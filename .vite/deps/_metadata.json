@@ -1,0 +1,15 @@
+{
+  "hash": "4abde945",
+  "configHash": "2bd88949",
+  "lockfileHash": "1a373dfc",
+  "browserHash": "3dbc821e",
+  "optimized": {
+    "framer-motion": {
+      "src": "../../pricing/node_modules/framer-motion/dist/es/index.mjs",
+      "file": "framer-motion.js",
+      "fileHash": "44336a63",
+      "needsInterop": false
+    }
+  },
+  "chunks": {}
+}

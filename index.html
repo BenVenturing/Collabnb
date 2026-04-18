@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Collabnb — Where creators and boutique stays collab</title>
+<meta name="description" content="The collab marketplace for creators and boutique stays. Join the waitlist — launching June 1, 2026." />
+<link rel="icon" href="/assets/favicon.png" type="image/png" />
+<link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&f[]=cabinet-grotesk@400,500,700,800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles/main.css" />
+</head>
+<body>
+
+<a href="#main" class="skip-link">Skip to main content</a>
+
+<!-- Fixed background layers -->
+<div aria-hidden="true" class="bg-layers bg-base"></div>
+<div aria-hidden="true" class="bg-layers bg-gradient"></div>
+<div aria-hidden="true" class="bg-layers bg-clouds"></div>
+<div aria-hidden="true" class="bg-grain"></div>
+
+<!-- Mobile nav overlay -->
+<div class="nav-overlay glass" aria-label="Mobile navigation" role="dialog" aria-modal="true">
+  <a href="index.html">Home</a>
+  <a href="about.html">About</a>
+  <a href="how-it-works.html">How it works</a>
+  <a href="faq.html">FAQ</a>
+  <a href="pricing/index.html">Pricing</a>
+  <a href="join.html" class="btn-primary">Join the Waitlist</a>
+</div>
+
+<!-- Floating glass nav -->
+<nav class="nav-pill glass" aria-label="Main navigation">
+  <a href="index.html" class="nav-logo" aria-label="Collabnb home">
+    <img src="/assets/collabnb-logo.png" alt="" role="presentation" width="32" height="32" />
+    <span>Collabnb</span>
+  </a>
+  <ul class="nav-links" role="list">
+    <li><a href="index.html">Home</a></li>
+    <li><a href="about.html">About</a></li>
+    <li><a href="how-it-works.html">How it works</a></li>
+    <li><a href="faq.html">FAQ</a></li>
+    <li><a href="pricing/index.html">Pricing</a></li>
+  </ul>
+  <a href="join.html" class="btn-primary">Join the Waitlist</a>
+  <button class="nav-hamburger" aria-label="Open menu" aria-expanded="false" aria-controls="mobile-nav">
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+      <line class="line line-1" x1="3" y1="5" x2="17" y2="5"/>
+      <line class="line line-2" x1="3" y1="10" x2="17" y2="10"/>
+      <line class="line line-3" x1="3" y1="15" x2="17" y2="15"/>
+    </svg>
+  </button>
+</nav>
+
+<main id="main">
+
+  <!-- ── HERO ── -->
+  <section class="hero" aria-label="Hero">
+    <div class="container" style="width:100%;padding-top:7rem;padding-bottom:6rem;">
+
+      <!-- Floating bokeh cards (decorative) -->
+      <div aria-hidden="true" class="bokeh-field">
+        <div class="bokeh-card bokeh-1" style="top:12%;right:8%;width:200px;transform:rotate(-3deg);">
+          <div class="bokeh-avatar"></div>
+          <div class="bokeh-title">Moss &amp; Pine Cabin</div>
+          <div class="bokeh-meta">Catskills, NY · UGC Pro</div>
+        </div>
+        <div class="bokeh-card bokeh-2" style="top:55%;right:4%;width:180px;transform:rotate(4deg);">
+          <div class="bokeh-avatar"></div>
+          <div class="bokeh-title">Tide House Bali</div>
+          <div class="bokeh-meta">Glamping · Indonesia</div>
+        </div>
+        <div class="bokeh-card bokeh-3" style="top:30%;right:22%;width:160px;transform:rotate(-2deg);">
+          <div class="bokeh-avatar"></div>
+          <div class="bokeh-title">Mesa Verde Camp</div>
+          <div class="bokeh-meta">Glamping · Utah</div>
+        </div>
+        <div class="bokeh-sphere bokeh-4" style="top:8%;right:32%;width:120px;height:120px;opacity:0.25;"></div>
+        <div class="bokeh-card bokeh-5" style="top:70%;right:18%;width:170px;transform:rotate(3deg);">
+          <div class="bokeh-avatar"></div>
+          <div class="bokeh-title">Sable House</div>
+          <div class="bokeh-meta">Boutique Hotel · Lisbon</div>
+        </div>
+      </div>
+
+      <!-- Left-aligned hero content -->
+      <div class="hero-content reveal">
+        <span class="eyebrow-tag">Early access · Launching June 1</span>
+        <h1 class="display">Where creators<br>and boutique<br>stays collab.</h1>
+        <p class="hero-sub">Get free stays in exchange for content. Or fill your rooms with creators who'll tell your story. Collabnb is the collab marketplace for boutique hospitality.</p>
+        <div class="hero-ctas">
+          <button class="btn-primary btn-open-modal" id="hero-cta-primary">Join the Waitlist</button>
+          <a href="how-it-works.html" class="btn-glass">See how it works</a>
+        </div>
+      </div>
+
+      <!-- Hero centerpiece glass card -->
+      <div class="hero-card glass reveal" style="transition-delay:120ms;" aria-label="Sample collab message preview">
+        <p class="hero-card-message">
+          "Hey, I'd love to host you at <strong>Moss &amp; Pine Cabin</strong> for a 2-night stay — looking for 3 Reels + 1 TikTok."
+        </p>
+        <div class="hero-card-listing">
+          <div class="hero-card-listing-title">Moss &amp; Pine Cabin</div>
+          <div class="hero-card-listing-meta">
+            <span class="chip">Catskills, NY</span>
+            <span class="chip">UGC Pro</span>
+            <span class="chip">3 deliverables</span>
+            <span class="chip">2-night stay</span>
+          </div>
+        </div>
+        <div class="hero-card-input" aria-label="Reply input (demo)">Reply to the host…</div>
+        <div class="hero-card-chips" role="list">
+          <button class="hero-card-chip" role="listitem">Accept the collab</button>
+          <button class="hero-card-chip" role="listitem">See more photos</button>
+          <button class="hero-card-chip" role="listitem">Ask a question</button>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ── LIVE COUNTERS ── -->
+  <section class="section" aria-labelledby="counters-heading">
+    <div class="container">
+      <p class="eyebrow-tag reveal" style="margin-bottom:2rem;">Lifetime access for the first 100 on each side.</p>
+      <div class="counters-grid glass reveal" style="transition-delay:80ms;">
+        <div class="counter-item">
+          <div class="counter-number"><span id="count-creators">0</span><span style="font-size:1.5rem;opacity:0.3;font-weight:400;"> / 100</span></div>
+          <div class="counter-label">Creators signed up</div>
+          <div class="counter-bar"><div class="counter-bar-fill" id="bar-creators"></div></div>
+        </div>
+        <div class="counter-item" style="border-left:1px solid var(--hairline);padding-left:2rem;">
+          <div class="counter-number"><span id="count-hosts">0</span><span style="font-size:1.5rem;opacity:0.3;font-weight:400;"> / 100</span></div>
+          <div class="counter-label">Hosts signed up</div>
+          <div class="counter-bar"><div class="counter-bar-fill" id="bar-hosts"></div></div>
+        </div>
+      </div>
+      <p class="counter-caption reveal" style="transition-delay:160ms;">First 100 on each side → lifetime access at launch</p>
+    </div>
+  </section>
+
+  <!-- ── FEATURE GRID ── -->
+  <section class="section" aria-labelledby="features-heading">
+    <div class="container">
+      <p class="eyebrow-tag reveal">Two sides, one marketplace.</p>
+      <div class="bento-grid stagger" style="margin-top:2rem;">
+
+        <!-- For Creators -->
+        <div class="bento-card glass reveal">
+          <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:1.25rem;">
+            <div style="width:40px;height:40px;border-radius:50%;background:var(--mint);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M6 20v-2a6 6 0 0112 0v2"/></svg>
+            </div>
+            <span class="eyebrow-tag" style="font-size:.65rem;">For Creators</span>
+          </div>
+          <h3>Collabs that feel like vacations</h3>
+          <p>Browse boutique stays that match your tier and content style. Apply, negotiate, create.</p>
+          <div class="bento-chips" aria-label="Creator tiers">
+            <span class="chip">UGC Beginner</span>
+            <span class="chip">UGC Pro</span>
+            <span class="chip">Micro</span>
+            <span class="chip">Influencer</span>
+          </div>
+        </div>
+
+        <!-- For Hosts -->
+        <div class="bento-card glass reveal">
+          <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:1.25rem;">
+            <div style="width:40px;height:40px;border-radius:50%;background:var(--mint);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg>
+            </div>
+            <span class="eyebrow-tag" style="font-size:.65rem;">For Hosts</span>
+          </div>
+          <h3>Fill rooms with storytellers, not just guests</h3>
+          <p>Post a stay, set your deliverables, and watch verified creators apply. Trade rooms for reach.</p>
+          <div class="bento-chips" aria-label="Property types">
+            <span class="chip">Boutique Hotel</span>
+            <span class="chip">BnB</span>
+            <span class="chip">Glamping</span>
+            <span class="chip">Small Resort</span>
+            <span class="chip">Experience</span>
+            <span class="chip">Tourism Board</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Three smaller bento tiles -->
+      <div class="bento-small-grid stagger">
+        <div class="bento-small glass reveal">
+          <div style="width:36px;height:36px;border-radius:50%;background:var(--mint);display:flex;align-items:center;justify-content:center;margin-bottom:1rem;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" stroke-width="1.8" stroke-linecap="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+          </div>
+          <h3>Matched by taste, not just numbers</h3>
+          <p>Creator tiers meet stay style. A UGC Beginner gets paired with a BnB, an Influencer with a boutique resort.</p>
+        </div>
+        <div class="bento-small glass reveal">
+          <div style="width:36px;height:36px;border-radius:50%;background:var(--mint);display:flex;align-items:center;justify-content:center;margin-bottom:1rem;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" stroke-width="1.8" stroke-linecap="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+          </div>
+          <h3>Messaging built for collabs</h3>
+          <p>Listing cards live inline in the chat. Review the deal, ask questions, and accept — without leaving the thread.</p>
+        </div>
+        <div class="bento-small glass reveal">
+          <div style="width:36px;height:36px;border-radius:50%;background:var(--mint);display:flex;align-items:center;justify-content:center;margin-bottom:1rem;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+          </div>
+          <h3>Your next stay, a collab away</h3>
+          <p>A discovery-first, mobile-native feed of stays looking for creators exactly like you.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── HOW IT WORKS TEASER ── -->
+  <section class="section" aria-labelledby="hiw-heading">
+    <div class="container">
+      <p class="eyebrow-tag reveal">From signup to first collab in three steps.</p>
+      <h2 id="hiw-heading" class="display reveal" style="font-size:var(--fs-h2);margin-top:1rem;margin-bottom:3rem;transition-delay:60ms;">Simple on both sides.</h2>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:2rem;" class="stagger">
+
+        <!-- Creator track -->
+        <div class="reveal">
+          <div class="track-label">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M6 20v-2a6 6 0 0112 0v2"/></svg>
+            Creator track
+          </div>
+          <div class="steps-track">
+            <div class="step-card glass">
+              <div class="step-number">1</div>
+              <div class="step-content">
+                <h3>Apply to the waitlist</h3>
+                <p>Tell us your handles, tier, and recent collab count. Takes two minutes.</p>
+              </div>
+            </div>
+            <div class="step-card glass">
+              <div class="step-number">2</div>
+              <div class="step-content">
+                <h3>Get verified</h3>
+                <p>Manual review by the team. First 100 creators get lifetime access at launch.</p>
+              </div>
+            </div>
+            <div class="step-card glass">
+              <div class="step-number">3</div>
+              <div class="step-content">
+                <h3>Start collabing</h3>
+                <p>Browse stays, apply, create content, travel. This is what you signed up for.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Host track -->
+        <div class="reveal" style="transition-delay:120ms;">
+          <div class="track-label">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+            Host track
+          </div>
+          <div class="steps-track">
+            <div class="step-card glass">
+              <div class="step-number">1</div>
+              <div class="step-content">
+                <h3>Sign up as a host</h3>
+                <p>Tell us about your property. Boutique hotel, BnB, glamping — all welcome.</p>
+              </div>
+            </div>
+            <div class="step-card glass">
+              <div class="step-number">2</div>
+              <div class="step-content">
+                <h3>List your first collab</h3>
+                <p>Set deliverables, stay value, and dates. You control the brief.</p>
+              </div>
+            </div>
+            <div class="step-card glass">
+              <div class="step-number">3</div>
+              <div class="step-content">
+                <h3>Get matched</h3>
+                <p>Review creator applications, approve the best fit, and host them.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div style="margin-top:2.5rem;text-align:center;" class="reveal">
+        <a href="how-it-works.html" class="btn-glass">See the full walkthrough</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── QUOTE ── -->
+  <section class="section" aria-label="Brand quote">
+    <div class="container">
+      <div class="quote-block reveal">
+        <blockquote>"Collabnb is for the kind of creator who'd rather earn in experiences, and the kind of host who'd rather fill rooms with storytellers."</blockquote>
+        <cite>— The Collabnb team.</cite>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── COUNTDOWN ── -->
+  <section class="section" aria-labelledby="countdown-heading">
+    <div class="container" style="text-align:center;">
+      <p class="eyebrow-tag reveal" style="justify-content:center;margin-bottom:1.5rem;">Launch countdown</p>
+      <div class="glass reveal" style="display:inline-flex;gap:0;padding:2rem 3rem;border-radius:1.75rem;transition-delay:80ms;" aria-label="Time until launch">
+        <div style="text-align:center;padding:0 1.5rem;border-right:1px solid var(--hairline);">
+          <div class="counter-number" style="font-size:3rem;" data-countdown="days">--</div>
+          <div class="counter-label">Days</div>
+        </div>
+        <div style="text-align:center;padding:0 1.5rem;border-right:1px solid var(--hairline);">
+          <div class="counter-number" style="font-size:3rem;" data-countdown="hours">--</div>
+          <div class="counter-label">Hours</div>
+        </div>
+        <div style="text-align:center;padding:0 1.5rem;border-right:1px solid var(--hairline);">
+          <div class="counter-number" style="font-size:3rem;" data-countdown="mins">--</div>
+          <div class="counter-label">Mins</div>
+        </div>
+        <div style="text-align:center;padding:0 1.5rem;">
+          <div class="counter-number" style="font-size:3rem;" data-countdown="secs">--</div>
+          <div class="counter-label">Secs</div>
+        </div>
+      </div>
+      <p style="margin-top:1rem;color:var(--sage);font-size:var(--fs-sm);" class="reveal" aria-live="polite">June 1, 2026</p>
+    </div>
+  </section>
+
+  <!-- ── FINAL CTA ── -->
+  <section class="final-cta" aria-labelledby="cta-heading">
+    <div class="container">
+      <p class="eyebrow-tag reveal" style="justify-content:center;margin-bottom:1.5rem;">Six weeks to launch. Save your spot.</p>
+      <h2 id="cta-heading" class="display reveal" style="font-size:var(--fs-h2);transition-delay:60ms;">Join the waitlist<br>before it fills up.</h2>
+      <div class="hero-ctas reveal" style="justify-content:center;transition-delay:120ms;">
+        <button class="btn-primary btn-open-modal">Join the Waitlist</button>
+        <a href="how-it-works.html" class="btn-glass">See how it works</a>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- ── FOOTER ── -->
+<footer aria-label="Site footer">
+  <div class="container">
+    <div class="site-footer glass">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <a href="index.html" class="nav-logo" style="display:inline-flex;" aria-label="Collabnb home">
+            <img src="/assets/collabnb-logo.png" alt="" role="presentation" width="32" height="32" />
+            <span style="font-family:var(--font-display);font-weight:700;font-size:1.1rem;letter-spacing:-0.02em;margin-left:.5rem;">Collabnb</span>
+          </a>
+          <p>Manage collabs effortlessly. Built for creators and boutique stays.</p>
+          <div class="footer-social">
+            <a href="#" aria-label="Instagram">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="5"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg>
+            </a>
+            <a href="#" aria-label="TikTok">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M9 12a4 4 0 104 4V4a5 5 0 005 5"/></svg>
+            </a>
+          </div>
+        </div>
+        <div class="footer-col">
+          <h4>Use</h4>
+          <ul>
+            <li><a href="index.html">Home</a></li>
+            <li><a href="about.html">About</a></li>
+            <li><a href="how-it-works.html">How it works</a></li>
+            <li><a href="faq.html">FAQ</a></li>
+            <li><a href="pricing/index.html">Pricing</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h4>Company</h4>
+          <ul>
+            <li><a href="mailto:hello@collabnb.co">Contact</a></li>
+            <li><a href="#">Privacy</a></li>
+            <li><a href="#">Terms</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h4>Join</h4>
+          <ul>
+            <li><a href="join.html">Creator waitlist</a></li>
+            <li><a href="join.html">Host waitlist</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>About Collabnb — a marketplace where boutique hospitality meets creator culture.</span>
+        <span>© 2026 Collabnb. All rights reserved.</span>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<!-- ── MODAL WIZARD ── -->
+<div id="modal-overlay" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title" aria-hidden="true">
+  <div class="modal-card" style="position:relative;">
+    <button id="modal-close" class="modal-close" aria-label="Close form">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+    </button>
+
+    <div class="modal-progress" role="progressbar" aria-label="Form progress">
+      <div class="modal-progress-fill" id="modal-progress-fill"></div>
+    </div>
+
+    <h2 id="modal-title" style="font-size:1.5rem;margin-bottom:.5rem;">Join Collabnb</h2>
+    <p style="color:var(--sage);font-size:.875rem;margin-bottom:1.5rem;">Six weeks to launch. First 100 on each side get lifetime access.</p>
+
+    <!-- Role toggle -->
+    <div style="margin-bottom:1.5rem;">
+      <div class="role-toggle glass" role="group" aria-label="Select your role">
+        <button class="role-btn active" data-role="creator" id="role-creator">I'm a Creator</button>
+        <button class="role-btn" data-role="host" id="role-host">I'm a Host</button>
+      </div>
+      <p style="text-align:center;margin-top:0.75rem;font-size:0.75rem;color:var(--sage);">
+        Already have an account? <a href="#" id="modal-login-link" style="color:var(--ink);font-weight:500;">Sign in</a>
+      </p>
+    </div>
+
+    <!-- CREATOR STEPS -->
+    <!-- Step 1 -->
+    <div class="wizard-step active" data-step="1" data-role="creator">
+      <h3>Let's start with the basics.</h3>
+      <p class="step-desc">Step 1 of 4</p>
+      <div class="form-group">
+        <label class="form-label" for="c-name">Your full name</label>
+        <input class="form-input" type="text" id="c-name" name="c-name" placeholder="Jane Smith" autocomplete="name" required />
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="c-email">Email address</label>
+        <input class="form-input" type="email" id="c-email" name="c-email" placeholder="jane@example.com" autocomplete="email" required />
+      </div>
+      <div class="wizard-nav">
+        <span></span>
+        <button class="btn-primary btn-next" id="c-next-1">Continue →</button>
+      </div>
+    </div>
+
+    <!-- Step 2 -->
+    <div class="wizard-step" data-step="2" data-role="creator">
+      <h3>Where can we find you?</h3>
+      <p class="step-desc">Step 2 of 4 — at least one handle required</p>
+      <div class="form-group">
+        <label class="form-label" for="c-tiktok">TikTok handle</label>
+        <input class="form-input" type="text" id="c-tiktok" name="c-tiktok" placeholder="@yourhandle" autocomplete="off" />
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="c-instagram">Instagram handle</label>
+        <input class="form-input" type="text" id="c-instagram" name="c-instagram" placeholder="@yourhandle" autocomplete="off" />
+      </div>
+      <div class="wizard-nav">
+        <button class="wizard-back btn-back">← Back</button>
+        <button class="btn-primary btn-next">Continue →</button>
+      </div>
+    </div>
+
+    <!-- Step 3 -->
+    <div class="wizard-step" data-step="3" data-role="creator">
+      <h3>Tell us about your content.</h3>
+      <p class="step-desc">Step 3 of 4</p>
+      <div class="form-group">
+        <label class="form-label" for="c-portfolio">Portfolio URL <span style="color:var(--sage);font-weight:400;">(optional)</span></label>
+        <input class="form-input" type="url" id="c-portfolio" name="c-portfolio" placeholder="https://yourportfolio.com" autocomplete="url" />
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="c-tier">Creator tier</label>
+        <select class="form-select" id="c-tier" name="c-tier" required>
+          <option value="" disabled selected>Select your tier</option>
+          <option value="ugc-beginner">UGC Beginner — building my portfolio</option>
+          <option value="ugc-pro">UGC Pro — paid UGC, regular output</option>
+          <option value="micro">Micro — 5K–100K followers</option>
+          <option value="influencer">Influencer — 100K+ followers</option>
+        </select>
+      </div>
+      <div class="wizard-nav">
+        <button class="wizard-back btn-back">← Back</button>
+        <button class="btn-primary btn-next">Continue →</button>
+      </div>
+    </div>
+
+    <!-- Step 4 -->
+    <div class="wizard-step" data-step="4" data-role="creator">
+      <h3>Almost there.</h3>
+      <p class="step-desc">Step 4 of 4</p>
+      <div class="form-group">
+        <label class="form-label" for="c-collabs">Paid collabs in the last 3 months</label>
+        <select class="form-select" id="c-collabs" name="c-collabs" required>
+          <option value="" disabled selected>Select a range</option>
+          <option value="0">0 — getting started</option>
+          <option value="1-3">1–3</option>
+          <option value="4-10">4–10</option>
+          <option value="10+">10+</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <div class="form-checkbox-wrap">
+          <input class="form-checkbox" type="checkbox" id="c-beta" name="c-beta" />
+          <label class="form-checkbox-label" for="c-beta">
+            Sign me up as a beta tester before the June 1 launch. I'm ready to give early feedback.
+          </label>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="c-password">Create a password</label>
+        <input class="form-input" type="password" id="c-password" name="c-password" placeholder="••••••••" required />
+      </div>
+      <div class="wizard-nav">
+        <button class="wizard-back btn-back">← Back</button>
+        <button class="btn-primary btn-next">Join the Waitlist</button>
+      </div>
+    </div>
+
+    <!-- HOST STEPS -->
+    <!-- Step 1 -->
+    <div class="wizard-step" data-step="1" data-role="host">
+      <h3>Tell us about you.</h3>
+      <p class="step-desc">Step 1 of 3</p>
+      <div class="form-group">
+        <label class="form-label" for="h-name">Your full name</label>
+        <input class="form-input" type="text" id="h-name" name="h-name" placeholder="Ben Williams" autocomplete="name" required />
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="h-email">Email address</label>
+        <input class="form-input" type="email" id="h-email" name="h-email" placeholder="ben@yourproperty.com" autocomplete="email" required />
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="h-business">Business or property name</label>
+        <input class="form-input" type="text" id="h-business" name="h-business" placeholder="Moss &amp; Pine Cabin" required />
+      </div>
+      <div class="wizard-nav">
+        <span></span>
+        <button class="btn-primary btn-next">Continue →</button>
+      </div>
+    </div>
+
+    <!-- Step 2 -->
+    <div class="wizard-step" data-step="2" data-role="host">
+      <h3>About your property.</h3>
+      <p class="step-desc">Step 2 of 3</p>
+      <div class="form-group">
+        <label class="form-label" for="h-type">Property type</label>
+        <select class="form-select" id="h-type" name="h-type" required>
+          <option value="" disabled selected>Select type</option>
+          <option value="boutique-hotel">Boutique Hotel</option>
+          <option value="bnb">BnB</option>
+          <option value="glamping">Glamping</option>
+          <option value="small-resort">Small Resort</option>
+          <option value="experience">Experience</option>
+          <option value="tourism-board">Tourism Board</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="h-city">City</label>
+          <input class="form-input" type="text" id="h-city" name="h-city" placeholder="Ubud" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="h-region">Region / Country</label>
+          <input class="form-input" type="text" id="h-region" name="h-region" placeholder="Bali, Indonesia" required />
+        </div>
+      </div>
+      <div class="wizard-nav">
+        <button class="wizard-back btn-back">← Back</button>
+        <button class="btn-primary btn-next">Continue →</button>
+      </div>
+    </div>
+
+    <!-- Step 3 -->
+    <div class="wizard-step" data-step="3" data-role="host">
+      <h3>One last thing.</h3>
+      <p class="step-desc">Step 3 of 3</p>
+      <div class="form-group">
+        <div class="form-checkbox-wrap">
+          <input class="form-checkbox" type="checkbox" id="h-beta" name="h-beta" />
+          <label class="form-checkbox-label" for="h-beta">
+            Sign me up as a beta tester before the June 1 launch. I want early access to list a collab stay.
+          </label>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="h-password">Create a password</label>
+        <input class="form-input" type="password" id="h-password" name="h-password" placeholder="••••••••" required />
+      </div>
+      <div class="wizard-nav">
+        <button class="wizard-back btn-back">← Back</button>
+        <button class="btn-primary btn-next">Join the Waitlist</button>
+      </div>
+    </div>
+
+    <!-- Success state -->
+    <div class="wizard-step" id="wizard-success" data-step="99" data-role="both">
+      <div class="wizard-success">
+        <div class="check-circle" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="var(--ink)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+        </div>
+        <h3>You're on the list.</h3>
+        <p>We'll be in touch as we approach the June 1 launch. Keep an eye on your inbox.</p>
+        <div class="share-row">
+          <button class="share-btn" id="btn-copy" aria-label="Copy link to clipboard">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+            Copy link
+          </button>
+          <button class="share-btn" id="btn-mail" aria-label="Share via email">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+            Share via email
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- .modal-card -->
+</div><!-- #modal-overlay -->
+
+<script type="module" src="/scripts/main.js"></script>
+</body>
+</html>

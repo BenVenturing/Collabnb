@@ -1,0 +1,117 @@
+@import url('https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&f[]=cabinet-grotesk@400,500,700,800&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  *, *::before, *::after { box-sizing: border-box; }
+
+  body {
+    font-family: 'Satoshi', ui-sans-serif, sans-serif;
+    background-color: #EFECE9;
+    color: #192524;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
+  }
+
+  h1, h2, h3, h4, .font-display {
+    font-family: 'Cabinet Grotesk', ui-sans-serif, sans-serif;
+    letter-spacing: -0.025em;
+    line-height: 1.02;
+  }
+}
+
+@layer components {
+  .glass {
+    background: rgba(255, 255, 255, 0.55);
+    backdrop-filter: blur(24px) saturate(140%);
+    -webkit-backdrop-filter: blur(24px) saturate(140%);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.6),
+      inset 0 -1px 0 rgba(25, 37, 36, 0.04),
+      0 20px 40px -15px rgba(25, 37, 36, 0.10);
+    border-radius: 1.75rem;
+  }
+
+  .glass-feature {
+    background: rgba(255, 255, 255, 0.82);
+    backdrop-filter: blur(32px) saturate(150%);
+    -webkit-backdrop-filter: blur(32px) saturate(150%);
+    border: 1.5px solid rgba(255, 255, 255, 0.75);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.75),
+      0 32px 64px -20px rgba(25, 37, 36, 0.16);
+    border-radius: 1.75rem;
+  }
+
+  .btn-ink {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    background: #192524;
+    color: #EFECE9;
+    font-family: 'Satoshi', ui-sans-serif, sans-serif;
+    font-weight: 500;
+    font-size: 0.95rem;
+    padding: 0.9rem 1.75rem;
+    border-radius: 9999px;
+    border: none;
+    cursor: pointer;
+    transition: transform 200ms cubic-bezier(0.25, 1, 0.5, 1), background 200ms;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.1), 0 1px 2px rgba(25,37,36,0.2);
+    text-decoration: none;
+  }
+  .btn-ink:hover  { background: #2a3a39; }
+  .btn-ink:active { transform: scale(0.97); }
+  .btn-ink:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .btn-glass {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    background: rgba(255,255,255,0.55);
+    backdrop-filter: blur(16px) saturate(140%);
+    -webkit-backdrop-filter: blur(16px) saturate(140%);
+    color: #192524;
+    font-family: 'Satoshi', ui-sans-serif, sans-serif;
+    font-weight: 500;
+    font-size: 0.95rem;
+    padding: 0.9rem 1.75rem;
+    border-radius: 9999px;
+    border: 1px solid rgba(255,255,255,0.6);
+    cursor: pointer;
+    transition: transform 200ms cubic-bezier(0.25, 1, 0.5, 1), background 200ms;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.6), 0 1px 2px rgba(25,37,36,0.04);
+    text-decoration: none;
+  }
+  .btn-glass:hover  { background: rgba(255,255,255,0.78); }
+  .btn-glass:active { transform: scale(0.97); }
+
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    background: rgba(209, 235, 219, 0.7);
+    border: 1px solid rgba(25, 37, 36, 0.08);
+    color: #192524;
+    font-family: 'Satoshi', ui-sans-serif, sans-serif;
+    font-size: 0.68rem;
+    font-weight: 500;
+    padding: 0.35rem 0.8rem;
+    border-radius: 9999px;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+  }
+
+  .check-icon {
+    width: 10px;
+    height: 10px;
+  }
+}

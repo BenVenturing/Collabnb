@@ -86,12 +86,12 @@ async function initCounters() {
   let hosts = 0;
 
   try {
-    const res = await fetch('/api/counts', { signal: AbortSignal.timeout(3000) });
-    if (res.ok) {
-      const data = await res.json();
-      creators = data.creators || 0;
-      hosts = data.hosts || 0;
-    }
+    const [creatorRes, hostRes] = await Promise.all([
+      supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'creator'),
+      supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'host'),
+    ]);
+    creators = creatorRes.count ?? 0;
+    hosts = hostRes.count ?? 0;
   } catch (err) {
     console.warn('Could not fetch live counts:', err);
   }
@@ -360,16 +360,31 @@ async function submitForm() {
     // Waitlist signup — no password needed, email verification handles access
     const randomPassword = crypto.randomUUID() + crypto.randomUUID();
 
+    const metadata = role === 'creator'
+      ? {
+          full_name: data.full_name,
+          role,
+          username: data.username,
+          tier: data.tier,
+          recent_collabs: data.recent_collabs,
+          portfolio: data.portfolio,
+          beta: data.beta || false,
+        }
+      : {
+          full_name: data.full_name,
+          role,
+          username: data.business_name,
+          business_name: data.business_name,
+          property_type: data.property_type,
+          city: data.city,
+          region: data.region,
+          beta: data.beta || false,
+        };
+
     const { error: authError } = await supabase.auth.signUp({
       email: data.email,
       password: randomPassword,
-      options: {
-        data: {
-          full_name: data.full_name,
-          role: role,
-          username: data.username || data.business_name
-        }
-      }
+      options: { data: metadata }
     });
 
     if (authError) throw authError;
@@ -482,16 +497,7 @@ function copyToClipboard(text) {
       btn.innerHTML = 'Copied!';
       setTimeout(() => { btn.innerHTML = origHTML; }, 2000);
     }
-  }).catch(() => {
-    // Fallback for non-secure contexts
-    const ta = document.createElement('textarea');
-    ta.value = text;
-    ta.style.cssText = 'position:fixed;opacity:0;';
-    document.body.appendChild(ta);
-    ta.select();
-    document.execCommand('copy');
-    document.body.removeChild(ta);
-  });
+  }).catch(() => {});
 }
 
 // Wire everything up on DOMContentLoaded

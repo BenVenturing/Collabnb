@@ -11,10 +11,9 @@ import TermsNote       from './TermsNote';
 import { supabase }    from '../../../scripts/supabase';
 
 const FOUNDING_TOTAL = 100;
-const FALLBACK_USED  = 63; // shows 37 spots remaining by default
 
 export default function PricingPage() {
-  const [slotsUsed,    setSlotsUsed]    = useState(FALLBACK_USED);
+  const [slotsUsed,    setSlotsUsed]    = useState(0);
   const [showConfetti, setShowConfetti] = useState(false);
   const [showModal,    setShowModal]    = useState(false);
   const [user,         setUser]         = useState(null);
@@ -33,21 +32,15 @@ export default function PricingPage() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Fetch live count from /api/counts (same endpoint as main site)
+  // Fetch live creator count from Supabase
   useEffect(() => {
-    let controller;
-    try {
-      controller = new AbortController();
-      fetch('/api/counts', { signal: controller.signal })
-        .then(r => r.ok ? r.json() : null)
-        .then(data => {
-          if (data?.creators != null) setSlotsUsed(Number(data.creators));
-        })
-        .catch(() => {}); // Silently fall back to FALLBACK_USED
-    } catch {
-      // AbortController not supported — just use fallback
-    }
-    return () => controller?.abort();
+    supabase
+      .from('profiles')
+      .select('*', { count: 'exact', head: true })
+      .eq('role', 'creator')
+      .then(({ count }) => {
+        if (count != null) setSlotsUsed(count);
+      });
   }, []);
 
   const spotsRemaining = Math.max(0, FOUNDING_TOTAL - slotsUsed);
@@ -139,7 +132,7 @@ export default function PricingPage() {
           <a href="../index.html" className="hover:text-slate transition-colors no-underline">Home</a>
           <a href="../about.html" className="hover:text-slate transition-colors no-underline">About</a>
           <a href="../faq.html" className="hover:text-slate transition-colors no-underline">FAQ</a>
-          <a href="mailto:hello@collabnb.co" className="hover:text-slate transition-colors no-underline">Contact</a>
+          <a href="mailto:hellocollabnb@gmail.com" className="hover:text-slate transition-colors no-underline">Contact</a>
         </div>
       </footer>
     </>

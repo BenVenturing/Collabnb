@@ -1,49 +1,88 @@
--- Run this in your Supabase SQL Editor:
+-- ═══════════════════════════════════════════════════════════════
+-- Collabnb — Run this entire file in Supabase SQL Editor
+-- ═══════════════════════════════════════════════════════════════
 
--- Create a table for public profiles
-create table if not exists profiles (
-  id uuid references auth.users not null primary key,
-  email text,
-  full_name text,
-  role text check (role in ('creator', 'host')),
-  username text, -- Instagram/Social handle
-  bio text,
-  avatar_url text, -- For profile pics later
-  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+-- ─── 1. Create profiles table (safe if already exists) ──────────
+CREATE TABLE IF NOT EXISTS public.profiles (
+  id           uuid REFERENCES auth.users NOT NULL PRIMARY KEY,
+  email        text,
+  full_name    text,
+  role         text CHECK (role IN ('creator', 'host')),
+  username     text,
+  bio          text,
+  avatar_url   text,
+  created_at   timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- Set up Row Level Security (RLS)
-alter table profiles enable row level security;
+-- ─── 2. Add new columns (safe to run on existing table) ─────────
+ALTER TABLE public.profiles
+  ADD COLUMN IF NOT EXISTS business_name   text,
+  ADD COLUMN IF NOT EXISTS property_type  text,
+  ADD COLUMN IF NOT EXISTS city           text,
+  ADD COLUMN IF NOT EXISTS region         text,
+  ADD COLUMN IF NOT EXISTS tier           text,
+  ADD COLUMN IF NOT EXISTS recent_collabs text,
+  ADD COLUMN IF NOT EXISTS portfolio      text,
+  ADD COLUMN IF NOT EXISTS beta           boolean DEFAULT false,
+  ADD COLUMN IF NOT EXISTS is_founder     boolean DEFAULT false;
 
--- Policies
-create policy "Public profiles are viewable by everyone." 
-  on profiles for select 
-  using (true);
+-- ─── 3. Row Level Security ───────────────────────────────────────
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
-create policy "Users can insert their own profile." 
-  on profiles for insert 
-  with check (auth.uid() = id);
+DROP POLICY IF EXISTS "Public profiles are viewable by everyone." ON public.profiles;
+CREATE POLICY "Public profiles are viewable by everyone."
+  ON public.profiles FOR SELECT USING (true);
 
-create policy "Users can update own profile." 
-  on profiles for update 
-  using (auth.uid() = id);
+DROP POLICY IF EXISTS "Users can insert their own profile." ON public.profiles;
+CREATE POLICY "Users can insert their own profile."
+  ON public.profiles FOR INSERT WITH CHECK (auth.uid() = id);
 
--- Trigger for creating profile on auth signup
-create or replace function public.handle_new_user()
-returns trigger as $$
-begin
-  insert into public.profiles (id, email, role, full_name, username)
-  values (
-    new.id, 
-    new.email, 
-    new.raw_user_meta_data->>'role', 
+DROP POLICY IF EXISTS "Users can update own profile." ON public.profiles;
+CREATE POLICY "Users can update own profile."
+  ON public.profiles FOR UPDATE USING (auth.uid() = id);
+
+-- ─── 4. Fix trigger function ─────────────────────────────────────
+-- Previous version had 'security modeller' (typo) — it never compiled.
+-- This version fixes that and adds founder tagging + all new fields.
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+DECLARE
+  role_count integer;
+  user_role  text;
+BEGIN
+  user_role := new.raw_user_meta_data->>'role';
+
+  -- Count existing signups for this role to determine founder status
+  SELECT COUNT(*) INTO role_count
+  FROM public.profiles
+  WHERE role = user_role;
+
+  INSERT INTO public.profiles (
+    id, email, role, full_name, username,
+    business_name, property_type, city, region,
+    tier, recent_collabs, portfolio, beta, is_founder
+  ) VALUES (
+    new.id,
+    new.email,
+    user_role,
     new.raw_user_meta_data->>'full_name',
-    new.raw_user_meta_data->>'username'
+    new.raw_user_meta_data->>'username',
+    new.raw_user_meta_data->>'business_name',
+    new.raw_user_meta_data->>'property_type',
+    new.raw_user_meta_data->>'city',
+    new.raw_user_meta_data->>'region',
+    new.raw_user_meta_data->>'tier',
+    new.raw_user_meta_data->>'recent_collabs',
+    new.raw_user_meta_data->>'portfolio',
+    COALESCE((new.raw_user_meta_data->>'beta')::boolean, false),
+    role_count < 100  -- first 100 of each role get is_founder = true
   );
-  return new;
-end;
-$$ language plpgsql security modeller;
+  RETURN new;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
-create or replace trigger on_auth_user_created
-  after insert on auth.users
-  for each row execute procedure public.handle_new_user();
+-- ─── 5. Recreate trigger (drops old broken one first) ────────────
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();

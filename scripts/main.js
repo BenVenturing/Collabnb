@@ -322,33 +322,42 @@ async function handleLogin() {
 }
 
 async function submitForm() {
-  const submitBtn = document.querySelector('.btn-next:last-of-type');
-  if (submitBtn) {
-    submitBtn.disabled = true;
-    submitBtn.textContent = 'Joining...';
-  }
+  const role = currentRole;
+  const data = {};
 
   try {
-    const data = {};
-    if (currentRole === 'creator') {
-      data.email = document.querySelector('#c-email')?.value;
+    if (role === 'creator') {
+      data.email = document.querySelector('#c-email')?.value?.trim();
       data.password = document.querySelector('#c-password')?.value;
-      data.full_name = document.querySelector('#c-name')?.value;
-      data.username = document.querySelector('#c-instagram')?.value || document.querySelector('#c-tiktok')?.value;
+      data.full_name = document.querySelector('#c-name')?.value?.trim();
+      data.username = document.querySelector('#c-instagram')?.value?.trim() || document.querySelector('#c-tiktok')?.value?.trim();
       data.tier = document.querySelector('#c-tier')?.value;
       data.recent_collabs = document.querySelector('#c-collabs')?.value;
-      data.portfolio = document.querySelector('#c-portfolio')?.value;
+      data.portfolio = document.querySelector('#c-portfolio')?.value?.trim();
       data.beta = document.querySelector('#c-beta')?.checked;
     } else {
-      data.email = document.querySelector('#h-email')?.value;
+      data.email = document.querySelector('#h-email')?.value?.trim();
       data.password = document.querySelector('#h-password')?.value;
-      data.full_name = document.querySelector('#h-name')?.value;
-      data.business_name = document.querySelector('#h-business')?.value;
+      data.full_name = document.querySelector('#h-name')?.value?.trim();
+      data.business_name = document.querySelector('#h-business')?.value?.trim();
       data.property_type = document.querySelector('#h-type')?.value;
-      data.city = document.querySelector('#h-city')?.value;
-      data.region = document.querySelector('#h-region')?.value;
+      data.city = document.querySelector('#h-city')?.value?.trim();
+      data.region = document.querySelector('#h-region')?.value?.trim();
       data.beta = document.querySelector('#h-beta')?.checked;
     }
+
+    // Basic Validation
+    if (!data.email || !data.password || !data.full_name) {
+      throw new Error('Please make sure you have filled out your name, email, and password.');
+    }
+
+    const submitBtn = document.querySelector(`.wizard-step[data-role="${role}"].active .btn-next`);
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Joining...';
+    }
+
+    console.log('Attempting signup for:', data.email, 'as', role);
 
     // Sign up via Supabase Auth
     const { data: authData, error: authError } = await supabase.auth.signUp({
@@ -357,7 +366,7 @@ async function submitForm() {
       options: {
         data: {
           full_name: data.full_name,
-          role: currentRole,
+          role: role,
           username: data.username || data.business_name
         }
       }

@@ -425,6 +425,15 @@ h3 { font-weight: 700; }
   flex-wrap: wrap;
   gap: 0.5rem;
 }
+.hero-card-chip-meta {
+  background: rgba(255,255,255,0.55);
+  border: 1px solid var(--hairline);
+  border-radius: 9999px;
+  padding: 0.2rem 0.6rem;
+  font-size: 0.65rem;
+  color: var(--slate);
+  font-weight: 500;
+}
 .hero-card-input {
   display: flex;
   align-items: center;
@@ -452,6 +461,104 @@ h3 { font-weight: 700; }
   transition: background 200ms var(--ease-out-quart);
 }
 .hero-card-chip:hover { background: rgba(209,235,219,0.7); }
+
+/* --- LISTING STACK --- */
+.listing-stack {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  height: 560px;
+  margin-top: var(--space-12);
+  perspective: 1100px;
+  perspective-origin: 50% 85%;
+  flex-shrink: 0;
+}
+
+/* Each card uses the same glass card look as the original hero-card */
+.lcard {
+  position: absolute;
+  inset: 0;
+  border-radius: 1.75rem;
+  overflow: hidden;
+  will-change: transform, opacity;
+  transition: transform 0.55s var(--ease-out-expo), box-shadow 0.55s var(--ease-out-expo);
+  transform-origin: center top;
+  /* glass styling matching .hero-card */
+  background: rgba(255,255,255,0.6);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,0.55);
+}
+
+.lcard.pos-0 {
+  z-index: 3;
+  transform: translateY(0) scale(1);
+  box-shadow: 0 24px 56px -8px rgba(25,37,36,0.16), 0 8px 20px -4px rgba(25,37,36,0.08);
+}
+.lcard.pos-1 {
+  z-index: 2;
+  transform: translateY(11px) scale(0.955);
+  box-shadow: 0 8px 24px rgba(25,37,36,0.07);
+}
+.lcard.pos-2 {
+  z-index: 1;
+  transform: translateY(21px) scale(0.912);
+  box-shadow: 0 4px 10px rgba(25,37,36,0.05);
+}
+
+/* Photo strip at top of each card */
+.lcard-photo {
+  position: relative;
+  height: 175px;
+  overflow: hidden;
+  background: var(--stone);
+}
+.lcard-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 7s linear;
+  transform: scale(1.06);
+}
+.lcard.pos-0 .lcard-photo img { transform: scale(1); }
+.lcard-photo-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 55%, rgba(25,37,36,0.15) 100%);
+}
+
+/* Inner content uses existing hero-card classes */
+.lcard-inner {
+  padding: var(--space-6);
+}
+
+/* Typing cursor */
+.lcard-cursor {
+  display: inline-block;
+  animation: lcard-blink 1s step-end infinite;
+  color: var(--sage);
+}
+@keyframes lcard-blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+
+/* Flip-out: card lifts and rotates up over the top */
+@keyframes lcard-flipout {
+  0%   { transform: translateY(0)    scale(1)    rotateX(0deg);   opacity: 1; }
+  40%  { transform: translateY(-12px) scale(1.01) rotateX(55deg);  opacity: 0.9; }
+  100% { transform: translateY(-5px)  scale(0.97) rotateX(105deg); opacity: 0; }
+}
+.lcard.is-flipping {
+  animation: lcard-flipout 0.52s cubic-bezier(0.4, 0, 0.6, 1) forwards;
+  z-index: 4 !important;
+  pointer-events: none;
+}
+
+@media (max-width: 640px) {
+  .listing-stack { max-width: 100%; height: 510px; }
+  .lcard-photo   { height: 140px; }
+}
 
 /* --- FLOATING BOKEH --- */
 .bokeh-field {

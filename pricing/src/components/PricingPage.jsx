@@ -11,20 +11,38 @@ import { supabase }    from '../../../scripts/supabase';
 const FOUNDING_TOTAL = 100;
 
 export default function PricingPage() {
-  const [slotsUsed, setSlotsUsed] = useState(0);
+  const [creatorCount, setCreatorCount] = useState(0);
+  const [hostCount, setHostCount] = useState(0);
 
-  // Fetch live creator count from Supabase
+  // Fetch live counts from Supabase
   useEffect(() => {
-    supabase
-      .from('profiles')
-      .select('*', { count: 'exact', head: true })
-      .eq('role', 'creator')
-      .then(({ count }) => {
-        if (count != null) setSlotsUsed(count);
-      });
+    // Initial fetch
+    Promise.all([
+      supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'creator'),
+      supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'host')
+    ]).then(([cRes, hRes]) => {
+      if (cRes.count != null) setCreatorCount(cRes.count);
+      if (hRes.count != null) setHostCount(hRes.count);
+    });
+
+    // Real-time subscription
+    const channel = supabase
+      .channel('pricing-sync')
+      .on('postgres_changes', 
+        { event: 'INSERT', schema: 'public', table: 'profiles' }, 
+        (payload) => {
+          if (payload.new.role === 'creator') setCreatorCount(prev => prev + 1);
+          if (payload.new.role === 'host') setHostCount(prev => prev + 1);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
-  const spotsRemaining = Math.max(0, FOUNDING_TOTAL - slotsUsed);
+  const spotsRemaining = Math.max(0, FOUNDING_TOTAL - creatorCount);
   const isFoundingFull  = spotsRemaining <= 0;
 
   function handleClaim() {
@@ -35,24 +53,10 @@ export default function PricingPage() {
 
   return (
     <>
-      {/* ── Background layers (mirrors main site HAZY theme) ── */}
-      <div aria-hidden="true" style={{
-        position: 'fixed', inset: 0, zIndex: -10,
-        background: '#EFECE9',
-      }} />
-      <div aria-hidden="true" style={{
-        position: 'fixed', inset: 0, zIndex: -9,
-        background: 'radial-gradient(ellipse 110% 55% at 55% -5%, #D1EBDB 0%, transparent 70%)',
-      }} />
-      <div aria-hidden="true" style={{
-        position: 'fixed', inset: 0, zIndex: -8,
-        backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'200\' height=\'200\'%3E%3Cfilter id=\'g\'%3E%3CfeTurbulence baseFrequency=\'0.75\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3CfeColorMatrix type=\'saturate\' values=\'0\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23g)\' opacity=\'0.3\'/%3E%3C/svg%3E")',
-        opacity: 0.08,
-        pointerEvents: 'none',
-      }} />
-
+      {/* ... previous background layers ... */}
+      
       {/* ── Nav link back to main site ── */}
-      <header className="max-w-7xl mx-auto px-4 md:px-8 pt-6 flex items-center justify-between">
+      <header className="max-w-7xl mx-auto px-4 md:px-8 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
         <a
           href="../index.html"
           className="flex items-center gap-2 text-ink no-underline hover:opacity-60 transition-opacity"
@@ -60,9 +64,15 @@ export default function PricingPage() {
           <img src="/assets/collabnb-logo.png" alt="" width="28" height="28" />
           <span className="font-display font-bold text-base tracking-tight">Collabnb</span>
         </a>
-        <a href="../join.html" className="btn-ink text-sm py-2.5 px-5">
-          Join the Waitlist
-        </a>
+        
+        <div className="flex items-center gap-4">
+          <span className="text-[0.7rem] uppercase tracking-widest text-sage font-medium bg-black/[0.03] px-3 py-1.5 rounded-full">
+            {creatorCount} Creators & {hostCount} Hosts Joined
+          </span>
+          <a href="../join.html" className="btn-ink text-sm py-2.5 px-5">
+            Join the Waitlist
+          </a>
+        </div>
       </header>
 
       <main>

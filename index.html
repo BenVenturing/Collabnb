@@ -94,27 +94,8 @@
         </div>
       </div>
 
-      <!-- Hero centerpiece glass card -->
-      <div class="hero-card glass reveal" style="transition-delay:120ms;" aria-label="Sample collab message preview">
-        <p class="hero-card-message">
-          "Hey, I'd love to host you at <strong>Moss &amp; Pine Cabin</strong> for a 2-night stay — looking for 3 Reels + 1 TikTok."
-        </p>
-        <div class="hero-card-listing">
-          <div class="hero-card-listing-title">Moss &amp; Pine Cabin</div>
-          <div class="hero-card-listing-meta">
-            <span class="chip">Catskills, NY</span>
-            <span class="chip">UGC Pro</span>
-            <span class="chip">3 deliverables</span>
-            <span class="chip">2-night stay</span>
-          </div>
-        </div>
-        <div class="hero-card-input" aria-label="Reply input (demo)">Reply to the host…</div>
-        <div class="hero-card-chips" role="list">
-          <button class="hero-card-chip" role="listitem">Accept the collab</button>
-          <button class="hero-card-chip" role="listitem">See more photos</button>
-          <button class="hero-card-chip" role="listitem">Ask a question</button>
-        </div>
-      </div>
+      <!-- Rotating listing card stack -->
+      <div class="listing-stack reveal" id="listing-stack" style="transition-delay:120ms;" aria-label="Sample collab listings"></div>
 
     </div>
   </section>
@@ -122,7 +103,12 @@
   <!-- ── LIVE COUNTERS ── -->
   <section class="section" aria-labelledby="counters-heading">
     <div class="container">
-      <p class="eyebrow-tag reveal" style="margin-bottom:2rem;">Lifetime access for the first 100 on each side.</p>
+      <p class="eyebrow-tag reveal" style="margin-bottom:2rem;" id="combined-tally">Lifetime access for the first 100 on each side.</p>
+      <p class="join-mini-counter reveal" style="transition-delay:240ms;">
+        <strong><span id="spots-left-mini">100</span> / 100</strong> <span id="role-label-mini">creator</span> spots remaining
+        <span class="count-creators-mini" style="display:none;">0</span>
+        <span class="count-hosts-mini" style="display:none;">0</span>
+      </p>
       <div class="counters-grid glass reveal" style="transition-delay:80ms;">
         <div class="counter-item">
           <div class="counter-number"><span id="count-creators">0</span><span style="font-size:1.5rem;opacity:0.3;font-weight:400;"> / 100</span></div>
@@ -135,7 +121,7 @@
           <div class="counter-bar"><div class="counter-bar-fill" id="bar-hosts"></div></div>
         </div>
       </div>
-      <p class="counter-caption reveal" style="transition-delay:160ms;">First 100 on each side → lifetime access at launch</p>
+      <p class="counter-caption reveal" style="transition-delay:160ms;" id="live-caption">First 100 on each side → lifetime access at launch</p>
     </div>
   </section>
 

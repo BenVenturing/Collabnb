@@ -85,52 +85,103 @@ async function initCounters() {
   let creators = 0;
   let hosts = 0;
 
-  try {
-    const [creatorRes, hostRes] = await Promise.all([
-      supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'creator'),
-      supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'host'),
-    ]);
-    creators = creatorRes.count ?? 0;
-    hosts = hostRes.count ?? 0;
-  } catch (err) {
-    console.warn('Could not fetch live counts:', err);
+  async function fetchCounts() {
+    try {
+      const [creatorRes, hostRes] = await Promise.all([
+        supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'creator'),
+        supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'host'),
+      ]);
+      creators = creatorRes.count ?? 0;
+      hosts = hostRes.count ?? 0;
+      updateUI();
+    } catch (err) {
+      console.warn('Could not fetch live counts:', err);
+    }
   }
 
-  const creatorEl = document.querySelector('#count-creators');
-  const hostEl = document.querySelector('#count-hosts');
-  const creatorBar = document.querySelector('#bar-creators');
-  const hostBar = document.querySelector('#bar-hosts');
-  const creatorMini = document.querySelector('.count-creators-mini');
-  const hostMini = document.querySelector('.count-hosts-mini');
+  function updateUI() {
+    const creatorEl = document.querySelector('#count-creators');
+    const hostEl = document.querySelector('#count-hosts');
+    const creatorBar = document.querySelector('#bar-creators');
+    const hostBar = document.querySelector('#bar-hosts');
+    const creatorMini = document.querySelectorAll('.count-creators-mini');
+    const hostMini = document.querySelectorAll('.count-hosts-mini');
 
-  if (creatorEl) runCount(creatorEl, creators);
-  if (hostEl) runCount(hostEl, hosts);
+    if (creatorEl) runCount(creatorEl, creators);
+    if (hostEl) runCount(hostEl, hosts);
 
-  if (creatorBar) {
-    setTimeout(() => { creatorBar.style.width = `${Math.min(100, (creators / 100) * 100)}%`; }, 200);
+    if (creatorBar) {
+      setTimeout(() => { creatorBar.style.width = `${Math.min(100, (creators / 100) * 100)}%`; }, 200);
+    }
+    if (hostBar) {
+      setTimeout(() => { hostBar.style.width = `${Math.min(100, (hosts / 100) * 100)}%`; }, 200);
+    }
+
+    // Mini counters on join/home pages
+    creatorMini.forEach(el => el.textContent = creators);
+    hostMini.forEach(el => el.textContent = hosts);
+
+    // Update "Spots Remaining" indicators
+    const spotsLeftMini = document.querySelector('#spots-left-mini');
+    const roleLabelMini = document.querySelector('#role-label-mini');
+    if (spotsLeftMini && roleLabelMini) {
+      const activeBtn = document.querySelector('.role-btn.active');
+      const role = activeBtn ? activeBtn.dataset.role : 'creator';
+      const count = role === 'creator' ? creators : hosts;
+      spotsLeftMini.textContent = Math.max(0, 100 - count);
+      roleLabelMini.textContent = role;
+    }
+
+    // Update combined tally if it exists
+    const combinedTally = document.querySelector('#combined-tally');
+    if (combinedTally) {
+      combinedTally.textContent = `Joined by ${creators} creators & ${hosts} hosts`;
+    }
+
+    // Update live caption
+    const liveCaption = document.querySelector('#live-caption');
+    if (liveCaption) {
+      const total = creators + hosts;
+      liveCaption.textContent = `${total} members on the waitlist · Only ${Math.max(0, 100 - creators)} creator & ${Math.max(0, 100 - hosts)} host spots left`;
+    }
   }
-  if (hostBar) {
-    setTimeout(() => { hostBar.style.width = `${Math.min(100, (hosts / 100) * 100)}%`; }, 200);
-  }
 
-  // Mini counters on join page
-  if (creatorMini) creatorMini.textContent = creators;
-  if (hostMini) hostMini.textContent = hosts;
+  // Initial fetch
+  await fetchCounts();
+
+  // Real-time subscription
+  if (supabase.channel) {
+    supabase
+      .channel('schema-db-changes')
+      .on('postgres_changes', 
+        { event: 'INSERT', schema: 'public', table: 'profiles' }, 
+        (payload) => {
+          if (payload.new.role === 'creator') creators++;
+          if (payload.new.role === 'host') hosts++;
+          updateUI();
+        }
+      )
+      .subscribe();
+  }
 }
 
-// Only run counters when elements are visible
+// Run counters logic
 const counterSection = document.querySelector('.counters-grid');
-if (counterSection) {
-  const cObs = new IntersectionObserver((entries) => {
-    if (entries[0].isIntersecting) {
-      initCounters();
-      cObs.disconnect();
-    }
-  }, { threshold: 0.3 });
-  cObs.observe(counterSection);
-} else {
-  // join page mini counters
-  if (document.querySelector('.count-creators-mini')) initCounters();
+const hasMini = document.querySelector('.count-creators-mini');
+
+if (counterSection || hasMini) {
+  // If we have a counters grid, wait for intersection, otherwise run immediately (join page)
+  if (counterSection) {
+    const cObs = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting) {
+        initCounters();
+        cObs.disconnect();
+      }
+    }, { threshold: 0.1 });
+    cObs.observe(counterSection);
+  } else {
+    initCounters();
+  }
 }
 
 /* --- Countdown timer --- */
@@ -500,8 +551,122 @@ function copyToClipboard(text) {
   }).catch(() => {});
 }
 
+/* --- Listing card stack --- */
+function initListingStack() {
+  const stack = document.getElementById('listing-stack');
+  if (!stack) return;
+
+  const LISTINGS = [
+    {
+      photo: 'https://images.unsplash.com/photo-1587061949409-02df41d5e562?w=800&auto=format&fit=crop',
+      name: 'Glacier Prime Cabin',
+      chips: ['Lake Tahoe, CA', 'Micro', '4 deliverables', '3-night stay'],
+      message: "Hey! I'd love to host you at Glacier Prime Cabin for a 3-night stay — looking for 4 Reels + 1 TikTok.",
+    },
+    {
+      photo: 'https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=800&auto=format&fit=crop',
+      name: 'Mountain View Lodge',
+      chips: ['Aspen, CO', 'Influencer', '3 deliverables', '2-night stay'],
+      message: "Mountain View Lodge has an opening next month — interested in a 2-night content collab?",
+    },
+    {
+      photo: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&auto=format&fit=crop',
+      name: 'Sable House',
+      chips: ['Lisbon, Portugal', 'UGC Pro', '6 deliverables', '4-night stay'],
+      message: "Sable House is looking for creators who love architecture and culture. Is that you?",
+    },
+  ];
+
+  let typingTimer = null;
+
+  const cards = LISTINGS.map((listing, i) => {
+    const el = document.createElement('div');
+    el.className = `lcard pos-${i}`;
+    el.dataset.index = i;
+    el.innerHTML = `
+      <div class="lcard-photo">
+        <img src="${listing.photo}" alt="${listing.name}" loading="${i === 0 ? 'eager' : 'lazy'}" />
+        <div class="lcard-photo-overlay"></div>
+      </div>
+      <div class="lcard-inner">
+        <p class="hero-card-message">&ldquo;<span class="lcard-typing"></span><span class="lcard-cursor">|</span>&rdquo;</p>
+        <div class="hero-card-listing">
+          <div class="hero-card-listing-title">${listing.name}</div>
+          <div class="hero-card-listing-meta">
+            ${listing.chips.map(c => `<span class="hero-card-chip-meta">${c}</span>`).join('')}
+          </div>
+        </div>
+        <div class="hero-card-input">Reply to the host…</div>
+        <div class="hero-card-chips">
+          <button class="hero-card-chip">Accept the collab</button>
+          <button class="hero-card-chip">See more photos</button>
+          <button class="hero-card-chip">Ask a question</button>
+        </div>
+      </div>
+    `;
+    stack.appendChild(el);
+    return el;
+  });
+
+  function getFront() { return cards.find(c => c.classList.contains('pos-0')); }
+
+  function startTyping(index) {
+    clearTimeout(typingTimer);
+    const front = getFront();
+    if (!front) return;
+    const el = front.querySelector('.lcard-typing');
+    if (!el) return;
+    el.textContent = '';
+    const msg = LISTINGS[index].message;
+    let i = 0;
+    function tick() {
+      if (i < msg.length) {
+        el.textContent += msg[i++];
+        typingTimer = setTimeout(tick, 26 + Math.random() * 18);
+      }
+    }
+    setTimeout(tick, 350);
+  }
+
+  function rotate() {
+    const front = getFront();
+    if (!front) return;
+
+    front.classList.add('is-flipping');
+
+    setTimeout(() => {
+      // Snap old front to pos-2 without transition
+      front.style.transition = 'none';
+      front.classList.remove('is-flipping', 'pos-0');
+      front.classList.add('pos-2');
+      const typing = front.querySelector('.lcard-typing');
+      if (typing) typing.textContent = '';
+      front.getBoundingClientRect(); // force reflow
+      front.style.transition = '';
+
+      // Slide remaining cards forward (with transition)
+      cards.forEach(card => {
+        if (card === front) return;
+        if (card.classList.contains('pos-1')) {
+          card.classList.replace('pos-1', 'pos-0');
+        } else if (card.classList.contains('pos-2')) {
+          card.classList.replace('pos-2', 'pos-1');
+        }
+      });
+
+      const newFront = getFront();
+      if (newFront) startTyping(parseInt(newFront.dataset.index));
+    }, 380);
+  }
+
+  startTyping(0);
+  setInterval(rotate, 4200);
+}
+
 // Wire everything up on DOMContentLoaded
 document.addEventListener('DOMContentLoaded', () => {
+  initListingStack();
+
   // Modal open buttons
   document.querySelectorAll('.btn-open-modal').forEach(btn => {
     btn.addEventListener('click', openModal);

@@ -68,7 +68,8 @@
 
       <!-- Mini counter -->
       <p class="join-mini-counter reveal" style="transition-delay:240ms;">
-        <strong><span class="count-creators-mini">0</span> / 100</strong> creator spots remaining
+        <strong><span id="spots-left-mini">100</span> / 100</strong> <span id="role-label-mini">creator</span> spots remaining
+        <span class="count-creators-mini" style="display:none;">0</span>
         <span class="count-hosts-mini" style="display:none;">0</span>
       </p>
 
@@ -385,12 +386,14 @@
         }
       }
       // Update mini counter
-      const mini = document.querySelector('.join-mini-counter');
-      if (mini) {
+      const spotsLeft = document.querySelector('#spots-left-mini');
+      const roleLabel = document.querySelector('#role-label-mini');
+      if (spotsLeft && roleLabel) {
         const cCount = document.querySelector('.count-creators-mini');
         const hCount = document.querySelector('.count-hosts-mini');
-        const count = role === 'creator' ? (cCount ? cCount.textContent : '0') : (hCount ? hCount.textContent : '0');
-        mini.innerHTML = `<strong>${100 - parseInt(count)} / 100</strong> ${role} spots remaining<span class="count-creators-mini" style="display:none;">${cCount ? cCount.textContent : '0'}</span><span class="count-hosts-mini" style="display:none;">${hCount ? hCount.textContent : '0'}</span>`;
+        const val = role === 'creator' ? (cCount ? cCount.textContent : '0') : (hCount ? hCount.textContent : '0');
+        spotsLeft.textContent = 100 - parseInt(val);
+        roleLabel.textContent = role;
       }
       // Pre-select modal role
       if (typeof switchRole === 'function') switchRole(role);

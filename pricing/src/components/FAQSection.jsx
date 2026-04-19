@@ -91,10 +91,10 @@ export default function FAQSection() {
       <div className="text-center mt-14">
         <p className="text-sage text-sm mb-3">Still have a question?</p>
         <a
-          href="mailto:hello@collabnb.co"
+          href="mailto:hellocollabnb@gmail.com"
           className="btn-glass text-sm px-5 py-3"
         >
-          hello@collabnb.co
+          hellocollabnb@gmail.com
         </a>
       </div>
     </section>

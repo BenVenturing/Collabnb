@@ -4,6 +4,8 @@
 
 import { supabase } from './supabase.js';
 
+let signedUpName = '';
+
 /* --- Reveal on scroll (IntersectionObserver) --- */
 const revealObserver = new IntersectionObserver((entries) => {
   entries.forEach((e) => {
@@ -324,11 +326,11 @@ async function handleLogin() {
 async function submitForm() {
   const role = currentRole;
   const data = {};
+  let submitBtn = null;
 
   try {
     if (role === 'creator') {
       data.email = document.querySelector('#c-email')?.value?.trim();
-      data.password = document.querySelector('#c-password')?.value;
       data.full_name = document.querySelector('#c-name')?.value?.trim();
       data.username = document.querySelector('#c-instagram')?.value?.trim() || document.querySelector('#c-tiktok')?.value?.trim();
       data.tier = document.querySelector('#c-tier')?.value;
@@ -337,7 +339,6 @@ async function submitForm() {
       data.beta = document.querySelector('#c-beta')?.checked;
     } else {
       data.email = document.querySelector('#h-email')?.value?.trim();
-      data.password = document.querySelector('#h-password')?.value;
       data.full_name = document.querySelector('#h-name')?.value?.trim();
       data.business_name = document.querySelector('#h-business')?.value?.trim();
       data.property_type = document.querySelector('#h-type')?.value;
@@ -346,23 +347,22 @@ async function submitForm() {
       data.beta = document.querySelector('#h-beta')?.checked;
     }
 
-    // Basic Validation
-    if (!data.email || !data.password || !data.full_name) {
-      throw new Error('Please make sure you have filled out your name, email, and password.');
+    if (!data.email || !data.full_name) {
+      throw new Error('Please fill out your name and email.');
     }
 
-    const submitBtn = document.querySelector(`.wizard-step[data-role="${role}"].active .btn-next`);
+    submitBtn = document.querySelector(`.wizard-step[data-role="${role}"].active .btn-next`);
     if (submitBtn) {
       submitBtn.disabled = true;
       submitBtn.textContent = 'Joining...';
     }
 
-    console.log('Attempting signup for:', data.email, 'as', role);
+    // Waitlist signup — no password needed, email verification handles access
+    const randomPassword = crypto.randomUUID() + crypto.randomUUID();
 
-    // Sign up via Supabase Auth
-    const { data: authData, error: authError } = await supabase.auth.signUp({
+    const { error: authError } = await supabase.auth.signUp({
       email: data.email,
-      password: data.password,
+      password: randomPassword,
       options: {
         data: {
           full_name: data.full_name,
@@ -374,7 +374,8 @@ async function submitForm() {
 
     if (authError) throw authError;
 
-    // Show success state
+    signedUpName = data.full_name.split(' ')[0];
+
     const successEl = document.querySelector('#wizard-success');
     document.querySelectorAll('.wizard-step').forEach(s => s.classList.remove('active'));
     if (successEl) {
@@ -382,17 +383,17 @@ async function submitForm() {
       const bar = document.querySelector('.modal-progress-fill');
       if (bar) bar.style.width = '100%';
 
-      // Update success message based on role
       const successTitle = successEl.querySelector('h3');
       const successDesc = successEl.querySelector('p');
-      if (currentRole === 'creator') {
-        if (successTitle) successTitle.textContent = "You're on the list, creator.";
-        if (successDesc) successDesc.textContent = "We've sent a verification link to your email. Check your inbox to confirm your spot for lifetime access.";
-      } else {
-        if (successTitle) successTitle.textContent = "You're on the list, host.";
-        if (successDesc) successDesc.textContent = "We've sent a verification link to your email. Confirm your email to secure early access for your property.";
+      if (successTitle) successTitle.textContent = `You're on the list, ${signedUpName}.`;
+      if (successDesc) {
+        successDesc.textContent = role === 'creator'
+          ? "We've sent a verification link to your email. Check your inbox to confirm your spot for lifetime access."
+          : "We've sent a verification link to your email. Confirm your email to secure early access for your property.";
       }
     }
+
+    launchConfetti();
 
   } catch (err) {
     console.error('Signup error:', err);
@@ -402,6 +403,74 @@ async function submitForm() {
       submitBtn.textContent = 'Join the Waitlist';
     }
   }
+}
+
+function launchConfetti() {
+  const canvas = document.createElement('canvas');
+  canvas.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;z-index:9999;pointer-events:none;';
+  document.body.appendChild(canvas);
+
+  const ctx = canvas.getContext('2d');
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+
+  const colors = ['#4ecdc4', '#a8e6cf', '#ffd93d', '#ff8c94', '#c8b8ff', '#ffffff', '#7ee8a2'];
+  const pieces = Array.from({ length: 160 }, () => ({
+    x: Math.random() * canvas.width,
+    y: -20 - Math.random() * canvas.height * 0.6,
+    r: 5 + Math.random() * 6,
+    dx: (Math.random() - 0.5) * 2.5,
+    dy: 3 + Math.random() * 5,
+    angle: Math.random() * Math.PI * 2,
+    spin: (Math.random() - 0.5) * 0.18,
+    color: colors[Math.floor(Math.random() * colors.length)],
+    rect: Math.random() > 0.4,
+  }));
+
+  let start = null;
+  const duration = 5000;
+
+  function draw(ts) {
+    if (!start) start = ts;
+    const elapsed = ts - start;
+    const progress = elapsed / duration;
+    const alpha = progress > 0.6 ? 1 - (progress - 0.6) / 0.4 : 1;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.globalAlpha = alpha;
+
+    pieces.forEach(p => {
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.angle);
+      ctx.fillStyle = p.color;
+      if (p.rect) {
+        ctx.fillRect(-p.r, -p.r * 0.4, p.r * 2, p.r * 0.8);
+      } else {
+        ctx.beginPath();
+        ctx.arc(0, 0, p.r * 0.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+
+      p.x += p.dx;
+      p.y += p.dy;
+      p.angle += p.spin;
+
+      if (p.y > canvas.height + 20) {
+        p.y = -20;
+        p.x = Math.random() * canvas.width;
+      }
+    });
+
+    if (elapsed < duration) {
+      requestAnimationFrame(draw);
+    } else {
+      canvas.remove();
+    }
+  }
+
+  requestAnimationFrame(draw);
 }
 
 // Copy to clipboard
@@ -485,14 +554,19 @@ document.addEventListener('DOMContentLoaded', () => {
   // Copy share link
   const copyBtn = document.querySelector('#btn-copy');
   if (copyBtn) {
-    copyBtn.addEventListener('click', () => copyToClipboard('https://collabnb.co'));
+    copyBtn.addEventListener('click', () => copyToClipboard('https://collabnb.vercel.app/index.html'));
   }
 
   // mailto share
   const mailBtn = document.querySelector('#btn-mail');
   if (mailBtn) {
     mailBtn.addEventListener('click', () => {
-      window.location.href = 'mailto:?subject=Join%20Collabnb&body=I%20just%20joined%20the%20Collabnb%20waitlist%20%E2%80%94%20a%20collab%20marketplace%20for%20creators%20and%20boutique%20stays.%20Check%20it%20out%3A%20https%3A%2F%2Fcollabnb.co';
+      const name = signedUpName || 'a friend';
+      const subject = encodeURIComponent('You have to see this — Collabnb');
+      const body = encodeURIComponent(
+        `Hey!\n\nI just joined the Collabnb waitlist — it's a new platform where creators book stays at boutique hotels and BnBs in exchange for content. First 100 creators and hosts get lifetime access, no commissions ever.\n\nThought you'd love it. Grab your spot before they fill up:\nhttps://collabnb.vercel.app/index.html\n\n— ${name}\n\nQuestions? Reach the team: hellocollabnb@gmail.com`
+      );
+      window.location.href = `mailto:?subject=${subject}&body=${body}`;
     });
   }
 });

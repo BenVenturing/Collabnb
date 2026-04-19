@@ -1,6 +1,4 @@
 import { useState, useEffect } from 'react';
-import ConfettiCanvas  from './ConfettiCanvas';
-import SuccessModal    from './SuccessModal';
 import HeroSection     from './HeroSection';
 import PricingCards    from './PricingCards';
 import TierLadder      from './TierLadder';
@@ -13,24 +11,7 @@ import { supabase }    from '../../../scripts/supabase';
 const FOUNDING_TOTAL = 100;
 
 export default function PricingPage() {
-  const [slotsUsed,    setSlotsUsed]    = useState(0);
-  const [showConfetti, setShowConfetti] = useState(false);
-  const [showModal,    setShowModal]    = useState(false);
-  const [user,         setUser]         = useState(null);
-
-  useEffect(() => {
-    // Check current session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-    });
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
+  const [slotsUsed, setSlotsUsed] = useState(0);
 
   // Fetch live creator count from Supabase
   useEffect(() => {
@@ -47,19 +28,10 @@ export default function PricingPage() {
   const isFoundingFull  = spotsRemaining <= 0;
 
   function handleClaim() {
-    if (!user) {
-      // Redirect to signup modal on main site
-      window.location.href = '../index.html?join=true';
-      return;
-    }
-    setShowConfetti(true);
-    setShowModal(true);
-    setTimeout(() => setShowConfetti(false), 4000);
+    window.location.href = '../join.html';
   }
 
-  function handleCloseModal() {
-    setShowModal(false);
-  }
+
 
   return (
     <>
@@ -79,9 +51,6 @@ export default function PricingPage() {
         pointerEvents: 'none',
       }} />
 
-      <ConfettiCanvas active={showConfetti} />
-      <SuccessModal open={showModal} onClose={handleCloseModal} />
-
       {/* ── Nav link back to main site ── */}
       <header className="max-w-7xl mx-auto px-4 md:px-8 pt-6 flex items-center justify-between">
         <a
@@ -91,23 +60,9 @@ export default function PricingPage() {
           <img src="/assets/collabnb-logo.png" alt="" width="28" height="28" />
           <span className="font-display font-bold text-base tracking-tight">Collabnb</span>
         </a>
-        <div className="flex items-center gap-4">
-          {user ? (
-            <div className="flex items-center gap-3">
-              <span className="text-xs text-sage font-medium hidden sm:block">{user.email}</span>
-              <button 
-                onClick={() => supabase.auth.signOut()}
-                className="btn-glass text-xs py-2 px-4"
-              >
-                Sign out
-              </button>
-            </div>
-          ) : (
-            <a href="../join.html" className="btn-ink text-sm py-2.5 px-5">
-              Join the Waitlist
-            </a>
-          )}
-        </div>
+        <a href="../join.html" className="btn-ink text-sm py-2.5 px-5">
+          Join the Waitlist
+        </a>
       </header>
 
       <main>

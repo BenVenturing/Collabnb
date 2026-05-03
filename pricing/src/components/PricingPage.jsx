@@ -48,7 +48,7 @@ export default function PricingPage() {
   const isFoundingFull  = spotsRemaining <= 0;
 
   function handleClaim() {
-    window.location.href = '../join.html';
+    window.location.href = '../join.html?join=true';
   }
 
 

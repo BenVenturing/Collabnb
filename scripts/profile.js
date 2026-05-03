@@ -70,10 +70,10 @@ function renderCreatorProfile(profile) {
     portfolioBtn.style.pointerEvents = 'none';
   }
 
-  // Mock stats (since they aren't in the DB yet)
-  document.getElementById('stat-followers').textContent = '413K';
-  document.getElementById('stat-engagement').textContent = '8.2%';
-  document.getElementById('stat-collabs').textContent = COLLABS_LABELS[profile.recent_collabs]?.split(' ')[0] || '12';
+  // Stats (placeholders for now)
+  document.getElementById('stat-followers').textContent = '—';
+  document.getElementById('stat-engagement').textContent = '—';
+  document.getElementById('stat-collabs').textContent = COLLABS_LABELS[profile.recent_collabs]?.split(' ')[0] || '0';
 
   document.getElementById('creator-profile').hidden = false;
 }

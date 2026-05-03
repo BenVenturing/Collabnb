@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Your Profile — Collabnb</title>
+<meta name="description" content="Your Collabnb profile — manage your account and see your founding member status." />
+<link rel="icon" href="/assets/favicon.png" type="image/png" />
+<link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&f[]=cabinet-grotesk@400,500,700,800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles/main.css" />
+<style>
+  /* ─── Profile page layout ─── */
+  .pf-page {
+    min-height: 100vh;
+    padding-top: 7rem;
+    padding-bottom: 4rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .pf-wrap {
+    width: 100%;
+    max-width: 480px;
+    padding: 0 1.25rem;
+  }
+
+  /* ─── Gate states ─── */
+  .pf-gate {
+    background: #fff;
+    border-radius: 20px;
+    border: 1px solid var(--stone);
+    box-shadow: 0 2px 24px rgba(25,37,36,0.07);
+    padding: 3rem 2rem;
+    text-align: center;
+  }
+
+  .pf-gate-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: var(--mint);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1.5rem;
+    font-size: 1.75rem;
+  }
+
+  .pf-gate-title {
+    font-family: 'Cabinet Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 1.5rem;
+    color: var(--ink);
+    margin-bottom: 0.625rem;
+  }
+
+  .pf-gate-desc {
+    font-size: 0.9375rem;
+    color: var(--slate);
+    line-height: 1.6;
+    margin-bottom: 2rem;
+  }
+
+  .pf-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid var(--stone);
+    border-top-color: var(--slate);
+    border-radius: 50%;
+    animation: pf-spin 0.8s linear infinite;
+    margin: 0 auto 1.5rem;
+  }
+
+  @keyframes pf-spin { to { transform: rotate(360deg); } }
+
+  @keyframes pf-pulse {
+    0%   { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(60,87,89,0.3); }
+    70%  { transform: scale(1);    box-shadow: 0 0 0 12px rgba(60,87,89,0); }
+    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(60,87,89,0); }
+  }
+
+  .pf-pulse { animation: pf-pulse 2.2s ease-in-out infinite; }
+
+  /* ─── Founder banner ─── */
+  .pf-founder-banner {
+    background: linear-gradient(135deg, #FFFBEA 0%, #FFF3CD 100%);
+    border: 1px solid #F0C040;
+    border-radius: 16px;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .pf-founder-banner-icon { font-size: 1.75rem; flex-shrink: 0; }
+
+  .pf-founder-banner-title {
+    font-family: 'Cabinet Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 0.9375rem;
+    color: #7A5800;
+    margin-bottom: 0.2rem;
+  }
+
+  .pf-founder-banner-desc {
+    font-size: 0.8125rem;
+    color: #9A6E00;
+    line-height: 1.45;
+  }
+
+  /* ─── Profile card ─── */
+  .pf-card {
+    background: #fff;
+    border-radius: 20px;
+    border: 1px solid var(--stone);
+    box-shadow: 0 2px 24px rgba(25,37,36,0.07);
+    overflow: hidden;
+  }
+
+  /* Card header */
+  .pf-card-header {
+    padding: 2.5rem 1.5rem 2rem;
+    text-align: center;
+    border-bottom: 1px solid var(--stone);
+    background: linear-gradient(180deg, #FAFAF9 0%, #fff 100%);
+  }
+
+  .pf-avatar {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    background: var(--mint);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1.25rem;
+    font-family: 'Cabinet Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 2rem;
+    color: var(--slate);
+    border: 3px solid #fff;
+    box-shadow: 0 4px 16px rgba(25,37,36,0.12);
+    overflow: hidden;
+    position: relative;
+  }
+
+  .pf-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  /* Subtle step indicator ring on avatar (mimics mobile progress bar) */
+  .pf-avatar::after {
+    content: '';
+    position: absolute;
+    inset: -4px;
+    border-radius: 50%;
+    border: 2px solid var(--mint);
+    opacity: 0.6;
+  }
+
+  .pf-name {
+    font-family: 'Cabinet Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 1.625rem;
+    color: var(--ink);
+    margin-bottom: 0.25rem;
+  }
+
+  .pf-sub {
+    font-size: 0.9375rem;
+    color: var(--sage);
+    margin-bottom: 1rem;
+    min-height: 1.4em;
+  }
+
+  .pf-badges {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: center;
+    flex-wrap: wrap;
+    min-height: 1.75rem;
+  }
+
+  .pf-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.3rem 0.8rem;
+    border-radius: 999px;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  .pf-badge--tier     { background: var(--mint); color: var(--slate); }
+  .pf-badge--founder  { background: #FFF3CD; color: #7A5800; }
+  .pf-badge--beta     { background: var(--stone); color: var(--slate); }
+  .pf-badge--property { background: var(--stone); color: var(--ink); }
+
+  /* Card body rows */
+  .pf-card-body { padding: 0.5rem 0; }
+
+  .pf-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.875rem;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--stone);
+  }
+
+  .pf-row:last-child { border-bottom: none; }
+
+  .pf-row-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background: var(--mint);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.0625rem;
+    flex-shrink: 0;
+  }
+
+  .pf-row-body { flex: 1; padding-top: 0.1rem; }
+
+  .pf-row-label {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: var(--sage);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 0.2rem;
+  }
+
+  .pf-row-value {
+    font-size: 0.9375rem;
+    color: var(--ink);
+    font-weight: 500;
+  }
+
+  .pf-row-value a {
+    color: var(--slate);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    word-break: break-all;
+  }
+
+  /* Sign-out link */
+  .pf-signout {
+    display: block;
+    text-align: center;
+    margin-top: 1.25rem;
+    font-size: 0.875rem;
+    color: var(--sage);
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  .pf-signout:hover { color: var(--slate); }
+
+  /* Progress bar beneath nav — mirrors mobile "Step X of Y" bar */
+  .pf-progress-bar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: var(--stone);
+    z-index: 999;
+  }
+
+  .pf-progress-fill {
+    height: 100%;
+    background: #3C5759;
+    width: 0%;
+    transition: width 0.6s var(--ease-out-expo);
+  }
+
+  [hidden] { display: none !important; }
+
+  @media (max-width: 520px) {
+    .pf-card-header { padding: 2rem 1.25rem 1.5rem; }
+    .pf-row         { padding: 0.875rem 1.25rem; }
+    .pf-gate        { padding: 2.25rem 1.5rem; }
+  }
+</style>
+</head>
+<body>
+
+<a href="#main" class="skip-link">Skip to main content</a>
+
+<!-- Fixed background layers (same as all other pages) -->
+<div aria-hidden="true" class="bg-layers bg-base"></div>
+<div aria-hidden="true" class="bg-layers bg-gradient"></div>
+<div aria-hidden="true" class="bg-layers bg-clouds"></div>
+<div aria-hidden="true" class="bg-grain"></div>
+
+<!-- Profile progress bar (inspired by mobile step indicator) -->
+<div class="pf-progress-bar" aria-hidden="true">
+  <div class="pf-progress-fill" id="pf-progress"></div>
+</div>
+
+<!-- Mobile nav overlay -->
+<div class="nav-overlay glass" aria-label="Mobile navigation" role="dialog" aria-modal="true">
+  <a href="index.html">Home</a>
+  <a href="about.html">About</a>
+  <a href="how-it-works.html">How it works</a>
+  <a href="faq.html">FAQ</a>
+  <a href="pricing/index.html">Pricing</a>
+  <a href="join.html" class="btn-primary">Join the Waitlist</a>
+</div>
+
+<!-- Floating glass nav -->
+<nav class="nav-pill glass" aria-label="Main navigation">
+  <a href="index.html" class="nav-logo" aria-label="Collabnb home">
+    <img src="/assets/collabnb-logo.png" alt="" role="presentation" width="32" height="32" />
+    <span>Collabnb</span>
+  </a>
+  <ul class="nav-links" role="list">
+    <li><a href="index.html">Home</a></li>
+    <li><a href="about.html">About</a></li>
+    <li><a href="how-it-works.html">How it works</a></li>
+    <li><a href="faq.html">FAQ</a></li>
+    <li><a href="pricing/index.html">Pricing</a></li>
+  </ul>
+  <div class="nav-actions" style="display:flex; align-items:center; gap:0.5rem;">
+    <button class="nav-hamburger" aria-label="Open menu" aria-expanded="false" aria-controls="mobile-nav">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+        <line class="line line-1" x1="3" y1="5" x2="17" y2="5"/>
+        <line class="line line-2" x1="3" y1="10" x2="17" y2="10"/>
+        <line class="line line-3" x1="3" y1="15" x2="17" y2="15"/>
+      </svg>
+    </button>
+    <a href="join.html" class="btn-primary" id="nav-cta">Join the Waitlist</a>
+  </div>
+</nav>
+
+<main id="main" class="pf-page">
+  <div class="pf-wrap">
+
+    <!-- ── LOADING ── -->
+    <div id="state-loading" class="pf-gate">
+      <div class="pf-spinner"></div>
+      <p style="font-size:0.9375rem;color:var(--sage);margin:0;">Loading your profile…</p>
+    </div>
+
+    <!-- ── NOT AUTHENTICATED ── -->
+    <div id="state-not-authed" class="pf-gate" hidden>
+      <div class="pf-gate-icon">🔒</div>
+      <h1 class="pf-gate-title">Not signed in</h1>
+      <p class="pf-gate-desc">Join the waitlist to create your Collabnb profile. Once you sign up and confirm your email, your profile will live here.</p>
+      <a href="join.html" class="btn-primary" style="display:inline-block;text-decoration:none;">Join the Waitlist</a>
+    </div>
+
+    <!-- ── EMAIL NOT CONFIRMED ── -->
+    <div id="state-unconfirmed" class="pf-gate" hidden>
+      <div class="pf-gate-icon pf-pulse">✉️</div>
+      <h1 class="pf-gate-title">One more step</h1>
+      <p class="pf-gate-desc">We sent a confirmation link to <strong id="unconfirmed-email"></strong>. Click the link in your inbox to activate your profile and secure your founding spot.</p>
+      <p style="font-size:0.8125rem;color:var(--sage);margin-bottom:0;">Can't find it? Check spam, or <a href="mailto:hellocollabnb@gmail.com" style="color:var(--slate);">contact us</a>.</p>
+    </div>
+
+    <!-- ── ERROR ── -->
+    <div id="state-error" class="pf-gate" hidden>
+      <div class="pf-gate-icon">⚠️</div>
+      <h1 class="pf-gate-title">Something went wrong</h1>
+      <p class="pf-gate-desc">We couldn't load your profile. Try refreshing, or reach out at <a href="mailto:hellocollabnb@gmail.com" style="color:var(--slate);">hellocollabnb@gmail.com</a>.</p>
+      <button onclick="window.location.reload()" class="btn-primary" style="cursor:pointer;">Refresh</button>
+    </div>
+
+    <!-- ── PROFILE CONTENT ── -->
+    <div id="state-profile" hidden>
+
+      <!-- Founder banner — shown only for founding members -->
+      <div id="founder-banner" class="pf-founder-banner" hidden>
+        <div class="pf-founder-banner-icon">⭐</div>
+        <div>
+          <div class="pf-founder-banner-title">Founding Member</div>
+          <div class="pf-founder-banner-desc">You're among the first 100 — lifetime access, zero commissions, forever.</div>
+        </div>
+      </div>
+
+      <!-- ── CREATOR PROFILE CARD ── -->
+      <div id="creator-profile" class="pf-card" hidden>
+        <div class="pf-card-header">
+          <div class="pf-avatar">
+            <span id="creator-initials">?</span>
+          </div>
+          <div class="pf-name" id="creator-name"></div>
+          <div class="pf-sub" id="creator-username"></div>
+          <div class="pf-badges" id="creator-badges"></div>
+        </div>
+        <div class="pf-card-body" id="creator-body"></div>
+      </div>
+
+      <!-- ── HOST PROFILE CARD ── -->
+      <div id="host-profile" class="pf-card" hidden>
+        <div class="pf-card-header">
+          <div class="pf-avatar">
+            <span id="host-initials">?</span>
+          </div>
+          <div class="pf-name" id="host-name"></div>
+          <div class="pf-sub" id="host-location"></div>
+          <div class="pf-badges" id="host-badges"></div>
+        </div>
+        <div class="pf-card-body" id="host-body"></div>
+      </div>
+
+      <button id="btn-signout" class="pf-signout">Sign out</button>
+
+    </div><!-- /state-profile -->
+
+  </div><!-- /pf-wrap -->
+</main>
+
+<script type="module" src="/scripts/profile.js"></script>
+<script type="module" src="/scripts/main.js"></script>
+
+</body>
+</html>

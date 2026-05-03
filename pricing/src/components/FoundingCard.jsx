@@ -53,7 +53,7 @@ export default function FoundingCard({ isFull, spotsRemaining, onClaim }) {
         <p className="text-sm text-slate mt-2">
           {isFull
             ? 'All founding spots have been claimed'
-            : 'For the first 100 creators — forever'}
+            : 'For the first 200 founders — forever'}
         </p>
       </div>
 
@@ -85,8 +85,8 @@ export default function FoundingCard({ isFull, spotsRemaining, onClaim }) {
         <p className={`text-xs mt-3 tabular-nums ${urgency}`}>
           Only{' '}
           <span className="font-semibold">{spotsRemaining}</span>
-          {' '}of 100 spots remaining
-          {spotsRemaining <= 10 && ' — almost gone'}
+          {' '}of 200 total founding spots remaining
+          {spotsRemaining <= 20 && ' — almost gone'}
         </p>
       )}
     </div>

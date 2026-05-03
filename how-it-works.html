@@ -39,14 +39,16 @@
     <li><a href="faq.html">FAQ</a></li>
     <li><a href="pricing/index.html">Pricing</a></li>
   </ul>
-  <a href="join.html" class="btn-primary">Join the Waitlist</a>
-  <button class="nav-hamburger" aria-label="Open menu" aria-expanded="false">
-    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
-      <line class="line line-1" x1="3" y1="5" x2="17" y2="5"/>
-      <line class="line line-2" x1="3" y1="10" x2="17" y2="10"/>
-      <line class="line line-3" x1="3" y1="15" x2="17" y2="15"/>
-    </svg>
-  </button>
+  <div class="nav-actions" style="display:flex; align-items:center; gap:0.5rem;">
+    <button class="nav-hamburger" aria-label="Open menu" aria-expanded="false">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+        <line class="line line-1" x1="3" y1="5" x2="17" y2="5"/>
+        <line class="line line-2" x1="3" y1="10" x2="17" y2="10"/>
+        <line class="line line-3" x1="3" y1="15" x2="17" y2="15"/>
+      </svg>
+    </button>
+    <a href="join.html" class="btn-primary">Join the Waitlist</a>
+  </div>
 </nav>
 
 <main id="main">
@@ -91,7 +93,7 @@
             <div class="step-number">2</div>
             <div class="step-content">
               <h3>Get verified</h3>
-              <p>Our team does a manual review of every creator — checking your content, your niche, and your fit for boutique hospitality collabs. This is how we keep quality high on both sides. The first 100 verified creators get lifetime access to Collabnb at launch.</p>
+              <p>Our team does a manual review of every creator — checking your content, your niche, and your fit for boutique hospitality collabs. This is how we keep quality high on both sides. The first 200 verified creators get lifetime access to Collabnb at launch.</p>
             </div>
           </div>
 
@@ -160,6 +162,32 @@
     </div>
   </section>
 
+  <!-- ── WAITLIST GLOBE ── -->
+  <section class="section globe-section" aria-labelledby="globe-heading">
+    <div class="container" style="text-align:center;">
+      <p class="eyebrow-tag reveal" style="justify-content:center;margin-bottom:1.5rem;">Creators &amp; hosts from around the world</p>
+      <h2 id="globe-heading" class="display reveal" style="font-size:var(--fs-h2);transition-delay:60ms;">A global community,<br>from day one.</h2>
+      <p class="reveal" style="color:var(--slate);font-size:var(--fs-lead);margin-top:1.25rem;max-width:52ch;margin-inline:auto;line-height:1.7;transition-delay:120ms;">See where creators and boutique hosts are joining from. Every dot is someone ready to collab.</p>
+      <div class="globe-container reveal" id="globe-container" style="transition-delay:180ms;">
+        <canvas id="globe-canvas"></canvas>
+      </div>
+      <div class="globe-stats reveal" id="globe-stats" style="transition-delay:240ms;">
+        <div class="globe-stat-pill glass">
+          <span class="globe-stat-dot globe-stat-dot--creator"></span>
+          <span class="globe-stat-label"><strong id="globe-creator-count">—</strong> Creators</span>
+        </div>
+        <div class="globe-stat-pill glass">
+          <span class="globe-stat-dot globe-stat-dot--host"></span>
+          <span class="globe-stat-label"><strong id="globe-host-count">—</strong> Hosts</span>
+        </div>
+        <div class="globe-stat-pill glass">
+          <span class="globe-stat-label"><strong id="globe-city-count">40+</strong> Cities worldwide</span>
+        </div>
+      </div>
+      <p class="globe-hint reveal" style="transition-delay:300ms;">Drag to explore · Hover to pause</p>
+    </div>
+  </section>
+
   <!-- ── WHY COLLABNB ── -->
   <section class="section" aria-labelledby="why-heading">
     <div class="container" style="max-width:700px;margin-inline:auto;text-align:center;">
@@ -211,5 +239,6 @@
 </footer>
 
 <script type="module" src="/scripts/main.js"></script>
+<script type="module" src="/scripts/globe.js"></script>
 </body>
 </html>

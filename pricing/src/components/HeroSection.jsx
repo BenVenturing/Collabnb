@@ -4,7 +4,7 @@ export default function HeroSection({ spotsRemaining, isFoundingFull }) {
       <span className="eyebrow mb-6 inline-flex">
         {isFoundingFull
           ? 'Founding spots are now closed'
-          : `Founding Access · ${spotsRemaining} of 100 spots remaining`}
+          : `Founding Access · ${spotsRemaining} of 200 spots remaining`}
       </span>
 
       <h1 className="font-display text-[clamp(2.75rem,6vw,5rem)] font-extrabold text-ink

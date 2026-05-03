@@ -23,6 +23,9 @@ ALTER TABLE public.profiles
   ADD COLUMN IF NOT EXISTS tier           text,
   ADD COLUMN IF NOT EXISTS recent_collabs text,
   ADD COLUMN IF NOT EXISTS portfolio      text,
+  ADD COLUMN IF NOT EXISTS phone_number   text,
+  ADD COLUMN IF NOT EXISTS instagram_handle text,
+  ADD COLUMN IF NOT EXISTS website_url    text,
   ADD COLUMN IF NOT EXISTS beta           boolean DEFAULT false,
   ADD COLUMN IF NOT EXISTS is_founder     boolean DEFAULT false;
 
@@ -60,7 +63,8 @@ BEGIN
   INSERT INTO public.profiles (
     id, email, role, full_name, username,
     business_name, property_type, city, region,
-    tier, recent_collabs, portfolio, beta, is_founder
+    tier, recent_collabs, portfolio, phone_number,
+    instagram_handle, website_url, beta, is_founder
   ) VALUES (
     new.id,
     new.email,
@@ -74,6 +78,9 @@ BEGIN
     new.raw_user_meta_data->>'tier',
     new.raw_user_meta_data->>'recent_collabs',
     new.raw_user_meta_data->>'portfolio',
+    new.raw_user_meta_data->>'phone_number',
+    new.raw_user_meta_data->>'instagram_handle',
+    new.raw_user_meta_data->>'website_url',
     COALESCE((new.raw_user_meta_data->>'beta')::boolean, false),
     role_count < 100  -- first 100 of each role get is_founder = true
   );

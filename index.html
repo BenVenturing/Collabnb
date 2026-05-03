@@ -42,14 +42,16 @@
     <li><a href="faq.html">FAQ</a></li>
     <li><a href="pricing/index.html">Pricing</a></li>
   </ul>
-  <a href="join.html" class="btn-primary">Join the Waitlist</a>
-  <button class="nav-hamburger" aria-label="Open menu" aria-expanded="false" aria-controls="mobile-nav">
-    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
-      <line class="line line-1" x1="3" y1="5" x2="17" y2="5"/>
-      <line class="line line-2" x1="3" y1="10" x2="17" y2="10"/>
-      <line class="line line-3" x1="3" y1="15" x2="17" y2="15"/>
-    </svg>
-  </button>
+  <div class="nav-actions" style="display:flex; align-items:center; gap:0.5rem;">
+    <button class="nav-hamburger" aria-label="Open menu" aria-expanded="false" aria-controls="mobile-nav">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+        <line class="line line-1" x1="3" y1="5" x2="17" y2="5"/>
+        <line class="line line-2" x1="3" y1="10" x2="17" y2="10"/>
+        <line class="line line-3" x1="3" y1="15" x2="17" y2="15"/>
+      </svg>
+    </button>
+    <a href="join.html" class="btn-primary">Join the Waitlist</a>
+  </div>
 </nav>
 
 <main id="main">
@@ -103,12 +105,8 @@
   <!-- ── LIVE COUNTERS ── -->
   <section class="section" aria-labelledby="counters-heading">
     <div class="container">
-      <p class="eyebrow-tag reveal" style="margin-bottom:2rem;" id="combined-tally">Lifetime access for the first 100 on each side.</p>
-      <p class="join-mini-counter reveal" style="transition-delay:240ms;">
-        <strong><span id="spots-left-mini">100</span> / 100</strong> <span id="role-label-mini">creator</span> spots remaining
-        <span class="count-creators-mini" style="display:none;">0</span>
-        <span class="count-hosts-mini" style="display:none;">0</span>
-      </p>
+      <p class="eyebrow-tag reveal" style="margin-bottom:2rem;" id="combined-tally">Lifetime access for the first 200 founding members.</p>
+
       <div class="counters-grid glass reveal" style="transition-delay:80ms;">
         <div class="counter-item">
           <div class="counter-number"><span id="count-creators">0</span><span style="font-size:1.5rem;opacity:0.3;font-weight:400;"> / 100</span></div>
@@ -121,7 +119,7 @@
           <div class="counter-bar"><div class="counter-bar-fill" id="bar-hosts"></div></div>
         </div>
       </div>
-      <p class="counter-caption reveal" style="transition-delay:160ms;" id="live-caption">First 100 on each side → lifetime access at launch</p>
+      <p class="counter-caption reveal" style="transition-delay:160ms;" id="live-caption">First 200 total members → lifetime access at launch</p>
     </div>
   </section>
 
@@ -435,6 +433,16 @@
       <div class="form-group">
         <label class="form-label" for="c-instagram">Instagram handle</label>
         <input class="form-input" type="text" id="c-instagram" name="c-instagram" placeholder="@yourhandle" autocomplete="off" />
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="c-city">Your city <span style="color:var(--sage);font-weight:400;">(optional)</span></label>
+          <input class="form-input" type="text" id="c-city" name="c-city" placeholder="e.g. Bali" autocomplete="address-level2" />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="c-country">Country <span style="color:var(--sage);font-weight:400;">(optional)</span></label>
+          <input class="form-input" type="text" id="c-country" name="c-country" placeholder="e.g. Indonesia" autocomplete="country-name" />
+        </div>
       </div>
       <div class="wizard-nav">
         <button class="wizard-back btn-back">← Back</button>

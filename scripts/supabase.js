@@ -19,17 +19,22 @@ if (isConfigured) {
 export const supabase = supabaseInstance || {
   auth: {
     getSession: async () => ({ data: { session: null }, error: null }),
-    onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
+    getUser:    async () => ({ data: { user: null }, error: null }),
+    onAuthStateChange: (cb) => {
+      cb('INITIAL_SESSION', null);
+      return { data: { subscription: { unsubscribe: () => {} } } };
+    },
     signUp: async () => ({ data: null, error: { message: 'Supabase not configured. Please add your credentials to .env' } }),
     signInWithPassword: async () => ({ data: null, error: { message: 'Supabase not configured.' } }),
     signOut: async () => ({ error: null }),
   },
   from: () => ({
     select: () => ({
-      eq: () => ({ 
-        count: 'exact', 
+      eq: () => ({
+        count: 'exact',
         head: true,
-        then: async (cb) => cb({ count: 0, error: null }) 
+        single: async () => ({ data: null, error: null }),
+        then: async (cb) => cb({ count: 0, error: null }),
       })
     })
   })

@@ -65,6 +65,7 @@ export default defineConfig(({ mode }) => {
           how: resolve(__dirname, 'how-it-works.html'),
           faq: resolve(__dirname, 'faq.html'),
           join: resolve(__dirname, 'join.html'),
+          profile: resolve(__dirname, 'profile.html'),
           pricing: resolve(__dirname, 'pricing/index.html'),
         },
       },

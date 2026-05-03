@@ -39,14 +39,16 @@
     <li><a href="faq.html">FAQ</a></li>
     <li><a href="pricing/index.html">Pricing</a></li>
   </ul>
-  <a href="join.html" class="btn-primary">Join the Waitlist</a>
-  <button class="nav-hamburger" aria-label="Open menu" aria-expanded="false">
-    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
-      <line class="line line-1" x1="3" y1="5" x2="17" y2="5"/>
-      <line class="line line-2" x1="3" y1="10" x2="17" y2="10"/>
-      <line class="line line-3" x1="3" y1="15" x2="17" y2="15"/>
-    </svg>
-  </button>
+  <div class="nav-actions" style="display:flex; align-items:center; gap:0.5rem;">
+    <button class="nav-hamburger" aria-label="Open menu" aria-expanded="false">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+        <line class="line line-1" x1="3" y1="5" x2="17" y2="5"/>
+        <line class="line line-2" x1="3" y1="10" x2="17" y2="10"/>
+        <line class="line line-3" x1="3" y1="15" x2="17" y2="15"/>
+      </svg>
+    </button>
+    <a href="join.html" class="btn-primary">Join the Waitlist</a>
+  </div>
 </nav>
 
 <main id="main">
@@ -66,7 +68,86 @@
       <div class="about-story reveal">
         <p id="story-heading">The collab economy already exists — it's just scattered across DMs, email threads, and half-baked spreadsheets. A boutique BnB in the Catskills wants a TikTok creator who fits their vibe. A UGC filmmaker in Bali wants a stay that's worth the content. Both sides know the deal they want. What they're missing is the marketplace to find each other.</p>
         <p>Collabnb is that marketplace. We built it because the middle layer — discovery, agreement, trust, and follow-through — was missing. Not a travel platform. Not an influencer agency. A direct collab infrastructure for the boutique end of hospitality and the creator end of travel.</p>
-        <p>We're starting with a waitlist because the first 100 creators and 100 hosts will shape what this platform becomes. If you're early, you're in for life.</p>
+        <p>We're starting with a waitlist because the first 200 creators and 200 hosts will shape what this platform becomes. If you're early, you're in for life.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── PHONE MOCKUP ── -->
+  <section class="section phone-mockup-section" aria-label="App preview">
+    <div class="container">
+      <div class="mockup-container reveal">
+        <!-- Glow effect -->
+        <div class="mockup-glow" aria-hidden="true"></div>
+        
+        <!-- Stationary Social Proof Review Cards (Background) -->
+        <div class="social-proof-icons" aria-hidden="true">
+
+          <!-- Sophia Martinez -->
+          <div class="proof-card pos-top-left review-glass">
+            <div class="rc-header">
+              <div class="rc-avatar">
+                <img src="assets/avatar-sophia.png" alt="Sophia Martinez" onerror="this.parentElement.innerHTML='SM'">
+              </div>
+              <div class="rc-meta">
+                <div class="rc-stars">★★★★<span class="rc-star-empty">★</span></div>
+                <div class="rc-name">Sophia Martinez</div>
+              </div>
+            </div>
+            <p class="rc-text">Great first collaboration! Sophia's cozy aesthetic matched our brand perfectly.</p>
+            <div class="rc-property">Coastal Cottage</div>
+          </div>
+
+          <!-- Marcus Chen -->
+          <div class="proof-card pos-bottom-left review-glass">
+            <div class="rc-header">
+              <div class="rc-avatar">
+                <img src="assets/avatar-marcus.png" alt="Marcus Chen" onerror="this.parentElement.innerHTML='MC'">
+              </div>
+              <div class="rc-meta">
+                <div class="rc-stars">★★★★★</div>
+                <div class="rc-name">Marcus Chen</div>
+              </div>
+            </div>
+            <p class="rc-text">Marcus's adventure-focused content was exactly what we needed.</p>
+            <div class="rc-property">Desert Oasis Villa</div>
+          </div>
+
+          <!-- Emma Rodriguez -->
+          <div class="proof-card pos-top-right review-glass">
+            <div class="rc-header">
+              <div class="rc-avatar rc-avatar-initials">ER</div>
+              <div class="rc-meta">
+                <div class="rc-stars">★★★★★</div>
+                <div class="rc-name">Emma Rodriguez</div>
+              </div>
+            </div>
+            <p class="rc-text">Emma delivered incredible content! Her photos captured the cabin's coz...</p>
+            <div class="rc-property">Mountain View Lodge</div>
+          </div>
+
+        </div>
+        
+        <!-- Phone Frame -->
+        <div class="phone-frame">
+          <div class="phone-island"></div>
+          
+          <!-- Revolving Screenshots -->
+          <div class="phone-screen" id="mockup-carousel">
+            <img src="assets/screenshot-1.png" alt="Treehouse Suite Screenshot" class="carousel-img active" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'400\' height=\'800\'><rect width=\'100%\' height=\'100%\' fill=\'%23d1ebdb\'/><text x=\'50%\' y=\'50%\' font-family=\'sans-serif\' font-size=\'24\' text-anchor=\'middle\' fill=\'%233c5759\'>Treehouse Suite</text></svg>'">
+            <img src="assets/screenshot-2.png" alt="Discover Creators Screenshot" class="carousel-img" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'400\' height=\'800\'><rect width=\'100%\' height=\'100%\' fill=\'%23efece9\'/><text x=\'50%\' y=\'50%\' font-family=\'sans-serif\' font-size=\'24\' text-anchor=\'middle\' fill=\'%233c5759\'>Discover Creators</text></svg>'">
+            <img src="assets/screenshot-3.png" alt="Host Profile Screenshot" class="carousel-img" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'400\' height=\'800\'><rect width=\'100%\' height=\'100%\' fill=\'%23d0d5ce\'/><text x=\'50%\' y=\'50%\' font-family=\'sans-serif\' font-size=\'24\' text-anchor=\'middle\' fill=\'%233c5759\'>Host Profile</text></svg>'">
+            <img src="assets/screenshot-4.png" alt="Main Listing Screenshot" class="carousel-img" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'400\' height=\'800\'><rect width=\'100%\' height=\'100%\' fill=\'%23ffffff\'/><text x=\'50%\' y=\'50%\' font-family=\'sans-serif\' font-size=\'24\' text-anchor=\'middle\' fill=\'%233c5759\'>Main Listings</text></svg>'">
+          </div>
+        </div>
+      </div>
+      
+      <div class="mockup-copy reveal text-center">
+        <h3 class="display">From boutique hotels to unique stays</h3>
+        <p>Swipe, match, and stay. The easiest way for creators and hosts to collaborate.</p>
+        <div class="hero-ctas justify-center">
+          <a href="join.html" class="btn-primary">Join the Waitlist</a>
+        </div>
       </div>
     </div>
   </section>
@@ -162,7 +243,7 @@
   <section class="final-cta" aria-label="Call to action">
     <div class="container">
       <p class="eyebrow-tag reveal" style="justify-content:center;margin-bottom:1.5rem;">Ready to collab?</p>
-      <h2 class="display reveal" style="font-size:var(--fs-h2);transition-delay:60ms;">Join before the<br>first 100 fill up.</h2>
+      <h2 class="display reveal" style="font-size:var(--fs-h2);transition-delay:60ms;">Join before the<br>first 200 fill up.</h2>
       <div class="hero-ctas reveal" style="justify-content:center;transition-delay:120ms;">
         <a href="join.html" class="btn-primary">Join the Waitlist</a>
         <a href="how-it-works.html" class="btn-glass">See how it works</a>

@@ -8,7 +8,7 @@ import FAQSection      from './FAQSection';
 import TermsNote       from './TermsNote';
 import { supabase }    from '../../../scripts/supabase';
 
-const FOUNDING_TOTAL = 100;
+const FOUNDING_TOTAL = 200;
 
 export default function PricingPage() {
   const [creatorCount, setCreatorCount] = useState(0);
@@ -42,7 +42,8 @@ export default function PricingPage() {
     };
   }, []);
 
-  const spotsRemaining = Math.max(0, FOUNDING_TOTAL - creatorCount);
+  const totalJoined = creatorCount + hostCount;
+  const spotsRemaining = Math.max(0, FOUNDING_TOTAL - totalJoined);
   const isFoundingFull  = spotsRemaining <= 0;
 
   function handleClaim() {
@@ -61,7 +62,7 @@ export default function PricingPage() {
           href="../index.html"
           className="flex items-center gap-2 text-ink no-underline hover:opacity-60 transition-opacity"
         >
-          <img src="/assets/collabnb-logo.png" alt="" width="28" height="28" />
+          <img src="../assets/collabnb-logo.png" alt="" width="28" height="28" />
           <span className="font-display font-bold text-base tracking-tight">Collabnb</span>
         </a>
         

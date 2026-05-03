@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 
 const TIERS = [
-  { range: 'First 100',  price: 'Free',  label: 'Founding Access',    active: true  },
+  { range: 'First 200',  price: 'Free',  label: 'Founding Access',    active: true  },
   { range: 'Next 50',   price: '$100',  label: 'Early Adopter',       active: false },
   { range: 'Next 50',   price: '$125',  label: 'Community',           active: false },
   { range: 'Next 50',   price: '$150',  label: 'Community',           active: false },

@@ -53,26 +53,28 @@ function renderCreatorProfile(profile) {
   document.getElementById('creator-initials').textContent = initials;
   document.getElementById('creator-name').textContent = profile.full_name || 'Creator';
 
-  const usernameEl = document.getElementById('creator-username');
-  usernameEl.textContent = profile.username ? `@${profile.username}` : '';
+  // Handle & Tier
+  const handleEl = document.getElementById('creator-handle');
+  handleEl.textContent = profile.instagram_handle ? `@${profile.instagram_handle.replace('@', '')}` : (profile.username ? `@${profile.username}` : '');
+  
+  const tierEl = document.getElementById('creator-tier-label');
+  tierEl.textContent = TIER_LABELS[profile.tier] || profile.tier || 'Creator';
 
-  const badgesEl = document.getElementById('creator-badges');
-  let badgeHtml = '';
-  if (profile.tier) badgeHtml += badge('tier', TIER_LABELS[profile.tier] || profile.tier);
-  if (profile.is_founder) badgeHtml += badge('founder', '⭐ Founding Creator');
-  if (profile.beta) badgeHtml += badge('beta', '🧪 Beta Tester');
-  badgesEl.innerHTML = badgeHtml;
-
-  const rows = [];
-  if (profile.portfolio) {
-    const display = profile.portfolio.replace(/^https?:\/\//, '');
-    rows.push(profileRow('🔗', 'Portfolio', `<a href="${profile.portfolio}" target="_blank" rel="noopener">${display}</a>`));
+  // Portfolio
+  const portfolioBtn = document.getElementById('creator-portfolio-btn');
+  if (profile.website_url || profile.portfolio) {
+    portfolioBtn.href = profile.website_url || profile.portfolio;
+    portfolioBtn.hidden = false;
+  } else {
+    portfolioBtn.style.opacity = '0.5';
+    portfolioBtn.style.pointerEvents = 'none';
   }
-  const collabsText = COLLABS_LABELS[profile.recent_collabs];
-  if (collabsText) rows.push(profileRow('🤝', 'Recent Collabs', collabsText));
-  rows.push(profileRow('📅', 'Member Since', formatDate(profile.created_at)));
 
-  document.getElementById('creator-body').innerHTML = rows.join('');
+  // Mock stats (since they aren't in the DB yet)
+  document.getElementById('stat-followers').textContent = '413K';
+  document.getElementById('stat-engagement').textContent = '8.2%';
+  document.getElementById('stat-collabs').textContent = COLLABS_LABELS[profile.recent_collabs]?.split(' ')[0] || '12';
+
   document.getElementById('creator-profile').hidden = false;
 }
 
@@ -81,25 +83,22 @@ function renderHostProfile(profile) {
   document.getElementById('host-initials').textContent = initials;
   document.getElementById('host-name').textContent = profile.business_name || profile.full_name || 'Host';
 
+  // Property Type
+  const typeEl = document.getElementById('host-property-label');
+  typeEl.textContent = profile.property_type || 'Boutique Stay';
+
+  // Location
   const locationEl = document.getElementById('host-location');
   const loc = [profile.city, profile.region].filter(Boolean).join(', ');
-  locationEl.textContent = loc ? `📍 ${loc}` : '';
-
-  const badgesEl = document.getElementById('host-badges');
-  let badgeHtml = '';
-  if (profile.property_type) badgeHtml += badge('property', profile.property_type);
-  if (profile.is_founder) badgeHtml += badge('founder', '⭐ Founding Host');
-  if (profile.beta) badgeHtml += badge('beta', '🧪 Beta Tester');
-  badgesEl.innerHTML = badgeHtml;
-
-  const rows = [];
-  if (profile.full_name && profile.full_name !== profile.business_name) {
-    rows.push(profileRow('👤', 'Host Name', profile.full_name));
+  if (loc) {
+    locationEl.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="margin-right:4px;vertical-align:middle;"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"></path></svg> ${loc}`;
+  } else {
+    locationEl.textContent = 'Location not set';
   }
-  if (loc) rows.push(profileRow('🌍', 'Location', loc));
-  rows.push(profileRow('📅', 'Member Since', formatDate(profile.created_at)));
 
-  document.getElementById('host-body').innerHTML = rows.join('');
+  // Action buttons
+  // (In a real app, these would link to specific routes)
+
   document.getElementById('host-profile').hidden = false;
 }
 

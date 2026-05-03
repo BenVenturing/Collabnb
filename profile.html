@@ -28,44 +28,44 @@
   /* ─── Gate states ─── */
   .pf-gate {
     background: #fff;
-    border-radius: 20px;
+    border-radius: 24px;
     border: 1px solid var(--stone);
-    box-shadow: 0 2px 24px rgba(25,37,36,0.07);
-    padding: 3rem 2rem;
+    box-shadow: 0 4px 32px rgba(25,37,36,0.08);
+    padding: 3.5rem 2rem;
     text-align: center;
   }
 
   .pf-gate-icon {
-    width: 64px;
-    height: 64px;
+    width: 72px;
+    height: 72px;
     border-radius: 50%;
     background: var(--mint);
     display: flex;
     align-items: center;
     justify-content: center;
     margin: 0 auto 1.5rem;
-    font-size: 1.75rem;
+    font-size: 2rem;
   }
 
   .pf-gate-title {
     font-family: 'Cabinet Grotesk', sans-serif;
     font-weight: 700;
-    font-size: 1.5rem;
+    font-size: 1.75rem;
     color: var(--ink);
-    margin-bottom: 0.625rem;
+    margin-bottom: 0.75rem;
   }
 
   .pf-gate-desc {
-    font-size: 0.9375rem;
+    font-size: 1rem;
     color: var(--slate);
     line-height: 1.6;
-    margin-bottom: 2rem;
+    margin-bottom: 2.5rem;
   }
 
   .pf-spinner {
-    width: 40px;
-    height: 40px;
-    border: 3px solid var(--stone);
+    width: 44px;
+    height: 44px;
+    border: 3.5px solid var(--stone);
     border-top-color: var(--slate);
     border-radius: 50%;
     animation: pf-spin 0.8s linear infinite;
@@ -74,187 +74,288 @@
 
   @keyframes pf-spin { to { transform: rotate(360deg); } }
 
-  @keyframes pf-pulse {
-    0%   { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(60,87,89,0.3); }
-    70%  { transform: scale(1);    box-shadow: 0 0 0 12px rgba(60,87,89,0); }
-    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(60,87,89,0); }
-  }
-
-  .pf-pulse { animation: pf-pulse 2.2s ease-in-out infinite; }
-
   /* ─── Founder banner ─── */
   .pf-founder-banner {
-    background: linear-gradient(135deg, #FFFBEA 0%, #FFF3CD 100%);
-    border: 1px solid #F0C040;
-    border-radius: 16px;
+    background: rgba(255, 243, 205, 0.4);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(240, 192, 64, 0.5);
+    border-radius: 20px;
     padding: 1.25rem 1.5rem;
     margin-bottom: 1rem;
     display: flex;
     align-items: center;
-    gap: 1rem;
+    gap: 1.25rem;
   }
 
-  .pf-founder-banner-icon { font-size: 1.75rem; flex-shrink: 0; }
+  .pf-founder-banner-icon { font-size: 2rem; flex-shrink: 0; }
 
   .pf-founder-banner-title {
     font-family: 'Cabinet Grotesk', sans-serif;
     font-weight: 700;
-    font-size: 0.9375rem;
+    font-size: 1rem;
     color: #7A5800;
     margin-bottom: 0.2rem;
   }
 
   .pf-founder-banner-desc {
-    font-size: 0.8125rem;
+    font-size: 0.875rem;
     color: #9A6E00;
-    line-height: 1.45;
+    line-height: 1.5;
   }
 
-  /* ─── Profile card ─── */
+  /* ─── Profile Card (App Style) ─── */
   .pf-card {
-    background: #fff;
-    border-radius: 20px;
-    border: 1px solid var(--stone);
-    box-shadow: 0 2px 24px rgba(25,37,36,0.07);
-    overflow: hidden;
-  }
-
-  /* Card header */
-  .pf-card-header {
-    padding: 2.5rem 1.5rem 2rem;
-    text-align: center;
-    border-bottom: 1px solid var(--stone);
-    background: linear-gradient(180deg, #FAFAF9 0%, #fff 100%);
-  }
-
-  .pf-avatar {
-    width: 100px;
-    height: 100px;
-    border-radius: 50%;
-    background: var(--mint);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 0 auto 1.25rem;
-    font-family: 'Cabinet Grotesk', sans-serif;
-    font-weight: 700;
-    font-size: 2rem;
-    color: var(--slate);
-    border: 3px solid #fff;
-    box-shadow: 0 4px 16px rgba(25,37,36,0.12);
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(20px);
+    border-radius: 32px;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    box-shadow: 
+      0 4px 24px rgba(25, 37, 36, 0.05),
+      0 20px 48px rgba(25, 37, 36, 0.08);
     overflow: hidden;
     position: relative;
   }
 
-  .pf-avatar img {
+  /* Cover photo */
+  .pf-cover {
+    height: 200px;
+    width: 100%;
+    background: #f0f0f0;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .pf-cover img {
     width: 100%;
     height: 100%;
     object-fit: cover;
   }
 
-  /* Subtle step indicator ring on avatar (mimics mobile progress bar) */
-  .pf-avatar::after {
-    content: '';
+  /* Settings icon */
+  .pf-settings-btn {
     position: absolute;
-    inset: -4px;
+    top: 1.25rem;
+    right: 1.25rem;
+    width: 40px;
+    height: 40px;
     border-radius: 50%;
-    border: 2px solid var(--mint);
-    opacity: 0.6;
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    cursor: pointer;
+    color: var(--slate);
+    z-index: 10;
+    transition: transform 0.2s;
+  }
+  .pf-settings-btn:hover { transform: scale(1.1); }
+
+  /* Card Content */
+  .pf-card-content {
+    padding: 0 1.5rem 2.5rem;
+    position: relative;
+  }
+
+  .pf-avatar-overlap {
+    width: 110px;
+    height: 110px;
+    border-radius: 28px;
+    background: var(--mint);
+    border: 6px solid #fff;
+    box-shadow: 0 8px 24px rgba(25,37,36,0.1);
+    margin-top: -55px;
+    margin-left: 0;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Cabinet Grotesk', sans-serif;
+    font-weight: 800;
+    font-size: 2.25rem;
+    color: var(--slate);
+    z-index: 5;
+    margin-bottom: 1.25rem;
+  }
+
+  .pf-avatar-overlap img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .pf-header-info {
+    margin-bottom: 1.5rem;
+  }
+
+  .pf-title-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.25rem;
   }
 
   .pf-name {
     font-family: 'Cabinet Grotesk', sans-serif;
-    font-weight: 700;
-    font-size: 1.625rem;
+    font-weight: 800;
+    font-size: 1.875rem;
     color: var(--ink);
-    margin-bottom: 0.25rem;
+    letter-spacing: -0.02em;
   }
 
-  .pf-sub {
-    font-size: 0.9375rem;
-    color: var(--sage);
-    margin-bottom: 1rem;
-    min-height: 1.4em;
-  }
-
-  .pf-badges {
-    display: flex;
-    gap: 0.5rem;
-    justify-content: center;
-    flex-wrap: wrap;
-    min-height: 1.75rem;
-  }
-
-  .pf-badge {
+  .pf-verified {
     display: inline-flex;
     align-items: center;
     gap: 0.25rem;
-    padding: 0.3rem 0.8rem;
-    border-radius: 999px;
-    font-size: 0.8125rem;
+    padding: 0.25rem 0.65rem;
+    background: #eef9f2;
+    color: #27ae60;
+    border-radius: 99px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+  }
+
+  .pf-subtitle {
+    font-size: 1.0625rem;
+    color: var(--slate);
     font-weight: 500;
-    white-space: nowrap;
+    margin-bottom: 0.5rem;
   }
 
-  .pf-badge--tier     { background: var(--mint); color: var(--slate); }
-  .pf-badge--founder  { background: #FFF3CD; color: #7A5800; }
-  .pf-badge--beta     { background: var(--stone); color: var(--slate); }
-  .pf-badge--property { background: var(--stone); color: var(--ink); }
-
-  /* Card body rows */
-  .pf-card-body { padding: 0.5rem 0; }
-
-  .pf-row {
+  .pf-location {
     display: flex;
-    align-items: flex-start;
-    gap: 0.875rem;
-    padding: 1rem 1.5rem;
-    border-bottom: 1px solid var(--stone);
+    align-items: center;
+    gap: 0.35rem;
+    color: var(--sage);
+    font-size: 0.9375rem;
+    font-weight: 500;
   }
 
-  .pf-row:last-child { border-bottom: none; }
+  .pf-location svg { color: #e74c3c; }
 
-  .pf-row-icon {
-    width: 38px;
-    height: 38px;
-    border-radius: 10px;
+  /* Bio */
+  .pf-bio {
+    font-size: 1rem;
+    color: var(--ink);
+    line-height: 1.6;
+    margin-bottom: 1.5rem;
+  }
+  .pf-bio-more {
+    color: var(--slate);
+    font-weight: 600;
+    text-decoration: underline;
+    cursor: pointer;
+    font-size: 0.875rem;
+    margin-left: 0.25rem;
+  }
+
+  /* Action Buttons */
+  .pf-actions {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.75rem;
+    margin-bottom: 2rem;
+  }
+
+  .pf-action-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 1rem 0.5rem;
+    background: #fff;
+    border: 1px solid var(--stone);
+    border-radius: 20px;
+    text-decoration: none;
+    transition: all 0.2s;
+  }
+  .pf-action-btn:hover {
     background: var(--mint);
+    border-color: var(--mint);
+    transform: translateY(-2px);
+  }
+
+  .pf-action-icon {
+    width: 32px;
+    height: 32px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.0625rem;
-    flex-shrink: 0;
+    font-size: 1.25rem;
   }
 
-  .pf-row-body { flex: 1; padding-top: 0.1rem; }
+  .pf-action-label {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--ink);
+  }
 
-  .pf-row-label {
-    font-size: 0.6875rem;
+  /* Stats Grid */
+  .pf-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    background: rgba(255, 255, 255, 0.5);
+    border: 1px solid var(--stone);
+    border-radius: 24px;
+    padding: 1.5rem 0.5rem;
+    text-align: center;
+    position: relative;
+  }
+
+  .pf-stat-item {
+    position: relative;
+  }
+  .pf-stat-item:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 15%;
+    height: 70%;
+    width: 1px;
+    background: var(--stone);
+  }
+
+  .pf-stat-value {
+    display: block;
+    font-family: 'Cabinet Grotesk', sans-serif;
+    font-weight: 800;
+    font-size: 1.5rem;
+    color: var(--ink);
+    margin-bottom: 0.15rem;
+  }
+
+  .pf-stat-label {
+    display: block;
+    font-size: 0.75rem;
     font-weight: 600;
     color: var(--sage);
     text-transform: uppercase;
-    letter-spacing: 0.06em;
-    margin-bottom: 0.2rem;
+    letter-spacing: 0.05em;
   }
 
-  .pf-row-value {
-    font-size: 0.9375rem;
-    color: var(--ink);
-    font-weight: 500;
-  }
-
-  .pf-row-value a {
-    color: var(--slate);
-    text-decoration: underline;
-    text-underline-offset: 2px;
-    word-break: break-all;
+  .pf-update-tag {
+    position: absolute;
+    bottom: -1.75rem;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-size: 0.75rem;
+    color: var(--sage);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
   }
 
   /* Sign-out link */
   .pf-signout {
     display: block;
     text-align: center;
-    margin-top: 1.25rem;
+    margin-top: 3.5rem;
     font-size: 0.875rem;
     color: var(--sage);
     background: none;
@@ -263,10 +364,9 @@
     text-decoration: underline;
     text-underline-offset: 2px;
   }
-
   .pf-signout:hover { color: var(--slate); }
 
-  /* Progress bar beneath nav — mirrors mobile "Step X of Y" bar */
+  /* Progress bar beneath nav */
   .pf-progress-bar {
     position: fixed;
     top: 0;
@@ -287,9 +387,10 @@
   [hidden] { display: none !important; }
 
   @media (max-width: 520px) {
-    .pf-card-header { padding: 2rem 1.25rem 1.5rem; }
-    .pf-row         { padding: 0.875rem 1.25rem; }
-    .pf-gate        { padding: 2.25rem 1.5rem; }
+    .pf-card-content { padding: 0 1.25rem 2rem; }
+    .pf-cover { height: 160px; }
+    .pf-name { font-size: 1.625rem; }
+    .pf-avatar-overlap { width: 90px; height: 90px; margin-top: -45px; font-size: 1.75rem; }
   }
 </style>
 </head>
@@ -321,7 +422,7 @@
 <!-- Floating glass nav -->
 <nav class="nav-pill glass" aria-label="Main navigation">
   <a href="index.html" class="nav-logo" aria-label="Collabnb home">
-    <img src="/assets/collabnb-logo.png" alt="" role="presentation" width="32" height="32" />
+    <img src="assets/collabnb-logo.webp" alt="" role="presentation" width="32" height="32" />
     <span>Collabnb</span>
   </a>
   <ul class="nav-links" role="list">
@@ -390,28 +491,137 @@
 
       <!-- ── CREATOR PROFILE CARD ── -->
       <div id="creator-profile" class="pf-card" hidden>
-        <div class="pf-card-header">
-          <div class="pf-avatar">
+        <div class="pf-cover">
+          <img src="https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&q=80&w=1200" alt="Cover photo" id="creator-cover-img">
+          <button class="pf-settings-btn" aria-label="Settings">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+          </button>
+        </div>
+        <div class="pf-card-content">
+          <div class="pf-avatar-overlap" id="creator-avatar">
             <span id="creator-initials">?</span>
           </div>
-          <div class="pf-name" id="creator-name"></div>
-          <div class="pf-sub" id="creator-username"></div>
-          <div class="pf-badges" id="creator-badges"></div>
+          
+          <div class="pf-header-info">
+            <div class="pf-title-row">
+              <h1 class="pf-name" id="creator-name"></h1>
+              <span class="pf-verified">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"></path></svg>
+                Verified
+              </span>
+            </div>
+            <div class="pf-subtitle" id="creator-tier-label">Creator</div>
+            <div class="pf-location" id="creator-handle">
+              @username
+            </div>
+          </div>
+
+          <div class="pf-bio" id="creator-bio">
+            Travel & lifestyle creator documenting unique stays and hidden gems around the world. Passionate about authentic content that inspires people to explore.
+          </div>
+
+          <div class="pf-actions">
+            <a href="#" class="pf-action-btn" id="creator-msg-btn">
+              <div class="pf-action-icon">💬</div>
+              <div class="pf-action-label">Message</div>
+            </a>
+            <a href="#" target="_blank" class="pf-action-btn" id="creator-portfolio-btn">
+              <div class="pf-action-icon">🔗</div>
+              <div class="pf-action-label">Portfolio</div>
+            </a>
+            <a href="#" class="pf-action-btn">
+              <div class="pf-action-icon">📍</div>
+              <div class="pf-action-label">Location</div>
+            </a>
+          </div>
+
+          <div class="pf-stats-grid">
+            <div class="pf-stat-item">
+              <span class="pf-stat-value" id="stat-followers">413K</span>
+              <span class="pf-stat-label">Followers</span>
+            </div>
+            <div class="pf-stat-item">
+              <span class="pf-stat-value" id="stat-engagement">8.2%</span>
+              <span class="pf-stat-label">Engagement</span>
+            </div>
+            <div class="pf-stat-item">
+              <span class="pf-stat-value" id="stat-collabs">47</span>
+              <span class="pf-stat-label">Collabs</span>
+            </div>
+            <div class="pf-update-tag">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+              Updated just now
+            </div>
+          </div>
         </div>
-        <div class="pf-card-body" id="creator-body"></div>
       </div>
 
       <!-- ── HOST PROFILE CARD ── -->
       <div id="host-profile" class="pf-card" hidden>
-        <div class="pf-card-header">
-          <div class="pf-avatar">
+        <div class="pf-cover">
+          <img src="https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?auto=format&fit=crop&q=80&w=1200" alt="Cover photo" id="host-cover-img">
+          <button class="pf-settings-btn" aria-label="Settings">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+          </button>
+        </div>
+        <div class="pf-card-content">
+          <div class="pf-avatar-overlap" id="host-avatar">
             <span id="host-initials">?</span>
           </div>
-          <div class="pf-name" id="host-name"></div>
-          <div class="pf-sub" id="host-location"></div>
-          <div class="pf-badges" id="host-badges"></div>
+          
+          <div class="pf-header-info">
+            <div class="pf-title-row">
+              <h1 class="pf-name" id="host-name"></h1>
+              <span class="pf-verified">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"></path></svg>
+                Verified
+              </span>
+            </div>
+            <div class="pf-subtitle" id="host-property-label">Boutique Stay</div>
+            <div class="pf-location" id="host-location">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"></path></svg>
+              Location
+            </div>
+          </div>
+
+          <div class="pf-bio" id="host-bio">
+            Welcome to our space — a uniquely designed stay for creators who want content that stops the scroll. Surrounded by nature, featuring an infinity pool and golden hour views.
+          </div>
+
+          <div class="pf-actions">
+            <a href="#" class="pf-action-btn">
+              <div class="pf-action-icon">💬</div>
+              <div class="pf-action-label">Message</div>
+            </a>
+            <a href="#" class="pf-action-btn">
+              <div class="pf-action-icon">🏡</div>
+              <div class="pf-action-label">View Property</div>
+            </a>
+            <a href="#" class="pf-action-btn">
+              <div class="pf-action-icon">📍</div>
+              <div class="pf-action-label">Location</div>
+            </a>
+          </div>
+
+          <div class="pf-stats-grid">
+            <div class="pf-stat-item">
+              <span class="pf-stat-value" id="host-stat-props">1</span>
+              <span class="pf-stat-label">Properties</span>
+            </div>
+            <div class="pf-stat-item">
+              <span class="pf-stat-value" id="host-stat-years">3</span>
+              <span class="pf-stat-label">Years Hosting</span>
+            </div>
+            <div class="pf-stat-item">
+              <span class="pf-stat-value" id="host-stat-collabs">12</span>
+              <span class="pf-stat-label">Collabs</span>
+            </div>
+            <div class="pf-update-tag">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+              Updated just now
+            </div>
+          </div>
         </div>
-        <div class="pf-card-body" id="host-body"></div>
       </div>
 
       <button id="btn-signout" class="pf-signout">Sign out</button>

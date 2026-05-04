@@ -40,12 +40,12 @@ formEl?.addEventListener('submit', async (e) => {
     return;
   }
 
-  // Success — show spinner then redirect to the React app profile
+  // Success — show spinner then redirect to profile
   cardEl.hidden = true;
   successEl.hidden = false;
   setTimeout(() => {
     const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    window.location.href = isLocalhost ? 'http://localhost:5174/#/profile' : '/#/profile';
+    window.location.href = isLocalhost ? 'http://localhost:5174/#/profile' : '/profile.html';
   }, 800);
 });
 
@@ -53,6 +53,6 @@ formEl?.addEventListener('submit', async (e) => {
 supabase.auth.getUser().then(({ data: { user } }) => {
   if (user?.email_confirmed_at) {
     const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    window.location.href = isLocalhost ? 'http://localhost:5174/#/profile' : '/#/profile';
+    window.location.href = isLocalhost ? 'http://localhost:5174/#/profile' : '/profile.html';
   }
 });

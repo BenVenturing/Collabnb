@@ -143,19 +143,24 @@ async function loadProfile(user) {
 /* ── Initialize profile on page load ── */
 (async function initProfile() {
   try {
-    const { data: { session } } = await supabase.auth.getSession();
+    console.log('[profile] initProfile started');
+    const result = await supabase.auth.getSession();
+    console.log('[profile] getSession result:', JSON.stringify({ hasData: !!result?.data, hasSession: !!result?.data?.session, userId: result?.data?.session?.user?.id }));
+    const { data: { session } } = result;
 
     if (!session) {
+      console.log('[profile] No session — showing not-authed');
       showState('state-not-authed');
     } else if (!session.user.email_confirmed_at) {
+      console.log('[profile] Session exists but email not confirmed');
       document.getElementById('unconfirmed-email').textContent = session.user.email;
       showState('state-unconfirmed');
     } else {
+      console.log('[profile] Session valid, loading profile for user:', session.user.id);
       await loadProfile(session.user);
     }
   } catch (err) {
-    // If Supabase is unavailable, show demo profile
-    console.warn('Auth check failed, showing demo profile:', err.message);
+    console.warn('[profile] Auth check failed, showing demo profile:', err.message, err.stack);
     profileLoaded = true;
     showState('state-profile');
     document.title = 'Demo Profile — Collabnb';

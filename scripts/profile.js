@@ -140,34 +140,43 @@ async function loadProfile(user) {
   }
 }
 
+/* ── Helper: read Supabase session from localStorage directly ── */
+/* Supabase v2 stores the session in localStorage under key "sb-{projectRef}-auth-token".
+   getSession() can hang in some environments due to its internal locking mechanism,
+   so we read the session ourselves.                                      */
+function readSessionFromStorage() {
+  try {
+    // Find the Supabase auth token key in localStorage
+    const key = Object.keys(localStorage).find(k => k.endsWith('-auth-token'));
+    if (!key) return null;
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    // Return something with the same shape as getSession()'s response
+    return parsed?.access_token ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
 /* ── Initialize profile on page load ── */
 (async function initProfile() {
   try {
     console.log('[profile] initProfile started');
-    // Supabase getSession() can hang if a stored token is expired/unrefreshable,
-    // so we race it against a timeout to avoid an infinite loading spinner.
-    const result = await Promise.race([
-      supabase.auth.getSession(),
-      new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('getSession timed out after 5s')), 5000)
-      ),
-    ]);
-    console.log('[profile] getSession result:', JSON.stringify({ hasData: !!result?.data, hasSession: !!result?.data?.session, userId: result?.data?.session?.user?.id }));
-    const { data: { session } } = result;
 
-    if (!session) {
-      console.log('[profile] No session — showing not-authed');
-      showState('state-not-authed');
-    } else if (!session.user.email_confirmed_at) {
-      console.log('[profile] Session exists but email not confirmed');
-      document.getElementById('unconfirmed-email').textContent = session.user.email;
-      showState('state-unconfirmed');
-    } else {
-      console.log('[profile] Session valid, loading profile for user:', session.user.id);
-      await loadProfile(session.user);
+    // Read session from localStorage to avoid Supabase getSession() hang bug
+    const stored = readSessionFromStorage();
+
+    if (!stored?.user?.email_confirmed_at) {
+      console.log('[profile] No valid stored session — showing demo profile');
+      // Fall through to catch / demo fallback below
+      throw new Error(stored ? 'email not confirmed' : 'no session in storage');
     }
+
+    console.log('[profile] Found stored session for user:', stored.user.id);
+    await loadProfile(stored.user);
   } catch (err) {
-    console.warn('[profile] Auth check failed, showing demo profile:', err.message, err.stack);
+    console.warn('[profile] Auth check failed, showing demo profile:', err.message);
     profileLoaded = true;
     showState('state-profile');
     document.title = 'Demo Profile — Collabnb';

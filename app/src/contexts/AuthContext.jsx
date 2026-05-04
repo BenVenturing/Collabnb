@@ -62,8 +62,11 @@ export function AuthProvider({ children }) {
 
   const signOut = async () => {
     if (supabase) await supabase.auth.signOut();
-    setSession(MOCK_SESSION);
-    setProfile(MOCK_CREATOR);
+    // Redirect to the static login page which has the real Supabase session
+    const loginUrl = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+      ? 'http://localhost:5173/login.html?logout'
+      : '/login.html?logout';
+    window.location.href = loginUrl;
   };
 
   return (

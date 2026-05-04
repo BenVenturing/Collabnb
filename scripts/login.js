@@ -1,5 +1,12 @@
 import { supabase } from './supabase.js';
 
+// If arriving from a sign-out, clear any stale session first
+(async () => {
+  if (window.location.search.includes('logout') || window.location.hash.includes('logout')) {
+    await supabase.auth.signOut();
+  }
+})();
+
 const formEl = document.getElementById('login-form');
 const emailEl = document.getElementById('login-email');
 const passwordEl = document.getElementById('login-password');

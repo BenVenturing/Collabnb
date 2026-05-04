@@ -2,12 +2,14 @@ import { Component } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { AppBarProvider } from './contexts/AppBarContext';
-import Layout from './components/Layout';
-import Explore  from './pages/Explore';
-import Collabs  from './pages/Collabs';
-import Saved    from './pages/Saved';
-import Inbox    from './pages/Inbox';
-import Profile  from './pages/Profile';
+import { CollabProvider } from './contexts/CollabContext';
+import Layout        from './components/Layout';
+import Explore       from './pages/Explore';
+import Collabs       from './pages/Collabs';
+import Saved         from './pages/Saved';
+import Inbox         from './pages/Inbox';
+import Profile       from './pages/Profile';
+import ListingDetail from './pages/ListingDetail';
 
 // Catch any render crash and show it instead of a blank page
 class ErrorBoundary extends Component {
@@ -43,17 +45,20 @@ function AppRoutes() {
   }
 
   return (
-    <Layout>
-      <Routes>
-        <Route path="/"        element={<Navigate to="/explore" replace />} />
-        <Route path="/explore" element={<Explore />} />
-        <Route path="/collabs" element={<Collabs />} />
-        <Route path="/saved"   element={<Saved />} />
-        <Route path="/inbox"   element={<Inbox />} />
-        <Route path="/profile" element={<Profile />} />
-        <Route path="*"        element={<Navigate to="/explore" replace />} />
-      </Routes>
-    </Layout>
+    <CollabProvider>
+      <Layout>
+        <Routes>
+          <Route path="/"               element={<Navigate to="/explore" replace />} />
+          <Route path="/explore"        element={<Explore />} />
+          <Route path="/listing/:id"    element={<ListingDetail />} />
+          <Route path="/collabs"        element={<Collabs />} />
+          <Route path="/saved"          element={<Saved />} />
+          <Route path="/inbox"          element={<Inbox />} />
+          <Route path="/profile"        element={<Profile />} />
+          <Route path="*"               element={<Navigate to="/explore" replace />} />
+        </Routes>
+      </Layout>
+    </CollabProvider>
   );
 }
 

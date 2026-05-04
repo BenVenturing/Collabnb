@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import logo              from '../../../assets/collabnb-logo.webp';
+import logo              from '../../../assets/collabnb-logo.png';
 import HeroSection     from './HeroSection';
 import PricingCards    from './PricingCards';
 import TierLadder      from './TierLadder';
@@ -48,7 +48,7 @@ export default function PricingPage() {
   const isFoundingFull  = spotsRemaining <= 0;
 
   function handleClaim() {
-    window.location.href = '../join.html?join=true';
+    window.location.href = '../join.html';
   }
 
 
@@ -63,7 +63,7 @@ export default function PricingPage() {
           href="../index.html"
           className="flex items-center gap-2 text-ink no-underline hover:opacity-60 transition-opacity"
         >
-          <img src={logo} alt="Collabnb" width="28" height="28" />
+          <img src={logo} alt="" width="28" height="28" />
           <span className="font-display font-bold text-base tracking-tight">Collabnb</span>
         </a>
         
@@ -92,16 +92,13 @@ export default function PricingPage() {
       </main>
 
       {/* ── Footer ── */}
-      <footer className="max-w-7xl mx-auto px-4 md:px-8 py-12 border-t border-black/[0.05]
-                         flex flex-col sm:flex-row items-center justify-between gap-8 text-xs text-sage">
-        <div className="flex flex-col items-center sm:items-start gap-4">
-          <a href="../index.html" className="flex items-center gap-2 text-ink no-underline hover:opacity-60 transition-opacity">
-            <img src={logo} alt="Collabnb" width="24" height="24" />
-            <span className="font-display font-bold text-sm tracking-tight">Collabnb</span>
-          </a>
+      <footer className="max-w-7xl mx-auto px-4 md:px-8 py-10 border-t border-black/[0.05]
+                         flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-sage">
+        <div className="flex items-center gap-2">
+          <img src={logo} alt="" width="18" height="18" className="opacity-40 grayscale" />
           <span>© 2026 Collabnb. All rights reserved.</span>
         </div>
-        <div className="flex gap-6">
+        <div className="flex gap-5">
           <a href="../index.html" className="hover:text-slate transition-colors no-underline">Home</a>
           <a href="../about.html" className="hover:text-slate transition-colors no-underline">About</a>
           <a href="../faq.html" className="hover:text-slate transition-colors no-underline">FAQ</a>

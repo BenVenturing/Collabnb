@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { SAMPLE_THREADS } from '../lib/mockData';
+import { useCollabs } from '../contexts/CollabContext';
 
 const TAG_STYLES = {
   Collab:      'bg-mint text-slate',
@@ -48,11 +48,12 @@ function ThreadRow({ thread }) {
 const FILTERS = ['All', 'Applications', 'Collabs', 'Pitches'];
 
 export default function Inbox() {
+  const { threads } = useCollabs();
   const [activeFilter, setActiveFilter] = useState('All');
 
   const filtered = activeFilter === 'All'
-    ? SAMPLE_THREADS
-    : SAMPLE_THREADS.filter((t) => t.tag === activeFilter.slice(0, -1) || t.tag === activeFilter);
+    ? threads
+    : threads.filter((t) => t.tag === activeFilter.slice(0, -1) || t.tag === activeFilter);
 
   return (
     <div className="min-h-dvh bg-bone">

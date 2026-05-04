@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { SAMPLE_LISTINGS } from '../lib/mockData';
 import { useAppBar } from '../contexts/AppBarContext';
 import { DESTINATIONS, COLLAB_TYPES, AVAIL_OPTIONS } from '../lib/searchData';
@@ -15,11 +16,12 @@ function StarIcon() {
 }
 
 // ─── Listing Card ─────────────────────────────────────────────────────────────
-function ListingCard({ listing, saved, onSave, delay }) {
+function ListingCard({ listing, saved, onSave, delay, onNavigate }) {
   return (
     <div
       className="listing-card reveal-up"
-      style={{ width: 260, animationDelay: `${delay}ms`, opacity: 0 }}
+      onClick={onNavigate}
+      style={{ width: 260, animationDelay: `${delay}ms`, opacity: 0, cursor: 'pointer' }}
     >
       {/* Photo */}
       <div style={{ position: 'relative', height: 176, overflow: 'hidden' }}>
@@ -103,7 +105,7 @@ function ListingCard({ listing, saved, onSave, delay }) {
 }
 
 // ─── Section Row ──────────────────────────────────────────────────────────────
-function SectionRow({ title, subtitle, listings, saved, onSave }) {
+function SectionRow({ title, subtitle, listings, saved, onSave, onNavigate }) {
   if (!listings.length) return null;
   return (
     <div style={{ marginBottom: '2.5rem' }}>
@@ -131,6 +133,7 @@ function SectionRow({ title, subtitle, listings, saved, onSave }) {
             saved={saved.has(l.id)}
             onSave={onSave}
             delay={i * 55}
+            onNavigate={() => onNavigate(l.id)}
           />
         ))}
       </div>
@@ -161,6 +164,7 @@ function Dropdown({ children, align = 'left', width }) {
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 export default function Explore() {
+  const navigate = useNavigate();
   const { compactSearch, setCompactSearch } = useAppBar();
   const [activeField, setActiveField] = useState(null); // 'where' | 'what' | 'when'
   const [whereVal,    setWhereVal]    = useState('');
@@ -169,6 +173,8 @@ export default function Explore() {
   const [propFilter,  setPropFilter]  = useState('All');
   const [saved,       setSaved]       = useState(new Set());
   const searchRef = useRef(null);
+
+  const goToListing = (id) => navigate(`/listing/${id}`);
 
   // Outside-click closes dropdowns
   useEffect(() => {
@@ -445,6 +451,7 @@ export default function Explore() {
           listings={trending}
           saved={saved}
           onSave={toggleSave}
+          onNavigate={goToListing}
         />
 
         <SectionRow
@@ -453,6 +460,7 @@ export default function Explore() {
           listings={forYou}
           saved={saved}
           onSave={toggleSave}
+          onNavigate={goToListing}
         />
 
         <SectionRow
@@ -461,6 +469,7 @@ export default function Explore() {
           listings={nearMe}
           saved={saved}
           onSave={toggleSave}
+          onNavigate={goToListing}
         />
 
         <SectionRow
@@ -469,6 +478,7 @@ export default function Explore() {
           listings={allFiltered}
           saved={saved}
           onSave={toggleSave}
+          onNavigate={goToListing}
         />
 
         {allFiltered.length === 0 && (

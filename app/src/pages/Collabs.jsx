@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { SAMPLE_COLLABORATIONS } from '../lib/mockData';
+import { useCollabs } from '../contexts/CollabContext';
 
 const STATUS_STYLES = {
   pending:  { bg: 'bg-amber-100',  text: 'text-amber-700',  icon: '🟡' },
@@ -71,10 +71,11 @@ function CollabCard({ collab }) {
 
 export default function Collabs() {
   const navigate = useNavigate();
+  const { collabs } = useCollabs();
   const [filter, setFilter] = useState('active');
 
-  const active   = SAMPLE_COLLABORATIONS.filter((c) =>  c.is_active);
-  const archived = SAMPLE_COLLABORATIONS.filter((c) => !c.is_active);
+  const active   = collabs.filter((c) =>  c.is_active);
+  const archived = collabs.filter((c) => !c.is_active);
   const shown    = filter === 'active' ? active : archived;
 
   return (

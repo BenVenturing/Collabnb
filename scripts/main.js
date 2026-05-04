@@ -796,7 +796,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Copy share link
   const copyBtn = document.querySelector('#btn-copy');
   if (copyBtn) {
-    copyBtn.addEventListener('click', () => copyToClipboard(window.location.origin + '/index.html'));
+    copyBtn.addEventListener('click', () => copyToClipboard('https://collabnb.vercel.app/index.html'));
   }
 
   // mailto share
@@ -806,7 +806,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const name = signedUpName || 'a friend';
       const subject = encodeURIComponent('You have to see this — Collabnb');
       const body = encodeURIComponent(
-        `Hey!\n\nI just joined the Collabnb waitlist — it's a new platform where creators book stays at boutique hotels and BnBs in exchange for content. First 100 creators and hosts get lifetime access, no commissions ever.\n\nThought you'd love it. Grab your spot before they fill up:\n${window.location.origin}/index.html\n\n— ${name}\n\nQuestions? Reach the team: hellocollabnb@gmail.com`
+        `Hey!\n\nI just joined the Collabnb waitlist — it's a new platform where creators book stays at boutique hotels and BnBs in exchange for content. First 100 creators and hosts get lifetime access, no commissions ever.\n\nThought you'd love it. Grab your spot before they fill up:\nhttps://collabnb.vercel.app/index.html\n\n— ${name}\n\nQuestions? Reach the team: hellocollabnb@gmail.com`
       );
       window.location.href = `mailto:?subject=${subject}&body=${body}`;
     });

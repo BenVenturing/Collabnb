@@ -144,7 +144,14 @@ async function loadProfile(user) {
 (async function initProfile() {
   try {
     console.log('[profile] initProfile started');
-    const result = await supabase.auth.getSession();
+    // Supabase getSession() can hang if a stored token is expired/unrefreshable,
+    // so we race it against a timeout to avoid an infinite loading spinner.
+    const result = await Promise.race([
+      supabase.auth.getSession(),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('getSession timed out after 5s')), 5000)
+      ),
+    ]);
     console.log('[profile] getSession result:', JSON.stringify({ hasData: !!result?.data, hasSession: !!result?.data?.session, userId: result?.data?.session?.user?.id }));
     const { data: { session } } = result;
 

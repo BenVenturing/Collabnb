@@ -433,6 +433,7 @@
     <li><a href="pricing/index.html">Pricing</a></li>
   </ul>
   <div class="nav-actions" style="display:flex; align-items:center; gap:0.5rem;">
+    <a href="login.html" class="btn-login">Login</a>
     <button class="nav-hamburger" aria-label="Open menu" aria-expanded="false" aria-controls="mobile-nav">
       <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
         <line class="line line-1" x1="3" y1="5" x2="17" y2="5"/>
@@ -457,8 +458,36 @@
     <div id="state-not-authed" class="pf-gate" hidden>
       <div class="pf-gate-icon">🔒</div>
       <h1 class="pf-gate-title">Not signed in</h1>
-      <p class="pf-gate-desc">Join the waitlist to create your Collabnb profile. Once you sign up and confirm your email, your profile will live here.</p>
-      <a href="join.html" class="btn-primary" style="display:inline-block;text-decoration:none;">Join the Waitlist</a>
+
+      <!-- Signed-out message (default) -->
+      <div id="not-authed-default">
+        <p class="pf-gate-desc">Join the waitlist to create your Collabnb profile. Once you sign up and confirm your email, your profile will live here.</p>
+        <a href="join.html" class="btn-primary" style="display:inline-block;text-decoration:none;">Join the Waitlist</a>
+        <p style="margin-top:1.5rem;font-size:0.875rem;color:var(--sage);">
+          Already have an account?
+          <button id="btn-show-signin" style="background:none;border:none;color:var(--ink);font-weight:600;cursor:pointer;text-decoration:underline;text-underline-offset:2px;font-size:0.875rem;">Sign in</button>
+        </p>
+      </div>
+
+      <!-- Sign-in form -->
+      <div id="not-authed-signin" hidden>
+        <p class="pf-gate-desc">Sign in to your account to view your profile.</p>
+        <form id="signin-form" style="text-align:left;">
+          <div class="form-group">
+            <label class="form-label" for="signin-email">Email address</label>
+            <input class="form-input" type="email" id="signin-email" name="signin-email" placeholder="you@example.com" autocomplete="email" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="signin-password">Password</label>
+            <input class="form-input" type="password" id="signin-password" name="signin-password" placeholder="••••••••" autocomplete="current-password" required />
+          </div>
+          <button type="submit" id="btn-signin-submit" class="btn-primary" style="width:100%;cursor:pointer;">Sign In</button>
+          <p id="signin-error" style="color:#e74c3c;font-size:0.8125rem;margin-top:0.75rem;display:none;"></p>
+        </form>
+        <p style="margin-top:1.25rem;font-size:0.8125rem;color:var(--sage);">
+          <button id="btn-back-to-waitlist" style="background:none;border:none;color:var(--ink);font-weight:500;cursor:pointer;text-decoration:underline;text-underline-offset:2px;font-size:0.8125rem;">← Back to waitlist signup</button>
+        </p>
+      </div>
     </div>
 
     <!-- ── EMAIL NOT CONFIRMED ── -->

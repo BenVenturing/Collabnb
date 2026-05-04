@@ -824,14 +824,41 @@ async function initNavAuth() {
     const firstName = user.user_metadata?.full_name?.split(' ')[0];
     const label = firstName ? `${firstName}'s Profile` : 'My Profile';
 
-    const navCta     = document.querySelector('.nav-pill .btn-primary');
-    const overlayCta = document.querySelector('.nav-overlay .btn-primary');
+    // Hide the Login button — user is already signed in
+    document.querySelectorAll('.btn-login').forEach(btn => btn.style.display = 'none');
 
-    [navCta, overlayCta].forEach(btn => {
-      if (!btn) return;
-      btn.textContent = label;
-      btn.href = '/profile.html';
-      btn.removeAttribute('data-modal');
+    // Nav pill CTA
+    const navCta = document.querySelector('.nav-pill .btn-primary');
+    if (navCta) {
+      navCta.textContent = label;
+      navCta.href = '/profile.html';
+      navCta.removeAttribute('data-modal');
+    }
+
+    // Mobile overlay CTA
+    const overlayCta = document.querySelector('.nav-overlay .btn-primary');
+    if (overlayCta) {
+      overlayCta.textContent = label;
+      overlayCta.href = '/profile.html';
+      overlayCta.removeAttribute('data-modal');
+    }
+
+    // Replace page-body "Join the Waitlist" buttons with profile links
+    document.querySelectorAll('.btn-open-modal').forEach(btn => {
+      if (!btn.classList.contains('btn-primary')) return;
+
+      // Clone to nuke any existing event listeners (openModal, etc.)
+      const clone = document.createElement('a');
+      clone.className = btn.className.replace('btn-open-modal', '');
+      clone.textContent = label;
+      clone.href = '/profile.html';
+
+      // Copy inline styles
+      if (btn.getAttribute('style')) {
+        clone.setAttribute('style', btn.getAttribute('style'));
+      }
+
+      btn.parentNode.replaceChild(clone, btn);
     });
   } catch (_) {
     // silently fail — nav stays as default

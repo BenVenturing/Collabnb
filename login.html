@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Log in — Collabnb</title>
+<meta name="description" content="Log in to your Collabnb account." />
+<link rel="icon" href="/assets/favicon.png" type="image/png" />
+<link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&f[]=cabinet-grotesk@400,500,700,800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles/main.css" />
+<style>
+  /* ─── Login page layout ─── */
+  .login-page {
+    min-height: 100vh;
+    padding-top: 7rem;
+    padding-bottom: 4rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .login-wrap {
+    width: 100%;
+    max-width: 420px;
+    padding: 0 1.25rem;
+  }
+
+  /* ─── Login card ─── */
+  .login-card {
+    background: #fff;
+    border-radius: 24px;
+    border: 1px solid var(--stone);
+    box-shadow: 0 4px 32px rgba(25,37,36,0.08);
+    padding: 3rem 2rem;
+    text-align: center;
+  }
+
+  .login-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: var(--mint);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1.25rem;
+    font-size: 1.75rem;
+  }
+
+  .login-title {
+    font-family: 'Cabinet Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 1.75rem;
+    color: var(--ink);
+    margin-bottom: 0.5rem;
+  }
+
+  .login-desc {
+    font-size: 0.9375rem;
+    color: var(--sage);
+    margin-bottom: 2rem;
+    line-height: 1.5;
+  }
+
+  .login-form {
+    text-align: left;
+  }
+
+  .login-error {
+    color: #e74c3c;
+    font-size: 0.8125rem;
+    margin-top: 0.75rem;
+    display: none;
+  }
+
+  .login-spinner {
+    width: 36px;
+    height: 36px;
+    border: 3px solid var(--stone);
+    border-top-color: var(--slate);
+    border-radius: 50%;
+    animation: login-spin 0.8s linear infinite;
+    margin: 0 auto 1rem;
+  }
+
+  @keyframes login-spin { to { transform: rotate(360deg); } }
+
+  .login-success-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: var(--mint);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1.25rem;
+  }
+  .login-success-icon svg {
+    width: 28px;
+    height: 28px;
+    stroke: var(--ink);
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    fill: none;
+  }
+
+  .login-footer {
+    margin-top: 1.5rem;
+    font-size: 0.875rem;
+    color: var(--sage);
+  }
+  .login-footer a {
+    color: var(--ink);
+    font-weight: 600;
+  }
+
+  @media (max-width: 520px) {
+    .login-card { padding: 2rem 1.5rem; }
+  }
+</style>
+</head>
+<body>
+
+<a href="#main" class="skip-link">Skip to main content</a>
+
+<!-- Fixed background layers -->
+<div aria-hidden="true" class="bg-layers bg-base"></div>
+<div aria-hidden="true" class="bg-layers bg-gradient"></div>
+<div aria-hidden="true" class="bg-layers bg-clouds"></div>
+<div aria-hidden="true" class="bg-grain"></div>
+
+<!-- Mobile nav overlay -->
+<div class="nav-overlay glass" aria-label="Mobile navigation" role="dialog" aria-modal="true">
+  <a href="index.html">Home</a>
+  <a href="about.html">About</a>
+  <a href="how-it-works.html">How it works</a>
+  <a href="faq.html">FAQ</a>
+  <a href="pricing/index.html">Pricing</a>
+  <a href="join.html" class="btn-primary">Join the Waitlist</a>
+</div>
+
+<!-- Floating glass nav -->
+<nav class="nav-pill glass" aria-label="Main navigation">
+  <a href="index.html" class="nav-logo" aria-label="Collabnb home">
+    <img src="assets/collabnb-logo.webp" alt="" role="presentation" width="32" height="32" />
+    <span>Collabnb</span>
+  </a>
+  <ul class="nav-links" role="list">
+    <li><a href="index.html">Home</a></li>
+    <li><a href="about.html">About</a></li>
+    <li><a href="how-it-works.html">How it works</a></li>
+    <li><a href="faq.html">FAQ</a></li>
+    <li><a href="pricing/index.html">Pricing</a></li>
+  </ul>
+  <div class="nav-actions" style="display:flex; align-items:center; gap:0.5rem;">
+    <a href="login.html" class="btn-login" aria-current="page">Login</a>
+    <button class="nav-hamburger" aria-label="Open menu" aria-expanded="false" aria-controls="mobile-nav">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+        <line class="line line-1" x1="3" y1="5" x2="17" y2="5"/>
+        <line class="line line-2" x1="3" y1="10" x2="17" y2="10"/>
+        <line class="line line-3" x1="3" y1="15" x2="17" y2="15"/>
+      </svg>
+    </button>
+    <a href="join.html" class="btn-primary">Join the Waitlist</a>
+  </div>
+</nav>
+
+<main id="main" class="login-page">
+  <div class="login-wrap">
+
+    <!-- ── LOGIN FORM ── -->
+    <div id="login-card" class="login-card">
+      <div class="login-icon">🔑</div>
+      <h1 class="login-title">Welcome back</h1>
+      <p class="login-desc">Sign in to your account to view your profile and manage collabs.</p>
+
+      <form id="login-form" class="login-form">
+        <div class="form-group">
+          <label class="form-label" for="login-email">Email address</label>
+          <input class="form-input" type="email" id="login-email" name="email" placeholder="you@example.com" autocomplete="email" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="login-password">Password</label>
+          <input class="form-input" type="password" id="login-password" name="password" placeholder="••••••••" autocomplete="current-password" required />
+        </div>
+        <button type="submit" id="login-submit" class="btn-primary" style="width:100%;cursor:pointer;">Sign In</button>
+        <div class="login-error" id="login-error"></div>
+      </form>
+
+      <div class="login-footer">
+        Don't have an account? <a href="join.html">Join the waitlist</a>
+      </div>
+    </div>
+
+    <!-- ── LOADING / REDIRECT ── -->
+    <div id="login-success" class="login-card" hidden>
+      <div class="login-success-icon">
+        <svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>
+      </div>
+      <h1 class="login-title">Signed in</h1>
+      <p class="login-desc">Taking you to your profile…</p>
+      <div class="login-spinner"></div>
+    </div>
+
+  </div>
+</main>
+
+<!-- ── FOOTER ── -->
+<footer aria-label="Site footer">
+  <div class="container">
+    <div class="site-footer glass">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <a href="index.html" class="nav-logo" style="display:inline-flex;" aria-label="Collabnb home">
+            <img src="assets/collabnb-logo.png" alt="" role="presentation" width="28" height="28" />
+            <span style="font-family:var(--font-display);font-weight:700;font-size:1.1rem;letter-spacing:-0.02em;margin-left:.5rem;">Collabnb</span>
+          </a>
+          <p>Manage collabs effortlessly. Built for creators and boutique stays.</p>
+          <div class="footer-social">
+            <a href="#" aria-label="Instagram">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="5"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg>
+            </a>
+            <a href="#" aria-label="TikTok">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M9 12a4 4 0 104 4V4a5 5 0 005 5"/></svg>
+            </a>
+          </div>
+        </div>
+        <div class="footer-col">
+          <h4>Use</h4>
+          <ul>
+            <li><a href="index.html">Home</a></li>
+            <li><a href="about.html">About</a></li>
+            <li><a href="how-it-works.html">How it works</a></li>
+            <li><a href="faq.html">FAQ</a></li>
+            <li><a href="pricing/index.html">Pricing</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h4>Company</h4>
+          <ul>
+            <li><a href="mailto:hellocollabnb@gmail.com">Contact</a></li>
+            <li><a href="#">Privacy</a></li>
+            <li><a href="#">Terms</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h4>Join</h4>
+          <ul>
+            <li><a href="join.html">Creator waitlist</a></li>
+            <li><a href="join.html">Host waitlist</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>About Collabnb — a marketplace where boutique hospitality meets creator culture.</span>
+        <span>&copy; 2026 Collabnb. All rights reserved.</span>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script type="module" src="/scripts/login.js"></script>
+<script type="module" src="/scripts/main.js"></script>
+
+</body>
+</html>

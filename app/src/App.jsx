@@ -38,10 +38,9 @@ function AppRoutes() {
   if (loading) return <LoadingScreen />;
 
   if (!session) {
-    if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-      window.location.href = '../index.html';
-    }
-    return <LoadingScreen />;
+    // No session at all (no Supabase, no mock) — redirect unauthenticated users
+    window.location.href = '../index.html';
+    return null;
   }
 
   return (

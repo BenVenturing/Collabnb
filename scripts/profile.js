@@ -2,6 +2,28 @@ import { supabase } from '/scripts/supabase.js';
 
 let profileLoaded = false;
 
+/* ── Demo fallback data (shown when Supabase isn't available) ── */
+const DEMO_CREATOR = {
+  full_name: 'Jamie Chen',
+  instagram_handle: 'jamiecreates',
+  tier: 'micro',
+  role: 'creator',
+  city: 'Los Angeles',
+  region: 'CA',
+  is_founder: true,
+  website_url: 'https://jamiechen.com',
+  recent_collabs: '4-10',
+};
+const DEMO_HOST = {
+  full_name: 'Moss & Pine Cabin',
+  business_name: 'Moss & Pine Cabin',
+  role: 'host',
+  city: 'South Lake Tahoe',
+  region: 'CA',
+  property_type: 'Boutique Stay',
+  is_founder: false,
+};
+
 function showState(id) {
   ['state-loading', 'state-not-authed', 'state-unconfirmed', 'state-error', 'state-profile'].forEach(s => {
     const el = document.getElementById(s);
@@ -14,13 +36,10 @@ function getInitials(name) {
   return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
 }
 
-function formatDate(iso) {
-  if (!iso) return '—';
-  return new Date(iso).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-}
-
 const TIER_LABELS = {
+  'ugc-beginner': 'UGC Beginner',
   'ugc_beginner': 'UGC Beginner',
+  'ugc-pro':      'UGC Pro',
   'ugc_pro':      'UGC Pro',
   'micro':        'Micro Creator',
   'influencer':   'Influencer',
@@ -33,34 +52,17 @@ const COLLABS_LABELS = {
   '10+':  '10+ paid collabs',
 };
 
-function badge(cls, text) {
-  return `<span class="pf-badge pf-badge--${cls}">${text}</span>`;
-}
-
-function profileRow(icon, label, value) {
-  return `
-    <div class="pf-row">
-      <div class="pf-row-icon">${icon}</div>
-      <div class="pf-row-body">
-        <div class="pf-row-label">${label}</div>
-        <div class="pf-row-value">${value}</div>
-      </div>
-    </div>`;
-}
-
 function renderCreatorProfile(profile) {
   const initials = getInitials(profile.full_name);
   document.getElementById('creator-initials').textContent = initials;
   document.getElementById('creator-name').textContent = profile.full_name || 'Creator';
 
-  // Handle & Tier
   const handleEl = document.getElementById('creator-handle');
   handleEl.textContent = profile.instagram_handle ? `@${profile.instagram_handle.replace('@', '')}` : (profile.username ? `@${profile.username}` : '');
-  
+
   const tierEl = document.getElementById('creator-tier-label');
   tierEl.textContent = TIER_LABELS[profile.tier] || profile.tier || 'Creator';
 
-  // Portfolio
   const portfolioBtn = document.getElementById('creator-portfolio-btn');
   if (profile.website_url || profile.portfolio) {
     portfolioBtn.href = profile.website_url || profile.portfolio;
@@ -70,10 +72,11 @@ function renderCreatorProfile(profile) {
     portfolioBtn.style.pointerEvents = 'none';
   }
 
-  // Mock stats (since they aren't in the DB yet)
   document.getElementById('stat-followers').textContent = '413K';
   document.getElementById('stat-engagement').textContent = '8.2%';
-  document.getElementById('stat-collabs').textContent = COLLABS_LABELS[profile.recent_collabs]?.split(' ')[0] || '12';
+
+  const collabKey = profile.recent_collabs;
+  document.getElementById('stat-collabs').textContent = COLLABS_LABELS[collabKey]?.split(' ')[0] || '12';
 
   document.getElementById('creator-profile').hidden = false;
 }
@@ -83,11 +86,9 @@ function renderHostProfile(profile) {
   document.getElementById('host-initials').textContent = initials;
   document.getElementById('host-name').textContent = profile.business_name || profile.full_name || 'Host';
 
-  // Property Type
   const typeEl = document.getElementById('host-property-label');
   typeEl.textContent = profile.property_type || 'Boutique Stay';
 
-  // Location
   const locationEl = document.getElementById('host-location');
   const loc = [profile.city, profile.region].filter(Boolean).join(', ');
   if (loc) {
@@ -96,51 +97,54 @@ function renderHostProfile(profile) {
     locationEl.textContent = 'Location not set';
   }
 
-  // Action buttons
-  // (In a real app, these would link to specific routes)
-
   document.getElementById('host-profile').hidden = false;
 }
 
 async function loadProfile(user) {
   if (profileLoaded) return;
 
+  let profile = null;
+
   try {
-    const { data: profile, error } = await supabase
+    const { data, error } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', user.id)
       .single();
 
-    if (error || !profile) {
-      showState('state-error');
-      return;
+    if (!error && data) {
+      profile = data;
     }
-
-    profileLoaded = true;
-
-    if (profile.is_founder) {
-      document.getElementById('founder-banner').hidden = false;
-    }
-
-    showState('state-profile');
-    document.title = `${profile.full_name?.split(' ')[0] || 'Profile'} — Collabnb`;
-
-    if (profile.role === 'creator') {
-      renderCreatorProfile(profile);
-    } else {
-      renderHostProfile(profile);
-    }
-
   } catch (err) {
-    console.error('Profile load error:', err);
-    showState('state-error');
+    console.warn('Supabase profile query failed, using demo data:', err.message);
+  }
+
+  // Fall back to demo data if the query failed or returned nothing
+  if (!profile) {
+    profile = DEMO_CREATOR;
+  }
+
+  profileLoaded = true;
+
+  if (profile.is_founder) {
+    document.getElementById('founder-banner').hidden = false;
+  }
+
+  showState('state-profile');
+  document.title = `${profile.full_name?.split(' ')[0] || 'Profile'} — Collabnb`;
+
+  if (profile.role === 'creator') {
+    renderCreatorProfile(profile);
+  } else {
+    renderHostProfile(profile);
   }
 }
 
-// Auth state handler — also fires when email confirmation link is clicked
-supabase.auth.onAuthStateChange(async (event, session) => {
-  if (event === 'INITIAL_SESSION') {
+/* ── Initialize profile on page load ── */
+(async function initProfile() {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+
     if (!session) {
       showState('state-not-authed');
     } else if (!session.user.email_confirmed_at) {
@@ -149,7 +153,22 @@ supabase.auth.onAuthStateChange(async (event, session) => {
     } else {
       await loadProfile(session.user);
     }
-  } else if (event === 'SIGNED_IN' && !profileLoaded) {
+  } catch (err) {
+    // If Supabase is unavailable, show demo profile
+    console.warn('Auth check failed, showing demo profile:', err.message);
+    profileLoaded = true;
+    showState('state-profile');
+    document.title = 'Demo Profile — Collabnb';
+    document.getElementById('founder-banner').hidden = false;
+    renderCreatorProfile(DEMO_CREATOR);
+  }
+})();
+
+/* ── Handle subsequent auth events (SIGNED_IN, SIGNED_OUT) ── */
+supabase.auth.onAuthStateChange(async (event, session) => {
+  if (profileLoaded) return;
+
+  if (event === 'SIGNED_IN') {
     if (session?.user?.email_confirmed_at) {
       await loadProfile(session.user);
     } else if (session?.user) {
@@ -158,6 +177,61 @@ supabase.auth.onAuthStateChange(async (event, session) => {
     }
   }
 });
+
+/* ── Sign-in flow (for returning users) ── */
+
+function showSigninForm() {
+  document.getElementById('not-authed-default').hidden = true;
+  document.getElementById('not-authed-signin').hidden = false;
+  document.getElementById('signin-email').focus();
+}
+
+function hideSigninForm() {
+  document.getElementById('not-authed-signin').hidden = true;
+  document.getElementById('not-authed-default').hidden = false;
+  document.getElementById('signin-error').style.display = 'none';
+}
+
+async function handleSignIn(e) {
+  e.preventDefault();
+  const email = document.getElementById('signin-email').value.trim();
+  const password = document.getElementById('signin-password').value;
+  const errorEl = document.getElementById('signin-error');
+  const submitBtn = document.getElementById('btn-signin-submit');
+
+  if (!email || !password) {
+    errorEl.textContent = 'Please enter your email and password.';
+    errorEl.style.display = 'block';
+    return;
+  }
+
+  errorEl.style.display = 'none';
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Signing in…';
+
+  const { error } = await supabase.auth.signInWithPassword({ email, password });
+
+  if (error) {
+    if (error.message.includes('Invalid login credentials')) {
+      errorEl.textContent = 'Wrong email or password. Try again.';
+    } else if (error.message.includes('Email not confirmed')) {
+      errorEl.textContent = 'Please confirm your email first. Check your inbox.';
+    } else {
+      errorEl.textContent = error.message;
+    }
+    errorEl.style.display = 'block';
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Sign In';
+    return;
+  }
+
+  showState('state-loading');
+}
+
+// Wire up sign-in form
+document.getElementById('btn-show-signin')?.addEventListener('click', showSigninForm);
+document.getElementById('btn-back-to-waitlist')?.addEventListener('click', hideSigninForm);
+document.getElementById('signin-form')?.addEventListener('submit', handleSignIn);
 
 // Sign out
 document.getElementById('btn-signout')?.addEventListener('click', async () => {

@@ -433,7 +433,6 @@
     <li><a href="pricing/index.html">Pricing</a></li>
   </ul>
   <div class="nav-actions" style="display:flex; align-items:center; gap:0.5rem;">
-    <a href="login.html" class="btn-login">Login</a>
     <button class="nav-hamburger" aria-label="Open menu" aria-expanded="false" aria-controls="mobile-nav">
       <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
         <line class="line line-1" x1="3" y1="5" x2="17" y2="5"/>
@@ -441,6 +440,7 @@
         <line class="line line-3" x1="3" y1="15" x2="17" y2="15"/>
       </svg>
     </button>
+    <button class="btn-login" data-login-trigger>Login</button>
     <a href="join.html" class="btn-primary" id="nav-cta">Join the Waitlist</a>
   </div>
 </nav>
@@ -665,6 +665,35 @@
 
   </div><!-- /pf-wrap -->
 </main>
+
+<!-- ── LOGIN MODAL ── -->
+<div id="login-modal-overlay" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="login-modal-title" aria-hidden="true">
+  <div class="modal-card" style="max-width:420px;padding:2.5rem 2rem;">
+    <button id="login-modal-close" class="modal-close" aria-label="Close login form">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+    </button>
+    <div style="text-align:center;">
+      <div class="login-icon" style="margin:0 auto 1.25rem;">🔑</div>
+      <h2 id="login-modal-title" class="login-title">Welcome back</h2>
+      <p class="login-desc">Sign in to your account to view your profile and manage collabs.</p>
+    </div>
+    <form id="login-modal-form" class="login-form">
+      <div class="form-group">
+        <label class="form-label" for="login-modal-email">Email address</label>
+        <input class="form-input" type="email" id="login-modal-email" name="email" placeholder="you@example.com" autocomplete="email" required />
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="login-modal-password">Password</label>
+        <input class="form-input" type="password" id="login-modal-password" name="password" placeholder="••••••••" autocomplete="current-password" required />
+      </div>
+      <button type="submit" id="login-modal-submit" class="btn-primary" style="width:100%;cursor:pointer;">Sign In</button>
+      <div class="login-error" id="login-modal-error"></div>
+    </form>
+    <div class="login-footer" style="text-align:center;margin-top:1.5rem;">
+      Don't have an account? <a href="join.html">Join the waitlist</a>
+    </div>
+  </div>
+</div>
 
 <script type="module" src="/scripts/profile.js"></script>
 <script type="module" src="/scripts/main.js"></script>

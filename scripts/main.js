@@ -394,17 +394,51 @@ function switchRole(role) {
   showStep(1);
 }
 
-async function handleLogin() {
-  const email = prompt('Enter your email:');
-  const password = prompt('Enter your password:');
-  if (!email || !password) return;
+/* --- Login Modal --- */
+function openLoginModal() {
+  const overlay = document.querySelector('#login-modal-overlay');
+  if (!overlay) return;
 
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
-  if (error) alert(error.message);
-  else {
-    alert('Welcome back!');
-    closeModal();
-    window.location.reload();
+  // Close the wizard modal if open
+  const wizardOverlay = document.querySelector('#modal-overlay');
+  if (wizardOverlay?.classList.contains('open')) closeModal();
+
+  overlay.classList.add('open');
+  overlay.setAttribute('aria-hidden', 'false');
+  document.body.style.overflow = 'hidden';
+
+  // Hide the nav pill
+  const nav = document.querySelector('.nav-pill');
+  if (nav) nav.style.display = 'none';
+
+  // Focus first input
+  const emailInput = document.querySelector('#login-modal-email');
+  if (emailInput) emailInput.focus();
+}
+
+function closeLoginModal() {
+  const overlay = document.querySelector('#login-modal-overlay');
+  if (!overlay) return;
+  overlay.classList.remove('open');
+  overlay.setAttribute('aria-hidden', 'true');
+  document.body.style.overflow = '';
+
+  // Show the nav pill again
+  const nav = document.querySelector('.nav-pill');
+  if (nav) nav.style.display = '';
+
+  // Reset form
+  const form = document.querySelector('#login-modal-form');
+  if (form) form.reset();
+  const errorEl = document.querySelector('#login-modal-error');
+  if (errorEl) {
+    errorEl.style.display = 'none';
+    errorEl.textContent = '';
+  }
+  const submitBtn = document.querySelector('#login-modal-submit');
+  if (submitBtn) {
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Sign In';
   }
 }
 
@@ -758,10 +792,20 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Escape closes modal
+  // Escape closes modals
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && overlay && overlay.classList.contains('open')) {
-      closeModal();
+    if (e.key === 'Escape') {
+      if (overlay && overlay.classList.contains('open')) {
+        closeModal();
+      }
+      if (loginOverlay && loginOverlay.classList.contains('open')) {
+        closeLoginModal();
+      }
+      // Close legal modals
+      document.querySelectorAll('.legal-modal-overlay.open').forEach(o => {
+        const type = o.id.replace('-modal-overlay', '');
+        closeLegalModal(type);
+      });
     }
   });
 
@@ -784,12 +828,82 @@ document.addEventListener('DOMContentLoaded', () => {
     btn.addEventListener('click', () => switchRole(btn.dataset.role));
   });
 
-  // Login link
+  // Login trigger buttons
+  document.querySelectorAll('[data-login-trigger]').forEach(btn => {
+    btn.addEventListener('click', openLoginModal);
+  });
+
+  // Login modal close button
+  const loginCloseBtn = document.querySelector('#login-modal-close');
+  if (loginCloseBtn) loginCloseBtn.addEventListener('click', closeLoginModal);
+
+  // Login modal backdrop click
+  const loginOverlay = document.querySelector('#login-modal-overlay');
+  if (loginOverlay) {
+    loginOverlay.addEventListener('click', (e) => {
+      if (e.target === loginOverlay) closeLoginModal();
+    });
+  }
+
+  // Login modal form submit
+  const loginFormEl = document.querySelector('#login-modal-form');
+  if (loginFormEl) {
+    loginFormEl.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const emailEl = document.querySelector('#login-modal-email');
+      const passwordEl = document.querySelector('#login-modal-password');
+      const errorEl = document.querySelector('#login-modal-error');
+      const submitBtn = document.querySelector('#login-modal-submit');
+
+      const email = emailEl?.value?.trim();
+      const password = passwordEl?.value;
+
+      if (!email || !password) {
+        if (errorEl) {
+          errorEl.textContent = 'Please enter your email and password.';
+          errorEl.style.display = 'block';
+        }
+        return;
+      }
+
+      if (errorEl) errorEl.style.display = 'none';
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Signing in…';
+      }
+
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+
+      if (error) {
+        if (errorEl) {
+          if (error.message.includes('Invalid login credentials')) {
+            errorEl.textContent = 'Wrong email or password. Try again.';
+          } else if (error.message.includes('Email not confirmed')) {
+            errorEl.textContent = 'Please confirm your email first. Check your inbox.';
+          } else {
+            errorEl.textContent = error.message;
+          }
+          errorEl.style.display = 'block';
+        }
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Sign In';
+        }
+        return;
+      }
+
+      // Success — redirect to profile
+      const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+      window.location.href = isLocalhost ? 'http://localhost:5174/#/profile' : '/profile.html';
+    });
+  }
+
+  // Login link in wizard modal -> open login modal
   const loginLink = document.querySelector('#modal-login-link');
   if (loginLink) {
     loginLink.addEventListener('click', (e) => {
       e.preventDefault();
-      handleLogin();
+      openLoginModal();
     });
   }
 
@@ -864,3 +978,122 @@ async function initNavAuth() {
     // silently fail — nav stays as default
   }
 }
+
+/* ─── Legal Modals (TOS / Privacy) ─── */
+
+function openLegalModal(type) {
+  const overlay = document.querySelector(`#${type}-modal-overlay`);
+  if (!overlay) return;
+  overlay.classList.add('open');
+  overlay.setAttribute('aria-hidden', 'false');
+  document.body.style.overflow = 'hidden';
+
+  const scrollBox = overlay.querySelector('[data-legal-scroll]');
+  if (scrollBox) {
+    scrollBox.scrollTop = 0;
+    startLegalAutoScroll(scrollBox);
+  }
+
+  const focusable = overlay.querySelectorAll('button, a[href]');
+  if (focusable.length) focusable[0].focus();
+}
+
+function closeLegalModal(type) {
+  const overlay = document.querySelector(`#${type}-modal-overlay`);
+  if (!overlay) return;
+  overlay.classList.remove('open');
+  overlay.setAttribute('aria-hidden', 'true');
+  document.body.style.overflow = '';
+  stopLegalAutoScroll(type);
+
+  const trigger = document.querySelector(`[data-open-legal="${type}"]`);
+  if (trigger) trigger.focus();
+}
+
+// Auto-scroll
+const legalScrollState = {};
+
+function startLegalAutoScroll(container) {
+  const type = container.getAttribute('data-legal-scroll');
+  if (!type) return;
+
+  // Stop any existing scroll for this type
+  stopLegalAutoScroll(type);
+
+  let paused = false;
+  let raf = null;
+
+  const indicator = document.querySelector(`[data-legal-indicator="${type}"]`);
+
+  function frame() {
+    if (!paused) {
+      container.scrollTop += 0.7;
+    }
+    raf = requestAnimationFrame(frame);
+  }
+  raf = requestAnimationFrame(frame);
+
+  const onEnter = () => {
+    paused = true;
+    if (indicator) indicator.textContent = 'Scrolling paused';
+  };
+  const onLeave = () => {
+    paused = false;
+    if (indicator) indicator.textContent = 'Scroll to continue reading';
+  };
+
+  container.addEventListener('mouseenter', onEnter);
+  container.addEventListener('mouseleave', onLeave);
+
+  // Show indicator until user scrolls manually
+  const showIndicator = () => {
+    if (indicator) indicator.classList.add('visible');
+    container.removeEventListener('scroll', showIndicator);
+  };
+  container.addEventListener('scroll', showIndicator, { once: true });
+  // Show it after a short delay if no scroll yet
+  setTimeout(showIndicator, 1500);
+
+  legalScrollState[type] = { raf, paused, onEnter, onLeave, container };
+}
+
+function stopLegalAutoScroll(type) {
+  const state = legalScrollState[type];
+  if (!state) return;
+  if (state.raf) cancelAnimationFrame(state.raf);
+  state.container.removeEventListener('mouseenter', state.onEnter);
+  state.container.removeEventListener('mouseleave', state.onLeave);
+  delete legalScrollState[type];
+}
+
+// Wire legal modal triggers on DOMContentLoaded
+document.addEventListener('DOMContentLoaded', () => {
+  // Open triggers
+  document.querySelectorAll('[data-open-legal]').forEach(link => {
+    link.addEventListener('click', (e) => {
+      e.preventDefault();
+      openLegalModal(link.getAttribute('data-open-legal'));
+    });
+  });
+
+  // Close triggers
+  document.querySelectorAll('[data-close-legal]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      closeLegalModal(btn.getAttribute('data-close-legal'));
+    });
+  });
+
+  // Close on overlay backdrop click
+  document.querySelectorAll('.legal-modal-overlay').forEach(overlay => {
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) {
+        const type = overlay.id.replace('-modal-overlay', '');
+        closeLegalModal(type);
+      }
+    });
+  });
+
+  // Escape closes legal modals (added to existing Escape handler logic)
+  // This check runs alongside the existing Escape handler
+});
+

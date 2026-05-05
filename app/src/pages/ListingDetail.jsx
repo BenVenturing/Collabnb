@@ -92,7 +92,7 @@ function PhotoGallery({ images, title, onClose }) {
 }
 
 // ─── Apply Now Modal ──────────────────────────────────────────────────────────
-function ApplyModal({ listing, onClose, onApply }) {
+function ApplyModal({ listing, onClose, onApply, navigate }) {
   const defaultPitch =
 `Hi! I'm ${MOCK_CREATOR.full_name} (@${MOCK_CREATOR.instagram_handle}), a ${MOCK_CREATOR.tier} travel creator with ${Math.round(MOCK_CREATOR.follower_count / 1000)}K followers across Instagram and TikTok.
 
@@ -151,6 +151,38 @@ Let's make something great together.`;
             <p style={{ color: 'var(--sage)', fontSize: '0.85rem', marginBottom: '2rem' }}>
               Check <strong style={{ color: 'var(--slate)' }}>Collabs</strong> to track your application and <strong style={{ color: 'var(--slate)' }}>Inbox</strong> for the host's reply.
             </p>
+            <button
+              onClick={() => {
+                navigate('/contract', {
+                  state: {
+                    prefill: {
+                      creator: MOCK_CREATOR.full_name,
+                      host: listing.title.split(' ').slice(0, 2).join(' '),
+                      property_name: listing.title,
+                      location: listing.location,
+                      dates: listing.dates_available,
+                      deliverables: listing.deliverables,
+                    }
+                  }
+                });
+              }}
+              style={{
+                width: '100%', padding: '0.875rem', marginBottom: '0.625rem',
+                background: 'var(--ink)', color: 'var(--bone)',
+                borderRadius: '999px', fontWeight: 700,
+                fontSize: '0.9rem', fontFamily: 'var(--font-body)',
+                border: 'none', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem',
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+                <line x1="16" y1="13" x2="8" y2="13"/>
+                <line x1="16" y1="17" x2="8" y2="17"/>
+              </svg>
+              Create Contract
+            </button>
             <button onClick={onClose} style={{
               width: '100%', padding: '0.875rem',
               background: 'var(--ink)', color: 'var(--bone)',
@@ -771,6 +803,7 @@ export default function ListingDetail() {
           listing={listing}
           onClose={() => setShowApplyModal(false)}
           onApply={applyToListing}
+          navigate={navigate}
         />
       )}
 

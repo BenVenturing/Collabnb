@@ -40,7 +40,6 @@
     <li><a href="pricing/index.html">Pricing</a></li>
   </ul>
   <div class="nav-actions" style="display:flex; align-items:center; gap:0.5rem;">
-    <a href="login.html" class="btn-login">Login</a>
     <button class="nav-hamburger" aria-label="Open menu" aria-expanded="false">
       <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
         <line class="line line-1" x1="3" y1="5" x2="17" y2="5"/>
@@ -48,6 +47,7 @@
         <line class="line line-3" x1="3" y1="15" x2="17" y2="15"/>
       </svg>
     </button>
+    <button class="btn-login" data-login-trigger>Login</button>
     <a href="join.html" class="btn-primary">Join the Waitlist</a>
   </div>
 </nav>
@@ -228,7 +228,7 @@
           </div>
         </div>
         <div class="footer-col"><h4>Use</h4><ul><li><a href="index.html">Home</a></li><li><a href="about.html">About</a></li><li><a href="how-it-works.html">How it works</a></li><li><a href="faq.html">FAQ</a></li><li><a href="pricing/index.html">Pricing</a></li></ul></div>
-        <div class="footer-col"><h4>Company</h4><ul><li><a href="mailto:hellocollabnb@gmail.com">Contact</a></li><li><a href="#">Privacy</a></li><li><a href="#">Terms</a></li></ul></div>
+        <div class="footer-col"><h4>Company</h4><ul><li><a href="mailto:hellocollabnb@gmail.com">Contact</a></li><li><a href="#" data-open-legal="privacy">Privacy</a></li><li><a href="#" data-open-legal="terms">Terms</a></li></ul></div>
         <div class="footer-col"><h4>Join</h4><ul><li><a href="join.html">Creator waitlist</a></li><li><a href="join.html">Host waitlist</a></li></ul></div>
       </div>
       <div class="footer-bottom">
@@ -239,7 +239,134 @@
   </div>
 </footer>
 
+<!-- ── LOGIN MODAL ── -->
+<div id="login-modal-overlay" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="login-modal-title" aria-hidden="true">
+  <div class="modal-card" style="max-width:420px;padding:2.5rem 2rem;">
+    <button id="login-modal-close" class="modal-close" aria-label="Close login form">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+    </button>
+    <div style="text-align:center;">
+      <div class="login-icon" style="margin:0 auto 1.25rem;">🔑</div>
+      <h2 id="login-modal-title" class="login-title">Welcome back</h2>
+      <p class="login-desc">Sign in to your account to view your profile and manage collabs.</p>
+    </div>
+    <form id="login-modal-form" class="login-form">
+      <div class="form-group">
+        <label class="form-label" for="login-modal-email">Email address</label>
+        <input class="form-input" type="email" id="login-modal-email" name="email" placeholder="you@example.com" autocomplete="email" required />
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="login-modal-password">Password</label>
+        <input class="form-input" type="password" id="login-modal-password" name="password" placeholder="••••••••" autocomplete="current-password" required />
+      </div>
+      <button type="submit" id="login-modal-submit" class="btn-primary" style="width:100%;cursor:pointer;">Sign In</button>
+      <div class="login-error" id="login-modal-error"></div>
+    </form>
+    <div class="login-footer" style="text-align:center;margin-top:1.5rem;">
+      Don't have an account? <a href="join.html">Join the waitlist</a>
+    </div>
+  </div>
+</div>
+
 <script type="module" src="/scripts/main.js"></script>
 <script type="module" src="/scripts/globe.js"></script>
+
+<!-- ── PRIVACY POLICY MODAL ── -->
+<div id="privacy-modal-overlay" class="legal-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="privacy-modal-title" aria-hidden="true">
+  <div class="legal-modal-card">
+    <button class="legal-modal-close" data-close-legal="privacy" aria-label="Close privacy policy">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+    </button>
+    <div class="legal-modal-header">
+      <h2 id="privacy-modal-title">Privacy Policy</h2>
+    </div>
+    <div class="legal-modal-scroll" data-legal-scroll="privacy">
+      <div class="legal-content">
+        <h1>Privacy Policy</h1>
+        <p><strong>Effective Date:</strong> June 1, 2026</p>
+        <h2>Introduction</h2>
+        <p>Collabnb ("we," "our," or "us") connects content creators with hospitality hosts for collaboration opportunities. We are committed to protecting your personal data and being transparent about how it is collected and used.</p>
+        <p>By using Collabnb, you agree to the collection and use of your information in accordance with this policy. If you do not agree, please discontinue use of the platform.</p>
+        <h2>Information We Collect</h2>
+        <p>We collect personal information such as your name, email, profile details, social media handles, and property or listing information depending on your role. We also collect content you upload, collaboration details, and messages exchanged on the platform.</p>
+        <p>We automatically collect usage data including device information, IP address, and interactions with the platform to improve performance and user experience.</p>
+        <h2>How We Use Information</h2>
+        <p>Your information is used to operate and improve Collabnb, including enabling collaborations, displaying profiles and listings, processing payments, and facilitating communication between users.</p>
+        <p>We may also use your data to send updates, ensure platform security, prevent fraud, and enhance the overall user experience.</p>
+        <h2>Sharing of Information</h2>
+        <p>Your information is shared with other users as necessary to enable collaborations, including displaying profiles, listings, and communication between relevant parties.</p>
+        <p>We may also share data with trusted third-party service providers or when required by law. We do not sell your personal data.</p>
+        <h2>Payments</h2>
+        <p>Payments for listing fees or collaborations are processed through third-party providers. Collabnb does not store full payment details.</p>
+        <p>By using the platform, you agree to applicable fees and payment structures as outlined within the app.</p>
+        <h2>Data Retention & Rights</h2>
+        <p>We retain your data only as long as necessary to provide services, comply with legal obligations, and maintain records. You may request account deletion at any time.</p>
+        <p>Depending on your location, you may have rights to access, update, or delete your data. Contact us at <a href="mailto:hellocollabnb@gmail.com">hellocollabnb@gmail.com</a>.</p>
+        <h2>Security & International Use</h2>
+        <p>We implement reasonable safeguards to protect your data, but no system is completely secure. Use of the platform is at your own risk.</p>
+        <p>As a global platform, your data may be transferred and processed internationally. By using Collabnb, you consent to this.</p>
+        <h2>Updates & Contact</h2>
+        <p>We may update this Privacy Policy from time to time. Continued use of the platform indicates acceptance of any changes.</p>
+        <p>Contact: <a href="mailto:hellocollabnb@gmail.com">hellocollabnb@gmail.com</a></p>
+      </div>
+    </div>
+    <span class="legal-modal-scroll-indicator" data-legal-indicator="privacy">Scroll to continue reading</span>
+  </div>
+</div>
+
+<!-- ── TERMS OF SERVICE MODAL ── -->
+<div id="terms-modal-overlay" class="legal-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="terms-modal-title" aria-hidden="true">
+  <div class="legal-modal-card">
+    <button class="legal-modal-close" data-close-legal="terms" aria-label="Close terms of service">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+    </button>
+    <div class="legal-modal-header">
+      <h2 id="terms-modal-title">Terms of Service</h2>
+    </div>
+    <div class="legal-modal-scroll" data-legal-scroll="terms">
+      <div class="legal-content">
+        <h1>Terms of Service</h1>
+        <p><strong>Effective Date:</strong> June 1, 2026</p>
+        <h2>Acceptance of Terms</h2>
+        <p>By accessing or using Collabnb, you agree to be bound by these Terms of Service. If you do not agree, you may not use the platform.</p>
+        <p>These Terms apply to all users, including creators and hosts, and govern your use of all Collabnb services.</p>
+        <h2>Platform Overview</h2>
+        <p>Collabnb connects content creators with hospitality hosts seeking promotional content. We provide tools for discovery, communication, and collaboration management.</p>
+        <p>Collabnb is not a direct party to agreements between users and does not guarantee outcomes or results.</p>
+        <h2>User Accounts</h2>
+        <p>Users must be at least 18 years old and provide accurate information. You are responsible for maintaining account security and all activity under your account.</p>
+        <p>We reserve the right to suspend or terminate accounts that violate these Terms or misuse the platform.</p>
+        <h2>User Responsibilities</h2>
+        <p>Creators agree to provide accurate profiles and deliver agreed content professionally. Hosts agree to provide accurate listings and honor agreed compensation or stay terms.</p>
+        <p>Both parties are responsible for clear communication, fulfilling agreements, and maintaining professional conduct.</p>
+        <h2>Collaborations & Agreements</h2>
+        <p>All collaborations are agreements between creators and hosts. Collabnb may provide tools to structure these agreements but is not responsible for enforcing them.</p>
+        <p>Users are solely responsible for fulfilling deliverables, timelines, and compensation terms.</p>
+        <h2>Payments & Fees</h2>
+        <p>Collabnb may charge listing fees, commissions, or service fees as outlined on the platform. By using the service, you agree to these fees.</p>
+        <p>Payments are handled through third-party providers, and Collabnb is not responsible for processing errors.</p>
+        <h2>Content & Usage Rights</h2>
+        <p>Creators retain ownership of their content but grant hosts usage rights as defined in each collaboration agreement.</p>
+        <p>By posting content on Collabnb, you grant us a limited license to display and promote content within the platform.</p>
+        <h2>Prohibited Conduct</h2>
+        <p>Users may not engage in fraudulent behavior, harassment, spam, or attempts to bypass platform systems or fees.</p>
+        <p>Violations may result in suspension or permanent removal from the platform.</p>
+        <h2>Disputes & Liability</h2>
+        <p>Collabnb is not responsible for disputes between users but may offer limited support at its discretion.</p>
+        <p>We are not liable for damages, losses, or unmet expectations resulting from platform use.</p>
+        <h2>Termination</h2>
+        <p>We may suspend or terminate access at any time if users violate these Terms or harm the platform.</p>
+        <p>Users may stop using the platform and delete their account at any time.</p>
+        <h2>Changes & Governing Law</h2>
+        <p>We may update these Terms periodically. Continued use indicates acceptance of any updates.</p>
+        <p>These Terms are governed by the laws of: [Insert Jurisdiction]</p>
+        <h2>Contact</h2>
+        <p>For questions, contact: <a href="mailto:hellocollabnb@gmail.com">hellocollabnb@gmail.com</a></p>
+      </div>
+    </div>
+    <span class="legal-modal-scroll-indicator" data-legal-indicator="terms">Scroll to continue reading</span>
+  </div>
+</div>
+
 </body>
 </html>

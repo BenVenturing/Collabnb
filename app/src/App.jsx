@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { AppBarProvider } from './contexts/AppBarContext';
 import { CollabProvider } from './contexts/CollabContext';
 import Layout        from './components/Layout';
+import ContractBuilder from './components/ContractBuilder';
 import Explore       from './pages/Explore';
 import Collabs       from './pages/Collabs';
 import Saved         from './pages/Saved';
@@ -54,6 +55,7 @@ function AppRoutes() {
           <Route path="/saved"          element={<Saved />} />
           <Route path="/inbox"          element={<Inbox />} />
           <Route path="/profile"        element={<Profile />} />
+          <Route path="/contract"       element={<ContractBuilder />} />
           <Route path="*"               element={<Navigate to="/explore" replace />} />
         </Routes>
       </Layout>

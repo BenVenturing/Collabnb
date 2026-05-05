@@ -88,7 +88,42 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- ─── 5. Recreate trigger (drops old broken one first) ────────────
+-- ─── 6. Contracts table ──────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS public.contracts (
+  id               uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  created_at       timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+  creator_name     text NOT NULL,
+  host_name        text NOT NULL,
+  property_name    text,
+  location         text,
+  dates            text,
+  deliverables     text,
+  currency         text DEFAULT 'USD',
+  payment          text,
+  usage_rights     text,
+  status           text DEFAULT 'draft' CHECK (status IN ('draft', 'pending', 'accepted')),
+  creator_signed   boolean DEFAULT false,
+  host_signed      boolean DEFAULT false,
+  creator_signed_at timestamp with time zone,
+  host_signed_at   timestamp with time zone,
+  summary_note     text
+);
+
+ALTER TABLE public.contracts ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can view own contracts." ON public.contracts;
+CREATE POLICY "Users can view own contracts."
+  ON public.contracts FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Users can insert contracts." ON public.contracts;
+CREATE POLICY "Users can insert contracts."
+  ON public.contracts FOR INSERT WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Users can update own contracts." ON public.contracts;
+CREATE POLICY "Users can update own contracts."
+  ON public.contracts FOR UPDATE USING (true);
+
+-- ─── 7. Recreate trigger (drops old broken one first) ────────────
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users

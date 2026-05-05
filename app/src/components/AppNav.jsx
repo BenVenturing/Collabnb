@@ -150,18 +150,7 @@ export default function AppNav() {
           <span>Collabnb</span>
         </NavLink>
 
-        {/* Desktop links (hidden when scrolled via CSS) */}
-        <ul className="nav-links" role="list">
-          {NAV_LINKS.map(({ to, label }) => (
-            <li key={to}>
-              <NavLink to={to} className={({ isActive }) => isActive ? 'active' : ''}>
-                {label}
-              </NavLink>
-            </li>
-          ))}
-        </ul>
-
-        {/* ── Middle section: inline menu links OR expanded nav search ───────── */}
+        {/* ── Middle section: nav links | inline menu | expanded search ── */}
         <div style={{
           flex: 1,
           display: 'flex',
@@ -171,6 +160,17 @@ export default function AppNav() {
           overflow: navSearchOpen ? 'visible' : 'hidden',
           position: 'relative',
         }}>
+
+          {/* Desktop nav links (hidden when scrolled via CSS) */}
+          <ul className="nav-links" role="list">
+            {NAV_LINKS.map(({ to, label }) => (
+              <li key={to}>
+                <NavLink to={to} className={({ isActive }) => isActive ? 'active' : ''}>
+                  {label}
+                </NavLink>
+              </li>
+            ))}
+          </ul>
 
           {/* Inline compact nav links (hamburger tapped while scrolled) */}
           {!navSearchOpen && (
@@ -458,8 +458,15 @@ export default function AppNav() {
             {/* Profile dropdown */}
             {profileOpen && (
               <div
-                className="absolute right-0 top-[calc(100%+0.5rem)] w-52 glass-sm rounded-2xl overflow-hidden z-50"
-                style={{ boxShadow: '0 8px 32px rgba(25,37,36,0.12)' }}
+                className="absolute right-0 top-[calc(100%+0.5rem)] w-52 rounded-2xl overflow-hidden z-50"
+                style={{
+                  background: 'rgba(255,255,255,0.94)',
+                  backdropFilter: 'blur(24px) saturate(140%)',
+                  WebkitBackdropFilter: 'blur(24px) saturate(140%)',
+                  border: '1px solid rgba(255,255,255,0.7)',
+                  boxShadow: '0 12px 40px rgba(25,37,36,0.18), inset 0 1px 0 rgba(255,255,255,0.7)',
+                  animation: 'fadeUp 180ms cubic-bezier(0.16,1,0.3,1) forwards',
+                }}
               >
                 <div className="px-4 py-3 border-b border-stone/30">
                   <p className="font-display font-bold text-ink text-sm">{profile?.full_name}</p>
@@ -468,9 +475,6 @@ export default function AppNav() {
                 <NavLink to="/profile" onClick={() => setProfileOpen(false)} className="block px-4 py-3 text-sm text-ink hover:bg-mint/30 transition-colors">
                   View Profile
                 </NavLink>
-                <button onClick={() => { setProfileOpen(false); navigate('/explore'); }} className="w-full text-left px-4 py-3 text-sm text-ink hover:bg-mint/30 transition-colors">
-                  Explore Stays
-                </button>
                 <div className="border-t border-stone/30" />
                 <button onClick={signOut} className="w-full text-left px-4 py-3 text-sm text-red-500 hover:bg-red-50/50 transition-colors">
                   Log Out

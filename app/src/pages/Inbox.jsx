@@ -18,7 +18,21 @@ function ThreadRow({ thread }) {
           <span className="font-display font-bold text-slate text-sm">{initials}</span>
         </div>
         {thread.is_founder && (
-          <span className="absolute -bottom-0.5 -right-0.5 text-xs leading-none">⭐</span>
+          <span
+            title="Founding Member"
+            className="absolute -bottom-0.5 -right-0.5"
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              width: '16px', height: '16px', borderRadius: '50%',
+              background: 'linear-gradient(135deg, #D4A843, #B8922A)',
+              border: '1.5px solid white',
+              boxShadow: '0 1px 4px rgba(212,168,67,0.4)',
+            }}
+          >
+            <svg viewBox="0 0 16 16" fill="white" width="8" height="8">
+              <path d="M8 1.5l1.67 3.38 3.73.54-2.7 2.63.64 3.72L8 9.77l-3.34 1.76.64-3.72L2.6 5.42l3.73-.54z"/>
+            </svg>
+          </span>
         )}
         {thread.unread > 0 && (
           <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-slate text-bone text-[9px] font-bold flex items-center justify-center">

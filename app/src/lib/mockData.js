@@ -7,7 +7,7 @@ export const MOCK_CREATOR = {
   role: 'creator',
   tier: 'UGC Pro',
   bio: 'Travel & lifestyle creator documenting unique stays and hidden gems around the world. Passionate about authentic content that inspires people to explore.',
-  avatar_url: 'https://ucarecdn.com/6d425040-e4c3-46f0-a774-91ac597ebe24/-/format/auto/',
+  avatar_url: '/assets/ben-venturing.png',
   follower_count: 413500,
   engagement_rate: 8.2,
   collab_count: 47,
@@ -26,7 +26,7 @@ export const MOCK_CREATOR = {
 export const SAMPLE_HOST = {
   name: 'Ben Venturing',
   username: 'ben.venturing',
-  avatar_url: '/assets/ben-venturing.jpg',
+  avatar_url: '/assets/ben-venturing.png',
   avatar_fallback: 'https://ucarecdn.com/6d425040-e4c3-46f0-a774-91ac597ebe24/-/format/auto/',
   role: 'Collabnb Host',
   verified: true,

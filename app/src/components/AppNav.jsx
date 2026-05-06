@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useAppBar } from '../contexts/AppBarContext';
+import { useCollabs } from '../contexts/CollabContext';
 import { DESTINATIONS, COLLAB_TYPES, AVAIL_OPTIONS } from '../lib/searchData';
 
 const NAV_LINKS = [
@@ -35,7 +36,26 @@ function NavDropdown({ children, align = 'left', width }) {
 export default function AppNav() {
   const { profile, signOut } = useAuth();
   const { compactSearch } = useAppBar();
+  const { savedIds } = useCollabs();
   const navigate = useNavigate();
+  const savedCount = savedIds.size;
+
+  // Transient badge: appears briefly when saved count changes, fades away after 2s
+  const prevSavedRef = useRef(savedCount);
+  const [showBadge, setShowBadge] = useState(false);
+  const [badgeBounce, setBadgeBounce] = useState(false);
+  const hideTimerRef = useRef(null);
+  useEffect(() => {
+    if (savedCount !== prevSavedRef.current) {
+      setShowBadge(true);
+      setBadgeBounce(true);
+      setTimeout(() => setBadgeBounce(false), 700);
+      clearTimeout(hideTimerRef.current);
+      hideTimerRef.current = setTimeout(() => setShowBadge(false), 2000);
+      prevSavedRef.current = savedCount;
+    }
+    return () => clearTimeout(hideTimerRef.current);
+  }, [savedCount]);
 
   // Nav state
   const [scrolled,    setScrolled]   = useState(false);
@@ -164,10 +184,24 @@ export default function AppNav() {
           {/* Desktop nav links (hidden when scrolled via CSS) */}
           <ul className="nav-links" role="list">
             {NAV_LINKS.map(({ to, label }) => (
-              <li key={to}>
+              <li key={to} style={{ position: 'relative' }}>
                 <NavLink to={to} className={({ isActive }) => isActive ? 'active' : ''}>
                   {label}
                 </NavLink>
+                {label === 'Saved' && showBadge && (
+                  <span style={{
+                    position: 'absolute', top: -6, right: -8,
+                    minWidth: 16, height: 16,
+                    background: 'var(--ink)', color: 'var(--bone)',
+                    borderRadius: 9999, fontSize: '0.58rem', fontWeight: 700,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    padding: '0 4px', lineHeight: 1,
+                    animation: badgeBounce ? 'badge-bounce 700ms var(--ease-out-expo)' : 'badge-fade-out 300ms var(--ease-out-expo) forwards',
+                    border: '1.5px solid rgba(255,255,255,0.7)',
+                  }}>
+                    {savedCount}
+                  </span>
+                )}
               </li>
             ))}
           </ul>
@@ -191,7 +225,7 @@ export default function AppNav() {
                   onClick={() => setMenuOpen(false)}
                   className={({ isActive }) => isActive ? 'active' : ''}
                   style={{
-                    fontSize: '0.875rem', fontFamily: 'var(--font-body)', fontWeight: 500,
+                    position: 'relative', fontSize: '0.875rem', fontFamily: 'var(--font-body)', fontWeight: 500,
                     color: 'var(--ink)', whiteSpace: 'nowrap', padding: '0.4rem 0.875rem',
                     borderRadius: '9999px', textDecoration: 'none', transition: 'background 150ms',
                   }}
@@ -199,6 +233,19 @@ export default function AppNav() {
                   onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                 >
                   {label}
+                  {label === 'Saved' && showBadge && (
+                    <span style={{
+                      position: 'absolute', top: 0, right: 2,
+                      minWidth: 14, height: 14,
+                      background: 'var(--ink)', color: 'var(--bone)',
+                      borderRadius: 9999, fontSize: '0.55rem', fontWeight: 700,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      padding: '0 3px', lineHeight: 1,
+                      animation: badgeBounce ? 'badge-bounce 700ms var(--ease-out-expo)' : 'badge-fade-out 300ms var(--ease-out-expo) forwards',
+                    }}>
+                      {savedCount}
+                    </span>
+                  )}
                 </NavLink>
               ))}
             </div>

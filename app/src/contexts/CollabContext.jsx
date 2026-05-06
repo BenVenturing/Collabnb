@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback } from 'react';
+import { createContext, useContext, useState, useCallback, useMemo } from 'react';
 import { SAMPLE_COLLABORATIONS, SAMPLE_THREADS, MOCK_CREATOR, STAGES } from '../lib/mockData';
 
 const CollabContext = createContext(null);
@@ -36,6 +36,98 @@ export function CollabProvider({ children }) {
     parseInt(localStorage.getItem('collabnb_apply_count') || '0', 10)
   );
   const [contracts, setContracts] = useState(loadContracts);
+  const [collections, setCollections] = useState(() => {
+    try {
+      const raw = localStorage.getItem('collabnb_collections');
+      if (raw) return JSON.parse(raw);
+    } catch {}
+    return [{ id: 'col_default', name: 'Saved', listingIds: [] }];
+  });
+  const [activeCollectionId, setActiveCollectionIdState] = useState(() =>
+    localStorage.getItem('collabnb_active_col') || 'col_default'
+  );
+
+  const saveCollectionsToStorage = (cols) => {
+    try { localStorage.setItem('collabnb_collections', JSON.stringify(cols)); } catch {}
+  };
+
+  const savedIds = useMemo(
+    () => new Set(collections.flatMap((c) => c.listingIds)),
+    [collections]
+  );
+
+  const toggleSave = useCallback((listingId) => {
+    setCollections((prev) => {
+      const inCollection = prev.find((c) => c.listingIds.includes(listingId));
+      let updated;
+      if (inCollection) {
+        updated = prev.map((c) =>
+          c.id === inCollection.id
+            ? { ...c, listingIds: c.listingIds.filter((id) => id !== listingId) }
+            : c
+        );
+      } else {
+        const targetId = activeCollectionId || prev[0]?.id || 'col_default';
+        updated = prev.map((c) =>
+          c.id === targetId ? { ...c, listingIds: [...c.listingIds, listingId] } : c
+        );
+      }
+      saveCollectionsToStorage(updated);
+      return updated;
+    });
+  }, [activeCollectionId]);
+
+  const isSaved = useCallback((listingId) => savedIds.has(listingId), [savedIds]);
+
+  const createCollection = useCallback((name) => {
+    const newCol = { id: `col_${Date.now()}`, name: name.trim() || 'New Collection', listingIds: [] };
+    setCollections((prev) => {
+      const updated = [...prev, newCol];
+      saveCollectionsToStorage(updated);
+      return updated;
+    });
+    setActiveCollectionIdState(newCol.id);
+    localStorage.setItem('collabnb_active_col', newCol.id);
+    return newCol;
+  }, []);
+
+  const setActiveCollection = useCallback((id) => {
+    setActiveCollectionIdState(id);
+    localStorage.setItem('collabnb_active_col', id);
+  }, []);
+
+  const moveToCollection = useCallback((listingId, targetCollectionId) => {
+    setCollections((prev) => {
+      const removed = prev.map((c) => ({ ...c, listingIds: c.listingIds.filter((id) => id !== listingId) }));
+      const updated = removed.map((c) =>
+        c.id === targetCollectionId ? { ...c, listingIds: [...c.listingIds, listingId] } : c
+      );
+      saveCollectionsToStorage(updated);
+      return updated;
+    });
+  }, []);
+
+  const renameCollection = useCallback((id, name) => {
+    setCollections((prev) => {
+      const updated = prev.map((c) => (c.id === id ? { ...c, name: name.trim() || c.name } : c));
+      saveCollectionsToStorage(updated);
+      return updated;
+    });
+  }, []);
+
+  const deleteCollection = useCallback((id) => {
+    setCollections((prev) => {
+      if (prev.length <= 1) return prev;
+      const updated = prev.filter((c) => c.id !== id);
+      saveCollectionsToStorage(updated);
+      if (activeCollectionId === id) {
+        const next = updated[0]?.id || 'col_default';
+        setActiveCollectionIdState(next);
+        localStorage.setItem('collabnb_active_col', next);
+      }
+      return updated;
+    });
+  }, [activeCollectionId]);
 
   const saveContract = useCallback((contractData) => {
     const newContract = {
@@ -155,7 +247,7 @@ export function CollabProvider({ children }) {
       );
       saveCollabsToStorage(updated);
 
-      // Sync thread tag with new stage
+      // Sync thread tag + notification with new stage
       setThreads((tPrev) => {
         const tagMap = {
           pending: 'Application',
@@ -165,9 +257,10 @@ export function CollabProvider({ children }) {
           closed: 'Collab',
           archived: 'Archived',
         };
+        const stageLabel = STAGES.find((s) => s.key === nextKey)?.label || nextKey;
         return tPrev.map((t) =>
           t.collab_id === id
-            ? { ...t, tag: tagMap[nextKey] || t.tag }
+            ? { ...t, tag: tagMap[nextKey] || t.tag, last_message: `Stage advanced to ${stageLabel} — host has been notified.`, timestamp: 'Just now' }
             : t
         );
       });
@@ -257,7 +350,7 @@ export function CollabProvider({ children }) {
   }, []);
 
   return (
-    <CollabContext.Provider value={{ collabs, threads, contracts, applyCount, applyToListing, hasApplied, saveContract, updateContract, getContracts, sendContractMessage, getCollabById, advanceStage, updateStageData, toggleCloseCollab, archiveThread, updateThreadTag }}>
+    <CollabContext.Provider value={{ collabs, threads, contracts, applyCount, savedIds, collections, activeCollectionId, toggleSave, isSaved, createCollection, setActiveCollection, moveToCollection, renameCollection, deleteCollection, applyToListing, hasApplied, saveContract, updateContract, getContracts, sendContractMessage, getCollabById, advanceStage, updateStageData, toggleCloseCollab, archiveThread, updateThreadTag }}>
       {children}
     </CollabContext.Provider>
   );

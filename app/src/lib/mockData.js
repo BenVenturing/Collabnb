@@ -436,11 +436,51 @@ export const SAMPLE_LISTINGS = [
 export const STAGES = [
   { key: 'pending',         label: 'Pending',           icon: '🟡' },
   { key: 'accepted',        label: 'Accepted',          icon: '📋' },
-  { key: 'updated',         label: 'Updated',           icon: '🔄' },
-  { key: 'uploaded_tagged', label: 'Uploaded & Tagged',  icon: '🔵' },
+  { key: 'updated',         label: 'Adjustments',       icon: '🔄' },
+  { key: 'uploaded_tagged', label: 'Uploaded',          icon: '🔵' },
   { key: 'closed',          label: 'Closed',            icon: '🟢' },
   { key: 'archived',        label: 'Archived',          icon: '📦' },
 ];
+
+// ─── Demo stage explanations (graphic icon cards for the demo collab) ─────────
+export const DEMO_STAGE_CARDS = {
+  pending: {
+    icon: '✉️',
+    title: 'Application Sent',
+    description: 'Your pitch has been submitted to the host. They\'ll review your profile, portfolio, and message before deciding.',
+    tip: 'Tip: A personalized message with specific content ideas increases acceptance rates by 3x.',
+  },
+  accepted: {
+    icon: '🤝',
+    title: 'Collaboration Accepted',
+    description: 'The host loved your pitch! Now it\'s time to share your drive link and start planning your content.',
+    tip: 'Tip: Share a Google Drive folder early so the host can follow along with your progress.',
+  },
+  updated: {
+    icon: '🔄',
+    title: 'Adjustments Requested',
+    description: 'Review and adjust the agreed deliverables — reels, photos, blog posts. Changes are shared with the host for approval.',
+    tip: 'Tip: Clear communication about changes builds trust. Explain why each adjustment helps the content perform better.',
+  },
+  uploaded_tagged: {
+    icon: '📸',
+    title: 'Uploaded',
+    description: 'All content is uploaded and ready for host review. Cross-check the deliverable list one more time before requesting approval.',
+    tip: 'Tip: Always tag @collabnb and the property — it helps both parties\' reach.',
+  },
+  closed: {
+    icon: '✅',
+    title: 'Collaboration Complete',
+    description: 'Both parties confirmed everything looks great. Payment is released and the collab is wrapped up.',
+    tip: 'Tip: A happy host = future referrals. Send a thank-you note after closing.',
+  },
+  archived: {
+    icon: '📦',
+    title: 'Archived',
+    description: 'This collaboration is safely stored in your archive. You can revisit any stage details anytime.',
+    tip: 'Tip: Archived collabs make great portfolio pieces for future applications.',
+  },
+};
 
 function makeStages(completedUpTo, notes = {}) {
   const keys = ['pending', 'accepted', 'updated', 'uploaded_tagged', 'closed', 'archived'];
@@ -485,10 +525,10 @@ export const SAMPLE_COLLABORATIONS = [
     host_name: 'Ben Venturing',
     image: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&q=80',
     status: 'uploaded',
-    status_text: 'Uploaded & Tagged (AI)',
+    status_text: 'Uploaded',
     dates: 'Jan 28–31, 2026',
     deliverables: '2 Reels, 8 Photos',
-    days_left: null,
+    days_left: 0,
     is_active: true,
     current_stage: 'uploaded_tagged',
     stages: makeStages('uploaded_tagged', {
@@ -509,20 +549,21 @@ export const SAMPLE_COLLABORATIONS = [
     location: 'Aspen, CO',
     host_name: 'Ben Venturing',
     image: 'https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=800&q=80',
-    status: 'approved',
-    status_text: 'Approved · Payment Released',
+    status: 'archived',
+    status_text: 'Archived',
     dates: 'Jan 10–13, 2026',
     deliverables: '5 Reels, 12 Photos, 1 YouTube Vlog',
     days_left: null,
     payment: '$500',
     is_active: false,
-    current_stage: 'closed',
-    stages: makeStages('closed', {
+    current_stage: 'archived',
+    stages: makeStages('archived', {
       pending:         { date: 'Dec 20, 2025', note: 'Application submitted and accepted' },
       accepted:        { date: 'Dec 22, 2025', note: 'Host confirmed the collaboration' },
       updated:         { date: 'Dec 28, 2025', note: 'Content plan submitted and reviewed' },
       uploaded_tagged: { date: 'Jan 15, 2026', note: 'All content uploaded and tagged' },
       closed:          { date: 'Jan 20, 2026', note: 'Content approved — payment released' },
+      archived:        { date: 'Jan 25, 2026', note: 'Collaboration completed and archived' },
     }),
     drive_url: '',
     content_stats: { reels: 5, photos: 12, youtube_vlog: 1 },
@@ -530,6 +571,37 @@ export const SAMPLE_COLLABORATIONS = [
     listing_description: 'Ski-in, ski-out luxury lodge at the base of Aspen Mountain with panoramic views.',
   },
 ];
+
+// ─── Demo collaboration (guided tour, all stages pre-filled) ──────────────────
+export const DEMO_COLLAB = {
+  id: 'demo',
+  listing_id: 'demo',
+  property_name: 'Collabnb Demo Tour',
+  location: 'San Francisco, CA',
+  host_name: 'Collabnb Guide',
+  image: '',
+  status: 'demo',
+  status_text: 'Demo',
+  dates: 'Anytime',
+  deliverables: 'Interactive Tour',
+  days_left: null,
+  payment: null,
+  is_active: true,
+  is_demo: true,
+  current_stage: 'pending',
+  stages: {
+    pending:         { completed: true,  date: 'Now',     note: 'You are here — your application is ready for review.' },
+    accepted:        { completed: false, date: null,      note: '' },
+    updated:         { completed: false, date: null,      note: '' },
+    uploaded_tagged: { completed: false, date: null,      note: '' },
+    closed:          { completed: false, date: null,      note: '' },
+    archived:        { completed: false, date: null,      note: '' },
+  },
+  drive_url: '',
+  content_stats: null,
+  contract_id: null,
+  listing_description: 'Welcome to Collabnb! This demo walks you through the entire collaboration lifecycle — from application to archive. Click the auto-advance play button or tap each stage dot to explore.',
+};
 
 // ─── Thread message histories ─────────────────────────────────────────────────
 export const THREAD_MESSAGES = {

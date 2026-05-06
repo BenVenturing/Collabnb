@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { SAMPLE_LISTINGS } from '../lib/mockData';
 import { useAppBar } from '../contexts/AppBarContext';
+import { useCollabs } from '../contexts/CollabContext';
 import { DESTINATIONS, COLLAB_TYPES, AVAIL_OPTIONS } from '../lib/searchData';
 
 const PROP_FILTERS = ['All', 'Cabin', 'Villa', 'Treehouse', 'Glamping', 'Lodge', 'Estate', 'Cottage'];
@@ -17,6 +18,15 @@ function StarIcon() {
 
 // ─── Listing Card ─────────────────────────────────────────────────────────────
 function ListingCard({ listing, saved, onSave, delay, onNavigate }) {
+  const [rippling, setRippling] = useState(false);
+
+  const handleSave = (e) => {
+    e.stopPropagation();
+    setRippling(true);
+    setTimeout(() => setRippling(false), 650);
+    onSave(listing.id);
+  };
+
   return (
     <div
       className="listing-card reveal-up"
@@ -56,20 +66,30 @@ function ListingCard({ listing, saved, onSave, delay, onNavigate }) {
 
         {/* Save heart */}
         <button
-          onClick={(e) => { e.stopPropagation(); onSave(listing.id); }}
+          onClick={handleSave}
           style={{
             position: 'absolute', top: '0.75rem', right: '0.75rem',
             width: '2rem', height: '2rem', borderRadius: '50%',
             background: 'rgba(255,255,255,0.88)', backdropFilter: 'blur(8px)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            border: 'none', cursor: 'pointer',
+            border: 'none', cursor: 'pointer', overflow: 'hidden',
             transition: 'transform 200ms var(--ease-out-quart)',
             boxShadow: '0 2px 8px rgba(25,37,36,0.1)',
           }}
           onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
           onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
         >
-          <svg viewBox="0 0 24 24" style={{ width: 13, height: 13 }}
+          {rippling && (
+            <span style={{
+              position: 'absolute', inset: 0, borderRadius: '50%',
+              background: 'rgba(25,37,36,0.15)',
+              animation: 'ripple-heart 650ms var(--ease-out-expo) forwards',
+              pointerEvents: 'none',
+            }} />
+          )}
+          <svg viewBox="0 0 24 24" style={{ width: 13, height: 13, position: 'relative', zIndex: 1,
+            transition: 'fill 250ms ease',
+          }}
             fill={saved ? '#192524' : 'none'}
             stroke="#192524" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
           >
@@ -171,7 +191,7 @@ export default function Explore() {
   const [whatVal,     setWhatVal]     = useState('');
   const [whenVal,     setWhenVal]     = useState('');
   const [propFilter,  setPropFilter]  = useState('All');
-  const [saved,       setSaved]       = useState(new Set());
+  const { savedIds, toggleSave } = useCollabs();
   const searchRef = useRef(null);
 
   const goToListing = (id) => navigate(`/listing/${id}`);
@@ -193,13 +213,6 @@ export default function Explore() {
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => { window.removeEventListener('scroll', onScroll); setCompactSearch(false); };
   }, [setCompactSearch]);
-
-  const toggleSave = (id) =>
-    setSaved((prev) => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
 
   // Filtered + curated rows
   const byPropType = (arr) =>
@@ -449,7 +462,7 @@ export default function Explore() {
           title="Trending Now"
           subtitle="Top picks this week"
           listings={trending}
-          saved={saved}
+          saved={savedIds}
           onSave={toggleSave}
           onNavigate={goToListing}
         />
@@ -458,7 +471,7 @@ export default function Explore() {
           title="Picked for You"
           subtitle="Matched to your UGC & Photography niche"
           listings={forYou}
-          saved={saved}
+          saved={savedIds}
           onSave={toggleSave}
           onNavigate={goToListing}
         />
@@ -467,7 +480,7 @@ export default function Explore() {
           title="Near Asheville"
           subtitle="Collabs within driving distance of you"
           listings={nearMe}
-          saved={saved}
+          saved={savedIds}
           onSave={toggleSave}
           onNavigate={goToListing}
         />
@@ -476,7 +489,7 @@ export default function Explore() {
           title="All Stays"
           subtitle={`${allFiltered.length} collabs available now`}
           listings={allFiltered}
-          saved={saved}
+          saved={savedIds}
           onSave={toggleSave}
           onNavigate={goToListing}
         />

@@ -571,6 +571,33 @@ export default function Profile() {
           <p style={{ textAlign: 'center', fontSize: '0.7rem', color: 'var(--sage)', marginTop: '1rem' }}>↻ Updated just now</p>
         </div>
 
+        {/* ── Payout card (creator only) ─────────────────────────────────── */}
+        {dp.role === 'creator' && (() => {
+          const totalPayout = SAMPLE_COLLABORATIONS
+            .filter((c) => c.payment)
+            .reduce((sum, c) => {
+              const amt = parseFloat(c.payment.replace(/[^0-9.]/g, ''));
+              return sum + (isNaN(amt) ? 0 : amt);
+            }, 0);
+          return (
+            <div className="glass section-reveal" ref={(el) => sectionsRef.current[0.5] = el} style={{ padding: '1.25rem 1.5rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <div style={{
+                width: '44px', height: '44px', borderRadius: '0.875rem',
+                background: 'linear-gradient(135deg, rgba(74,155,127,0.2), rgba(209,235,221,0.3))',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                fontSize: '1.25rem',
+              }}>
+                💰
+              </div>
+              <div style={{ flex: 1 }}>
+                <p style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--sage)', margin: 0, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Total Payout Received</p>
+                <p style={{ fontFamily: 'var(--font-display)', fontSize: '1.75rem', fontWeight: 800, color: 'var(--ink)', margin: '0.1rem 0 0' }}>${totalPayout.toLocaleString()}</p>
+                <p style={{ fontSize: '0.68rem', color: 'var(--stone)', margin: '0.1rem 0 0' }}>Across {SAMPLE_COLLABORATIONS.filter((c) => c.payment).length} completed collaborations</p>
+              </div>
+            </div>
+          );
+        })()}
+
         {/* ── Bio ──────────────────────────────────────────────────────────── */}
         {dp.bio && (
           <div className="section-reveal" ref={(el) => sectionsRef.current[1] = el} style={{ marginBottom: '1.75rem' }}>

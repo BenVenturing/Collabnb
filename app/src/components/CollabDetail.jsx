@@ -1,7 +1,18 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { useCollabs } from '../contexts/CollabContext';
-import { SAMPLE_LISTINGS, SAMPLE_HOST, STAGES } from '../lib/mockData';
+import { SAMPLE_LISTINGS, SAMPLE_HOST, STAGES, DEMO_STAGE_CARDS } from '../lib/mockData';
+
+/* ── Brand stage colors ──────────────────────────────────────────────────── */
+const STAGE_COLORS = {
+  pending:         { dot: '#192524', bg: 'rgba(25,37,36,0.08)',  label: 'Pending' },
+  accepted:        { dot: '#959D90', bg: 'rgba(149,157,144,0.12)', label: 'Accepted' },
+  updated:         { dot: '#D4A843', bg: 'rgba(212,168,67,0.12)', label: 'Adjustments' },
+  uploaded_tagged: { dot: '#D1EBDD', bg: 'rgba(209,235,221,0.3)', label: 'Uploaded' },
+  closed:          { dot: '#4A9B7F', bg: 'rgba(74,155,127,0.15)', label: 'Closed' },
+  archived:        { dot: '#D0D5CE', bg: 'rgba(208,213,206,0.3)', label: 'Archived' },
+};
 
 /* ── SVG icons ────────────────────────────────────────────────────────────── */
 const XIcon = () => (
@@ -10,7 +21,7 @@ const XIcon = () => (
   </svg>
 );
 const CheckIcon = () => (
-  <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="12" height="12">
+  <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" width="10" height="10">
     <polyline points="2 7 5.5 10.5 12 3.5"/>
   </svg>
 );
@@ -36,73 +47,124 @@ const DollarSmall = () => (
   </svg>
 );
 
-/* ─── Stage progress bar ─────────────────────────────────────────────────── */
-function StageProgressBar({ stages, currentStage }) {
+/* ─── Stage progress bar (redesigned) ────────────────────────────────────── */
+/* Pulse keyframes for demo auto-advance */
+const pulseKeyframes = `
+@keyframes demo-pulse {
+  0%, 100% { box-shadow: 0 0 0 4px var(--pulse-color, rgba(25,37,36,0.12)); }
+  50% { box-shadow: 0 0 0 8px var(--pulse-color, rgba(25,37,36,0.25)); }
+}
+@keyframes demo-dot-bounce {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.25); }
+  100% { transform: scale(1); }
+}
+`;
+
+function StageProgressBar({ stages, currentStage, viewingStage, onStageClick, demoPlaying }) {
+  const prevViewingRef = useRef(viewingStage);
+  const [animatingDot, setAnimatingDot] = useState(null);
+
+  /* Detect when viewing stage changes — trigger bounce animation */
+  useEffect(() => {
+    if (prevViewingRef.current !== viewingStage) {
+      setAnimatingDot(viewingStage);
+      const t = setTimeout(() => setAnimatingDot(null), 400);
+      prevViewingRef.current = viewingStage;
+      return () => clearTimeout(t);
+    }
+  }, [viewingStage]);
   const curIdx = STAGES.findIndex((s) => s.key === currentStage);
+  const stageCount = STAGES.length;
 
   return (
-    <div style={{
-      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      padding: '0.5rem 0', marginBottom: '1rem',
-      maxWidth: '640px', marginInline: 'auto',
-    }}>
-      {STAGES.map((stage, idx) => {
-        const s = stages?.[stage.key];
-        const completed = s?.completed;
-        const isCurrent = stage.key === currentStage;
-        const isPast = idx < curIdx;
+    <div style={{ maxWidth: '600px', margin: '0 auto', padding: '0.25rem 0' }}>
+      <style>{pulseKeyframes}</style>
+      <div className="flex items-start">
+        {STAGES.map((stage, idx) => {
+          const s = stages?.[stage.key];
+          const completed = s?.completed;
+          const isCurrent = stage.key === currentStage;
+          const isViewing = stage.key === viewingStage;
+          const isPast = idx < curIdx;
+          const isClickable = completed || isCurrent;
+          const color = STAGE_COLORS[stage.key] || STAGE_COLORS.pending;
+          const dotSize = isCurrent ? 20 : isViewing ? 18 : completed ? 16 : 14;
 
-        return (
-          <div key={stage.key} style={{ display: 'flex', alignItems: 'center', flex: 1, position: 'relative' }}>
-            {/* Dot */}
-            <div style={{
-              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem',
-              position: 'relative', zIndex: 1,
-            }}>
-              <div style={{
-                width: isCurrent ? '30px' : '24px', height: isCurrent ? '30px' : '24px',
-                borderRadius: '50%',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: isCurrent ? '0.6rem' : completed ? '0.55rem' : '0.55rem',
-                fontWeight: 700,
-                background: completed
-                  ? 'var(--slate)'
-                  : isCurrent
-                    ? 'var(--mint)'
-                    : 'rgba(208,213,206,0.4)',
-                color: completed ? '#fff' : isCurrent ? 'var(--slate)' : 'var(--stone)',
-                border: isCurrent ? '2px solid var(--slate)' : 'none',
-                transition: 'all 200ms',
-                boxShadow: isCurrent ? '0 0 0 4px rgba(60,87,89,0.12)' : 'none',
-              }}>
-                {completed ? <CheckIcon /> : stage.icon}
-              </div>
-              <span style={{
-                fontSize: '0.55rem', fontWeight: isCurrent ? 700 : 500,
-                color: completed ? 'var(--slate)' : isCurrent ? 'var(--ink)' : 'var(--stone)',
-                textAlign: 'center', lineHeight: 1.1, whiteSpace: 'nowrap',
-                maxWidth: '70px', overflow: 'hidden', textOverflow: 'ellipsis',
-              }}>
-                {stage.label}
-              </span>
-              {completed && s?.date && (
-                <span style={{ fontSize: '0.45rem', color: 'var(--sage)', textAlign: 'center', lineHeight: 1 }}>
-                  {s.date}
+          return (
+            <div key={stage.key} className="flex items-center" style={{ flex: 1, minWidth: 0 }}>
+              {/* Dot + label column */}
+              <div
+                className="flex flex-col items-center"
+                style={{ flex: 1, cursor: isClickable ? 'pointer' : 'default' }}
+                onClick={() => isClickable && onStageClick?.(stage.key)}
+              >
+                <div
+                  className="flex items-center justify-center"
+                  style={{
+                    width: dotSize, height: dotSize,
+                    borderRadius: '50%',
+                    background: completed ? color.dot : isCurrent ? color.dot : 'transparent',
+                    border: completed ? 'none' : isCurrent ? `2.5px solid ${color.dot}` : `1.5px solid ${color.dot}`,
+                    opacity: completed || isCurrent ? 1 : 0.35,
+                    boxShadow: isCurrent
+                      ? `0 0 0 4px ${color.bg}`
+                      : isViewing
+                        ? `0 0 0 3px ${color.bg}`
+                        : 'none',
+                    transform: isViewing ? 'scale(1.1)' : 'scale(1)',
+                    transition: 'box-shadow 300ms, transform 200ms',
+                    animation: animatingDot === stage.key
+                      ? 'demo-dot-bounce 400ms ease-out'
+                      : demoPlaying && isCurrent
+                        ? 'demo-pulse 1.5s ease-in-out infinite'
+                        : 'none',
+                  }}
+                >
+                  {completed && <CheckIcon />}
+                </div>
+                <span
+                  className="text-center leading-tight transition-colors duration-200"
+                  style={{
+                    fontSize: completed || isCurrent ? '0.6rem' : '0.55rem',
+                    fontWeight: isViewing ? 800 : isCurrent ? 700 : completed ? 600 : 500,
+                    color: completed ? 'var(--slate)' : isCurrent ? 'var(--ink)' : 'var(--stone)',
+                    marginTop: '0.4rem',
+                    maxWidth: '72px', overflow: 'hidden', textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {stage.label}
                 </span>
+                {completed && s?.date && (
+                  <span style={{
+                    fontSize: '0.48rem', color: 'var(--sage)', textAlign: 'center',
+                    lineHeight: 1, marginTop: '0.15rem', whiteSpace: 'nowrap',
+                  }}>
+                    {s.date}
+                  </span>
+                )}
+              </div>
+
+              {/* Connector line — fixed 36px width for equal spacing */}
+              {idx < stageCount - 1 && (
+                <div
+                  style={{
+                    width: '36px', flexShrink: 0,
+                    height: '1.5px',
+                    background: isPast
+                      ? `linear-gradient(90deg, ${color.dot}, ${STAGE_COLORS[STAGES[idx + 1].key]?.dot || color.dot})`
+                      : `repeating-linear-gradient(90deg, rgba(208,213,206,0.5) 0, rgba(208,213,206,0.5) 4px, transparent 4px, transparent 7px)`,
+                    alignSelf: 'flex-start',
+                    marginTop: dotSize / 2,
+                    marginBottom: completed && s?.date ? '1.6rem' : '1.25rem',
+                  }}
+                />
               )}
             </div>
-            {/* Connector line to next stage */}
-            {idx < STAGES.length - 1 && (
-              <div style={{
-                flex: 1, height: '2px',
-                background: isPast ? 'var(--slate)' : 'rgba(208,213,206,0.5)',
-                margin: '0 0.25rem', marginBottom: '1.25rem',
-                alignSelf: 'flex-start', marginTop: '12px',
-              }} />
-            )}
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -151,6 +213,17 @@ function PendingPanel({ collab, advanceStage }) {
 function AcceptedPanel({ collab, updateStageData, advanceStage }) {
   const [url, setUrl] = useState(collab.drive_url || '');
   const [saved, setSaved] = useState(false);
+  const [showTooltip, setShowTooltip] = useState(false);
+  const hasLink = collab.drive_url && collab.drive_url.length > 0;
+  const [notified, setNotified] = useState(false);
+
+  const handleSaveLink = () => {
+    updateStageData(collab.id, 'accepted', { drive_url: url, note: url ? 'Drive link shared' : '' });
+    setSaved(true);
+    setNotified(true);
+    setTimeout(() => setSaved(false), 2000);
+  };
+
   return (
     <div style={{ background: 'rgba(255,255,255,0.65)', borderRadius: '1rem', padding: '1.25rem', border: '1px solid rgba(255,255,255,0.8)' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
@@ -160,30 +233,68 @@ function AcceptedPanel({ collab, updateStageData, advanceStage }) {
       <p style={{ color: 'var(--slate)', fontSize: '0.85rem', margin: '0 0 1rem', lineHeight: 1.6 }}>
         The host has accepted! Share a link to your Google Drive or Dropbox folder so the host can preview your work.
       </p>
-      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem' }}>
-        <input
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          placeholder="https://drive.google.com/..."
-          style={{
-            flex: 1, padding: '0.6rem 0.875rem', borderRadius: '0.75rem',
-            background: 'rgba(255,255,255,0.75)', border: '1px solid rgba(25,37,36,0.12)',
-            fontFamily: 'var(--font-body)', fontSize: '0.85rem', color: 'var(--ink)',
-            outline: 'none',
-          }}
-        />
-        <button
-          className="btn-primary"
-          style={{ fontSize: '0.8rem', padding: '0.6rem 1rem' }}
-          onClick={() => {
-            updateStageData(collab.id, 'accepted', { drive_url: url, note: url ? 'Drive link shared' : '' });
-            setSaved(true);
-            setTimeout(() => setSaved(false), 2000);
-          }}
-        >
-          {saved ? 'Saved' : 'Save'}
-        </button>
+      <div style={{ marginBottom: '0.75rem' }}>
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <input
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            placeholder="https://drive.google.com/..."
+            style={{
+              flex: 1, padding: '0.6rem 0.875rem', borderRadius: '0.75rem',
+              background: 'rgba(255,255,255,0.75)', border: '1px solid rgba(25,37,36,0.12)',
+              fontFamily: 'var(--font-body)', fontSize: '0.85rem', color: 'var(--ink)',
+              outline: 'none',
+            }}
+          />
+          <div style={{ position: 'relative' }}>
+            <button
+              className="btn-primary"
+              style={{ fontSize: '0.8rem', padding: '0.6rem 1rem' }}
+              onClick={handleSaveLink}
+              onMouseEnter={() => setShowTooltip(true)}
+              onMouseLeave={() => setShowTooltip(false)}
+            >
+              {saved ? 'Saved' : hasLink ? 'Update' : 'Save'}
+            </button>
+            {showTooltip && (
+              <div style={{
+                position: 'absolute', bottom: '100%', left: '50%', transform: 'translateX(-50%)',
+                marginBottom: '0.4rem', padding: '0.4rem 0.65rem', borderRadius: '0.5rem',
+                background: 'var(--ink)', color: 'var(--bone)', fontSize: '0.68rem',
+                whiteSpace: 'nowrap', pointerEvents: 'none', zIndex: 10,
+                boxShadow: '0 4px 12px rgba(25,37,36,0.15)',
+              }}>
+                Be sure that the link is editable by the host.
+                <div style={{
+                  position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)',
+                  width: 0, height: 0, borderLeft: '5px solid transparent',
+                  borderRight: '5px solid transparent', borderTop: '5px solid var(--ink)',
+                }} />
+              </div>
+            )}
+          </div>
+        </div>
       </div>
+
+      {/* Host notified banner */}
+      {notified && (
+        <div style={{
+          padding: '0.5rem 0.75rem', marginBottom: '0.75rem',
+          borderRadius: '0.625rem', fontSize: '0.75rem', fontWeight: 600,
+          background: 'rgba(74,155,127,0.1)', color: '#4A9B7F',
+          display: 'flex', alignItems: 'center', gap: '0.4rem',
+        }}>
+          ✓ Drive link sent to host!
+        </div>
+      )}
+
+      {/* Edit/resend button after first save */}
+      {hasLink && (
+        <p style={{ fontSize: '0.72rem', color: 'var(--sage)', margin: '0 0 0.75rem', fontStyle: 'italic' }}>
+          Need to update the link? Enter a new one above and click "{url !== collab.drive_url ? 'Save' : 'Update'}" to resend to the host.
+        </p>
+      )}
+
       <p style={{ fontSize: '0.7rem', color: 'var(--sage)', fontStyle: 'italic', margin: '0 0 1rem' }}>
         Future integrations with Frame.io, Wipster, and more on the way.
       </p>
@@ -192,33 +303,51 @@ function AcceptedPanel({ collab, updateStageData, advanceStage }) {
         style={{ fontSize: '0.8rem', padding: '0.6rem 1.25rem' }}
         onClick={() => advanceStage(collab.id)}
       >
-        Advance to Updated
+        Advance to Adjustments
       </button>
     </div>
   );
 }
 
-function UpdatedPanel({ collab, updateStageData, advanceStage }) {
+function AdjustmentsPanel({ collab, updateStageData, advanceStage }) {
   const deliverables = collab.deliverables || '';
   const parseDefault = (keyword) => {
     const m = deliverables.match(new RegExp(`(\\d+)\\s*${keyword}`, 'i'));
     return m ? parseInt(m[1]) : 0;
   };
+  const defaultReels = parseDefault('Reel');
+  const defaultPhotos = parseDefault('Photo');
+  const defaultBlog = parseDefault('Blog');
   const [stats, setStats] = useState(collab.content_stats || {
-    reels: parseDefault('Reel'),
-    photos: parseDefault('Photo'),
-    blog_posts: parseDefault('Blog'),
+    reels: defaultReels,
+    photos: defaultPhotos,
+    blog_posts: defaultBlog,
   });
 
   return (
     <div style={{ background: 'rgba(255,255,255,0.65)', borderRadius: '1rem', padding: '1.25rem', border: '1px solid rgba(255,255,255,0.8)' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
         <span style={{ fontSize: '1rem' }}>🔄</span>
-        <h4 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.9rem', color: 'var(--ink)', margin: 0 }}>Content Plan</h4>
+        <h4 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.9rem', color: 'var(--ink)', margin: 0 }}>Adjustments</h4>
       </div>
-      <p style={{ color: 'var(--slate)', fontSize: '0.85rem', margin: '0 0 1rem', lineHeight: 1.6 }}>
-        Submit your content plan — how many of each deliverable are you creating?
+      <p style={{ color: 'var(--slate)', fontSize: '0.85rem', margin: '0 0 0.75rem', lineHeight: 1.6 }}>
+        Adjust the deliverables agreed upon in the Collabnb Agreement. The host will be notified of any changes.
       </p>
+
+      {/* Agreement deliverables reference */}
+      <div style={{
+        padding: '0.6rem 0.75rem', marginBottom: '0.75rem',
+        borderRadius: '0.625rem', background: 'rgba(209,235,221,0.15)',
+        border: '1px solid rgba(209,235,221,0.4)',
+      }}>
+        <p style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--sage)', margin: '0 0 0.2rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+          From Collabnb Agreement
+        </p>
+        <p style={{ fontSize: '0.78rem', color: 'var(--slate)', margin: 0, fontStyle: 'italic' }}>
+          {deliverables || 'No deliverables specified'}
+        </p>
+      </div>
+
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem', marginBottom: '1rem' }}>
         {[
           { key: 'reels', label: 'Reels', icon: '🎬' },
@@ -250,14 +379,14 @@ function UpdatedPanel({ collab, updateStageData, advanceStage }) {
           style={{ fontSize: '0.8rem', padding: '0.6rem 1rem' }}
           onClick={() => updateStageData(collab.id, 'updated', { content_stats: stats })}
         >
-          Save Stats
+          Save Adjustments
         </button>
         <button
           className="btn-glass"
           style={{ fontSize: '0.8rem', padding: '0.6rem 1.25rem' }}
           onClick={() => advanceStage(collab.id)}
         >
-          Advance to Uploaded & Tagged
+          Advance to Uploaded
         </button>
       </div>
     </div>
@@ -272,7 +401,7 @@ function UploadedPanel({ collab, advanceStage }) {
     <div style={{ background: 'rgba(255,255,255,0.65)', borderRadius: '1rem', padding: '1.25rem', border: '1px solid rgba(255,255,255,0.8)' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
         <span style={{ fontSize: '1rem' }}>🔵</span>
-        <h4 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.9rem', color: 'var(--ink)', margin: 0 }}>Uploaded &amp; Tagged</h4>
+        <h4 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.9rem', color: 'var(--ink)', margin: 0 }}>Uploaded</h4>
       </div>
 
       {/* Stats display */}
@@ -424,28 +553,9 @@ function ArchivedPanel({ collab }) {
         <span style={{ fontSize: '1rem' }}>📦</span>
         <h4 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.9rem', color: 'var(--ink)', margin: 0 }}>Archived Collaboration</h4>
       </div>
-      <p style={{ color: 'var(--slate)', fontSize: '0.85rem', margin: '0 0 1rem', lineHeight: 1.6 }}>
-        This collaboration has been completed and archived. Here's a timeline of what happened:
+      <p style={{ color: 'var(--slate)', fontSize: '0.85rem', margin: 0, lineHeight: 1.6 }}>
+        This collaboration has been completed and archived. Use the timeline above to revisit any stage, or view the listing details below.
       </p>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-        {STAGES.filter((s) => s.key !== 'archived' && collab.stages?.[s.key]?.completed).map((stage) => {
-          const s = collab.stages[stage.key];
-          return (
-            <div key={stage.key} style={{
-              display: 'flex', alignItems: 'center', gap: '0.75rem',
-              padding: '0.625rem 0.875rem', borderRadius: '0.75rem',
-              background: 'rgba(255,255,255,0.5)',
-            }}>
-              <span style={{ fontSize: '1.1rem' }}>{stage.icon}</span>
-              <div style={{ flex: 1 }}>
-                <p style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--slate)', margin: 0 }}>{stage.label}</p>
-                {s.note && <p style={{ fontSize: '0.68rem', color: 'var(--sage)', margin: '0.1rem 0 0' }}>{s.note}</p>}
-              </div>
-              {s.date && <span style={{ fontSize: '0.65rem', color: 'var(--stone)', flexShrink: 0 }}>{s.date}</span>}
-            </div>
-          );
-        })}
-      </div>
       {collab.payment && (
         <div style={{ marginTop: '1rem', padding: '0.75rem', borderRadius: '0.75rem', background: 'rgba(74,155,127,0.1)', textAlign: 'center' }}>
           <p style={{ fontSize: '0.85rem', fontWeight: 700, color: '#4A9B7F', margin: 0 }}>Payment: {collab.payment}</p>
@@ -466,6 +576,50 @@ export default function CollabDetail({ collab, onClose }) {
     ? contracts.find((c) => c.id === collab.contract_id)
     : null;
 
+  // Stage viewing & demo state
+  const [viewingStageKey, setViewingStageKey] = useState(null);
+  const isViewingPast = viewingStageKey && viewingStageKey !== collab.current_stage;
+  const effectiveStageKey = viewingStageKey || collab.current_stage;
+  const stageKeys = STAGES.map((s) => s.key);
+
+  // Demo auto-advance
+  const isDemo = collab.is_demo;
+  const [demoPlaying, setDemoPlaying] = useState(isDemo);
+  const [demoCardKey, setDemoCardKey] = useState(null);
+  const demoCurIdx = stageKeys.indexOf(effectiveStageKey);
+  const lastStageIdx = stageKeys.length - 1;
+  const demoIntervalRef = useRef(null);
+
+  useEffect(() => {
+    if (isDemo && demoPlaying) {
+      setDemoCardKey(effectiveStageKey);
+      demoIntervalRef.current = setTimeout(() => {
+        const curIdx = stageKeys.indexOf(effectiveStageKey);
+        if (curIdx < lastStageIdx) {
+          setViewingStageKey(stageKeys[curIdx + 1]);
+        } else {
+          setDemoPlaying(false);
+          setDemoCardKey(null);
+        }
+      }, 3000);
+      return () => clearTimeout(demoIntervalRef.current);
+    }
+  }, [isDemo, demoPlaying, effectiveStageKey]);
+
+  const toggleDemoPlay = useCallback(() => {
+    if (demoPlaying) {
+      setDemoPlaying(false);
+      clearTimeout(demoIntervalRef.current);
+    } else {
+      setDemoPlaying(true);
+    }
+  }, [demoPlaying]);
+
+  const handleStageClick = useCallback((key) => {
+    if (isDemo && demoPlaying) return; // ignore clicks while auto-playing
+    setViewingStageKey(key === viewingStageKey ? null : key);
+  }, [isDemo, demoPlaying, viewingStageKey]);
+
   // Save drive URL when it changes
   useEffect(() => {
     if (driveUrl !== collab.drive_url && driveUrl) {
@@ -476,16 +630,21 @@ export default function CollabDetail({ collab, onClose }) {
     }
   }, [driveUrl]);
 
-  const stagePanels = {
-    pending:         <PendingPanel collab={collab} advanceStage={advanceStage} />,
-    accepted:        <AcceptedPanel collab={collab} updateStageData={updateStageData} advanceStage={advanceStage} />,
-    updated:         <UpdatedPanel collab={collab} updateStageData={updateStageData} advanceStage={advanceStage} />,
-    uploaded_tagged: <UploadedPanel collab={collab} advanceStage={advanceStage} />,
-    closed:          <ClosedPanel collab={collab} toggleCloseCollab={toggleCloseCollab} />,
-    archived:        <ArchivedPanel collab={collab} />,
+  const makeStagePanel = (stageKey) => {
+    const panel = STAGES.find((s) => s.key === stageKey);
+    if (!panel) return null;
+    const panels = {
+      pending:         <PendingPanel collab={collab} advanceStage={advanceStage} />,
+      accepted:        <AcceptedPanel collab={collab} updateStageData={updateStageData} advanceStage={advanceStage} />,
+      updated:         <AdjustmentsPanel collab={collab} updateStageData={updateStageData} advanceStage={advanceStage} />,
+      uploaded_tagged: <UploadedPanel collab={collab} advanceStage={advanceStage} />,
+      closed:          <ClosedPanel collab={collab} toggleCloseCollab={toggleCloseCollab} />,
+      archived:        <ArchivedPanel collab={collab} />,
+    };
+    return panels[stageKey] || null;
   };
 
-  return (
+  return createPortal(
     <div
       style={{
         position: 'fixed', inset: 0, zIndex: 200,
@@ -511,25 +670,71 @@ export default function CollabDetail({ collab, onClose }) {
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           padding: '1rem 1.5rem', borderBottom: '1px solid rgba(25,37,36,0.06)',
         }}>
-          <div>
-            <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.1rem', color: 'var(--ink)', margin: 0 }}>
-              {collab.property_name}
-            </h3>
-            <p style={{ fontSize: '0.75rem', color: 'var(--sage)', margin: '0.15rem 0 0' }}>
-              {collab.location}
-            </p>
+          <div className="flex items-center gap-3">
+            <div>
+              <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.1rem', color: 'var(--ink)', margin: 0 }}>
+                {collab.property_name}
+              </h3>
+              <p style={{ fontSize: '0.75rem', color: 'var(--sage)', margin: '0.15rem 0 0' }}>
+                {collab.location}
+              </p>
+            </div>
+            {/* Due date badge */}
+            {collab.is_active && collab.days_left !== null && collab.days_left !== undefined && (
+              <span
+                className="flex-shrink-0"
+                style={{
+                  fontSize: '0.65rem', fontWeight: 700, padding: '0.25rem 0.6rem',
+                  borderRadius: '999px',
+                  background: collab.days_left > 3
+                    ? 'rgba(209,235,221,0.5)'
+                    : collab.days_left > 0
+                      ? 'rgba(212,168,67,0.15)'
+                      : 'rgba(220,38,38,0.08)',
+                  color: collab.days_left > 3
+                    ? 'var(--slate)'
+                    : collab.days_left > 0
+                      ? '#B8922A'
+                      : '#DC2626',
+                }}
+              >
+                {collab.days_left > 0
+                  ? `Due in ${collab.days_left} day${collab.days_left === 1 ? '' : 's'}`
+                  : collab.days_left === 0
+                    ? 'Due today'
+                    : `Overdue by ${Math.abs(collab.days_left)} days`}
+              </span>
+            )}
           </div>
-          <button
-            onClick={onClose}
-            style={{
-              width: '32px', height: '32px', borderRadius: '50%',
-              background: 'rgba(25,37,36,0.06)', border: 'none', cursor: 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: 'var(--slate)', flexShrink: 0,
-            }}
-          >
-            <XIcon />
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+            {isDemo && (
+              <button
+                onClick={toggleDemoPlay}
+                style={{
+                  width: '32px', height: '32px', borderRadius: '50%',
+                  background: demoPlaying ? 'rgba(74,155,127,0.12)' : 'rgba(25,37,36,0.06)',
+                  border: 'none', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  color: demoPlaying ? '#4A9B7F' : 'var(--slate)', flexShrink: 0,
+                  fontSize: '0.8rem',
+                }}
+                title={demoPlaying ? 'Pause auto-advance' : 'Resume auto-advance'}
+              >
+                {demoPlaying ? '⏸' : '▶'}
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              style={{
+                width: '32px', height: '32px', borderRadius: '50%',
+                background: 'rgba(25,37,36,0.06)', border: 'none', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: 'var(--slate)', flexShrink: 0,
+              }}
+            >
+              <XIcon />
+            </button>
+          </div>
         </div>
 
         {/* ── Stage progress bar ───────────────────────────────────────── */}
@@ -537,23 +742,74 @@ export default function CollabDetail({ collab, onClose }) {
           <StageProgressBar
             stages={collab.stages}
             currentStage={collab.current_stage}
+            viewingStage={viewingStageKey}
+            onStageClick={handleStageClick}
+            demoPlaying={demoPlaying}
           />
         </div>
 
         {/* ── Stage interaction panel ──────────────────────────────────── */}
         <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid rgba(25,37,36,0.06)' }}>
-          {stagePanels[collab.current_stage] || stagePanels.pending}
+          {/* Demo tour card */}
+          {isDemo && demoCardKey && DEMO_STAGE_CARDS[demoCardKey] && (
+            <div style={{
+              padding: '1rem 1.25rem', marginBottom: '1rem',
+              borderRadius: '1rem',
+              background: 'rgba(209,235,221,0.3)',
+              border: '1px solid rgba(209,235,221,0.6)',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
+                <span style={{ fontSize: '1.25rem' }}>{DEMO_STAGE_CARDS[demoCardKey].icon}</span>
+                <div>
+                  <p style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--ink)', margin: 0 }}>
+                    {DEMO_STAGE_CARDS[demoCardKey].title}
+                  </p>
+                  <p style={{ fontSize: '0.72rem', color: 'var(--slate)', margin: '0.1rem 0 0', lineHeight: 1.4 }}>
+                    {DEMO_STAGE_CARDS[demoCardKey].description}
+                  </p>
+                </div>
+              </div>
+              <p style={{
+                fontSize: '0.68rem', color: 'var(--sage)', fontStyle: 'italic', margin: 0,
+                padding: '0.4rem 0.65rem', borderRadius: '0.5rem',
+                background: 'rgba(255,255,255,0.5)',
+              }}>
+                {DEMO_STAGE_CARDS[demoCardKey].tip}
+              </p>
+            </div>
+          )}
+
+          {/* Stage panel (grayed out when viewing past) */}
+          <div style={{
+            opacity: isViewingPast ? 0.4 : 1,
+            pointerEvents: isViewingPast ? 'none' : 'auto',
+            transition: 'opacity 300ms',
+          }}>
+            {makeStagePanel(effectiveStageKey)}
+          </div>
+
+          {/* Past stage notice */}
+          {isViewingPast && (
+            <div style={{ textAlign: 'center', marginTop: '0.75rem' }}>
+              <p style={{ fontSize: '0.72rem', color: 'var(--sage)', fontStyle: 'italic' }}>
+                Viewing past stage — actions are disabled. Click current or future stages to interact.
+              </p>
+            </div>
+          )}
         </div>
 
-        {/* ── Split content: Listing (left) + Contract (right) ────────── */}
+        {/* ── Split content: Listing (left) + Contract (right, active only) ── */}
+        {/* Skip for demo — only show stage pipeline */}
+        {!isDemo && (
         <div style={{
           display: 'flex', flexDirection: 'row', gap: 0,
           borderBottom: '1px solid rgba(25,37,36,0.06)',
         }}>
           {/* Left: Listing Details */}
           <div style={{
-            flex: '1 1 50%', padding: '1.5rem',
-            borderRight: '1px solid rgba(25,37,36,0.06)',
+            flex: collab.is_active ? '1 1 50%' : '1 1 100%',
+            padding: '1.5rem',
+            borderRight: collab.is_active ? '1px solid rgba(25,37,36,0.06)' : 'none',
             minWidth: 0,
           }}>
             <h4 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.85rem', color: 'var(--sage)', margin: '0 0 0.75rem', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
@@ -625,7 +881,8 @@ export default function CollabDetail({ collab, onClose }) {
             </button>
           </div>
 
-          {/* Right: Contract Summary */}
+          {/* Right: Contract Summary (active collabs only) */}
+          {collab.is_active && (
           <div style={{ flex: '1 1 50%', padding: '1.5rem', minWidth: 0 }}>
             <h4 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.85rem', color: 'var(--sage)', margin: '0 0 0.75rem', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
               Contract Summary
@@ -712,30 +969,40 @@ export default function CollabDetail({ collab, onClose }) {
 
             {/* Action buttons */}
             <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <button
-                className="btn-primary"
-                style={{ flex: 1, fontSize: '0.75rem', padding: '0.5rem' }}
-                onClick={() => navigate('/contract', { state: { prefill: {
-                  creator: 'Ben Venturing',
-                  host: collab.host_name,
-                  property_name: collab.property_name,
-                  location: collab.location,
-                  dates: collab.dates,
-                  deliverables: collab.deliverables,
-                } } })}
-              >
-                {contract ? 'Edit Contract' : 'Create Contract'}
-              </button>
+              {(!contract || !contract.host_signed) && (
+                <button
+                  className="btn-primary"
+                  style={{ flex: 1, fontSize: '0.75rem', padding: '0.5rem' }}
+                  onClick={() => navigate('/contract', { state: { prefill: {
+                    creator: 'Ben Venturing',
+                    host: collab.host_name,
+                    property_name: collab.property_name,
+                    location: collab.location,
+                    dates: collab.dates,
+                    deliverables: collab.deliverables,
+                  } } })}
+                >
+                  {contract ? 'Edit Contract' : 'Create Contract'}
+                </button>
+              )}
               <button
                 className="btn-glass"
-                style={{ fontSize: '0.75rem', padding: '0.5rem 0.75rem' }}
+                style={{ flex: contract?.host_signed ? 1 : 'initial', fontSize: '0.75rem', padding: '0.5rem 0.75rem' }}
                 onClick={() => navigate('/contract')}
               >
                 View All
               </button>
             </div>
+          </div>)}
+        </div>)}
+        {/* ── Demo listing-bypass message ──────────────────────────────── */}
+        {isDemo && (
+          <div style={{ padding: '1.5rem 1.5rem 0.5rem', textAlign: 'center' }}>
+            <p style={{ fontSize: '0.72rem', color: 'var(--sage)', fontStyle: 'italic' }}>
+              This is a demo tour — listing details and contract sections are hidden. Use the stage walkthrough above to explore the collaboration lifecycle.
+            </p>
           </div>
-        </div>
+        )}
 
         {/* ── Footer ────────────────────────────────────────────────────── */}
         <div style={{ padding: '0.75rem 1.5rem', textAlign: 'center' }}>
@@ -744,6 +1011,7 @@ export default function CollabDetail({ collab, onClose }) {
           </p>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

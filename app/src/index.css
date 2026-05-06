@@ -426,3 +426,53 @@ button { font: inherit; cursor: pointer; border: none; background: none; }
 .reveal-up:nth-child(5) { animation-delay: 240ms; }
 .reveal-up:nth-child(6) { animation-delay: 300ms; }
 .reveal-up:nth-child(7) { animation-delay: 360ms; }
+
+/* ── CONTINUOUS SCROLL (collab cards) ────────────────────────────────────── */
+.scroll-track {
+  display: flex;
+  gap: 1rem;
+  width: max-content;
+  animation: marquee 28s linear infinite;
+}
+.scroll-track:hover {
+  animation-play-state: paused;
+}
+@keyframes marquee {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+/* ── SCROLL REVEAL (profile sections) ────────────────────────────────────── */
+.section-reveal {
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity 640ms cubic-bezier(0.16,1,0.3,1),
+              transform 640ms cubic-bezier(0.16,1,0.3,1);
+}
+.section-reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ── TOAST NOTIFICATION ───────────────────────────────────────────────────── */
+.toast {
+  position: fixed;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 300;
+  padding: 0.75rem 1.5rem;
+  border-radius: 1rem;
+  background: var(--ink);
+  color: var(--bone);
+  font-size: 0.85rem;
+  font-weight: 600;
+  box-shadow: 0 8px 30px rgba(25,37,36,0.25);
+  animation: toastIn 250ms cubic-bezier(0.16,1,0.3,1);
+  pointer-events: none;
+}
+
+@keyframes toastIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(12px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}

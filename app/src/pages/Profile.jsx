@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useCollabs } from '../contexts/CollabContext';
@@ -348,7 +348,7 @@ function PastCollabCard({ collab }) {
 
 // ─── Main Profile page ────────────────────────────────────────────────────────
 export default function Profile() {
-  const { profile, signOut } = useAuth();
+  const { profile, signOut, updateProfile } = useAuth();
   const { contracts } = useCollabs();
   const navigate = useNavigate();
 
@@ -362,9 +362,12 @@ export default function Profile() {
   const [showSwitchConfirm, setShowSwitchConfirm] = useState(false);
   const [showContracts,     setShowContracts]     = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showAllCollabs,    setShowAllCollabs]    = useState(false);
   const [showPrivacy,       setShowPrivacy]       = useState(false);
   const [showVerification,  setShowVerification]  = useState(false);
   const [showListingPicker, setShowListingPicker] = useState(false);
+  const [toastMsg, setToastMsg]       = useState(null);
+  const [exitConfirmDraft, setExitConfirmDraft] = useState(null);
 
   // Notification toggles
   const [notifSettings, setNotifSettings] = useState({
@@ -378,6 +381,34 @@ export default function Profile() {
   // Bio expand
   const [bioExpanded, setBioExpanded] = useState(false);
 
+  // ── Scroll reveal observer ──────────────────────────────────────────────
+  const sectionsRef = useRef([]);
+  useEffect(() => {
+    const el = sectionsRef.current;
+    if (!('IntersectionObserver' in window)) {
+      el.forEach((s) => s?.classList.add('visible'));
+      return;
+    }
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) entry.target.classList.add('visible');
+        });
+      },
+      { threshold: 0.08, rootMargin: '0px 0px -20px 0px' }
+    );
+    el.forEach((s) => { if (s) observer.observe(s); });
+    return () => observer.disconnect();
+  }, []);
+
+  // ── Toast auto-dismiss ────────────────────────────────────────────────
+  useEffect(() => {
+    if (toastMsg) {
+      const t = setTimeout(() => setToastMsg(null), 2200);
+      return () => clearTimeout(t);
+    }
+  }, [toastMsg]);
+
   if (!profile) return null;
 
   const dp = { ...profile, ...profileOverride }; // display profile
@@ -390,12 +421,20 @@ export default function Profile() {
 
   const coinBackSrc = SAMPLE_LISTINGS[selectedListingIdx]?.image ?? '';
 
+  function hasUnsavedChanges() {
+    const fields = ['full_name','bio','city','region','country','avatar_url','banner_url','instagram_handle','tiktok_handle','youtube_handle','portfolio'];
+    return fields.some(f => editDraft[f] !== (dp[f] ?? ''));
+  }
+
   function openEditProfile() {
     setEditDraft({
       full_name:        dp.full_name        ?? '',
       bio:              dp.bio              ?? '',
       city:             dp.city             ?? '',
       region:           dp.region           ?? '',
+      country:          dp.country          ?? '',
+      avatar_url:       dp.avatar_url       ?? '',
+      banner_url:       dp.banner_url       ?? '/assets/ben-venturing.png',
       instagram_handle: dp.instagram_handle ?? '',
       tiktok_handle:    dp.tiktok_handle    ?? '',
       youtube_handle:   dp.youtube_handle   ?? '',
@@ -404,8 +443,10 @@ export default function Profile() {
   }
 
   function saveEditProfile() {
+    updateProfile(editDraft);
     setProfileOverride({ ...profileOverride, ...editDraft });
     setEditDraft(null);
+    setToastMsg('All changes saved');
   }
 
   function handleShare() {
@@ -433,7 +474,7 @@ export default function Profile() {
       <div style={{ position: 'relative' }}>
         <div style={{ height: '400px', overflow: 'hidden', background: '#1a2322' }}>
           <img
-            src="/assets/ben-venturing.png"
+            src={dp.banner_url || "/assets/ben-venturing.png"}
             alt={dp.full_name}
             style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center', display: 'block' }}
           />
@@ -443,7 +484,7 @@ export default function Profile() {
         {/* Coin flip — bottom-left */}
         <div style={{ position: 'absolute', bottom: '-20px', left: '1.5rem' }}>
           <CoinFlip
-            frontSrc="/assets/ben-venturing.png"
+            frontSrc={dp.avatar_url || "/assets/ben-venturing.png"}
             backSrc={coinBackSrc}
             editMode={editMode}
             onEdit={() => setShowListingPicker(true)}
@@ -480,9 +521,9 @@ export default function Profile() {
           {/* Handle + location */}
           <p style={{ color: 'var(--sage)', fontSize: '0.875rem', margin: '0 0 1.5rem' }}>
             @{dp.username}
-            {dp.city && (
+            {(dp.city || dp.country) && (
               <span style={{ color: 'var(--slate)', marginLeft: '0.5rem' }}>
-                · {dp.city}{dp.region ? `. ${dp.region}` : ''}
+                · {[dp.city, dp.region, dp.country].filter(Boolean).join(' ')}
               </span>
             )}
           </p>
@@ -514,7 +555,7 @@ export default function Profile() {
         </section>
 
         {/* ── Stats card ─────────────────────────────────────────────────── */}
-        <div className="glass" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
+        <div className="glass section-reveal" ref={(el) => sectionsRef.current[0] = el} style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)' }}>
             {[
               { value: dp.collab_count ?? 0,                                    label: 'Collabs'    },
@@ -532,7 +573,7 @@ export default function Profile() {
 
         {/* ── Bio ──────────────────────────────────────────────────────────── */}
         {dp.bio && (
-          <div style={{ marginBottom: '1.75rem' }}>
+          <div className="section-reveal" ref={(el) => sectionsRef.current[1] = el} style={{ marginBottom: '1.75rem' }}>
             <p style={{ color: 'var(--slate)', fontSize: '0.9375rem', lineHeight: 1.7, margin: 0 }}>
               {bioTruncated ? `${dp.bio.slice(0, BIO_LIMIT)}…` : dp.bio}
             </p>
@@ -545,7 +586,7 @@ export default function Profile() {
         )}
 
         {/* ── Links & Socials ───────────────────────────────────────────────── */}
-        <section style={{ marginBottom: '2.5rem' }}>
+        <section className="section-reveal" ref={(el) => sectionsRef.current[2] = el} style={{ marginBottom: '2.5rem' }}>
           <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.125rem', color: 'var(--ink)', marginBottom: '1rem' }}>Links &amp; Socials</h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
             {portfolioHref && <SocialRow icon={<GlobeIcon />} label="My Link-in-Bio" value={dp.portfolio} href={portfolioHref} />}
@@ -555,19 +596,22 @@ export default function Profile() {
           </div>
         </section>
 
-        {/* ── Past Collabs ─────────────────────────────────────────────────── */}
-        <section style={{ marginBottom: '2.5rem' }}>
+        {/* ── Past Collabs (continuous scroll) ────────────────────────────── */}
+        <section className="section-reveal" ref={(el) => sectionsRef.current[3] = el} style={{ marginBottom: '2.5rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
             <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.125rem', color: 'var(--ink)', margin: 0 }}>Past Collabs</h3>
-            <button style={{ color: 'var(--slate)', fontSize: '0.875rem', fontWeight: 500, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font-body)' }}>View all →</button>
+            <button onClick={() => setShowAllCollabs(true)} style={{ color: 'var(--slate)', fontSize: '0.875rem', fontWeight: 500, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font-body)' }}>View all →</button>
           </div>
-          <div className="snap-row" style={{ paddingBottom: '0.5rem' }}>
-            {SAMPLE_COLLABORATIONS.map((c) => <PastCollabCard key={c.id} collab={c} />)}
+          <div style={{ overflow: 'hidden', paddingBottom: '0.5rem' }}>
+            <div className="scroll-track">
+              {SAMPLE_COLLABORATIONS.map((c) => <PastCollabCard key={c.id} collab={c} />)}
+              {SAMPLE_COLLABORATIONS.map((c) => <PastCollabCard key={`dup-${c.id}`} collab={c} />)}
+            </div>
           </div>
         </section>
 
         {/* ── Globe ────────────────────────────────────────────────────────── */}
-        <section style={{ textAlign: 'center', paddingBottom: '2rem' }}>
+        <section className="section-reveal" ref={(el) => sectionsRef.current[4] = el} style={{ textAlign: 'center', paddingBottom: '2rem' }}>
           <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.25rem', color: 'var(--ink)', marginBottom: '0.375rem' }}>Our Global Community</h3>
           <p style={{ color: 'var(--sage)', fontSize: '0.9rem', marginBottom: '2.5rem' }}>Creators and hosts connecting across the world</p>
           <GlobeCanvas />
@@ -606,7 +650,7 @@ export default function Profile() {
       {editMode && (
         <div
           style={{ position: 'fixed', inset: 0, zIndex: 70, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', background: 'rgba(25,37,36,0.4)', backdropFilter: 'blur(6px)' }}
-          onClick={() => setEditDraft(null)}
+          onClick={() => { if (hasUnsavedChanges()) setExitConfirmDraft(editDraft); else setEditDraft(null); }}
         >
           <div
             className="glass"
@@ -616,16 +660,47 @@ export default function Profile() {
             {/* Header */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
               <h4 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.25rem', color: 'var(--ink)', margin: 0 }}>Edit Profile</h4>
-              <button onClick={() => setEditDraft(null)} style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(25,37,36,0.07)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--slate)', fontSize: '1rem' }}>✕</button>
+              <button onClick={() => { if (hasUnsavedChanges()) setExitConfirmDraft(editDraft); else setEditDraft(null); }} style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(25,37,36,0.07)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--slate)', fontSize: '1rem' }}>✕</button>
             </div>
 
             {/* Fields */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.125rem' }}>
               <EditField label="Name" value={editDraft.full_name} onChange={(v) => setEditDraft({ ...editDraft, full_name: v })} />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.4rem', padding: '0.75rem', borderRadius: '0.875rem', background: 'rgba(255,255,255,0.7)', border: '1.5px dashed rgba(60,87,89,0.25)', cursor: 'pointer', transition: 'border-color 150ms, background 150ms' }}
+                  onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(60,87,89,0.5)'; e.currentTarget.style.background = 'rgba(255,255,255,0.9)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(60,87,89,0.25)'; e.currentTarget.style.background = 'rgba(255,255,255,0.7)'; }}
+                >
+                  <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--sage)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Profile Photo</span>
+                  <div style={{ width: 52, height: 52, borderRadius: '50%', overflow: 'hidden', background: 'var(--stone)', flexShrink: 0, border: '2px solid white', boxShadow: '0 2px 8px rgba(25,37,36,0.12)' }}>
+                    {editDraft.avatar_url ? (
+                      <img src={editDraft.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                    ) : (
+                      <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--sage)', fontSize: '0.7rem' }}>+</div>
+                    )}
+                  </div>
+                  <input type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => { const f = e.target.files?.[0]; if (f) { const r = new FileReader(); r.onload = (ev) => setEditDraft({ ...editDraft, avatar_url: ev.target.result }); r.readAsDataURL(f); } }} />
+                </label>
+                <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.4rem', padding: '0.75rem', borderRadius: '0.875rem', background: 'rgba(255,255,255,0.7)', border: '1.5px dashed rgba(60,87,89,0.25)', cursor: 'pointer', transition: 'border-color 150ms, background 150ms' }}
+                  onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(60,87,89,0.5)'; e.currentTarget.style.background = 'rgba(255,255,255,0.9)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(60,87,89,0.25)'; e.currentTarget.style.background = 'rgba(255,255,255,0.7)'; }}
+                >
+                  <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--sage)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Banner Image</span>
+                  <div style={{ width: '100%', height: 52, borderRadius: '0.5rem', overflow: 'hidden', background: 'var(--stone)', flexShrink: 0, border: '2px solid white', boxShadow: '0 2px 8px rgba(25,37,36,0.12)' }}>
+                    {editDraft.banner_url ? (
+                      <img src={editDraft.banner_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                    ) : (
+                      <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--sage)', fontSize: '0.7rem' }}>+</div>
+                    )}
+                  </div>
+                  <input type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => { const f = e.target.files?.[0]; if (f) { const r = new FileReader(); r.onload = (ev) => setEditDraft({ ...editDraft, banner_url: ev.target.result }); r.readAsDataURL(f); } }} />
+                </label>
+              </div>
               <EditField label="Bio" value={editDraft.bio} onChange={(v) => setEditDraft({ ...editDraft, bio: v })} multiline />
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                 <EditField label="City" value={editDraft.city} onChange={(v) => setEditDraft({ ...editDraft, city: v })} />
                 <EditField label="State / Region" value={editDraft.region} onChange={(v) => setEditDraft({ ...editDraft, region: v })} />
+                <EditField label="Country" value={editDraft.country || ''} onChange={(v) => setEditDraft({ ...editDraft, country: v })} />
               </div>
               <div style={{ borderTop: '1px solid rgba(25,37,36,0.06)', paddingTop: '1rem' }}>
                 <p style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--sage)', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 0.875rem' }}>Social Handles</p>
@@ -640,7 +715,7 @@ export default function Profile() {
 
             {/* Actions */}
             <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.5rem' }}>
-              <button className="btn-glass" style={{ flex: 1 }} onClick={() => setEditDraft(null)}>Cancel</button>
+              <button className="btn-glass" style={{ flex: 1 }} onClick={() => { if (hasUnsavedChanges()) setExitConfirmDraft(editDraft); else setEditDraft(null); }}>Cancel</button>
               <button className="btn-primary" style={{ flex: 1 }} onClick={saveEditProfile}>Save Changes</button>
             </div>
           </div>
@@ -802,6 +877,65 @@ export default function Profile() {
         </div>
       )}
 
+      {/* ── All Collabs modal ────────────────────────────────────────────── */}
+      {showAllCollabs && (
+        <div
+          style={{ position: 'fixed', inset: 0, zIndex: 70, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', padding: '1rem', background: 'rgba(25,37,36,0.5)', backdropFilter: 'blur(6px)' }}
+          onClick={() => setShowAllCollabs(false)}
+        >
+          <div
+            style={{ width: '100%', maxWidth: '560px', borderRadius: '1.5rem', padding: '2rem', maxHeight: '80dvh', overflowY: 'auto', background: 'rgba(255,255,255,0.97)', border: '1px solid rgba(255,255,255,0.85)', boxShadow: '0 20px 60px rgba(25,37,36,0.18)' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
+              <h4 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.15rem', color: 'var(--slate)', margin: 0 }}>All Collaborations</h4>
+              <button onClick={() => setShowAllCollabs(false)} style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'rgba(209,235,219,0.5)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--slate)' }}>✕</button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              {[...SAMPLE_COLLABORATIONS]
+                .sort((a, b) => {
+                  const parseDate = (str) => {
+                    const m = str.match(/(\w+)\s*\d+.*?(\d{4})/);
+                    if (!m) return 0;
+                    const months = {jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};
+                    return parseInt(m[2]) * 12 + (months[m[1].toLowerCase().slice(0,3)] || 0);
+                  };
+                  return parseDate(b.dates) - parseDate(a.dates);
+                })
+                .map((c) => {
+                  const statusColors = {
+                    pending:  { bg: 'rgba(212,168,67,0.12)', text: '#D4A843' },
+                    uploaded: { bg: 'rgba(74,155,210,0.12)', text: '#4A9BD2' },
+                    approved: { bg: 'rgba(74,155,127,0.12)', text: '#4A9B7F' },
+                  };
+                  const sc = statusColors[c.status] || statusColors.pending;
+                  return (
+                    <div key={c.id} style={{
+                      display: 'flex', alignItems: 'center', gap: '0.75rem',
+                      padding: '0.625rem 0.875rem', borderRadius: '0.875rem',
+                      background: 'rgba(255,255,255,0.65)', border: '1px solid rgba(255,255,255,0.8)',
+                    }}>
+                      <div style={{
+                        width: '36px', height: '36px', borderRadius: '0.625rem', overflow: 'hidden',
+                        flexShrink: 0, background: 'var(--stone)',
+                      }}>
+                        <img src={c.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} loading="lazy" />
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{ fontSize: '0.825rem', fontWeight: 600, color: 'var(--slate)', margin: 0, lineHeight: 1.3 }}>{c.property_name}</p>
+                        <p style={{ fontSize: '0.68rem', color: 'var(--sage)', margin: '0.1rem 0 0' }}>{c.location} · {c.dates}</p>
+                      </div>
+                      <span style={{ fontSize: '0.65rem', fontWeight: 600, padding: '0.15rem 0.6rem', borderRadius: '999px', background: sc.bg, color: sc.text, flexShrink: 0, whiteSpace: 'nowrap' }}>
+                        {c.status_text}
+                      </span>
+                    </div>
+                  );
+                })}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Notifications modal ──────────────────────────────────────────── */}
       {showNotifications && (
         <div
@@ -935,6 +1069,45 @@ export default function Profile() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+      {/* ── Exit confirmation modal ───────────────────────────────────── */}
+      {exitConfirmDraft && (
+        <div
+          style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', background: 'rgba(25,37,36,0.5)', backdropFilter: 'blur(6px)' }}
+          onClick={() => setExitConfirmDraft(null)}
+        >
+          <div
+            style={{ width: '100%', maxWidth: '380px', borderRadius: '1.5rem', padding: '2rem', background: 'rgba(255,255,255,0.97)', border: '1px solid rgba(255,255,255,0.85)', boxShadow: '0 20px 60px rgba(25,37,36,0.18)' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h4 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.1rem', color: 'var(--slate)', margin: '0 0 0.75rem' }}>Unsaved Changes</h4>
+            <p style={{ color: 'var(--sage)', fontSize: '0.875rem', lineHeight: 1.6, margin: '0 0 1.25rem' }}>
+              You have unsaved changes. Are you sure you want to exit without saving?
+            </p>
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <button className="btn-primary" style={{ flex: 1, fontSize: '0.85rem' }} onClick={() => setExitConfirmDraft(null)}>Stay Editing</button>
+              <button className="btn-glass" style={{ flex: 1, fontSize: '0.85rem' }} onClick={() => { setEditDraft(null); setExitConfirmDraft(null); }}>Discard Changes</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Toast notification ───────────────────────────────────────────── */}
+      {toastMsg && (
+        <div style={{
+          position: 'fixed', bottom: '5rem', left: '50%', transform: 'translateX(-50%)',
+          zIndex: 110, background: 'rgba(25,37,36,0.92)', backdropFilter: 'blur(12px)',
+          color: '#EFECE9', padding: '0.75rem 1.5rem', borderRadius: '9999px',
+          fontSize: '0.875rem', fontWeight: 600, fontFamily: 'var(--font-body)',
+          boxShadow: '0 8px 24px rgba(25,37,36,0.25)',
+          display: 'flex', alignItems: 'center', gap: '0.5rem',
+          animation: 'fadeUp 300ms cubic-bezier(0.16,1,0.3,1) forwards',
+        }}>
+          <svg viewBox="0 0 14 14" fill="none" stroke="#D1EBDB" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16">
+            <polyline points="2 7 5.5 10.5 12 3.5" />
+          </svg>
+          {toastMsg}
         </div>
       )}
     </div>

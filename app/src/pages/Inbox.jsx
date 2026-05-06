@@ -1,122 +1,475 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useCollabs } from '../contexts/CollabContext';
+import { THREAD_MESSAGES } from '../lib/mockData';
+import CollabDetail from '../components/CollabDetail';
 
 const TAG_STYLES = {
   Collab:      'bg-mint text-slate',
   Application: 'bg-stone text-slate',
   Pitch:       'bg-red-100 text-red-500',
+  Contract:    'bg-amber-100 text-amber-700',
+  Archived:    'bg-stone/40 text-sage',
 };
 
-function ThreadRow({ thread }) {
-  const tagStyle = TAG_STYLES[thread.tag] || TAG_STYLES.Application;
-  const initials = thread.host_name.split(' ').map((n) => n[0]).join('').slice(0, 2);
+const FILTERS = ['All', 'Applications', 'Collabs', 'Pitches'];
+
+// ─── Avatar helper ────────────────────────────────────────────────────────────
+function Avatar({ name, src, size = 44, unread = 0, isFounder = false }) {
+  const initials = name.split(' ').map((n) => n[0]).join('').slice(0, 2);
   return (
-    <button className="w-full flex items-center gap-3.5 px-4 py-4 hover:bg-white/60 transition-colors border-b border-stone/30 text-left">
-      {/* Avatar */}
-      <div className="relative flex-shrink-0">
-        <div className="w-11 h-11 rounded-full bg-mint flex items-center justify-center">
-          <span className="font-display font-bold text-slate text-sm">{initials}</span>
-        </div>
-        {thread.is_founder && (
-          <span
-            title="Founding Member"
-            className="absolute -bottom-0.5 -right-0.5"
-            style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              width: '16px', height: '16px', borderRadius: '50%',
-              background: 'linear-gradient(135deg, #D4A843, #B8922A)',
-              border: '1.5px solid white',
-              boxShadow: '0 1px 4px rgba(212,168,67,0.4)',
-            }}
-          >
-            <svg viewBox="0 0 16 16" fill="white" width="8" height="8">
-              <path d="M8 1.5l1.67 3.38 3.73.54-2.7 2.63.64 3.72L8 9.77l-3.34 1.76.64-3.72L2.6 5.42l3.73-.54z"/>
-            </svg>
-          </span>
-        )}
-        {thread.unread > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-slate text-bone text-[9px] font-bold flex items-center justify-center">
-            {thread.unread}
-          </span>
+    <div className="relative flex-shrink-0" style={{ width: size, height: size }}>
+      <div
+        className="rounded-full bg-mint flex items-center justify-center overflow-hidden"
+        style={{ width: size, height: size }}
+      >
+        {src ? (
+          <img src={src} alt={name} className="w-full h-full object-cover" />
+        ) : (
+          <span className="font-display font-bold text-slate" style={{ fontSize: size * 0.3 }}>{initials}</span>
         )}
       </div>
-      {/* Content */}
+      {isFounder && (
+        <span
+          className="absolute -bottom-0.5 -right-0.5 flex items-center justify-center"
+          style={{
+            width: 15, height: 15, borderRadius: '50%',
+            background: 'linear-gradient(135deg, #D4A843, #B8922A)',
+            border: '1.5px solid white',
+            boxShadow: '0 1px 4px rgba(212,168,67,0.4)',
+          }}
+        >
+          <svg viewBox="0 0 16 16" fill="white" width="7" height="7">
+            <path d="M8 1.5l1.67 3.38 3.73.54-2.7 2.63.64 3.72L8 9.77l-3.34 1.76.64-3.72L2.6 5.42l3.73-.54z"/>
+          </svg>
+        </span>
+      )}
+      {unread > 0 && (
+        <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-slate text-bone text-[9px] font-bold flex items-center justify-center">
+          {unread}
+        </span>
+      )}
+    </div>
+  );
+}
+
+// ─── Thread row (left panel) ──────────────────────────────────────────────────
+function ThreadRow({ thread, isActive, onClick }) {
+  const tagStyle = TAG_STYLES[thread.tag] || TAG_STYLES.Application;
+  return (
+    <button
+      onClick={onClick}
+      className={`w-full flex items-center gap-3 px-4 py-3.5 border-b border-stone/20 text-left transition-colors ${
+        isActive ? 'bg-white/90' : 'hover:bg-white/50'
+      }`}
+    >
+      <Avatar name={thread.host_name} src={thread.host_avatar} unread={thread.unread} isFounder={thread.is_founder} />
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between mb-0.5">
-          <p className={`text-sm font-semibold truncate ${thread.unread ? 'text-ink' : 'text-slate'}`}>
+          <p className={`text-sm truncate pr-2 ${thread.unread ? 'font-bold text-ink' : 'font-semibold text-slate'}`}>
             {thread.listing_title}
           </p>
-          <p className="text-sage text-xs flex-shrink-0 ml-2">{thread.timestamp}</p>
+          <p className="text-sage text-[11px] flex-shrink-0">{thread.timestamp}</p>
         </div>
-        <div className="flex items-center gap-2 mb-0.5">
+        <div className="flex items-center gap-1.5 mb-0.5">
           <span className={`inline-block text-[10px] font-semibold px-1.5 py-0.5 rounded ${tagStyle}`}>
             {thread.tag}
           </span>
+          <span className="text-sage text-[11px] truncate">{thread.host_name}</span>
         </div>
-        <p className="text-sage text-xs truncate">{thread.host_name}: {thread.last_message}</p>
+        <p className={`text-xs truncate ${thread.unread ? 'text-ink/70' : 'text-sage'}`}>
+          {thread.last_message}
+        </p>
       </div>
     </button>
   );
 }
 
-const FILTERS = ['All', 'Applications', 'Collabs', 'Pitches'];
+// ─── Message bubble ───────────────────────────────────────────────────────────
+function Bubble({ msg }) {
+  const isMe = msg.from === 'me';
+  return (
+    <div className={`flex gap-2.5 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
+      <div
+        className={`max-w-[72%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
+          isMe
+            ? 'bg-slate text-bone rounded-br-sm'
+            : 'bg-white border border-stone/30 text-ink rounded-bl-sm'
+        }`}
+      >
+        <p>{msg.text}</p>
+        <p className={`text-[10px] mt-1 ${isMe ? 'text-bone/50 text-right' : 'text-sage'}`}>
+          {msg.time}
+        </p>
+      </div>
+    </div>
+  );
+}
 
-export default function Inbox() {
-  const { threads } = useCollabs();
-  const [activeFilter, setActiveFilter] = useState('All');
+// ─── Three-dot dropdown menu ──────────────────────────────────────────────────
+function ThreadMenu({ thread, onClose, onArchive, onUpdateTag }) {
+  const menuRef = useRef(null);
 
-  const filtered = activeFilter === 'All'
-    ? threads
-    : threads.filter((t) => t.tag === activeFilter.slice(0, -1) || t.tag === activeFilter);
+  useEffect(() => {
+    const handler = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) onClose();
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [onClose]);
 
   return (
-    <div className="min-h-dvh bg-bone">
-      {/* Header */}
-      <div className="bg-white/70 backdrop-blur-md border-b border-stone/50 px-4 pt-6 pb-0 lg:px-8">
-        <div className="flex items-center justify-between mb-4">
-          <h1 className="font-display font-bold text-ink text-2xl">Messages</h1>
-          <div className="flex gap-2">
-            <button className="w-9 h-9 rounded-full bg-bone flex items-center justify-center hover:bg-stone/60 transition-colors">
-              <svg viewBox="0 0 256 256" fill="none" stroke="#3C5759" strokeWidth="16" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
-                <circle cx="112" cy="112" r="80"/><line x1="168.57" y1="168.57" x2="224" y2="224"/>
-              </svg>
-            </button>
-            <button className="w-9 h-9 rounded-full bg-bone flex items-center justify-center hover:bg-stone/60 transition-colors">
-              <svg viewBox="0 0 256 256" fill="none" stroke="#3C5759" strokeWidth="16" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
-                <circle cx="128" cy="128" r="40"/>
-                <path d="M130.05,24a104.22,104.22,0,0,1,22.08,4.29l6.81,11.79a88,88,0,0,1,15.23,8.79l13.55-1a104.58,104.58,0,0,1,15.73,22.16l-5.57,12.38a87.87,87.87,0,0,1,3.6,17.34l11.05,8.35a103.86,103.86,0,0,1,0,25.56l-11.05,8.35a87.87,87.87,0,0,1-3.6,17.34l5.57,12.38a104.58,104.58,0,0,1-15.73,22.16l-13.55-1a88,88,0,0,1-15.23,8.79l-6.81,11.79a104.22,104.22,0,0,1-22.08,4.29l-8.36-9.1a87.89,87.89,0,0,1-17.58,0Z"/>
-              </svg>
-            </button>
+    <div
+      ref={menuRef}
+      className="absolute right-0 top-full mt-1 z-50 w-48 rounded-xl bg-white border border-stone/30 shadow-lg py-1"
+      style={{ boxShadow: '0 8px 30px rgba(25,37,36,0.12)' }}
+    >
+      <button
+        onClick={() => { onArchive(thread.id); onClose(); }}
+        className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-slate hover:bg-bone transition-colors text-left"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+          <polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/>
+        </svg>
+        Archive
+      </button>
+      <div className="border-t border-stone/20 my-1" />
+      <p className="px-4 py-1 text-[10px] font-bold text-sage uppercase tracking-wider">Change Stage</p>
+      {['Application', 'Collab', 'Pitch'].map((tag) => (
+        <button
+          key={tag}
+          onClick={() => { onUpdateTag(thread.id, tag); onClose(); }}
+          className={`w-full flex items-center gap-2.5 px-4 py-2 text-sm transition-colors text-left ${
+            thread.tag === tag ? 'text-ink font-semibold bg-bone/60' : 'text-slate hover:bg-bone'
+          }`}
+        >
+          <span className={`inline-block w-2 h-2 rounded-full ${(TAG_STYLES[tag] || '').split(' ')[0]}`} />
+          {tag}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// ─── Conversation panel (right side) ─────────────────────────────────────────
+function ConversationPanel({ thread, onViewCollab, onArchive, onUpdateTag }) {
+  const [draft, setDraft] = useState('');
+  const [localMessages, setLocalMessages] = useState([]);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const bottomRef = useRef(null);
+  const tagStyle = TAG_STYLES[thread.tag] || TAG_STYLES.Application;
+
+  useEffect(() => {
+    setLocalMessages(THREAD_MESSAGES[thread.id] || []);
+    setDraft('');
+  }, [thread.id]);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [localMessages]);
+
+  const sendMessage = () => {
+    const text = draft.trim();
+    if (!text) return;
+    setLocalMessages((prev) => [
+      ...prev,
+      { id: `m${Date.now()}`, from: 'me', text, time: 'Just now' },
+    ]);
+    setDraft('');
+  };
+
+  const handleKey = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  };
+
+  return (
+    <div className="flex flex-col h-full">
+      {/* Conversation header */}
+      <div className="flex items-center gap-3 px-6 py-4 border-b border-stone/30 bg-white/60 backdrop-blur-sm flex-shrink-0">
+        <Avatar name={thread.host_name} src={thread.host_avatar} size={40} isFounder={thread.is_founder} />
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <h2 className="font-display font-bold text-ink text-base truncate">{thread.listing_title}</h2>
+            <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded flex-shrink-0 ${tagStyle}`}>
+              {thread.tag}
+            </span>
           </div>
+          <p className="text-sage text-xs">{thread.host_name}</p>
         </div>
-        {/* Filter pills */}
-        <div className="flex gap-2 overflow-x-auto no-scrollbar pb-0">
-          {FILTERS.map((f) => (
+        {/* Action icons */}
+        <div className="flex gap-2">
+          <button
+            onClick={() => onViewCollab(thread)}
+            className="w-8 h-8 rounded-full bg-bone hover:bg-stone/60 flex items-center justify-center transition-colors"
+            title="View collaboration"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 text-slate">
+              <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+              <polyline points="10 17 15 12 10 7"/>
+              <line x1="15" y1="12" x2="3" y2="12"/>
+            </svg>
+          </button>
+          <div className="relative">
             <button
-              key={f}
-              onClick={() => setActiveFilter(f)}
-              className={`flex-none px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-colors mb-3 ${
-                activeFilter === f
-                  ? 'bg-ink text-bone border-ink'
-                  : 'bg-transparent text-slate border-stone hover:border-slate'
-              }`}
+              onClick={() => setMenuOpen(!menuOpen)}
+              className="w-8 h-8 rounded-full bg-bone hover:bg-stone/60 flex items-center justify-center transition-colors"
+              title="More options"
             >
-              {f}
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 text-slate">
+                <circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/>
+              </svg>
             </button>
-          ))}
+            {menuOpen && (
+              <ThreadMenu
+                thread={thread}
+                onClose={() => setMenuOpen(false)}
+                onArchive={onArchive}
+                onUpdateTag={onUpdateTag}
+              />
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Thread list */}
-      <div className="max-w-2xl mx-auto">
-        {filtered.length === 0 ? (
-          <div className="text-center py-16">
-            <p className="text-sage text-sm">No messages yet</p>
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto px-6 py-5 space-y-3">
+        {localMessages.length === 0 ? (
+          <div className="flex items-center justify-center h-full">
+            <p className="text-sage text-sm">No messages yet. Say hello!</p>
           </div>
         ) : (
-          filtered.map((t) => <ThreadRow key={t.id} thread={t} />)
+          localMessages.map((msg) => <Bubble key={msg.id} msg={msg} />)
+        )}
+        <div ref={bottomRef} />
+      </div>
+
+      {/* Compose bar */}
+      <div className="px-4 py-3 border-t border-stone/30 bg-white/60 backdrop-blur-sm flex-shrink-0">
+        <div className="flex items-end gap-2 bg-bone rounded-2xl px-4 py-2.5 border border-stone/40">
+          <textarea
+            rows={1}
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={handleKey}
+            placeholder="Write a message…"
+            className="flex-1 bg-transparent text-sm text-ink placeholder-sage resize-none outline-none leading-relaxed max-h-28"
+            style={{ minHeight: '1.4rem' }}
+          />
+          <button
+            onClick={sendMessage}
+            disabled={!draft.trim()}
+            className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-colors"
+            style={{
+              background: draft.trim() ? 'var(--slate)' : 'rgba(60,87,89,0.15)',
+            }}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke={draft.trim() ? 'white' : 'var(--sage)'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+              <line x1="22" y1="2" x2="11" y2="13"/>
+              <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+            </svg>
+          </button>
+        </div>
+        <p className="text-[10px] text-sage/60 text-center mt-1.5">Enter to send · Shift+Enter for new line</p>
+      </div>
+    </div>
+  );
+}
+
+// ─── Empty state ──────────────────────────────────────────────────────────────
+function EmptyState() {
+  return (
+    <div className="flex flex-col items-center justify-center h-full gap-4 text-center px-8">
+      <div className="w-16 h-16 rounded-full bg-mint/30 flex items-center justify-center">
+        <svg viewBox="0 0 24 24" fill="none" stroke="var(--slate)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        </svg>
+      </div>
+      <div>
+        <p className="font-display font-bold text-ink text-base mb-1">Select a conversation</p>
+        <p className="text-sage text-sm">Choose a thread on the left to read and reply to messages.</p>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main Inbox ───────────────────────────────────────────────────────────────
+export default function Inbox() {
+  const { threads, collabs, archiveThread, updateThreadTag } = useCollabs();
+  const [activeFilter, setActiveFilter] = useState('All');
+  const [selectedId, setSelectedId] = useState(null);
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [viewingCollab, setViewingCollab] = useState(null);
+  const [toastMsg, setToastMsg] = useState('');
+  const searchInputRef = useRef(null);
+
+  // Auto-focus search input
+  useEffect(() => {
+    if (isSearching && searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, [isSearching]);
+
+  // Show a brief toast message
+  const showToast = useCallback((msg) => {
+    setToastMsg(msg);
+    setTimeout(() => setToastMsg(''), 2500);
+  }, []);
+
+  // Handle View Collab click
+  const handleViewCollab = useCallback((thread) => {
+    const collab = collabs.find((c) => c.id === thread.collab_id);
+    if (collab) {
+      setViewingCollab(collab);
+    } else {
+      showToast('No collaboration found for this thread');
+    }
+  }, [collabs, showToast]);
+
+  // Non-archived threads
+  const activeThreads = threads.filter((t) => !t.archived);
+
+  // Apply tag filter
+  const tagFiltered = activeFilter === 'All'
+    ? activeThreads
+    : activeThreads.filter((t) => t.tag === activeFilter.slice(0, -1) || t.tag === activeFilter);
+
+  // Apply search filter
+  const filtered = searchQuery.trim()
+    ? tagFiltered.filter((t) => {
+        const q = searchQuery.toLowerCase();
+        return (
+          t.listing_title.toLowerCase().includes(q) ||
+          t.host_name.toLowerCase().includes(q) ||
+          t.last_message.toLowerCase().includes(q)
+        );
+      })
+    : tagFiltered;
+
+  const selectedThread = activeThreads.find((t) => t.id === selectedId) || null;
+
+  return (
+    <div className="flex bg-bone overflow-hidden" style={{ height: 'calc(100dvh - 7rem)' }}>
+
+      {/* ── Left panel: thread list ── */}
+      <div
+        className="flex flex-col border-r border-stone/30 bg-white/40 backdrop-blur-md flex-shrink-0"
+        style={{ width: 340 }}
+      >
+        {/* Header */}
+        <div className="px-5 pt-6 pb-0 border-b border-stone/20">
+          <div className="flex items-center justify-between mb-4">
+            {isSearching ? (
+              <>
+                <button
+                  onClick={() => { setIsSearching(false); setSearchQuery(''); }}
+                  className="w-8 h-8 rounded-full bg-bone hover:bg-stone/60 flex items-center justify-center transition-colors flex-shrink-0"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#3C5759" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5">
+                    <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
+                  </svg>
+                </button>
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search messages…"
+                  className="flex-1 mx-2 text-sm text-ink bg-transparent border-none outline-none placeholder-sage"
+                />
+              </>
+            ) : (
+              <>
+                <h1 className="font-display font-bold text-ink text-xl">Messages</h1>
+                <div className="flex gap-1.5">
+                  <button
+                    onClick={() => setIsSearching(true)}
+                    className="w-8 h-8 rounded-full bg-bone hover:bg-stone/60 flex items-center justify-center transition-colors"
+                  >
+                    <svg viewBox="0 0 256 256" fill="none" stroke="#3C5759" strokeWidth="16" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5">
+                      <circle cx="112" cy="112" r="80"/><line x1="168.57" y1="168.57" x2="224" y2="224"/>
+                    </svg>
+                  </button>
+                  <button className="w-8 h-8 rounded-full bg-bone hover:bg-stone/60 flex items-center justify-center transition-colors">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#3C5759" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5">
+                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                    </svg>
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+          {/* Filter pills */}
+          <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-3">
+            {FILTERS.map((f) => (
+              <button
+                key={f}
+                onClick={() => setActiveFilter(f)}
+                className={`flex-none px-3 py-1 rounded-full text-xs font-semibold border transition-colors ${
+                  activeFilter === f
+                    ? 'bg-ink text-bone border-ink'
+                    : 'bg-transparent text-slate border-stone hover:border-slate'
+                }`}
+              >
+                {f}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Thread list */}
+        <div className="flex-1 overflow-y-auto">
+          {filtered.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-sage text-sm">
+                {searchQuery ? 'No matching messages' : 'No messages'}
+              </p>
+            </div>
+          ) : (
+            filtered.map((t) => (
+              <ThreadRow
+                key={t.id}
+                thread={t}
+                isActive={t.id === selectedId}
+                onClick={() => {
+                  setSelectedId(t.id);
+                  if (t.id !== selectedId) setIsSearching(false);
+                }}
+              />
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* ── Right panel: conversation ── */}
+      <div className="flex-1 min-w-0">
+        {selectedThread ? (
+          <ConversationPanel
+            thread={selectedThread}
+            onViewCollab={handleViewCollab}
+            onArchive={archiveThread}
+            onUpdateTag={updateThreadTag}
+          />
+        ) : (
+          <EmptyState />
         )}
       </div>
+
+      {/* ── CollabDetail modal ── */}
+      {viewingCollab && (
+        <CollabDetail
+          collab={viewingCollab}
+          onClose={() => setViewingCollab(null)}
+        />
+      )}
+
+      {/* ── Toast notification ── */}
+      {toastMsg && (
+        <div className="toast">{toastMsg}</div>
+      )}
     </div>
   );
 }

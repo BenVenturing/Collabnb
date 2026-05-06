@@ -60,6 +60,15 @@ export function AuthProvider({ children }) {
     }
   };
 
+  const updateProfile = async (updates) => {
+    const merged = { ...profile, ...updates };
+    setProfile(merged);
+    localStorage.setItem('collabnb_profile', JSON.stringify(merged));
+    if (supabase) {
+      await supabase.from('profiles').upsert({ id: profile?.id, ...updates });
+    }
+  };
+
   const signOut = async () => {
     if (supabase) await supabase.auth.signOut();
     // Redirect to the static login page which has the real Supabase session
@@ -70,7 +79,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ session, profile, loading, signOut }}>
+    <AuthContext.Provider value={{ session, profile, loading, signOut, updateProfile }}>
       {children}
     </AuthContext.Provider>
   );

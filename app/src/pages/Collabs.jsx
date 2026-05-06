@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCollabs } from '../contexts/CollabContext';
+import CollabDetail from '../components/CollabDetail';
 
 const STATUS_STYLES = {
   pending:  { bg: 'bg-amber-100',  text: 'text-amber-700',  icon: '🟡' },
@@ -8,10 +9,10 @@ const STATUS_STYLES = {
   approved: { bg: 'bg-mint',       text: 'text-slate',      icon: '🟢' },
 };
 
-function CollabCard({ collab }) {
+function CollabCard({ collab, onClick }) {
   const style = STATUS_STYLES[collab.status] || STATUS_STYLES.pending;
   return (
-    <div className="bg-white rounded-2xl overflow-hidden shadow-card border border-stone/30 flex flex-col">
+    <div className="bg-white rounded-2xl overflow-hidden shadow-card border border-stone/30 flex flex-col cursor-pointer transition-shadow hover:shadow-md" onClick={() => onClick?.(collab)}>
       <div className="flex">
         {/* Photo */}
         <div className="w-28 h-28 flex-shrink-0 bg-stone overflow-hidden">
@@ -73,6 +74,7 @@ export default function Collabs() {
   const navigate = useNavigate();
   const { collabs } = useCollabs();
   const [filter, setFilter] = useState('active');
+  const [selectedCollab, setSelectedCollab] = useState(null);
 
   const active   = collabs.filter((c) =>  c.is_active);
   const archived = collabs.filter((c) => !c.is_active);
@@ -113,9 +115,13 @@ export default function Collabs() {
             </button>
           </div>
         ) : (
-          shown.map((c) => <CollabCard key={c.id} collab={c} />)
+          shown.map((c) => <CollabCard key={c.id} collab={c} onClick={setSelectedCollab} />)
         )}
       </div>
+
+      {selectedCollab && (
+        <CollabDetail collab={selectedCollab} onClose={() => setSelectedCollab(null)} />
+      )}
     </div>
   );
 }

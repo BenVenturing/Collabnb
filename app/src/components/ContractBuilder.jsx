@@ -48,6 +48,7 @@ export default function ContractBuilder() {
   const [editingId, setEditingId] = useState(null);
   const [contractList, setContractList] = useState([]);
   const [showList, setShowList] = useState(false);
+  const [selectedHost, setSelectedHost] = useState(null);
 
   const [form, setForm] = useState({
     creator: prefill?.creator || profile?.full_name || '',
@@ -222,7 +223,7 @@ export default function ContractBuilder() {
   };
 
   const signAsCreator = () => {
-    const name = window.prompt('Enter your name to sign:')?.trim();
+    const name = profile?.full_name || form.creator;
     if (!name) return;
     setCreatorSig(name);
     if (hostSig) setStatus('in_progress');
@@ -230,8 +231,11 @@ export default function ContractBuilder() {
   };
 
   const signAsHost = () => {
-    const name = window.prompt('Enter host name to accept:')?.trim();
-    if (!name) return;
+    const name = selectedHost?.name || form.host;
+    if (!name) {
+      window.alert('Please send this contract to a host first.');
+      return;
+    }
     setHostSig(name);
     if (creatorSig) setStatus('in_progress');
     else setStatus('pending');
@@ -271,6 +275,8 @@ export default function ContractBuilder() {
   };
 
   const handleSendToHost = async (host) => {
+    setSelectedHost(host);
+    updateField('host', host.name);
     // Save first
     let id = editingId;
     if (!id) {
@@ -512,34 +518,73 @@ export default function ContractBuilder() {
                 >
                   {/* ── Profile icons + names row ── */}
                   <div className="flex items-center justify-center gap-8 mb-3">
+                    {/* Creator slot — always populated from logged-in profile */}
                     <div className="flex flex-col items-center gap-2">
                       <div style={{
-                        width: 48, height: 48, borderRadius: '50%',
+                        width: 52, height: 52, borderRadius: '50%',
                         background: 'linear-gradient(135deg, #D1EBDB, #959D90)',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: '1.2rem', fontWeight: 700, color: '#fff',
-                        fontFamily: '"Cabinet Grotesk", sans-serif',
+                        overflow: 'hidden', flexShrink: 0,
+                        boxShadow: '0 2px 8px rgba(60,87,89,0.18)',
+                        border: '2px solid rgba(209,235,219,0.6)',
                       }}>
-                        {form.creator ? form.creator.charAt(0).toUpperCase() : 'C'}
+                        {profile?.avatar_url ? (
+                          <img
+                            src={profile.avatar_url}
+                            alt={form.creator}
+                            style={{ width: 52, height: 52, objectFit: 'cover' }}
+                          />
+                        ) : (
+                          <span style={{ fontSize: '1.2rem', fontWeight: 700, color: '#fff', fontFamily: '"Cabinet Grotesk", sans-serif' }}>
+                            {form.creator ? form.creator.charAt(0).toUpperCase() : 'C'}
+                          </span>
+                        )}
                       </div>
                       <span className="text-sm font-semibold text-ink text-center leading-tight">
                         {form.creator || 'Creator'}
                       </span>
+                      <span className="text-[10px] text-sage uppercase tracking-wider">Creator</span>
                     </div>
+
                     <span className="text-sage text-lg font-bold" style={{ fontFamily: '"Cabinet Grotesk", sans-serif' }}>×</span>
+
+                    {/* Host slot — ghost until host signs, then shows host avatar */}
                     <div className="flex flex-col items-center gap-2">
                       <div style={{
-                        width: 48, height: 48, borderRadius: '50%',
-                        background: 'linear-gradient(135deg, #3C5759, #192524)',
+                        width: 52, height: 52, borderRadius: '50%',
+                        background: hostSig
+                          ? 'linear-gradient(135deg, #3C5759, #192524)'
+                          : 'rgba(60,87,89,0.08)',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: '1.2rem', fontWeight: 700, color: '#fff',
-                        fontFamily: '"Cabinet Grotesk", sans-serif',
+                        overflow: 'hidden', flexShrink: 0,
+                        boxShadow: hostSig ? '0 2px 8px rgba(60,87,89,0.18)' : 'none',
+                        border: hostSig
+                          ? '2px solid rgba(60,87,89,0.25)'
+                          : '2px dashed rgba(60,87,89,0.25)',
+                        transition: 'all 0.35s ease',
                       }}>
-                        {form.host ? form.host.charAt(0).toUpperCase() : 'H'}
+                        {hostSig && selectedHost?.avatar ? (
+                          <img
+                            src={selectedHost.avatar}
+                            alt={form.host}
+                            style={{ width: 52, height: 52, objectFit: 'cover' }}
+                          />
+                        ) : hostSig ? (
+                          <span style={{ fontSize: '1.2rem', fontWeight: 700, color: '#fff', fontFamily: '"Cabinet Grotesk", sans-serif' }}>
+                            {form.host ? form.host.charAt(0).toUpperCase() : 'H'}
+                          </span>
+                        ) : (
+                          /* Ghost placeholder — awaiting host */
+                          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="rgba(60,87,89,0.35)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                            <circle cx="12" cy="7" r="4"/>
+                          </svg>
+                        )}
                       </div>
-                      <span className="text-sm font-semibold text-ink text-center leading-tight">
-                        {form.host || 'Host'}
+                      <span className="text-sm font-semibold text-center leading-tight" style={{ color: hostSig ? 'var(--ink)' : 'var(--sage)' }}>
+                        {form.host || 'Awaiting Host'}
                       </span>
+                      <span className="text-[10px] text-sage uppercase tracking-wider">Host</span>
                     </div>
                   </div>
 

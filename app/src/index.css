@@ -499,3 +499,8 @@ button { font: inherit; cursor: pointer; border: none; background: none; }
   0%, 100% { transform: scale(1);    opacity: 0.35; }
   50%       { transform: scale(1.18); opacity: 0.6;  }
 }
+
+@keyframes spin {
+  0%   { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}

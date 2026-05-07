@@ -348,7 +348,7 @@ function PastCollabCard({ collab }) {
 
 // ─── Main Profile page ────────────────────────────────────────────────────────
 export default function Profile() {
-  const { profile, signOut, updateProfile } = useAuth();
+  const { profile, loading, signOut, updateProfile } = useAuth();
   const { contracts } = useCollabs();
   const navigate = useNavigate();
 
@@ -408,6 +408,23 @@ export default function Profile() {
       return () => clearTimeout(t);
     }
   }, [toastMsg]);
+
+  if (loading) {
+    return (
+      <div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bone)' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{
+            width: 32, height: 32, borderRadius: '50%',
+            border: '2.5px solid var(--stone)',
+            borderTopColor: 'var(--slate)',
+            animation: 'spin 0.8s linear infinite',
+            margin: '0 auto 1rem',
+          }} />
+          <p style={{ fontSize: '0.85rem', color: 'var(--sage)' }}>Loading profile...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!profile) return null;
 

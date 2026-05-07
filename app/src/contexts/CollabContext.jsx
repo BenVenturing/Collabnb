@@ -333,6 +333,23 @@ export function CollabProvider({ children }) {
     collabs.some((c) => c.listing_id === listingId),
   [collabs]);
 
+  const createThread = useCallback((listingTitle, hostName, tag = 'Application') => {
+    const newId = `t${Date.now()}`;
+    const newThread = {
+      id: newId,
+      listing_title: listingTitle,
+      host_name: hostName,
+      host_avatar: null,
+      tag,
+      last_message: 'Start a conversation...',
+      timestamp: 'Just now',
+      unread: 0,
+      is_founder: false,
+    };
+    setThreads((prev) => [newThread, ...prev]);
+    return newId;
+  }, []);
+
   const archiveThread = useCallback((threadId) => {
     setThreads((prev) =>
       prev.map((t) =>
@@ -350,7 +367,7 @@ export function CollabProvider({ children }) {
   }, []);
 
   return (
-    <CollabContext.Provider value={{ collabs, threads, contracts, applyCount, savedIds, collections, activeCollectionId, toggleSave, isSaved, createCollection, setActiveCollection, moveToCollection, renameCollection, deleteCollection, applyToListing, hasApplied, saveContract, updateContract, getContracts, sendContractMessage, getCollabById, advanceStage, updateStageData, toggleCloseCollab, archiveThread, updateThreadTag }}>
+    <CollabContext.Provider value={{ collabs, threads, contracts, applyCount, savedIds, collections, activeCollectionId, toggleSave, isSaved, createCollection, setActiveCollection, moveToCollection, renameCollection, deleteCollection, applyToListing, hasApplied, saveContract, updateContract, getContracts, sendContractMessage, getCollabById, advanceStage, updateStageData, toggleCloseCollab, createThread, archiveThread, updateThreadTag }}>
       {children}
     </CollabContext.Provider>
   );

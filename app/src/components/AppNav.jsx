@@ -3,7 +3,8 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useAppBar } from '../contexts/AppBarContext';
 import { useCollabs } from '../contexts/CollabContext';
-import { DESTINATIONS, COLLAB_TYPES, AVAIL_OPTIONS } from '../lib/searchData';
+import { SAMPLE_LISTINGS } from '../lib/mockData';
+import { WhereSearchContent, WhatSearchContent, WhenSearchContent, useAnimatedPlaceholder } from './SearchDropdowns';
 
 const NAV_LINKS = [
   { to: '/explore', label: 'Explore' },
@@ -67,6 +68,7 @@ export default function AppNav() {
   const [navField,      setNavField]      = useState(null); // 'where'|'what'|'when'
   const [navWhere,      setNavWhere]      = useState('');
   const [navWhat,       setNavWhat]       = useState('');
+  const [navWhatQuery,  setNavWhatQuery]  = useState('');
   const [navWhen,       setNavWhen]       = useState('');
 
   const profileRef   = useRef(null);
@@ -126,6 +128,8 @@ export default function AppNav() {
     setNavSearchOpen(false);
     setNavField(null);
   };
+
+  const whatPlaceholder = useAnimatedPlaceholder();
 
   const initials = profile?.full_name?.split(' ').map((n) => n[0]).join('').slice(0, 2) ?? '?';
 
@@ -271,104 +275,83 @@ export default function AppNav() {
                 animation: 'fadeUp 200ms cubic-bezier(0.16,1,0.3,1) forwards',
               }}
             >
-              {/* WHERE */}
+              {/* WHERE — typeable */}
               <div
                 className="search-field"
                 style={{
                   borderRadius: '0.875rem 0 0 0.875rem',
                   background: navField === 'where' ? 'rgba(255,255,255,0.7)' : undefined,
                   position: 'relative',
+                  cursor: 'text',
                 }}
-                onClick={() => setNavField(navField === 'where' ? null : 'where')}
+                onClick={() => { if (navField !== 'where') setNavField('where'); }}
               >
                 <label>Where</label>
-                <span className="search-value" style={{ color: navWhere ? 'var(--ink)' : undefined }}>
-                  {navWhere || 'Destination'}
-                </span>
+                <input
+                  type="text"
+                  value={navWhere}
+                  onChange={(e) => { setNavWhere(e.target.value); if (navField !== 'where') setNavField('where'); }}
+                  onFocus={() => setNavField('where')}
+                  placeholder="Destination"
+                  style={{
+                    border: 'none', outline: 'none', background: 'transparent',
+                    width: '100%', fontFamily: 'var(--font-body)',
+                    color: navWhere ? 'var(--ink)' : 'var(--sage)',
+                    fontSize: '0.82rem', fontWeight: navWhere ? 600 : 400,
+                    padding: 0, minWidth: 0,
+                  }}
+                />
 
                 {navField === 'where' && (
                   <NavDropdown width="440px">
-                    <p style={{ fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.14em', color: 'var(--sage)', marginBottom: '0.75rem' }}>
-                      Trending Destinations
-                    </p>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(175px, 1fr))', gap: '0.375rem' }}>
-                      {DESTINATIONS.map((d) => (
-                        <button
-                          key={d.label}
-                          onClick={(e) => { e.stopPropagation(); setNavWhere(d.label); setNavField(null); }}
-                          style={{
-                            display: 'flex', alignItems: 'center', gap: '0.625rem',
-                            padding: '0.625rem 0.75rem', borderRadius: '0.875rem',
-                            background: navWhere === d.label ? 'rgba(209,235,219,0.55)' : 'transparent',
-                            border: '1px solid', borderColor: navWhere === d.label ? 'rgba(25,37,36,0.1)' : 'transparent',
-                            cursor: 'pointer', textAlign: 'left', fontFamily: 'var(--font-body)',
-                            transition: 'background 130ms',
-                          }}
-                          onMouseEnter={(e) => { if (navWhere !== d.label) e.currentTarget.style.background = 'rgba(209,235,219,0.35)'; }}
-                          onMouseLeave={(e) => { if (navWhere !== d.label) e.currentTarget.style.background = 'transparent'; }}
-                        >
-                          <div style={{ width: '2.25rem', height: '2.25rem', borderRadius: '0.625rem', background: 'rgba(209,235,219,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem', flexShrink: 0 }}>
-                            {d.emoji}
-                          </div>
-                          <div style={{ minWidth: 0 }}>
-                            <p style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--ink)', lineHeight: 1.25 }}>{d.label}</p>
-                            <p style={{ fontSize: '0.68rem', color: 'var(--sage)', marginTop: '0.1rem' }}>{d.desc}</p>
-                          </div>
-                        </button>
-                      ))}
-                    </div>
+                    <WhereSearchContent
+                      whereVal={navWhere}
+                      setWhereVal={setNavWhere}
+                      onClose={() => setNavField(null)}
+                      listings={SAMPLE_LISTINGS}
+                    />
                   </NavDropdown>
                 )}
               </div>
 
-              {/* WHAT */}
+              {/* WHAT — typeable with animated placeholder */}
               <div
                 className="search-field"
                 style={{
                   background: navField === 'what' ? 'rgba(255,255,255,0.7)' : undefined,
-                  position: 'relative',
+                  position: 'relative', cursor: 'text',
                 }}
-                onClick={() => setNavField(navField === 'what' ? null : 'what')}
+                onClick={() => { if (navField !== 'what') setNavField('what'); }}
               >
                 <label>What</label>
-                <span className="search-value" style={{ color: navWhat ? 'var(--ink)' : undefined }}>
-                  {navWhat || 'Collab type'}
-                </span>
+                <input
+                  type="text"
+                  value={navWhatQuery}
+                  onChange={(e) => { setNavWhatQuery(e.target.value); if (navField !== 'what') setNavField('what'); }}
+                  onFocus={() => setNavField('what')}
+                  placeholder={whatPlaceholder}
+                  style={{
+                    border: 'none', outline: 'none', background: 'transparent',
+                    width: '100%', fontFamily: 'var(--font-body)',
+                    color: navWhat ? 'var(--ink)' : 'var(--sage)',
+                    fontSize: '0.82rem', fontWeight: navWhat ? 600 : 400,
+                    padding: 0, minWidth: 0,
+                  }}
+                />
 
                 {navField === 'what' && (
-                  <NavDropdown width="360px">
-                    <p style={{ fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.14em', color: 'var(--sage)', marginBottom: '0.75rem' }}>
-                      Collab Type
-                    </p>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                      {COLLAB_TYPES.map((ct) => {
-                        const active = navWhat === ct.label;
-                        return (
-                          <button
-                            key={ct.label}
-                            onClick={(e) => { e.stopPropagation(); setNavWhat(active ? '' : ct.label); setNavField(null); }}
-                            style={{
-                              display: 'flex', alignItems: 'center', gap: '0.375rem',
-                              padding: '0.5rem 1rem', borderRadius: '9999px',
-                              border: '1px solid', cursor: 'pointer',
-                              borderColor: active ? 'var(--ink)' : 'rgba(25,37,36,0.12)',
-                              background: active ? 'var(--ink)' : 'rgba(255,255,255,0.6)',
-                              color: active ? 'var(--bone)' : 'var(--slate)',
-                              fontSize: '0.825rem', fontWeight: 500,
-                              transition: 'all 140ms', fontFamily: 'var(--font-body)',
-                            }}
-                          >
-                            <span>{ct.emoji}</span>
-                            {ct.label}
-                          </button>
-                        );
-                      })}
-                    </div>
+                  <NavDropdown width="400px">
+                    <WhatSearchContent
+                      whatVal={navWhat}
+                      setWhatVal={setNavWhat}
+                      onClose={() => setNavField(null)}
+                      typeQuery={navWhatQuery}
+                    />
                   </NavDropdown>
                 )}
               </div>
 
-              {/* WHEN */}
+              {/* WHEN — date range picker */}
               <div
                 className="search-field"
                 style={{
@@ -385,33 +368,12 @@ export default function AppNav() {
                 </span>
 
                 {navField === 'when' && (
-                  <NavDropdown align="right" width="220px">
-                    <p style={{ fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.14em', color: 'var(--sage)', marginBottom: '0.625rem' }}>
-                      Availability
-                    </p>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                      {AVAIL_OPTIONS.map((opt) => {
-                        const active = navWhen === opt || (!navWhen && opt === 'Any time');
-                        return (
-                          <button
-                            key={opt}
-                            onClick={(e) => { e.stopPropagation(); setNavWhen(opt === 'Any time' ? '' : opt); setNavField(null); }}
-                            style={{
-                              padding: '0.6rem 0.875rem', borderRadius: '0.75rem',
-                              background: active ? 'rgba(209,235,219,0.55)' : 'transparent',
-                              border: '1px solid', borderColor: active ? 'rgba(25,37,36,0.1)' : 'transparent',
-                              color: 'var(--ink)', fontSize: '0.85rem', fontWeight: active ? 600 : 400,
-                              textAlign: 'left', cursor: 'pointer', transition: 'background 130ms',
-                              fontFamily: 'var(--font-body)',
-                            }}
-                            onMouseEnter={(e) => { if (!active) e.currentTarget.style.background = 'rgba(209,235,219,0.3)'; }}
-                            onMouseLeave={(e) => { if (!active) e.currentTarget.style.background = 'transparent'; }}
-                          >
-                            {opt}
-                          </button>
-                        );
-                      })}
-                    </div>
+                  <NavDropdown align="right" width="460px">
+                    <WhenSearchContent
+                      whenVal={navWhen}
+                      setWhenVal={setNavWhen}
+                      onClose={() => setNavField(null)}
+                    />
                   </NavDropdown>
                 )}
               </div>

@@ -1,6 +1,7 @@
 import { supabase } from '/scripts/supabase.js';
 
 let profileLoaded = false;
+let isNewVerification = false;
 
 /* ── Demo fallback data (shown when Supabase isn't available) ── */
 const DEMO_CREATOR = {
@@ -25,7 +26,7 @@ const DEMO_HOST = {
 };
 
 function showState(id) {
-  ['state-loading', 'state-not-authed', 'state-unconfirmed', 'state-error', 'state-profile'].forEach(s => {
+  ['state-loading', 'state-not-authed', 'state-unconfirmed', 'state-set-password', 'state-error', 'state-profile'].forEach(s => {
     const el = document.getElementById(s);
     if (el) el.hidden = s !== id;
   });
@@ -161,6 +162,14 @@ function readSessionFromStorage() {
 
 /* ── Initialize profile on page load ── */
 (async function initProfile() {
+  // Detect if arriving from email verification link (hash contains type=signup)
+  const hashParams = new URLSearchParams(window.location.hash.slice(1));
+  if (hashParams.get('type') === 'signup') {
+    isNewVerification = true;
+    // Let onAuthStateChange handle it after Supabase processes the hash tokens
+    return;
+  }
+
   try {
     console.log('[profile] initProfile started');
 
@@ -169,7 +178,6 @@ function readSessionFromStorage() {
 
     if (!stored?.user?.email_confirmed_at) {
       console.log('[profile] No valid stored session — showing demo profile');
-      // Fall through to catch / demo fallback below
       throw new Error(stored ? 'email not confirmed' : 'no session in storage');
     }
 
@@ -177,7 +185,7 @@ function readSessionFromStorage() {
     await loadProfile(stored.user);
   } catch (err) {
     console.warn('[profile] Auth check failed, showing demo profile:', err.message);
-    profileLoaded = true;
+    // Do NOT set profileLoaded = true here — onAuthStateChange must still be able to fire
     showState('state-profile');
     document.title = 'Demo Profile — Collabnb';
     document.getElementById('founder-banner').hidden = false;
@@ -191,7 +199,11 @@ supabase.auth.onAuthStateChange(async (event, session) => {
 
   if (event === 'SIGNED_IN') {
     if (session?.user?.email_confirmed_at) {
-      await loadProfile(session.user);
+      if (isNewVerification) {
+        showState('state-set-password');
+      } else {
+        await loadProfile(session.user);
+      }
     } else if (session?.user) {
       document.getElementById('unconfirmed-email').textContent = session.user.email;
       showState('state-unconfirmed');
@@ -258,4 +270,37 @@ document.getElementById('signin-form')?.addEventListener('submit', handleSignIn)
 document.getElementById('btn-signout')?.addEventListener('click', async () => {
   await supabase.auth.signOut();
   window.location.href = '/index.html';
+});
+
+/* ── Set password after email verification ── */
+document.getElementById('set-password-form')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const newPwd = document.getElementById('new-password').value;
+  const confirmPwd = document.getElementById('confirm-password').value;
+  const errorEl = document.getElementById('set-password-error');
+  const btn = document.getElementById('btn-set-password');
+
+  if (newPwd !== confirmPwd) {
+    errorEl.textContent = 'Passwords do not match.';
+    errorEl.style.display = 'block';
+    return;
+  }
+
+  errorEl.style.display = 'none';
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+
+  const { error } = await supabase.auth.updateUser({ password: newPwd });
+
+  if (error) {
+    errorEl.textContent = error.message;
+    errorEl.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = 'Save Password';
+    return;
+  }
+
+  showState('state-loading');
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user) await loadProfile(user);
 });

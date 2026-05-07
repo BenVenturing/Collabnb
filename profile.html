@@ -498,6 +498,25 @@
       <p style="font-size:0.8125rem;color:var(--sage);margin-bottom:0;">Can't find it? Check spam, or <a href="mailto:hellocollabnb@gmail.com" style="color:var(--slate);">contact us</a>.</p>
     </div>
 
+    <!-- ── SET PASSWORD (after email verification) ── -->
+    <div id="state-set-password" class="pf-gate" hidden>
+      <div class="pf-gate-icon">🔐</div>
+      <h1 class="pf-gate-title">Create your password</h1>
+      <p class="pf-gate-desc">Your email is confirmed! Set a password so you can sign in to your profile anytime.</p>
+      <form id="set-password-form" style="text-align:left;">
+        <div class="form-group">
+          <label class="form-label" for="new-password">Password</label>
+          <input class="form-input" type="password" id="new-password" placeholder="At least 8 characters" minlength="8" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="confirm-password">Confirm password</label>
+          <input class="form-input" type="password" id="confirm-password" placeholder="Repeat your password" minlength="8" required />
+        </div>
+        <button type="submit" id="btn-set-password" class="btn-primary" style="width:100%;cursor:pointer;">Save Password</button>
+        <p id="set-password-error" style="color:#e74c3c;font-size:0.8125rem;margin-top:0.75rem;display:none;"></p>
+      </form>
+    </div>
+
     <!-- ── ERROR ── -->
     <div id="state-error" class="pf-gate" hidden>
       <div class="pf-gate-icon">⚠️</div>

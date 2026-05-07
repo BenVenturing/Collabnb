@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useCollabs } from '../contexts/CollabContext';
-import { THREAD_MESSAGES } from '../lib/mockData';
+import { SAMPLE_LISTINGS, THREAD_MESSAGES } from '../lib/mockData';
 import CollabDetail from '../components/CollabDetail';
 
 const TAG_STYLES = {
@@ -294,15 +294,123 @@ function EmptyState() {
   );
 }
 
+// ─── New Message Modal ─────────────────────────────────────────────────────────
+function NewMessageModal({ listings, onSelect, onClose }) {
+  const [query, setQuery] = useState('');
+  const inputRef = useRef(null);
+  const modalRef = useRef(null);
+
+  useEffect(() => {
+    inputRef.current?.focus();
+    const handler = (e) => {
+      if (modalRef.current && !modalRef.current.contains(e.target)) onClose();
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [onClose]);
+
+  const filtered = query.trim()
+    ? listings.filter((l) =>
+        l.title.toLowerCase().includes(query.toLowerCase()) ||
+        l.location.toLowerCase().includes(query.toLowerCase())
+      )
+    : listings;
+
+  return (
+    <div
+      style={{
+        position: 'fixed', inset: 0, zIndex: 9999,
+        background: 'rgba(25,37,36,0.25)',
+        backdropFilter: 'blur(4px)',
+        display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
+        paddingTop: '12vh',
+      }}
+    >
+      <div
+        ref={modalRef}
+        className="bg-white rounded-2xl shadow-xl border border-stone/20 overflow-hidden"
+        style={{ width: 'min(90vw, 420px)', maxHeight: '70vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(25,37,36,0.18)' }}
+      >
+        {/* Header */}
+        <div className="px-5 pt-4 pb-3 border-b border-stone/20">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="font-display font-bold text-ink text-base">New Message</h2>
+            <button
+              onClick={onClose}
+              className="w-7 h-7 rounded-full bg-bone hover:bg-stone/50 flex items-center justify-center transition-colors"
+            >
+              <svg viewBox="0 0 16 16" fill="none" stroke="#3C5759" strokeWidth="2" strokeLinecap="round" width="12" height="12">
+                <line x1="2" y1="2" x2="14" y2="14"/><line x1="14" y1="2" x2="2" y2="14"/>
+              </svg>
+            </button>
+          </div>
+          <div className="bg-bone rounded-xl px-3 py-2 flex items-center gap-2 border border-stone/30">
+            <svg viewBox="0 0 256 256" fill="none" stroke="#959D90" strokeWidth="16" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 flex-shrink-0">
+              <circle cx="112" cy="112" r="80"/><line x1="168.57" y1="168.57" x2="224" y2="224"/>
+            </svg>
+            <input
+              ref={inputRef}
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search listings..."
+              className="flex-1 bg-transparent text-sm text-ink placeholder-sage outline-none"
+            />
+          </div>
+        </div>
+
+        {/* Listing list */}
+        <div className="flex-1 overflow-y-auto">
+          {filtered.length === 0 ? (
+            <div className="py-12 text-center">
+              <p className="text-sage text-sm">No listings found</p>
+            </div>
+          ) : (
+            filtered.map((listing) => (
+              <button
+                key={listing.id}
+                onClick={() => onSelect(listing)}
+                className="w-full flex items-center gap-3 px-5 py-3 hover:bg-bone/60 transition-colors text-left border-b border-stone/10 last:border-0"
+              >
+                {/* Thumbnail */}
+                <div
+                  className="w-10 h-10 rounded-lg bg-mint overflow-hidden flex-shrink-0"
+                >
+                  {listing.image ? (
+                    <img src={listing.image} alt={listing.title} className="w-full h-full object-cover" loading="lazy" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #D1EBDB, #959D90)' }}>
+                      <span className="font-display font-bold text-slate text-xs">{listing.title[0]}</span>
+                    </div>
+                  )}
+                </div>
+                {/* Info */}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-ink truncate">{listing.title}</p>
+                  <p className="text-xs text-sage truncate">{listing.location}</p>
+                </div>
+                <svg viewBox="0 0 256 256" fill="none" stroke="#959D90" strokeWidth="12" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 flex-shrink-0">
+                  <polyline points="96 48 176 128 96 208"/>
+                </svg>
+              </button>
+            ))
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Inbox ───────────────────────────────────────────────────────────────
 export default function Inbox() {
-  const { threads, collabs, archiveThread, updateThreadTag } = useCollabs();
+  const { threads, collabs, archiveThread, updateThreadTag, createThread } = useCollabs();
   const [activeFilter, setActiveFilter] = useState('All');
   const [selectedId, setSelectedId] = useState(null);
   const [isSearching, setIsSearching] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [viewingCollab, setViewingCollab] = useState(null);
   const [toastMsg, setToastMsg] = useState('');
+  const [newMessageOpen, setNewMessageOpen] = useState(false);
   const searchInputRef = useRef(null);
 
   // Auto-focus search input
@@ -328,6 +436,13 @@ export default function Inbox() {
     }
   }, [collabs, showToast]);
 
+  // Handle selecting a listing to start a new message
+  const handleNewMessage = useCallback((listing) => {
+    const newId = createThread(listing.title, 'Ben Venturing');
+    setSelectedId(newId);
+    setNewMessageOpen(false);
+  }, [createThread]);
+
   // Non-archived threads
   const activeThreads = threads.filter((t) => !t.archived);
 
@@ -349,6 +464,10 @@ export default function Inbox() {
     : tagFiltered;
 
   const selectedThread = activeThreads.find((t) => t.id === selectedId) || null;
+
+  // Deduplicated listings for New Message
+  const existingTitles = new Set(threads.map((t) => t.listing_title));
+  const listingsForNewMessage = SAMPLE_LISTINGS.filter((l) => !existingTitles.has(l.title));
 
   return (
     <div className="flex bg-bone overflow-hidden" style={{ height: 'calc(100dvh - 7rem)' }}>
@@ -392,7 +511,11 @@ export default function Inbox() {
                       <circle cx="112" cy="112" r="80"/><line x1="168.57" y1="168.57" x2="224" y2="224"/>
                     </svg>
                   </button>
-                  <button className="w-8 h-8 rounded-full bg-bone hover:bg-stone/60 flex items-center justify-center transition-colors">
+                  <button
+                    onClick={() => setNewMessageOpen(true)}
+                    className="w-8 h-8 rounded-full bg-bone hover:bg-stone/60 flex items-center justify-center transition-colors"
+                    title="New message"
+                  >
                     <svg viewBox="0 0 24 24" fill="none" stroke="#3C5759" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5">
                       <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
                       <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
@@ -469,6 +592,15 @@ export default function Inbox() {
       {/* ── Toast notification ── */}
       {toastMsg && (
         <div className="toast">{toastMsg}</div>
+      )}
+
+      {/* ── New Message Modal ── */}
+      {newMessageOpen && (
+        <NewMessageModal
+          listings={listingsForNewMessage}
+          onSelect={handleNewMessage}
+          onClose={() => setNewMessageOpen(false)}
+        />
       )}
     </div>
   );

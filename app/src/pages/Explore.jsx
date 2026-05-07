@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { SAMPLE_LISTINGS } from '../lib/mockData';
 import { useAppBar } from '../contexts/AppBarContext';
 import { useCollabs } from '../contexts/CollabContext';
-import { DESTINATIONS, COLLAB_TYPES, AVAIL_OPTIONS } from '../lib/searchData';
+import { WhereSearchContent, WhatSearchContent, WhenSearchContent, useAnimatedPlaceholder } from '../components/SearchDropdowns';
 
 const PROP_FILTERS = ['All', 'Cabin', 'Villa', 'Treehouse', 'Glamping', 'Lodge', 'Estate', 'Cottage'];
 
@@ -31,7 +31,7 @@ function ListingCard({ listing, saved, onSave, delay, onNavigate }) {
     <div
       className="listing-card reveal-up"
       onClick={onNavigate}
-      style={{ width: 260, animationDelay: `${delay}ms`, opacity: 0, cursor: 'pointer' }}
+      style={{ width: 260, maxWidth: '100%', animationDelay: `${delay}ms`, opacity: 0, cursor: 'pointer' }}
     >
       {/* Photo */}
       <div style={{ position: 'relative', height: 176, overflow: 'hidden' }}>
@@ -125,10 +125,10 @@ function ListingCard({ listing, saved, onSave, delay, onNavigate }) {
 }
 
 // ─── Section Row ──────────────────────────────────────────────────────────────
-function SectionRow({ title, subtitle, listings, saved, onSave, onNavigate }) {
-  if (!listings.length) return null;
+function SectionRow({ title, subtitle, listings, saved, onSave, onNavigate, expanded, onToggleExpand, hidden }) {
+  if (!listings.length || hidden) return null;
   return (
-    <div style={{ marginBottom: '2.5rem' }}>
+    <div style={{ marginBottom: expanded ? '3rem' : '2.5rem' }}>
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', padding: '0 1.5rem', marginBottom: '1rem' }}>
         <div>
           <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.2rem', color: 'var(--ink)', marginBottom: '0.1rem' }}>
@@ -136,27 +136,51 @@ function SectionRow({ title, subtitle, listings, saved, onSave, onNavigate }) {
           </h2>
           {subtitle && <p style={{ fontSize: '0.75rem', color: 'var(--sage)' }}>{subtitle}</p>}
         </div>
-        <button style={{
-          fontSize: '0.78rem', fontWeight: 500, color: 'var(--slate)',
-          background: 'none', border: 'none', cursor: 'pointer',
-          textDecoration: 'underline', textDecorationColor: 'rgba(60,87,89,0.3)',
-          fontFamily: 'var(--font-body)', whiteSpace: 'nowrap',
-        }}>
-          See all
+        <button
+          onClick={onToggleExpand}
+          style={{
+            fontSize: '0.78rem', fontWeight: 500, color: 'var(--slate)',
+            background: 'none', border: 'none', cursor: 'pointer',
+            textDecoration: 'underline', textDecorationColor: 'rgba(60,87,89,0.3)',
+            fontFamily: 'var(--font-body)', whiteSpace: 'nowrap',
+          }}
+        >
+          {expanded ? 'Show less' : 'See all'}
         </button>
       </div>
-      <div className="snap-row no-scrollbar" style={{ padding: '0 1.5rem 0.5rem' }}>
-        {listings.map((l, i) => (
-          <ListingCard
-            key={l.id}
-            listing={l}
-            saved={saved.has(l.id)}
-            onSave={onSave}
-            delay={i * 55}
-            onNavigate={() => onNavigate(l.id)}
-          />
-        ))}
-      </div>
+      {expanded ? (
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
+          gap: '1rem',
+          padding: '0 1.5rem 0.5rem',
+          justifyItems: 'center',
+        }}>
+          {listings.map((l, i) => (
+            <ListingCard
+              key={l.id}
+              listing={l}
+              saved={saved.has(l.id)}
+              onSave={onSave}
+              delay={i * 55}
+              onNavigate={() => onNavigate(l.id)}
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="snap-row no-scrollbar" style={{ padding: '0 1.5rem 0.5rem' }}>
+          {listings.map((l, i) => (
+            <ListingCard
+              key={l.id}
+              listing={l}
+              saved={saved.has(l.id)}
+              onSave={onSave}
+              delay={i * 55}
+              onNavigate={() => onNavigate(l.id)}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -189,10 +213,35 @@ export default function Explore() {
   const [activeField, setActiveField] = useState(null); // 'where' | 'what' | 'when'
   const [whereVal,    setWhereVal]    = useState('');
   const [whatVal,     setWhatVal]     = useState('');
+  const [whatQuery,   setWhatQuery]   = useState('');
   const [whenVal,     setWhenVal]     = useState('');
   const [propFilter,  setPropFilter]  = useState('All');
+  const [expandedSection, setExpandedSection] = useState(null); // null | section title
   const { savedIds, toggleSave } = useCollabs();
   const searchRef = useRef(null);
+  const whereRef = useRef(null);
+  const whatRef = useRef(null);
+  const whenRef = useRef(null);
+  const whatPlaceholder = useAnimatedPlaceholder();
+
+  // When whatVal changes (from clicking filter chips), sync to search input
+  useEffect(() => {
+    if (whatVal) setWhatQuery(whatVal);
+  }, [whatVal]);
+
+  // Sliding mint pill position
+  const [pillPos, setPillPos] = useState({ left: 0, width: 0 });
+  useEffect(() => {
+    if (!activeField) return;
+    const refs = { where: whereRef, what: whatRef, when: whenRef };
+    const el = refs[activeField]?.current;
+    const bar = searchRef.current?.querySelector('.search-bar');
+    if (el && bar) {
+      const barRect = bar.getBoundingClientRect();
+      const elRect = el.getBoundingClientRect();
+      setPillPos({ left: elRect.left - barRect.left, width: elRect.width });
+    }
+  }, [activeField]);
 
   const goToListing = (id) => navigate(`/listing/${id}`);
 
@@ -240,36 +289,80 @@ export default function Explore() {
 
         {/* Search bar */}
         <div ref={searchRef} style={{ maxWidth: '680px', margin: '0 auto', position: 'relative' }}>
-          <div className="search-bar">
+          <div className="search-bar" style={{ position: 'relative' }}>
 
-            {/* Where */}
+            {/* Sliding mint-green pill overlay */}
+            {activeField && (
+              <div style={{
+                position: 'absolute', top: '4px', left: pillPos.left, width: pillPos.width,
+                height: 'calc(100% - 8px)',
+                background: 'rgba(209,235,219,0.7)',
+                borderRadius: '9999px',
+                transition: 'left 280ms cubic-bezier(0.16,1,0.3,1), width 280ms cubic-bezier(0.16,1,0.3,1)',
+                pointerEvents: 'none', zIndex: 0,
+                boxShadow: 'inset 0 1px 2px rgba(255,255,255,0.6), 0 2px 8px rgba(74,155,127,0.12)',
+                backdropFilter: 'blur(2px)',
+                WebkitBackdropFilter: 'blur(2px)',
+              }} />
+            )}
+
+            {/* Where — typeable input with live suggestions */}
             <div
+              ref={whereRef}
               className="search-field"
-              style={{ background: activeField === 'where' ? 'rgba(255,255,255,0.65)' : undefined }}
-              onClick={() => setActiveField(activeField === 'where' ? null : 'where')}
+              style={{
+                flex: whereVal ? undefined : 1,
+                cursor: 'text', position: 'relative', zIndex: 1,
+              }}
+              onClick={() => { if (activeField !== 'where') setActiveField('where'); }}
             >
               <label>Where</label>
-              <span className="search-value" style={{ color: whereVal ? 'var(--ink)' : undefined }}>
-                {whereVal || 'Search destinations'}
-              </span>
+              <input
+                type="text"
+                value={whereVal}
+                onChange={(e) => { setWhereVal(e.target.value); if (activeField !== 'where') setActiveField('where'); }}
+                onFocus={() => setActiveField('where')}
+                placeholder="Search destinations"
+                className="search-value"
+                style={{
+                  border: 'none', outline: 'none', background: 'transparent',
+                  width: '100%', fontFamily: 'var(--font-body)',
+                  color: whereVal ? 'var(--ink)' : 'var(--sage)',
+                  fontSize: '0.82rem', fontWeight: whereVal ? 600 : 400,
+                  padding: 0, minWidth: 0,
+                }}
+              />
             </div>
 
-            {/* What */}
+            {/* What — typeable with animated placeholder */}
             <div
+              ref={whatRef}
               className="search-field"
-              style={{ background: activeField === 'what' ? 'rgba(255,255,255,0.65)' : undefined }}
-              onClick={() => setActiveField(activeField === 'what' ? null : 'what')}
+              style={{ cursor: 'text', position: 'relative', zIndex: 1 }}
+              onClick={() => { if (activeField !== 'what') setActiveField('what'); }}
             >
               <label>What</label>
-              <span className="search-value" style={{ color: whatVal ? 'var(--ink)' : undefined }}>
-                {whatVal || 'Collab type'}
-              </span>
+              <input
+                type="text"
+                value={whatQuery}
+                onChange={(e) => { setWhatQuery(e.target.value); if (activeField !== 'what') setActiveField('what'); }}
+                onFocus={() => setActiveField('what')}
+                placeholder={whatPlaceholder}
+                style={{
+                  border: 'none', outline: 'none', background: 'transparent',
+                  width: '100%', fontFamily: 'var(--font-body)',
+                  color: whatVal ? 'var(--ink)' : 'var(--sage)',
+                  fontSize: '0.82rem', fontWeight: whatVal ? 600 : 400,
+                  padding: 0, minWidth: 0,
+                }}
+              />
             </div>
 
             {/* When */}
             <div
+              ref={whenRef}
               className="search-field"
-              style={{ flex: '0.75', background: activeField === 'when' ? 'rgba(255,255,255,0.65)' : undefined }}
+              style={{ flex: '0.75', position: 'relative', zIndex: 1 }}
               onClick={() => setActiveField(activeField === 'when' ? null : 'when')}
             >
               <label>When</label>
@@ -293,119 +386,37 @@ export default function Explore() {
             </div>
           </div>
 
-          {/* ── Where dropdown ──────────────────────────────────────────────── */}
           {activeField === 'where' && (
-            <Dropdown>
-              <p style={{
-                fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase',
-                letterSpacing: '0.14em', color: 'var(--sage)', marginBottom: '0.75rem',
-              }}>
-                Trending Destinations
-              </p>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(175px, 1fr))', gap: '0.375rem' }}>
-                {DESTINATIONS.map((d) => (
-                  <button
-                    key={d.label}
-                    onClick={() => { setWhereVal(d.label); setActiveField(null); }}
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: '0.625rem',
-                      padding: '0.625rem 0.75rem', borderRadius: '0.875rem',
-                      background: whereVal === d.label ? 'rgba(209,235,219,0.55)' : 'transparent',
-                      border: '1px solid', borderColor: whereVal === d.label ? 'rgba(25,37,36,0.1)' : 'transparent',
-                      cursor: 'pointer', textAlign: 'left',
-                      transition: 'background 130ms, border-color 130ms',
-                      fontFamily: 'var(--font-body)',
-                    }}
-                    onMouseEnter={(e) => { if (whereVal !== d.label) e.currentTarget.style.background = 'rgba(209,235,219,0.35)'; }}
-                    onMouseLeave={(e) => { if (whereVal !== d.label) e.currentTarget.style.background = 'transparent'; }}
-                  >
-                    <div style={{
-                      width: '2.25rem', height: '2.25rem', borderRadius: '0.625rem',
-                      background: 'rgba(209,235,219,0.6)', display: 'flex',
-                      alignItems: 'center', justifyContent: 'center',
-                      fontSize: '1rem', flexShrink: 0,
-                    }}>
-                      {d.emoji}
-                    </div>
-                    <div style={{ minWidth: 0 }}>
-                      <p style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--ink)', lineHeight: 1.25 }}>{d.label}</p>
-                      <p style={{ fontSize: '0.68rem', color: 'var(--sage)', marginTop: '0.1rem' }}>{d.desc}</p>
-                    </div>
-                  </button>
-                ))}
-              </div>
+            <Dropdown width="380px">
+              <WhereSearchContent
+                whereVal={whereVal}
+                setWhereVal={setWhereVal}
+                onClose={() => setActiveField(null)}
+                listings={SAMPLE_LISTINGS}
+              />
             </Dropdown>
           )}
 
-          {/* ── What dropdown ───────────────────────────────────────────────── */}
+          {/* ── What dropdown (collab type + deliverables) ─────────────────────── */}
           {activeField === 'what' && (
             <Dropdown>
-              <p style={{
-                fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase',
-                letterSpacing: '0.14em', color: 'var(--sage)', marginBottom: '0.75rem',
-              }}>
-                Collab Type
-              </p>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                {COLLAB_TYPES.map((ct) => {
-                  const active = whatVal === ct.label;
-                  return (
-                    <button
-                      key={ct.label}
-                      onClick={() => { setWhatVal(active ? '' : ct.label); setActiveField(null); }}
-                      style={{
-                        display: 'flex', alignItems: 'center', gap: '0.375rem',
-                        padding: '0.5rem 1rem', borderRadius: '9999px',
-                        border: '1px solid', cursor: 'pointer',
-                        borderColor: active ? 'var(--ink)' : 'rgba(25,37,36,0.12)',
-                        background: active ? 'var(--ink)' : 'rgba(255,255,255,0.6)',
-                        color: active ? 'var(--bone)' : 'var(--slate)',
-                        fontSize: '0.825rem', fontWeight: 500,
-                        transition: 'all 140ms',
-                        fontFamily: 'var(--font-body)',
-                      }}
-                    >
-                      <span>{ct.emoji}</span>
-                      {ct.label}
-                    </button>
-                  );
-                })}
-              </div>
+              <WhatSearchContent
+                whatVal={whatVal}
+                setWhatVal={setWhatVal}
+                onClose={() => setActiveField(null)}
+                typeQuery={whatQuery}
+              />
             </Dropdown>
           )}
 
-          {/* ── When dropdown ───────────────────────────────────────────────── */}
+          {/* ── When dropdown (date range picker) ──────────────────────────────── */}
           {activeField === 'when' && (
-            <Dropdown align="right" width="240px">
-              <p style={{
-                fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase',
-                letterSpacing: '0.14em', color: 'var(--sage)', marginBottom: '0.625rem',
-              }}>
-                Availability
-              </p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                {AVAIL_OPTIONS.map((opt) => {
-                  const active = whenVal === opt || (!whenVal && opt === 'Any time');
-                  return (
-                    <button
-                      key={opt}
-                      onClick={() => { setWhenVal(opt === 'Any time' ? '' : opt); setActiveField(null); }}
-                      style={{
-                        padding: '0.6rem 0.875rem', borderRadius: '0.75rem',
-                        background: active ? 'rgba(209,235,219,0.55)' : 'transparent',
-                        border: '1px solid', borderColor: active ? 'rgba(25,37,36,0.1)' : 'transparent',
-                        color: 'var(--ink)', fontSize: '0.85rem', fontWeight: active ? 600 : 400,
-                        textAlign: 'left', cursor: 'pointer', transition: 'background 130ms',
-                        fontFamily: 'var(--font-body)',
-                      }}
-                      onMouseEnter={(e) => { if (!active) e.currentTarget.style.background = 'rgba(209,235,219,0.3)'; }}
-                      onMouseLeave={(e) => { if (!active) e.currentTarget.style.background = 'transparent'; }}
-                    >
-                      {opt}
-                    </button>
-                  );
-                })}
-              </div>
+            <Dropdown align="right" width="460px">
+              <WhenSearchContent
+                whenVal={whenVal}
+                setWhenVal={setWhenVal}
+                onClose={() => setActiveField(null)}
+              />
             </Dropdown>
           )}
         </div>
@@ -465,6 +476,9 @@ export default function Explore() {
           saved={savedIds}
           onSave={toggleSave}
           onNavigate={goToListing}
+          expanded={expandedSection === 'Trending Now'}
+          onToggleExpand={() => setExpandedSection(expandedSection === 'Trending Now' ? null : 'Trending Now')}
+          hidden={expandedSection !== null && expandedSection !== 'Trending Now'}
         />
 
         <SectionRow
@@ -474,6 +488,9 @@ export default function Explore() {
           saved={savedIds}
           onSave={toggleSave}
           onNavigate={goToListing}
+          expanded={expandedSection === 'Picked for You'}
+          onToggleExpand={() => setExpandedSection(expandedSection === 'Picked for You' ? null : 'Picked for You')}
+          hidden={expandedSection !== null && expandedSection !== 'Picked for You'}
         />
 
         <SectionRow
@@ -483,6 +500,9 @@ export default function Explore() {
           saved={savedIds}
           onSave={toggleSave}
           onNavigate={goToListing}
+          expanded={expandedSection === 'Near Asheville'}
+          onToggleExpand={() => setExpandedSection(expandedSection === 'Near Asheville' ? null : 'Near Asheville')}
+          hidden={expandedSection !== null && expandedSection !== 'Near Asheville'}
         />
 
         <SectionRow
@@ -492,6 +512,9 @@ export default function Explore() {
           saved={savedIds}
           onSave={toggleSave}
           onNavigate={goToListing}
+          expanded={expandedSection === 'All Stays'}
+          onToggleExpand={() => setExpandedSection(expandedSection === 'All Stays' ? null : 'All Stays')}
+          hidden={expandedSection !== null && expandedSection !== 'All Stays'}
         />
 
         {allFiltered.length === 0 && (

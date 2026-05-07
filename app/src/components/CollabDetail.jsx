@@ -51,8 +51,8 @@ const DollarSmall = () => (
 /* Pulse keyframes for demo auto-advance */
 const pulseKeyframes = `
 @keyframes demo-pulse {
-  0%, 100% { box-shadow: 0 0 0 4px var(--pulse-color, rgba(25,37,36,0.12)); }
-  50% { box-shadow: 0 0 0 8px var(--pulse-color, rgba(25,37,36,0.25)); }
+  0%, 100% { box-shadow: 0 0 0 4px rgba(149,157,144,0.2); }
+  50% { box-shadow: 0 0 0 10px rgba(149,157,144,0.4); }
 }
 @keyframes demo-dot-bounce {
   0% { transform: scale(1); }
@@ -76,6 +76,10 @@ function StageProgressBar({ stages, currentStage, viewingStage, onStageClick, de
   }, [viewingStage]);
   const curIdx = STAGES.findIndex((s) => s.key === currentStage);
   const stageCount = STAGES.length;
+  // During demo, use viewingStage as the reference point instead of currentStage
+  const refIdx = demoPlaying
+    ? STAGES.findIndex((s) => s.key === (viewingStage || currentStage))
+    : curIdx;
 
   return (
     <div style={{ maxWidth: '600px', margin: '0 auto', padding: '0.25rem 0' }}>
@@ -86,10 +90,31 @@ function StageProgressBar({ stages, currentStage, viewingStage, onStageClick, de
           const completed = s?.completed;
           const isCurrent = stage.key === currentStage;
           const isViewing = stage.key === viewingStage;
-          const isPast = idx < curIdx;
+          const isPast = idx < refIdx;
           const isClickable = completed || isCurrent;
           const color = STAGE_COLORS[stage.key] || STAGE_COLORS.pending;
           const dotSize = isCurrent ? 20 : isViewing ? 18 : completed ? 16 : 14;
+
+          // In demo mode, use lighter/gentler visuals
+          const effectiveDot = demoPlaying
+            ? (isViewing || isPast ? color.dot : 'rgba(208,213,206,0.5)')
+            : (completed ? color.dot : isCurrent ? color.dot : 'transparent');
+
+          const effectiveBorder = demoPlaying
+            ? isViewing
+              ? `2.5px solid ${color.dot}`
+              : isPast
+                ? `2px solid ${color.dot}`
+                : `1.5px solid rgba(208,213,206,0.5)`
+            : completed
+              ? 'none'
+              : isCurrent
+                ? `2.5px solid ${color.dot}`
+                : `1.5px solid ${color.dot}`;
+
+          const effectiveOpacity = demoPlaying
+            ? (isViewing || isPast ? 1 : 0.4)
+            : (completed || isCurrent ? 1 : 0.35);
 
           return (
             <div key={stage.key} className="flex items-center" style={{ flex: 1, minWidth: 0 }}>
@@ -104,31 +129,33 @@ function StageProgressBar({ stages, currentStage, viewingStage, onStageClick, de
                   style={{
                     width: dotSize, height: dotSize,
                     borderRadius: '50%',
-                    background: completed ? color.dot : isCurrent ? color.dot : 'transparent',
-                    border: completed ? 'none' : isCurrent ? `2.5px solid ${color.dot}` : `1.5px solid ${color.dot}`,
-                    opacity: completed || isCurrent ? 1 : 0.35,
-                    boxShadow: isCurrent
+                    background: effectiveDot,
+                    border: effectiveBorder,
+                    opacity: effectiveOpacity,
+                    boxShadow: isViewing
                       ? `0 0 0 4px ${color.bg}`
-                      : isViewing
-                        ? `0 0 0 3px ${color.bg}`
+                      : isCurrent
+                        ? `0 0 0 4px ${color.bg}`
                         : 'none',
-                    transform: isViewing ? 'scale(1.1)' : 'scale(1)',
-                    transition: 'box-shadow 300ms, transform 200ms',
+                    transform: isViewing ? 'scale(1.15)' : 'scale(1)',
+                    transition: 'all 350ms cubic-bezier(0.16,1,0.3,1)',
                     animation: animatingDot === stage.key
                       ? 'demo-dot-bounce 400ms ease-out'
-                      : demoPlaying && isCurrent
+                      : demoPlaying && isViewing
                         ? 'demo-pulse 1.5s ease-in-out infinite'
                         : 'none',
                   }}
                 >
-                  {completed && <CheckIcon />}
+                  {isPast && !isViewing && !isCurrent && <span style={{ color: 'white', fontSize: '0.45rem' }}>✓</span>}
                 </div>
                 <span
                   className="text-center leading-tight transition-colors duration-200"
                   style={{
-                    fontSize: completed || isCurrent ? '0.6rem' : '0.55rem',
+                    fontSize: isViewing ? '0.65rem' : isCurrent ? '0.6rem' : completed ? '0.6rem' : '0.55rem',
                     fontWeight: isViewing ? 800 : isCurrent ? 700 : completed ? 600 : 500,
-                    color: completed ? 'var(--slate)' : isCurrent ? 'var(--ink)' : 'var(--stone)',
+                    color: demoPlaying
+                      ? (isViewing ? 'var(--ink)' : isPast ? 'var(--slate)' : 'var(--stone)')
+                      : (completed ? 'var(--slate)' : isCurrent ? 'var(--ink)' : 'var(--stone)'),
                     marginTop: '0.4rem',
                     maxWidth: '72px', overflow: 'hidden', textOverflow: 'ellipsis',
                     whiteSpace: 'nowrap',
@@ -136,7 +163,16 @@ function StageProgressBar({ stages, currentStage, viewingStage, onStageClick, de
                 >
                   {stage.label}
                 </span>
-                {completed && s?.date && (
+                {demoPlaying && isViewing && (
+                  <span style={{
+                    fontSize: '0.48rem', color: 'var(--sage)', textAlign: 'center',
+                    lineHeight: 1, marginTop: '0.15rem', whiteSpace: 'nowrap',
+                    fontStyle: 'italic',
+                  }}>
+                    Current
+                  </span>
+                )}
+                {!demoPlaying && completed && s?.date && (
                   <span style={{
                     fontSize: '0.48rem', color: 'var(--sage)', textAlign: 'center',
                     lineHeight: 1, marginTop: '0.15rem', whiteSpace: 'nowrap',
@@ -157,7 +193,7 @@ function StageProgressBar({ stages, currentStage, viewingStage, onStageClick, de
                       : `repeating-linear-gradient(90deg, rgba(208,213,206,0.5) 0, rgba(208,213,206,0.5) 4px, transparent 4px, transparent 7px)`,
                     alignSelf: 'flex-start',
                     marginTop: dotSize / 2,
-                    marginBottom: completed && s?.date ? '1.6rem' : '1.25rem',
+                    marginBottom: (completed || (demoPlaying && isPast)) && s?.date ? '1.6rem' : '1.25rem',
                   }}
                 />
               )}
@@ -577,13 +613,13 @@ export default function CollabDetail({ collab, onClose }) {
     : null;
 
   // Stage viewing & demo state
+  const isDemo = collab.is_demo;
   const [viewingStageKey, setViewingStageKey] = useState(null);
-  const isViewingPast = viewingStageKey && viewingStageKey !== collab.current_stage;
+  const isViewingPast = !isDemo && viewingStageKey && viewingStageKey !== collab.current_stage;
   const effectiveStageKey = viewingStageKey || collab.current_stage;
   const stageKeys = STAGES.map((s) => s.key);
 
   // Demo auto-advance
-  const isDemo = collab.is_demo;
   const [demoPlaying, setDemoPlaying] = useState(isDemo);
   const [demoCardKey, setDemoCardKey] = useState(null);
   const demoCurIdx = stageKeys.indexOf(effectiveStageKey);

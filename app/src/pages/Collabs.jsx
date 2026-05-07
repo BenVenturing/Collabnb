@@ -125,7 +125,7 @@ export default function Collabs() {
   const allCollabs = useMemo(() => {
     if (demoDismissed) return collabs;
     const hasDemo = collabs.some((c) => c.is_demo);
-    return hasDemo ? collabs : [DEMO_COLLAB, ...collabs];
+    return hasDemo ? collabs : [...collabs, DEMO_COLLAB];
   }, [collabs, demoDismissed]);
 
   const active   = allCollabs.filter((c) =>  c.is_active);
@@ -138,13 +138,7 @@ export default function Collabs() {
     : baseList;
 
   return (
-    <div className="min-h-dvh" style={{ background: 'var(--bone)' }}>
-      {/* Hazy background layers (matching explore/inbox pages) */}
-      <div className="bg-layers">
-        <div className="bg-base" />
-        <div className="bg-gradient" />
-        <div className="bg-clouds" />
-      </div>
+    <div className="min-h-dvh">
 
       {/* Header */}
       <div className="bg-white/70 backdrop-blur-md border-b border-stone/50 px-4 pt-6 pb-4 lg:px-8">
@@ -211,8 +205,6 @@ export default function Collabs() {
           shown.map((c) => <CollabCard key={c.id} collab={c} onClick={setSelectedCollab} onDismissDemo={dismissDemo} />)
         )}
       </div>
-
-      <div className="bg-layers bg-grain" />
 
       {selectedCollab && (
         <CollabDetail collab={selectedCollab} onClose={() => setSelectedCollab(null)} />

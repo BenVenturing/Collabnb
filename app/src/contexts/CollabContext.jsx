@@ -1,34 +1,24 @@
 import { createContext, useContext, useState, useCallback, useMemo } from 'react';
+import { useMutation } from 'convex/react';
+import { api } from '../../convex/_generated/api';
 import { SAMPLE_COLLABORATIONS, SAMPLE_THREADS, MOCK_CREATOR, STAGES } from '../lib/mockData';
 
 const CollabContext = createContext(null);
 
 function loadContracts() {
-  try {
-    const raw = localStorage.getItem('collabnb_contracts');
-    if (raw) return JSON.parse(raw);
-  } catch {}
+  try { const raw = localStorage.getItem('collabnb_contracts'); if (raw) return JSON.parse(raw); } catch {}
   return [];
 }
-
 function saveContractsToStorage(contracts) {
-  try {
-    localStorage.setItem('collabnb_contracts', JSON.stringify(contracts));
-  } catch {}
+  try { localStorage.setItem('collabnb_contracts', JSON.stringify(contracts)); } catch {}
 }
-
 function saveCollabsToStorage(collabs) {
-  try {
-    localStorage.setItem('collabnb_collabs', JSON.stringify(collabs));
-  } catch {}
+  try { localStorage.setItem('collabnb_collabs', JSON.stringify(collabs)); } catch {}
 }
 
 export function CollabProvider({ children }) {
   const [collabs, setCollabs] = useState(() => {
-    try {
-      const raw = localStorage.getItem('collabnb_collabs');
-      if (raw) return JSON.parse(raw);
-    } catch {}
+    try { const raw = localStorage.getItem('collabnb_collabs'); if (raw) return JSON.parse(raw); } catch {}
     return SAMPLE_COLLABORATIONS;
   });
   const [threads, setThreads] = useState(SAMPLE_THREADS);
@@ -37,15 +27,22 @@ export function CollabProvider({ children }) {
   );
   const [contracts, setContracts] = useState(loadContracts);
   const [collections, setCollections] = useState(() => {
-    try {
-      const raw = localStorage.getItem('collabnb_collections');
-      if (raw) return JSON.parse(raw);
-    } catch {}
+    try { const raw = localStorage.getItem('collabnb_collections'); if (raw) return JSON.parse(raw); } catch {}
     return [{ id: 'col_default', name: 'Saved', listingIds: [] }];
   });
   const [activeCollectionId, setActiveCollectionIdState] = useState(() =>
     localStorage.getItem('collabnb_active_col') || 'col_default'
   );
+
+  // Convex mutations (will be no-op if Clerk/Convex not connected)
+  const saveContractCvx = useMutation(api.contracts.save);
+  const updateContractCvx = useMutation(api.contracts.update);
+  const createCollabCvx = useMutation(api.collaborations.create);
+  const createThreadCvx = useMutation(api.threads.create);
+  const createCollectionCvx = useMutation(api.collections.create);
+  const toggleSaveCvx = useMutation(api.collections.toggleSave);
+  const renameCollectionCvx = useMutation(api.collections.rename);
+  const deleteCollectionCvx = useMutation(api.collections.deleteCollection);
 
   const saveCollectionsToStorage = (cols) => {
     try { localStorage.setItem('collabnb_collections', JSON.stringify(cols)); } catch {}
@@ -73,9 +70,16 @@ export function CollabProvider({ children }) {
         );
       }
       saveCollectionsToStorage(updated);
+
+      // Sync to Convex (fire-and-forget)
+      const collection = updated.find(c => c.id === (inCollection?.id || activeCollectionId));
+      if (collection) {
+        toggleSaveCvx({ collectionId: collection.id, listingId }).catch(() => {});
+      }
+
       return updated;
     });
-  }, [activeCollectionId]);
+  }, [activeCollectionId, toggleSaveCvx]);
 
   const isSaved = useCallback((listingId) => savedIds.has(listingId), [savedIds]);
 
@@ -88,8 +92,12 @@ export function CollabProvider({ children }) {
     });
     setActiveCollectionIdState(newCol.id);
     localStorage.setItem('collabnb_active_col', newCol.id);
+
+    // Sync to Convex
+    createCollectionCvx({ name: newCol.name }).catch(() => {});
+
     return newCol;
-  }, []);
+  }, [createCollectionCvx]);
 
   const setActiveCollection = useCallback((id) => {
     setActiveCollectionIdState(id);
@@ -113,7 +121,9 @@ export function CollabProvider({ children }) {
       saveCollectionsToStorage(updated);
       return updated;
     });
-  }, []);
+
+    renameCollectionCvx({ id: id.startsWith('col_') ? id.replace('col_', '') : id, name: name.trim() || name }).catch(() => {});
+  }, [renameCollectionCvx]);
 
   const deleteCollection = useCallback((id) => {
     setCollections((prev) => {
@@ -127,7 +137,9 @@ export function CollabProvider({ children }) {
       }
       return updated;
     });
-  }, [activeCollectionId]);
+
+    deleteCollectionCvx({ id: id.startsWith('col_') ? id.replace('col_', '') : id }).catch(() => {});
+  }, [activeCollectionId, deleteCollectionCvx]);
 
   const saveContract = useCallback((contractData) => {
     const newContract = {
@@ -141,8 +153,26 @@ export function CollabProvider({ children }) {
       saveContractsToStorage(updated);
       return updated;
     });
+
+    // Sync to Convex
+    saveContractCvx({
+      creatorName: contractData.creator_name || '',
+      hostName: contractData.host_name || '',
+      propertyName: contractData.property_name,
+      location: contractData.location,
+      dates: contractData.dates,
+      deliverables: contractData.deliverables,
+      currency: contractData.currency,
+      payment: contractData.payment,
+      usageRights: contractData.usage_rights,
+      status: contractData.status || 'draft',
+      creatorSigned: contractData.creator_signed,
+      hostSigned: contractData.host_signed,
+      summaryNote: contractData.summary_note,
+    }).catch(() => {});
+
     return newContract;
-  }, []);
+  }, [saveContractCvx]);
 
   const updateContract = useCallback((id, updates) => {
     setContracts((prev) => {
@@ -150,7 +180,26 @@ export function CollabProvider({ children }) {
       saveContractsToStorage(updated);
       return updated;
     });
-  }, []);
+
+    updateContractCvx({
+      id,
+      updates: {
+        creatorName: updates.creator_name,
+        hostName: updates.host_name,
+        propertyName: updates.property_name,
+        location: updates.location,
+        dates: updates.dates,
+        deliverables: updates.deliverables,
+        currency: updates.currency,
+        payment: updates.payment,
+        usageRights: updates.usage_rights,
+        status: updates.status,
+        creatorSigned: updates.creator_signed,
+        hostSigned: updates.host_signed,
+        summaryNote: updates.summary_note,
+      },
+    }).catch(() => {});
+  }, [updateContractCvx]);
 
   const getContracts = useCallback(() => contracts, [contracts]);
 
@@ -167,7 +216,15 @@ export function CollabProvider({ children }) {
       is_founder: false,
     };
     setThreads((prev) => [newThread, ...prev]);
-  }, []);
+
+    // Sync to Convex
+    createThreadCvx({
+      listingTitle: contractTitle || 'Contract',
+      hostName,
+      tag: 'Contract',
+      lastMessage: newThread.last_message,
+    }).catch(() => {});
+  }, [createThreadCvx]);
 
   const applyToListing = useCallback((listing, pitchMessage) => {
     const stageKeys = ['pending', 'accepted', 'updated', 'uploaded_tagged', 'closed', 'archived'];
@@ -218,7 +275,26 @@ export function CollabProvider({ children }) {
     const next = applyCount + 1;
     setApplyCount(next);
     localStorage.setItem('collabnb_apply_count', String(next));
-  }, [applyCount]);
+
+    // Sync to Convex
+    createCollabCvx({
+      listingId: listing.id,
+      propertyName: listing.title,
+      location: listing.location,
+      hostName: MOCK_CREATOR.full_name,
+      image: listing.image,
+      deliverables: listing.deliverables,
+      listingDescription: listing.about,
+      pitchMessage,
+    }).catch(() => {});
+
+    createThreadCvx({
+      listingTitle: listing.title,
+      hostName: MOCK_CREATOR.full_name,
+      tag: 'Application',
+      lastMessage: pitchMessage.slice(0, 100),
+    }).catch(() => {});
+  }, [applyCount, createCollabCvx, createThreadCvx]);
 
   const getCollabById = useCallback((id) =>
     collabs.find((c) => c.id === id) || null,
@@ -235,32 +311,17 @@ export function CollabProvider({ children }) {
       const now = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
       const updated = prev.map((c) =>
         c.id === id
-          ? {
-              ...c,
-              current_stage: nextKey,
-              stages: {
-                ...c.stages,
-                [nextKey]: { ...c.stages?.[nextKey], completed: true, date: now },
-              },
-            }
+          ? { ...c, current_stage: nextKey, stages: { ...c.stages, [nextKey]: { ...c.stages?.[nextKey], completed: true, date: now } } }
           : c
       );
       saveCollabsToStorage(updated);
 
-      // Sync thread tag + notification with new stage
       setThreads((tPrev) => {
-        const tagMap = {
-          pending: 'Application',
-          accepted: 'Collab',
-          updated: 'Collab',
-          uploaded_tagged: 'Collab',
-          closed: 'Collab',
-          archived: 'Archived',
-        };
+        const tagMap = { pending: 'Application', accepted: 'Collab', updated: 'Collab', uploaded_tagged: 'Collab', closed: 'Collab', archived: 'Archived' };
         const stageLabel = STAGES.find((s) => s.key === nextKey)?.label || nextKey;
         return tPrev.map((t) =>
           t.collab_id === id
-            ? { ...t, tag: tagMap[nextKey] || t.tag, last_message: `Stage advanced to ${stageLabel} — host has been notified.`, timestamp: 'Just now' }
+            ? { ...t, tag: tagMap[nextKey] || t.tag, last_message: `Stage advanced to ${stageLabel}`, timestamp: 'Just now' }
             : t
         );
       });
@@ -292,37 +353,15 @@ export function CollabProvider({ children }) {
       const now = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
       const updated = prev.map((c) =>
         c.id === id
-          ? {
-              ...c,
-              current_stage: bothClosed ? 'archived' : c.current_stage,
-              status: bothClosed ? 'approved' : c.status,
-              status_text: bothClosed ? 'Closed' : c.status_text,
-              is_active: bothClosed ? false : c.is_active,
-              stages: {
-                ...c.stages,
-                closed: {
-                  ...stage,
-                  creator_closed: creatorClosed,
-                  host_closed: hostClosed,
-                  completed: bothClosed,
-                  date: bothClosed ? now : stage.date,
-                },
-                archived: bothClosed
-                  ? { ...c.stages?.archived, completed: true, date: now, note: 'Collab closed by both parties' }
-                  : c.stages?.archived,
-              },
-            }
+          ? { ...c, current_stage: bothClosed ? 'archived' : c.current_stage, status: bothClosed ? 'approved' : c.status, status_text: bothClosed ? 'Closed' : c.status_text, is_active: bothClosed ? false : c.is_active,
+              stages: { ...c.stages, closed: { ...stage, creator_closed: creatorClosed, host_closed: hostClosed, completed: bothClosed, date: bothClosed ? now : stage.date },
+                archived: bothClosed ? { ...c.stages?.archived, completed: true, date: now, note: 'Collab closed by both parties' } : c.stages?.archived } }
           : c
       );
       saveCollabsToStorage(updated);
 
-      // Sync thread tag when both parties close → archived
       if (bothClosed) {
-        setThreads((tPrev) =>
-          tPrev.map((t) =>
-            t.collab_id === id ? { ...t, tag: 'Archived' } : t
-          )
-        );
+        setThreads((tPrev) => tPrev.map((t) => t.collab_id === id ? { ...t, tag: 'Archived' } : t));
       }
 
       return updated;
@@ -335,35 +374,19 @@ export function CollabProvider({ children }) {
 
   const createThread = useCallback((listingTitle, hostName, tag = 'Application') => {
     const newId = `t${Date.now()}`;
-    const newThread = {
-      id: newId,
-      listing_title: listingTitle,
-      host_name: hostName,
-      host_avatar: null,
-      tag,
-      last_message: 'Start a conversation...',
-      timestamp: 'Just now',
-      unread: 0,
-      is_founder: false,
-    };
+    const newThread = { id: newId, listing_title: listingTitle, host_name: hostName, host_avatar: null, tag, last_message: 'Start a conversation...', timestamp: 'Just now', unread: 0, is_founder: false };
     setThreads((prev) => [newThread, ...prev]);
+
+    createThreadCvx({ listingTitle, hostName, tag, lastMessage: 'Start a conversation...' }).catch(() => {});
     return newId;
-  }, []);
+  }, [createThreadCvx]);
 
   const archiveThread = useCallback((threadId) => {
-    setThreads((prev) =>
-      prev.map((t) =>
-        t.id === threadId ? { ...t, archived: true } : t
-      )
-    );
+    setThreads((prev) => prev.map((t) => t.id === threadId ? { ...t, archived: true } : t));
   }, []);
 
   const updateThreadTag = useCallback((threadId, newTag) => {
-    setThreads((prev) =>
-      prev.map((t) =>
-        t.id === threadId ? { ...t, tag: newTag } : t
-      )
-    );
+    setThreads((prev) => prev.map((t) => t.id === threadId ? { ...t, tag: newTag } : t));
   }, []);
 
   return (

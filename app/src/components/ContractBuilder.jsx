@@ -2,7 +2,6 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useCollabs } from '../contexts/CollabContext';
 import { useAuth } from '../contexts/AuthContext';
-import { supabase } from '../lib/supabase';
 import { SAMPLE_HOST } from '../lib/mockData';
 
 const CURRENCIES = ['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'JPY'];
@@ -197,28 +196,6 @@ export default function ContractBuilder() {
     } else {
       const saved = saveContract(contractData);
       setEditingId(saved.id);
-    }
-
-    // Try Supabase too
-    if (supabase) {
-      const { error } = await supabase.from('contracts').insert([
-        {
-          creator_name: form.creator,
-          host_name: form.host,
-          property_name: form.property_name,
-          location: form.location,
-          dates: form.dates,
-          deliverables: form.deliverables,
-          currency: form.isFreeStay ? FREE_STAY_VALUE : form.currency,
-          payment: computePaymentDisplay(),
-          usage_rights: computeUsageDisplay(),
-          summary_note: summaryNote,
-          status,
-          creator_signed: !!creatorSig,
-          host_signed: !!hostSig,
-        },
-      ]);
-      if (error) console.warn('Supabase save warning:', error.message);
     }
   };
 

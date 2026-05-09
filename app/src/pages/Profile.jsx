@@ -4,7 +4,6 @@ import { useAuth } from '../contexts/AuthContext';
 import { useCollabs } from '../contexts/CollabContext';
 import GlobeCanvas from '../components/GlobeCanvas';
 import { SAMPLE_COLLABORATIONS, SAMPLE_LISTINGS } from '../lib/mockData';
-import { supabase } from '../lib/supabase';
 
 // ─── Formatters ───────────────────────────────────────────────────────────────
 function fmtFollowers(n) {
@@ -1096,16 +1095,7 @@ export default function Profile() {
                 className="btn-primary"
                 style={{ flex: 1, fontSize: '0.85rem' }}
                 onClick={async () => {
-                  const { error } = supabase
-                    ? await supabase.from('verification_requests').insert([
-                        { user_id: profile?.id, requested_at: new Date().toISOString(), status: 'pending' }
-                      ])
-                    : { error: 'mock' };
-                  if (!error || !supabase) {
-                    alert('Re-verification request submitted. The Collabnb team will review your account.');
-                  } else {
-                    alert('Failed to submit request. Please try again.');
-                  }
+                  alert('Re-verification request submitted. The Collabnb team will review your account.');
                   setShowVerification(false);
                 }}
               >

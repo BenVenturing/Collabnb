@@ -2,9 +2,37 @@
    Collabnb — Main JavaScript
    ============================================================ */
 
-import { supabase } from './supabase.js';
+import { getProfileCounts } from './convex.js';
 
 let signedUpName = '';
+
+/* ── Lazy Clerk instance (shared across initNavAuth, submitForm, login) ── */
+let _clerkPromise = null;
+async function getClerk() {
+  if (!_clerkPromise) {
+    _clerkPromise = (async () => {
+      const Clerk = (await import('@clerk/clerk-js')).default;
+      const key = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
+      if (!key) return null;
+      const clerk = new Clerk(key);
+      await clerk.load();
+      return clerk;
+    })();
+  }
+  return _clerkPromise;
+}
+
+/* ── Clerk error to user-friendly message ── */
+function getClerkErrorMessage(err) {
+  const code = err.errors?.[0]?.code;
+  if (code === 'form_identifier_not_found' || code === 'form_password_incorrect') {
+    return 'Wrong email or password. Try again.';
+  }
+  if (code === 'form_not_verified') {
+    return 'Please confirm your email first. Check your inbox.';
+  }
+  return err.errors?.[0]?.longMessage || err.message || 'Something went wrong. Please try again.';
+}
 
 /* --- Reveal on scroll (IntersectionObserver) --- */
 const revealObserver = new IntersectionObserver((entries) => {
@@ -122,12 +150,9 @@ async function initCounters() {
 
   async function fetchCounts() {
     try {
-      const [creatorRes, hostRes] = await Promise.all([
-        supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'creator'),
-        supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'host'),
-      ]);
-      creators = creatorRes.count ?? 0;
-      hosts = hostRes.count ?? 0;
+      const counts = await getProfileCounts();
+      creators = counts.creators;
+      hosts = counts.hosts;
       updateUI();
     } catch (err) {
       console.warn('Could not fetch live counts:', err);
@@ -184,20 +209,8 @@ async function initCounters() {
   // Initial fetch
   await fetchCounts();
 
-  // Real-time subscription
-  if (supabase.channel) {
-    supabase
-      .channel('schema-db-changes')
-      .on('postgres_changes', 
-        { event: 'INSERT', schema: 'public', table: 'profiles' }, 
-        (payload) => {
-          if (payload.new.role === 'creator') creators++;
-          if (payload.new.role === 'host') hosts++;
-          updateUI();
-        }
-      )
-      .subscribe();
-  }
+  // Poll every 30 seconds for updates
+  setInterval(fetchCounts, 30000);
 }
 
 // Run counters logic
@@ -484,48 +497,20 @@ async function submitForm() {
       submitBtn.textContent = 'Joining...';
     }
 
-    // Waitlist signup — no password needed, email verification handles access
-    const randomPassword = crypto.randomUUID() + crypto.randomUUID();
+    // Waitlist signup — use Clerk for auth
+    const clerk = await getClerk();
+    if (!clerk) throw new Error('Clerk not configured. Add VITE_CLERK_PUBLISHABLE_KEY to .env');
 
-    const metadata = role === 'creator'
-      ? {
-          full_name: data.full_name,
-          role,
-          phone_number: data.phone_number,
-          instagram_handle: data.instagram_handle,
-          website_url: data.website_url,
-          username: data.username,
-          tier: data.tier,
-          recent_collabs: data.recent_collabs,
-          portfolio: data.portfolio,
-          beta: data.beta || false,
-          city: data.city || '',
-          region: data.region || '',
-        }
-      : {
-          full_name: data.full_name,
-          role,
-          phone_number: data.phone_number,
-          instagram_handle: data.instagram_handle,
-          website_url: data.website_url,
-          username: data.business_name,
-          business_name: data.business_name,
-          property_type: data.property_type,
-          city: data.city,
-          region: data.region,
-          beta: data.beta || false,
-        };
-
-    const { error: authError } = await supabase.auth.signUp({
-      email: data.email,
-      password: randomPassword,
-      options: {
-        data: metadata,
-        emailRedirectTo: window.location.origin + '/profile.html',
-      }
+    const signUp = await clerk.client.signUp.create({
+      emailAddress: data.email,
+      password: crypto.randomUUID() + crypto.randomUUID(),
+      unsafeMetadata: metadata,
     });
 
-    if (authError) throw authError;
+    await signUp.prepareEmailAddressVerification({
+      strategy: 'email_link',
+      redirectUrl: window.location.origin + '/profile.html',
+    });
 
     signedUpName = data.full_name.split(' ')[0];
 
@@ -872,29 +857,34 @@ document.addEventListener('DOMContentLoaded', () => {
         submitBtn.textContent = 'Signing in…';
       }
 
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      try {
+        const clerk = await getClerk();
+        if (!clerk) throw new Error('Clerk not configured');
 
-      if (error) {
+        const signInAttempt = await clerk.client.signIn.create({
+          identifier: email,
+          password: password,
+        });
+
+        if (signInAttempt.status !== 'complete') {
+          throw new Error('Additional authentication required.');
+        }
+
+        // Success — redirect to profile
+        const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        window.location.href = isLocalhost ? 'http://localhost:5174/#/profile' : '/profile.html';
+
+      } catch (err) {
+        const msg = getClerkErrorMessage(err);
         if (errorEl) {
-          if (error.message.includes('Invalid login credentials')) {
-            errorEl.textContent = 'Wrong email or password. Try again.';
-          } else if (error.message.includes('Email not confirmed')) {
-            errorEl.textContent = 'Please confirm your email first. Check your inbox.';
-          } else {
-            errorEl.textContent = error.message;
-          }
+          errorEl.textContent = msg;
           errorEl.style.display = 'block';
         }
         if (submitBtn) {
           submitBtn.disabled = false;
           submitBtn.textContent = 'Sign In';
         }
-        return;
       }
-
-      // Success — redirect to profile
-      const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-      window.location.href = isLocalhost ? 'http://localhost:5174/#/profile' : '/profile.html';
     });
   }
 
@@ -932,10 +922,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function initNavAuth() {
   try {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user?.email_confirmed_at) return;
+    const clerk = await getClerk();
+    if (!clerk?.user) return;
 
-    const firstName = user.user_metadata?.full_name?.split(' ')[0];
+    const firstName = clerk.user.fullName?.split(' ')[0];
     const label = firstName ? `${firstName}'s Profile` : 'My Profile';
 
     // Hide the Login button — user is already signed in

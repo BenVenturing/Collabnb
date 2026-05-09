@@ -9,7 +9,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.103.3",
+    "@clerk/clerk-js": "^5.61.6",
+    "convex": "^1.38.0",
     "framer-motion": "^11.1.7",
     "html2pdf.js": "^0.14.0",
     "react": "^18.3.1",

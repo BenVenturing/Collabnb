@@ -3,7 +3,7 @@
    ============================================================ */
 
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.min.js';
-import { supabase } from './supabase.js';
+import { getAllProfiles } from './convex.js';
 
 /* ── Safety: uncaught errors ─────────────────────────────────── */
 window.addEventListener('unhandledrejection', e => console.warn('Globe rejection:', e.reason));
@@ -352,8 +352,7 @@ function initGlobe() {
   /* ── Fetch Live Data and Add Pins ── */
   async function loadPins() {
     try {
-      const { data, error } = await supabase.from('profiles').select('city, region, role');
-      if (error) throw error;
+      const data = await getAllProfiles();
 
       let creators = 0, hosts = 0;
       const uniqueCities = new Set();
@@ -362,15 +361,15 @@ function initGlobe() {
         if (profile.role === 'creator') creators++;
         if (profile.role === 'host') hosts++;
         if (profile.city) uniqueCities.add(profile.city.toLowerCase().trim());
-        
+
         const coords = getCityCoords(profile.city);
         // Mint Green for Creators, Red for Hosts
-        const colorHex = profile.role === 'creator' ? 0x4ecdc4 : 0xE74C3C; 
-        
+        const colorHex = profile.role === 'creator' ? 0x4ecdc4 : 0xE74C3C;
+
         // Add some random scatter so pins in the same city don't completely overlap
         const jitterLat = coords.lat + (Math.random() - 0.5) * 0.8;
         const jitterLng = coords.lng + (Math.random() - 0.5) * 0.8;
-        
+
         addPin(jitterLat, jitterLng, colorHex);
       });
 
@@ -389,24 +388,15 @@ function initGlobe() {
 
   loadPins();
 
-  // Listen for realtime inserts
-  if (supabase.channel) {
-    supabase.channel('public:profiles')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'profiles' }, payload => {
-        const profile = payload.new;
-        const coords = getCityCoords(profile.city);
-        const colorHex = profile.role === 'creator' ? 0x4ecdc4 : 0xE74C3C;
-        addPin(coords.lat + (Math.random() - 0.5) * 0.8, coords.lng + (Math.random() - 0.5) * 0.8, colorHex);
-        
-        // Update counts
-        const cityEl = document.getElementById('globe-city-count');
-        const cEl = document.getElementById('globe-creator-count');
-        const hEl = document.getElementById('globe-host-count');
-        if (profile.role === 'creator' && cEl) cEl.textContent = parseInt(cEl.textContent || 0) + 1;
-        if (profile.role === 'host' && hEl) hEl.textContent = parseInt(hEl.textContent || 0) + 1;
-      })
-      .subscribe();
-  }
+  // Refresh pins every 30 seconds
+  setInterval(async () => {
+    // Clear existing pins
+    while (pinsGroup.children.length > 0) {
+      pinsGroup.remove(pinsGroup.children[0]);
+    }
+    pinGlows.length = 0;
+    loadPins();
+  }, 30000);
 
   /* ── Wrapper (everything that rotates) ── */
   const wrapper = new THREE.Group();

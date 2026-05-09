@@ -1,9 +1,35 @@
-import { supabase } from '/scripts/supabase.js';
+import { getProfileByEmail } from './convex.js';
 
 let profileLoaded = false;
-let isNewVerification = false;
 
-/* ── Demo fallback data (shown when Supabase isn't available) ── */
+/* ── Clerk instance (cached) ── */
+let _clerkPromise = null;
+async function getClerk() {
+  if (!_clerkPromise) {
+    _clerkPromise = (async () => {
+      const Clerk = (await import('@clerk/clerk-js')).default;
+      const key = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
+      if (!key) return null;
+      const clerk = new Clerk(key);
+      await clerk.load();
+      return clerk;
+    })();
+  }
+  return _clerkPromise;
+}
+
+function getClerkErrorMessage(err) {
+  const code = err.errors?.[0]?.code;
+  if (code === 'form_identifier_not_found' || code === 'form_password_incorrect') {
+    return 'Wrong email or password. Try again.';
+  }
+  if (code === 'form_not_verified') {
+    return 'Please confirm your email first. Check your inbox.';
+  }
+  return err.errors?.[0]?.longMessage || err.message || 'Something went wrong. Please try again.';
+}
+
+/* ── Demo fallback data (shown when Clerk/Convex isn't available) ── */
 const DEMO_CREATOR = {
   full_name: 'Jamie Chen',
   instagram_handle: 'jamiecreates',
@@ -101,23 +127,18 @@ function renderHostProfile(profile) {
   document.getElementById('host-profile').hidden = false;
 }
 
-async function loadProfile(user) {
+async function loadProfile(clerkUser) {
   if (profileLoaded) return;
 
   let profile = null;
 
   try {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', user.id)
-      .single();
-
-    if (!error && data) {
-      profile = data;
+    const email = clerkUser.primaryEmailAddress?.emailAddress;
+    if (email) {
+      profile = await getProfileByEmail(email);
     }
   } catch (err) {
-    console.warn('Supabase profile query failed, using demo data:', err.message);
+    console.warn('Convex profile query failed, using demo data:', err.message);
   }
 
   // Fall back to demo data if the query failed or returned nothing
@@ -141,75 +162,39 @@ async function loadProfile(user) {
   }
 }
 
-/* ── Helper: read Supabase session from localStorage directly ── */
-/* Supabase v2 stores the session in localStorage under key "sb-{projectRef}-auth-token".
-   getSession() can hang in some environments due to its internal locking mechanism,
-   so we read the session ourselves.                                      */
-function readSessionFromStorage() {
-  try {
-    // Find the Supabase auth token key in localStorage
-    const key = Object.keys(localStorage).find(k => k.endsWith('-auth-token'));
-    if (!key) return null;
-    const raw = localStorage.getItem(key);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    // Return something with the same shape as getSession()'s response
-    return parsed?.access_token ? parsed : null;
-  } catch {
-    return null;
-  }
-}
-
 /* ── Initialize profile on page load ── */
 (async function initProfile() {
-  // Detect if arriving from email verification link (hash contains type=signup)
-  const hashParams = new URLSearchParams(window.location.hash.slice(1));
-  if (hashParams.get('type') === 'signup') {
-    isNewVerification = true;
-    // Let onAuthStateChange handle it after Supabase processes the hash tokens
-    return;
-  }
-
   try {
     console.log('[profile] initProfile started');
+    const clerk = await getClerk();
 
-    // Read session from localStorage to avoid Supabase getSession() hang bug
-    const stored = readSessionFromStorage();
+    // Check if this is a fresh signup via email verification
+    const isVerifiedSignup = clerk?.client?.signUp?.verifications?.emailAddress?.status === 'verified';
 
-    if (!stored?.user?.email_confirmed_at) {
-      console.log('[profile] No valid stored session — showing demo profile');
-      throw new Error(stored ? 'email not confirmed' : 'no session in storage');
+    if (clerk?.user) {
+      // User is signed in — load Convex profile
+      if (isVerifiedSignup) {
+        showState('state-set-password');
+      } else {
+        showState('state-loading');
+        await loadProfile(clerk.user);
+      }
+    } else if (isVerifiedSignup) {
+      // Just verified email but not fully signed in yet — show set-password
+      showState('state-set-password');
+    } else {
+      // Not signed in — show demo profile
+      console.log('[profile] No valid session — showing demo profile');
+      throw new Error('no session');
     }
-
-    console.log('[profile] Found stored session for user:', stored.user.id);
-    await loadProfile(stored.user);
   } catch (err) {
     console.warn('[profile] Auth check failed, showing demo profile:', err.message);
-    // Do NOT set profileLoaded = true here — onAuthStateChange must still be able to fire
     showState('state-profile');
     document.title = 'Demo Profile — Collabnb';
     document.getElementById('founder-banner').hidden = false;
     renderCreatorProfile(DEMO_CREATOR);
   }
 })();
-
-/* ── Handle subsequent auth events (SIGNED_IN, SIGNED_OUT) ── */
-supabase.auth.onAuthStateChange(async (event, session) => {
-  if (profileLoaded) return;
-
-  if (event === 'SIGNED_IN') {
-    if (session?.user?.email_confirmed_at) {
-      if (isNewVerification) {
-        showState('state-set-password');
-      } else {
-        await loadProfile(session.user);
-      }
-    } else if (session?.user) {
-      document.getElementById('unconfirmed-email').textContent = session.user.email;
-      showState('state-unconfirmed');
-    }
-  }
-});
 
 /* ── Sign-in flow (for returning users) ── */
 
@@ -242,23 +227,26 @@ async function handleSignIn(e) {
   submitBtn.disabled = true;
   submitBtn.textContent = 'Signing in…';
 
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  try {
+    const clerk = await getClerk();
+    if (!clerk) throw new Error('Clerk not configured');
 
-  if (error) {
-    if (error.message.includes('Invalid login credentials')) {
-      errorEl.textContent = 'Wrong email or password. Try again.';
-    } else if (error.message.includes('Email not confirmed')) {
-      errorEl.textContent = 'Please confirm your email first. Check your inbox.';
-    } else {
-      errorEl.textContent = error.message;
+    const signInAttempt = await clerk.client.signIn.create({
+      identifier: email,
+      password: password,
+    });
+
+    if (signInAttempt.status !== 'complete') {
+      throw new Error('Additional authentication required.');
     }
+
+    showState('state-loading');
+  } catch (err) {
+    errorEl.textContent = getClerkErrorMessage(err);
     errorEl.style.display = 'block';
     submitBtn.disabled = false;
     submitBtn.textContent = 'Sign In';
-    return;
   }
-
-  showState('state-loading');
 }
 
 // Wire up sign-in form
@@ -268,7 +256,8 @@ document.getElementById('signin-form')?.addEventListener('submit', handleSignIn)
 
 // Sign out
 document.getElementById('btn-signout')?.addEventListener('click', async () => {
-  await supabase.auth.signOut();
+  const clerk = await getClerk();
+  if (clerk) await clerk.signOut();
   window.location.href = '/index.html';
 });
 
@@ -290,17 +279,17 @@ document.getElementById('set-password-form')?.addEventListener('submit', async (
   btn.disabled = true;
   btn.textContent = 'Saving…';
 
-  const { error } = await supabase.auth.updateUser({ password: newPwd });
+  try {
+    const clerk = await getClerk();
+    if (!clerk?.user) throw new Error('No user');
+    await clerk.user.update({ password: newPwd });
 
-  if (error) {
-    errorEl.textContent = error.message;
+    showState('state-loading');
+    if (clerk.user) await loadProfile(clerk.user);
+  } catch (err) {
+    errorEl.textContent = getClerkErrorMessage(err);
     errorEl.style.display = 'block';
     btn.disabled = false;
     btn.textContent = 'Save Password';
-    return;
   }
-
-  showState('state-loading');
-  const { data: { user } } = await supabase.auth.getUser();
-  if (user) await loadProfile(user);
 });

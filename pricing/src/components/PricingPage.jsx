@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { ConvexClient } from 'convex/browser';
 import logo              from '../../../assets/collabnb-logo.png';
 import HeroSection     from './HeroSection';
 import PricingCards    from './PricingCards';
@@ -7,39 +8,38 @@ import ValueSection    from './ValueSection';
 import ClaritySection  from './ClaritySection';
 import FAQSection      from './FAQSection';
 import TermsNote       from './TermsNote';
-import { supabase }    from '../../../scripts/supabase';
 
 const FOUNDING_TOTAL = 200;
+const CONVEX_URL = import.meta.env.VITE_CONVEX_URL;
 
 export default function PricingPage() {
   const [creatorCount, setCreatorCount] = useState(0);
   const [hostCount, setHostCount] = useState(0);
 
-  // Fetch live counts from Supabase
+  // Fetch live counts from Convex
   useEffect(() => {
-    // Initial fetch
-    Promise.all([
-      supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'creator'),
-      supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'host')
-    ]).then(([cRes, hRes]) => {
-      if (cRes.count != null) setCreatorCount(cRes.count);
-      if (hRes.count != null) setHostCount(hRes.count);
-    });
+    if (!CONVEX_URL) return;
+    const client = new ConvexClient(CONVEX_URL);
+    let cancelled = false;
 
-    // Real-time subscription
-    const channel = supabase
-      .channel('pricing-sync')
-      .on('postgres_changes', 
-        { event: 'INSERT', schema: 'public', table: 'profiles' }, 
-        (payload) => {
-          if (payload.new.role === 'creator') setCreatorCount(prev => prev + 1);
-          if (payload.new.role === 'host') setHostCount(prev => prev + 1);
-        }
-      )
-      .subscribe();
+    async function fetchCounts() {
+      try {
+        const profiles = await client.query('profiles:getAll');
+        if (cancelled) return;
+        setCreatorCount(profiles.filter(p => p.role === 'creator').length);
+        setHostCount(profiles.filter(p => p.role === 'host').length);
+      } catch (err) {
+        console.warn('Pricing count fetch failed:', err);
+      }
+    }
+
+    fetchCounts();
+    const interval = setInterval(fetchCounts, 30000);
 
     return () => {
-      supabase.removeChannel(channel);
+      cancelled = true;
+      clearInterval(interval);
+      client.close();
     };
   }, []);
 

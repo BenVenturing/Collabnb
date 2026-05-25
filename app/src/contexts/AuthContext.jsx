@@ -12,9 +12,11 @@ export const useAuth = () => useContext(AuthContext);
 
 // ─── Unified AuthProvider — picks MockAuthProvider or ClerkAuthProvider ─────
 const CLERK_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
+const IS_LOCAL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 
 export function AuthProvider({ children }) {
-  return CLERK_KEY
+  // Always use mock on localhost — Clerk CDN unreachable in local dev
+  return (CLERK_KEY && !IS_LOCAL)
     ? <ClerkAuthProvider>{children}</ClerkAuthProvider>
     : <MockAuthProvider>{children}</MockAuthProvider>;
 }
@@ -84,9 +86,15 @@ function ClerkAuthInner({ hooks, children }) {
     if (!clerkLoaded) return;
 
     if (!clerkUser) {
-      // No user signed in — fall back to mock data for development
-      setSession(MOCK_SESSION);
-      setProfile(MOCK_CREATOR);
+      const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+      if (isLocalhost) {
+        // Dev mode — use mock session so app is testable without signing in
+        setSession(MOCK_SESSION);
+        setProfile(MOCK_CREATOR);
+      } else {
+        setSession(null);
+        setProfile(null);
+      }
       setLoading(false);
       return;
     }
@@ -140,6 +148,7 @@ function ClerkAuthInner({ hooks, children }) {
             portfolio: updates.portfolio,
             city: updates.city,
             region: updates.region,
+            role: updates.role,
           },
         });
       } catch (err) {

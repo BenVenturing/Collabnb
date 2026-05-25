@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useCollabs } from '../contexts/CollabContext';
 import { SAMPLE_LISTINGS, THREAD_MESSAGES } from '../lib/mockData';
 import CollabDetail from '../components/CollabDetail';
@@ -404,6 +405,7 @@ function NewMessageModal({ listings, onSelect, onClose }) {
 // ─── Main Inbox ───────────────────────────────────────────────────────────────
 export default function Inbox() {
   const { threads, collabs, archiveThread, updateThreadTag, createThread } = useCollabs();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [activeFilter, setActiveFilter] = useState('All');
   const [selectedId, setSelectedId] = useState(null);
   const [isSearching, setIsSearching] = useState(false);
@@ -412,6 +414,32 @@ export default function Inbox() {
   const [toastMsg, setToastMsg] = useState('');
   const [newMessageOpen, setNewMessageOpen] = useState(false);
   const searchInputRef = useRef(null);
+  const creatorParamHandled = useRef(false);
+
+  // Open or create a thread when navigated from HostCreators with ?creatorName=
+  useEffect(() => {
+    if (creatorParamHandled.current) return;
+    const creatorName   = searchParams.get('creatorName');
+    const creatorAvatar = searchParams.get('creatorAvatar');
+    if (!creatorName) return;
+    creatorParamHandled.current = true;
+
+    const existing = threads.find(t => !t.archived && t.host_name === creatorName);
+    if (existing) {
+      setSelectedId(existing.id);
+    } else {
+      const newId = createThread(creatorName, creatorName, 'Collab');
+      // Patch the avatar onto the new thread (createThread doesn't support it yet)
+      // The thread will show initials; avatar is best-effort
+      setSelectedId(newId);
+      if (creatorAvatar) {
+        // Store avatar in session so ConversationPanel can pick it up if needed
+        try { sessionStorage.setItem(`inbox_avatar_${newId}`, creatorAvatar); } catch {}
+      }
+    }
+    setSearchParams({}, { replace: true });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Auto-focus search input
   useEffect(() => {

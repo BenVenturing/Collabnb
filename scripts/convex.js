@@ -30,13 +30,22 @@ const client = convexInstance || mockClient;
 // Fetch all profiles, count by role
 export async function getProfileCounts() {
   try {
-    const profiles = await client.query('profiles:getAll');
-    const creators = profiles.filter(p => p.role === 'creator').length;
-    const hosts = profiles.filter(p => p.role === 'host').length;
-    return { creators, hosts };
+    const counts = await client.query('waitlist:getCounts');
+    return { creators: counts.creators, hosts: counts.hosts };
   } catch (err) {
     console.warn('getProfileCounts failed:', err.message);
-    return { creators: 63, hosts: 22 };
+    return { creators: 0, hosts: 0 };
+  }
+}
+
+// Submit a waitlist sign-up directly to Convex (bypasses Clerk for pre-auth signups)
+export async function waitlistSignUp(data) {
+  try {
+    const result = await client.mutation('waitlist:signUp', data);
+    return result;
+  } catch (err) {
+    console.warn('waitlistSignUp failed:', err.message);
+    throw err;
   }
 }
 

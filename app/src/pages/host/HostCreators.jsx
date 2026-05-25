@@ -1,0 +1,1301 @@
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import {
+  Search, MessageSquare, Check, X,
+  Sparkles, ExternalLink, MapPin, Calendar, ChevronRight,
+} from 'lucide-react';
+
+// ─── Constants ────────────────────────────────────────────────────────────────
+const LOCATION_CONSENT_KEY = '@collabnb_location_consent_v1';
+const HOST_LOCATION = { city: 'San Francisco', state: 'CA', country: 'USA', lat: 37.7749, lng: -122.4194 };
+const MAX_NEARBY_MILES = 50;
+const NEARBY_SECTION_LIMIT = 6;
+
+// ─── Distance helpers ─────────────────────────────────────────────────────────
+function haversineDistance(lat1, lng1, lat2, lng2) {
+  const R = 3958.8;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.asin(Math.sqrt(a));
+}
+
+function isNearHost(creator) {
+  if (creator.lat != null && creator.lng != null) {
+    return haversineDistance(HOST_LOCATION.lat, HOST_LOCATION.lng, creator.lat, creator.lng) <= MAX_NEARBY_MILES;
+  }
+  return creator.location?.toLowerCase().includes(HOST_LOCATION.city.toLowerCase()) || false;
+}
+
+// ─── Date helpers ─────────────────────────────────────────────────────────────
+function fmtDate(isoStr) {
+  if (!isoStr) return '';
+  const [, m, d] = isoStr.split('-').map(Number);
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return `${months[m - 1]} ${d}`;
+}
+
+function tripsOverlapWithHost(creator, startIso, endIso) {
+  if (!creator.travelCalendar?.length) return false;
+  const rangeStart = new Date(startIso);
+  const rangeEnd   = new Date(endIso);
+  return creator.travelCalendar.some(entry => {
+    const es = new Date(entry.startDate);
+    const ee = new Date(entry.endDate);
+    return es <= rangeEnd && ee >= rangeStart &&
+      entry.city?.toLowerCase().includes(HOST_LOCATION.city.toLowerCase());
+  });
+}
+
+function getVisitingBadge(creator, startIso, endIso) {
+  if (!startIso || !endIso || !creator.travelCalendar?.length) return null;
+  const rangeStart = new Date(startIso);
+  const rangeEnd   = new Date(endIso);
+  const trip = creator.travelCalendar.find(entry => {
+    const es = new Date(entry.startDate);
+    const ee = new Date(entry.endDate);
+    return es <= rangeEnd && ee >= rangeStart &&
+      entry.city?.toLowerCase().includes(HOST_LOCATION.city.toLowerCase());
+  });
+  if (!trip) return null;
+  return `Visiting ${trip.city} · ${fmtDate(trip.startDate)}–${fmtDate(trip.endDate)}`;
+}
+
+// ─── Mock creator pool ────────────────────────────────────────────────────────
+const CREATORS = [
+  {
+    id: 'c1', name: 'Priya Nair', username: 'priya.wanders', tier: 'Micro Influencer',
+    avatar: 'https://i.pravatar.cc/80?img=47', followers: 84200, engagement: 9.4, collab_count: 18,
+    location: 'San Francisco, CA', lat: 37.7749, lng: -122.4194,
+    platforms: ['Instagram', 'TikTok'], niches: ['Travel', 'Cabins', 'Mountain'],
+    isFounder: true, avg_reach_30d: 24600, er_30d: 7.8, past_collab: false,
+    bio: 'Mountain stays and city escapes — documenting authentic travel moments that inspire.',
+    portfolioUrl: 'https://priya.wanders.co', travelCalendar: [],
+  },
+  {
+    id: 'c2', name: 'Maya Chen', username: 'mayachen.travel', tier: 'Influencer',
+    avatar: 'https://i.pravatar.cc/80?img=5', followers: 218000, engagement: 6.8, collab_count: 47,
+    location: 'Los Angeles, CA', lat: 34.0522, lng: -118.2437,
+    platforms: ['Instagram', 'YouTube'], niches: ['Luxury', 'Coastal', 'Villa'],
+    isFounder: true, avg_reach_30d: 58200, er_30d: 5.4, past_collab: true,
+    bio: 'Luxury hospitality creator. Editorial-quality content for boutique properties.',
+    portfolioUrl: 'https://mayachen.travel',
+    travelCalendar: [
+      { id: 'tc2a', startDate: '2026-05-15', endDate: '2026-05-22', country: 'USA', city: 'San Francisco', note: 'Bay Area content tour' },
+      { id: 'tc2b', startDate: '2026-06-01', endDate: '2026-06-10', country: 'Italy', city: 'Amalfi' },
+    ],
+  },
+  {
+    id: 'c3', name: 'Sam Kowalski', username: 'sam.kowalski', tier: 'UGC Pro',
+    avatar: 'https://i.pravatar.cc/80?img=59', followers: 58300, engagement: 8.9, collab_count: 23,
+    location: 'Miami, FL', lat: 25.7617, lng: -80.1918,
+    platforms: ['Instagram', 'TikTok'], niches: ['Coastal', 'Ocean', 'Lifestyle'],
+    isFounder: true, avg_reach_30d: 18900, er_30d: 7.2, past_collab: true,
+    bio: 'Coastal and ocean lifestyle content. My last villa collab drove 140k in direct bookings.',
+    portfolioUrl: null,
+    travelCalendar: [
+      { id: 'tc3a', startDate: '2026-05-20', endDate: '2026-05-30', country: 'USA', city: 'San Francisco', note: 'West coast trip' },
+    ],
+  },
+  {
+    id: 'c4', name: 'Lena Park', username: 'lena.explores', tier: 'UGC Pro',
+    avatar: 'https://i.pravatar.cc/80?img=32', followers: 31500, engagement: 12.1, collab_count: 31,
+    location: 'Portland, OR', lat: 45.5051, lng: -122.6750,
+    platforms: ['TikTok', 'Instagram'], niches: ['Adventure', 'Cabin', 'Nature'],
+    isFounder: false, avg_reach_30d: 14200, er_30d: 10.8, past_collab: false,
+    bio: 'Off-the-beaten-path travel and adventure stays. Fast turnaround, high engagement.',
+    portfolioUrl: 'https://lena.explores.io',
+    travelCalendar: [
+      { id: 'tc4a', startDate: '2026-05-18', endDate: '2026-05-25', country: 'USA', city: 'San Francisco', note: 'Heading down the coast' },
+    ],
+  },
+  {
+    id: 'c5', name: 'Nina Okafor', username: 'ninaokafor', tier: 'Micro Influencer',
+    avatar: 'https://i.pravatar.cc/80?img=44', followers: 67100, engagement: 10.5, collab_count: 14,
+    location: 'Chicago, IL', lat: 41.8781, lng: -87.6298,
+    platforms: ['Instagram', 'TikTok'], niches: ['Design', 'Boutique', 'Urban'],
+    isFounder: true, avg_reach_30d: 22400, er_30d: 8.9, past_collab: false,
+    bio: 'Boutique properties and design-forward spaces. Strong storytelling focus.',
+    portfolioUrl: null, travelCalendar: [],
+  },
+  {
+    id: 'c6', name: 'Jordan Ellis', username: 'jordanellis.co', tier: 'UGC Beginner',
+    avatar: 'https://i.pravatar.cc/80?img=11', followers: 12400, engagement: 14.2, collab_count: 4,
+    location: 'Oakland, CA', lat: 37.8044, lng: -122.2711,
+    platforms: ['TikTok'], niches: ['Eco', 'Sustainable', 'Design'],
+    isFounder: false, avg_reach_30d: 8800, er_30d: 12.6, past_collab: false,
+    bio: 'Sustainable travel and eco-design creator. Rapidly growing audience, very high ER.',
+    portfolioUrl: 'https://jordanellis.co', travelCalendar: [],
+  },
+  {
+    id: 'c7', name: 'Ava Torres', username: 'ava.offshore', tier: 'Micro Influencer',
+    avatar: 'https://i.pravatar.cc/80?img=21', followers: 43900, engagement: 7.3, collab_count: 9,
+    location: 'Berkeley, CA', lat: 37.8716, lng: -122.2727,
+    platforms: ['Instagram'], niches: ['Water', 'Boats', 'Coastal'],
+    isFounder: false, avg_reach_30d: 13700, er_30d: 5.8, past_collab: false,
+    bio: 'Water-based travel content. Floating homes, boats, and coastal adventures.',
+    portfolioUrl: null, travelCalendar: [],
+  },
+  {
+    id: 'c8', name: 'Kai Yamamoto', username: 'kai.wilderness', tier: 'UGC Beginner',
+    avatar: 'https://i.pravatar.cc/80?img=68', followers: 9200, engagement: 18.7, collab_count: 2,
+    location: 'Asheville, NC', lat: 35.5951, lng: -82.5515,
+    platforms: ['TikTok'], niches: ['Nature', 'Treehouse', 'Wellness'],
+    isFounder: false, avg_reach_30d: 6100, er_30d: 16.4, past_collab: false,
+    bio: 'Off-grid nature experiences and wellness retreats. Tiny audience, extraordinary ER.',
+    portfolioUrl: null, travelCalendar: [],
+  },
+  {
+    id: 'c9', name: 'Isabelle Laurent', username: 'isabelle.unpack', tier: 'Influencer',
+    avatar: 'https://i.pravatar.cc/80?img=16', followers: 342000, engagement: 5.2, collab_count: 62,
+    location: 'New York, NY', lat: 40.7128, lng: -74.0060,
+    platforms: ['Instagram', 'YouTube', 'TikTok'], niches: ['Luxury', 'Fashion', 'City'],
+    isFounder: true, avg_reach_30d: 87300, er_30d: 4.1, past_collab: false,
+    bio: 'Luxury travel and fashion crossover. High-end hospitality and editorial content.',
+    portfolioUrl: 'https://isabelle.unpack.co',
+    travelCalendar: [
+      { id: 'tc9a', startDate: '2026-06-10', endDate: '2026-06-20', country: 'USA', city: 'San Francisco', note: 'West Coast luxury tour' },
+    ],
+  },
+  {
+    id: 'c10', name: 'Marcus Webb', username: 'marcus.captured', tier: 'UGC Pro',
+    avatar: 'https://i.pravatar.cc/80?img=52', followers: 44800, engagement: 9.1, collab_count: 29,
+    location: 'Denver, CO', lat: 39.7392, lng: -104.9903,
+    platforms: ['Instagram', 'YouTube'], niches: ['Photography', 'Mountain', 'Outdoors'],
+    isFounder: true, avg_reach_30d: 15600, er_30d: 7.5, past_collab: false,
+    bio: 'Travel photographer turning stays into cinematic content. 4K video, editorial stills.',
+    portfolioUrl: null, travelCalendar: [],
+  },
+];
+
+const TIER_COLORS = {
+  'UGC Beginner':     { bg: 'rgba(209,235,219,0.6)', color: 'var(--ink)'  },
+  'UGC Pro':          { bg: 'rgba(60,87,89,0.12)',   color: '#3C5759'     },
+  'Micro Influencer': { bg: 'rgba(123,104,200,0.12)',color: '#5b4db8'     },
+  'Influencer':       { bg: 'rgba(212,168,67,0.15)', color: '#b45309'     },
+};
+
+const TIER_DEFS = {
+  'UGC Beginner':     '< 5K followers — New creators building their portfolio',
+  'UGC Pro':          '5K–20K followers — Content creators, not influencer reach',
+  'Micro Influencer': '5K–50K followers — Influencer-style content, engaged audience',
+  'Influencer':       '50K+ followers — Broad reach, established audience',
+};
+
+const TIERS = ['All', 'UGC Beginner', 'UGC Pro', 'Micro Influencer', 'Influencer'];
+
+function fmtFollowers(n) {
+  if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M`;
+  if (n >= 1000)    return `${(n / 1000).toFixed(1)}K`;
+  return String(n);
+}
+
+// ─── localStorage helpers ─────────────────────────────────────────────────────
+const SAVED_KEY  = '@collabnb_swipe_saved_v1';
+const DEPRIO_KEY = '@collabnb_swipe_deprioritized_v1';
+const HIST_KEY   = '@collabnb_swipe_history_v1';
+function lsGet(k) { try { return JSON.parse(localStorage.getItem(k) || '[]'); } catch { return []; } }
+function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
+
+// ─── Location consent modal ───────────────────────────────────────────────────
+function LocationConsentModal({ onAllow, onDisable }) {
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 9000,
+      background: 'rgba(25,37,36,0.55)',
+      backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      padding: '1.5rem',
+    }}>
+      <div style={{
+        background: 'rgba(255,255,255,0.97)',
+        backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)',
+        borderRadius: '1.5rem',
+        border: '1.5px solid rgba(255,255,255,0.9)',
+        boxShadow: '0 24px 80px rgba(25,37,36,0.22)',
+        padding: '28px 24px 24px',
+        width: '100%', maxWidth: 380,
+      }}>
+        <div style={{ textAlign: 'center', marginBottom: 20 }}>
+          <div style={{ fontSize: 36, marginBottom: 12 }}>📍</div>
+          <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 18, color: 'var(--ink)', margin: '0 0 10px' }}>
+            Location access
+          </h2>
+          <p style={{ fontSize: 13, color: 'var(--slate)', lineHeight: 1.65, margin: 0 }}>
+            Collabnb uses your location to suggest nearby creators and stays. You can disable this anytime in Settings.{' '}
+            <strong>Your exact location is never shared with other users.</strong>
+          </p>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <button onClick={onAllow} style={{
+            padding: '12px 0', borderRadius: 9999,
+            background: 'var(--ink)', color: 'var(--bone)',
+            fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 700,
+            border: 'none', cursor: 'pointer',
+          }}>
+            Allow
+          </button>
+          <button onClick={onDisable} style={{
+            padding: '12px 0', borderRadius: 9999,
+            background: 'transparent', color: 'var(--slate)',
+            fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 600,
+            border: '1.5px solid rgba(25,37,36,0.12)', cursor: 'pointer',
+          }}>
+            Disable Location
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Nearby creator card (compact, for horizontal scroll row) ─────────────────
+function NearbyCreatorCard({ creator, onExpand }) {
+  const [hovered, setHovered] = useState(false);
+  const t = TIER_COLORS[creator.tier] || TIER_COLORS['UGC Beginner'];
+  return (
+    <div
+      onClick={() => onExpand(creator)}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        flexShrink: 0, width: 154,
+        background: hovered ? 'rgba(255,255,255,0.96)' : 'rgba(255,255,255,0.82)',
+        backdropFilter: 'blur(20px) saturate(135%)', WebkitBackdropFilter: 'blur(20px) saturate(135%)',
+        border: '1.5px solid rgba(255,255,255,0.85)',
+        borderRadius: '1rem', padding: '14px 12px',
+        cursor: 'pointer',
+        transform: hovered ? 'translateY(-2px)' : 'none',
+        boxShadow: hovered ? '0 10px 30px rgba(25,37,36,0.12)' : '0 3px 12px rgba(25,37,36,0.06)',
+        transition: 'all 200ms var(--ease-out-quart)',
+        textAlign: 'center',
+      }}
+    >
+      <img src={creator.avatar} alt={creator.name}
+        style={{ width: 52, height: 52, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(25,37,36,0.07)', marginBottom: 8 }} />
+      <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 12, color: 'var(--ink)', marginBottom: 3 }}>
+        {creator.name}
+      </div>
+      <div style={{ fontSize: 10, color: 'var(--sage)', marginBottom: 7 }}>
+        📍 {creator.location.split(',')[0]}
+      </div>
+      <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: 9999, fontSize: 9, fontWeight: 700, background: t.bg, color: t.color }}>
+        {creator.tier}
+      </span>
+    </div>
+  );
+}
+
+// ─── Nearby creators section ──────────────────────────────────────────────────
+function NearbyCreatorsSection({ creators, onExpand, onSeeAll }) {
+  if (creators.length === 0) return null;
+  const shown   = creators.slice(0, NEARBY_SECTION_LIMIT);
+  const hasMore = creators.length > NEARBY_SECTION_LIMIT;
+
+  return (
+    <div style={{ marginBottom: '2rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.875rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <MapPin size={13} color="var(--sage)" style={{ flexShrink: 0 }} />
+          <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 13, color: 'var(--ink)' }}>
+            Creators in your area right now
+          </span>
+          <span style={{
+            padding: '2px 9px', borderRadius: 9999,
+            fontSize: 10, fontWeight: 700,
+            background: 'rgba(209,235,219,0.75)', color: 'var(--ink)',
+          }}>
+            {HOST_LOCATION.city}, {HOST_LOCATION.state}
+          </span>
+        </div>
+        {hasMore && (
+          <button onClick={onSeeAll} style={{
+            display: 'flex', alignItems: 'center', gap: 2,
+            background: 'none', border: 'none', cursor: 'pointer',
+            fontSize: 11, fontWeight: 700, color: 'var(--sage)',
+            fontFamily: 'var(--font-body)', flexShrink: 0,
+          }}>
+            See All <ChevronRight size={11} />
+          </button>
+        )}
+      </div>
+      <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 6, scrollbarWidth: 'none' }}>
+        {shown.map(c => (
+          <NearbyCreatorCard key={c.id} creator={c} onExpand={onExpand} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── Date range picker ────────────────────────────────────────────────────────
+function DateRangePicker({ dateStart, dateEnd, onApply, onClear }) {
+  const [open,     setOpen]     = useState(false);
+  const [tmpStart, setTmpStart] = useState(dateStart || '');
+  const [tmpEnd,   setTmpEnd]   = useState(dateEnd   || '');
+  const containerRef = useRef(null);
+  const isActive = !!(dateStart && dateEnd);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e) => {
+      if (containerRef.current && !containerRef.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
+
+  const dateInputStyle = {
+    width: '100%', padding: '7px 10px', borderRadius: '0.625rem',
+    border: '1.5px solid rgba(25,37,36,0.12)', background: 'var(--bone)',
+    fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--ink)',
+    outline: 'none', boxSizing: 'border-box',
+  };
+
+  return (
+    <div ref={containerRef} style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+      <button
+        onClick={() => setOpen(!open)}
+        style={{
+          display: 'flex', alignItems: 'center', gap: 6,
+          padding: '0.4rem 0.875rem', borderRadius: 9999,
+          fontSize: '0.78rem', fontWeight: 600,
+          background: isActive ? 'rgba(60,87,89,0.12)' : 'rgba(255,255,255,0.65)',
+          color: isActive ? '#3C5759' : 'var(--slate)',
+          border: `1px solid ${isActive ? 'rgba(60,87,89,0.3)' : 'rgba(25,37,36,0.12)'}`,
+          backdropFilter: 'blur(12px)', cursor: 'pointer',
+          transition: 'all 180ms var(--ease-out-quart)',
+          fontFamily: 'var(--font-body)',
+        }}
+      >
+        <Calendar size={11} />
+        {isActive ? `${fmtDate(dateStart)} – ${fmtDate(dateEnd)}` : 'Find creators traveling during…'}
+      </button>
+      {isActive && (
+        <button
+          onClick={() => { onClear(); setTmpStart(''); setTmpEnd(''); }}
+          style={{
+            width: 20, height: 20, borderRadius: '50%',
+            background: 'rgba(25,37,36,0.08)', border: 'none',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer', flexShrink: 0,
+          }}
+        >
+          <X size={9} color="var(--slate)" />
+        </button>
+      )}
+      {open && (
+        <div style={{
+          position: 'absolute', top: 'calc(100% + 8px)', left: 0,
+          zIndex: 50, width: 280,
+          background: 'rgba(255,255,255,0.97)',
+          backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+          border: '1.5px solid rgba(255,255,255,0.85)',
+          borderRadius: '1rem',
+          boxShadow: '0 8px 32px rgba(25,37,36,0.14)',
+          padding: '1rem',
+        }}>
+          <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--ink)', margin: '0 0 10px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            Travel dates to {HOST_LOCATION.city}
+          </p>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+            <div style={{ flex: 1 }}>
+              <label style={{ display: 'block', fontSize: 10, fontWeight: 600, color: 'var(--sage)', marginBottom: 4 }}>From</label>
+              <input type="date" value={tmpStart} onChange={e => setTmpStart(e.target.value)} style={dateInputStyle} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <label style={{ display: 'block', fontSize: 10, fontWeight: 600, color: 'var(--sage)', marginBottom: 4 }}>To</label>
+              <input type="date" value={tmpEnd} min={tmpStart} onChange={e => setTmpEnd(e.target.value)} style={dateInputStyle} />
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 6 }}>
+            <button
+              onClick={() => { onClear(); setTmpStart(''); setTmpEnd(''); setOpen(false); }}
+              style={{
+                flex: 1, padding: '8px 0', borderRadius: 9999,
+                border: '1.5px solid rgba(25,37,36,0.12)', background: 'transparent',
+                fontSize: 11, fontWeight: 700, color: 'var(--slate)', cursor: 'pointer',
+                fontFamily: 'var(--font-body)',
+              }}
+            >
+              Clear
+            </button>
+            <button
+              onClick={() => { if (tmpStart && tmpEnd) { onApply(tmpStart, tmpEnd); setOpen(false); } }}
+              disabled={!tmpStart || !tmpEnd}
+              style={{
+                flex: 2, padding: '8px 0', borderRadius: 9999, border: 'none',
+                background: tmpStart && tmpEnd ? 'var(--ink)' : 'rgba(25,37,36,0.1)',
+                fontSize: 11, fontWeight: 700,
+                color: tmpStart && tmpEnd ? 'var(--bone)' : 'var(--sage)',
+                cursor: tmpStart && tmpEnd ? 'pointer' : 'not-allowed',
+                fontFamily: 'var(--font-body)',
+              }}
+            >
+              Show creators
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── SwipeCardLarge ───────────────────────────────────────────────────────────
+function SwipeCardLarge({ creator, exitDir, onClick }) {
+  const [entered, setEntered] = useState(false);
+  const [tierHovered, setTierHovered] = useState(false);
+  const t = TIER_COLORS[creator.tier] || TIER_COLORS['UGC Beginner'];
+
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setEntered(true));
+    return () => cancelAnimationFrame(id);
+  }, []);
+
+  const dynamicStyle = !entered
+    ? { opacity: 0, transform: 'translateY(36px) scale(0.97)' }
+    : exitDir === 'left'  ? { opacity: 0, transform: 'translateX(-140%) rotate(-15deg)' }
+    : exitDir === 'right' ? { opacity: 0, transform: 'translateX(140%) rotate(15deg)' }
+    : exitDir === 'up'    ? { opacity: 0, transform: 'translateY(-120%) scale(0.88)' }
+    : { opacity: 1, transform: 'translateY(0) scale(1)' };
+
+  return (
+    <div
+      onClick={onClick}
+      style={{
+        position: 'absolute', inset: 0, borderRadius: '1.5rem',
+        background: 'rgba(255,255,255,0.93)',
+        backdropFilter: 'blur(24px) saturate(140%)', WebkitBackdropFilter: 'blur(24px) saturate(140%)',
+        border: '1.5px solid rgba(255,255,255,0.85)',
+        boxShadow: '0 20px 60px rgba(25,37,36,0.16)',
+        padding: '28px 24px 20px',
+        cursor: 'pointer', overflowY: 'auto',
+        transition: 'transform 340ms cubic-bezier(0.25,1,0.5,1), opacity 300ms ease',
+        userSelect: 'none',
+        ...dynamicStyle,
+      }}
+    >
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 20 }}>
+        <div style={{ position: 'relative', marginBottom: 12 }}>
+          <img src={creator.avatar} alt={creator.name}
+            style={{ width: 100, height: 100, borderRadius: '50%', objectFit: 'cover', border: '3px solid rgba(25,37,36,0.07)' }} />
+          {creator.past_collab && (
+            <div title="You've collab'd with this creator before" style={{
+              position: 'absolute', bottom: 2, right: 2, width: 22, height: 22, borderRadius: '50%',
+              background: '#4A9B7F', border: '2.5px solid #fff',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <Check size={11} color="#fff" />
+            </div>
+          )}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', justifyContent: 'center' }}>
+          <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 22, color: 'var(--ink)' }}>{creator.name}</span>
+          {creator.isFounder && (
+            <span title="One of the first 100 creators on Collabnb" style={{ display: 'flex', alignItems: 'center', gap: 3, padding: '2px 8px', borderRadius: 9999, background: 'rgba(25,37,36,0.07)', border: '1px solid rgba(25,37,36,0.1)', fontSize: 10, fontWeight: 700, color: 'var(--ink)' }}>
+              <Sparkles size={9} />Founder
+            </span>
+          )}
+        </div>
+        <div style={{ fontSize: 13, color: 'var(--sage)', marginTop: 3 }}>@{creator.username}</div>
+        <div style={{ fontSize: 12, color: 'var(--sage)', marginTop: 3 }}>📍 {creator.location}</div>
+        <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span
+            onMouseEnter={() => setTierHovered(true)}
+            onMouseLeave={() => setTierHovered(false)}
+            style={{ padding: '4px 14px', borderRadius: 9999, fontSize: 11, fontWeight: 700, background: t.bg, color: t.color, cursor: 'default', position: 'relative' }}>
+            {creator.tier}
+            {tierHovered && (
+              <span title={TIER_DEFS[creator.tier]} style={{ position: 'absolute', top: -10, right: -14, fontSize: 9, color: 'var(--sage)', cursor: 'help', background: 'rgba(255,255,255,0.95)', borderRadius: '50%', width: 16, height: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(25,37,36,0.12)', lineHeight: 1 }}>?</span>
+            )}
+          </span>
+        </div>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 1, background: 'rgba(25,37,36,0.06)', borderRadius: '0.75rem', overflow: 'hidden', marginBottom: 16 }}>
+        {[
+          { label: 'Avg. Reach', value: fmtFollowers(creator.avg_reach_30d) },
+          { label: 'ER @ 30d',  value: `${creator.er_30d}%` },
+          { label: 'Collabs',   value: creator.collab_count },
+        ].map(({ label, value }) => (
+          <div key={label} style={{ padding: '11px 0', background: 'rgba(255,255,255,0.75)', textAlign: 'center' }}>
+            <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 17, color: 'var(--ink)', lineHeight: 1 }}>{value}</div>
+            <div style={{ fontSize: 10, color: 'var(--sage)', marginTop: 3 }}>{label}</div>
+          </div>
+        ))}
+      </div>
+      <div style={{ display: 'flex', gap: 6, justifyContent: 'center', marginBottom: 12 }}>
+        {creator.platforms.map(p => (
+          <span key={p} style={{ padding: '4px 12px', borderRadius: 9999, fontSize: 11, fontWeight: 600, background: 'rgba(60,87,89,0.08)', color: 'var(--ink)' }}>{p}</span>
+        ))}
+      </div>
+      <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', justifyContent: 'center', marginBottom: 14 }}>
+        {creator.niches.map(n => (
+          <span key={n} style={{ padding: '3px 10px', borderRadius: 9999, fontSize: 10, fontWeight: 600, background: 'var(--bone)', color: 'var(--slate)' }}>{n}</span>
+        ))}
+      </div>
+      <p style={{ fontSize: 13, color: 'var(--slate)', lineHeight: 1.6, textAlign: 'center', margin: '0 0 10px' }}>{creator.bio}</p>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span title={`${creator.tier}: ${TIER_DEFS[creator.tier]}`} style={{ fontSize: 10, color: 'rgba(149,157,144,0.55)', cursor: 'help', display: 'flex', alignItems: 'center', gap: 3 }}>
+          <span style={{ border: '1px solid rgba(149,157,144,0.3)', borderRadius: '50%', width: 13, height: 13, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 8, fontWeight: 700, lineHeight: 1 }}>?</span>
+          Tiers explained
+        </span>
+        <p style={{ fontSize: 11, color: 'rgba(149,157,144,0.65)', textAlign: 'right', margin: 0 }}>Tap to expand</p>
+      </div>
+    </div>
+  );
+}
+
+// ─── Creator detail modal ─────────────────────────────────────────────────────
+function CreatorModal({ creator, onClose, onMessage }) {
+  const navigate = useNavigate();
+  const t = TIER_COLORS[creator.tier] || TIER_COLORS['UGC Beginner'];
+
+  useEffect(() => {
+    const handler = (e) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [onClose]);
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 200,
+        background: 'rgba(25,37,36,0.55)',
+        backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: '1.5rem',
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          position: 'relative',
+          background: 'rgba(255,255,255,0.97)',
+          backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)',
+          borderRadius: '1.5rem',
+          border: '1.5px solid rgba(255,255,255,0.9)',
+          boxShadow: '0 24px 80px rgba(25,37,36,0.22)',
+          padding: '28px 24px 24px',
+          width: '100%', maxWidth: 420, maxHeight: '85dvh', overflowY: 'auto',
+          animation: 'swipeModalEnter 280ms cubic-bezier(0.25,1,0.5,1) both',
+        }}
+      >
+        <button onClick={onClose} style={{
+          position: 'absolute', top: 16, right: 16,
+          width: 32, height: 32, borderRadius: '50%',
+          background: 'rgba(25,37,36,0.06)', border: 'none', cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <X size={14} color="var(--ink)" />
+        </button>
+
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 20 }}>
+          <div style={{ position: 'relative', marginBottom: 12 }}>
+            <img
+              src={creator.avatar} alt={creator.name}
+              onClick={() => { onClose(); navigate('/profile'); }}
+              title="View profile"
+              style={{ width: 88, height: 88, borderRadius: '50%', objectFit: 'cover', border: '3px solid rgba(25,37,36,0.07)', cursor: 'pointer' }}
+            />
+            {creator.past_collab && (
+              <div title="You've collab'd with this creator before" style={{
+                position: 'absolute', bottom: 2, right: 2, width: 20, height: 20, borderRadius: '50%',
+                background: '#4A9B7F', border: '2px solid #fff',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <Check size={9} color="#fff" />
+              </div>
+            )}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', justifyContent: 'center' }}>
+            <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 20, color: 'var(--ink)' }}>{creator.name}</span>
+            {creator.isFounder && (
+              <span title="One of the first 100 creators on Collabnb" style={{ display: 'flex', alignItems: 'center', gap: 3, padding: '2px 8px', borderRadius: 9999, background: 'rgba(25,37,36,0.07)', border: '1px solid rgba(25,37,36,0.1)', fontSize: 10, fontWeight: 700, color: 'var(--ink)' }}>
+                <Sparkles size={8} />Founder
+              </span>
+            )}
+          </div>
+          <div style={{ fontSize: 12, color: 'var(--sage)', marginTop: 3 }}>@{creator.username}</div>
+          <div style={{ fontSize: 12, color: 'var(--sage)', marginTop: 3 }}>📍 {creator.location}</div>
+          <div style={{ marginTop: 10 }}>
+            <span style={{ padding: '4px 12px', borderRadius: 9999, fontSize: 11, fontWeight: 700, background: t.bg, color: t.color }}>{creator.tier}</span>
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 1, background: 'rgba(25,37,36,0.06)', borderRadius: '0.75rem', overflow: 'hidden', marginBottom: 16 }}>
+          {[
+            { label: 'Followers', value: fmtFollowers(creator.followers) },
+            { label: 'Eng. Rate', value: `${creator.engagement}%` },
+            { label: 'Collabs',   value: creator.collab_count },
+          ].map(({ label, value }) => (
+            <div key={label} style={{ padding: '11px 0', background: 'rgba(255,255,255,0.75)', textAlign: 'center' }}>
+              <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 16, color: 'var(--ink)', lineHeight: 1 }}>{value}</div>
+              <div style={{ fontSize: 10, color: 'var(--sage)', marginTop: 3 }}>{label}</div>
+            </div>
+          ))}
+        </div>
+
+        <p style={{ fontSize: 13, color: 'var(--slate)', lineHeight: 1.6, marginBottom: 14 }}>{creator.bio}</p>
+
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', marginBottom: 10 }}>
+          <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--sage)' }}>Platforms</span>
+          {creator.platforms.map(p => (
+            <span key={p} style={{ padding: '3px 10px', borderRadius: 9999, fontSize: 11, fontWeight: 600, background: 'rgba(60,87,89,0.08)', color: 'var(--ink)' }}>{p}</span>
+          ))}
+        </div>
+
+        <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', alignItems: 'center', marginBottom: 18 }}>
+          <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--sage)' }}>Niches</span>
+          {creator.niches.map(n => (
+            <span key={n} style={{ padding: '3px 10px', borderRadius: 9999, fontSize: 10, fontWeight: 600, background: 'var(--bone)', color: 'var(--slate)' }}>{n}</span>
+          ))}
+        </div>
+
+        {creator.past_collab && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 14px', borderRadius: '0.75rem', background: 'rgba(74,155,127,0.08)', border: '1px solid rgba(74,155,127,0.2)', marginBottom: 16 }}>
+            <Check size={13} color="#2d7d5e" />
+            <span style={{ fontSize: 12, fontWeight: 600, color: '#2d7d5e' }}>You've collab'd with this creator before</span>
+          </div>
+        )}
+
+        <div style={{ display: 'flex', gap: 8 }}>
+          {creator.portfolioUrl && (
+            <button
+              onClick={() => window.open(creator.portfolioUrl, '_blank')}
+              title="View portfolio"
+              style={{
+                width: 42, height: 42, borderRadius: 9999, flexShrink: 0,
+                border: '1.5px solid rgba(25,37,36,0.12)', background: 'transparent',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+              }}
+            >
+              <ExternalLink size={14} color="var(--slate)" />
+            </button>
+          )}
+          <button
+            onClick={onMessage}
+            style={{
+              flex: 1, padding: '12px 0', borderRadius: 9999,
+              background: 'var(--ink)', color: 'var(--bone)',
+              fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 700,
+              border: 'none', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            }}
+          >
+            <MessageSquare size={14} />
+            Message {creator.name.split(' ')[0]}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Saved contact row ────────────────────────────────────────────────────────
+function SavedContactRow({ creator, onMessage }) {
+  const t = TIER_COLORS[creator.tier] || TIER_COLORS['UGC Beginner'];
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px',
+      background: 'rgba(255,255,255,0.8)',
+      backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
+      border: '1px solid rgba(255,255,255,0.85)',
+      borderRadius: '1rem', boxShadow: '0 2px 10px rgba(25,37,36,0.05)',
+    }}>
+      <img src={creator.avatar} alt={creator.name}
+        style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(25,37,36,0.06)', flexShrink: 0 }} />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 13, color: 'var(--ink)' }}>{creator.name}</div>
+        <div style={{ fontSize: 11, color: 'var(--sage)', marginTop: 1 }}>@{creator.username} · {creator.location}</div>
+        <span style={{ display: 'inline-block', marginTop: 4, padding: '2px 8px', borderRadius: 9999, fontSize: 9, fontWeight: 700, background: t.bg, color: t.color }}>{creator.tier}</span>
+      </div>
+      <button
+        onClick={() => onMessage(creator)}
+        style={{
+          padding: '7px 14px', borderRadius: 9999, fontSize: 11, fontWeight: 700,
+          background: 'var(--ink)', color: 'var(--bone)',
+          border: 'none', cursor: 'pointer', flexShrink: 0,
+          display: 'flex', alignItems: 'center', gap: 5,
+        }}
+      >
+        <MessageSquare size={11} />Message
+      </button>
+    </div>
+  );
+}
+
+// ─── View toggle pill ─────────────────────────────────────────────────────────
+function ViewToggle({ mode, onChange }) {
+  return (
+    <div style={{
+      display: 'inline-flex',
+      background: 'rgba(255,255,255,0.72)',
+      backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
+      border: '1px solid rgba(255,255,255,0.85)',
+      borderRadius: 9999, padding: 3,
+      boxShadow: '0 2px 10px rgba(25,37,36,0.07)',
+    }}>
+      {[
+        { value: 'grid',  label: '⊞  Grid View'  },
+        { value: 'swipe', label: '✦  Swipe View' },
+      ].map(({ value, label }) => (
+        <button key={value} onClick={() => onChange(value)} style={{
+          padding: '6px 20px', borderRadius: 9999,
+          fontSize: 12, fontWeight: 700,
+          background: mode === value ? 'var(--ink)' : 'transparent',
+          color: mode === value ? 'var(--bone)' : 'var(--slate)',
+          border: 'none', cursor: 'pointer',
+          transition: 'all 200ms var(--ease-out-quart)',
+          fontFamily: 'var(--font-body)',
+        }}>
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// ─── Swipe view ───────────────────────────────────────────────────────────────
+function SwipeView({ creators }) {
+  const navigate = useNavigate();
+
+  const [savedIds,     setSavedIds]     = useState(() => lsGet(SAVED_KEY));
+  const [deprioIds,    setDeprioIds]    = useState(() => lsGet(DEPRIO_KEY));
+  const [swipeHistory, setSwipeHistory] = useState(() => lsGet(HIST_KEY));
+
+  const [deck] = useState(() => {
+    const prevDeprio = new Set(lsGet(DEPRIO_KEY));
+    return [
+      ...creators.filter(c => !prevDeprio.has(c.id)),
+      ...creators.filter(c => prevDeprio.has(c.id)),
+    ];
+  });
+
+  const [deckIdx,     setDeckIdx]     = useState(0);
+  const [exitDir,     setExitDir]     = useState(null);
+  const [showModal,   setShowModal]   = useState(false);
+  const [isAnimating, setIsAnimating] = useState(false);
+
+  const currentCreator = deck[deckIdx] || null;
+  const canUndo = swipeHistory.length > 0 && deckIdx > 0;
+
+  function goToInbox(creator) {
+    navigate(`/inbox?creatorName=${encodeURIComponent(creator.name)}&creatorAvatar=${encodeURIComponent(creator.avatar)}`);
+  }
+
+  const handleSwipe = useCallback((dir) => {
+    if (isAnimating || !currentCreator) return;
+    setIsAnimating(true);
+    setExitDir(dir);
+    setShowModal(false);
+
+    setTimeout(() => {
+      if (dir === 'right') {
+        const next = [...savedIds, currentCreator.id];
+        setSavedIds(next); lsSet(SAVED_KEY, next);
+      } else if (dir === 'left') {
+        const next = [...deprioIds, currentCreator.id];
+        setDeprioIds(next); lsSet(DEPRIO_KEY, next);
+      } else if (dir === 'up') {
+        goToInbox(currentCreator);
+      }
+      const nextHist = [...swipeHistory, { id: currentCreator.id, action: dir }];
+      setSwipeHistory(nextHist); lsSet(HIST_KEY, nextHist);
+      setDeckIdx(i => i + 1);
+      setExitDir(null);
+      setIsAnimating(false);
+    }, 340);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAnimating, currentCreator, savedIds, deprioIds, swipeHistory]);
+
+  const handleUndo = useCallback(() => {
+    if (!canUndo) return;
+    const last = swipeHistory[swipeHistory.length - 1];
+    const nextHist = swipeHistory.slice(0, -1);
+    setSwipeHistory(nextHist); lsSet(HIST_KEY, nextHist);
+    if (last.action === 'right') {
+      const next = savedIds.filter(id => id !== last.id);
+      setSavedIds(next); lsSet(SAVED_KEY, next);
+    } else if (last.action === 'left') {
+      const next = deprioIds.filter(id => id !== last.id);
+      setDeprioIds(next); lsSet(DEPRIO_KEY, next);
+    }
+    setDeckIdx(i => i - 1);
+  }, [canUndo, swipeHistory, savedIds, deprioIds]);
+
+  const swipeRef = useRef(handleSwipe);
+  const undoRef  = useRef(handleUndo);
+  const modalRef = useRef(setShowModal);
+  useEffect(() => { swipeRef.current = handleSwipe; }, [handleSwipe]);
+  useEffect(() => { undoRef.current  = handleUndo;  }, [handleUndo]);
+
+  useEffect(() => {
+    function onKey(e) {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+      if (e.key === 'ArrowLeft')  { e.preventDefault(); swipeRef.current('left');  }
+      if (e.key === 'ArrowRight') { e.preventDefault(); swipeRef.current('right'); }
+      if (e.key === 'ArrowUp')    { e.preventDefault(); swipeRef.current('up');    }
+      if (e.key === ' ')          { e.preventDefault(); modalRef.current(m => !m); }
+      if (e.key === 'z' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); undoRef.current(); }
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  const savedCreators = creators.filter(c => savedIds.includes(c.id));
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: '0.25rem' }}>
+      <p style={{ fontSize: 12, color: 'var(--sage)', marginBottom: 14, fontWeight: 500 }}>
+        {currentCreator ? `${deckIdx + 1} of ${deck.length} creators` : `All ${deck.length} creators reviewed`}
+      </p>
+
+      <div style={{ position: 'relative', width: '100%', maxWidth: 400, height: 520 }}>
+        {currentCreator ? (
+          <SwipeCardLarge key={deckIdx} creator={currentCreator} exitDir={exitDir}
+            onClick={() => !isAnimating && setShowModal(true)} />
+        ) : (
+          <div style={{
+            position: 'absolute', inset: 0, borderRadius: '1.5rem',
+            background: 'rgba(255,255,255,0.82)',
+            backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)',
+            border: '1.5px solid rgba(255,255,255,0.85)',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10,
+          }}>
+            <div style={{ fontSize: 44 }}>✓</div>
+            <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 18, color: 'var(--ink)' }}>All caught up!</div>
+            <p style={{ fontSize: 13, color: 'var(--sage)', textAlign: 'center', maxWidth: 220, margin: 0, lineHeight: 1.5 }}>
+              You've reviewed all {deck.length} creators. Undo to revisit any.
+            </p>
+          </div>
+        )}
+      </div>
+
+      <div style={{ marginTop: 16, display: 'flex', gap: 14, flexWrap: 'wrap', justifyContent: 'center' }}>
+        {[
+          { key: '←', label: 'De-prioritize' },
+          { key: '→', label: 'Save' },
+          { key: '↑', label: 'Message' },
+          { key: 'Space', label: 'Expand' },
+        ].map(({ key, label }) => (
+          <span key={key} style={{ fontSize: 11, color: 'var(--sage)', display: 'flex', alignItems: 'center', gap: 5 }}>
+            <kbd style={{ padding: '2px 6px', borderRadius: 4, background: 'rgba(255,255,255,0.72)', border: '1px solid rgba(25,37,36,0.12)', fontSize: 10, fontFamily: 'monospace' }}>{key}</kbd>
+            {label}
+          </span>
+        ))}
+      </div>
+
+      {savedCreators.length > 0 && (
+        <div style={{ width: '100%', maxWidth: 500, marginTop: 44 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+            <span style={{ fontSize: 16 }}>❤️</span>
+            <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 15, color: 'var(--ink)', margin: 0 }}>Saved Contacts</h3>
+            <span style={{ padding: '2px 8px', borderRadius: 9999, fontSize: 11, fontWeight: 700, background: 'rgba(236,72,153,0.1)', color: '#be185d' }}>
+              {savedCreators.length}
+            </span>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {savedCreators.map(c => (
+              <SavedContactRow key={c.id} creator={c} onMessage={(creator) => goToInbox(creator)} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {showModal && currentCreator && (
+        <CreatorModal
+          creator={currentCreator}
+          onClose={() => setShowModal(false)}
+          onMessage={() => { setShowModal(false); goToInbox(currentCreator); }}
+        />
+      )}
+    </div>
+  );
+}
+
+// ─── Creator card (grid view) ─────────────────────────────────────────────────
+function CreatorCard({ creator, delay, onExpand, onMessage, visitingBadge }) {
+  const navigate = useNavigate();
+  const [hovered, setHovered] = useState(false);
+  const t = TIER_COLORS[creator.tier] || TIER_COLORS['UGC Beginner'];
+
+  return (
+    <div
+      className="reveal-up"
+      style={{ animationDelay: `${delay}ms`, opacity: 0 }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      <div
+        onClick={() => onExpand(creator)}
+        style={{
+          background: hovered ? 'rgba(255,255,255,0.96)' : 'rgba(255,255,255,0.82)',
+          backdropFilter: 'blur(20px) saturate(135%)', WebkitBackdropFilter: 'blur(20px) saturate(135%)',
+          border: '1.5px solid rgba(255,255,255,0.85)',
+          borderRadius: '1.25rem', padding: '20px',
+          transform: hovered ? 'translateY(-3px)' : 'none',
+          boxShadow: hovered ? '0 12px 40px rgba(25,37,36,0.13)' : '0 3px 14px rgba(25,37,36,0.06)',
+          transition: 'all 240ms var(--ease-out-quart)',
+          cursor: 'pointer',
+        }}
+      >
+        {/* Top row */}
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: 14 }}>
+          <div style={{ position: 'relative', flexShrink: 0 }}>
+            <img
+              src={creator.avatar} alt={creator.name}
+              onClick={(e) => { e.stopPropagation(); navigate('/profile'); }}
+              title="View profile"
+              style={{ width: 52, height: 52, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(25,37,36,0.07)', cursor: 'pointer' }}
+            />
+            {creator.past_collab && (
+              <>
+                <div
+                  title="You've collab'd with this creator before"
+                  style={{
+                    position: 'absolute', bottom: -2, right: -2,
+                    width: 18, height: 18, borderRadius: '50%',
+                    background: '#4A9B7F', border: '2px solid #fff',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}
+                >
+                  <Check size={9} color="#fff" />
+                </div>
+                {hovered && (
+                  <div style={{
+                    position: 'absolute', bottom: 24, right: -6,
+                    background: 'rgba(25,37,36,0.9)', color: '#EFECE9',
+                    fontSize: 10, fontWeight: 600,
+                    padding: '4px 8px', borderRadius: 6,
+                    whiteSpace: 'nowrap', pointerEvents: 'none',
+                    boxShadow: '0 2px 8px rgba(25,37,36,0.22)', zIndex: 5,
+                  }}>
+                    You've collab'd with this creator before
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+              <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 14, color: 'var(--ink)' }}>{creator.name}</span>
+              {creator.isFounder && (
+                <span title="One of the first 100 creators on Collabnb" style={{ display: 'flex', alignItems: 'center', gap: 3, padding: '1px 6px', borderRadius: 9999, background: 'rgba(25,37,36,0.07)', border: '1px solid rgba(25,37,36,0.1)', fontSize: 9, fontWeight: 700, color: 'var(--ink)' }}>
+                  <Sparkles size={8} />Founder
+                </span>
+              )}
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--sage)', marginTop: 2 }}>@{creator.username}</div>
+            <div style={{ marginTop: 6 }}>
+              <span style={{ padding: '3px 9px', borderRadius: 9999, fontSize: 10, fontWeight: 700, background: t.bg, color: t.color }}>{creator.tier}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Bio */}
+        <p style={{ fontSize: 12, color: 'var(--slate)', lineHeight: 1.55, margin: '0 0 14px' }}>{creator.bio}</p>
+
+        {/* Stats */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 1, background: 'rgba(25,37,36,0.06)', borderRadius: '0.625rem', overflow: 'hidden', marginBottom: 14 }}>
+          {[
+            { label: 'Avg. Reach', value: fmtFollowers(creator.avg_reach_30d) },
+            { label: 'ER @ 30d',  value: `${creator.er_30d}%`              },
+            { label: 'Collabs',   value: creator.collab_count               },
+          ].map(({ label, value }) => (
+            <div key={label} style={{ padding: '9px 0', background: 'rgba(255,255,255,0.75)', textAlign: 'center' }}>
+              <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 14, color: 'var(--ink)', lineHeight: 1 }}>{value}</div>
+              <div style={{ fontSize: 10, color: 'var(--sage)', marginTop: 2 }}>{label}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Niches */}
+        <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginBottom: 14 }}>
+          {creator.niches.map(n => (
+            <span key={n} style={{ padding: '3px 9px', borderRadius: 9999, fontSize: 10, fontWeight: 600, background: 'var(--bone)', color: 'var(--slate)' }}>{n}</span>
+          ))}
+        </div>
+
+        {/* Platforms + location */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: visitingBadge ? 10 : 14 }}>
+          <div style={{ display: 'flex', gap: 5 }}>
+            {creator.platforms.map(p => (
+              <span key={p} style={{ padding: '3px 9px', borderRadius: 9999, fontSize: 10, fontWeight: 600, background: 'rgba(60,87,89,0.08)', color: 'var(--ink)' }}>{p}</span>
+            ))}
+          </div>
+          <span style={{ fontSize: 11, color: 'var(--sage)' }}>{creator.location}</span>
+        </div>
+
+        {/* Visiting badge */}
+        {visitingBadge && (
+          <div style={{
+            display: 'inline-flex', alignItems: 'center', gap: 4,
+            padding: '3px 10px', borderRadius: 9999,
+            background: 'rgba(60,87,89,0.08)', color: 'var(--slate)',
+            fontSize: 10, fontWeight: 600, marginBottom: 10,
+          }}>
+            <MapPin size={9} color="var(--slate)" />
+            {visitingBadge}
+          </div>
+        )}
+
+        {/* Actions */}
+        <div style={{ display: 'flex', gap: 8 }}>
+          {creator.portfolioUrl && (
+            <button
+              onClick={(e) => { e.stopPropagation(); window.open(creator.portfolioUrl, '_blank'); }}
+              title="View portfolio"
+              style={{
+                width: 38, height: 38, borderRadius: 9999, flexShrink: 0,
+                border: '1.5px solid rgba(25,37,36,0.12)', background: 'transparent',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+              }}
+            >
+              <ExternalLink size={13} color="var(--slate)" />
+            </button>
+          )}
+          <button
+            onClick={(e) => { e.stopPropagation(); onMessage(creator); }}
+            style={{
+              flex: 1, padding: '9px 0', borderRadius: 9999,
+              border: '1.5px solid var(--ink)', background: 'transparent',
+              fontFamily: 'var(--font-body)', fontSize: 12, fontWeight: 700, color: 'var(--ink)',
+              cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+            }}
+          >
+            <MessageSquare size={12} />
+            Message
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main page ────────────────────────────────────────────────────────────────
+export default function HostCreators() {
+  const navigate = useNavigate();
+
+  const [locationConsent,  setLocationConsent]  = useState(() => {
+    try { return localStorage.getItem(LOCATION_CONSENT_KEY); } catch { return null; }
+  });
+  const [viewMode,         setViewMode]         = useState('grid');
+  const [query,            setQuery]            = useState('');
+  const [tierFilter,       setTierFilter]       = useState('All');
+  const [showPast,         setShowPast]         = useState(false);
+  const [nearbyOnly,       setNearbyOnly]       = useState(false);
+  const [dateStart,        setDateStart]        = useState('');
+  const [dateEnd,          setDateEnd]          = useState('');
+  const [expandedCreator,  setExpandedCreator]  = useState(null);
+
+  const gridRef = useRef(null);
+
+  function handleLocationAllow() {
+    try { localStorage.setItem(LOCATION_CONSENT_KEY, 'allowed'); } catch {}
+    setLocationConsent('allowed');
+  }
+  function handleLocationDisable() {
+    try { localStorage.setItem(LOCATION_CONSENT_KEY, 'disabled'); } catch {}
+    setLocationConsent('disabled');
+  }
+
+  function handleMessage(creator) {
+    navigate(`/inbox?creatorName=${encodeURIComponent(creator.name)}&creatorAvatar=${encodeURIComponent(creator.avatar)}`);
+  }
+
+  function handleSeeAllNearby() {
+    setNearbyOnly(true);
+    setTimeout(() => gridRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
+  }
+
+  const nearbyCreators = CREATORS.filter(c => isNearHost(c));
+
+  const baseFiltered = CREATORS.filter((c) => {
+    if (showPast && !c.past_collab) return false;
+    if (tierFilter !== 'All' && c.tier !== tierFilter) return false;
+    if (nearbyOnly && !isNearHost(c)) return false;
+    if (query) {
+      const q = query.toLowerCase();
+      return (
+        c.name.toLowerCase().includes(q) ||
+        c.username.toLowerCase().includes(q) ||
+        c.niches.some(n => n.toLowerCase().includes(q)) ||
+        c.location.toLowerCase().includes(q) ||
+        c.platforms.some(p => p.toLowerCase().includes(q))
+      );
+    }
+    return true;
+  });
+
+  // When date filter is active, include nearby creators (always present) + visitors
+  const filtered = (dateStart && dateEnd)
+    ? baseFiltered.filter(c => isNearHost(c) || tripsOverlapWithHost(c, dateStart, dateEnd))
+    : baseFiltered;
+
+  return (
+    <div style={{ minHeight: '100dvh' }}>
+
+      {/* One-time location consent modal */}
+      {locationConsent === null && (
+        <LocationConsentModal onAllow={handleLocationAllow} onDisable={handleLocationDisable} />
+      )}
+
+      <div style={{ maxWidth: 1100, margin: '0 auto', padding: '2rem 1.5rem 5rem' }}>
+
+        {/* ── Header ── */}
+        <div style={{ marginBottom: '1.25rem' }}>
+          <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 'clamp(1.6rem,4vw,2rem)', color: 'var(--ink)', margin: 0, lineHeight: 1.1 }}>
+            Creators
+          </h1>
+          <p style={{ fontSize: '0.82rem', color: 'var(--sage)', marginTop: '0.25rem' }}>
+            Discover creators who've collaborated with properties like yours
+          </p>
+        </div>
+
+        {/* ── View toggle ── */}
+        <div style={{ marginBottom: '1.5rem' }}>
+          <ViewToggle mode={viewMode} onChange={setViewMode} />
+        </div>
+
+        {viewMode === 'grid' ? (
+          <>
+            {/* ── Nearby section (only if consent given) ── */}
+            {locationConsent === 'allowed' && (
+              <NearbyCreatorsSection
+                creators={nearbyCreators}
+                onExpand={setExpandedCreator}
+                onSeeAll={handleSeeAllNearby}
+              />
+            )}
+
+            {/* ── Search + tier filters ── */}
+            <div ref={gridRef} style={{ display: 'flex', gap: 12, marginBottom: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 10,
+                flex: '1 1 240px', minWidth: 200, maxWidth: 340,
+                background: 'rgba(255,255,255,0.78)',
+                backdropFilter: 'blur(16px)',
+                border: '1px solid rgba(255,255,255,0.85)',
+                borderRadius: 9999, padding: '0.5rem 1rem',
+                boxShadow: '0 2px 10px rgba(25,37,36,0.06)',
+              }}>
+                <Search size={14} color="var(--sage)" style={{ flexShrink: 0 }} />
+                <input
+                  type="text" value={query} onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Search by name, niche, platform…"
+                  style={{ border: 'none', outline: 'none', background: 'transparent', fontFamily: 'var(--font-body)', fontSize: '0.82rem', color: 'var(--ink)', width: '100%' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                {TIERS.map(t => (
+                  <button key={t} onClick={() => setTierFilter(t)} style={{
+                    padding: '0.4rem 0.875rem', borderRadius: 9999,
+                    fontSize: '0.78rem', fontWeight: 600,
+                    background: tierFilter === t ? 'var(--ink)' : 'rgba(255,255,255,0.65)',
+                    color: tierFilter === t ? 'var(--bone)' : 'var(--slate)',
+                    border: '1px solid', borderColor: tierFilter === t ? 'var(--ink)' : 'rgba(25,37,36,0.12)',
+                    backdropFilter: 'blur(12px)', cursor: 'pointer',
+                    transition: 'all 180ms var(--ease-out-quart)',
+                    fontFamily: 'var(--font-body)',
+                  }}>
+                    {t}
+                  </button>
+                ))}
+              </div>
+
+              <button onClick={() => setShowPast(!showPast)} style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '0.4rem 0.875rem', borderRadius: 9999,
+                fontSize: '0.78rem', fontWeight: 600,
+                background: showPast ? 'rgba(74,155,127,0.12)' : 'rgba(255,255,255,0.65)',
+                color: showPast ? '#2d7d5e' : 'var(--slate)',
+                border: `1px solid ${showPast ? 'rgba(74,155,127,0.3)' : 'rgba(25,37,36,0.12)'}`,
+                backdropFilter: 'blur(12px)', cursor: 'pointer',
+                transition: 'all 180ms var(--ease-out-quart)',
+                fontFamily: 'var(--font-body)',
+              }}>
+                <Check size={11} />Past Collabs
+              </button>
+
+              {nearbyOnly && (
+                <button onClick={() => setNearbyOnly(false)} style={{
+                  display: 'flex', alignItems: 'center', gap: 5,
+                  padding: '0.4rem 0.875rem', borderRadius: 9999,
+                  fontSize: '0.78rem', fontWeight: 600,
+                  background: 'rgba(209,235,219,0.7)', color: 'var(--ink)',
+                  border: '1px solid rgba(209,235,219,0.9)',
+                  backdropFilter: 'blur(12px)', cursor: 'pointer',
+                  fontFamily: 'var(--font-body)',
+                }}>
+                  <MapPin size={11} />Nearby only <X size={9} />
+                </button>
+              )}
+            </div>
+
+            {/* ── Date range search ── */}
+            <div style={{ marginBottom: '1.25rem' }}>
+              <DateRangePicker
+                dateStart={dateStart} dateEnd={dateEnd}
+                onApply={(s, e) => { setDateStart(s); setDateEnd(e); }}
+                onClear={() => { setDateStart(''); setDateEnd(''); }}
+              />
+              {dateStart && dateEnd && (
+                <p style={{ fontSize: '0.75rem', color: 'var(--sage)', marginTop: 6, marginLeft: 2 }}>
+                  Showing creators visiting or based in {HOST_LOCATION.city} between {fmtDate(dateStart)}–{fmtDate(dateEnd)}
+                </p>
+              )}
+            </div>
+
+            {/* ── Results count ── */}
+            <p style={{ fontSize: '0.78rem', color: 'var(--sage)', marginBottom: '1.25rem' }}>
+              {filtered.length} creator{filtered.length !== 1 ? 's' : ''}{nearbyOnly ? ' nearby' : ''}
+            </p>
+
+            {/* ── Grid ── */}
+            {filtered.length === 0 ? (
+              <div style={{
+                background: 'rgba(255,255,255,0.6)', backdropFilter: 'blur(20px)',
+                border: '1.5px solid rgba(255,255,255,0.7)', borderRadius: '1.25rem',
+                padding: '3rem', textAlign: 'center',
+              }}>
+                <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1rem', color: 'var(--ink)', marginBottom: '0.4rem' }}>
+                  No creators found
+                </p>
+                <p style={{ fontSize: '0.82rem', color: 'var(--sage)', margin: 0 }}>
+                  {dateStart && dateEnd
+                    ? `No creators are visiting ${HOST_LOCATION.city} during those dates. Try a different range.`
+                    : 'Try adjusting your search or filters.'}
+                </p>
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1.25rem' }}>
+                {filtered.map((c, i) => (
+                  <CreatorCard
+                    key={c.id} creator={c} delay={i * 45}
+                    onExpand={setExpandedCreator}
+                    onMessage={handleMessage}
+                    visitingBadge={!isNearHost(c) && dateStart && dateEnd ? getVisitingBadge(c, dateStart, dateEnd) : null}
+                  />
+                ))}
+              </div>
+            )}
+          </>
+        ) : (
+          <SwipeView creators={CREATORS} />
+        )}
+      </div>
+
+      {/* ── Expanded creator modal (grid) ── */}
+      {expandedCreator && (
+        <CreatorModal
+          creator={expandedCreator}
+          onClose={() => setExpandedCreator(null)}
+          onMessage={() => { setExpandedCreator(null); handleMessage(expandedCreator); }}
+        />
+      )}
+    </div>
+  );
+}

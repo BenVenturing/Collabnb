@@ -1,16 +1,24 @@
 import { useState, useEffect, useRef } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useAppBar } from '../contexts/AppBarContext';
 import { useCollabs } from '../contexts/CollabContext';
 import { SAMPLE_LISTINGS } from '../lib/mockData';
 import { WhereSearchContent, WhatSearchContent, WhenSearchContent, useAnimatedPlaceholder } from './SearchDropdowns';
 
-const NAV_LINKS = [
+const CREATOR_NAV = [
   { to: '/explore', label: 'Explore' },
   { to: '/collabs', label: 'Collabs' },
   { to: '/saved',   label: 'Saved'   },
   { to: '/inbox',   label: 'Inbox'   },
+];
+
+const HOST_NAV = [
+  { to: '/host',           label: 'Dashboard' },
+  { to: '/host/proposals', label: 'Proposals' },
+  { to: '/inbox',          label: 'Inbox'     },
+  { to: '/host/creators',  label: 'Creators'  },
+  { to: '/profile',        label: 'Profile'   },
 ];
 
 // ─── Dropdown panel (appears below nav pill) ──────────────────────────────────
@@ -131,6 +139,9 @@ export default function AppNav() {
 
   const whatPlaceholder = useAnimatedPlaceholder();
 
+  const location = useLocation();
+  const isHost = profile?.role === 'host' || location.pathname.startsWith('/host');
+  const NAV_LINKS = isHost ? HOST_NAV : CREATOR_NAV;
   const initials = profile?.full_name?.split(' ').map((n) => n[0]).join('').slice(0, 2) ?? '?';
 
   // Whether the "Search stays" pill is visible

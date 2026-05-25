@@ -11,10 +11,13 @@
 import type * as collaborations from "../collaborations.js";
 import type * as collections from "../collections.js";
 import type * as contracts from "../contracts.js";
+import type * as http from "../http.js";
 import type * as listings from "../listings.js";
 import type * as profiles from "../profiles.js";
 import type * as seed from "../seed.js";
 import type * as threads from "../threads.js";
+import type * as uploads from "../uploads.js";
+import type * as waitlist from "../waitlist.js";
 
 import type {
   ApiFromModules,
@@ -26,10 +29,13 @@ declare const fullApi: ApiFromModules<{
   collaborations: typeof collaborations;
   collections: typeof collections;
   contracts: typeof contracts;
+  http: typeof http;
   listings: typeof listings;
   profiles: typeof profiles;
   seed: typeof seed;
   threads: typeof threads;
+  uploads: typeof uploads;
+  waitlist: typeof waitlist;
 }>;
 
 /**

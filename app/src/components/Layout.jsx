@@ -5,8 +5,8 @@ export default function Layout({ children }) {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Hide on the contract page itself (it has its own back button)
-  const showContractBtn = location.pathname !== '/contract';
+  // Hide on contract page and all host pages
+  const showContractBtn = location.pathname !== '/contract' && !location.pathname.startsWith('/host');
 
   return (
     <>

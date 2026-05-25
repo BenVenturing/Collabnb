@@ -3,7 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useCollabs } from '../contexts/CollabContext';
 import GlobeCanvas from '../components/GlobeCanvas';
+import TravelCalendar from '../components/TravelCalendar';
 import { SAMPLE_COLLABORATIONS, SAMPLE_LISTINGS } from '../lib/mockData';
+import { getPitchCount } from '../lib/pitchCount';
 
 // ─── Formatters ───────────────────────────────────────────────────────────────
 function fmtFollowers(n) {
@@ -480,7 +482,7 @@ export default function Profile() {
     { icon: <BellIcon />,    label: 'Notifications',      sublabel: 'Manage email & push preferences',      onClick: () => { setShowSettings(false); setShowNotifications(true); } },
     { icon: <LockIcon />,    label: 'Privacy Policy',     sublabel: 'Review how your data is used',         onClick: () => { setShowSettings(false); setShowPrivacy(true); } },
     { icon: <SealCheck />,   label: 'Verification',       sublabel: 'Submit a re-verification request',     onClick: () => { setShowSettings(false); setShowVerification(true); } },
-    { icon: <SwitchIcon />,  label: 'Switch to Host Mode', sublabel: 'List your property as a host',        onClick: () => { setShowSettings(false); setShowSwitchConfirm(true); } },
+    { icon: <SwitchIcon />,  label: profile?.role === 'host' ? 'Switch to Creator Mode' : 'Switch to Host Mode', sublabel: profile?.role === 'host' ? 'Browse listings as a creator' : 'List your property as a host', onClick: () => { setShowSettings(false); setShowSwitchConfirm(true); } },
   ];
 
   return (
@@ -653,6 +655,11 @@ export default function Profile() {
           </div>
         </section>
 
+        {/* ── Travel Calendar ──────────────────────────────────────────────── */}
+        <section className="glass section-reveal" ref={(el) => sectionsRef.current[3.5] = el} style={{ padding: '1.5rem', marginBottom: '2.5rem' }}>
+          <TravelCalendar viewerRole="self" />
+        </section>
+
         {/* ── Globe ────────────────────────────────────────────────────────── */}
         <section className="section-reveal" ref={(el) => sectionsRef.current[4] = el} style={{ textAlign: 'center', paddingBottom: '2rem' }}>
           <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.25rem', color: 'var(--ink)', marginBottom: '0.375rem' }}>Our Global Community</h3>
@@ -823,6 +830,21 @@ export default function Profile() {
               <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1rem', color: 'var(--slate)', margin: 0, letterSpacing: '-0.01em' }}>Settings</p>
               <button onClick={() => setShowSettings(false)} style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'rgba(209,235,219,0.5)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--slate)' }}>✕</button>
             </div>
+            {dp.role === 'creator' && (() => {
+              const { count } = getPitchCount();
+              return (
+                <div style={{ padding: '0.875rem 1.5rem', borderBottom: '1px solid rgba(60,87,89,0.08)', background: 'rgba(209,235,219,0.1)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                    <p style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--slate)', margin: 0 }}>Pitches used this month</p>
+                    <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.9rem', color: count >= 10 ? '#ef4444' : 'var(--ink)', margin: 0 }}>{count} / 10</p>
+                  </div>
+                  <div style={{ height: '4px', borderRadius: '999px', background: 'rgba(25,37,36,0.08)', overflow: 'hidden' }}>
+                    <div style={{ height: '100%', borderRadius: '999px', width: `${Math.min((count / 10) * 100, 100)}%`, background: count >= 10 ? '#ef4444' : count >= 7 ? '#D4A843' : '#4A9B7F', transition: 'width 400ms ease' }} />
+                  </div>
+                  <p style={{ fontSize: '0.68rem', color: 'var(--sage)', margin: '0.35rem 0 0' }}>Resets on the 1st · Applications are unlimited</p>
+                </div>
+              );
+            })()}
             {SETTINGS.map((row, i) => (
               <SettingsRow key={row.label} {...row} isLast={i === SETTINGS.length - 1} />
             ))}
@@ -855,13 +877,24 @@ export default function Profile() {
           onClick={() => setShowSwitchConfirm(false)}
         >
           <div className="glass" style={{ width: '100%', maxWidth: '400px', borderRadius: '1.5rem', padding: '2rem' }} onClick={(e) => e.stopPropagation()}>
-            <h4 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.25rem', color: 'var(--ink)', marginBottom: '0.75rem' }}>Switch to Host Mode?</h4>
+            <h4 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.25rem', color: 'var(--ink)', marginBottom: '0.75rem' }}>
+              {profile?.role === 'host' ? 'Switch to Creator Mode?' : 'Switch to Host Mode?'}
+            </h4>
             <p style={{ color: 'var(--slate)', fontSize: '0.9rem', lineHeight: 1.6, marginBottom: '1.5rem' }}>
-              You'll complete a short onboarding to list your property. You can switch back any time.
+              {profile?.role === 'host'
+                ? 'You\'ll switch back to browsing and applying to listings as a creator. You can return to Host Mode any time in Settings.'
+                : 'You can create listings for creators to apply to. You can switch back to Creator Mode any time in Settings.'}
             </p>
             <div style={{ display: 'flex', gap: '0.75rem' }}>
               <button className="btn-glass" style={{ flex: 1 }} onClick={() => setShowSwitchConfirm(false)}>Cancel</button>
-              <button className="btn-primary" style={{ flex: 1 }} onClick={() => setShowSwitchConfirm(false)}>Continue</button>
+              <button className="btn-primary" style={{ flex: 1 }} onClick={async () => {
+                const newRole = profile?.role === 'host' ? 'creator' : 'host';
+                await updateProfile({ role: newRole });
+                setShowSwitchConfirm(false);
+                if (newRole === 'host') navigate('/host');
+              }}>
+                Switch
+              </button>
             </div>
           </div>
         </div>

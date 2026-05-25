@@ -42,6 +42,7 @@ export const updateProfile = mutation({
       portfolio: v.optional(v.string()),
       city: v.optional(v.string()),
       region: v.optional(v.string()),
+      role: v.optional(v.string()),
     }),
   },
   handler: async (ctx, args) => {

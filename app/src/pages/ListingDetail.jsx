@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { SAMPLE_LISTINGS, SAMPLE_HOST, MOCK_CREATOR } from '../lib/mockData';
 import { useCollabs } from '../contexts/CollabContext';
+import { canSubmitPitch, incrementPitchCount } from '../lib/pitchCount';
 
 const SECTIONS = ['Photos', 'The Offer', 'Requirements', 'Location'];
 
@@ -34,14 +35,6 @@ function useIsMd(breakpoint = 768) {
 // ─── Sub-components ───────────────────────────────────────────────────────────
 function Divider() {
   return <div style={{ borderTop: '1px solid rgba(25,37,36,0.08)', margin: '2rem 0' }} />;
-}
-
-function StarIcon() {
-  return (
-    <svg viewBox="0 0 20 20" fill="currentColor" style={{ width: 12, height: 12, flexShrink: 0 }}>
-      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
-    </svg>
-  );
 }
 
 function ArrowRight() {
@@ -106,8 +99,16 @@ Let's make something great together.`;
 
   const [pitch, setPitch] = useState(defaultPitch);
   const [submitted, setSubmitted] = useState(false);
+  const [pitchBlocked, setPitchBlocked] = useState(false);
+
+  const isPitch = pitch.trim() !== defaultPitch.trim();
 
   const handleSubmit = () => {
+    if (isPitch) {
+      const { allowed } = canSubmitPitch();
+      if (!allowed) { setPitchBlocked(true); return; }
+      incrementPitchCount();
+    }
     onApply(listing, pitch);
     setSubmitted(true);
   };
@@ -132,7 +133,41 @@ Let's make something great together.`;
         animation: 'detailSlideUp 300ms cubic-bezier(0.32,0.72,0,1) forwards',
         maxHeight: '90dvh', overflowY: 'auto',
       }}>
-        {submitted ? (
+        {pitchBlocked ? (
+          <div style={{ textAlign: 'center', padding: '1.5rem 0' }}>
+            <div style={{
+              width: 64, height: 64, borderRadius: '50%',
+              background: 'rgba(255,220,210,0.8)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              margin: '0 auto 1.25rem', fontSize: '1.6rem', color: '#8b2500',
+            }}>
+              ✕
+            </div>
+            <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.4rem', color: 'var(--ink)', marginBottom: '0.75rem' }}>
+              Pitch Limit Reached
+            </h2>
+            <p style={{ color: 'var(--slate)', fontSize: '0.9rem', lineHeight: 1.65, marginBottom: '0.75rem' }}>
+              You've used all 10 pitches this month. Pitches reset on the 1st of next month. You can still submit standard applications anytime.
+            </p>
+            <p style={{ color: 'var(--sage)', fontSize: '0.8rem', marginBottom: '2rem' }}>
+              To send a standard application, restore your pitch message to the default template.
+            </p>
+            <button onClick={() => setPitchBlocked(false)} style={{
+              width: '100%', padding: '0.875rem', marginBottom: '0.625rem',
+              background: 'var(--ink)', color: 'var(--bone)',
+              borderRadius: '999px', fontWeight: 700,
+              fontSize: '0.9rem', fontFamily: 'var(--font-body)',
+              border: 'none', cursor: 'pointer',
+            }}>Back to Application</button>
+            <button onClick={onClose} style={{
+              width: '100%', padding: '0.875rem',
+              background: 'transparent', color: 'var(--sage)',
+              borderRadius: '999px', fontWeight: 600,
+              fontSize: '0.875rem', fontFamily: 'var(--font-body)',
+              border: '1.5px solid rgba(25,37,36,0.12)', cursor: 'pointer',
+            }}>Close</button>
+          </div>
+        ) : submitted ? (
           <div style={{ textAlign: 'center', padding: '1.5rem 0' }}>
             <div style={{
               width: 64, height: 64, borderRadius: '50%',
@@ -239,9 +274,18 @@ Let's make something great together.`;
               onBlur={(e) => { e.target.style.borderColor = 'rgba(25,37,36,0.12)'; }}
             />
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', margin: '0.4rem 0 1.25rem' }}>
-              <p style={{ fontSize: '0.72rem', color: 'var(--sage)' }}>{pitch.length} characters</p>
-              <p style={{ fontSize: '0.72rem', color: 'var(--sage)' }}>Adds to Collabs & Inbox automatically</p>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '0.4rem 0 1.25rem' }}>
+              <p style={{ fontSize: '0.72rem', color: 'var(--sage)', margin: 0 }}>{pitch.length} characters</p>
+              <span style={{
+                fontSize: '0.68rem', fontWeight: 700, padding: '0.18rem 0.6rem',
+                borderRadius: '999px',
+                background: isPitch ? 'rgba(209,235,219,0.8)' : 'rgba(25,37,36,0.07)',
+                color: isPitch ? '#2d6a4f' : 'var(--sage)',
+                border: isPitch ? '1px solid rgba(74,155,127,0.3)' : 'none',
+                transition: 'all 200ms',
+              }}>
+                {isPitch ? 'Pitch' : 'Application'}
+              </span>
             </div>
 
             <button
@@ -257,7 +301,7 @@ Let's make something great together.`;
               onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.88'; }}
               onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; }}
             >
-              Send Application <ArrowRight />
+              {isPitch ? 'Send Pitch' : 'Send Application'} <ArrowRight />
             </button>
           </>
         )}
@@ -484,14 +528,10 @@ export default function ListingDetail() {
               {listing.title}
             </h1>
 
-            {/* Location + rating */}
+            {/* Location */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '0.875rem' }}>
               <span style={{ fontSize: '0.85rem', color: 'var(--sage)' }}>
                 ✦ {listing.property_type} · {listing.location}
-              </span>
-              <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.85rem', color: 'var(--ink)', fontWeight: 600 }}>
-                <StarIcon />{listing.rating}
-                <span style={{ color: 'var(--sage)', fontWeight: 400 }}>({listing.review_count} reviews)</span>
               </span>
             </div>
 
@@ -665,7 +705,7 @@ export default function ListingDetail() {
                   </div>
                   <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1rem', color: 'var(--ink)', marginBottom: '0.15rem' }}>{SAMPLE_HOST.name}</p>
                   <p style={{ fontSize: '0.75rem', color: 'var(--sage)', marginBottom: '0.875rem' }}>Collabnb Host</p>
-                  {[{ val: SAMPLE_HOST.review_count, label: 'Reviews' }, { val: `${SAMPLE_HOST.rating}★`, label: 'Rating' }, { val: `${SAMPLE_HOST.years_hosting}`, label: 'Years hosting' }].map(({ val, label }) => (
+                  {[{ val: `${SAMPLE_HOST.years_hosting}`, label: 'Years hosting' }].map(({ val, label }) => (
                     <div key={label} style={{ borderTop: '1px solid rgba(25,37,36,0.07)', paddingTop: '0.5rem', marginTop: '0.5rem' }}>
                       <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.05rem', color: 'var(--ink)' }}>{val}</p>
                       <p style={{ fontSize: '0.7rem', color: 'var(--sage)' }}>{label}</p>

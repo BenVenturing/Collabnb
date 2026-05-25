@@ -3,7 +3,7 @@ let _clerkPromise = null;
 async function getClerk() {
   if (!_clerkPromise) {
     _clerkPromise = (async () => {
-      const Clerk = (await import('@clerk/clerk-js')).default;
+      const { Clerk } = await import('@clerk/clerk-js');
       const key = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
       if (!key) return null;
       const clerk = new Clerk(key);
@@ -67,7 +67,7 @@ formEl?.addEventListener('submit', async (e) => {
     });
 
     if (signInAttempt.status !== 'complete') {
-      throw new Error('Additional authentication required.');
+      throw new Error(`Additional authentication required (status: ${signInAttempt.status}). Check your email for a verification code or visit the Clerk dashboard to confirm the user.`);
     }
 
     // Success — show spinner then redirect to profile
@@ -86,7 +86,46 @@ formEl?.addEventListener('submit', async (e) => {
   }
 });
 
-// If already signed in, go straight to profile
+// ── Password visibility toggle ────────────────────────────────────────
+const passwordToggle = document.getElementById('login-password-toggle');
+const passwordEye = document.getElementById('login-password-eye');
+passwordToggle?.addEventListener('click', () => {
+  const isPassword = passwordEl.type === 'password';
+  passwordEl.type = isPassword ? 'text' : 'password';
+  passwordToggle.setAttribute('aria-label', isPassword ? 'Hide password' : 'Show password');
+  passwordEye.innerHTML = isPassword
+    ? '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>'
+    : '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
+});
+
+// ── Forgot password ───────────────────────────────────────────────────
+const forgotBtn = document.getElementById('login-forgot');
+forgotBtn?.addEventListener('click', async () => {
+  const email = emailEl.value.trim();
+  if (!email) {
+    errorEl.textContent = 'Enter your email address first.';
+    errorEl.style.display = 'block';
+    return;
+  }
+  forgotBtn.disabled = true;
+  forgotBtn.textContent = 'Sending…';
+  try {
+    const clerk = await getClerk();
+    if (!clerk) throw new Error('Clerk not configured');
+    await clerk.client.signIn.create({
+      strategy: 'reset_password_email_code',
+      identifier: email,
+    });
+    forgotBtn.textContent = 'Check your inbox';
+    errorEl.textContent = '';
+    errorEl.style.display = 'none';
+  } catch (err) {
+    errorEl.textContent = getClerkErrorMessage(err) || 'Could not send reset email. Try again.';
+    errorEl.style.display = 'block';
+    forgotBtn.disabled = false;
+    forgotBtn.textContent = 'Forgot password?';
+  }
+});
 (async () => {
   const clerk = await getClerk();
   if (clerk?.user) {

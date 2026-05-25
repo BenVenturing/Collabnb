@@ -3,6 +3,7 @@ import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { AppBarProvider } from './contexts/AppBarContext';
 import { CollabProvider } from './contexts/CollabContext';
+import { ListingDraftProvider } from './contexts/ListingDraftContext';
 import Layout        from './components/Layout';
 import ContractBuilder from './components/ContractBuilder';
 import Explore       from './pages/Explore';
@@ -11,6 +12,15 @@ import Saved         from './pages/Saved';
 import Inbox         from './pages/Inbox';
 import Profile       from './pages/Profile';
 import ListingDetail from './pages/ListingDetail';
+import HostDashboard        from './pages/HostDashboard';
+import HostListingDetail    from './pages/host/HostListingDetail';
+import HostProposals        from './pages/host/HostProposals';
+import HostCreators         from './pages/host/HostCreators';
+import CreateListingIntro   from './pages/host/CreateListingIntro';
+import Step1Basics          from './pages/host/Step1Basics';
+import Step2Offer           from './pages/host/Step2Offer';
+import Step3Deliverables    from './pages/host/Step3Deliverables';
+import Step4Review          from './pages/host/Step4Review';
 
 // Catch any render crash and show it instead of a blank page
 class ErrorBoundary extends Component {
@@ -34,31 +44,54 @@ class ErrorBoundary extends Component {
 }
 
 function AppRoutes() {
-  const { session, loading } = useAuth();
+  const { session, loading, profile } = useAuth();
 
   if (loading) return <LoadingScreen />;
 
   if (!session) {
-    // No session at all (no Supabase, no mock) — redirect unauthenticated users
-    window.location.href = '../index.html';
-    return null;
+    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    if (!isLocalhost) {
+      window.location.href = '/login.html';
+      return null;
+    }
+    // On localhost — fall through to app with mock session (dev mode)
   }
 
   return (
     <CollabProvider>
-      <Layout>
+      <ListingDraftProvider>
         <Routes>
-          <Route path="/"               element={<Navigate to="/explore" replace />} />
-          <Route path="/explore"        element={<Explore />} />
-          <Route path="/listing/:id"    element={<ListingDetail />} />
-          <Route path="/collabs"        element={<Collabs />} />
-          <Route path="/saved"          element={<Saved />} />
-          <Route path="/inbox"          element={<Inbox />} />
-          <Route path="/profile"        element={<Profile />} />
-          <Route path="/contract"       element={<ContractBuilder />} />
-          <Route path="*"               element={<Navigate to="/explore" replace />} />
+            {/* Host wizard — full-screen, no nav chrome */}
+          <Route path="/host/listings/create"              element={<CreateListingIntro />} />
+          <Route path="/host/listings/create/basics"       element={<Step1Basics />} />
+          <Route path="/host/listings/create/offer"        element={<Step2Offer />} />
+          <Route path="/host/listings/create/deliverables" element={<Step3Deliverables />} />
+          <Route path="/host/listings/create/review"       element={<Step4Review />} />
+
+          {/* All other routes — wrapped in Layout (nav + HAZY bg) */}
+          <Route path="*" element={
+            <Layout>
+              <Routes>
+                <Route path="/"                  element={<Navigate to="/explore" replace />} />
+                {/* Host dashboard pages */}
+                <Route path="/host"              element={<HostDashboard />} />
+                <Route path="/host/listing/:id"  element={<HostListingDetail />} />
+                <Route path="/host/proposals"    element={<HostProposals />} />
+                <Route path="/host/creators"     element={<HostCreators />} />
+                {/* Creator pages */}
+                <Route path="/explore"           element={<Explore />} />
+                <Route path="/listing/:id"       element={<ListingDetail />} />
+                <Route path="/collabs"           element={<Collabs />} />
+                <Route path="/saved"             element={<Saved />} />
+                <Route path="/inbox"             element={<Inbox />} />
+                <Route path="/profile"           element={<Profile />} />
+                <Route path="/contract"          element={<ContractBuilder />} />
+                <Route path="*"                  element={<Navigate to="/explore" replace />} />
+              </Routes>
+            </Layout>
+          } />
         </Routes>
-      </Layout>
+      </ListingDraftProvider>
     </CollabProvider>
   );
 }

@@ -8,13 +8,6 @@ import { WhereSearchContent, WhatSearchContent, WhenSearchContent, useAnimatedPl
 const PROP_FILTERS = ['All', 'Cabin', 'Villa', 'Treehouse', 'Glamping', 'Lodge', 'Estate', 'Cottage'];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-function StarIcon() {
-  return (
-    <svg viewBox="0 0 20 20" fill="#192524" style={{ width: 10, height: 10, flexShrink: 0 }}>
-      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
-    </svg>
-  );
-}
 
 // ─── Listing Card ─────────────────────────────────────────────────────────────
 function ListingCard({ listing, saved, onSave, delay, onNavigate }) {
@@ -100,14 +93,10 @@ function ListingCard({ listing, saved, onSave, delay, onNavigate }) {
 
       {/* Info */}
       <div style={{ padding: '0.875rem 1rem 1rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem', marginBottom: '0.2rem' }}>
-          <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.875rem', color: 'var(--ink)', lineHeight: 1.25, flex: 1 }}>
+        <div style={{ marginBottom: '0.2rem' }}>
+          <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.875rem', color: 'var(--ink)', lineHeight: 1.25 }}>
             {listing.title}
           </p>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.2rem', flexShrink: 0, paddingTop: '0.1rem' }}>
-            <StarIcon />
-            <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--ink)' }}>{listing.rating}</span>
-          </div>
         </div>
         <p style={{ fontSize: '0.72rem', color: 'var(--sage)', marginBottom: '0.6rem' }}>{listing.location}</p>
         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '0.5rem' }}>
@@ -264,13 +253,19 @@ export default function Explore() {
   }, [setCompactSearch]);
 
   // Filtered + curated rows
+  const listingStatuses = (() => {
+    try { return JSON.parse(localStorage.getItem('@collabnb_host_listings_local_v1') || '{}'); }
+    catch { return {}; }
+  })();
+  const activeListings = SAMPLE_LISTINGS.filter((l) => listingStatuses[l.id]?.status !== 'paused');
+
   const byPropType = (arr) =>
     propFilter === 'All' ? arr : arr.filter((l) => l.property_type === propFilter);
 
-  const trending   = byPropType(SAMPLE_LISTINGS.filter((l) => l.is_featured));
-  const forYou     = byPropType(SAMPLE_LISTINGS.filter((l) => ['Photography', 'UGC Video', 'Instagram Reels'].includes(l.collab_type)));
-  const nearMe     = byPropType(SAMPLE_LISTINGS.filter((l) => ['NC', 'TN', 'SC', 'VA', 'GA'].some((s) => l.location.includes(s))));
-  const allFiltered = byPropType(SAMPLE_LISTINGS);
+  const trending   = byPropType(activeListings.filter((l) => l.is_featured));
+  const forYou     = byPropType(activeListings.filter((l) => ['Photography', 'UGC Video', 'Instagram Reels'].includes(l.collab_type)));
+  const nearMe     = byPropType(activeListings.filter((l) => ['NC', 'TN', 'SC', 'VA', 'GA'].some((s) => l.location.includes(s))));
+  const allFiltered = byPropType(activeListings);
 
   return (
     <div style={{ minHeight: '100dvh' }}>

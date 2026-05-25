@@ -2,7 +2,7 @@
    Collabnb — Main JavaScript
    ============================================================ */
 
-import { getProfileCounts } from './convex.js';
+import { getProfileCounts, waitlistSignUp } from './convex.js';
 
 let signedUpName = '';
 
@@ -11,7 +11,7 @@ let _clerkPromise = null;
 async function getClerk() {
   if (!_clerkPromise) {
     _clerkPromise = (async () => {
-      const Clerk = (await import('@clerk/clerk-js')).default;
+      const { Clerk } = await import('@clerk/clerk-js');
       const key = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
       if (!key) return null;
       const clerk = new Clerk(key);
@@ -293,30 +293,139 @@ document.querySelectorAll('.faq-question').forEach(btn => {
   });
 });
 
-/* --- Modal Wizard --- */
-let currentStep = 1;
+/* --- Modal Wizard (Convex waitlist — Clerk bypassed until DNS resolves) --- */
 let currentRole = 'creator';
-const CREATOR_STEPS = 4;
-const HOST_STEPS = 3;
 
-function getMaxSteps() {
-  return currentRole === 'creator' ? CREATOR_STEPS : HOST_STEPS;
-}
-
-function openModal() {
+async function openModal() {
   const overlay = document.querySelector('#modal-overlay');
   if (!overlay) return;
   overlay.classList.add('open');
   overlay.setAttribute('aria-hidden', 'false');
   document.body.style.overflow = 'hidden';
 
-  // Focus trap setup
-  const focusable = overlay.querySelectorAll('button, input, select, a[href], [tabindex]:not([tabindex="-1"])');
-  if (focusable.length) focusable[0].focus();
+  // Show the simple waitlist form
+  const signUpArea = document.querySelector('#clerk-sign-up-area');
+  if (!signUpArea) return;
 
-  currentStep = 1;
-  showStep(1);
-  updateProgress();
+  signUpArea.innerHTML = `
+    <form id="waitlist-form" style="display:flex;flex-direction:column;gap:1rem;">
+      <div class="form-group">
+        <label class="form-label" for="wl-name">Full name</label>
+        <input class="form-input" type="text" id="wl-name" placeholder="Jane Smith" autocomplete="name" required />
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="wl-email">Email address</label>
+        <input class="form-input" type="email" id="wl-email" placeholder="jane@example.com" autocomplete="email" required />
+      </div>
+      <div id="wl-fields-creator" style="display:flex;flex-direction:column;gap:0.75rem;">
+        <div class="form-group">
+          <label class="form-label" for="wl-instagram">Instagram handle <span style="color:var(--sage);font-weight:400;">(optional)</span></label>
+          <input class="form-input" type="text" id="wl-instagram" placeholder="@yourhandle" />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="wl-tiktok">TikTok handle <span style="color:var(--sage);font-weight:400;">(optional)</span></label>
+          <input class="form-input" type="text" id="wl-tiktok" placeholder="@yourhandle" />
+        </div>
+      </div>
+      <div id="wl-fields-host" style="display:none;flex-direction:column;gap:0.75rem;">
+        <div class="form-group">
+          <label class="form-label" for="wl-business">Business or property name</label>
+          <input class="form-input" type="text" id="wl-business" placeholder="Moss &amp; Pine Cabin" />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="wl-city">City</label>
+          <input class="form-input" type="text" id="wl-city" placeholder="Asheville" />
+        </div>
+      </div>
+      <div style="text-align:center;margin-top:0.5rem;">
+        <p style="font-size:0.75rem;color:var(--sage);margin-bottom:0.75rem;">Already have an account? <a href="#" id="modal-login-link" style="color:var(--ink);font-weight:500;">Sign in</a></p>
+      </div>
+      <button type="submit" id="wl-submit" class="btn-primary" style="width:100%;cursor:pointer;">Join the Waitlist</button>
+      <div id="wl-error" style="display:none;color:#e74c3c;font-size:0.8125rem;text-align:center;"></div>
+    </form>
+    <div id="wl-success" style="display:none;text-align:center;padding:1rem 0;">
+      <div style="width:64px;height:64px;border-radius:50%;background:var(--mint);display:flex;align-items:center;justify-content:center;margin:0 auto 1.25rem;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="var(--ink)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:28px;height:28px;"><path d="M20 6L9 17l-5-5"/></svg>
+      </div>
+      <h3 style="font-size:1.25rem;margin-bottom:.5rem;">You're on the list!</h3>
+      <p style="color:var(--sage);font-size:.875rem;line-height:1.6;">We'll be in touch as we approach the June 1 launch. Keep an eye on your inbox.</p>
+    </div>
+  `;
+
+  // Show correct role fields
+  toggleRoleFields(currentRole);
+
+  // Wire form submit
+  const form = document.getElementById('waitlist-form');
+  form?.addEventListener('submit', handleWaitlistSubmit);
+
+  // Wire login link
+  const loginLink = form?.querySelector('#modal-login-link');
+  if (loginLink) {
+    loginLink.addEventListener('click', (e) => {
+      e.preventDefault();
+      closeModal();
+      openLoginModal();
+    });
+  }
+}
+
+function toggleRoleFields(role) {
+  const creatorFields = document.getElementById('wl-fields-creator');
+  const hostFields = document.getElementById('wl-fields-host');
+  if (creatorFields) creatorFields.style.display = role === 'creator' ? 'flex' : 'none';
+  if (hostFields) hostFields.style.display = role === 'host' ? 'flex' : 'none';
+}
+
+async function handleWaitlistSubmit(e) {
+  e.preventDefault();
+  const submitBtn = document.getElementById('wl-submit');
+  const errorEl = document.getElementById('wl-error');
+  const successEl = document.getElementById('wl-success');
+  const form = document.getElementById('waitlist-form');
+
+  const name = document.getElementById('wl-name')?.value?.trim();
+  const email = document.getElementById('wl-email')?.value?.trim();
+
+  if (!name || !email) {
+    if (errorEl) { errorEl.textContent = 'Please enter your name and email.'; errorEl.style.display = 'block'; }
+    return;
+  }
+
+  if (errorEl) errorEl.style.display = 'none';
+  if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Joining…'; }
+
+  try {
+    const data = {
+      full_name: name,
+      email: email,
+      role: currentRole,
+      instagram_handle: document.getElementById('wl-instagram')?.value?.trim(),
+      tiktok_handle: document.getElementById('wl-tiktok')?.value?.trim(),
+      business_name: document.getElementById('wl-business')?.value?.trim(),
+      city: document.getElementById('wl-city')?.value?.trim(),
+    };
+
+    const result = await waitlistSignUp(data);
+
+    if (result.alreadySignedUp) {
+      if (errorEl) { errorEl.textContent = 'This email is already on the waitlist!'; errorEl.style.display = 'block'; }
+      if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Join the Waitlist'; }
+      return;
+    }
+
+    // Show success
+    if (form) form.style.display = 'none';
+    if (successEl) successEl.style.display = '';
+
+    // Refresh counters
+    initCounters();
+
+  } catch (err) {
+    console.error('Waitlist sign-up error:', err);
+    if (errorEl) { errorEl.textContent = 'Something went wrong. Please try again.'; errorEl.style.display = 'block'; }
+    if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Join the Waitlist'; }
+  }
 }
 
 function closeModal() {
@@ -325,52 +434,8 @@ function closeModal() {
   overlay.classList.remove('open');
   overlay.setAttribute('aria-hidden', 'true');
   document.body.style.overflow = '';
-
-  // Return focus to trigger
   const trigger = document.querySelector('.btn-open-modal');
   if (trigger) trigger.focus();
-}
-
-function showStep(n) {
-  const role = currentRole;
-  document.querySelectorAll('.wizard-step').forEach(s => s.classList.remove('active'));
-  // Find step matching role OR 'both'; prefer role-specific match
-  let step = document.querySelector(`[data-step="${n}"][data-role="${role}"]`);
-  if (!step) step = document.querySelector(`[data-step="${n}"][data-role="both"]`);
-  if (step) step.classList.add('active');
-
-  updateStepDots(n);
-  currentStep = n;
-  updateProgress();
-}
-
-function updateProgress() {
-  const bar = document.querySelector('.modal-progress-fill');
-  if (!bar) return;
-  const max = getMaxSteps();
-  bar.style.width = `${((currentStep - 1) / max) * 100}%`;
-}
-
-function updateStepDots(active) {
-  document.querySelectorAll('.step-dot').forEach((dot, i) => {
-    const n = i + 1;
-    dot.classList.remove('active', 'done');
-    if (n < active) dot.classList.add('done');
-    else if (n === active) dot.classList.add('active');
-  });
-}
-
-function nextStep() {
-  const max = getMaxSteps();
-  if (currentStep < max) {
-    showStep(currentStep + 1);
-  } else {
-    submitForm();
-  }
-}
-
-function prevStep() {
-  if (currentStep > 1) showStep(currentStep - 1);
 }
 
 function switchRole(role) {
@@ -379,32 +444,16 @@ function switchRole(role) {
     btn.classList.toggle('active', btn.dataset.role === role);
   });
 
-  // Update step dots count
-  const dotsContainer = document.querySelector('.step-indicator');
-  if (dotsContainer) {
-    const max = getMaxSteps();
-    dotsContainer.innerHTML = '';
-    for (let i = 1; i <= max; i++) {
-      if (i > 1) {
-        const line = document.createElement('div');
-        line.className = 'step-line';
-        dotsContainer.appendChild(line);
-      }
-      const dot = document.createElement('div');
-      dot.className = 'step-dot' + (i === 1 ? ' active' : '');
-      dot.textContent = i;
-      dotsContainer.appendChild(dot);
-    }
-  }
-
   // Update mini counter label
   const miniLabel = document.querySelector('.join-mini-counter');
   if (miniLabel) {
-    const count = role === 'creator' ? creators : hosts;
-    miniLabel.innerHTML = `<strong>${100 - count} / 100</strong> ${role === 'creator' ? 'creator' : 'host'} spots remaining`;
+    const cCount = document.querySelector('.count-creators-mini');
+    const hCount = document.querySelector('.count-hosts-mini');
+    const count = role === 'creator' ? parseInt(cCount?.textContent || '0') : parseInt(hCount?.textContent || '0');
+    miniLabel.innerHTML = `<strong>${Math.max(0, 100 - count)} / 100</strong> ${role} spots remaining`;
   }
 
-  showStep(1);
+  toggleRoleFields(role);
 }
 
 /* --- Login Modal --- */
@@ -452,94 +501,6 @@ function closeLoginModal() {
   if (submitBtn) {
     submitBtn.disabled = false;
     submitBtn.textContent = 'Sign In';
-  }
-}
-
-async function submitForm() {
-  const role = currentRole;
-  const data = {};
-  let submitBtn = null;
-
-  try {
-    if (role === 'creator') {
-      data.email = document.querySelector('#c-email')?.value?.trim();
-      data.full_name = document.querySelector('#c-name')?.value?.trim();
-      data.phone_number = document.querySelector('#c-phone')?.value?.trim();
-      data.username = document.querySelector('#c-instagram')?.value?.trim() || document.querySelector('#c-tiktok')?.value?.trim();
-      data.instagram_handle = document.querySelector('#c-instagram')?.value?.trim();
-      data.tier = document.querySelector('#c-tier')?.value;
-      data.recent_collabs = document.querySelector('#c-collabs')?.value;
-      data.portfolio = document.querySelector('#c-portfolio')?.value?.trim();
-      data.website_url = document.querySelector('#c-portfolio')?.value?.trim();
-      data.beta = document.querySelector('#c-beta')?.checked;
-      data.city = document.querySelector('#c-city')?.value?.trim();
-      data.region = document.querySelector('#c-country')?.value?.trim();
-    } else {
-      data.email = document.querySelector('#h-email')?.value?.trim();
-      data.full_name = document.querySelector('#h-name')?.value?.trim();
-      data.phone_number = document.querySelector('#h-phone')?.value?.trim();
-      data.business_name = document.querySelector('#h-business')?.value?.trim();
-      data.property_type = document.querySelector('#h-type')?.value;
-      data.instagram_handle = document.querySelector('#h-instagram')?.value?.trim();
-      data.website_url = document.querySelector('#h-website')?.value?.trim();
-      data.city = document.querySelector('#h-city')?.value?.trim();
-      data.region = document.querySelector('#h-region')?.value?.trim();
-      data.beta = document.querySelector('#h-beta')?.checked;
-    }
-
-    if (!data.email || !data.full_name) {
-      throw new Error('Please fill out your name and email.');
-    }
-
-    submitBtn = document.querySelector(`.wizard-step[data-role="${role}"].active .btn-next`);
-    if (submitBtn) {
-      submitBtn.disabled = true;
-      submitBtn.textContent = 'Joining...';
-    }
-
-    // Waitlist signup — use Clerk for auth
-    const clerk = await getClerk();
-    if (!clerk) throw new Error('Clerk not configured. Add VITE_CLERK_PUBLISHABLE_KEY to .env');
-
-    const signUp = await clerk.client.signUp.create({
-      emailAddress: data.email,
-      password: crypto.randomUUID() + crypto.randomUUID(),
-      unsafeMetadata: metadata,
-    });
-
-    await signUp.prepareEmailAddressVerification({
-      strategy: 'email_link',
-      redirectUrl: window.location.origin + '/profile.html',
-    });
-
-    signedUpName = data.full_name.split(' ')[0];
-
-    const successEl = document.querySelector('#wizard-success');
-    document.querySelectorAll('.wizard-step').forEach(s => s.classList.remove('active'));
-    if (successEl) {
-      successEl.classList.add('active');
-      const bar = document.querySelector('.modal-progress-fill');
-      if (bar) bar.style.width = '100%';
-
-      const successTitle = successEl.querySelector('h3');
-      const successDesc = successEl.querySelector('p');
-      if (successTitle) successTitle.textContent = `You're on the list, ${signedUpName}.`;
-      if (successDesc) {
-        successDesc.textContent = role === 'creator'
-          ? "We've sent a verification link to your email. Check your inbox to confirm your spot for lifetime access."
-          : "We've sent a verification link to your email. Confirm your email to secure early access for your property.";
-      }
-    }
-
-    launchConfetti();
-
-  } catch (err) {
-    console.error('Signup error:', err);
-    alert('Oops! Something went wrong: ' + err.message);
-    if (submitBtn) {
-      submitBtn.disabled = false;
-      submitBtn.textContent = 'Join the Waitlist';
-    }
   }
 }
 
@@ -800,15 +761,7 @@ document.addEventListener('DOMContentLoaded', () => {
     openModal();
   }
 
-  // Next/back buttons
-  document.querySelectorAll('.btn-next').forEach(btn => {
-    btn.addEventListener('click', nextStep);
-  });
-  document.querySelectorAll('.btn-back').forEach(btn => {
-    btn.addEventListener('click', prevStep);
-  });
-
-  // Role toggle
+  // Role toggle (kept for Clerk sign-up role selection)
   document.querySelectorAll('.role-btn').forEach(btn => {
     btn.addEventListener('click', () => switchRole(btn.dataset.role));
   });
@@ -867,7 +820,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         if (signInAttempt.status !== 'complete') {
-          throw new Error('Additional authentication required.');
+          throw new Error(`Additional authentication required (status: ${signInAttempt.status}).`);
         }
 
         // Success — redirect to profile
@@ -887,6 +840,54 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   }
+
+  // ── Password visibility toggle (modal) ──────────────────────────────
+  const modalPasswordToggle = document.querySelector('#login-modal-password-toggle');
+  const modalPasswordInput = document.querySelector('#login-modal-password');
+  const modalPasswordEye = document.querySelector('#login-modal-password-eye');
+  modalPasswordToggle?.addEventListener('click', () => {
+    if (!modalPasswordInput) return;
+    const isPassword = modalPasswordInput.type === 'password';
+    modalPasswordInput.type = isPassword ? 'text' : 'password';
+    modalPasswordToggle.setAttribute('aria-label', isPassword ? 'Hide password' : 'Show password');
+    if (modalPasswordEye) {
+      modalPasswordEye.innerHTML = isPassword
+        ? '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>'
+        : '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
+    }
+  });
+
+  // ── Forgot password (modal) ─────────────────────────────────────────
+  const modalForgotBtn = document.querySelector('#login-modal-forgot');
+  const modalEmailEl = document.querySelector('#login-modal-email');
+  const modalErrorEl = document.querySelector('#login-modal-error');
+  modalForgotBtn?.addEventListener('click', async () => {
+    const email = modalEmailEl?.value?.trim();
+    if (!email) {
+      if (modalErrorEl) {
+        modalErrorEl.textContent = 'Enter your email address first.';
+        modalErrorEl.style.display = 'block';
+      }
+      return;
+    }
+    modalForgotBtn.disabled = true;
+    modalForgotBtn.textContent = 'Sending…';
+    try {
+      const clerk = await getClerk();
+      if (!clerk) throw new Error('Clerk not configured');
+      await clerk.client.signIn.create({
+        strategy: 'reset_password_email_code',
+        identifier: email,
+      });
+      modalForgotBtn.textContent = 'Check your inbox';
+      if (modalErrorEl) { modalErrorEl.textContent = ''; modalErrorEl.style.display = 'none'; }
+    } catch (err) {
+      const msg = getClerkErrorMessage(err) || 'Could not send reset email. Try again.';
+      if (modalErrorEl) { modalErrorEl.textContent = msg; modalErrorEl.style.display = 'block'; }
+      modalForgotBtn.disabled = false;
+      modalForgotBtn.textContent = 'Forgot password?';
+    }
+  });
 
   // Login link in wizard modal -> open login modal
   const loginLink = document.querySelector('#modal-login-link');

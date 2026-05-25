@@ -7,7 +7,7 @@ let _clerkPromise = null;
 async function getClerk() {
   if (!_clerkPromise) {
     _clerkPromise = (async () => {
-      const Clerk = (await import('@clerk/clerk-js')).default;
+      const { Clerk } = await import('@clerk/clerk-js');
       const key = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
       if (!key) return null;
       const clerk = new Clerk(key);

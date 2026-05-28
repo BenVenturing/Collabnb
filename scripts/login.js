@@ -104,17 +104,147 @@ passwordToggle?.addEventListener('click', () => {
     : '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
 });
 
-// ── Forgot password — redirect to Clerk hosted reset page ────────────
-function handleForgotPassword() {
-  const origin = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-    ? 'http://localhost:5173'
-    : 'https://www.collabnb.com';
-  window.location.href = `https://accounts.collabnb.com/sign-in#/forgot-password?redirect_url=${encodeURIComponent(origin + '/profile.html')}`;
+// ── Forgot password — inline reset flow ──────────────────────────────
+const resetStep1Card   = document.getElementById('reset-step1-card');
+const resetStep2Card   = document.getElementById('reset-step2-card');
+const resetEmailForm   = document.getElementById('reset-email-form');
+const resetEmailEl     = document.getElementById('reset-email');
+const resetEmailSubmit = document.getElementById('reset-email-submit');
+const resetEmailError  = document.getElementById('reset-email-error');
+const resetCodeForm    = document.getElementById('reset-code-form');
+const resetCodeEl      = document.getElementById('reset-code');
+const resetNewPwEl     = document.getElementById('reset-new-password');
+const resetConfirmPwEl = document.getElementById('reset-confirm-password');
+const resetCodeSubmit  = document.getElementById('reset-code-submit');
+const resetCodeError   = document.getElementById('reset-code-error');
+const resetStep2Desc   = document.getElementById('reset-step2-desc');
+
+let _resetSignIn = null;
+let _resetEmail  = '';
+
+function showPanel(panel) {
+  [cardEl, resetStep1Card, resetStep2Card].forEach(el => { if (el) el.hidden = true; });
+  if (panel) panel.hidden = false;
 }
 
-const forgotBtn = document.getElementById('login-forgot');
-forgotBtn?.addEventListener('click', handleForgotPassword);
+function handleForgotPassword() {
+  const prefill = emailEl?.value.trim();
+  if (prefill && resetEmailEl) resetEmailEl.value = prefill;
+  showPanel(resetStep1Card);
+  resetEmailEl?.focus();
+}
+
+document.getElementById('login-forgot')?.addEventListener('click', handleForgotPassword);
 forgotHintBtn?.addEventListener('click', handleForgotPassword);
+document.getElementById('reset-back-to-login')?.addEventListener('click', () => showPanel(cardEl));
+document.getElementById('reset-step2-back')?.addEventListener('click', () => showPanel(resetStep1Card));
+
+resetEmailForm?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const email = resetEmailEl.value.trim();
+  if (!email) return;
+  resetEmailError.style.display = 'none';
+  resetEmailSubmit.disabled = true;
+  resetEmailSubmit.textContent = 'Sending…';
+  try {
+    const clerk = await getClerk();
+    _resetSignIn = await clerk.client.signIn.create({
+      strategy: 'reset_password_email_code',
+      identifier: email,
+    });
+    _resetEmail = email;
+    if (resetStep2Desc) resetStep2Desc.textContent = `We sent a code to ${email}. Enter it below and choose a new password.`;
+    showPanel(resetStep2Card);
+    resetCodeEl?.focus();
+  } catch (err) {
+    resetEmailError.textContent = getClerkErrorMessage(err);
+    resetEmailError.style.display = 'block';
+  } finally {
+    resetEmailSubmit.disabled = false;
+    resetEmailSubmit.textContent = 'Send code';
+  }
+});
+
+document.getElementById('reset-resend')?.addEventListener('click', async function() {
+  if (!_resetEmail) { showPanel(resetStep1Card); return; }
+  this.textContent = 'Sending…';
+  this.disabled = true;
+  try {
+    const clerk = await getClerk();
+    _resetSignIn = await clerk.client.signIn.create({
+      strategy: 'reset_password_email_code',
+      identifier: _resetEmail,
+    });
+    this.textContent = 'Code resent ✓';
+    setTimeout(() => { this.textContent = 'Resend code'; this.disabled = false; }, 3000);
+  } catch {
+    this.textContent = 'Failed — try again';
+    setTimeout(() => { this.textContent = 'Resend code'; this.disabled = false; }, 3000);
+  }
+});
+
+resetCodeForm?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const code        = resetCodeEl.value.trim();
+  const newPassword = resetNewPwEl.value;
+  const confirm     = resetConfirmPwEl.value;
+  resetCodeError.style.display = 'none';
+
+  if (newPassword !== confirm) {
+    resetCodeError.textContent = 'Passwords do not match.';
+    resetCodeError.style.display = 'block';
+    return;
+  }
+  if (newPassword.length < 8) {
+    resetCodeError.textContent = 'Password must be at least 8 characters.';
+    resetCodeError.style.display = 'block';
+    return;
+  }
+
+  resetCodeSubmit.disabled = true;
+  resetCodeSubmit.textContent = 'Resetting…';
+
+  try {
+    let result = await _resetSignIn.attemptFirstFactor({
+      strategy: 'reset_password_email_code',
+      code,
+    });
+
+    if (result.status === 'needs_new_password') {
+      result = await _resetSignIn.resetPassword({ password: newPassword, signOutOfOtherSessions: false });
+    }
+
+    if (result.status === 'complete') {
+      const clerk = await getClerk();
+      await clerk.setActive({ session: result.createdSessionId });
+      showPanel(null);
+      successEl.hidden = false;
+      setTimeout(() => {
+        const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        window.location.href = isLocalhost ? 'http://localhost:5174/#/profile' : '/profile.html';
+      }, 800);
+    } else {
+      throw new Error(`Unexpected status: ${result.status}`);
+    }
+  } catch (err) {
+    resetCodeError.textContent = getClerkErrorMessage(err);
+    resetCodeError.style.display = 'block';
+    resetCodeSubmit.disabled = false;
+    resetCodeSubmit.textContent = 'Reset Password';
+  }
+});
+
+// Password visibility toggle for reset form
+const resetPasswordToggle = document.getElementById('reset-password-toggle');
+const resetPasswordEye    = document.getElementById('reset-password-eye');
+resetPasswordToggle?.addEventListener('click', () => {
+  const isPassword = resetNewPwEl.type === 'password';
+  resetNewPwEl.type = isPassword ? 'text' : 'password';
+  resetPasswordToggle.setAttribute('aria-label', isPassword ? 'Hide password' : 'Show password');
+  resetPasswordEye.innerHTML = isPassword
+    ? '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>'
+    : '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
+});
 
 // ── Google sign-in ────────────────────────────────────────────────────
 const googleBtn = document.getElementById('login-google');

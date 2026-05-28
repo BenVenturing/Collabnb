@@ -229,6 +229,58 @@
       <div class="login-spinner"></div>
     </div>
 
+    <!-- ── RESET STEP 1: enter email ── -->
+    <div id="reset-step1-card" class="login-card" hidden>
+      <div class="login-icon">🔒</div>
+      <h1 class="login-title">Reset password</h1>
+      <p class="login-desc">Enter your email and we'll send you a 6-digit reset code.</p>
+      <form id="reset-email-form" class="login-form">
+        <div class="form-group">
+          <label class="form-label" for="reset-email">Email address</label>
+          <input class="form-input" type="email" id="reset-email" name="email" placeholder="you@example.com" autocomplete="email" required />
+        </div>
+        <button type="submit" id="reset-email-submit" class="btn-primary" style="width:100%;cursor:pointer;margin-top:0.5rem;">Send code</button>
+        <div class="login-error" id="reset-email-error"></div>
+      </form>
+      <div class="login-footer" style="margin-top:1.25rem;">
+        <button type="button" id="reset-back-to-login" style="background:none;border:none;font-family:var(--font-body);font-size:0.875rem;color:var(--slate);cursor:pointer;padding:0;text-decoration:underline;text-underline-offset:2px;">← Back to sign in</button>
+      </div>
+    </div>
+
+    <!-- ── RESET STEP 2: enter code + new password ── -->
+    <div id="reset-step2-card" class="login-card" hidden>
+      <div class="login-icon">📬</div>
+      <h1 class="login-title">Enter your code</h1>
+      <p class="login-desc" id="reset-step2-desc">Check your email for a 6-digit code, then set your new password below.</p>
+      <form id="reset-code-form" class="login-form">
+        <div class="form-group">
+          <label class="form-label" for="reset-code">6-digit code</label>
+          <input class="form-input" type="text" id="reset-code" name="code" placeholder="123456" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" required style="letter-spacing:0.25em;font-size:1.375rem;text-align:center;font-weight:600;" />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="reset-new-password">New password</label>
+          <div style="position:relative;">
+            <input class="form-input" type="password" id="reset-new-password" name="new-password" placeholder="At least 8 characters" autocomplete="new-password" required style="padding-right:2.75rem;" />
+            <button type="button" id="reset-password-toggle" aria-label="Show password" style="position:absolute;right:0.5rem;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;padding:0.375rem;display:flex;align-items:center;color:var(--slate);opacity:0.7;line-height:1;" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.7'">
+              <svg id="reset-password-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="20" height="20">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="reset-confirm-password">Confirm new password</label>
+          <input class="form-input" type="password" id="reset-confirm-password" name="confirm-password" placeholder="Repeat password" autocomplete="new-password" required />
+        </div>
+        <button type="submit" id="reset-code-submit" class="btn-primary" style="width:100%;cursor:pointer;">Reset Password</button>
+        <div class="login-error" id="reset-code-error"></div>
+      </form>
+      <div class="login-footer" style="margin-top:1.25rem;display:flex;justify-content:space-between;">
+        <button type="button" id="reset-step2-back" style="background:none;border:none;font-family:var(--font-body);font-size:0.875rem;color:var(--slate);cursor:pointer;padding:0;text-decoration:underline;text-underline-offset:2px;">← Change email</button>
+        <button type="button" id="reset-resend" style="background:none;border:none;font-family:var(--font-body);font-size:0.875rem;color:var(--slate);cursor:pointer;padding:0;text-decoration:underline;text-underline-offset:2px;">Resend code</button>
+      </div>
+    </div>
+
   </div>
 </main>
 

@@ -362,6 +362,7 @@ export default function Profile() {
   const { openModal: openSubModal } = useSubscription();
   const userId = profile?._id || profile?.id || 'mock-user-001';
   const serverPitchCount = useQuery(api.pitches.getCount, { userId });
+  const allProfiles = useQuery(api.profiles.getAll);
 
   // Edit profile state
   const [profileOverride, setProfileOverride] = useState({});
@@ -770,9 +771,9 @@ export default function Profile() {
         <section className="section-reveal" ref={(el) => sectionsRef.current[4] = el} style={{ textAlign: 'center', paddingBottom: '2rem' }}>
           <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.25rem', color: 'var(--ink)', marginBottom: '0.375rem' }}>Our Global Community</h3>
           <p style={{ color: 'var(--sage)', fontSize: '0.9rem', marginBottom: '0.875rem' }}>Creators and hosts connecting across the world</p>
-          <GlobeCanvas />
+          <GlobeCanvas profiles={allProfiles} />
           <div style={{ display: 'flex', justifyContent: 'center', gap: '0.75rem', marginTop: '1.5rem', flexWrap: 'wrap' }}>
-            {[{ color: '#D1EBDB', label: 'Creators' }, { color: '#3C5759', label: 'Hosts' }, { color: '#D0D5CE', label: '40+ Cities' }].map(({ color, label }) => (
+            {[{ color: '#22c55e', label: 'Creators' }, { color: '#ef4444', label: 'Hosts' }, { color: '#D0D5CE', label: '40+ Cities' }].map(({ color, label }) => (
               <span key={label} className="eyebrow-tag" style={{ gap: '0.5rem' }}>
                 <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: color, display: 'inline-block', flexShrink: 0 }} />{label}
               </span>

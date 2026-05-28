@@ -1,4 +1,4 @@
-import { ConvexClient } from 'convex/browser';
+import { ConvexHttpClient } from 'convex/browser';
 
 const CONVEX_URL = import.meta.env.VITE_CONVEX_URL;
 const isConfigured = CONVEX_URL && CONVEX_URL !== 'YOUR_CONVEX_URL';
@@ -7,7 +7,7 @@ let convexInstance;
 
 if (isConfigured) {
   try {
-    convexInstance = new ConvexClient(CONVEX_URL);
+    convexInstance = new ConvexHttpClient(CONVEX_URL);
   } catch (err) {
     console.warn('Convex initialization failed:', err.message);
   }

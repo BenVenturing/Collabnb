@@ -50,10 +50,10 @@ export const signUp = mutation({
       beta: rest.beta || false,
     });
 
-    await ctx.scheduler.runAfter(0, internal.emails.sendWelcomeEmail, {
-      email,
-      full_name: rest.full_name,
-      role,
+    await ctx.scheduler.runAfter(0, internal.email.sendAdminNotification, {
+      type: "signup",
+      subject: `New ${role} waitlist signup: ${rest.full_name}`,
+      body: `Name: ${rest.full_name}\nEmail: ${email}\nRole: ${role}\nCity: ${rest.city || "—"}\nInstagram: ${rest.instagram_handle ? "@" + rest.instagram_handle : "—"}\n\nView in admin: https://collabnb.com/#/admin`,
     });
 
     return { signedUp: true, profileId };
@@ -64,8 +64,10 @@ export const getCounts = query({
   args: {},
   handler: async (ctx) => {
     const profiles = await ctx.db.query("profiles").collect();
-    const creators = profiles.filter((p) => p.role === "creator").length;
-    const hosts = profiles.filter((p) => p.role === "host").length;
+    // Count real signups: waitlist submissions or verified users
+    const real = profiles.filter((p) => p.tier === "waitlist" || p.is_verified === true);
+    const creators = real.filter((p) => p.role === "creator").length;
+    const hosts    = real.filter((p) => p.role === "host").length;
     return { creators, hosts, total: creators + hosts };
   },
 });

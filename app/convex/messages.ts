@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
+import { internal } from "./_generated/api";
 
 export const submitMessage = mutation({
   args: {
@@ -16,6 +17,12 @@ export const submitMessage = mutation({
       message: args.message,
       is_read: false,
       is_archived: false,
+    });
+
+    await ctx.scheduler.runAfter(0, internal.email.sendAdminNotification, {
+      type: "message",
+      subject: `New message from ${args.name}`,
+      body: `From: ${args.name} <${args.email}>\nCategory: ${args.category || "General"}\n\n${args.message}\n\nView in admin: https://collabnb.com/#/admin`,
     });
   },
 });

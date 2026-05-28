@@ -434,8 +434,10 @@ export default function Profile() {
   const sectionsRef = useRef([]);
   useEffect(() => {
     const el = sectionsRef.current;
+    // Object.values catches non-integer keys (0.5, 3.5) that Array.forEach skips
+    const all = Object.values(el).filter(Boolean);
     if (!('IntersectionObserver' in window)) {
-      el.forEach((s) => s?.classList.add('visible'));
+      all.forEach((s) => s.classList.add('visible'));
       return;
     }
     const observer = new IntersectionObserver(
@@ -446,7 +448,7 @@ export default function Profile() {
       },
       { threshold: 0.08, rootMargin: '0px 0px -20px 0px' }
     );
-    el.forEach((s) => { if (s) observer.observe(s); });
+    all.forEach((s) => observer.observe(s));
     return () => observer.disconnect();
   }, []);
 
@@ -1341,7 +1343,7 @@ export default function Profile() {
               <button onClick={() => setShowPrivacy(false)} style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'rgba(209,235,219,0.5)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--slate)' }}>✕</button>
             </div>
             <div style={{ fontSize: '0.85rem', color: 'var(--slate)', lineHeight: 1.7 }}>
-              <p><strong>Effective Date:</strong> June 1, 2026</p>
+              <p><strong>Effective Date:</strong> July 1, 2026</p>
               <p>Collabnb ("we," "our," "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our platform.</p>
               <h5 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.95rem', color: 'var(--ink)', margin: '1.25rem 0 0.5rem' }}>Information We Collect</h5>
               <p>We collect personal information you provide directly, such as your name, email address, profile details, and social media handles. We also automatically collect usage data, cookies, and device information when you interact with our platform.</p>

@@ -194,7 +194,7 @@ const STATUS_CFG = {
 const ACTIVITY = [
   { id: 'a1', icon: '✦', bg: 'rgba(60,87,89,0.12)',   text: 'Priya Nair applied to Glacier Prime Cabin', sub: '2h ago',  cta: 'Review',  route: '/host/proposals' },
   { id: 'a2', icon: '💬', bg: 'rgba(123,104,200,0.1)', text: 'Jordan Ellis sent you a message',            sub: '5h ago',  cta: 'Reply',   route: '/inbox' },
-  { id: 'a3', icon: '🏡', bg: 'rgba(74,155,127,0.12)', text: "Maya Chen's stay starts in 3 days",          sub: 'June 14', cta: 'Details', route: '/host/proposals' },
+  { id: 'a3', icon: '🏡', bg: 'rgba(74,155,127,0.12)', text: "Maya Chen's stay starts in 3 days",          sub: 'July 4',  cta: 'Details', route: '/host/proposals' },
   { id: 'a4', icon: '✦', bg: 'rgba(60,87,89,0.12)',   text: 'Lena Park applied to Cliffside Villa',       sub: '1d ago',  cta: 'Review',  route: '/host/proposals' },
   { id: 'a5', icon: '✓', bg: 'rgba(212,168,67,0.12)', text: 'Sam Kowalski completed their collab',        sub: '2d ago',  cta: 'Rate',    route: '/host/proposals' },
 ];

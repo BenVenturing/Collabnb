@@ -12,6 +12,7 @@ import type * as admin from "../admin.js";
 import type * as collaborations from "../collaborations.js";
 import type * as collections from "../collections.js";
 import type * as contracts from "../contracts.js";
+import type * as emails from "../emails.js";
 import type * as http from "../http.js";
 import type * as listings from "../listings.js";
 import type * as messages from "../messages.js";
@@ -35,6 +36,7 @@ declare const fullApi: ApiFromModules<{
   collaborations: typeof collaborations;
   collections: typeof collections;
   contracts: typeof contracts;
+  emails: typeof emails;
   http: typeof http;
   listings: typeof listings;
   messages: typeof messages;

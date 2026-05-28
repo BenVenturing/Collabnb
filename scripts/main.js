@@ -237,7 +237,7 @@ function initCountdown() {
   const els = document.querySelectorAll('[data-countdown]');
   if (!els.length) return;
 
-  const target = new Date('2026-06-01T00:00:00+07:00');
+  const target = new Date('2026-07-01T00:00:00+07:00');
 
   function update() {
     const now = new Date();
@@ -348,7 +348,7 @@ async function openModal() {
         <svg viewBox="0 0 24 24" fill="none" stroke="var(--ink)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:28px;height:28px;"><path d="M20 6L9 17l-5-5"/></svg>
       </div>
       <h3 style="font-size:1.25rem;margin-bottom:.5rem;">You're on the list!</h3>
-      <p style="color:var(--sage);font-size:.875rem;line-height:1.6;">We'll be in touch as we approach the June 1 launch. Keep an eye on your inbox.</p>
+      <p style="color:var(--sage);font-size:.875rem;line-height:1.6;">We'll be in touch as we approach the July 1 launch. Keep an eye on your inbox.</p>
     </div>
   `;
 

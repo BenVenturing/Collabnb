@@ -8,6 +8,9 @@ import SuggestionsModeration from './admin/SuggestionsModeration';
 import UserMessages from './admin/UserMessages';
 import PlatformAnalytics from './admin/PlatformAnalytics';
 import AdminSettings from './admin/AdminSettings';
+import FounderTracker from './admin/FounderTracker';
+import Broadcast from './admin/Broadcast';
+import WaitlistManager from './admin/WaitlistManager';
 
 const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL;
 
@@ -33,12 +36,14 @@ function useAdminGuard() {
 
 // ─── Sidebar nav items ────────────────────────────────────────────────────────
 const SECTIONS = [
-  { id: 'verification', icon: '📋', label: 'Verification Queue' },
-  { id: 'founders',     icon: '🌟', label: 'Founder Tracker'    },
-  { id: 'messages',     icon: '💬', label: 'User Messages'      },
+  { id: 'verification', icon: '📋', label: 'Verification Queue'     },
+  { id: 'founders',     icon: '🌟', label: 'Founder Tracker'        },
+  { id: 'waitlist',     icon: '📝', label: 'Waitlist Manager'       },
+  { id: 'broadcast',    icon: '📣', label: 'Broadcast'              },
+  { id: 'messages',     icon: '💬', label: 'User Messages'          },
   { id: 'suggestions',  icon: '💡', label: 'Suggestions Moderation' },
-  { id: 'analytics',    icon: '📊', label: 'Platform Analytics' },
-  { id: 'settings',     icon: '⚙️', label: 'Settings'           },
+  { id: 'analytics',    icon: '📊', label: 'Platform Analytics'     },
+  { id: 'settings',     icon: '⚙️', label: 'Settings'               },
 ];
 
 // ─── Panel placeholders ───────────────────────────────────────────────────────
@@ -47,11 +52,7 @@ function VerificationPanel() {
 }
 
 function FoundersPanel() {
-  return (
-    <PanelShell title="Founder Tracker" subtitle="Track early-access founders and their activity">
-      <EmptyState icon="🌟" message="No founders tracked yet" />
-    </PanelShell>
-  );
+  return <FounderTracker />;
 }
 
 function MessagesPanel() {
@@ -66,38 +67,20 @@ function AnalyticsPanel() {
   return <PlatformAnalytics />;
 }
 
-function SettingsPanel() {
-  return <AdminSettings />;
-}
+function SettingsPanel()  { return <AdminSettings />;  }
+function WaitlistPanel()  { return <WaitlistManager />; }
+function BroadcastPanel() { return <Broadcast />;       }
 
 const PANEL_MAP = {
   verification: VerificationPanel,
   founders:     FoundersPanel,
+  waitlist:     WaitlistPanel,
+  broadcast:    BroadcastPanel,
   messages:     MessagesPanel,
   suggestions:  SuggestionsPanel,
   analytics:    AnalyticsPanel,
   settings:     SettingsPanel,
 };
-
-// ─── Shared shell ─────────────────────────────────────────────────────────────
-function PanelShell({ title, subtitle, children }) {
-  return (
-    <div style={{ padding: '2rem 2.5rem', maxWidth: 960 }}>
-      <h1 style={{ fontFamily: 'Cabinet Grotesk, sans-serif', fontSize: '1.5rem', fontWeight: 700, color: '#192524', letterSpacing: '-0.025em', margin: 0 }}>{title}</h1>
-      {subtitle && <p style={{ fontSize: '0.85rem', color: '#959D90', marginTop: '0.3rem', marginBottom: '1.75rem' }}>{subtitle}</p>}
-      {children}
-    </div>
-  );
-}
-
-function EmptyState({ icon, message }) {
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', padding: '4rem 2rem', color: '#959D90' }}>
-      <span style={{ fontSize: '2rem' }}>{icon}</span>
-      <span style={{ fontSize: '0.875rem' }}>{message}</span>
-    </div>
-  );
-}
 
 // ─── AdminDashboard ───────────────────────────────────────────────────────────
 export default function AdminDashboard() {

@@ -126,3 +126,56 @@ export const getMaintenanceMode = query({
     return row?.value === "true";
   },
 });
+
+// ─── Founder Tracker ──────────────────────────────────────────────────────────
+export const getFounders = query({
+  args: {},
+  handler: async (ctx) => {
+    const [profiles, collabs] = await Promise.all([
+      ctx.db.query("profiles").collect(),
+      ctx.db.query("collaborations").collect(),
+    ]);
+
+    const founders = profiles.filter((p) => p.is_founder === true);
+
+    return founders.map((p) => {
+      const pId = p._id as string;
+      const myCollabs   = collabs.filter((c) => c.creator_id === pId);
+      const completed   = myCollabs.filter(
+        (c) => c.status === "completed" || c.current_stage === "completed"
+      );
+      const goneLive = p.first_collab_completed === true || completed.length > 0;
+      return {
+        _id: p._id,
+        full_name: p.full_name,
+        username: p.username,
+        email: p.email,
+        role: p.role,
+        city: p.city,
+        region: p.region,
+        is_verified: p.is_verified || false,
+        collabCount: myCollabs.length,
+        completedCount: completed.length,
+        goneLive,
+        _creationTime: p._creationTime,
+      };
+    });
+  },
+});
+
+// ─── Broadcast email list ─────────────────────────────────────────────────────
+export const getEmailList = query({
+  args: { audience: v.string() },
+  handler: async (ctx, { audience }) => {
+    const profiles = await ctx.db.query("profiles").collect();
+
+    let pool = profiles.filter((p) => p.is_verified === true);
+    if (audience === "creators") pool = pool.filter((p) => p.role === "creator");
+    else if (audience === "hosts")    pool = pool.filter((p) => p.role === "host");
+    else if (audience === "founders") pool = pool.filter((p) => p.is_founder === true);
+
+    return pool
+      .filter((p) => !!p.email)
+      .map((p) => ({ email: p.email as string, full_name: p.full_name, role: p.role }));
+  },
+});

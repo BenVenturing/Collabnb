@@ -21,6 +21,14 @@ export default defineSchema({
     beta: v.optional(v.boolean()),
     city: v.optional(v.string()),
     region: v.optional(v.string()),
+    is_verified: v.optional(v.boolean()),
+    is_rejected: v.optional(v.boolean()),
+    rejection_reason: v.optional(v.string()),
+    first_collab_completed: v.optional(v.boolean()),
+    subscription_status: v.optional(v.string()),
+    subscription_tier: v.optional(v.string()),
+    subscription_expires_at: v.optional(v.number()),
+    stripe_customer_id: v.optional(v.string()),
   }).index("by_email", ["email"]),
 
   listings: defineTable({
@@ -123,6 +131,10 @@ export default defineSchema({
     creator_signed_at: v.optional(v.string()),
     host_signed_at: v.optional(v.string()),
     summary_note: v.optional(v.string()),
+    paid: v.optional(v.boolean()),
+    payment_amount: v.optional(v.number()),
+    stripe_session_id: v.optional(v.string()),
+    sent_at: v.optional(v.number()),
   }),
 
   collections: defineTable({
@@ -130,4 +142,38 @@ export default defineSchema({
     listing_ids: v.array(v.string()),
     creator_id: v.optional(v.string()),
   }).index("by_creator", ["creator_id"]),
+
+  pitch_counts: defineTable({
+    user_id: v.string(),
+    month_key: v.string(), // "YYYY-MM"
+    count: v.number(),
+  }).index("by_user", ["user_id"]),
+
+  suggestions: defineTable({
+    text: v.string(),
+    submitted_by: v.optional(v.string()),
+    status: v.optional(v.string()), // 'pending' | 'approved' | 'implemented' | 'rejected'
+  }),
+
+  messages: defineTable({
+    name: v.string(),
+    email: v.string(),
+    category: v.optional(v.string()),
+    message: v.string(),
+    is_read: v.optional(v.boolean()),
+    is_archived: v.optional(v.boolean()),
+  }),
+
+  admin_settings: defineTable({
+    key: v.string(),
+    value: v.string(),
+  }).index("by_key", ["key"]),
+
+  suggestion_votes: defineTable({
+    suggestion_id: v.id("suggestions"),
+    user_id: v.string(),
+    vote: v.union(v.literal("up"), v.literal("down")),
+  })
+    .index("by_suggestion", ["suggestion_id"])
+    .index("by_user_suggestion", ["user_id", "suggestion_id"]),
 });

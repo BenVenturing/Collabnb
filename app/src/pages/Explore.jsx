@@ -1,13 +1,57 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { SAMPLE_LISTINGS } from '../lib/mockData';
+import { useQuery } from 'convex/react';
+import { api } from '../../convex/_generated/api';
+import { SAMPLE_LISTINGS, IMG_FALLBACK } from '../lib/mockData';
+import { formatDateRange } from '../lib/dateUtils';
 import { useAppBar } from '../contexts/AppBarContext';
 import { useCollabs } from '../contexts/CollabContext';
 import { WhereSearchContent, WhatSearchContent, WhenSearchContent, useAnimatedPlaceholder } from '../components/SearchDropdowns';
+import SkeletonCard from '../components/SkeletonCard';
+import { cache } from '../lib/cache';
+
+const EXPLORE_CACHE_KEY = 'explore_listings_all';
 
 const PROP_FILTERS = ['All', 'Cabin', 'Villa', 'Treehouse', 'Glamping', 'Lodge', 'Estate', 'Cottage'];
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// ─── Convex listing normalizer ────────────────────────────────────────────────
+function normalizeConvexListing(l) {
+  const images = l.gallery_images?.length ? l.gallery_images : (l.image ? [l.image] : []);
+
+  let compensation = l.compensation || '';
+  if (!compensation) {
+    if (l.compensation_type === 'free_stay') compensation = `Free Stay · ${l.nights || '?'} nights`;
+    else if (l.compensation_type === 'paid') compensation = `$${l.cash_amount || '?'} cash`;
+    else if (l.compensation_type === 'hybrid') compensation = `Free Stay + $${l.cash_amount || '?'}`;
+    else compensation = 'See listing';
+  }
+
+  let deliverables = l.deliverables || '';
+  if (!deliverables && l.deliverables_list?.length) {
+    const parts = l.deliverables_list.slice(0, 2).map((d) => `${d.quantity}× ${d.type}`);
+    deliverables = parts.join(', ');
+    if (l.deliverables_list.length > 2) deliverables += ` +${l.deliverables_list.length - 2} more`;
+  } else if (!deliverables && l.deliverable_count) {
+    deliverables = `${l.deliverable_count} deliverables`;
+  }
+
+  return {
+    ...l,
+    id: String(l._id),
+    image: images[0] || '',
+    gallery_images: images,
+    compensation,
+    deliverables,
+    collab_type: l.collab_type || l.deliverable_load || 'Collab',
+    about: l.about || l.collaboration_brief || '',
+    dates_available: l.dates_available || (l.collab_start && l.collab_end ? formatDateRange(l.collab_start, l.collab_end) : ''),
+    due_days: l.due_days ?? l.turnaround_days,
+    amenities: l.amenities || [],
+    what_you_get: l.what_you_get || [],
+    requirements: l.requirements || [],
+    _isSample: false,
+  };
+}
 
 // ─── Listing Card ─────────────────────────────────────────────────────────────
 function ListingCard({ listing, saved, onSave, delay, onNavigate }) {
@@ -32,20 +76,23 @@ function ListingCard({ listing, saved, onSave, delay, onNavigate }) {
           src={listing.image}
           alt={listing.title}
           loading="lazy"
+          onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = IMG_FALLBACK; }}
           style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
         />
 
-        {/* SAMPLE watermark */}
-        <div style={{
-          position: 'absolute', inset: 0, display: 'flex',
-          alignItems: 'center', justifyContent: 'center', pointerEvents: 'none',
-        }}>
-          <span style={{
-            fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.75rem',
-            color: '#192524', opacity: 0.07, transform: 'rotate(-25deg)',
-            userSelect: 'none', letterSpacing: '0.25em',
-          }}>SAMPLE</span>
-        </div>
+        {/* SAMPLE watermark — demo listings only */}
+        {listing._isSample !== false && (
+          <div style={{
+            position: 'absolute', inset: 0, display: 'flex',
+            alignItems: 'center', justifyContent: 'center', pointerEvents: 'none',
+          }}>
+            <span style={{
+              fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.75rem',
+              color: '#192524', opacity: 0.07, transform: 'rotate(-25deg)',
+              userSelect: 'none', letterSpacing: '0.25em',
+            }}>SAMPLE</span>
+          </div>
+        )}
 
         {/* Featured badge */}
         {listing.is_featured && (
@@ -213,6 +260,10 @@ export default function Explore() {
   const whenRef = useRef(null);
   const whatPlaceholder = useAnimatedPlaceholder();
 
+  // Debounced search values (300ms)
+  const [debouncedWhere, setDebouncedWhere] = useState('');
+  const [debouncedWhat,  setDebouncedWhat]  = useState('');
+
   // When whatVal changes (from clicking filter chips), sync to search input
   useEffect(() => {
     if (whatVal) setWhatQuery(whatVal);
@@ -234,6 +285,16 @@ export default function Explore() {
 
   const goToListing = (id) => navigate(`/listing/${id}`);
 
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedWhere(whereVal), 300);
+    return () => clearTimeout(t);
+  }, [whereVal]);
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedWhat(whatQuery), 300);
+    return () => clearTimeout(t);
+  }, [whatQuery]);
+
   // Outside-click closes dropdowns
   useEffect(() => {
     const handler = (e) => {
@@ -252,20 +313,81 @@ export default function Explore() {
     return () => { window.removeEventListener('scroll', onScroll); setCompactSearch(false); };
   }, [setCompactSearch]);
 
-  // Filtered + curated rows
+  // ── Data source: Convex (active/published) with sample fallback ──────────────
+  const convexRaw = useQuery(api.listings.getAll) ?? null;
+
+  const convexActive = convexRaw
+    ? convexRaw
+        .filter((l) => l.status === 'published' || l.status === 'active')
+        .map(normalizeConvexListing)
+    : null; // null = still loading
+
+  // Sample listings: respect the host's localStorage pause toggles
   const listingStatuses = (() => {
     try { return JSON.parse(localStorage.getItem('@collabnb_host_listings_local_v1') || '{}'); }
     catch { return {}; }
   })();
-  const activeListings = SAMPLE_LISTINGS.filter((l) => listingStatuses[l.id]?.status !== 'paused');
+  const sampleActive = SAMPLE_LISTINGS
+    .filter((l) => listingStatuses[l.id]?.status !== 'paused')
+    .map((l) => ({ ...l, _isSample: true }));
+
+  // Use Convex listings once loaded; fall back to samples while loading or if empty
+  const freshListings = convexActive?.length ? convexActive : sampleActive;
+
+  // Client-side cache: seed display instantly on repeat visits, update when fresh data arrives
+  const cachedListings = cache.get(EXPLORE_CACHE_KEY);
+  useEffect(() => {
+    if (convexActive?.length) {
+      cache.set(EXPLORE_CACHE_KEY, convexActive, 5);
+    }
+  }, [convexRaw]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const allListings = freshListings.length ? freshListings : (cachedListings ?? sampleActive);
+  const isLoading = convexRaw === null && !cachedListings;
+
+  function toISODate(v) {
+    if (!v) return '';
+    if (typeof v === 'string') return v.slice(0, 10);
+    if (typeof v === 'number') return new Date(v).toISOString().slice(0, 10);
+    return '';
+  }
+
+  function applySearch(arr) {
+    return arr.filter((l) => {
+      if (debouncedWhere) {
+        const q = debouncedWhere.toLowerCase();
+        const haystack = [l.location, l.location_city, l.location_country]
+          .filter(Boolean).join(' ').toLowerCase();
+        if (!haystack.includes(q)) return false;
+      }
+      if (debouncedWhat) {
+        const q = debouncedWhat.toLowerCase();
+        const haystack = [l.title, l.about, l.collab_type, l.deliverables, ...(l.vibe_tags || [])]
+          .filter(Boolean).join(' ').toLowerCase();
+        if (!haystack.includes(q)) return false;
+      }
+      if (whenVal && !whenVal.startsWith('Flexible:')) {
+        const parts = whenVal.split(' → ');
+        const fStart = parts[0].trim();
+        const fEnd = (parts[1] || parts[0]).trim();
+        const lStart = toISODate(l.collab_start);
+        const lEnd   = toISODate(l.collab_end);
+        if (!lStart || !lEnd) return false;
+        if (lStart > fEnd || lEnd < fStart) return false;
+      }
+      return true;
+    });
+  }
 
   const byPropType = (arr) =>
     propFilter === 'All' ? arr : arr.filter((l) => l.property_type === propFilter);
 
-  const trending   = byPropType(activeListings.filter((l) => l.is_featured));
-  const forYou     = byPropType(activeListings.filter((l) => ['Photography', 'UGC Video', 'Instagram Reels'].includes(l.collab_type)));
-  const nearMe     = byPropType(activeListings.filter((l) => ['NC', 'TN', 'SC', 'VA', 'GA'].some((s) => l.location.includes(s))));
-  const allFiltered = byPropType(activeListings);
+  const searchFiltered = isLoading ? [] : applySearch(allListings);
+
+  const trending    = byPropType(searchFiltered.filter((l) => l.is_featured));
+  const forYou      = byPropType(searchFiltered.filter((l) => ['Photography', 'UGC Video', 'Instagram Reels'].includes(l.collab_type)));
+  const nearMe      = byPropType(searchFiltered.filter((l) => ['NC', 'TN', 'SC', 'VA', 'GA'].some((s) => l.location?.includes(s))));
+  const allFiltered = byPropType(searchFiltered);
 
   return (
     <div style={{ minHeight: '100dvh' }}>
@@ -387,7 +509,7 @@ export default function Explore() {
                 whereVal={whereVal}
                 setWhereVal={setWhereVal}
                 onClose={() => setActiveField(null)}
-                listings={SAMPLE_LISTINGS}
+                listings={allListings}
               />
             </Dropdown>
           )}
@@ -451,7 +573,7 @@ export default function Explore() {
               {whatVal  && <span className="eyebrow-tag">{whatVal}</span>}
               {whenVal  && <span className="eyebrow-tag">{whenVal}</span>}
               <button
-                onClick={() => { setWhereVal(''); setWhatVal(''); setWhenVal(''); }}
+                onClick={() => { setWhereVal(''); setWhatVal(''); setWhatQuery(''); setWhenVal(''); }}
                 style={{
                   fontSize: '0.72rem', color: 'var(--slate)', background: 'none',
                   border: 'none', cursor: 'pointer', textDecoration: 'underline',
@@ -464,67 +586,92 @@ export default function Explore() {
           </div>
         )}
 
-        <SectionRow
-          title="Trending Now"
-          subtitle="Top picks this week"
-          listings={trending}
-          saved={savedIds}
-          onSave={toggleSave}
-          onNavigate={goToListing}
-          expanded={expandedSection === 'Trending Now'}
-          onToggleExpand={() => setExpandedSection(expandedSection === 'Trending Now' ? null : 'Trending Now')}
-          hidden={expandedSection !== null && expandedSection !== 'Trending Now'}
-        />
-
-        <SectionRow
-          title="Picked for You"
-          subtitle="Matched to your UGC & Photography niche"
-          listings={forYou}
-          saved={savedIds}
-          onSave={toggleSave}
-          onNavigate={goToListing}
-          expanded={expandedSection === 'Picked for You'}
-          onToggleExpand={() => setExpandedSection(expandedSection === 'Picked for You' ? null : 'Picked for You')}
-          hidden={expandedSection !== null && expandedSection !== 'Picked for You'}
-        />
-
-        <SectionRow
-          title="Near Asheville"
-          subtitle="Collabs within driving distance of you"
-          listings={nearMe}
-          saved={savedIds}
-          onSave={toggleSave}
-          onNavigate={goToListing}
-          expanded={expandedSection === 'Near Asheville'}
-          onToggleExpand={() => setExpandedSection(expandedSection === 'Near Asheville' ? null : 'Near Asheville')}
-          hidden={expandedSection !== null && expandedSection !== 'Near Asheville'}
-        />
-
-        <SectionRow
-          title="All Stays"
-          subtitle={`${allFiltered.length} collabs available now`}
-          listings={allFiltered}
-          saved={savedIds}
-          onSave={toggleSave}
-          onNavigate={goToListing}
-          expanded={expandedSection === 'All Stays'}
-          onToggleExpand={() => setExpandedSection(expandedSection === 'All Stays' ? null : 'All Stays')}
-          hidden={expandedSection !== null && expandedSection !== 'All Stays'}
-        />
-
-        {allFiltered.length === 0 && (
-          <div style={{ textAlign: 'center', paddingTop: '3rem', paddingBottom: '3rem' }}>
-            <p style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>✦</p>
-            <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.5rem', color: 'var(--ink)', marginBottom: '0.5rem' }}>
-              No stays found
-            </h2>
-            <p style={{ fontSize: '0.875rem', color: 'var(--sage)', marginBottom: '1.5rem' }}>
-              Try removing the property type filter.
-            </p>
-            <button className="btn-glass" onClick={() => setPropFilter('All')} style={{ fontSize: '0.875rem' }}>
-              Show all types
-            </button>
+        {isLoading ? (
+          <div style={{ marginBottom: '2.5rem' }}>
+            <div style={{ padding: '0 1.5rem', marginBottom: '1rem' }}>
+              <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.2rem', color: 'var(--ink)', marginBottom: '0.1rem' }}>
+                Loading stays...
+              </h2>
+            </div>
+            <div className="snap-row no-scrollbar" style={{ padding: '0 1.5rem 0.5rem' }}>
+              {Array.from({ length: 6 }).map((_, i) => (
+                <SkeletonCard key={i} />
+              ))}
+            </div>
           </div>
+        ) : (
+          <>
+            <SectionRow
+              title="Trending Now"
+              subtitle="Top picks this week"
+              listings={trending}
+              saved={savedIds}
+              onSave={toggleSave}
+              onNavigate={goToListing}
+              expanded={expandedSection === 'Trending Now'}
+              onToggleExpand={() => setExpandedSection(expandedSection === 'Trending Now' ? null : 'Trending Now')}
+              hidden={expandedSection !== null && expandedSection !== 'Trending Now'}
+            />
+
+            <SectionRow
+              title="Picked for You"
+              subtitle="Matched to your UGC & Photography niche"
+              listings={forYou}
+              saved={savedIds}
+              onSave={toggleSave}
+              onNavigate={goToListing}
+              expanded={expandedSection === 'Picked for You'}
+              onToggleExpand={() => setExpandedSection(expandedSection === 'Picked for You' ? null : 'Picked for You')}
+              hidden={expandedSection !== null && expandedSection !== 'Picked for You'}
+            />
+
+            <SectionRow
+              title="Near Asheville"
+              subtitle="Collabs within driving distance of you"
+              listings={nearMe}
+              saved={savedIds}
+              onSave={toggleSave}
+              onNavigate={goToListing}
+              expanded={expandedSection === 'Near Asheville'}
+              onToggleExpand={() => setExpandedSection(expandedSection === 'Near Asheville' ? null : 'Near Asheville')}
+              hidden={expandedSection !== null && expandedSection !== 'Near Asheville'}
+            />
+
+            <SectionRow
+              title="All Stays"
+              subtitle={`${allFiltered.length} collabs available now`}
+              listings={allFiltered}
+              saved={savedIds}
+              onSave={toggleSave}
+              onNavigate={goToListing}
+              expanded={expandedSection === 'All Stays'}
+              onToggleExpand={() => setExpandedSection(expandedSection === 'All Stays' ? null : 'All Stays')}
+              hidden={expandedSection !== null && expandedSection !== 'All Stays'}
+            />
+
+            {allFiltered.length === 0 && (
+              <div style={{ textAlign: 'center', paddingTop: '3rem', paddingBottom: '3rem' }}>
+                <p style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>✦</p>
+                <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.5rem', color: 'var(--ink)', marginBottom: '0.5rem' }}>
+                  {(debouncedWhere || debouncedWhat || whenVal) ? 'No listings match your search' : 'No stays found'}
+                </h2>
+                <p style={{ fontSize: '0.875rem', color: 'var(--sage)', marginBottom: '1.5rem' }}>
+                  {(debouncedWhere || debouncedWhat || whenVal)
+                    ? 'Try adjusting your filters or clearing the search.'
+                    : 'Try removing the property type filter.'}
+                </p>
+                {(debouncedWhere || debouncedWhat || whenVal) ? (
+                  <button className="btn-glass" onClick={() => { setWhereVal(''); setWhatVal(''); setWhatQuery(''); setWhenVal(''); }} style={{ fontSize: '0.875rem' }}>
+                    Clear search
+                  </button>
+                ) : (
+                  <button className="btn-glass" onClick={() => setPropFilter('All')} style={{ fontSize: '0.875rem' }}>
+                    Show all types
+                  </button>
+                )}
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

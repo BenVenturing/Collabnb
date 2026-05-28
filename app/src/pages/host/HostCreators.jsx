@@ -4,6 +4,8 @@ import {
   Search, MessageSquare, Check, X,
   Sparkles, ExternalLink, MapPin, Calendar, ChevronRight,
 } from 'lucide-react';
+import SkeletonCard from '../../components/SkeletonCard';
+import { cache, cacheKey } from '../../lib/cache';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const LOCATION_CONSENT_KEY = '@collabnb_location_consent_v1';
@@ -1081,6 +1083,7 @@ export default function HostCreators() {
   const [locationConsent,  setLocationConsent]  = useState(() => {
     try { return localStorage.getItem(LOCATION_CONSENT_KEY); } catch { return null; }
   });
+  const [creatorsLoading,  setCreatorsLoading]  = useState(true);
   const [viewMode,         setViewMode]         = useState('grid');
   const [query,            setQuery]            = useState('');
   const [tierFilter,       setTierFilter]       = useState('All');
@@ -1091,6 +1094,11 @@ export default function HostCreators() {
   const [expandedCreator,  setExpandedCreator]  = useState(null);
 
   const gridRef = useRef(null);
+
+  useEffect(() => {
+    const t = setTimeout(() => setCreatorsLoading(false), 350);
+    return () => clearTimeout(t);
+  }, []);
 
   function handleLocationAllow() {
     try { localStorage.setItem(LOCATION_CONSENT_KEY, 'allowed'); } catch {}
@@ -1112,27 +1120,40 @@ export default function HostCreators() {
 
   const nearbyCreators = CREATORS.filter(c => isNearHost(c));
 
-  const baseFiltered = CREATORS.filter((c) => {
-    if (showPast && !c.past_collab) return false;
-    if (tierFilter !== 'All' && c.tier !== tierFilter) return false;
-    if (nearbyOnly && !isNearHost(c)) return false;
-    if (query) {
-      const q = query.toLowerCase();
-      return (
-        c.name.toLowerCase().includes(q) ||
-        c.username.toLowerCase().includes(q) ||
-        c.niches.some(n => n.toLowerCase().includes(q)) ||
-        c.location.toLowerCase().includes(q) ||
-        c.platforms.some(p => p.toLowerCase().includes(q))
-      );
-    }
-    return true;
-  });
+  // Cache key derived from all active filter params
+  const filterParams = { query, tierFilter, showPast, nearbyOnly, dateStart, dateEnd };
+  const searchCacheKey = cacheKey('creator_search', filterParams);
 
-  // When date filter is active, include nearby creators (always present) + visitors
-  const filtered = (dateStart && dateEnd)
-    ? baseFiltered.filter(c => isNearHost(c) || tripsOverlapWithHost(c, dateStart, dateEnd))
-    : baseFiltered;
+  const computeFiltered = () => {
+    const base = CREATORS.filter((c) => {
+      if (showPast && !c.past_collab) return false;
+      if (tierFilter !== 'All' && c.tier !== tierFilter) return false;
+      if (nearbyOnly && !isNearHost(c)) return false;
+      if (query) {
+        const q = query.toLowerCase();
+        return (
+          c.name.toLowerCase().includes(q) ||
+          c.username.toLowerCase().includes(q) ||
+          c.niches.some(n => n.toLowerCase().includes(q)) ||
+          c.location.toLowerCase().includes(q) ||
+          c.platforms.some(p => p.toLowerCase().includes(q))
+        );
+      }
+      return true;
+    });
+    return (dateStart && dateEnd)
+      ? base.filter(c => isNearHost(c) || tripsOverlapWithHost(c, dateStart, dateEnd))
+      : base;
+  };
+
+  // Return cached result for this exact filter combo, or compute + cache it
+  const filtered = (() => {
+    const hit = cache.get(searchCacheKey);
+    if (hit) return hit;
+    const result = computeFiltered();
+    cache.set(searchCacheKey, result, 5);
+    return result;
+  })();
 
   return (
     <div style={{ minHeight: '100dvh' }}>
@@ -1250,12 +1271,20 @@ export default function HostCreators() {
             </div>
 
             {/* ── Results count ── */}
-            <p style={{ fontSize: '0.78rem', color: 'var(--sage)', marginBottom: '1.25rem' }}>
-              {filtered.length} creator{filtered.length !== 1 ? 's' : ''}{nearbyOnly ? ' nearby' : ''}
-            </p>
+            {!creatorsLoading && (
+              <p style={{ fontSize: '0.78rem', color: 'var(--sage)', marginBottom: '1.25rem' }}>
+                {filtered.length} creator{filtered.length !== 1 ? 's' : ''}{nearbyOnly ? ' nearby' : ''}
+              </p>
+            )}
 
             {/* ── Grid ── */}
-            {filtered.length === 0 ? (
+            {creatorsLoading ? (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1.25rem' }}>
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <SkeletonCard key={i} variant="creator" />
+                ))}
+              </div>
+            ) : filtered.length === 0 ? (
               <div style={{
                 background: 'rgba(255,255,255,0.6)', backdropFilter: 'blur(20px)',
                 border: '1.5px solid rgba(255,255,255,0.7)', borderRadius: '1.25rem',

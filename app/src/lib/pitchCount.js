@@ -33,3 +33,12 @@ export function incrementPitchCount() {
     return 0;
   }
 }
+
+export function syncPitchCount(serverCount) {
+  try {
+    const next = { count: serverCount, month: currentMonth() };
+    localStorage.setItem(PITCH_COUNT_KEY, JSON.stringify(next));
+  } catch {
+    // ignore
+  }
+}

@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useCallback, useMemo } from 'react
 import { useMutation } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { SAMPLE_COLLABORATIONS, SAMPLE_THREADS, MOCK_CREATOR, STAGES } from '../lib/mockData';
+import { formatDate } from '../lib/dateUtils';
 
 const CollabContext = createContext(null);
 
@@ -16,6 +17,19 @@ function saveCollabsToStorage(collabs) {
   try { localStorage.setItem('collabnb_collabs', JSON.stringify(collabs)); } catch {}
 }
 
+// ─── Collection ID migration ──────────────────────────────────────────────────
+// Canonical format: 'default' for the built-in collection, raw Convex _id for
+// user-created ones. The old format used a 'col_' prefix — strip it on load.
+function migrateCollId(id) {
+  if (!id) return 'default';
+  if (id === 'col_default') return 'default';
+  if (id.startsWith('col_')) return id.slice(4);
+  return id;
+}
+function migrateCollections(cols) {
+  return cols.map((c) => ({ ...c, id: migrateCollId(c.id) }));
+}
+
 export function CollabProvider({ children }) {
   const [collabs, setCollabs] = useState(() => {
     try { const raw = localStorage.getItem('collabnb_collabs'); if (raw) return JSON.parse(raw); } catch {}
@@ -27,16 +41,33 @@ export function CollabProvider({ children }) {
   );
   const [contracts, setContracts] = useState(loadContracts);
   const [collections, setCollections] = useState(() => {
-    try { const raw = localStorage.getItem('collabnb_collections'); if (raw) return JSON.parse(raw); } catch {}
-    return [{ id: 'col_default', name: 'Saved', listingIds: [] }];
+    try {
+      const raw = localStorage.getItem('collabnb_collections');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        const migrated = migrateCollections(parsed);
+        // Persist migrated form so subsequent loads are already clean
+        if (JSON.stringify(migrated) !== raw) {
+          try { localStorage.setItem('collabnb_collections', JSON.stringify(migrated)); } catch {}
+        }
+        return migrated;
+      }
+    } catch {}
+    return [{ id: 'default', name: 'Saved', listingIds: [] }];
   });
-  const [activeCollectionId, setActiveCollectionIdState] = useState(() =>
-    localStorage.getItem('collabnb_active_col') || 'col_default'
-  );
+  const [activeCollectionId, setActiveCollectionIdState] = useState(() => {
+    const stored = localStorage.getItem('collabnb_active_col');
+    const migrated = migrateCollId(stored);
+    if (stored && migrated !== stored) {
+      try { localStorage.setItem('collabnb_active_col', migrated); } catch {}
+    }
+    return migrated;
+  });
 
   // Convex mutations (will be no-op if Clerk/Convex not connected)
   const saveContractCvx = useMutation(api.contracts.save);
   const updateContractCvx = useMutation(api.contracts.update);
+  const markSentCvx = useMutation(api.contracts.markSent);
   const createCollabCvx = useMutation(api.collaborations.create);
   const createThreadCvx = useMutation(api.threads.create);
   const createCollectionCvx = useMutation(api.collections.create);
@@ -64,7 +95,7 @@ export function CollabProvider({ children }) {
             : c
         );
       } else {
-        const targetId = activeCollectionId || prev[0]?.id || 'col_default';
+        const targetId = activeCollectionId || prev[0]?.id || 'default';
         updated = prev.map((c) =>
           c.id === targetId ? { ...c, listingIds: [...c.listingIds, listingId] } : c
         );
@@ -83,20 +114,36 @@ export function CollabProvider({ children }) {
 
   const isSaved = useCallback((listingId) => savedIds.has(listingId), [savedIds]);
 
-  const createCollection = useCallback((name) => {
-    const newCol = { id: `col_${Date.now()}`, name: name.trim() || 'New Collection', listingIds: [] };
+  const createCollection = useCallback(async (name) => {
+    const trimmedName = name.trim() || 'New Collection';
+    // Use a stable temp ID for immediate UI responsiveness
+    const tempId = `temp_${Date.now()}`;
+    const newCol = { id: tempId, name: trimmedName, listingIds: [] };
+
     setCollections((prev) => {
       const updated = [...prev, newCol];
       saveCollectionsToStorage(updated);
       return updated;
     });
-    setActiveCollectionIdState(newCol.id);
-    localStorage.setItem('collabnb_active_col', newCol.id);
+    setActiveCollectionIdState(tempId);
+    localStorage.setItem('collabnb_active_col', tempId);
 
-    // Sync to Convex
-    createCollectionCvx({ name: newCol.name }).catch(() => {});
-
-    return newCol;
+    // Await Convex to get the canonical _id, then replace the temp ID
+    try {
+      const convexId = await createCollectionCvx({ name: trimmedName });
+      const canonicalId = convexId ? String(convexId) : tempId;
+      setCollections((prev) => {
+        const updated = prev.map((c) => c.id === tempId ? { ...c, id: canonicalId } : c);
+        saveCollectionsToStorage(updated);
+        return updated;
+      });
+      setActiveCollectionIdState(canonicalId);
+      localStorage.setItem('collabnb_active_col', canonicalId);
+      return { ...newCol, id: canonicalId };
+    } catch {
+      // Convex unavailable — keep tempId; it's consistent within this session
+      return newCol;
+    }
   }, [createCollectionCvx]);
 
   const setActiveCollection = useCallback((id) => {
@@ -121,8 +168,10 @@ export function CollabProvider({ children }) {
       saveCollectionsToStorage(updated);
       return updated;
     });
-
-    renameCollectionCvx({ id: id.startsWith('col_') ? id.replace('col_', '') : id, name: name.trim() || name }).catch(() => {});
+    // 'default' is local-only; all other IDs are raw Convex _ids
+    if (id !== 'default') {
+      renameCollectionCvx({ id, name: name.trim() || name }).catch(() => {});
+    }
   }, [renameCollectionCvx]);
 
   const deleteCollection = useCallback((id) => {
@@ -131,14 +180,16 @@ export function CollabProvider({ children }) {
       const updated = prev.filter((c) => c.id !== id);
       saveCollectionsToStorage(updated);
       if (activeCollectionId === id) {
-        const next = updated[0]?.id || 'col_default';
+        const next = updated[0]?.id || 'default';
         setActiveCollectionIdState(next);
         localStorage.setItem('collabnb_active_col', next);
       }
       return updated;
     });
-
-    deleteCollectionCvx({ id: id.startsWith('col_') ? id.replace('col_', '') : id }).catch(() => {});
+    // 'default' is local-only; all other IDs are raw Convex _ids
+    if (id !== 'default') {
+      deleteCollectionCvx({ id }).catch(() => {});
+    }
   }, [activeCollectionId, deleteCollectionCvx]);
 
   const saveContract = useCallback((contractData) => {
@@ -201,6 +252,16 @@ export function CollabProvider({ children }) {
     }).catch(() => {});
   }, [updateContractCvx]);
 
+  const markContractSent = useCallback((id) => {
+    const sentAt = Date.now();
+    setContracts((prev) => {
+      const updated = prev.map((c) => (c.id === id ? { ...c, sent_at: sentAt } : c));
+      saveContractsToStorage(updated);
+      return updated;
+    });
+    markSentCvx({ id }).catch(() => {});
+  }, [markSentCvx]);
+
   const getContracts = useCallback(() => contracts, [contracts]);
 
   const sendContractMessage = useCallback(({ hostName, contractId, contractTitle }) => {
@@ -229,7 +290,7 @@ export function CollabProvider({ children }) {
   const applyToListing = useCallback((listing, pitchMessage) => {
     const stageKeys = ['pending', 'accepted', 'updated', 'uploaded_tagged', 'closed', 'archived'];
     const emptyStages = Object.fromEntries(stageKeys.map(k => [k, { completed: false, date: null, note: '' }]));
-    emptyStages.pending = { completed: true, date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }), note: 'Application sent' };
+    emptyStages.pending = { completed: true, date: formatDate(new Date()), note: 'Application sent' };
 
     const newCollab = {
       id: Date.now(),
@@ -308,7 +369,7 @@ export function CollabProvider({ children }) {
       const curIdx = keys.indexOf(collab.current_stage);
       if (curIdx === -1 || curIdx >= keys.length - 1) return prev;
       const nextKey = keys[curIdx + 1];
-      const now = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      const now = formatDate(new Date());
       const updated = prev.map((c) =>
         c.id === id
           ? { ...c, current_stage: nextKey, stages: { ...c.stages, [nextKey]: { ...c.stages?.[nextKey], completed: true, date: now } } }
@@ -350,7 +411,7 @@ export function CollabProvider({ children }) {
       const creatorClosed = party === 'creator' ? !stage.creator_closed : !!stage.creator_closed;
       const hostClosed = party === 'host' ? !stage.host_closed : !!stage.host_closed;
       const bothClosed = creatorClosed && hostClosed;
-      const now = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      const now = formatDate(new Date());
       const updated = prev.map((c) =>
         c.id === id
           ? { ...c, current_stage: bothClosed ? 'archived' : c.current_stage, status: bothClosed ? 'approved' : c.status, status_text: bothClosed ? 'Closed' : c.status_text, is_active: bothClosed ? false : c.is_active,
@@ -390,7 +451,7 @@ export function CollabProvider({ children }) {
   }, []);
 
   return (
-    <CollabContext.Provider value={{ collabs, threads, contracts, applyCount, savedIds, collections, activeCollectionId, toggleSave, isSaved, createCollection, setActiveCollection, moveToCollection, renameCollection, deleteCollection, applyToListing, hasApplied, saveContract, updateContract, getContracts, sendContractMessage, getCollabById, advanceStage, updateStageData, toggleCloseCollab, createThread, archiveThread, updateThreadTag }}>
+    <CollabContext.Provider value={{ collabs, threads, contracts, applyCount, savedIds, collections, activeCollectionId, toggleSave, isSaved, createCollection, setActiveCollection, moveToCollection, renameCollection, deleteCollection, applyToListing, hasApplied, saveContract, updateContract, markContractSent, getContracts, sendContractMessage, getCollabById, advanceStage, updateStageData, toggleCloseCollab, createThread, archiveThread, updateThreadTag }}>
       {children}
     </CollabContext.Provider>
   );

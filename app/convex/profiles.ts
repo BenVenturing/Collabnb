@@ -28,6 +28,89 @@ export const getAll = query({
   },
 });
 
+export const getByUsername = query({
+  args: { username: v.string() },
+  handler: async (ctx, args) => {
+    const all = await ctx.db.query("profiles").collect();
+    return all.find((p) => p.username.toLowerCase() === args.username.toLowerCase()) ?? null;
+  },
+});
+
+export const setFounderStatus = mutation({
+  args: { profileId: v.string(), isFounder: v.boolean() },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.profileId as any, { is_founder: args.isFounder });
+  },
+});
+
+export const getUnverified = query({
+  args: {},
+  handler: async (ctx) => {
+    const all = await ctx.db.query("profiles").collect();
+    return all.filter(p => p.is_verified !== true && p.is_rejected !== true);
+  },
+});
+
+export const getRejected = query({
+  args: {},
+  handler: async (ctx) => {
+    const all = await ctx.db.query("profiles").collect();
+    return all.filter(p => p.is_rejected === true);
+  },
+});
+
+export const approveProfile = mutation({
+  args: {
+    profileId: v.string(),
+    isFounder: v.boolean(),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.profileId as any, {
+      is_verified: true,
+      is_founder: args.isFounder,
+    });
+  },
+});
+
+export const rejectProfile = mutation({
+  args: {
+    profileId: v.string(),
+    reason: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.profileId as any, {
+      is_rejected: true,
+      rejection_reason: args.reason,
+    });
+  },
+});
+
+export const updateSubscription = mutation({
+  args: {
+    profileId: v.string(),
+    subscriptionStatus: v.string(),
+    subscriptionTier: v.optional(v.string()),
+    subscriptionExpiresAt: v.optional(v.number()),
+    stripeCustomerId: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const patch: Record<string, any> = {
+      subscription_status: args.subscriptionStatus,
+    };
+    if (args.subscriptionTier !== undefined) patch.subscription_tier = args.subscriptionTier;
+    if (args.subscriptionExpiresAt !== undefined) patch.subscription_expires_at = args.subscriptionExpiresAt;
+    if (args.stripeCustomerId !== undefined) patch.stripe_customer_id = args.stripeCustomerId;
+    await ctx.db.patch(args.profileId as any, patch);
+  },
+});
+
+export const markFirstCollabCompleted = mutation({
+  args: { profileId: v.string() },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.profileId as any, { first_collab_completed: true });
+  },
+});
+
 export const updateProfile = mutation({
   args: {
     profileId: v.string(),

@@ -2,5 +2,8 @@ node_modules
 .DS_Store
 dist
 .env
+.env.local
+.env*.local
 Anything Zip/
+Collabnb App May 10th/
 .vercel

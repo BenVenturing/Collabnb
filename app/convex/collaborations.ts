@@ -70,6 +70,27 @@ export const create = mutation({
   },
 });
 
+export const markCompleted = mutation({
+  args: {
+    id: v.string(),
+    creatorId: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.id as any, {
+      status: 'completed',
+      status_text: 'Completed',
+      is_active: false,
+    });
+
+    if (!args.creatorId) return;
+
+    const profile = await ctx.db.get(args.creatorId as any);
+    if (profile && !profile.first_collab_completed) {
+      await ctx.db.patch(profile._id, { first_collab_completed: true });
+    }
+  },
+});
+
 export const advanceStage = mutation({
   args: {
     id: v.string(),

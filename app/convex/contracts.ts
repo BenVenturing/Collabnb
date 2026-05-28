@@ -43,6 +43,29 @@ export const save = mutation({
   },
 });
 
+export const recordPayment = mutation({
+  args: {
+    id: v.string(),
+    paid: v.boolean(),
+    paymentAmount: v.number(),
+    stripeSessionId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.id as any, {
+      paid: args.paid,
+      payment_amount: args.paymentAmount,
+      stripe_session_id: args.stripeSessionId,
+    });
+  },
+});
+
+export const markSent = mutation({
+  args: { id: v.string() },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.id as any, { sent_at: Date.now() });
+  },
+});
+
 export const update = mutation({
   args: {
     id: v.string(),

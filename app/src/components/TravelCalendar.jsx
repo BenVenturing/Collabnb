@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { ChevronLeft, ChevronRight, Plus, X, MapPin, Lock } from 'lucide-react';
+import { formatDateRange } from '../lib/dateUtils';
 
 // ─── localStorage ─────────────────────────────────────────────────────────────
 const CAL_KEY = '@collabnb_travel_calendar_v1';
@@ -23,12 +24,8 @@ function inRange(date, a, b) {
 const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 const DAY_ABBR = ['Su','Mo','Tu','We','Th','Fr','Sa'];
 
-function fmt(isoStr) {
-  const d = fromISO(isoStr);
-  return `${MONTH_NAMES[d.getMonth()].slice(0, 3)} ${d.getDate()}`;
-}
 function fmtRange(startISO, endISO) {
-  return `${fmt(startISO)} – ${fmt(endISO)}`;
+  return formatDateRange(startISO, endISO);
 }
 
 function generateId() { return `t_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`; }

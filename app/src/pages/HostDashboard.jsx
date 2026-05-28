@@ -1,8 +1,14 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, MapPin, Users, Calendar, MessageSquare, MoreVertical, X } from 'lucide-react';
+import { useQuery } from 'convex/react';
+import { api } from '../../convex/_generated/api';
 import { useAuth } from '../contexts/AuthContext';
-import { SAMPLE_LISTINGS } from '../lib/mockData';
+import { SAMPLE_LISTINGS, IMG_FALLBACK } from '../lib/mockData';
+import SkeletonCard from '../components/SkeletonCard';
+import { cache } from '../lib/cache';
+
+const EXPLORE_CACHE_KEY = 'explore_listings_all';
 
 // ─── Light glass token — matches nav bar exactly ──────────────────────────────
 const GC = {
@@ -193,6 +199,42 @@ const ACTIVITY = [
   { id: 'a5', icon: '✓', bg: 'rgba(212,168,67,0.12)', text: 'Sam Kowalski completed their collab',        sub: '2d ago',  cta: 'Rate',    route: '/host/proposals' },
 ];
 
+// ─── Convex listing normalizer ────────────────────────────────────────────────
+function normalizeConvexListing(l) {
+  const images = l.gallery_images?.length ? l.gallery_images : (l.image ? [l.image] : []);
+
+  let compensation = l.compensation || '';
+  if (!compensation) {
+    if (l.compensation_type === 'free_stay') compensation = `Free Stay · ${l.nights || '?'} nights`;
+    else if (l.compensation_type === 'paid') compensation = `$${l.cash_amount || '?'} cash`;
+    else if (l.compensation_type === 'hybrid') compensation = `Free Stay + $${l.cash_amount || '?'}`;
+    else compensation = 'See listing';
+  }
+
+  let deliverables = l.deliverables || '';
+  if (!deliverables && l.deliverables_list?.length) {
+    const parts = l.deliverables_list.slice(0, 2).map((d) => `${d.quantity}× ${d.type}`);
+    deliverables = parts.join(', ');
+    if (l.deliverables_list.length > 2) deliverables += ` +${l.deliverables_list.length - 2} more`;
+  } else if (!deliverables && l.deliverable_count) {
+    deliverables = `${l.deliverable_count} deliverables`;
+  }
+
+  // Normalize 'published' → 'active' so STATUS_CFG renders correctly
+  const status = l.status === 'published' ? 'active' : (l.status || 'draft');
+
+  return {
+    ...l,
+    id: String(l._id),
+    status,
+    image: images[0] || '',
+    gallery_images: images,
+    compensation,
+    deliverables,
+    collab_type: l.collab_type || l.deliverable_load || 'Collab',
+  };
+}
+
 // ─── Host Listing Card ────────────────────────────────────────────────────────
 function HostListingCard({ listing, meta, delay, glowState, onToggleStatus, onDuplicate }) {
   const navigate = useNavigate();
@@ -237,6 +279,7 @@ function HostListingCard({ listing, meta, delay, glowState, onToggleStatus, onDu
             src={listing.image}
             alt={listing.title}
             loading="lazy"
+            onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = IMG_FALLBACK; }}
             style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
           />
           <span style={{
@@ -345,6 +388,14 @@ function HostListingCard({ listing, meta, delay, glowState, onToggleStatus, onDu
 export default function HostDashboard() {
   const navigate = useNavigate();
   const { profile } = useAuth();
+
+  // ── Convex: fetch only this host's listings ──────────────────────────────────
+  const hostId = profile?._id || profile?.id;
+  const convexHostListings = useQuery(
+    api.listings.getByHost,
+    hostId ? { host_id: hostId } : 'skip',
+  );
+
   const [filter, setFilter] = useState('all');
   const [glowState, setGlowState] = useState('idle');
   const [dismissed, setDismissed] = useState(() => getDismissed());
@@ -352,8 +403,13 @@ export default function HostDashboard() {
   const [listingStatuses, setListingStatuses] = useState(() => {
     const stored = getListingStatuses();
     const merged = {};
+    // Seed mock-listing statuses from HOST_META + any stored overrides
     Object.keys(HOST_META).forEach((id) => {
       merged[id] = { ...HOST_META[id], ...(stored[id] ? { status: stored[id].status } : {}) };
+    });
+    // Also carry forward any stored statuses for Convex listing IDs
+    Object.keys(stored).forEach((id) => {
+      if (!merged[id]) merged[id] = { status: stored[id].status };
     });
     return merged;
   });
@@ -377,6 +433,7 @@ export default function HostDashboard() {
       const next = current === 'paused' ? 'active' : 'paused';
       const updated = { ...prev, [id]: { ...prev[id], status: next } };
       saveListingStatuses(Object.fromEntries(Object.entries(updated).map(([k, v]) => [k, { status: v.status }])));
+      cache.clear(EXPLORE_CACHE_KEY); // invalidate explore cache on status change
       return updated;
     });
   }
@@ -415,8 +472,24 @@ export default function HostDashboard() {
     });
   }
 
-  const hostListings = SAMPLE_LISTINGS.map((l) => {
-    const meta = listingStatuses[l.id] || { status: 'draft', applicants: 0, confirmed: 0, completed: 0 };
+  // Use host's Convex listings when available; fall back to SAMPLE_LISTINGS for dev/demo
+  const useConvex = convexHostListings !== undefined && convexHostListings.length > 0;
+  const sourceListings = useConvex
+    ? convexHostListings.map(normalizeConvexListing)
+    : SAMPLE_LISTINGS;
+
+  const hostListings = sourceListings.map((l) => {
+    const stored   = listingStatuses[l.id];
+    // Convex listings carry their own status; samples use HOST_META defaults
+    const defaultStatus = useConvex
+      ? (l.status || 'draft')
+      : (HOST_META[l.id]?.status || 'draft');
+    const meta = {
+      status:     stored?.status     ?? defaultStatus,
+      applicants: HOST_META[l.id]?.applicants ?? 0,
+      confirmed:  HOST_META[l.id]?.confirmed  ?? 0,
+      completed:  HOST_META[l.id]?.completed  ?? 0,
+    };
     const autoPaused = meta.status === 'active' && l.maxOffers && meta.confirmed >= l.maxOffers;
     return { ...l, meta: autoPaused ? { ...meta, status: 'paused' } : meta };
   });
@@ -534,7 +607,13 @@ export default function HostDashboard() {
             </div>
           </div>
 
-          {filtered.length === 0 ? (
+          {convexHostListings === undefined ? (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1.25rem', alignItems: 'start' }}>
+              {Array.from({ length: 3 }).map((_, i) => (
+                <SkeletonCard key={i} variant="host-listing" />
+              ))}
+            </div>
+          ) : filtered.length === 0 ? (
             <div style={{ ...GC, padding: '3rem', textAlign: 'center' }}>
               <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.1rem', color: 'var(--ink)', marginBottom: '0.5rem' }}>
                 No {filter} listings

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { DESTINATIONS, COLLAB_TYPES } from '../lib/searchData';
+import { formatDate } from '../lib/dateUtils';
 
 // ─── Animated placeholder hook (typewriter + thinking dots) ────────────────
 const WHAT_PLACEHOLDERS = [
@@ -613,15 +614,7 @@ export function WhenSearchContent({ whenVal, setWhenVal, onClose }) {
   const secondMonth = (baseMonth + 1) % 12;
   const secondYear = baseMonth === 11 ? baseYear + 1 : baseYear;
 
-  const formatDisplay = (dateStr) => {
-    if (!dateStr) return '';
-    const parts = dateStr.split('-');
-    if (parts.length < 3) return dateStr;
-    const [, m, d] = parts;
-    const monthIdx = parseInt(m, 10) - 1;
-    if (monthIdx < 0 || monthIdx > 11) return dateStr;
-    return `${MONTHS[monthIdx].slice(0, 3)} ${parseInt(d, 10)}`;
-  };
+  const formatDisplay = (dateStr) => formatDate(dateStr);
 
   const clearDates = () => {
     setStartDate('');

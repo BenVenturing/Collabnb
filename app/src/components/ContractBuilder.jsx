@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useCollabs } from '../contexts/CollabContext';
 import { useAuth } from '../contexts/AuthContext';
 import { SAMPLE_HOST } from '../lib/mockData';
+import PaymentModal from './PaymentModal';
 
 const CURRENCIES = ['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'JPY'];
 const FREE_STAY_VALUE = 'free_stay';
@@ -41,7 +42,7 @@ export default function ContractBuilder() {
   const location = useLocation();
   const prefill = location.state?.prefill;
   const previewRef = useRef(null);
-  const { saveContract, updateContract, contracts, sendContractMessage } = useCollabs();
+  const { saveContract, updateContract, markContractSent, contracts, sendContractMessage } = useCollabs();
   const { profile } = useAuth();
 
   const [editingId, setEditingId] = useState(null);
@@ -66,9 +67,16 @@ export default function ContractBuilder() {
   const [creatorSig, setCreatorSig] = useState('');
   const [hostSig, setHostSig] = useState('');
 
-  // ── Send-to-host modal state ──
+  // ── Send modal state ──
   const [showSendModal, setShowSendModal] = useState(false);
   const [sendSuccess, setSendSuccess] = useState(false);
+  const [isSent, setIsSent] = useState(false);
+
+  // ── Payment state ──
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [contractPaid, setContractPaid] = useState(false);
+  const [paymentCancelled, setPaymentCancelled] = useState(false);
+  const [founderToast, setFounderToast] = useState(false);
 
   // ── Auto-generated summary paragraph ──
   const [summaryNote, setSummaryNote] = useState('');
@@ -135,6 +143,7 @@ export default function ContractBuilder() {
     setSummaryNote('');
     setEditingId(null);
     setSendSuccess(false);
+    setIsSent(false);
   };
 
   const loadContract = (c) => {
@@ -158,6 +167,7 @@ export default function ContractBuilder() {
     setEditingId(c.id);
     setShowList(false);
     setSendSuccess(false);
+    setIsSent(Boolean(c.sent_at));
   };
 
   const computePaymentDisplay = () => {
@@ -227,6 +237,35 @@ export default function ContractBuilder() {
     }
   }, [creatorSig, hostSig, status]);
 
+  // Handle Stripe payment redirect return
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const paymentStatus = params.get('payment');
+    if (paymentStatus === 'success') {
+      setContractPaid(true);
+      setShowPaymentModal(false);
+      navigate('/contract', { replace: true });
+    } else if (paymentStatus === 'cancelled') {
+      setPaymentCancelled(true);
+      navigate('/contract', { replace: true });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Show payment modal when both parties have signed and contract is unpaid.
+  // Founding member hosts skip the payment entirely.
+  useEffect(() => {
+    if (creatorSig && hostSig && !contractPaid) {
+      if (profile?.is_founder) {
+        setContractPaid(true);
+        setFounderToast(true);
+        setTimeout(() => setFounderToast(false), 4000);
+      } else {
+        setShowPaymentModal(true);
+      }
+    }
+  }, [creatorSig, hostSig, contractPaid, profile?.is_founder]);
+
   const downloadPDF = async () => {
     if (!previewRef.current) return;
     try {
@@ -274,6 +313,8 @@ export default function ContractBuilder() {
       contractTitle: form.property_name || form.creator || 'Contract',
     });
 
+    markContractSent(id);
+    setIsSent(true);
     setSendSuccess(true);
     setTimeout(() => {
       setShowSendModal(false);
@@ -673,23 +714,49 @@ export default function ContractBuilder() {
                     </button>
                   )}
 
-                  {/* Send to host — only once, after creator has signed */}
-                  {creatorSig && !hostSig && status !== 'in_progress' && (
+                  {/* Send button — role-aware, shows sent state once dispatched */}
+                  {(isSent || (creatorSig && !hostSig && status !== 'in_progress')) && (
                     <button
-                      onClick={() => setShowSendModal(true)}
+                      disabled={isSent}
+                      onClick={isSent ? undefined : () => setShowSendModal(true)}
                       className="btn-glass"
+                      style={isSent ? {
+                        background: 'rgba(74,155,127,0.12)',
+                        borderColor: 'rgba(74,155,127,0.3)',
+                        color: '#2d7d5e',
+                        cursor: 'default',
+                        opacity: 1,
+                      } : undefined}
                     >
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="inline mr-1">
-                        <line x1="22" y1="2" x2="11" y2="13"/>
-                        <polygon points="22 2 15 22 11 13 2 9 22 2"/>
-                      </svg>
-                      Send to Host
+                      {isSent ? (
+                        <>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="inline mr-1">
+                            <polyline points="20 6 9 17 4 12"/>
+                          </svg>
+                          {profile?.role === 'host' ? 'Sent to Creator ✓' : 'Sent to Host ✓'}
+                        </>
+                      ) : (
+                        <>
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="inline mr-1">
+                            <line x1="22" y1="2" x2="11" y2="13"/>
+                            <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                          </svg>
+                          {profile?.role === 'host' ? 'Send to Creator' : 'Send to Host'}
+                        </>
+                      )}
                     </button>
                   )}
 
                   <button onClick={downloadPDF} className="btn-glass">
                     Download PDF
                   </button>
+
+                  {/* Pay platform fee if signed but unpaid */}
+                  {status === 'in_progress' && !contractPaid && (
+                    <button onClick={() => setShowPaymentModal(true)} className="btn-primary">
+                      Pay Platform Fee
+                    </button>
+                  )}
                 </div>
 
                 {/* ── Status ── */}
@@ -713,6 +780,19 @@ export default function ContractBuilder() {
                       Both parties signed
                     </span>
                   )}
+                  {contractPaid && (
+                    <span className="text-xs text-green-700 ml-2 flex items-center gap-1 font-semibold">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="20 6 9 17 4 12"/>
+                      </svg>
+                      Payment confirmed
+                    </span>
+                  )}
+                  {paymentCancelled && !contractPaid && (
+                    <span className="text-xs text-amber-600 ml-2">
+                      Payment cancelled — click "Pay Platform Fee" to retry
+                    </span>
+                  )}
                 </div>
 
               </div>
@@ -720,6 +800,42 @@ export default function ContractBuilder() {
           </div>
         )}
       </div>
+
+      {/* ── Founder toast (auto-dismisses) ── */}
+      {founderToast && (
+        <div style={{
+          position: 'fixed', bottom: '5.5rem', left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 350,
+          background: 'linear-gradient(135deg, rgba(212,168,67,0.97), rgba(194,148,47,0.95))',
+          backdropFilter: 'blur(12px)',
+          borderRadius: '1rem',
+          padding: '0.75rem 1.375rem',
+          color: '#4A2E00',
+          fontWeight: 700,
+          fontSize: '0.875rem',
+          boxShadow: '0 8px 28px rgba(212,168,67,0.4)',
+          whiteSpace: 'nowrap',
+          display: 'flex', alignItems: 'center', gap: '0.5rem',
+          fontFamily: 'var(--font-body)',
+          animation: 'collabnb-fadein 0.25s ease',
+        }}>
+          <svg viewBox='0 0 16 16' width='14' height='14' fill='#4A2E00'>
+            <path d='M8 1.5l1.67 3.38 3.73.54-2.7 2.63.64 3.72L8 9.77l-3.34 1.76.64-3.72L2.6 5.42l3.73-.54z'/>
+          </svg>
+          Founding member — no platform fee! 🎉
+        </div>
+      )}
+
+      {/* ── Payment modal ── */}
+      <PaymentModal
+        isOpen={showPaymentModal}
+        onClose={() => setShowPaymentModal(false)}
+        fee={form.isFreeStay ? 20 : Math.max((parseFloat(form.paymentAmount) || 0) * 0.05, 20)}
+        isFreeStay={form.isFreeStay}
+        cashAmount={parseFloat(form.paymentAmount) || 0}
+        contractId={editingId || 'draft'}
+      />
 
       {/* ── Send to Host modal ── */}
       {showSendModal && (
@@ -762,45 +878,59 @@ export default function ContractBuilder() {
             ) : (
               <>
                 <h4 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.15rem', color: 'var(--ink)', marginBottom: '0.5rem' }}>
-                  Send Contract to Host
+                  {profile?.role === 'host' ? 'Send Contract to Creator' : 'Send Contract to Host'}
                 </h4>
                 <p style={{ color: 'var(--sage)', fontSize: '0.85rem', marginBottom: '1.25rem' }}>
-                  Select a host to send this contract to. It will appear in your Inbox.
+                  {profile?.role === 'host'
+                    ? `Send this contract to ${form.creator || 'the creator'}. It will appear in their Inbox.`
+                    : 'Select a host to send this contract to. It will appear in your Inbox.'}
                 </p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
-                  {KNOWN_HOSTS.map((host) => (
+                  {profile?.role === 'host' ? (
                     <button
-                      key={host.id}
-                      onClick={() => handleSendToHost(host)}
-                      className="w-full flex items-center gap-3 p-3 rounded-xl bg-white/60 border border-stone/30
-                                 hover:bg-white/90 hover:border-mint transition-all text-left"
+                      onClick={() => handleSendToHost({ id: 'creator', name: form.creator || 'Creator', avatar: null, properties: [] })}
+                      className="w-full flex items-center gap-3 p-3 rounded-xl bg-white/60 border border-stone/30 hover:bg-white/90 hover:border-mint transition-all text-left"
                       style={{ fontFamily: 'var(--font-body)', cursor: 'pointer' }}
                     >
-                      <div style={{
-                        width: 40, height: 40, borderRadius: '50%',
-                        background: 'var(--mint)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        flexShrink: 0,
-                        fontSize: '1rem',
-                      }}>
-                        {host.avatar ? (
-                          <img src={host.avatar} alt="" style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover' }} />
-                        ) : (
-                          host.name.charAt(0)
-                        )}
+                      <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'var(--mint)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: '1rem', fontWeight: 700, color: 'var(--slate)' }}>
+                        {(form.creator || 'C').charAt(0).toUpperCase()}
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <p style={{ fontWeight: 600, fontSize: '0.875rem', color: 'var(--ink)', margin: 0 }}>{host.name}</p>
-                        <p style={{ fontSize: '0.72rem', color: 'var(--sage)', margin: '0.1rem 0 0' }}>
-                          {host.properties.join(', ')}
-                        </p>
+                        <p style={{ fontWeight: 600, fontSize: '0.875rem', color: 'var(--ink)', margin: 0 }}>{form.creator || 'Creator'}</p>
+                        <p style={{ fontSize: '0.72rem', color: 'var(--sage)', margin: '0.1rem 0 0' }}>Send contract for review & signature</p>
                       </div>
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--sage)', flexShrink: 0 }}>
                         <line x1="22" y1="2" x2="11" y2="13"/>
                         <polygon points="22 2 15 22 11 13 2 9 22 2"/>
                       </svg>
                     </button>
-                  ))}
+                  ) : (
+                    KNOWN_HOSTS.map((host) => (
+                      <button
+                        key={host.id}
+                        onClick={() => handleSendToHost(host)}
+                        className="w-full flex items-center gap-3 p-3 rounded-xl bg-white/60 border border-stone/30
+                                   hover:bg-white/90 hover:border-mint transition-all text-left"
+                        style={{ fontFamily: 'var(--font-body)', cursor: 'pointer' }}
+                      >
+                        <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'var(--mint)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: '1rem' }}>
+                          {host.avatar ? (
+                            <img src={host.avatar} alt="" style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover' }} />
+                          ) : (
+                            host.name.charAt(0)
+                          )}
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <p style={{ fontWeight: 600, fontSize: '0.875rem', color: 'var(--ink)', margin: 0 }}>{host.name}</p>
+                          <p style={{ fontSize: '0.72rem', color: 'var(--sage)', margin: '0.1rem 0 0' }}>{host.properties.join(', ')}</p>
+                        </div>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--sage)', flexShrink: 0 }}>
+                          <line x1="22" y1="2" x2="11" y2="13"/>
+                          <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                        </svg>
+                      </button>
+                    ))
+                  )}
                 </div>
                 <div style={{ marginTop: '1rem', textAlign: 'center' }}>
                   <button

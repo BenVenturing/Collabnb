@@ -6,6 +6,8 @@ import { useCollabs } from '../contexts/CollabContext';
 import { SAMPLE_LISTINGS } from '../lib/mockData';
 import { WhereSearchContent, WhatSearchContent, WhenSearchContent, useAnimatedPlaceholder } from './SearchDropdowns';
 
+const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL;
+
 const CREATOR_NAV = [
   { to: '/explore', label: 'Explore' },
   { to: '/collabs', label: 'Collabs' },
@@ -143,6 +145,9 @@ export default function AppNav() {
   const isHost = profile?.role === 'host' || location.pathname.startsWith('/host');
   const NAV_LINKS = isHost ? HOST_NAV : CREATOR_NAV;
   const initials = profile?.full_name?.split(' ').map((n) => n[0]).join('').slice(0, 2) ?? '?';
+  const { session } = useAuth();
+  const userEmail = session?.user?.email || profile?.email;
+  const isAdmin = !!ADMIN_EMAIL && userEmail === ADMIN_EMAIL;
 
   // Whether the "Search stays" pill is visible
   const showSearchPill = compactSearch && !menuOpen && !navSearchOpen;
@@ -495,6 +500,19 @@ export default function AppNav() {
                 <NavLink to="/profile" onClick={() => setProfileOpen(false)} className="block px-4 py-3 text-sm text-ink hover:bg-mint/30 transition-colors">
                   View Profile
                 </NavLink>
+                {isAdmin && (
+                  <>
+                    <div className="border-t border-stone/30" />
+                    <NavLink
+                      to="/admin"
+                      onClick={() => setProfileOpen(false)}
+                      className="block px-4 py-3 text-sm font-medium hover:bg-mint/30 transition-colors"
+                      style={{ color: '#3C5759' }}
+                    >
+                      ⚙️ Admin Panel
+                    </NavLink>
+                  </>
+                )}
                 <div className="border-t border-stone/30" />
                 <button onClick={signOut} className="w-full text-left px-4 py-3 text-sm text-red-500 hover:bg-red-50/50 transition-colors">
                   Log Out

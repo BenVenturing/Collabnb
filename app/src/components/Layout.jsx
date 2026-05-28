@@ -1,5 +1,26 @@
 import AppNav from './AppNav';
+import VerificationPendingModal from './VerificationPendingModal';
+import SubscriptionModal from './SubscriptionModal';
+import FloatingHelpButton from './FloatingHelpButton';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useQuery } from 'convex/react';
+import { api } from '../../convex/_generated/api';
+
+function MaintenanceBanner() {
+  const isMaintenance = useQuery(api.admin.getMaintenanceMode);
+  if (!isMaintenance) return null;
+  return (
+    <div style={{
+      position: 'fixed', top: 0, left: 0, right: 0, zIndex: 9999,
+      background: '#92400E', color: '#FEF3C7',
+      padding: '0.6rem 1.5rem', textAlign: 'center',
+      fontSize: '0.82rem', fontWeight: 600,
+      boxShadow: '0 2px 8px rgba(25,37,36,0.15)',
+    }}>
+      🔧 Collabnb is currently undergoing maintenance. Some features may be unavailable.
+    </div>
+  );
+}
 
 export default function Layout({ children }) {
   const navigate = useNavigate();
@@ -10,6 +31,9 @@ export default function Layout({ children }) {
 
   return (
     <>
+      {/* ── Maintenance mode banner ─────────────────────────────────────────── */}
+      <MaintenanceBanner />
+
       {/* ── HAZY background layers (exact match to website) ─────────────────── */}
       <div aria-hidden="true" className="bg-layers bg-base" />
       <div aria-hidden="true" className="bg-layers bg-gradient" />
@@ -23,6 +47,15 @@ export default function Layout({ children }) {
       <main id="main" className="relative z-10 pt-28">
         {children}
       </main>
+
+      {/* ── Verification gate modal ─────────────────────────────────────────── */}
+      <VerificationPendingModal />
+
+      {/* ── Subscription gate modal ─────────────────────────────────────────── */}
+      <SubscriptionModal />
+
+      {/* ── Floating help button (bottom-right) ────────────────────────────── */}
+      <FloatingHelpButton />
 
       {/* ── Floating contract button (bottom-left) ──────────────────────────── */}
       {showContractBtn && (

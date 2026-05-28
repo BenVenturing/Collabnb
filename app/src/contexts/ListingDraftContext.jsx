@@ -50,8 +50,7 @@ const EMPTY_DRAFT = {
 
 function calculateFee(draft) {
   if (draft.compensation_type === "paid" || draft.compensation_type === "hybrid") {
-    const pct = draft.cash_amount * 0.08;
-    return Math.min(Math.max(pct, 20), 100);
+    return Math.max(draft.cash_amount * 0.05, 20);
   }
   return 20;
 }

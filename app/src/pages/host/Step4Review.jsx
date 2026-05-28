@@ -6,6 +6,7 @@ import { api } from "../../../convex/_generated/api";
 import WizardShell from "../../components/host/WizardShell";
 import { useListingDraft } from "../../contexts/ListingDraftContext";
 import { useAuth } from "../../contexts/AuthContext";
+import { formatDateRange } from "../../lib/dateUtils";
 
 const TIER_LABELS = { ugc_beginner: "UGC Beginner", ugc_pro: "UGC Pro", micro: "Micro Influencer", mid: "Influencer" };
 const COMP_LABELS = { free_stay: "Free Stay", paid: "Paid", hybrid: "Hybrid" };
@@ -145,7 +146,7 @@ export default function Step4Review() {
         </Section>
 
         <Section title="Dates & Deadlines">
-          {draft.collab_start && draft.collab_end && <Row label="Collaboration Window" value={`${draft.collab_start} → ${draft.collab_end}`} />}
+          {draft.collab_start && draft.collab_end && <Row label="Collaboration Window" value={formatDateRange(draft.collab_start, draft.collab_end)} />}
           <Row label="Deliverables Due" value={`${draft.turnaround_days} days after stay`} />
         </Section>
 

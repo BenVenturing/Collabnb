@@ -1,8 +1,54 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { SAMPLE_LISTINGS, SAMPLE_HOST, MOCK_CREATOR } from '../lib/mockData';
+import { useQuery, useMutation } from 'convex/react';
+import { api } from '../../convex/_generated/api';
+import { SAMPLE_LISTINGS, SAMPLE_HOST, MOCK_CREATOR, IMG_FALLBACK } from '../lib/mockData';
 import { useCollabs } from '../contexts/CollabContext';
-import { canSubmitPitch, incrementPitchCount } from '../lib/pitchCount';
+import { useAuth } from '../contexts/AuthContext';
+import { useVerification } from '../contexts/VerificationContext';
+import { useSubscription } from '../contexts/SubscriptionContext';
+import { canSubmitPitch, incrementPitchCount, syncPitchCount } from '../lib/pitchCount';
+import { formatDateRange } from '../lib/dateUtils';
+import { cache } from '../lib/cache';
+
+function normalizeConvexListingDetail(l) {
+  const images = l.gallery_images?.length ? l.gallery_images : (l.image ? [l.image] : []);
+
+  let compensation = l.compensation || '';
+  if (!compensation) {
+    if (l.compensation_type === 'free_stay') compensation = `Free Stay · ${l.nights || '?'} nights`;
+    else if (l.compensation_type === 'paid') compensation = `$${l.cash_amount || '?'} cash`;
+    else if (l.compensation_type === 'hybrid') compensation = `Free Stay + $${l.cash_amount || '?'}`;
+    else compensation = 'See listing';
+  }
+
+  let deliverables = l.deliverables || '';
+  if (!deliverables && l.deliverables_list?.length) {
+    const parts = l.deliverables_list.slice(0, 2).map((d) => `${d.quantity}× ${d.type}`);
+    deliverables = parts.join(', ');
+    if (l.deliverables_list.length > 2) deliverables += ` +${l.deliverables_list.length - 2} more`;
+  } else if (!deliverables && l.deliverable_count) {
+    deliverables = `${l.deliverable_count} deliverables`;
+  }
+
+  return {
+    ...l,
+    id: String(l._id),
+    image: images[0] || '',
+    gallery_images: images,
+    compensation,
+    deliverables,
+    about: l.about || l.collaboration_brief || '',
+    collab_type: l.collab_type || l.deliverable_load || 'Collab',
+    dates_available: l.dates_available || (l.collab_start && l.collab_end ? formatDateRange(l.collab_start, l.collab_end) : ''),
+    due_days: l.due_days ?? l.turnaround_days,
+    amenities: l.amenities || [],
+    what_you_get: l.what_you_get || [],
+    what_you_deliver: l.what_you_deliver || (l.deliverable_count ? `${l.deliverable_count} total deliverables` : ''),
+    requirements: l.requirements || [],
+    is_featured: l.is_featured ?? false,
+  };
+}
 
 const SECTIONS = ['Photos', 'The Offer', 'Requirements', 'Location'];
 
@@ -45,6 +91,16 @@ function ArrowRight() {
   );
 }
 
+
+function LockIcon({ size = 13 }) {
+  return (
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: size, height: size, flexShrink: 0 }}>
+      <rect x="3" y="8" width="10" height="6" rx="1"/>
+      <path d="M5 8V5.5a3 3 0 0 1 6 0V8"/>
+    </svg>
+  );
+}
+
 // ─── Photo Gallery Overlay ────────────────────────────────────────────────────
 function PhotoGallery({ images, title, onClose }) {
   return (
@@ -76,6 +132,7 @@ function PhotoGallery({ images, title, onClose }) {
       <div style={{ maxWidth: '900px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
         {images.map((src, i) => (
           <img key={i} src={src} alt={`Photo ${i + 1}`}
+            onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = IMG_FALLBACK; }}
             style={{ width: '100%', borderRadius: '1rem', objectFit: 'cover', display: 'block' }}
           />
         ))}
@@ -85,7 +142,8 @@ function PhotoGallery({ images, title, onClose }) {
 }
 
 // ─── Apply Now Modal ──────────────────────────────────────────────────────────
-function ApplyModal({ listing, onClose, onApply, navigate }) {
+function ApplyModal({ listing, userId, onClose, onApply, navigate, isVerified, onVerificationRequired, isSubscribed, onSubscriptionRequired }) {
+  const checkAndIncrementCvx = useMutation(api.pitches.checkAndIncrement);
   const defaultPitch =
 `Hi! I'm ${MOCK_CREATOR.full_name} (@${MOCK_CREATOR.instagram_handle}), a ${MOCK_CREATOR.tier} travel creator with ${Math.round(MOCK_CREATOR.follower_count / 1000)}K followers across Instagram and TikTok.
 
@@ -103,11 +161,23 @@ Let's make something great together.`;
 
   const isPitch = pitch.trim() !== defaultPitch.trim();
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
+    if (!isVerified) { onVerificationRequired(); return; }
+    if (!isSubscribed) { onSubscriptionRequired(); return; }
     if (isPitch) {
-      const { allowed } = canSubmitPitch();
-      if (!allowed) { setPitchBlocked(true); return; }
-      incrementPitchCount();
+      const { allowed: localAllowed } = canSubmitPitch();
+      if (!localAllowed) { setPitchBlocked(true); return; }
+      try {
+        const result = await checkAndIncrementCvx({ userId: userId || 'mock-user-001' });
+        if (!result.allowed) {
+          syncPitchCount(result.count);
+          setPitchBlocked(true);
+          return;
+        }
+        syncPitchCount(result.count);
+      } catch {
+        incrementPitchCount();
+      }
     }
     onApply(listing, pitch);
     setSubmitted(true);
@@ -310,12 +380,357 @@ Let's make something great together.`;
   );
 }
 
+// ─── Share Modal ─────────────────────────────────────────────────────────────
+function ShareModal({ listing, onClose, onCopied }) {
+  const url = window.location.href;
+  const text = `Check out this collab listing: ${listing.title} in ${listing.location}`;
+  const tweetUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(text + ' ')}&url=${encodeURIComponent(url)}`;
+  const waUrl = `https://wa.me/?text=${encodeURIComponent(text + ' ' + url)}`;
+
+  const rows = [
+    {
+      icon: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 18, height: 18 }}>
+          <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+        </svg>
+      ),
+      label: 'Copy link',
+      action: async () => {
+        try { await navigator.clipboard.writeText(url); } catch { /* fallback */ const el = document.createElement('textarea'); el.value = url; document.body.appendChild(el); el.select(); document.execCommand('copy'); document.body.removeChild(el); }
+        onCopied();
+        onClose();
+      },
+    },
+    {
+      icon: (
+        <svg viewBox="0 0 24 24" fill="currentColor" style={{ width: 18, height: 18 }}>
+          <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+        </svg>
+      ),
+      label: 'Share on X',
+      action: () => { window.open(tweetUrl, '_blank', 'noopener'); onClose(); },
+    },
+    {
+      icon: (
+        <svg viewBox="0 0 24 24" fill="currentColor" style={{ width: 18, height: 18, color: '#25D366' }}>
+          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+        </svg>
+      ),
+      label: 'Share on WhatsApp',
+      action: () => { window.open(waUrl, '_blank', 'noopener'); onClose(); },
+    },
+  ];
+
+  return (
+    <div
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 200,
+        background: 'rgba(25,37,36,0.45)', backdropFilter: 'blur(6px)',
+        display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+        padding: '1rem', animation: 'detailFadeIn 200ms ease forwards',
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          width: '100%', maxWidth: '420px',
+          background: 'rgba(255,255,255,0.97)', backdropFilter: 'blur(24px)',
+          borderRadius: '1.75rem', padding: '1.5rem',
+          boxShadow: '0 32px 64px -16px rgba(25,37,36,0.2)',
+          animation: 'detailSlideUp 280ms cubic-bezier(0.32,0.72,0,1) forwards',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
+          <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1rem', color: 'var(--ink)' }}>Share listing</p>
+          <button onClick={onClose} style={{ width: 30, height: 30, borderRadius: '50%', background: 'rgba(25,37,36,0.07)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.9rem', color: 'var(--slate)' }}>✕</button>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+          {rows.map(({ icon, label, action }) => (
+            <button
+              key={label}
+              onClick={action}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '0.875rem',
+                padding: '0.875rem 1rem', borderRadius: '1rem',
+                background: 'none', border: 'none', cursor: 'pointer',
+                fontFamily: 'var(--font-body)', fontSize: '0.925rem', fontWeight: 600, color: 'var(--ink)',
+                textAlign: 'left', transition: 'background 120ms',
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(25,37,36,0.05)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'none'; }}
+            >
+              <span style={{ width: 38, height: 38, borderRadius: '0.75rem', background: 'rgba(25,37,36,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: 'var(--slate)' }}>{icon}</span>
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Save Collection Modal ────────────────────────────────────────────────────
+function SaveCollectionModal({ listing, collections, onMoveToCollection, onRemove, onCreateAndSave, onClose }) {
+  const [newName, setNewName] = useState('');
+  const [creating, setCreating] = useState(false);
+  const savedIn = collections.find((c) => c.listingIds.includes(listing.id));
+
+  const handleCreate = () => {
+    const name = newName.trim();
+    if (!name) return;
+    onCreateAndSave(name);
+    setNewName('');
+    setCreating(false);
+  };
+
+  return (
+    <div
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 200,
+        background: 'rgba(25,37,36,0.45)', backdropFilter: 'blur(6px)',
+        display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+        padding: '1rem', animation: 'detailFadeIn 200ms ease forwards',
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          width: '100%', maxWidth: '420px',
+          background: 'rgba(255,255,255,0.97)', backdropFilter: 'blur(24px)',
+          borderRadius: '1.75rem', padding: '1.5rem',
+          boxShadow: '0 32px 64px -16px rgba(25,37,36,0.2)',
+          animation: 'detailSlideUp 280ms cubic-bezier(0.32,0.72,0,1) forwards',
+          maxHeight: '70dvh', overflowY: 'auto',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
+          <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1rem', color: 'var(--ink)' }}>Save to collection</p>
+          <button onClick={onClose} style={{ width: 30, height: 30, borderRadius: '50%', background: 'rgba(25,37,36,0.07)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.9rem', color: 'var(--slate)' }}>✕</button>
+        </div>
+
+        {/* Collections list */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', marginBottom: '1rem' }}>
+          {collections.map((col) => {
+            const isInThis = col.listingIds.includes(listing.id);
+            return (
+              <button
+                key={col.id}
+                onClick={() => isInThis ? onRemove(col.id) : onMoveToCollection(col.id)}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '0.875rem 1rem', borderRadius: '1rem',
+                  background: isInThis ? 'rgba(209,235,219,0.4)' : 'none',
+                  border: isInThis ? '1.5px solid rgba(45,106,79,0.2)' : '1.5px solid transparent',
+                  cursor: 'pointer', textAlign: 'left', transition: 'background 120ms',
+                  fontFamily: 'var(--font-body)',
+                }}
+                onMouseEnter={(e) => { if (!isInThis) e.currentTarget.style.background = 'rgba(25,37,36,0.05)'; }}
+                onMouseLeave={(e) => { if (!isInThis) e.currentTarget.style.background = 'none'; }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <div style={{ width: 36, height: 36, borderRadius: '0.625rem', background: isInThis ? 'rgba(45,106,79,0.15)' : 'rgba(25,37,36,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <svg viewBox="0 0 24 24" fill={isInThis ? '#2d6a4f' : 'none'} stroke={isInThis ? '#2d6a4f' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 16, height: 16, color: 'var(--sage)' }}>
+                      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                    </svg>
+                  </div>
+                  <div>
+                    <p style={{ fontSize: '0.9rem', fontWeight: 600, color: isInThis ? '#2d6a4f' : 'var(--ink)', marginBottom: '0.05rem' }}>{col.name}</p>
+                    <p style={{ fontSize: '0.72rem', color: 'var(--sage)' }}>{col.listingIds.length} saved</p>
+                  </div>
+                </div>
+                {isInThis && (
+                  <svg viewBox="0 0 20 20" fill="none" stroke="#2d6a4f" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 18, height: 18, flexShrink: 0 }}>
+                    <polyline points="4 10 8 14 16 6"/>
+                  </svg>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Create new collection */}
+        {creating ? (
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+            <input
+              autoFocus
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleCreate(); if (e.key === 'Escape') { setCreating(false); setNewName(''); } }}
+              placeholder="Collection name"
+              style={{
+                flex: 1, padding: '0.65rem 0.875rem',
+                borderRadius: '0.75rem', border: '1.5px solid rgba(25,37,36,0.15)',
+                fontFamily: 'var(--font-body)', fontSize: '0.875rem', color: 'var(--ink)',
+                background: 'rgba(255,255,255,0.9)', outline: 'none',
+              }}
+            />
+            <button
+              onClick={handleCreate}
+              disabled={!newName.trim()}
+              style={{
+                padding: '0.65rem 1rem', borderRadius: '0.75rem',
+                background: newName.trim() ? 'var(--ink)' : 'rgba(25,37,36,0.1)',
+                color: newName.trim() ? 'var(--bone)' : 'var(--sage)',
+                border: 'none', cursor: newName.trim() ? 'pointer' : 'default',
+                fontFamily: 'var(--font-body)', fontSize: '0.875rem', fontWeight: 700,
+              }}
+            >Create</button>
+            <button
+              onClick={() => { setCreating(false); setNewName(''); }}
+              style={{ padding: '0.65rem 0.875rem', borderRadius: '0.75rem', background: 'none', border: '1.5px solid rgba(25,37,36,0.12)', cursor: 'pointer', fontFamily: 'var(--font-body)', fontSize: '0.875rem', color: 'var(--sage)' }}
+            >Cancel</button>
+          </div>
+        ) : (
+          <button
+            onClick={() => setCreating(true)}
+            style={{
+              width: '100%', padding: '0.75rem', borderRadius: '1rem',
+              background: 'none', border: '1.5px dashed rgba(25,37,36,0.15)',
+              cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
+              fontFamily: 'var(--font-body)', fontSize: '0.875rem', fontWeight: 600, color: 'var(--sage)',
+              transition: 'background 120ms',
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(25,37,36,0.04)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = 'none'; }}
+          >
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ width: 15, height: 15 }}>
+              <line x1="10" y1="4" x2="10" y2="16"/><line x1="4" y1="10" x2="16" y2="10"/>
+            </svg>
+            New collection
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Host Profile Modal ───────────────────────────────────────────────────────
+function HostProfileModal({ host, listing, onClose, onMessage }) {
+  const [imgError, setImgError] = useState(false);
+  const avatar = imgError ? host.avatar_fallback : host.avatar_url;
+  return (
+    <div
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 200,
+        background: 'rgba(25,37,36,0.5)', backdropFilter: 'blur(8px)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: '1.5rem', animation: 'detailFadeIn 200ms ease forwards',
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          width: '100%', maxWidth: '380px',
+          background: 'rgba(255,255,255,0.97)',
+          backdropFilter: 'blur(24px)',
+          borderRadius: '1.75rem', padding: '2rem',
+          boxShadow: '0 32px 64px -16px rgba(25,37,36,0.25)',
+          animation: 'detailSlideUp 300ms cubic-bezier(0.32,0.72,0,1) forwards',
+          position: 'relative',
+        }}
+      >
+        <button
+          onClick={onClose}
+          style={{
+            position: 'absolute', top: '1.25rem', right: '1.25rem',
+            width: 32, height: 32, borderRadius: '50%',
+            background: 'rgba(25,37,36,0.07)', border: 'none',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer', fontSize: '1rem', color: 'var(--slate)',
+          }}
+        >✕</button>
+
+        <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+          <div style={{ position: 'relative', display: 'inline-block', marginBottom: '0.875rem' }}>
+            <img
+              src={avatar} alt={host.name}
+              onError={() => setImgError(true)}
+              style={{ width: 88, height: 88, borderRadius: '50%', objectFit: 'cover', display: 'block', border: '3px solid rgba(255,255,255,0.9)', boxShadow: '0 4px 16px rgba(25,37,36,0.12)' }}
+            />
+            {host.verified && (
+              <div style={{ position: 'absolute', bottom: 2, right: 2, width: 26, height: 26, borderRadius: '50%', background: '#192524', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2.5px solid white' }}>
+                <svg viewBox="0 0 12 12" fill="none" style={{ width: 11, height: 11 }}>
+                  <path d="M2 6l2.5 2.5L10 3" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </div>
+            )}
+          </div>
+          <p style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.2rem', color: 'var(--ink)', marginBottom: '0.2rem' }}>{host.name}</p>
+          <p style={{ fontSize: '0.8rem', color: 'var(--sage)' }}>
+            {host.role}
+          </p>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem', marginBottom: '1.25rem' }}>
+          {[
+            { val: `${host.rating}★`, label: 'Rating' },
+            { val: `${host.years_hosting}`, label: 'Yrs hosting' },
+            { val: `${host.response_rate}%`, label: 'Response' },
+          ].map(({ val, label }) => (
+            <div key={label} style={{ background: 'rgba(25,37,36,0.04)', borderRadius: '0.875rem', padding: '0.75rem 0.5rem', textAlign: 'center' }}>
+              <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1rem', color: 'var(--ink)', marginBottom: '0.15rem' }}>{val}</p>
+              <p style={{ fontSize: '0.68rem', color: 'var(--sage)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>{label}</p>
+            </div>
+          ))}
+        </div>
+
+        <p style={{ fontSize: '0.9rem', color: 'var(--slate)', lineHeight: 1.7, marginBottom: '0.875rem' }}>{host.bio}</p>
+        <p style={{ fontSize: '0.82rem', color: 'var(--sage)', marginBottom: '0.3rem' }}>
+          <strong style={{ color: 'var(--slate)' }}>Responds</strong> {host.response_time}
+        </p>
+        <p style={{ fontSize: '0.82rem', color: 'var(--sage)', marginBottom: '1.5rem' }}>
+          <strong style={{ color: 'var(--slate)' }}>Hosting in</strong> {listing.location}
+        </p>
+
+        <button
+          onClick={onMessage}
+          style={{
+            width: '100%', padding: '0.875rem',
+            background: 'var(--ink)', color: 'var(--bone)',
+            borderRadius: '999px', fontFamily: 'var(--font-body)',
+            fontSize: '0.9rem', fontWeight: 700,
+            border: 'none', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem',
+            transition: 'opacity 150ms',
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.88'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; }}
+        >
+          Message {host.name.split(' ')[0]} <ArrowRight />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function ListingDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const listing = SAMPLE_LISTINGS.find((l) => l.id === id);
-  const { applyToListing, hasApplied } = useCollabs();
+
+  const sampleListing = SAMPLE_LISTINGS.find((l) => l.id === id);
+  // Only query Convex if this id didn't match a sample listing
+  const convexListing = useQuery(api.listings.getById, sampleListing ? 'skip' : { id });
+  const convexNormalized = convexListing ? normalizeConvexListingDetail(convexListing) : undefined;
+
+  // Cache Convex listing details per id (5 min TTL) to avoid re-fetch on back-navigation
+  const listingCacheKey = `listing_detail_${id}`;
+  useEffect(() => {
+    if (convexNormalized) cache.set(listingCacheKey, convexNormalized, 5);
+  }, [convexListing]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const cachedListing = !sampleListing ? cache.get(listingCacheKey) : null;
+  const listing = sampleListing || convexNormalized || cachedListing || undefined;
+
+  const { applyToListing, hasApplied, threads, createThread, toggleSave, isSaved, collections, createCollection, moveToCollection } = useCollabs();
+  const { profile } = useAuth();
+  const { openModal } = useVerification();
+  const { isSubscribed, openModal: openSubModal } = useSubscription();
+  const isVerified = profile?.is_verified === true;
+
   const isDesktop = useIsDesktop();
   const isMd      = useIsMd();
 
@@ -324,7 +739,11 @@ export default function ListingDetail() {
   const [showApplyModal, setShowApplyModal] = useState(false);
   const [showGallery,    setShowGallery]    = useState(false);
   const [hostImgError,   setHostImgError]   = useState(false);
-
+  const [showHostModal,  setShowHostModal]  = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [showSaveModal,  setShowSaveModal]  = useState(false);
+  const [toast,          setToast]          = useState('');
+  const toastTimer = useRef(null);
   const photoGridRef = useRef(null);
   const offerRef     = useRef(null);
   const reqRef       = useRef(null);
@@ -337,6 +756,50 @@ export default function ListingDetail() {
     if (!el) return;
     window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 72, behavior: 'smooth' });
   }, []);
+
+  const handleMessageHost = useCallback(() => {
+    if (!isVerified) { openModal(); setShowHostModal(false); return; }
+    if (!isSubscribed) { openSubModal(); setShowHostModal(false); return; }
+    const existing = threads.find((t) => !t.archived && t.host_name === SAMPLE_HOST.name);
+    const threadId = existing ? existing.id : createThread(listing.title, SAMPLE_HOST.name, 'Application');
+    navigate('/inbox', { state: { selectedThreadId: threadId } });
+  }, [isVerified, openModal, threads, createThread, listing, navigate]);
+
+  const showToast = useCallback((msg) => {
+    setToast(msg);
+    clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToast(''), 2500);
+  }, []);
+
+  const handleShare = useCallback(async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: listing.title, text: `Check out this collab listing: ${listing.title} in ${listing.location}`, url: window.location.href });
+        return;
+      } catch {}
+    }
+    setShowShareModal(true);
+  }, [listing]);
+
+  const handleSaveToCollection = useCallback((collectionId) => {
+    moveToCollection(listing.id, collectionId);
+    const col = collections.find((c) => c.id === collectionId);
+    showToast(`Saved to "${col?.name || 'collection'}"`);
+    setShowSaveModal(false);
+  }, [listing.id, moveToCollection, collections, showToast]);
+
+  const handleRemoveFromCollection = useCallback((collectionId) => {
+    toggleSave(listing.id);
+    showToast('Removed from collection');
+    setShowSaveModal(false);
+  }, [listing.id, toggleSave, showToast]);
+
+  const handleCreateAndSave = useCallback((name) => {
+    const newCol = createCollection(name);
+    moveToCollection(listing.id, newCol.id);
+    showToast(`Saved to "${name}"`);
+    setShowSaveModal(false);
+  }, [listing.id, createCollection, moveToCollection, showToast]);
 
   useEffect(() => {
     const onScroll = () => {
@@ -404,26 +867,47 @@ export default function ListingDetail() {
           ← Back
         </button>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
-          {['Share', 'Save'].map((label) => (
-            <button key={label} style={{
+          {/* Share */}
+          <button
+            onClick={handleShare}
+            style={{
               display: 'flex', alignItems: 'center', gap: '0.35rem',
               fontFamily: 'var(--font-body)', fontSize: '0.82rem', fontWeight: 600, color: 'var(--slate)',
               background: 'rgba(255,255,255,0.65)', backdropFilter: 'blur(12px)',
               border: '1px solid rgba(25,37,36,0.1)', borderRadius: '999px', padding: '0.5rem 0.9rem', cursor: 'pointer',
-            }}>
-              {label === 'Share' ? (
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 13, height: 13 }}>
-                  <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
-                  <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
-                </svg>
-              ) : (
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 13, height: 13 }}>
+            }}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 13, height: 13 }}>
+              <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+              <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+            </svg>
+            Share
+          </button>
+
+          {/* Save */}
+          {(() => {
+            const saved = isSaved(listing.id);
+            return (
+              <button
+                onClick={() => setShowSaveModal(true)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '0.35rem',
+                  fontFamily: 'var(--font-body)', fontSize: '0.82rem', fontWeight: 600,
+                  color: saved ? '#c0392b' : 'var(--slate)',
+                  background: saved ? 'rgba(255,220,220,0.75)' : 'rgba(255,255,255,0.65)',
+                  backdropFilter: 'blur(12px)',
+                  border: saved ? '1px solid rgba(192,57,43,0.2)' : '1px solid rgba(25,37,36,0.1)',
+                  borderRadius: '999px', padding: '0.5rem 0.9rem', cursor: 'pointer',
+                  transition: 'all 150ms',
+                }}
+              >
+                <svg viewBox="0 0 24 24" fill={saved ? '#c0392b' : 'none'} stroke={saved ? '#c0392b' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 13, height: 13 }}>
                   <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
                 </svg>
-              )}
-              {label}
-            </button>
-          ))}
+                {saved ? 'Saved' : 'Save'}
+              </button>
+            );
+          })()}
         </div>
       </div>
 
@@ -435,6 +919,7 @@ export default function ListingDetail() {
             <div style={{ display: 'grid', gridTemplateColumns: '3fr 2fr', gap: 6, height: 460 }}>
               <div style={{ overflow: 'hidden' }}>
                 <img src={listing.gallery_images[0]} alt={listing.title}
+                  onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = IMG_FALLBACK; }}
                   style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', transition: 'transform 400ms ease' }}
                   onMouseEnter={(e) => { e.target.style.transform = 'scale(1.02)'; }}
                   onMouseLeave={(e) => { e.target.style.transform = 'scale(1)'; }}
@@ -444,6 +929,7 @@ export default function ListingDetail() {
                 {listing.gallery_images.slice(1, 5).map((src, i) => (
                   <div key={i} style={{ overflow: 'hidden' }}>
                     <img src={src} alt={`${listing.title} ${i + 2}`}
+                      onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = IMG_FALLBACK; }}
                       style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', transition: 'transform 400ms ease' }}
                       onMouseEnter={(e) => { e.target.style.transform = 'scale(1.04)'; }}
                       onMouseLeave={(e) => { e.target.style.transform = 'scale(1)'; }}
@@ -456,6 +942,7 @@ export default function ListingDetail() {
             /* Mobile single photo */
             <div style={{ height: 280 }}>
               <img src={listing.gallery_images[0]} alt={listing.title}
+                onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = IMG_FALLBACK; }}
                 style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
               />
             </div>
@@ -553,17 +1040,20 @@ export default function ListingDetail() {
 
             {/* Host row */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.75rem' }}>
-              <div style={{ position: 'relative', flexShrink: 0 }}>
+              <button
+                onClick={() => setShowHostModal(true)}
+                style={{ position: 'relative', flexShrink: 0, background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+              >
                 <img src={hostAvatar} alt={SAMPLE_HOST.name}
                   onError={() => setHostImgError(true)}
-                  style={{ width: 52, height: 52, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(255,255,255,0.8)', boxShadow: '0 2px 8px rgba(25,37,36,0.12)' }}
+                  style={{ width: 52, height: 52, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(255,255,255,0.8)', boxShadow: '0 2px 8px rgba(25,37,36,0.12)', display: 'block' }}
                 />
                 <div style={{ position: 'absolute', bottom: 0, right: 0, width: 18, height: 18, borderRadius: '50%', background: '#192524', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid white' }}>
                   <svg viewBox="0 0 12 12" fill="none" style={{ width: 8, height: 8 }}>
                     <path d="M2 6l2.5 2.5L10 3" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
                 </div>
-              </div>
+              </button>
               <div>
                 <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1rem', color: 'var(--ink)', lineHeight: 1.2 }}>
                   Listed by {SAMPLE_HOST.name}
@@ -692,7 +1182,10 @@ export default function ListingDetail() {
               }}>
                 {/* Host card */}
                 <div style={{ background: 'rgba(255,255,255,0.7)', borderRadius: '1rem', padding: '1.25rem', textAlign: 'center', minWidth: 155, border: '1px solid rgba(25,37,36,0.08)' }}>
-                  <div style={{ position: 'relative', display: 'inline-block', marginBottom: '0.75rem' }}>
+                  <button
+                    onClick={() => setShowHostModal(true)}
+                    style={{ position: 'relative', display: 'inline-block', marginBottom: '0.75rem', background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+                  >
                     <img src={hostAvatar} alt={SAMPLE_HOST.name}
                       onError={() => setHostImgError(true)}
                       style={{ width: 72, height: 72, borderRadius: '50%', objectFit: 'cover', display: 'block' }}
@@ -702,7 +1195,7 @@ export default function ListingDetail() {
                         <path d="M2 6l2.5 2.5L10 3" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                       </svg>
                     </div>
-                  </div>
+                  </button>
                   <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1rem', color: 'var(--ink)', marginBottom: '0.15rem' }}>{SAMPLE_HOST.name}</p>
                   <p style={{ fontSize: '0.75rem', color: 'var(--sage)', marginBottom: '0.875rem' }}>Collabnb Host</p>
                   {[{ val: `${SAMPLE_HOST.years_hosting}`, label: 'Years hosting' }].map(({ val, label }) => (
@@ -716,17 +1209,19 @@ export default function ListingDetail() {
                 {/* Host bio + details */}
                 <div style={{ flex: 1, minWidth: 180 }}>
                   <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1rem', color: 'var(--ink)', marginBottom: '0.75rem' }}>
-                    {SAMPLE_HOST.name} is a Verified Host
+                    {SAMPLE_HOST.name}
                   </p>
                   <p style={{ fontSize: '0.9rem', color: 'var(--slate)', lineHeight: 1.7, marginBottom: '1.25rem' }}>{SAMPLE_HOST.bio}</p>
                   <p style={{ fontSize: '0.85rem', color: 'var(--slate)', marginBottom: '0.35rem' }}><strong>Response rate:</strong> {SAMPLE_HOST.response_rate}%</p>
                   <p style={{ fontSize: '0.85rem', color: 'var(--slate)', marginBottom: '1.25rem' }}><strong>Responds</strong> {SAMPLE_HOST.response_time}</p>
-                  <button style={{
-                    padding: '0.65rem 1.5rem',
-                    background: 'var(--bone)', border: '1.5px solid rgba(25,37,36,0.15)',
-                    borderRadius: '999px', fontFamily: 'var(--font-body)',
-                    fontSize: '0.875rem', fontWeight: 600, color: 'var(--ink)', cursor: 'pointer',
-                  }}
+                  <button
+                    onClick={handleMessageHost}
+                    style={{
+                      padding: '0.65rem 1.5rem',
+                      background: 'var(--bone)', border: '1.5px solid rgba(25,37,36,0.15)',
+                      borderRadius: '999px', fontFamily: 'var(--font-body)',
+                      fontSize: '0.875rem', fontWeight: 600, color: 'var(--ink)', cursor: 'pointer',
+                    }}
                     onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(25,37,36,0.07)'; }}
                     onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--bone)'; }}
                   >
@@ -773,7 +1268,7 @@ export default function ListingDetail() {
                 </div>
 
                 <button
-                  onClick={() => setShowApplyModal(true)}
+                  onClick={applied ? undefined : (!isVerified ? openModal : !isSubscribed ? openSubModal : () => setShowApplyModal(true))}
                   disabled={applied}
                   style={{
                     width: '100%', padding: '1rem',
@@ -789,7 +1284,7 @@ export default function ListingDetail() {
                   onMouseEnter={(e) => { if (!applied) e.currentTarget.style.opacity = '0.88'; }}
                   onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; }}
                 >
-                  {applied ? '✓ Applied' : <><span>Apply Now</span> <ArrowRight /></>}
+                  {applied ? '✓ Applied' : (!isVerified || !isSubscribed) ? <><LockIcon /><span>Apply Now</span></> : <><span>Apply Now</span><ArrowRight /></>}
                 </button>
 
                 <p style={{ fontSize: '0.75rem', color: 'var(--sage)', textAlign: 'center' }}>
@@ -819,7 +1314,7 @@ export default function ListingDetail() {
             <p style={{ fontSize: '0.75rem', color: 'var(--sage)' }}>{listing.deliverable_count} deliverables</p>
           </div>
           <button
-            onClick={() => setShowApplyModal(true)}
+            onClick={applied ? undefined : (!isVerified ? openModal : !isSubscribed ? openSubModal : () => setShowApplyModal(true))}
             disabled={applied}
             style={{
               padding: '0.875rem 2rem',
@@ -832,7 +1327,7 @@ export default function ListingDetail() {
               display: 'flex', alignItems: 'center', gap: '0.4rem',
             }}
           >
-            {applied ? '✓ Applied' : <><span>Apply Now</span> <ArrowRight /></>}
+            {applied ? '✓ Applied' : (!isVerified || !isSubscribed) ? <><LockIcon /><span>Apply Now</span></> : <><span>Apply Now</span><ArrowRight /></>}
           </button>
         </div>
       )}
@@ -841,9 +1336,14 @@ export default function ListingDetail() {
       {showApplyModal && (
         <ApplyModal
           listing={listing}
+          userId={profile?._id || profile?.id}
           onClose={() => setShowApplyModal(false)}
           onApply={applyToListing}
           navigate={navigate}
+          isVerified={isVerified}
+          onVerificationRequired={() => { setShowApplyModal(false); openModal(); }}
+          isSubscribed={isSubscribed}
+          onSubscriptionRequired={() => { setShowApplyModal(false); openSubModal(); }}
         />
       )}
 
@@ -854,6 +1354,52 @@ export default function ListingDetail() {
           title={listing.title}
           onClose={() => setShowGallery(false)}
         />
+      )}
+
+      {/* ── Host profile modal ────────────────────────────────────────────────── */}
+      {showHostModal && (
+        <HostProfileModal
+          host={SAMPLE_HOST}
+          listing={listing}
+          onClose={() => setShowHostModal(false)}
+          onMessage={() => { setShowHostModal(false); handleMessageHost(); }}
+        />
+      )}
+
+      {/* ── Share modal ───────────────────────────────────────────────────────── */}
+      {showShareModal && (
+        <ShareModal
+          listing={listing}
+          onClose={() => setShowShareModal(false)}
+          onCopied={() => showToast('Link copied!')}
+        />
+      )}
+
+      {/* ── Save collection modal ─────────────────────────────────────────────── */}
+      {showSaveModal && (
+        <SaveCollectionModal
+          listing={listing}
+          collections={collections}
+          onMoveToCollection={handleSaveToCollection}
+          onRemove={handleRemoveFromCollection}
+          onCreateAndSave={handleCreateAndSave}
+          onClose={() => setShowSaveModal(false)}
+        />
+      )}
+
+      {/* ── Toast ─────────────────────────────────────────────────────────────── */}
+      {toast && (
+        <div style={{
+          position: 'fixed', bottom: '5.5rem', left: '50%', transform: 'translateX(-50%)',
+          zIndex: 300, background: 'rgba(25,37,36,0.92)', backdropFilter: 'blur(12px)',
+          color: '#EFECE9', padding: '0.65rem 1.25rem', borderRadius: '9999px',
+          fontSize: '0.875rem', fontWeight: 600, fontFamily: 'var(--font-body)',
+          boxShadow: '0 8px 24px rgba(25,37,36,0.22)',
+          whiteSpace: 'nowrap', pointerEvents: 'none',
+          animation: 'detailFadeIn 200ms ease forwards',
+        }}>
+          {toast}
+        </div>
       )}
     </div>
   );

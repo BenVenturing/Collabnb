@@ -1,3 +1,6 @@
+// Fallback for broken/missing listing images — warm gray placeholder
+export const IMG_FALLBACK = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='600'%3E%3Crect fill='%23EFECE9' width='800' height='600'/%3E%3C/svg%3E";
+
 // ─── Mock creator profile ─────────────────────────────────────────────────────
 export const MOCK_CREATOR = {
   id: 'mock-benjamin',
@@ -19,6 +22,7 @@ export const MOCK_CREATOR = {
   beta: true,
   city: 'Asheville',
   region: 'NC',
+  is_verified: false,
 };
 
 // ─── Sample host profile (always Ben Venturing on listing detail pages) ───────
@@ -257,13 +261,13 @@ export const SAMPLE_LISTINGS = [
     dates_available: 'Mar–Nov 2026',
     due_days: 14,
 
-    image: 'https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=800&q=80',
+    image: 'https://images.unsplash.com/photo-1543362906-acfc16c67564?w=800&q=80',
     gallery_images: [
-      'https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=1200&q=85',
-      'https://images.unsplash.com/photo-1566042351553-52fb6fc0a880?w=800&q=80',
-      'https://images.unsplash.com/photo-1573246123716-6b178079bfb0?w=800&q=80',
-      'https://images.unsplash.com/photo-1504376379689-8d54347b4f08?w=800&q=80',
-      'https://images.unsplash.com/photo-1531058020387-3be344556be6?w=800&q=80',
+      'https://images.unsplash.com/photo-1543362906-acfc16c67564?w=1200&q=85',
+      'https://images.unsplash.com/photo-1516594915697-87eb3b1c14ea?w=800&q=80',
+      'https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=800&q=80',
+      'https://images.unsplash.com/photo-1506377247377-2a5b3b417ebb?w=800&q=80',
+      'https://images.unsplash.com/photo-1601821765780-754fa98637c1?w=800&q=80',
     ],
 
     about: 'An opulent Cape Dutch-style private villa set within a working Stellenbosch wine estate with dramatic views of the Jonkershoek Valley and Table Mountain in the distance. Wake up to rows of Cabernet Sauvignon and Chenin Blanc vines stretching toward the mountains. Includes exclusive barrel room access, private wine tastings with a master sommelier, and guided vineyard tours. The warm golden hour light over the Cape Winelands is among the most cinematic in the world.',
@@ -328,7 +332,7 @@ export const SAMPLE_LISTINGS = [
       'https://images.unsplash.com/photo-1448375240586-882707db888b?w=800&q=80',
       'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=800&q=80',
       'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=800&q=80',
-      'https://images.unsplash.com/photo-1474302771604-7f7a4aff70f8?w=800&q=80',
+      'https://images.unsplash.com/photo-1511497584788-876760111969?w=800&q=80',
     ],
 
     about: 'A one-of-a-kind treehouse elevated 30 feet above a glassy private lake in the Blue Ridge Mountains. Accessed by a rope bridge, with glass floors and a wraparound deck. Kayaks and paddleboards are included. The mist rolling across the lake at dawn creates some of the most ethereal photography conditions anywhere in the Southeast.',
@@ -390,7 +394,7 @@ export const SAMPLE_LISTINGS = [
     image: 'https://images.unsplash.com/photo-1533104816931-20fa691ff6ca?w=800&q=80',
     gallery_images: [
       'https://images.unsplash.com/photo-1533104816931-20fa691ff6ca?w=1200&q=85',
-      'https://images.unsplash.com/photo-1572510097885-0c1d5d6b39ee?w=800&q=80',
+      'https://images.unsplash.com/photo-1525130413817-d45c1d127c42?w=800&q=80',
       'https://images.unsplash.com/photo-1595867818082-083862f3d630?w=800&q=80',
       'https://images.unsplash.com/photo-1585970480901-90d6bb2a48b5?w=800&q=80',
       'https://images.unsplash.com/photo-1532339142463-fd0a8979791a?w=800&q=80',

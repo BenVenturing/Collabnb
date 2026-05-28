@@ -4,6 +4,8 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { AppBarProvider } from './contexts/AppBarContext';
 import { CollabProvider } from './contexts/CollabContext';
 import { ListingDraftProvider } from './contexts/ListingDraftContext';
+import { VerificationProvider } from './contexts/VerificationContext';
+import { SubscriptionProvider } from './contexts/SubscriptionContext';
 import Layout        from './components/Layout';
 import ContractBuilder from './components/ContractBuilder';
 import Explore       from './pages/Explore';
@@ -21,6 +23,7 @@ import Step1Basics          from './pages/host/Step1Basics';
 import Step2Offer           from './pages/host/Step2Offer';
 import Step3Deliverables    from './pages/host/Step3Deliverables';
 import Step4Review          from './pages/host/Step4Review';
+import AdminDashboard       from './pages/AdminDashboard';
 
 // Catch any render crash and show it instead of a blank page
 class ErrorBoundary extends Component {
@@ -59,6 +62,8 @@ function AppRoutes() {
 
   return (
     <CollabProvider>
+      <VerificationProvider>
+      <SubscriptionProvider>
       <ListingDraftProvider>
         <Routes>
             {/* Host wizard — full-screen, no nav chrome */}
@@ -67,6 +72,9 @@ function AppRoutes() {
           <Route path="/host/listings/create/offer"        element={<Step2Offer />} />
           <Route path="/host/listings/create/deliverables" element={<Step3Deliverables />} />
           <Route path="/host/listings/create/review"       element={<Step4Review />} />
+
+          {/* Admin panel — full-screen, no nav chrome */}
+          <Route path="/admin" element={<AdminDashboard />} />
 
           {/* All other routes — wrapped in Layout (nav + HAZY bg) */}
           <Route path="*" element={
@@ -92,6 +100,8 @@ function AppRoutes() {
           } />
         </Routes>
       </ListingDraftProvider>
+      </SubscriptionProvider>
+      </VerificationProvider>
     </CollabProvider>
   );
 }

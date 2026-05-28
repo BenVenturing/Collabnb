@@ -1,11 +1,15 @@
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useQuery, useAction } from 'convex/react';
+import { api } from '../../convex/_generated/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useCollabs } from '../contexts/CollabContext';
+import { useSubscription } from '../contexts/SubscriptionContext';
 import GlobeCanvas from '../components/GlobeCanvas';
 import TravelCalendar from '../components/TravelCalendar';
 import { SAMPLE_COLLABORATIONS, SAMPLE_LISTINGS } from '../lib/mockData';
 import { getPitchCount } from '../lib/pitchCount';
+import { cache } from '../lib/cache';
 
 // ─── Formatters ───────────────────────────────────────────────────────────────
 function fmtFollowers(n) {
@@ -352,6 +356,12 @@ export default function Profile() {
   const { profile, loading, signOut, updateProfile } = useAuth();
   const { contracts } = useCollabs();
   const navigate = useNavigate();
+  const location = useLocation();
+  const verifySubscriptionSession = useAction(api.stripe.verifySubscriptionSession);
+  const createBillingPortalSession = useAction(api.stripe.createBillingPortalSession);
+  const { openModal: openSubModal } = useSubscription();
+  const userId = profile?._id || profile?.id || 'mock-user-001';
+  const serverPitchCount = useQuery(api.pitches.getCount, { userId });
 
   // Edit profile state
   const [profileOverride, setProfileOverride] = useState({});
@@ -369,6 +379,7 @@ export default function Profile() {
   const [showListingPicker, setShowListingPicker] = useState(false);
   const [toastMsg, setToastMsg]       = useState(null);
   const [exitConfirmDraft, setExitConfirmDraft] = useState(null);
+  const [portalLoading, setPortalLoading] = useState(false);
 
   // Notification toggles
   const [notifSettings, setNotifSettings] = useState({
@@ -379,8 +390,45 @@ export default function Profile() {
     marketing:       false,
   });
 
+  // Browser notification permission banner
+  const NOTIF_KEY = '@collabnb_notif_permission_v1';
+  const [showNotifBanner, setShowNotifBanner] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    const stored = localStorage.getItem(NOTIF_KEY);
+    if (stored) return false;
+    return 'Notification' in window && Notification.permission === 'default';
+  });
+
+  function handleNotifAllow() {
+    Notification.requestPermission().then((result) => {
+      localStorage.setItem(NOTIF_KEY, result);
+      setShowNotifBanner(false);
+    });
+  }
+
+  function handleNotifDismiss() {
+    localStorage.setItem(NOTIF_KEY, 'dismissed');
+    setShowNotifBanner(false);
+  }
+
   // Bio expand
   const [bioExpanded, setBioExpanded] = useState(false);
+
+  // ── Stripe subscription redirect handler ────────────────────────────
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const subStatus = params.get('subscription');
+    const sessionId = params.get('session_id');
+    if (subStatus === 'success' && sessionId) {
+      navigate('/profile', { replace: true });
+      verifySubscriptionSession({ sessionId })
+        .then(() => setToastMsg('Subscription activated! Welcome to Collabnb Pro.'))
+        .catch(() => setToastMsg('Could not verify payment — contact support@collabnb.com'));
+    } else if (subStatus === 'cancelled') {
+      navigate('/profile', { replace: true });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ── Scroll reveal observer ──────────────────────────────────────────────
   const sectionsRef = useRef([]);
@@ -465,6 +513,8 @@ export default function Profile() {
     setProfileOverride({ ...profileOverride, ...editDraft });
     setEditDraft(null);
     setToastMsg('All changes saved');
+    // Invalidate creator search cache so updated profile surfaces in host search
+    cache.clearAll();
   }
 
   function handleShare() {
@@ -472,6 +522,22 @@ export default function Profile() {
       navigator.share({ title: `${dp.full_name} on Collabnb`, url: window.location.href }).catch(() => {});
     } else {
       navigator.clipboard?.writeText(window.location.href);
+    }
+  }
+
+  async function handleManageSubscription() {
+    const customerId = dp.stripe_customer_id;
+    if (!customerId) { setToastMsg('No billing account found — contact support@collabnb.com'); return; }
+    setPortalLoading(true);
+    try {
+      const { url } = await createBillingPortalSession({
+        customerId,
+        returnUrl: `${window.location.origin}/#/profile`,
+      });
+      window.location.href = url;
+    } catch {
+      setToastMsg('Could not open billing portal — try again shortly');
+      setPortalLoading(false);
     }
   }
 
@@ -487,6 +553,45 @@ export default function Profile() {
 
   return (
     <div style={{ minHeight: '100dvh', paddingBottom: '6rem' }}>
+
+      {/* ── Browser notification permission banner ────────────────────── */}
+      {showNotifBanner && (
+        <div style={{
+          position: 'sticky', top: 0, zIndex: 50,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          gap: '0.75rem', flexWrap: 'wrap',
+          padding: '0.625rem 1rem',
+          background: 'rgba(209,235,219,0.92)',
+          backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
+          borderBottom: '1px solid rgba(74,155,127,0.2)',
+        }}>
+          <span style={{ fontSize: '0.82rem', color: 'var(--slate)', fontWeight: 500, textAlign: 'center', flex: '1 1 200px', minWidth: 0 }}>
+            Enable notifications to stay updated on your collabs
+          </span>
+          <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0 }}>
+            <button
+              onClick={handleNotifAllow}
+              style={{
+                padding: '0.45rem 1rem', borderRadius: '999px', border: 'none', cursor: 'pointer',
+                background: 'var(--slate)', color: '#fff', fontSize: '0.78rem', fontWeight: 600,
+                fontFamily: 'var(--font-body)', minHeight: '44px',
+              }}
+            >
+              Allow
+            </button>
+            <button
+              onClick={handleNotifDismiss}
+              style={{
+                padding: '0.45rem 1rem', borderRadius: '999px', border: '1px solid rgba(60,87,89,0.25)',
+                cursor: 'pointer', background: 'transparent', color: 'var(--slate)',
+                fontSize: '0.78rem', fontWeight: 500, fontFamily: 'var(--font-body)', minHeight: '44px',
+              }}
+            >
+              Not now
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ── Hero (full-bleed) ──────────────────────────────────────────────── */}
       <div style={{ position: 'relative' }}>
@@ -519,14 +624,13 @@ export default function Profile() {
       <div className="container" style={{ maxWidth: '720px' }}>
 
         {/* ── Profile header ─────────────────────────────────────────────── */}
-        <section style={{ textAlign: 'center', paddingTop: '2.75rem', paddingBottom: '2rem' }}>
+        <section style={{ textAlign: 'center', paddingTop: '2.75rem', paddingBottom: '1.5rem' }}>
 
-          {/* Name + verified */}
+          {/* Name */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
             <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.75rem', fontWeight: 800, color: 'var(--ink)', margin: 0 }}>
               {dp.full_name}
             </h2>
-            <VerifiedBadge />
           </div>
 
           {/* Founding Member badge */}
@@ -586,7 +690,7 @@ export default function Profile() {
               </div>
             ))}
           </div>
-          <p style={{ textAlign: 'center', fontSize: '0.7rem', color: 'var(--sage)', marginTop: '1rem' }}>↻ Updated just now</p>
+          <p style={{ textAlign: 'center', fontSize: '0.7rem', color: 'var(--sage)', marginTop: '0.625rem' }}>↻ Updated just now</p>
         </div>
 
         {/* ── Payout card (creator only) ─────────────────────────────────── */}
@@ -618,7 +722,7 @@ export default function Profile() {
 
         {/* ── Bio ──────────────────────────────────────────────────────────── */}
         {dp.bio && (
-          <div className="section-reveal" ref={(el) => sectionsRef.current[1] = el} style={{ marginBottom: '1.75rem' }}>
+          <div className="section-reveal" ref={(el) => sectionsRef.current[1] = el} style={{ marginBottom: '1.25rem' }}>
             <p style={{ color: 'var(--slate)', fontSize: '0.9375rem', lineHeight: 1.7, margin: 0 }}>
               {bioTruncated ? `${dp.bio.slice(0, BIO_LIMIT)}…` : dp.bio}
             </p>
@@ -631,7 +735,7 @@ export default function Profile() {
         )}
 
         {/* ── Links & Socials ───────────────────────────────────────────────── */}
-        <section className="section-reveal" ref={(el) => sectionsRef.current[2] = el} style={{ marginBottom: '2.5rem' }}>
+        <section className="section-reveal" ref={(el) => sectionsRef.current[2] = el} style={{ marginBottom: '1.75rem' }}>
           <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.125rem', color: 'var(--ink)', marginBottom: '1rem' }}>Links &amp; Socials</h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
             {portfolioHref && <SocialRow icon={<GlobeIcon />} label="My Link-in-Bio" value={dp.portfolio} href={portfolioHref} />}
@@ -642,7 +746,7 @@ export default function Profile() {
         </section>
 
         {/* ── Past Collabs (continuous scroll) ────────────────────────────── */}
-        <section className="section-reveal" ref={(el) => sectionsRef.current[3] = el} style={{ marginBottom: '2.5rem' }}>
+        <section className="section-reveal" ref={(el) => sectionsRef.current[3] = el} style={{ marginBottom: '1.75rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
             <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.125rem', color: 'var(--ink)', margin: 0 }}>Past Collabs</h3>
             <button onClick={() => setShowAllCollabs(true)} style={{ color: 'var(--slate)', fontSize: '0.875rem', fontWeight: 500, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font-body)' }}>View all →</button>
@@ -656,14 +760,14 @@ export default function Profile() {
         </section>
 
         {/* ── Travel Calendar ──────────────────────────────────────────────── */}
-        <section className="glass section-reveal" ref={(el) => sectionsRef.current[3.5] = el} style={{ padding: '1.5rem', marginBottom: '2.5rem' }}>
+        <section className="glass section-reveal" ref={(el) => sectionsRef.current[3.5] = el} style={{ padding: '1.5rem', marginBottom: '1.75rem' }}>
           <TravelCalendar viewerRole="self" />
         </section>
 
         {/* ── Globe ────────────────────────────────────────────────────────── */}
         <section className="section-reveal" ref={(el) => sectionsRef.current[4] = el} style={{ textAlign: 'center', paddingBottom: '2rem' }}>
           <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.25rem', color: 'var(--ink)', marginBottom: '0.375rem' }}>Our Global Community</h3>
-          <p style={{ color: 'var(--sage)', fontSize: '0.9rem', marginBottom: '2.5rem' }}>Creators and hosts connecting across the world</p>
+          <p style={{ color: 'var(--sage)', fontSize: '0.9rem', marginBottom: '0.875rem' }}>Creators and hosts connecting across the world</p>
           <GlobeCanvas />
           <div style={{ display: 'flex', justifyContent: 'center', gap: '0.75rem', marginTop: '1.5rem', flexWrap: 'wrap' }}>
             {[{ color: '#D1EBDB', label: 'Creators' }, { color: '#3C5759', label: 'Hosts' }, { color: '#D0D5CE', label: '40+ Cities' }].map(({ color, label }) => (
@@ -831,7 +935,7 @@ export default function Profile() {
               <button onClick={() => setShowSettings(false)} style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'rgba(209,235,219,0.5)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--slate)' }}>✕</button>
             </div>
             {dp.role === 'creator' && (() => {
-              const { count } = getPitchCount();
+              const count = serverPitchCount ?? getPitchCount().count;
               return (
                 <div style={{ padding: '0.875rem 1.5rem', borderBottom: '1px solid rgba(60,87,89,0.08)', background: 'rgba(209,235,219,0.1)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
@@ -841,13 +945,155 @@ export default function Profile() {
                   <div style={{ height: '4px', borderRadius: '999px', background: 'rgba(25,37,36,0.08)', overflow: 'hidden' }}>
                     <div style={{ height: '100%', borderRadius: '999px', width: `${Math.min((count / 10) * 100, 100)}%`, background: count >= 10 ? '#ef4444' : count >= 7 ? '#D4A843' : '#4A9B7F', transition: 'width 400ms ease' }} />
                   </div>
-                  <p style={{ fontSize: '0.68rem', color: 'var(--sage)', margin: '0.35rem 0 0' }}>Resets on the 1st · Applications are unlimited</p>
+                  <p style={{ fontSize: '0.68rem', color: 'var(--sage)', margin: '0.35rem 0 0' }}>Resets on the 1st of each month. Standard applications are unlimited.</p>
                 </div>
               );
             })()}
+            {/* Membership status — 4-state subscription section */}
+            {(() => {
+              const isFounder = dp.is_founder === true;
+              const expiresAt = dp.subscription_expires_at;
+              const isActive = dp.subscription_status === 'active' && (!expiresAt || Date.now() < expiresAt);
+              const isExpired = dp.subscription_status === 'active' && expiresAt && Date.now() >= expiresAt;
+              const tier = dp.subscription_tier;
+              const isYearly = tier === 'yearly';
+              const firstDone = dp.first_collab_completed === true;
+
+              if (isFounder) {
+                return (
+                  <div style={{ padding: '0.875rem 1.5rem', borderBottom: '1px solid rgba(60,87,89,0.08)', background: 'linear-gradient(135deg, rgba(212,168,67,0.08) 0%, rgba(212,168,67,0.04) 100%)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                      <div style={{ width: 36, height: 36, borderRadius: '50%', flexShrink: 0, background: 'rgba(212,168,67,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <svg viewBox="0 0 16 16" width="15" height="15" fill="#D4A843"><path d="M8 1.5l1.67 3.38 3.73.54-2.7 2.63.64 3.72L8 9.77l-3.34 1.76.64-3.72L2.6 5.42l3.73-.54z"/></svg>
+                      </div>
+                      <div>
+                        <p style={{ fontSize: '0.82rem', fontWeight: 700, color: '#A87820', margin: 0 }}>Founding Member</p>
+                        <p style={{ fontSize: '0.72rem', color: '#C4921A', margin: '0.1rem 0 0' }}>Free Forever — all features unlocked</p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+
+              if (isActive) {
+                const nextDate = expiresAt ? new Date(expiresAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : null;
+                return (
+                  <div style={{ padding: '0.875rem 1.5rem', borderBottom: '1px solid rgba(60,87,89,0.08)', background: 'rgba(74,155,127,0.05)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#4A9B7F', flexShrink: 0, display: 'inline-block' }} />
+                        <p style={{ fontSize: '0.82rem', fontWeight: 700, color: '#2D7A5F', margin: 0 }}>
+                          Collabnb Pro &middot; {isYearly ? 'Annual' : 'Monthly'}
+                        </p>
+                      </div>
+                      <button
+                        onClick={handleManageSubscription}
+                        disabled={portalLoading}
+                        style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--slate)', background: 'none', border: 'none', cursor: portalLoading ? 'wait' : 'pointer', padding: 0, textDecoration: 'underline', opacity: portalLoading ? 0.6 : 1 }}
+                      >
+                        {portalLoading ? 'Opening…' : 'Manage →'}
+                      </button>
+                    </div>
+                    <p style={{ fontSize: '0.72rem', color: 'var(--sage)', margin: 0 }}>
+                      {isYearly ? '$60/year' : '$10/month'}{nextDate ? ` · Renews ${nextDate}` : ''}
+                    </p>
+                    {!isYearly && (
+                      <button
+                        onClick={openSubModal}
+                        style={{ marginTop: '0.5rem', fontSize: '0.7rem', fontWeight: 600, color: '#A87820', background: 'rgba(212,168,67,0.1)', border: '1px solid rgba(212,168,67,0.25)', borderRadius: '999px', padding: '0.2rem 0.7rem', cursor: 'pointer' }}
+                      >
+                        Upgrade to Yearly — save 50%
+                      </button>
+                    )}
+                  </div>
+                );
+              }
+
+              if (isExpired) {
+                return (
+                  <div style={{ padding: '0.875rem 1.5rem', borderBottom: '1px solid rgba(60,87,89,0.08)', background: 'rgba(239,68,68,0.04)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div>
+                        <p style={{ fontSize: '0.82rem', fontWeight: 700, color: '#dc2626', margin: 0 }}>Plan expired</p>
+                        <p style={{ fontSize: '0.72rem', color: 'var(--sage)', margin: '0.1rem 0 0' }}>Renew to keep messaging and applying</p>
+                      </div>
+                      <button
+                        onClick={openSubModal}
+                        style={{ fontSize: '0.75rem', fontWeight: 700, color: 'white', background: '#dc2626', border: 'none', borderRadius: '999px', padding: '0.35rem 0.9rem', cursor: 'pointer' }}
+                      >
+                        Renew
+                      </button>
+                    </div>
+                  </div>
+                );
+              }
+
+              if (!firstDone) {
+                return (
+                  <div style={{ padding: '0.875rem 1.5rem', borderBottom: '1px solid rgba(60,87,89,0.08)', background: 'rgba(209,235,219,0.15)' }}>
+                    <p style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--slate)', margin: '0 0 0.1rem' }}>Free — first collab included</p>
+                    <p style={{ fontSize: '0.72rem', color: 'var(--sage)', margin: 0 }}>Complete your first collaboration, then choose a plan to continue.</p>
+                  </div>
+                );
+              }
+
+              return (
+                <div style={{ padding: '0.875rem 1.5rem', borderBottom: '1px solid rgba(60,87,89,0.08)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div>
+                      <p style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--slate)', margin: 0 }}>No active plan</p>
+                      <p style={{ fontSize: '0.72rem', color: 'var(--sage)', margin: '0.1rem 0 0' }}>Subscribe to keep collaborating</p>
+                    </div>
+                    <button
+                      onClick={openSubModal}
+                      style={{ fontSize: '0.75rem', fontWeight: 700, color: 'white', background: 'var(--slate)', border: 'none', borderRadius: '999px', padding: '0.35rem 0.9rem', cursor: 'pointer' }}
+                    >
+                      Subscribe
+                    </button>
+                  </div>
+                </div>
+              );
+            })()}
+
             {SETTINGS.map((row, i) => (
               <SettingsRow key={row.label} {...row} isLast={i === SETTINGS.length - 1} />
             ))}
+
+            {/* Host payment history */}
+            {dp.role === 'host' && (() => {
+              const paid = (contracts || []).filter(c => c.paid === true);
+              if (paid.length === 0) return null;
+              return (
+                <div style={{ borderTop: '1px solid rgba(60,87,89,0.1)', padding: '0.875rem 1.5rem' }}>
+                  <p style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--slate)', margin: '0 0 0.625rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Payment History</p>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.75rem' }}>
+                    <thead>
+                      <tr style={{ borderBottom: '1px solid rgba(60,87,89,0.1)' }}>
+                        <th style={{ textAlign: 'left', padding: '0.25rem 0', fontWeight: 600, color: 'var(--sage)', paddingRight: '1rem' }}>Collab</th>
+                        <th style={{ textAlign: 'right', padding: '0.25rem 0', fontWeight: 600, color: 'var(--sage)', paddingRight: '1rem' }}>Fee Paid</th>
+                        <th style={{ textAlign: 'right', padding: '0.25rem 0', fontWeight: 600, color: 'var(--sage)' }}>Date</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {paid.map((c, i) => (
+                        <tr key={i} style={{ borderBottom: i < paid.length - 1 ? '1px solid rgba(60,87,89,0.06)' : 'none' }}>
+                          <td style={{ padding: '0.4rem 0', color: 'var(--ink)', paddingRight: '1rem', maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {c.property_name || c.creator_name || '—'}
+                          </td>
+                          <td style={{ padding: '0.4rem 0', color: 'var(--slate)', fontWeight: 600, textAlign: 'right', paddingRight: '1rem' }}>
+                            {c.payment_amount ? `$${c.payment_amount.toFixed(2)}` : '—'}
+                          </td>
+                          <td style={{ padding: '0.4rem 0', color: 'var(--sage)', textAlign: 'right' }}>
+                            {c.host_signed_at ? new Date(c.host_signed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              );
+            })()}
+
             <div style={{ borderTop: '1px solid rgba(60,87,89,0.1)' }}>
               <button
                 onClick={signOut}
@@ -1019,24 +1265,25 @@ export default function Profile() {
           onClick={() => setShowNotifications(false)}
         >
           <div
-            style={{ width: '100%', maxWidth: '460px', borderRadius: '1.5rem', padding: '2rem', background: 'rgba(255,255,255,0.97)', border: '1px solid rgba(255,255,255,0.85)', boxShadow: '0 20px 60px rgba(25,37,36,0.18)' }}
+            style={{ width: '100%', maxWidth: '460px', borderRadius: '1.5rem', padding: 'clamp(1.25rem, 5vw, 2rem)', background: 'rgba(255,255,255,0.97)', border: '1px solid rgba(255,255,255,0.85)', boxShadow: '0 20px 60px rgba(25,37,36,0.18)' }}
             onClick={(e) => e.stopPropagation()}
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
               <h4 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.15rem', color: 'var(--slate)', margin: 0 }}>Notification Preferences</h4>
-              <button onClick={() => setShowNotifications(false)} style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'rgba(209,235,219,0.5)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--slate)' }}>✕</button>
+              {/* 44px touch target wrapping the visual button */}
+              <button onClick={() => setShowNotifications(false)} style={{ minWidth: '44px', minHeight: '44px', borderRadius: '50%', background: 'rgba(209,235,219,0.5)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--slate)' }}>✕</button>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.125rem' }}>
               {[
-                { key: 'messages',       label: 'Messages',         desc: 'New messages and replies in your inbox' },
-                { key: 'contractUpdates', label: 'Contract Updates', desc: 'When a contract is signed, updated, or needs action' },
-                { key: 'newListings',     label: 'New Listings',    desc: 'Properties that match your preferences' },
-                { key: 'collabReminders', label: 'Collab Reminders', desc: 'Upcoming deadlines and pending deliverables' },
-                { key: 'marketing',       label: 'Marketing',       desc: 'Product updates, tips, and Collabnb news' },
+                { key: 'messages',        label: 'Messages',         desc: 'New messages and replies in your inbox' },
+                { key: 'contractUpdates', label: 'Contract Updates',  desc: 'When a contract is signed, updated, or needs action' },
+                { key: 'newListings',     label: 'New Listings',      desc: 'Properties that match your preferences' },
+                { key: 'collabReminders', label: 'Collab Reminders',  desc: 'Upcoming deadlines and pending deliverables' },
+                { key: 'marketing',       label: 'Marketing',         desc: 'Product updates, tips, and Collabnb news' },
               ].map((item) => (
                 <div key={item.key} style={{
                   display: 'flex', alignItems: 'center', gap: '0.75rem',
-                  padding: '0.875rem 1rem', borderRadius: '1rem',
+                  padding: '0.75rem 0.5rem', borderRadius: '1rem',
                   background: 'transparent', transition: 'background 150ms',
                 }}
                   onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(209,235,219,0.2)'}
@@ -1046,27 +1293,34 @@ export default function Profile() {
                     <p style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--slate)', margin: 0 }}>{item.label}</p>
                     <p style={{ fontSize: '0.72rem', color: 'var(--sage)', margin: '0.1rem 0 0' }}>{item.desc}</p>
                   </div>
+                  {/* 44px touch target wrapper around the visual toggle */}
                   <button
                     onClick={() => setNotifSettings((p) => ({ ...p, [item.key]: !p[item.key] }))}
                     style={{
-                      width: '38px', height: '22px', borderRadius: '999px', flexShrink: 0,
-                      background: notifSettings[item.key] ? 'var(--slate)' : 'rgba(25,37,36,0.15)',
-                      border: 'none', cursor: 'pointer', position: 'relative',
-                      transition: 'background 200ms', padding: 0,
+                      minWidth: '44px', minHeight: '44px', flexShrink: 0,
+                      background: 'transparent', border: 'none', cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0,
                     }}
+                    aria-label={`Toggle ${item.label}`}
                   >
                     <span style={{
-                      position: 'absolute', top: '2px', width: '18px', height: '18px',
-                      borderRadius: '50%', background: '#fff', boxShadow: '0 1px 4px rgba(0,0,0,0.15)',
-                      transition: 'left 200ms cubic-bezier(0.34,1.56,0.64,1)',
-                      left: notifSettings[item.key] ? '18px' : '2px',
-                    }} />
+                      width: '38px', height: '22px', borderRadius: '999px', position: 'relative', display: 'block',
+                      background: notifSettings[item.key] ? 'var(--slate)' : 'rgba(25,37,36,0.15)',
+                      transition: 'background 200ms',
+                    }}>
+                      <span style={{
+                        position: 'absolute', top: '2px', width: '18px', height: '18px',
+                        borderRadius: '50%', background: '#fff', boxShadow: '0 1px 4px rgba(0,0,0,0.15)',
+                        transition: 'left 200ms cubic-bezier(0.34,1.56,0.64,1)',
+                        left: notifSettings[item.key] ? '18px' : '2px',
+                      }} />
+                    </span>
                   </button>
                 </div>
               ))}
             </div>
             <div style={{ marginTop: '1.25rem', textAlign: 'center' }}>
-              <button onClick={() => setShowNotifications(false)} className="btn-primary" style={{ padding: '0.6rem 2rem', fontSize: '0.85rem' }}>Save Preferences</button>
+              <button onClick={() => setShowNotifications(false)} className="btn-primary" style={{ padding: '0.6rem 2rem', fontSize: '0.85rem', minHeight: '44px' }}>Save Preferences</button>
             </div>
           </div>
         </div>

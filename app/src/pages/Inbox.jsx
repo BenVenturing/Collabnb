@@ -1,8 +1,11 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useLocation } from 'react-router-dom';
 import { useCollabs } from '../contexts/CollabContext';
 import { SAMPLE_LISTINGS, THREAD_MESSAGES } from '../lib/mockData';
 import CollabDetail from '../components/CollabDetail';
+import { useAuth } from '../contexts/AuthContext';
+import { useVerification } from '../contexts/VerificationContext';
+import { useSubscription } from '../contexts/SubscriptionContext';
 
 const TAG_STYLES = {
   Collab:      'bg-mint text-slate',
@@ -158,6 +161,10 @@ function ConversationPanel({ thread, onViewCollab, onArchive, onUpdateTag }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const bottomRef = useRef(null);
   const tagStyle = TAG_STYLES[thread.tag] || TAG_STYLES.Application;
+  const { profile } = useAuth();
+  const { openModal } = useVerification();
+  const { isSubscribed, openModal: openSubModal } = useSubscription();
+  const isVerified = profile?.is_verified === true;
 
   useEffect(() => {
     setLocalMessages(THREAD_MESSAGES[thread.id] || []);
@@ -169,6 +176,8 @@ function ConversationPanel({ thread, onViewCollab, onArchive, onUpdateTag }) {
   }, [localMessages]);
 
   const sendMessage = () => {
+    if (!isVerified) { openModal(); return; }
+    if (!isSubscribed) { openSubModal(); return; }
     const text = draft.trim();
     if (!text) return;
     setLocalMessages((prev) => [
@@ -259,17 +268,24 @@ function ConversationPanel({ thread, onViewCollab, onArchive, onUpdateTag }) {
             style={{ minHeight: '1.4rem' }}
           />
           <button
-            onClick={sendMessage}
-            disabled={!draft.trim()}
+            onClick={!isVerified ? openModal : !isSubscribed ? openSubModal : sendMessage}
+            disabled={isVerified && isSubscribed && !draft.trim()}
             className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-colors"
             style={{
-              background: draft.trim() ? 'var(--slate)' : 'rgba(60,87,89,0.15)',
+              background: (!isVerified || !isSubscribed) ? 'rgba(60,87,89,0.18)' : draft.trim() ? 'var(--slate)' : 'rgba(60,87,89,0.15)',
             }}
           >
-            <svg viewBox="0 0 24 24" fill="none" stroke={draft.trim() ? 'white' : 'var(--sage)'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
-              <line x1="22" y1="2" x2="11" y2="13"/>
-              <polygon points="22 2 15 22 11 13 2 9 22 2"/>
-            </svg>
+            {(!isVerified || !isSubscribed) ? (
+              <svg viewBox="0 0 16 16" fill="none" stroke="var(--sage)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5">
+                <rect x="3" y="8" width="10" height="6" rx="1"/>
+                <path d="M5 8V5.5a3 3 0 0 1 6 0V8"/>
+              </svg>
+            ) : (
+              <svg viewBox="0 0 24 24" fill="none" stroke={draft.trim() ? 'white' : 'var(--sage)'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+                <line x1="22" y1="2" x2="11" y2="13"/>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+              </svg>
+            )}
           </button>
         </div>
         <p className="text-[10px] text-sage/60 text-center mt-1.5">Enter to send · Shift+Enter for new line</p>
@@ -406,8 +422,9 @@ function NewMessageModal({ listings, onSelect, onClose }) {
 export default function Inbox() {
   const { threads, collabs, archiveThread, updateThreadTag, createThread } = useCollabs();
   const [searchParams, setSearchParams] = useSearchParams();
+  const location = useLocation();
   const [activeFilter, setActiveFilter] = useState('All');
-  const [selectedId, setSelectedId] = useState(null);
+  const [selectedId, setSelectedId] = useState(() => location.state?.selectedThreadId ?? null);
   const [isSearching, setIsSearching] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [viewingCollab, setViewingCollab] = useState(null);

@@ -40,6 +40,8 @@ const submitBtn = document.getElementById('login-submit');
 const errorEl = document.getElementById('login-error');
 const cardEl = document.getElementById('login-card');
 const successEl = document.getElementById('login-success');
+const forgotHint = document.getElementById('login-forgot-hint');
+const forgotHintBtn = document.getElementById('login-forgot-hint-btn');
 
 formEl?.addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -79,8 +81,12 @@ formEl?.addEventListener('submit', async (e) => {
     }, 800);
 
   } catch (err) {
-    errorEl.textContent = getClerkErrorMessage(err);
+    const msg = getClerkErrorMessage(err);
+    errorEl.textContent = msg;
     errorEl.style.display = 'block';
+    if (msg.includes('Wrong email or password') || msg.includes('password')) {
+      if (forgotHint) forgotHint.style.display = 'block';
+    }
     submitBtn.disabled = false;
     submitBtn.textContent = 'Sign In';
   }
@@ -99,16 +105,15 @@ passwordToggle?.addEventListener('click', () => {
 });
 
 // ── Forgot password ───────────────────────────────────────────────────
-const forgotBtn = document.getElementById('login-forgot');
-forgotBtn?.addEventListener('click', async () => {
+async function handleForgotPassword(btn) {
   const email = emailEl.value.trim();
   if (!email) {
     errorEl.textContent = 'Enter your email address first.';
     errorEl.style.display = 'block';
     return;
   }
-  forgotBtn.disabled = true;
-  forgotBtn.textContent = 'Sending…';
+  btn.disabled = true;
+  btn.textContent = 'Sending…';
   try {
     const clerk = await getClerk();
     if (!clerk) throw new Error('Clerk not configured');
@@ -116,16 +121,20 @@ forgotBtn?.addEventListener('click', async () => {
       strategy: 'reset_password_email_code',
       identifier: email,
     });
-    forgotBtn.textContent = 'Check your inbox';
+    btn.textContent = 'Check your inbox ✓';
     errorEl.textContent = '';
     errorEl.style.display = 'none';
   } catch (err) {
     errorEl.textContent = getClerkErrorMessage(err) || 'Could not send reset email. Try again.';
     errorEl.style.display = 'block';
-    forgotBtn.disabled = false;
-    forgotBtn.textContent = 'Forgot password?';
+    btn.disabled = false;
+    btn.textContent = 'Forgot password?';
   }
-});
+}
+
+const forgotBtn = document.getElementById('login-forgot');
+forgotBtn?.addEventListener('click', () => handleForgotPassword(forgotBtn));
+forgotHintBtn?.addEventListener('click', () => handleForgotPassword(forgotHintBtn));
 (async () => {
   const clerk = await getClerk();
   if (clerk?.user) {

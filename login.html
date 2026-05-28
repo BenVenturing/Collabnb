@@ -184,7 +184,7 @@
           <label class="form-label" for="login-password">Password</label>
           <div style="position:relative;">
             <input class="form-input" type="password" id="login-password" name="password" placeholder="••••••••" autocomplete="current-password" required style="padding-right:2.75rem;" />
-            <button type="button" id="login-password-toggle" aria-label="Show password" style="position:absolute;right:0.5rem;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;padding:0.375rem;display:flex;align-items:center;color:var(--sage);line-height:1;">
+            <button type="button" id="login-password-toggle" aria-label="Show password" style="position:absolute;right:0.5rem;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;padding:0.375rem;display:flex;align-items:center;color:var(--slate);opacity:0.7;line-height:1;" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.7'">
               <svg id="login-password-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="20" height="20">
                 <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
                 <circle cx="12" cy="12" r="3"/>
@@ -197,6 +197,9 @@
         </div>
         <button type="submit" id="login-submit" class="btn-primary" style="width:100%;cursor:pointer;">Sign In</button>
         <div class="login-error" id="login-error"></div>
+        <div id="login-forgot-hint" style="display:none;margin-top:0.5rem;text-align:center;">
+          <button type="button" id="login-forgot-hint-btn" style="background:none;border:none;font-family:var(--font-body);font-size:0.8125rem;color:var(--slate);cursor:pointer;padding:0;text-decoration:underline;text-underline-offset:2px;">Forgot password?</button>
+        </div>
       </form>
 
       <div class="login-footer">
@@ -286,7 +289,7 @@
     <div class="legal-modal-scroll" data-legal-scroll="privacy">
       <div class="legal-content">
         <h1>Privacy Policy</h1>
-        <p><strong>Effective Date:</strong> June 1, 2026</p>
+        <p><strong>Effective Date:</strong> July 1, 2026</p>
         <h2>Introduction</h2>
         <p>Collabnb ("we," "our," or "us") connects content creators with hospitality hosts for collaboration opportunities. We are committed to protecting your personal data and being transparent about how it is collected and used.</p>
         <p>By using Collabnb, you agree to the collection and use of your information in accordance with this policy. If you do not agree, please discontinue use of the platform.</p>
@@ -329,7 +332,7 @@
     <div class="legal-modal-scroll" data-legal-scroll="terms">
       <div class="legal-content">
         <h1>Terms of Service</h1>
-        <p><strong>Effective Date:</strong> June 1, 2026</p>
+        <p><strong>Effective Date:</strong> July 1, 2026</p>
         <h2>Acceptance of Terms</h2>
         <p>By accessing or using Collabnb, you agree to be bound by these Terms of Service. If you do not agree, you may not use the platform.</p>
         <p>These Terms apply to all users, including creators and hosts, and govern your use of all Collabnb services.</p>

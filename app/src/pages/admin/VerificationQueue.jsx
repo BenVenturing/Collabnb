@@ -17,22 +17,6 @@ function bumpCount(key) {
   return next;
 }
 
-// ─── Email helpers (mailto: for MVP) ─────────────────────────────────────────
-function openApproveEmail(profile, isFounder) {
-  const subject = "You're verified on Collabnb 🎉";
-  const roleText = profile.role === 'host' ? 'creators' : 'listings';
-  let body = `Welcome, ${profile.full_name}! Your account is now live. Start exploring ${roleText}.`;
-  if (isFounder) body += "\n\nYou're one of our founding members — everything is free for you, forever.";
-  window.location.href = `mailto:${profile.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-}
-
-function openRejectEmail(profile, reason) {
-  const subject = "Your Collabnb application";
-  let body = `Hi ${profile.full_name}, we're not able to verify your account at this time.`;
-  if (reason?.trim()) body += ` ${reason.trim()}`;
-  window.location.href = `mailto:${profile.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-}
-
 // ─── Utilities ────────────────────────────────────────────────────────────────
 function formatDate(ts) {
   if (!ts) return '—';
@@ -278,12 +262,10 @@ export default function VerificationQueue() {
     }
 
     await approve({ profileId: profile._id, isFounder });
-    openApproveEmail(profile, isFounder);
   }
 
   async function handleReject(profile, reason) {
     await reject({ profileId: profile._id, reason: reason || undefined });
-    openRejectEmail(profile, reason);
   }
 
   const displayCards =

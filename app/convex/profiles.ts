@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
+import { internal } from "./_generated/api";
 
 export const getByEmail = query({
   args: { email: v.string() },
@@ -69,6 +70,14 @@ export const approveProfile = mutation({
       is_verified: true,
       is_founder: args.isFounder,
     });
+    const profile = await ctx.db.get(args.profileId as any);
+    if (profile?.email) {
+      await ctx.scheduler.runAfter(0, internal.emails.sendAccessGrantedEmail, {
+        email: profile.email,
+        full_name: profile.full_name,
+        role: profile.role,
+      });
+    }
   },
 });
 
@@ -82,6 +91,14 @@ export const rejectProfile = mutation({
       is_rejected: true,
       rejection_reason: args.reason,
     });
+    const profile = await ctx.db.get(args.profileId as any);
+    if (profile?.email) {
+      await ctx.scheduler.runAfter(0, internal.emails.sendRejectionEmail, {
+        email: profile.email,
+        full_name: profile.full_name,
+        reason: args.reason,
+      });
+    }
   },
 });
 

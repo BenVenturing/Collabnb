@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { internal } from "./_generated/api";
 
 export const signUp = mutation({
   args: {
@@ -47,6 +48,12 @@ export const signUp = mutation({
       region: rest.region,
       is_founder: false,
       beta: rest.beta || false,
+    });
+
+    await ctx.scheduler.runAfter(0, internal.emails.sendWelcomeEmail, {
+      email,
+      full_name: rest.full_name,
+      role,
     });
 
     return { signedUp: true, profileId };

@@ -418,6 +418,9 @@ async function handleWaitlistSubmit(e) {
     if (form) form.style.display = 'none';
     if (successEl) successEl.style.display = '';
 
+    // Confetti burst
+    launchConfetti();
+
     // Refresh counters
     initCounters();
 

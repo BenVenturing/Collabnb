@@ -1,114 +1,96 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { ChevronLeft, ChevronRight, Plus, X, MapPin, Lock } from 'lucide-react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { formatDateRange } from '../lib/dateUtils';
 
-// ─── localStorage ─────────────────────────────────────────────────────────────
+// ─── persistence ──────────────────────────────────────────────────────────────
 const CAL_KEY = '@collabnb_travel_calendar_v1';
-function lsGet() { try { return JSON.parse(localStorage.getItem(CAL_KEY) || '[]'); } catch { return []; } }
-function lsSet(v) { try { localStorage.setItem(CAL_KEY, JSON.stringify(v)); } catch {} }
+const lsGet = () => { try { return JSON.parse(localStorage.getItem(CAL_KEY) || '[]'); } catch { return []; } };
+const lsSet = (v) => { try { localStorage.setItem(CAL_KEY, JSON.stringify(v)); } catch {} };
 
-// ─── Trip color palette (cycling) ────────────────────────────────────────────
+const MAX_TRIPS = 6;
 const TRIP_COLORS = ['#4A9B7F', '#5b7fd4', '#c0785e', '#9b7bb8', '#c4963a', '#3C5759'];
-function tripBg(hex) { return hex + '28'; }      // ~16% opacity fill
-function tripBorder(hex) { return hex + '90'; }  // ~56% opacity border
+const tripBg     = (hex) => hex + '28';
+const tripBorder = (hex) => hex + '90';
 
-// ─── Date helpers ─────────────────────────────────────────────────────────────
+// ─── date helpers ─────────────────────────────────────────────────────────────
 function toISO(d) { return d.toISOString().slice(0, 10); }
-function fromISO(s) { const [y, m, day] = s.split('-').map(Number); return new Date(y, m - 1, day); }
-function sameDay(a, b) { return toISO(a) === toISO(b); }
-function inRange(date, a, b) {
-  const lo = a < b ? a : b;
-  const hi = a < b ? b : a;
-  return date >= lo && date <= hi;
-}
-const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+function fromISO(s) { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); }
+function sameDay(a, b) { return a && b && toISO(a) === toISO(b); }
+function inRange(d, lo, hi) { return d >= lo && d <= hi; }
+function minD(a, b) { return a < b ? a : b; }
+function maxD(a, b) { return a > b ? a : b; }
+function genId() { return `t_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`; }
+function fmt(s, e) { return formatDateRange(s, e); }
+
+const MONTHS   = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 const DAY_ABBR = ['Su','Mo','Tu','We','Th','Fr','Sa'];
 
-function fmtRange(startISO, endISO) {
-  return formatDateRange(startISO, endISO);
-}
+// ─── inline SVG icons (no lucide dependency issues) ───────────────────────────
+const ChevL  = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>;
+const ChevR  = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>;
+const IcoX   = ({ size = 12 }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>;
+const IcoPin = () => <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>;
+const IcoPen = () => <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>;
+const IcoLock = () => <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>;
+const IcoPlus = () => <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>;
 
-function generateId() { return `t_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`; }
-
-// ─── Day cell ─────────────────────────────────────────────────────────────────
-function DayCell({ day, date, trips, selRange, isoDate, viewerRole, onMouseDown, onMouseEnter, onMouseUp, isEditable }) {
+// ─── DayCell ──────────────────────────────────────────────────────────────────
+function DayCell({ day, date, trips, selRange, viewerRole, onMouseDown, onMouseEnter, isEditable, hoverMode }) {
   const [showTip, setShowTip] = useState(false);
-
   if (!day) return <div />;
 
-  const matchTrip = trips.find(t => {
-    const s = fromISO(t.startDate), e = fromISO(t.endDate);
-    return date >= s && date <= e;
-  });
+  const showCity   = viewerRole === 'host' || viewerRole === 'self';
+  const visTrips   = viewerRole === 'creator' ? [] : trips;
+  const matchTrip  = visTrips.find(t => inRange(date, fromISO(t.startDate), fromISO(t.endDate)));
 
-  const inSel = selRange && inRange(date, selRange.start, selRange.end);
-  const isStart = matchTrip && sameDay(date, fromISO(matchTrip.startDate));
-  const isEnd   = matchTrip && sameDay(date, fromISO(matchTrip.endDate));
+  const inSel      = selRange && inRange(date, selRange.start, selRange.end);
+  const isSelStart = inSel && sameDay(date, selRange.start);
+  const isSelEnd   = inSel && sameDay(date, selRange.end);
+  const isTripS    = matchTrip && sameDay(date, fromISO(matchTrip.startDate));
+  const isTripE    = matchTrip && sameDay(date, fromISO(matchTrip.endDate));
 
-  const bg = inSel
-    ? 'rgba(60,87,89,0.15)'
-    : matchTrip
-    ? tripBg(matchTrip.color)
-    : 'transparent';
-
-  const radius = isStart && isEnd ? '8px'
-    : isStart ? '8px 0 0 8px'
-    : isEnd   ? '0 8px 8px 0'
-    : matchTrip ? 0 : '6px';
-
-  const showCity = viewerRole === 'host' || viewerRole === 'self';
+  // Background + radius
+  let bg = 'transparent', radius = '6px', color = 'var(--ink)', fontWeight = 400;
+  if (inSel) {
+    bg = 'rgba(60,87,89,0.16)';
+    radius = (isSelStart && isSelEnd) ? '8px' : isSelStart ? '8px 0 0 8px' : isSelEnd ? '0 8px 8px 0' : '0';
+  } else if (matchTrip) {
+    bg = tripBg(matchTrip.color);
+    color = matchTrip.color;
+    fontWeight = 600;
+    radius = (isTripS && isTripE) ? '8px' : isTripS ? '8px 0 0 8px' : isTripE ? '0 8px 8px 0' : '0';
+  }
 
   return (
     <div
-      onMouseDown={() => isEditable && onMouseDown(date, isoDate)}
-      onMouseEnter={() => onMouseEnter(date, isoDate)}
-      onMouseUp={() => isEditable && onMouseUp(date, isoDate)}
+      onMouseDown={() => isEditable && onMouseDown(date)}
+      onMouseEnter={() => onMouseEnter(date)}
       onMouseOver={() => matchTrip && setShowTip(true)}
       onMouseOut={() => setShowTip(false)}
       style={{
-        position: 'relative',
-        padding: '5px 2px',
-        textAlign: 'center',
-        fontSize: 12,
-        fontFamily: 'var(--font-body)',
-        fontWeight: matchTrip ? 600 : 400,
-        color: matchTrip ? matchTrip.color : 'var(--ink)',
-        background: bg,
-        borderRadius: radius,
-        cursor: isEditable ? 'pointer' : matchTrip ? 'default' : 'default',
-        userSelect: 'none',
-        transition: 'background 80ms ease',
-        minWidth: 0,
+        position: 'relative', padding: '5px 2px', textAlign: 'center',
+        fontSize: 12, fontFamily: 'var(--font-body)', fontWeight, color,
+        background: bg, borderRadius: radius,
+        cursor: isEditable ? (hoverMode ? 'crosshair' : 'pointer') : 'default',
+        userSelect: 'none', transition: 'background 60ms', minWidth: 0,
       }}
     >
       {day}
-      {/* Tooltip */}
       {showTip && matchTrip && (
         <div style={{
-          position: 'absolute',
-          bottom: 'calc(100% + 6px)',
-          left: '50%',
+          position: 'absolute', bottom: 'calc(100% + 6px)', left: '50%',
           transform: 'translateX(-50%)',
-          background: 'rgba(25,37,36,0.92)',
-          backdropFilter: 'blur(8px)',
-          WebkitBackdropFilter: 'blur(8px)',
-          color: '#EFECE9',
-          fontSize: 11,
-          fontWeight: 500,
-          padding: '6px 10px',
-          borderRadius: '0.625rem',
-          whiteSpace: 'nowrap',
-          zIndex: 50,
-          pointerEvents: 'none',
-          boxShadow: '0 4px 14px rgba(25,37,36,0.25)',
-          lineHeight: 1.5,
-          textAlign: 'left',
+          background: 'rgba(25,37,36,0.92)', backdropFilter: 'blur(8px)',
+          WebkitBackdropFilter: 'blur(8px)', color: '#EFECE9',
+          fontSize: 11, fontWeight: 500, padding: '6px 10px',
+          borderRadius: '0.625rem', whiteSpace: 'nowrap', zIndex: 50,
+          pointerEvents: 'none', boxShadow: '0 4px 14px rgba(25,37,36,0.25)',
+          lineHeight: 1.5, textAlign: 'left',
         }}>
           <div style={{ fontWeight: 700, marginBottom: 2 }}>
             {matchTrip.country}{showCity && matchTrip.city ? `, ${matchTrip.city}` : ''}
           </div>
           <div style={{ color: 'rgba(239,236,233,0.7)', fontSize: 10 }}>
-            {fmtRange(matchTrip.startDate, matchTrip.endDate)}
+            {fmt(matchTrip.startDate, matchTrip.endDate)}
           </div>
           {matchTrip.note && (
             <div style={{ color: 'rgba(209,235,219,0.85)', fontSize: 10, marginTop: 3 }}>
@@ -117,7 +99,7 @@ function DayCell({ day, date, trips, selRange, isoDate, viewerRole, onMouseDown,
           )}
           {!showCity && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 3, color: 'rgba(239,236,233,0.5)', fontSize: 9, marginTop: 3 }}>
-              <Lock size={8} />city private
+              <IcoLock /> city private
             </div>
           )}
         </div>
@@ -126,160 +108,167 @@ function DayCell({ day, date, trips, selRange, isoDate, viewerRole, onMouseDown,
   );
 }
 
-// ─── Month grid ───────────────────────────────────────────────────────────────
-function MonthGrid({ year, month, trips, selRange, viewerRole, onMouseDown, onMouseEnter, onMouseUp, isEditable }) {
-  const daysInM  = new Date(year, month + 1, 0).getDate();
-  const firstDay = new Date(year, month, 1).getDay();
-
-  const cells = [];
-  for (let i = 0; i < firstDay; i++) cells.push(null);
-  for (let d = 1; d <= daysInM; d++) cells.push(d);
+// ─── MonthGrid ────────────────────────────────────────────────────────────────
+function MonthGrid(props) {
+  const { year, month, ...rest } = props;
+  const daysInMonth   = new Date(year, month + 1, 0).getDate();
+  const firstDayOfWk  = new Date(year, month, 1).getDay();
+  const cells = [...Array(firstDayOfWk).fill(null), ...Array.from({ length: daysInMonth }, (_, i) => i + 1)];
 
   return (
     <div>
       <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 13, color: 'var(--ink)', textAlign: 'center', margin: '0 0 10px' }}>
-        {MONTH_NAMES[month]} {year}
+        {MONTHS[month]} {year}
       </p>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: '2px' }}>
         {DAY_ABBR.map(d => (
-          <div key={d} style={{ textAlign: 'center', fontSize: 9, fontWeight: 700, color: 'var(--sage)', padding: '3px 0', letterSpacing: '0.04em' }}>{d}</div>
+          <div key={d} style={{ textAlign: 'center', fontSize: 9, fontWeight: 700, color: 'var(--sage)', padding: '3px 0', letterSpacing: '0.05em' }}>{d}</div>
         ))}
         {cells.map((day, i) => {
           const date = day ? new Date(year, month, day) : null;
-          const isoDate = date ? toISO(date) : null;
-          return (
-            <DayCell
-              key={i}
-              day={day}
-              date={date}
-              isoDate={isoDate}
-              trips={trips}
-              selRange={selRange}
-              viewerRole={viewerRole}
-              onMouseDown={onMouseDown}
-              onMouseEnter={onMouseEnter}
-              onMouseUp={onMouseUp}
-              isEditable={isEditable}
-            />
-          );
+          return <DayCell key={i} day={day} date={date} {...rest} />;
         })}
       </div>
     </div>
   );
 }
 
-// ─── Trip form modal ──────────────────────────────────────────────────────────
-function TripFormModal({ range, onSave, onCancel }) {
-  const [country, setCountry] = useState('');
-  const [city,    setCity]    = useState('');
-  const [note,    setNote]    = useState('');
+// ─── TripModal ────────────────────────────────────────────────────────────────
+function TripModal({ form, onSave, onCancel }) {
+  const [country, setCountry] = useState(form.country);
+  const [city,    setCity]    = useState(form.city);
+  const [note,    setNote]    = useState(form.note);
   const countryRef = useRef(null);
+  const isEdit = !!form.editId;
 
   useEffect(() => { countryRef.current?.focus(); }, []);
   useEffect(() => {
-    const handler = (e) => { if (e.key === 'Escape') onCancel(); };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
+    const h = (e) => { if (e.key === 'Escape') onCancel(); };
+    window.addEventListener('keydown', h);
+    return () => window.removeEventListener('keydown', h);
   }, [onCancel]);
+
+  const rangeLabel = fmt(toISO(form.range.start), toISO(form.range.end));
+  const canSave = country.trim() && city.trim();
+
+  const inp = {
+    width: '100%', padding: '10px 13px', borderRadius: '0.875rem',
+    border: '1.5px solid rgba(25,37,36,0.12)',
+    background: 'rgba(255,255,255,0.88)',
+    fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--ink)',
+    outline: 'none', boxSizing: 'border-box', transition: 'border-color 150ms',
+  };
 
   return (
     <div
-      onClick={onCancel}
+      onClick={(e) => { if (e.target === e.currentTarget) onCancel(); }}
       style={{
         position: 'fixed', inset: 0, zIndex: 300,
-        background: 'rgba(25,37,36,0.5)',
-        backdropFilter: 'blur(6px)',
-        WebkitBackdropFilter: 'blur(6px)',
+        background: 'rgba(25,37,36,0.38)',
+        backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         padding: '1.5rem',
       }}
     >
+      <style>{`
+        @keyframes tcModalIn {
+          from { opacity: 0; transform: translateY(14px) scale(0.97); }
+          to   { opacity: 1; transform: translateY(0) scale(1); }
+        }
+      `}</style>
       <div
-        onClick={e => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}
         style={{
-          background: 'rgba(255,255,255,0.97)',
-          borderRadius: '1.25rem',
-          border: '1.5px solid rgba(255,255,255,0.9)',
-          boxShadow: '0 20px 60px rgba(25,37,36,0.2)',
-          padding: '24px',
-          width: '100%',
-          maxWidth: 360,
+          background: 'rgba(243,240,237,0.97)',
+          backdropFilter: 'blur(28px) saturate(140%)',
+          WebkitBackdropFilter: 'blur(28px) saturate(140%)',
+          borderRadius: '1.75rem',
+          border: '1px solid rgba(255,255,255,0.82)',
+          boxShadow: '0 24px 56px -12px rgba(25,37,36,0.22), inset 0 1px 0 rgba(255,255,255,0.7)',
+          padding: '24px 28px',
+          width: '100%', maxWidth: 380,
+          animation: 'tcModalIn 200ms cubic-bezier(0.16,1,0.3,1) forwards',
         }}
       >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        {/* Header */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
           <div>
             <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 16, color: 'var(--ink)', margin: 0 }}>
-              Add Trip
+              {isEdit ? 'Edit Trip' : 'Add Trip'}
             </h3>
-            <p style={{ fontSize: 11, color: 'var(--sage)', margin: '3px 0 0' }}>
-              {fmtRange(toISO(range.start), toISO(range.end))}
-            </p>
+            <p style={{ fontSize: 11, color: 'var(--sage)', margin: '4px 0 0' }}>{rangeLabel}</p>
           </div>
-          <button onClick={onCancel} style={{ background: 'rgba(25,37,36,0.06)', border: 'none', borderRadius: '50%', width: 28, height: 28, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <X size={13} color="var(--ink)" />
+          <button
+            onClick={onCancel}
+            style={{ background: 'rgba(25,37,36,0.07)', border: 'none', borderRadius: '50%', width: 30, height: 30, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 150ms', flexShrink: 0 }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(25,37,36,0.13)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(25,37,36,0.07)'; }}
+          >
+            <IcoX size={13} />
           </button>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {/* Fields */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
           <div>
-            <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--ink)', marginBottom: 5 }}>
+            <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--slate)', marginBottom: 6 }}>
               Country <span style={{ color: '#ef4444' }}>*</span>
             </label>
-            <input
-              ref={countryRef}
-              value={country}
-              onChange={e => setCountry(e.target.value)}
-              placeholder="e.g. Japan"
-              style={inputStyle}
+            <input ref={countryRef} value={country} onChange={(e) => setCountry(e.target.value)}
+              placeholder="e.g. Japan" style={inp}
+              onFocus={(e) => { e.target.style.borderColor = 'rgba(25,37,36,0.3)'; }}
+              onBlur={(e) => { e.target.style.borderColor = 'rgba(25,37,36,0.12)'; }}
             />
           </div>
+
           <div>
-            <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--ink)', marginBottom: 4 }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 700, color: 'var(--slate)', marginBottom: 6 }}>
               City <span style={{ color: '#ef4444' }}>*</span>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, marginLeft: 6, padding: '1px 6px', borderRadius: 9999, background: 'rgba(25,37,36,0.05)', fontSize: 9, fontWeight: 600, color: 'var(--sage)' }}>
-                <Lock size={7} />private to other creators
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '2px 7px', borderRadius: 9999, background: 'rgba(25,37,36,0.06)', fontSize: 9, fontWeight: 600, color: 'var(--sage)' }}>
+                <IcoLock /> private to other creators
               </span>
             </label>
-            <input
-              value={city}
-              onChange={e => setCity(e.target.value)}
-              placeholder="e.g. Tokyo"
-              style={inputStyle}
+            <input value={city} onChange={(e) => setCity(e.target.value)}
+              placeholder="e.g. Tokyo" style={inp}
+              onFocus={(e) => { e.target.style.borderColor = 'rgba(25,37,36,0.3)'; }}
+              onBlur={(e) => { e.target.style.borderColor = 'rgba(25,37,36,0.12)'; }}
             />
           </div>
+
           <div>
-            <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--ink)', marginBottom: 5 }}>
-              Trip note <span style={{ color: 'var(--sage)', fontWeight: 500 }}>(optional)</span>
+            <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--slate)', marginBottom: 6 }}>
+              Trip note <span style={{ fontWeight: 500, color: 'var(--sage)' }}>(optional)</span>
             </label>
-            <input
-              value={note}
-              onChange={e => setNote(e.target.value)}
-              placeholder="e.g. Open to glamping collabs"
-              style={inputStyle}
+            <input value={note} onChange={(e) => setNote(e.target.value)}
+              placeholder="e.g. Open to glamping collabs" style={inp}
+              onFocus={(e) => { e.target.style.borderColor = 'rgba(25,37,36,0.3)'; }}
+              onBlur={(e) => { e.target.style.borderColor = 'rgba(25,37,36,0.12)'; }}
             />
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: 8, marginTop: 18 }}>
-          <button
-            onClick={onCancel}
-            style={{ flex: 1, padding: '10px 0', borderRadius: 9999, border: '1.5px solid rgba(25,37,36,0.12)', background: 'transparent', fontSize: 12, fontWeight: 700, color: 'var(--slate)', cursor: 'pointer', fontFamily: 'var(--font-body)' }}
-          >
+        {/* Actions */}
+        <div style={{ display: 'flex', gap: 8, marginTop: 20 }}>
+          <button onClick={onCancel} style={{
+            flex: 1, padding: '10px 0', borderRadius: 9999,
+            border: '1.5px solid rgba(25,37,36,0.12)', background: 'transparent',
+            fontSize: 12, fontWeight: 700, color: 'var(--slate)', cursor: 'pointer', fontFamily: 'var(--font-body)',
+          }}>
             Cancel
           </button>
           <button
-            onClick={() => { if (country && city) onSave({ country, city, note }); }}
-            disabled={!country || !city}
+            onClick={() => canSave && onSave({ country: country.trim(), city: city.trim(), note: note.trim() })}
+            disabled={!canSave}
             style={{
               flex: 2, padding: '10px 0', borderRadius: 9999, border: 'none',
-              background: !country || !city ? 'rgba(25,37,36,0.12)' : 'var(--ink)',
+              background: canSave ? 'var(--ink)' : 'rgba(25,37,36,0.1)',
               fontSize: 12, fontWeight: 700,
-              color: !country || !city ? 'var(--sage)' : 'var(--bone)',
-              cursor: !country || !city ? 'not-allowed' : 'pointer',
-              fontFamily: 'var(--font-body)',
+              color: canSave ? 'var(--bone)' : 'var(--sage)',
+              cursor: canSave ? 'pointer' : 'not-allowed',
+              fontFamily: 'var(--font-body)', transition: 'background 150ms',
             }}
           >
-            Save Trip
+            {isEdit ? 'Save Changes' : 'Save Trip'}
           </button>
         </div>
       </div>
@@ -287,264 +276,327 @@ function TripFormModal({ range, onSave, onCancel }) {
   );
 }
 
-const inputStyle = {
-  width: '100%', padding: '9px 12px', borderRadius: '0.625rem',
-  border: '1.5px solid rgba(25,37,36,0.12)',
-  background: 'rgba(255,255,255,0.85)',
-  fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--ink)',
-  outline: 'none', boxSizing: 'border-box',
-};
-
-// ─── Main TravelCalendar component ────────────────────────────────────────────
+// ─── main component ───────────────────────────────────────────────────────────
 // viewerRole: 'self' | 'host' | 'creator'
 export default function TravelCalendar({ viewerRole = 'self' }) {
-  const today = new Date();
+  const today    = new Date();
   const isEditable = viewerRole === 'self';
 
-  const [trips,       setTrips]       = useState(() => lsGet());
-  const [month,       setMonth]       = useState(new Date(today.getFullYear(), today.getMonth(), 1));
-  const [dragging,    setDragging]    = useState(false);
-  const [dragStart,   setDragStart]   = useState(null);
-  const [dragEnd,     setDragEnd]     = useState(null);
-  const [pendingRange, setPendingRange] = useState(null);
-  const [showForm,    setShowForm]    = useState(false);
+  const [trips, setTrips] = useState(() => lsGet());
+  const [firstMonth, setFirstMonth] = useState(() => new Date(today.getFullYear(), today.getMonth(), 1));
 
-  const year = month.getFullYear();
-  const mon  = month.getMonth();
+  // ── Selection state machine ─────────────────────────────────────────────────
+  // null → { mode: 'dragging'|'hover', anchor: Date, preview: Date }
+  //
+  // 'dragging': mousedown held — anchor fixed, preview follows mouse
+  //   • mouseup with no move → transition to 'hover'
+  //   • mouseup with move    → open form
+  //
+  // 'hover': clicked once — anchor fixed, preview follows mouse
+  //   • second mousedown    → open form with [anchor, hovered date]
+  //   • Escape              → cancel
+  const [_sel, _setSel] = useState(null);
+  const selRef = useRef(null);                  // always in sync (no async lag)
+  const setSel = useCallback((val) => {
+    const next = typeof val === 'function' ? val(selRef.current) : val;
+    selRef.current = next;
+    _setSel(next);
+  }, []);
+  const sel = _sel; // for rendering
 
-  const nextMonthYear = mon === 11 ? year + 1 : year;
-  const nextMon       = mon === 11 ? 0 : mon + 1;
+  const didMoveRef = useRef(false);
 
-  const selRange = dragging && dragStart && dragEnd
-    ? { start: dragStart < dragEnd ? dragStart : dragEnd,
-        end:   dragStart < dragEnd ? dragEnd   : dragStart }
+  // ── Form state ──────────────────────────────────────────────────────────────
+  // null | { range: {start,end}, editId: null|string, country, city, note }
+  const [form, setForm] = useState(null);
+
+  // Derived selection range (normalized start ≤ end)
+  const selRange = sel
+    ? { start: minD(sel.anchor, sel.preview), end: maxD(sel.anchor, sel.preview) }
     : null;
 
-  // Commit drag on window mouseup
-  const draggingRef = useRef(dragging);
-  const dragStartRef = useRef(dragStart);
-  const dragEndRef   = useRef(dragEnd);
-  useEffect(() => { draggingRef.current = dragging; }, [dragging]);
-  useEffect(() => { dragStartRef.current = dragStart; }, [dragStart]);
-  useEffect(() => { dragEndRef.current = dragEnd; }, [dragEnd]);
+  // Month nav
+  const y1 = firstMonth.getFullYear(), m1 = firstMonth.getMonth();
+  const y2 = m1 === 11 ? y1 + 1 : y1, m2 = m1 === 11 ? 0 : m1 + 1;
+  const prevMonth = () => setFirstMonth(m => new Date(m.getFullYear(), m.getMonth() - 1, 1));
+  const nextMonth = () => setFirstMonth(m => new Date(m.getFullYear(), m.getMonth() + 1, 1));
 
+  // ── Global mouseup: commit drag or enter hover ──────────────────────────────
   useEffect(() => {
     function onUp() {
-      if (!draggingRef.current) return;
-      setDragging(false);
-      const s = dragStartRef.current;
-      const e = dragEndRef.current || s;
-      if (s) {
-        setPendingRange({ start: s < e ? s : e, end: s < e ? e : s });
-        setShowForm(true);
+      const s = selRef.current;
+      if (!s || s.mode !== 'dragging') return;
+      if (didMoveRef.current) {
+        // Multi-day drag → open form
+        const start = minD(s.anchor, s.preview), end = maxD(s.anchor, s.preview);
+        setSel(null);
+        setForm({ range: { start, end }, editId: null, country: '', city: '', note: '' });
+      } else {
+        // Single click → enter hover mode
+        setSel({ mode: 'hover', anchor: s.anchor, preview: s.anchor });
       }
-      setDragStart(null);
-      setDragEnd(null);
     }
     window.addEventListener('mouseup', onUp);
     return () => window.removeEventListener('mouseup', onUp);
-  }, []);
+  }, [setSel]);
 
+  // ── Escape cancels active selection ────────────────────────────────────────
+  useEffect(() => {
+    const h = (e) => { if (e.key === 'Escape' && selRef.current && !form) setSel(null); };
+    window.addEventListener('keydown', h);
+    return () => window.removeEventListener('keydown', h);
+  }, [form, setSel]);
+
+  // ── Day interaction handlers ────────────────────────────────────────────────
   const handleMouseDown = useCallback((date) => {
-    setDragging(true);
-    setDragStart(date);
-    setDragEnd(date);
-  }, []);
+    if (!isEditable) return;
+    const s = selRef.current;
+
+    if (s?.mode === 'hover') {
+      // Second mousedown in hover mode → commit selection with current preview
+      const start = minD(s.anchor, s.preview), end = maxD(s.anchor, s.preview);
+      setSel(null);
+      setForm({ range: { start, end }, editId: null, country: '', city: '', note: '' });
+      return;
+    }
+
+    if (trips.length >= MAX_TRIPS) return;
+    didMoveRef.current = false;
+    setSel({ mode: 'dragging', anchor: date, preview: date });
+  }, [isEditable, trips.length, setSel]);
 
   const handleMouseEnter = useCallback((date) => {
-    if (draggingRef.current) setDragEnd(date);
-  }, []);
+    setSel(s => {
+      if (!s) return s;
+      if (s.mode === 'dragging' && !sameDay(date, s.anchor)) didMoveRef.current = true;
+      return (s.mode === 'dragging' || s.mode === 'hover') ? { ...s, preview: date } : s;
+    });
+  }, [setSel]);
 
-  const handleMouseUp = useCallback(() => {
-    // actual commit is handled by window mouseup listener
-  }, []);
+  // ── Add trip button: anchor to today and enter hover mode ──────────────────
+  const handleAddBtnClick = useCallback(() => {
+    if (sel?.mode === 'hover') { setSel(null); return; }
+    if (trips.length >= MAX_TRIPS) return;
+    setSel({ mode: 'hover', anchor: today, preview: today });
+  }, [sel, trips.length, today, setSel]);
 
+  // ── Save / edit / delete ────────────────────────────────────────────────────
   function saveTrip({ country, city, note }) {
-    const color = TRIP_COLORS[trips.length % TRIP_COLORS.length];
-    const newTrip = {
-      id: generateId(),
-      startDate: toISO(pendingRange.start),
-      endDate:   toISO(pendingRange.end),
-      country,
-      city,
-      note,
-      color,
-    };
-    const updated = [...trips, newTrip];
-    setTrips(updated);
-    lsSet(updated);
-    setShowForm(false);
-    setPendingRange(null);
+    if (!form) return;
+    let updated;
+    if (form.editId) {
+      updated = trips.map(t => t.id === form.editId ? { ...t, country, city, note } : t);
+    } else {
+      const color = TRIP_COLORS[trips.length % TRIP_COLORS.length];
+      updated = [...trips, {
+        id: genId(),
+        startDate: toISO(form.range.start),
+        endDate:   toISO(form.range.end),
+        country, city, note, color,
+      }];
+    }
+    setTrips(updated); lsSet(updated); setForm(null);
   }
 
   function deleteTrip(id) {
     const updated = trips.filter(t => t.id !== id);
-    setTrips(updated);
-    lsSet(updated);
+    setTrips(updated); lsSet(updated);
   }
 
-  const showCity = viewerRole === 'host' || viewerRole === 'self';
+  function startEdit(trip) {
+    setForm({
+      range: { start: fromISO(trip.startDate), end: fromISO(trip.endDate) },
+      editId: trip.id,
+      country: trip.country,
+      city: trip.city,
+      note: trip.note || '',
+    });
+  }
+
+  const atMax      = trips.length >= MAX_TRIPS;
+  const hoverMode  = sel?.mode === 'hover';
+  const showCity   = viewerRole === 'host' || viewerRole === 'self';
+
+  const gridShared = {
+    trips, selRange, viewerRole,
+    onMouseDown: handleMouseDown,
+    onMouseEnter: handleMouseEnter,
+    isEditable, hoverMode,
+  };
 
   return (
-    <div>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+    <div style={{ userSelect: 'none' }}>
+
+      {/* ── Header ── */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 16 }}>
         <div>
           <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.125rem', color: 'var(--ink)', margin: 0 }}>
             Travel Calendar
           </h3>
           <p style={{ fontSize: '0.78rem', color: 'var(--sage)', margin: '3px 0 0' }}>
             {isEditable
-              ? 'Click and drag to add a trip'
+              ? hoverMode
+                ? 'Hover to extend range — click to confirm'
+                : atMax
+                ? `${MAX_TRIPS}/${MAX_TRIPS} trips — delete one to add another`
+                : 'Click and drag, or click once then hover to select dates'
               : viewerRole === 'host'
-              ? 'Upcoming creator trips — city visible to you as host'
-              : 'Upcoming trips — city is private'}
+              ? 'Creator trips visible to you — city shown'
+              : 'Trip info is private'}
           </p>
         </div>
-        {isEditable && trips.length > 0 && (
-          <button
-            onClick={() => { setPendingRange(null); setShowForm(true); }}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 5,
-              padding: '6px 14px', borderRadius: 9999,
-              background: 'var(--ink)', color: 'var(--bone)',
-              border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 700,
-              fontFamily: 'var(--font-body)',
-            }}
-          >
-            <Plus size={11} />
-            Add trip
-          </button>
+
+        {isEditable && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+            {trips.length > 0 && (
+              <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--sage)' }}>
+                {trips.length}/{MAX_TRIPS}
+              </span>
+            )}
+            <button
+              onClick={handleAddBtnClick}
+              disabled={atMax && !hoverMode}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 5,
+                padding: '6px 14px', borderRadius: 9999,
+                background: hoverMode ? 'rgba(25,37,36,0.08)' : atMax ? 'rgba(25,37,36,0.06)' : 'var(--ink)',
+                color: hoverMode ? 'var(--slate)' : atMax ? 'var(--sage)' : 'var(--bone)',
+                border: hoverMode ? '1px solid rgba(25,37,36,0.12)' : 'none',
+                cursor: atMax && !hoverMode ? 'not-allowed' : 'pointer',
+                fontSize: 11, fontWeight: 700, fontFamily: 'var(--font-body)',
+                transition: 'background 150ms',
+              }}
+            >
+              {hoverMode ? (
+                <><IcoX size={10} /> Cancel</>
+              ) : (
+                <><IcoPlus /> Add trip</>
+              )}
+            </button>
+          </div>
         )}
       </div>
 
-      {/* Month navigation */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-        <button
-          onClick={() => setMonth(new Date(mon === 0 ? year - 1 : year, mon === 0 ? 11 : mon - 1, 1))}
-          style={navBtnStyle}
-        >
-          <ChevronLeft size={14} color="var(--slate)" />
-        </button>
+      {/* ── Month navigation ── */}
+      <div style={{ display: 'flex', alignItems: 'center', marginBottom: 16 }}>
+        <button onClick={prevMonth} style={navBtn}><ChevL /></button>
         <div style={{ flex: 1 }} />
-        <button
-          onClick={() => setMonth(new Date(nextMon === 11 && mon !== 10 ? nextMonthYear : nextMonthYear, nextMon === 11 && mon !== 10 ? 0 : nextMon + 1, 1))}
-          style={navBtnStyle}
-        >
-          <ChevronRight size={14} color="var(--slate)" />
-        </button>
+        <button onClick={nextMonth} style={navBtn}><ChevR /></button>
       </div>
 
-      {/* Two-month grid */}
+      {/* ── Two-month grid ── */}
       <div style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-        gap: '1.5rem',
-        marginBottom: 20,
-        userSelect: 'none',
+        gap: '1.5rem', marginBottom: 16,
       }}>
-        <MonthGrid
-          year={year} month={mon}
-          trips={trips} selRange={selRange}
-          viewerRole={viewerRole}
-          onMouseDown={handleMouseDown}
-          onMouseEnter={handleMouseEnter}
-          onMouseUp={handleMouseUp}
-          isEditable={isEditable}
-        />
-        <MonthGrid
-          year={nextMonthYear} month={nextMon}
-          trips={trips} selRange={selRange}
-          viewerRole={viewerRole}
-          onMouseDown={handleMouseDown}
-          onMouseEnter={handleMouseEnter}
-          onMouseUp={handleMouseUp}
-          isEditable={isEditable}
-        />
+        <MonthGrid year={y1} month={m1} {...gridShared} />
+        <MonthGrid year={y2} month={m2} {...gridShared} />
       </div>
 
-      {/* Empty state hint */}
-      {trips.length === 0 && isEditable && (
+      {/* ── Hover-mode range hint bar ── */}
+      {hoverMode && sel && (
         <div style={{
-          textAlign: 'center', padding: '1.5rem',
-          background: 'rgba(255,255,255,0.5)',
-          borderRadius: '1rem',
-          border: '1.5px dashed rgba(25,37,36,0.1)',
-          marginBottom: 16,
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '8px 14px', marginBottom: 12,
+          background: 'rgba(74,155,127,0.1)', border: '1px solid rgba(74,155,127,0.28)',
+          borderRadius: '0.75rem',
         }}>
-          <p style={{ fontSize: 13, color: 'var(--sage)', margin: 0 }}>
-            Drag across dates to add your first trip
+          <p style={{ fontSize: 12, color: '#2d6a4f', fontWeight: 600, margin: 0 }}>
+            {sameDay(sel.anchor, sel.preview)
+              ? 'Hover over dates to extend range, then click to confirm'
+              : `${fmt(toISO(minD(sel.anchor, sel.preview)), toISO(maxD(sel.anchor, sel.preview)))} — click to confirm`
+            }
           </p>
+          <button onClick={() => setSel(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', display: 'flex', color: '#2d6a4f', opacity: 0.6 }}>
+            <IcoX />
+          </button>
         </div>
       )}
 
-      {trips.length === 0 && !isEditable && (
-        <p style={{ fontSize: 13, color: 'var(--sage)', textAlign: 'center', margin: '0 0 16px' }}>
+      {/* ── Empty state ── */}
+      {trips.length === 0 && isEditable && !hoverMode && (
+        <div style={{
+          textAlign: 'center', padding: '1.5rem',
+          background: 'rgba(255,255,255,0.5)', borderRadius: '1rem',
+          border: '1.5px dashed rgba(25,37,36,0.1)', marginBottom: 14,
+        }}>
+          <p style={{ fontSize: 13, color: 'var(--sage)', margin: 0 }}>
+            Drag across dates to add your first trip — up to {MAX_TRIPS} total
+          </p>
+        </div>
+      )}
+      {trips.length === 0 && !isEditable && viewerRole !== 'creator' && (
+        <p style={{ fontSize: 13, color: 'var(--sage)', textAlign: 'center', marginBottom: 14 }}>
           No trips planned yet.
         </p>
       )}
 
-      {/* Trip legend */}
-      {trips.length > 0 && (
+      {/* ── Trip list ── */}
+      {trips.length > 0 && viewerRole !== 'creator' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
           {trips.map(t => (
             <div key={t.id} style={{
               display: 'flex', alignItems: 'center', gap: 10,
-              padding: '8px 12px',
-              background: tripBg(t.color),
-              border: `1px solid ${tripBorder(t.color)}`,
-              borderRadius: '0.75rem',
+              padding: '9px 13px',
+              background: tripBg(t.color), border: `1px solid ${tripBorder(t.color)}`,
+              borderRadius: '0.875rem',
             }}>
-              <MapPin size={12} color={t.color} style={{ flexShrink: 0 }} />
+              <span style={{ color: t.color, flexShrink: 0, display: 'flex' }}><IcoPin /></span>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink)' }}>
-                  {t.country}
-                  {showCity && t.city ? `, ${t.city}` : ''}
+                  {t.country}{showCity && t.city ? `, ${t.city}` : ''}
                 </span>
                 <span style={{ fontSize: 11, color: 'var(--sage)', marginLeft: 8 }}>
-                  {fmtRange(t.startDate, t.endDate)}
+                  {fmt(t.startDate, t.endDate)}
                 </span>
                 {t.note && (
-                  <span style={{ fontSize: 11, color: 'var(--slate)', display: 'block', marginTop: 1 }}>
-                    "{t.note}"
-                  </span>
+                  <span style={{ fontSize: 11, color: 'var(--slate)', display: 'block', marginTop: 1 }}>"{t.note}"</span>
                 )}
                 {!showCity && (
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 10, color: 'var(--sage)', marginLeft: 6 }}>
-                    <Lock size={8} />city hidden
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 10, color: 'var(--sage)', marginLeft: 4 }}>
+                    <IcoLock /> city hidden
                   </span>
                 )}
               </div>
               {isEditable && (
-                <button
-                  onClick={() => deleteTrip(t.id)}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 3, borderRadius: '50%', display: 'flex', flexShrink: 0 }}
-                >
-                  <X size={12} color="var(--sage)" />
-                </button>
+                <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                  <button
+                    onClick={() => startEdit(t)}
+                    title="Edit trip"
+                    style={{ width: 26, height: 26, borderRadius: '50%', border: '1px solid rgba(25,37,36,0.1)', background: 'rgba(255,255,255,0.75)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 150ms' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,1)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.75)'; }}
+                  >
+                    <IcoPen />
+                  </button>
+                  <button
+                    onClick={() => deleteTrip(t.id)}
+                    title="Delete trip"
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 3, borderRadius: '50%', display: 'flex', opacity: 0.55, transition: 'opacity 150ms' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.55'; }}
+                  >
+                    <IcoX />
+                  </button>
+                </div>
               )}
             </div>
           ))}
         </div>
       )}
 
-      {/* Form modal */}
-      {showForm && (
-        <TripFormModal
-          range={pendingRange || { start: today, end: today }}
-          onSave={saveTrip}
-          onCancel={() => { setShowForm(false); setPendingRange(null); }}
-        />
-      )}
+      {/* ── Form modal ── */}
+      {form && <TripModal form={form} onSave={saveTrip} onCancel={() => setForm(null)} />}
     </div>
   );
 }
 
-const navBtnStyle = {
+const navBtn = {
   width: 28, height: 28, borderRadius: '50%',
-  background: 'rgba(255,255,255,0.7)',
-  backdropFilter: 'blur(12px)',
-  border: '1px solid rgba(255,255,255,0.85)',
+  background: 'rgba(255,255,255,0.7)', backdropFilter: 'blur(12px)',
+  WebkitBackdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.85)',
   display: 'flex', alignItems: 'center', justifyContent: 'center',
   cursor: 'pointer', boxShadow: '0 2px 8px rgba(25,37,36,0.07)',
+  color: 'var(--slate)',
 };

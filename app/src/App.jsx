@@ -24,6 +24,7 @@ import Step2Offer           from './pages/host/Step2Offer';
 import Step3Deliverables    from './pages/host/Step3Deliverables';
 import Step4Review          from './pages/host/Step4Review';
 import AdminDashboard       from './pages/AdminDashboard';
+import WaitlistPreview      from './pages/WaitlistPreview';
 
 // Catch any render crash and show it instead of a blank page
 class ErrorBoundary extends Component {
@@ -58,6 +59,16 @@ function AppRoutes() {
       return null;
     }
     // On localhost — fall through to app with mock session (dev mode)
+  }
+
+  // Waitlist gate — unverified waitlist-tier users see locked preview only
+  const isWaitlisted = profile && profile.tier === 'waitlist' && !profile.is_verified;
+  if (isWaitlisted) {
+    return (
+      <Routes>
+        <Route path="*" element={<WaitlistPreview />} />
+      </Routes>
+    );
   }
 
   return (

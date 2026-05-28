@@ -50,10 +50,18 @@ export const signUp = mutation({
       beta: rest.beta || false,
     });
 
+    // Notify admin
     await ctx.scheduler.runAfter(0, internal.email.sendAdminNotification, {
       type: "signup",
       subject: `New ${role} waitlist signup: ${rest.full_name}`,
       body: `Name: ${rest.full_name}\nEmail: ${email}\nRole: ${role}\nCity: ${rest.city || "—"}\nInstagram: ${rest.instagram_handle ? "@" + rest.instagram_handle : "—"}\n\nView in admin: https://collabnb.com/#/admin`,
+    });
+
+    // Welcome email to the new member
+    await ctx.scheduler.runAfter(0, internal.email.sendWelcomeEmail, {
+      to: email,
+      name: rest.full_name,
+      role,
     });
 
     return { signedUp: true, profileId };

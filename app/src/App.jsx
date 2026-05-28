@@ -24,7 +24,6 @@ import Step2Offer           from './pages/host/Step2Offer';
 import Step3Deliverables    from './pages/host/Step3Deliverables';
 import Step4Review          from './pages/host/Step4Review';
 import AdminDashboard       from './pages/AdminDashboard';
-import WaitlistPreview      from './pages/WaitlistPreview';
 
 // Catch any render crash and show it instead of a blank page
 class ErrorBoundary extends Component {
@@ -61,13 +60,19 @@ function AppRoutes() {
     // On localhost — fall through to app with mock session (dev mode)
   }
 
-  // Waitlist gate — unverified waitlist-tier users see locked preview only
-  const isWaitlisted = profile && profile.tier === 'waitlist' && !profile.is_verified;
-  if (isWaitlisted) {
+  // Pending gate — unverified waitlist-tier users can browse but not interact
+  const isPending = profile && profile.tier === 'waitlist' && !profile.is_verified;
+  if (isPending) {
     return (
-      <Routes>
-        <Route path="*" element={<WaitlistPreview />} />
-      </Routes>
+      <CollabProvider>
+        <Layout>
+          <Routes>
+            <Route path="/explore"     element={<Explore />} />
+            <Route path="/listing/:id" element={<ListingDetail />} />
+            <Route path="*"            element={<Navigate to="/explore" replace />} />
+          </Routes>
+        </Layout>
+      </CollabProvider>
     );
   }
 
@@ -91,7 +96,7 @@ function AppRoutes() {
           <Route path="*" element={
             <Layout>
               <Routes>
-                <Route path="/"                  element={<Navigate to="/explore" replace />} />
+                <Route path="/"                  element={<Navigate to={profile?.role === 'host' ? '/host' : '/explore'} replace />} />
                 {/* Host dashboard pages */}
                 <Route path="/host"              element={<HostDashboard />} />
                 <Route path="/host/listing/:id"  element={<HostListingDetail />} />

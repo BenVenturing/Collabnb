@@ -6,6 +6,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { useState } from 'react';
+import { useAuth } from '../contexts/AuthContext';
 
 const LAUNCH_DATE = new Date('2026-07-01');
 const LAUNCH_BANNER_KEY = 'collabnb_launch_banner_dismissed';
@@ -27,9 +28,38 @@ function MaintenanceBanner() {
   );
 }
 
+function PendingVerificationBanner({ profile }) {
+  const firstName = profile?.full_name?.split(' ')[0] || 'there';
+  return (
+    <div style={{
+      background: '#FFFBEB',
+      border: '1.5px solid #D97706',
+      borderRadius: '14px',
+      padding: '0.875rem 1.125rem',
+      marginBottom: '1.5rem',
+      display: 'flex',
+      gap: '0.875rem',
+      alignItems: 'flex-start',
+    }}>
+      <span style={{ fontSize: '1.25rem', lineHeight: 1, flexShrink: 0, marginTop: '0.05rem' }}>⏳</span>
+      <div>
+        <p style={{ fontWeight: 700, color: '#92400E', margin: '0 0 0.2rem', fontSize: '0.9375rem', fontFamily: 'var(--font-display, sans-serif)' }}>
+          Account under review, {firstName}!
+        </p>
+        <p style={{ color: '#78350F', margin: 0, fontSize: '0.875rem', lineHeight: 1.5 }}>
+          We're reviewing your account — typically 24–48 hours. Browse listings freely below.
+          Messaging and applying will unlock the moment you're approved.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export default function Layout({ children }) {
   const navigate = useNavigate();
   const location = useLocation();
+  const { profile } = useAuth();
+  const isPending = profile?.tier === 'waitlist' && !profile?.is_verified;
 
   const [bannerDismissed, setBannerDismissed] = useState(
     () => localStorage.getItem(LAUNCH_BANNER_KEY) === '1'
@@ -84,6 +114,7 @@ export default function Layout({ children }) {
         className="relative z-10"
         style={{ paddingTop: bannerVisible ? `calc(7rem + ${BANNER_H})` : '7rem' }}
       >
+        {isPending && <div style={{ maxWidth: '820px', margin: '0 auto', padding: '0 1.25rem' }}><PendingVerificationBanner profile={profile} /></div>}
         {children}
       </main>
 

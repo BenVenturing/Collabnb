@@ -327,13 +327,22 @@ googleBtn?.addEventListener('click', async () => {
     const origin = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
       ? 'http://localhost:5173'
       : 'https://www.collabnb.com';
-    await clerk.signIn.authenticateWithRedirect({
+    // Clerk v5: create the sign-in, then manually follow the redirect URL
+    const signInAttempt = await clerk.client.signIn.create({
       strategy: 'oauth_google',
       redirectUrl: `${origin}/sso-callback.html`,
-      redirectUrlComplete: `${origin}/profile.html`,
+      actionCompleteRedirectUrl: `${origin}/profile.html`,
     });
+    const redirectTarget = signInAttempt.firstFactorVerification?.externalVerificationRedirectURL;
+    if (redirectTarget) {
+      window.location.href = redirectTarget.toString();
+    } else {
+      throw new Error('No redirect URL returned from Google sign-in. Check Clerk Dashboard → Social Connections → Google is enabled.');
+    }
   } catch (err) {
-    errorEl.textContent = 'Could not connect to Google. Please try again.';
+    console.error('Google sign-in error:', err);
+    const msg = getClerkErrorMessage(err);
+    errorEl.textContent = msg.startsWith('Something went wrong') ? 'Google sign-in failed — ' + (err.message || msg) : msg;
     errorEl.style.display = 'block';
     googleBtn.disabled = false;
     googleBtn.innerHTML = `<svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.2l6.7-6.7C35.7 2.5 30.2 0 24 0 14.8 0 7 5.4 3.2 13.3l7.8 6C12.9 13.2 18 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8C43.7 37.2 46.5 31.3 46.5 24.5z"/><path fill="#FBBC05" d="M11 28.3c-.7-2-1-4-1-6.3s.4-4.4 1-6.3l-7.8-6C1.2 13.3 0 18.5 0 24s1.2 10.7 3.2 14.3l7.8-6z"/><path fill="#34A853" d="M24 48c6.2 0 11.4-2 15.2-5.5l-7.5-5.8c-2 1.4-4.6 2.3-7.7 2.3-6 0-11.1-3.7-12.9-9l-7.8 6C7 42.6 14.8 48 24 48z"/></svg> Continue with Google`;

@@ -229,6 +229,24 @@
       <div class="login-spinner"></div>
     </div>
 
+    <!-- ── MFA: second factor ── -->
+    <div id="mfa-card" class="login-card" hidden>
+      <div class="login-icon">🔐</div>
+      <h1 class="login-title">Verify it's you</h1>
+      <p class="login-desc" id="mfa-desc">Enter the verification code to complete sign in.</p>
+      <form id="mfa-form" class="login-form">
+        <div class="form-group">
+          <label class="form-label" for="mfa-code">Verification code</label>
+          <input class="form-input" type="text" id="mfa-code" name="code" placeholder="123456" inputmode="numeric" maxlength="8" autocomplete="one-time-code" required style="letter-spacing:0.25em;font-size:1.375rem;text-align:center;font-weight:600;" />
+        </div>
+        <button type="submit" id="mfa-submit" class="btn-primary" style="width:100%;cursor:pointer;">Verify</button>
+        <div class="login-error" id="mfa-error"></div>
+      </form>
+      <div class="login-footer" style="margin-top:1.25rem;">
+        <button type="button" id="mfa-back" style="background:none;border:none;font-family:var(--font-body);font-size:0.875rem;color:var(--slate);cursor:pointer;padding:0;text-decoration:underline;text-underline-offset:2px;">← Back to sign in</button>
+      </div>
+    </div>
+
     <!-- ── RESET STEP 1: enter email ── -->
     <div id="reset-step1-card" class="login-card" hidden>
       <div class="login-icon">🔒</div>

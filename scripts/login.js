@@ -104,37 +104,41 @@ passwordToggle?.addEventListener('click', () => {
     : '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
 });
 
-// ── Forgot password ───────────────────────────────────────────────────
-async function handleForgotPassword(btn) {
-  const email = emailEl.value.trim();
-  if (!email) {
-    errorEl.textContent = 'Enter your email address first.';
-    errorEl.style.display = 'block';
-    return;
-  }
-  btn.disabled = true;
-  btn.textContent = 'Sending…';
-  try {
-    const clerk = await getClerk();
-    if (!clerk) throw new Error('Clerk not configured');
-    await clerk.client.signIn.create({
-      strategy: 'reset_password_email_code',
-      identifier: email,
-    });
-    btn.textContent = 'Check your inbox ✓';
-    errorEl.textContent = '';
-    errorEl.style.display = 'none';
-  } catch (err) {
-    errorEl.textContent = getClerkErrorMessage(err) || 'Could not send reset email. Try again.';
-    errorEl.style.display = 'block';
-    btn.disabled = false;
-    btn.textContent = 'Forgot password?';
-  }
+// ── Forgot password — redirect to Clerk hosted reset page ────────────
+function handleForgotPassword() {
+  const origin = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? 'http://localhost:5173'
+    : 'https://www.collabnb.com';
+  window.location.href = `https://accounts.collabnb.com/sign-in#/forgot-password?redirect_url=${encodeURIComponent(origin + '/profile.html')}`;
 }
 
 const forgotBtn = document.getElementById('login-forgot');
-forgotBtn?.addEventListener('click', () => handleForgotPassword(forgotBtn));
-forgotHintBtn?.addEventListener('click', () => handleForgotPassword(forgotHintBtn));
+forgotBtn?.addEventListener('click', handleForgotPassword);
+forgotHintBtn?.addEventListener('click', handleForgotPassword);
+
+// ── Google sign-in ────────────────────────────────────────────────────
+const googleBtn = document.getElementById('login-google');
+googleBtn?.addEventListener('click', async () => {
+  googleBtn.disabled = true;
+  googleBtn.textContent = 'Redirecting to Google…';
+  try {
+    const clerk = await getClerk();
+    if (!clerk) throw new Error('Clerk not configured');
+    const origin = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+      ? 'http://localhost:5173'
+      : 'https://www.collabnb.com';
+    await clerk.client.signIn.create({
+      strategy: 'oauth_google',
+      redirectUrl: `${origin}/sso-callback.html`,
+      actionCompleteRedirectUrl: `${origin}/profile.html`,
+    });
+  } catch (err) {
+    errorEl.textContent = 'Could not connect to Google. Please try again.';
+    errorEl.style.display = 'block';
+    googleBtn.disabled = false;
+    googleBtn.innerHTML = `<svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.2l6.7-6.7C35.7 2.5 30.2 0 24 0 14.8 0 7 5.4 3.2 13.3l7.8 6C12.9 13.2 18 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8C43.7 37.2 46.5 31.3 46.5 24.5z"/><path fill="#FBBC05" d="M11 28.3c-.7-2-1-4-1-6.3s.4-4.4 1-6.3l-7.8-6C1.2 13.3 0 18.5 0 24s1.2 10.7 3.2 14.3l7.8-6z"/><path fill="#34A853" d="M24 48c6.2 0 11.4-2 15.2-5.5l-7.5-5.8c-2 1.4-4.6 2.3-7.7 2.3-6 0-11.1-3.7-12.9-9l-7.8 6C7 42.6 14.8 48 24 48z"/></svg> Continue with Google`;
+  }
+});
 (async () => {
   const clerk = await getClerk();
   if (clerk?.user) {

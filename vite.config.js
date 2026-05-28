@@ -14,6 +14,7 @@ export default defineConfig({
         faq: resolve(__dirname, 'faq.html'),
         join: resolve(__dirname, 'join.html'),
         login: resolve(__dirname, 'login.html'),
+        'sso-callback': resolve(__dirname, 'sso-callback.html'),
         profile: resolve(__dirname, 'profile.html'),
         pricing: resolve(__dirname, 'pricing/index.html'),
       },

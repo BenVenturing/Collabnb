@@ -46,8 +46,11 @@ class ErrorBoundary extends Component {
   }
 }
 
+const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL;
+
 function AppRoutes() {
   const { session, loading, profile } = useAuth();
+  const isAdmin = profile?.email && ADMIN_EMAIL && profile.email.toLowerCase() === ADMIN_EMAIL.toLowerCase();
 
   if (loading) return <LoadingScreen />;
 
@@ -80,7 +83,7 @@ function AppRoutes() {
           <Route path="*" element={
             <Layout>
               <Routes>
-                <Route path="/"                  element={<Navigate to={profile?.role === 'host' ? '/host' : '/explore'} replace />} />
+                <Route path="/"                  element={<Navigate to={isAdmin ? '/admin' : profile?.role === 'host' ? '/host' : '/explore'} replace />} />
                 {/* Host dashboard pages */}
                 <Route path="/host"              element={<HostDashboard />} />
                 <Route path="/host/listing/:id"  element={<HostListingDetail />} />

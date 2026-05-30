@@ -117,14 +117,31 @@ function ClerkAuthInner({ hooks, children }) {
           setLoading(false);
           return;
         }
+        const isAdminUser = ADMIN_EMAIL ? email.toLowerCase() === ADMIN_EMAIL.toLowerCase() : false;
         let result = await convex.query(api.profiles.getByEmail, { email });
         if (!result) {
-          result = await getOrCreateMutation({
-            email,
-            full_name: clerkUser.fullName || email.split('@')[0],
-            avatar_url: clerkUser.imageUrl || undefined,
-            is_admin: ADMIN_EMAIL ? email === ADMIN_EMAIL : false,
-          });
+          try {
+            result = await getOrCreateMutation({
+              email,
+              full_name: clerkUser.fullName || email.split('@')[0],
+              avatar_url: clerkUser.imageUrl || undefined,
+              is_admin: isAdminUser,
+            });
+          } catch {
+            // getOrCreate not yet deployed — profile remains null
+          }
+        } else if (isAdminUser) {
+          // Profile exists — still call getOrCreate so it upgrades tier/verified if needed
+          try {
+            result = await getOrCreateMutation({
+              email,
+              full_name: result.full_name,
+              avatar_url: result.avatar_url,
+              is_admin: true,
+            });
+          } catch {
+            // If not deployed yet, use the existing result as-is
+          }
         }
         setProfile(result || MOCK_CREATOR);
       } catch {

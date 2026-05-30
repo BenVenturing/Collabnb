@@ -22,7 +22,18 @@ export const getOrCreate = mutation({
       .query("profiles")
       .withIndex("by_email", (q) => q.eq("email", args.email))
       .unique();
-    if (existing) return existing;
+    if (existing) {
+      if (args.is_admin && (!existing.is_verified || existing.tier !== 'UGC Pro')) {
+        await ctx.db.patch(existing._id, {
+          is_verified: true,
+          tier: 'UGC Pro',
+          is_founder: true,
+          beta: true,
+        });
+        return await ctx.db.get(existing._id);
+      }
+      return existing;
+    }
 
     const username = args.email.split('@')[0].replace(/[^a-z0-9_]/gi, '').toLowerCase() || 'user';
     const profileId = await ctx.db.insert("profiles", {

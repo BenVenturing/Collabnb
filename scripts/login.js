@@ -25,6 +25,14 @@ function getClerkErrorMessage(err) {
   return err.errors?.[0]?.longMessage || err.message || 'Something went wrong. Please try again.';
 }
 
+const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL;
+function appUrl(email) {
+  const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  const isAdmin = ADMIN_EMAIL && email && email.toLowerCase() === ADMIN_EMAIL.toLowerCase();
+  const path = isAdmin ? '#/admin' : '#/explore';
+  return isLocalhost ? `http://localhost:5174/${path}` : `/app/${path}`;
+}
+
 // If arriving from a sign-out, clear any stale session first
 (async () => {
   if (window.location.search.includes('logout') || window.location.hash.includes('logout')) {
@@ -101,10 +109,7 @@ formEl?.addEventListener('submit', async (e) => {
     await clerk.setActive({ session: signInAttempt.createdSessionId });
     cardEl.hidden = true;
     successEl.hidden = false;
-    setTimeout(() => {
-      const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-      window.location.href = isLocalhost ? 'http://localhost:5174/#/explore' : '/app/#/explore';
-    }, 800);
+    setTimeout(() => { window.location.href = appUrl(email); }, 800);
 
   } catch (err) {
     const msg = getClerkErrorMessage(err);
@@ -253,10 +258,7 @@ resetCodeForm?.addEventListener('submit', async (e) => {
       await clerk.setActive({ session: result.createdSessionId });
       showPanel(null);
       successEl.hidden = false;
-      setTimeout(() => {
-        const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-        window.location.href = isLocalhost ? 'http://localhost:5174/#/explore' : '/app/#/explore';
-      }, 800);
+      setTimeout(() => { window.location.href = appUrl(_resetEmail); }, 800);
     } else {
       throw new Error(`Unexpected status: ${result.status}`);
     }
@@ -301,10 +303,8 @@ mfaForm?.addEventListener('submit', async (e) => {
       await clerk.setActive({ session: result.createdSessionId });
       showPanel(null);
       successEl.hidden = false;
-      setTimeout(() => {
-        const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-        window.location.href = isLocalhost ? 'http://localhost:5174/#/explore' : '/app/#/explore';
-      }, 800);
+      const mfaEmail = clerk.user?.primaryEmailAddress?.emailAddress || '';
+      setTimeout(() => { window.location.href = appUrl(mfaEmail); }, 800);
     } else {
       throw new Error(`Unexpected status: ${result.status}`);
     }
@@ -351,7 +351,7 @@ googleBtn?.addEventListener('click', async () => {
 (async () => {
   const clerk = await getClerk();
   if (clerk?.user) {
-    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    window.location.href = isLocalhost ? 'http://localhost:5174/#/explore' : '/app/#/explore';
+    const existingEmail = clerk.user.primaryEmailAddress?.emailAddress || '';
+    window.location.href = appUrl(existingEmail);
   }
 })();

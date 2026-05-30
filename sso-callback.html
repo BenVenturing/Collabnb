@@ -21,14 +21,20 @@
 <script type="module">
   import { Clerk } from '@clerk/clerk-js';
   const key = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
+  const adminEmail = import.meta.env.VITE_ADMIN_EMAIL;
   if (!key) { window.location.href = '/login.html'; }
   const clerk = new Clerk(key);
   await clerk.load();
   try {
+    // handleRedirectCallback completes the OAuth flow and sets the active session
     await clerk.handleRedirectCallback({
-      afterSignInUrl: '/app/#/explore',
-      afterSignUpUrl: '/app/#/explore',
+      afterSignInUrl: '/app/',
+      afterSignUpUrl: '/app/',
     });
+    // After callback, check if admin and override redirect
+    const email = clerk.user?.primaryEmailAddress?.emailAddress || '';
+    const isAdmin = adminEmail && email && email.toLowerCase() === adminEmail.toLowerCase();
+    if (isAdmin) window.location.href = '/app/#/admin';
   } catch {
     window.location.href = '/login.html';
   }

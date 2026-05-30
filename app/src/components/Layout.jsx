@@ -2,6 +2,7 @@ import AppNav from './AppNav';
 import VerificationPendingModal from './VerificationPendingModal';
 import SubscriptionModal from './SubscriptionModal';
 import FloatingHelpButton from './FloatingHelpButton';
+import OnboardingChecklist from './OnboardingChecklist';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
@@ -60,6 +61,7 @@ export default function Layout({ children }) {
   const location = useLocation();
   const { profile } = useAuth();
   const isPending = profile?.tier === 'waitlist' && !profile?.is_verified;
+  const userCount = useQuery(api.profiles.countAll) ?? null;
 
   const [bannerDismissed, setBannerDismissed] = useState(
     () => localStorage.getItem(LAUNCH_BANNER_KEY) === '1'
@@ -87,7 +89,13 @@ export default function Layout({ children }) {
         }}>
           <span style={{ color: '#7ecfc4', fontWeight: 700 }}>🚀 {daysLeft} days to launch</span>
           <span style={{ color: 'rgba(255,255,255,0.7)' }}>·</span>
-          <span>Full listings go live <strong>July 1st</strong> — prepare your listing now so you're ready on day one.</span>
+          <span>Full listings go live <strong>July 1st</strong></span>
+          {userCount !== null && (
+            <>
+              <span style={{ color: 'rgba(255,255,255,0.7)' }}>·</span>
+              <span style={{ color: '#a8f0e8', fontWeight: 600 }}>👥 {userCount.toLocaleString()} {userCount === 1 ? 'member' : 'members'} joined</span>
+            </>
+          )}
           <button
             onClick={() => { localStorage.setItem(LAUNCH_BANNER_KEY, '1'); setBannerDismissed(true); }}
             style={{ marginLeft: '0.5rem', background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', fontSize: '1rem', cursor: 'pointer', lineHeight: 1, padding: '0 0.25rem', flexShrink: 0 }}
@@ -114,7 +122,10 @@ export default function Layout({ children }) {
         className="relative z-10"
         style={{ paddingTop: bannerVisible ? `calc(7rem + ${BANNER_H})` : '7rem' }}
       >
-        {isPending && <div style={{ maxWidth: '820px', margin: '0 auto', padding: '0 1.25rem' }}><PendingVerificationBanner profile={profile} /></div>}
+        <div style={{ maxWidth: '820px', margin: '0 auto', padding: '0 1.25rem' }}>
+          {isPending && <PendingVerificationBanner profile={profile} />}
+          <OnboardingChecklist />
+        </div>
         {children}
       </main>
 

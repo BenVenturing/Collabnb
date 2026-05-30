@@ -60,22 +60,6 @@ function AppRoutes() {
     // On localhost — fall through to app with mock session (dev mode)
   }
 
-  // Pending gate — unverified waitlist-tier users can browse but not interact
-  const isPending = profile && profile.tier === 'waitlist' && !profile.is_verified;
-  if (isPending) {
-    return (
-      <CollabProvider>
-        <Layout>
-          <Routes>
-            <Route path="/explore"     element={<Explore />} />
-            <Route path="/listing/:id" element={<ListingDetail />} />
-            <Route path="*"            element={<Navigate to="/explore" replace />} />
-          </Routes>
-        </Layout>
-      </CollabProvider>
-    );
-  }
-
   return (
     <CollabProvider>
       <VerificationProvider>

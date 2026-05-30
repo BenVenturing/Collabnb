@@ -26,8 +26,8 @@
   await clerk.load();
   try {
     await clerk.handleRedirectCallback({
-      afterSignInUrl: '/profile.html',
-      afterSignUpUrl: '/profile.html',
+      afterSignInUrl: '/app/#/explore',
+      afterSignUpUrl: '/app/#/explore',
     });
   } catch {
     window.location.href = '/login.html';

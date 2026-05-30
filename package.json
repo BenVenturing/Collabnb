@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && cd app && vite build --outDir ../dist/app",
     "preview": "vite preview"
   },
   "dependencies": {

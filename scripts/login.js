@@ -96,14 +96,14 @@ formEl?.addEventListener('submit', async (e) => {
       throw new Error(`Sign-in requires additional steps (${signInAttempt.status}). Please contact support.`);
     }
 
-    // Success — show spinner then redirect to profile
+    // Success — show spinner then redirect to app
     const clerk = await getClerk();
     await clerk.setActive({ session: signInAttempt.createdSessionId });
     cardEl.hidden = true;
     successEl.hidden = false;
     setTimeout(() => {
       const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-      window.location.href = isLocalhost ? 'http://localhost:5174/#/profile' : '/profile.html';
+      window.location.href = isLocalhost ? 'http://localhost:5174/#/explore' : '/app/#/explore';
     }, 800);
 
   } catch (err) {
@@ -255,7 +255,7 @@ resetCodeForm?.addEventListener('submit', async (e) => {
       successEl.hidden = false;
       setTimeout(() => {
         const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-        window.location.href = isLocalhost ? 'http://localhost:5174/#/profile' : '/profile.html';
+        window.location.href = isLocalhost ? 'http://localhost:5174/#/explore' : '/app/#/explore';
       }, 800);
     } else {
       throw new Error(`Unexpected status: ${result.status}`);
@@ -303,7 +303,7 @@ mfaForm?.addEventListener('submit', async (e) => {
       successEl.hidden = false;
       setTimeout(() => {
         const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-        window.location.href = isLocalhost ? 'http://localhost:5174/#/profile' : '/profile.html';
+        window.location.href = isLocalhost ? 'http://localhost:5174/#/explore' : '/app/#/explore';
       }, 800);
     } else {
       throw new Error(`Unexpected status: ${result.status}`);
@@ -326,12 +326,12 @@ googleBtn?.addEventListener('click', async () => {
     if (!clerk) throw new Error('Clerk not configured');
     const origin = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
       ? 'http://localhost:5173'
-      : 'https://www.collabnb.com';
+      : 'https://collabnb.com';
     // Clerk v5: create the sign-in, then manually follow the redirect URL
     const signInAttempt = await clerk.client.signIn.create({
       strategy: 'oauth_google',
       redirectUrl: `${origin}/sso-callback.html`,
-      actionCompleteRedirectUrl: `${origin}/profile.html`,
+      actionCompleteRedirectUrl: `${origin}/app/#/explore`,
     });
     const redirectTarget = signInAttempt.firstFactorVerification?.externalVerificationRedirectURL;
     if (redirectTarget) {
@@ -352,6 +352,6 @@ googleBtn?.addEventListener('click', async () => {
   const clerk = await getClerk();
   if (clerk?.user) {
     const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    window.location.href = isLocalhost ? 'http://localhost:5174/#/profile' : '/profile.html';
+    window.location.href = isLocalhost ? 'http://localhost:5174/#/explore' : '/app/#/explore';
   }
 })();

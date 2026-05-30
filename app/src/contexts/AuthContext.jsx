@@ -3,6 +3,8 @@ import { useMutation, useConvex } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { MOCK_CREATOR } from '../lib/mockData';
 
+const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL;
+
 const AuthContext = createContext(null);
 
 export const MOCK_SESSION = { user: { id: MOCK_CREATOR.id } };
@@ -74,6 +76,7 @@ function ClerkAuthInner({ hooks, children }) {
   const { signOut: clerkSignOut } = useClerkAuth();
   const convex = useConvex();
   const updateProfileMutation = useMutation(api.profiles.updateProfile);
+  const getOrCreateMutation = useMutation(api.profiles.getOrCreate);
 
   const [session, setSession] = useState(null);
   const [profile, setProfile] = useState(null);
@@ -85,7 +88,6 @@ function ClerkAuthInner({ hooks, children }) {
     if (!clerkUser) {
       const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
       if (isLocalhost) {
-        // Dev mode — use mock session so app is testable without signing in
         setSession(MOCK_SESSION);
         setProfile(MOCK_CREATOR);
       } else {
@@ -96,26 +98,34 @@ function ClerkAuthInner({ hooks, children }) {
       return;
     }
 
+    const email = clerkUser.primaryEmailAddress?.emailAddress;
     const clerkSession = {
       user: {
         id: clerkUser.id,
-        email: clerkUser.primaryEmailAddress?.emailAddress,
+        email,
         fullName: clerkUser.fullName,
         imageUrl: clerkUser.imageUrl,
       },
     };
     setSession(clerkSession);
 
-    // Fetch profile from Convex
+    // Fetch or auto-create profile in Convex
     (async () => {
       try {
-        const email = clerkUser.primaryEmailAddress?.emailAddress;
         if (!email) {
           setProfile(MOCK_CREATOR);
           setLoading(false);
           return;
         }
-        const result = await convex.query(api.profiles.getByEmail, { email });
+        let result = await convex.query(api.profiles.getByEmail, { email });
+        if (!result) {
+          result = await getOrCreateMutation({
+            email,
+            full_name: clerkUser.fullName || email.split('@')[0],
+            avatar_url: clerkUser.imageUrl || undefined,
+            is_admin: ADMIN_EMAIL ? email === ADMIN_EMAIL : false,
+          });
+        }
         setProfile(result || MOCK_CREATOR);
       } catch {
         setProfile(MOCK_CREATOR);
@@ -123,7 +133,7 @@ function ClerkAuthInner({ hooks, children }) {
         setLoading(false);
       }
     })();
-  }, [clerkLoaded, clerkUser, convex]);
+  }, [clerkLoaded, clerkUser, convex, getOrCreateMutation]);
 
   const updateProfile = useCallback(async (updates) => {
     const merged = { ...profile, ...updates };

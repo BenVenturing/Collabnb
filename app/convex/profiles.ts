@@ -2,6 +2,44 @@ import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
 import { internal } from "./_generated/api";
 
+export const countAll = query({
+  args: {},
+  handler: async (ctx) => {
+    const all = await ctx.db.query("profiles").collect();
+    return all.length;
+  },
+});
+
+export const getOrCreate = mutation({
+  args: {
+    email: v.string(),
+    full_name: v.string(),
+    avatar_url: v.optional(v.string()),
+    is_admin: v.optional(v.boolean()),
+  },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query("profiles")
+      .withIndex("by_email", (q) => q.eq("email", args.email))
+      .unique();
+    if (existing) return existing;
+
+    const username = args.email.split('@')[0].replace(/[^a-z0-9_]/gi, '').toLowerCase() || 'user';
+    const profileId = await ctx.db.insert("profiles", {
+      email: args.email,
+      full_name: args.full_name || args.email.split('@')[0],
+      username,
+      role: 'creator',
+      tier: args.is_admin ? 'UGC Pro' : 'waitlist',
+      is_verified: args.is_admin ? true : false,
+      is_founder: args.is_admin ? true : undefined,
+      beta: args.is_admin ? true : undefined,
+      avatar_url: args.avatar_url,
+    });
+    return await ctx.db.get(profileId);
+  },
+});
+
 export const getByEmail = query({
   args: { email: v.string() },
   handler: async (ctx, args) => {

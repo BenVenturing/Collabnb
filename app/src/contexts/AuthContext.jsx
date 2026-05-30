@@ -38,10 +38,7 @@ export function MockAuthProvider({ children }) {
   }, [profile]);
 
   const signOut = useCallback(() => {
-    const homeUrl = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-      ? 'http://localhost:5173/'
-      : '/';
-    window.location.href = homeUrl;
+    window.location.href = window.location.origin + '/';
   }, []);
 
   return (

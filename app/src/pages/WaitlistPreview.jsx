@@ -1,4 +1,6 @@
 import { useEffect, useRef } from 'react';
+import { useQuery } from 'convex/react';
+import { api } from '../../convex/_generated/api';
 import { useAuth } from '../contexts/AuthContext';
 import { SAMPLE_LISTINGS, IMG_FALLBACK } from '../lib/mockData';
 
@@ -157,6 +159,15 @@ function LockedCard({ listing }) {
 export default function WaitlistPreview() {
   const { profile, signOut } = useAuth();
   const previewListings = SAMPLE_LISTINGS.slice(0, 6);
+
+  // Reactively watch for approval — reloads the page the moment admin approves
+  const liveProfile = useQuery(
+    api.profiles.getByEmail,
+    profile?.email ? { email: profile.email } : 'skip'
+  );
+  useEffect(() => {
+    if (liveProfile?.is_verified) window.location.reload();
+  }, [liveProfile?.is_verified]);
 
   return (
     <>

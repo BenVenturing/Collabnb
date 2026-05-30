@@ -29,9 +29,9 @@ export const sendWelcomeEmail = internalAction({
   body { margin:0; padding:0; background:#EFECE9; font-family:'Helvetica Neue',Helvetica,Arial,sans-serif; }
   .wrap { max-width:560px; margin:0 auto; padding:40px 20px; }
   .card { background:#fff; border-radius:20px; overflow:hidden; box-shadow:0 4px 24px rgba(25,37,36,0.07); }
-  .header { background:linear-gradient(135deg,#192524,#2d4a3e); padding:40px 40px 32px; text-align:center; }
-  .logo { color:#fff; font-size:1.4rem; font-weight:800; letter-spacing:-0.01em; }
-  .logo span { color:#7ecfc4; }
+  .header { background:linear-gradient(135deg,#192524,#2d4a3e); padding:36px 40px 28px; text-align:center; }
+  .header-inner { display:inline-flex; align-items:center; gap:12px; }
+  .logo-text { color:#fff; font-size:1.35rem; font-weight:800; letter-spacing:-0.02em; vertical-align:middle; }
   .body { padding:36px 40px 32px; }
   h1 { font-size:1.55rem; font-weight:800; color:#192524; margin:0 0 12px; line-height:1.2; }
   p { font-size:0.9375rem; color:#4a6670; line-height:1.65; margin:0 0 16px; }
@@ -54,7 +54,10 @@ export const sendWelcomeEmail = internalAction({
 <div class="wrap">
   <div class="card">
     <div class="header">
-      <div class="logo">collab<span>nb</span></div>
+      <div class="header-inner">
+        <img src="https://collabnb.com/assets/collabnb-logo.png" alt="Collabnb" width="40" height="40" style="border-radius:10px;display:inline-block;vertical-align:middle;" />
+        <span class="logo-text">Collabnb</span>
+      </div>
     </div>
     <div class="body">
       <h1>You're on the list, ${firstName}! 🎉</h1>

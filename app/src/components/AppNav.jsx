@@ -471,11 +471,15 @@ export default function AppNav() {
               <span className="font-body text-sm font-medium text-ink hidden sm:block">
                 {profile?.full_name ?? 'Profile'}
               </span>
-              <div className="w-8 h-8 rounded-full bg-mint flex items-center justify-center overflow-hidden flex-shrink-0">
-                {profile?.avatar_url ? (
-                  <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
-                ) : (
-                  <span className="font-display font-bold text-slate text-sm">{initials}</span>
+              <div className="w-8 h-8 rounded-full bg-mint flex items-center justify-center overflow-hidden flex-shrink-0 relative">
+                <span className="font-display font-bold text-slate text-sm">{initials}</span>
+                {profile?.avatar_url && (
+                  <img
+                    src={profile.avatar_url}
+                    alt=""
+                    className="absolute inset-0 w-full h-full object-cover"
+                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                  />
                 )}
               </div>
             </button>

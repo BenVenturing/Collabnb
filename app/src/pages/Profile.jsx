@@ -185,7 +185,7 @@ function FoundingMemberBadge() {
 }
 
 // ─── Coin flip avatar ─────────────────────────────────────────────────────────
-function CoinFlip({ frontSrc, backSrc, editMode, onEdit }) {
+function CoinFlip({ frontSrc, backSrc, editMode, onEdit, initials = '?' }) {
   const [flipped, setFlipped] = useState(false);
   return (
     <div
@@ -212,8 +212,17 @@ function CoinFlip({ frontSrc, backSrc, editMode, onEdit }) {
         <div style={{
           position: 'absolute', inset: 0, borderRadius: '50%', overflow: 'hidden',
           backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden',
+          background: 'var(--mint)', display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
-          <img src={frontSrc} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center', display: 'block' }} />
+          <span style={{ fontFamily: 'var(--font-display, sans-serif)', fontWeight: 700, fontSize: '1.5rem', color: 'var(--slate)' }}>{initials}</span>
+          {frontSrc && (
+            <img
+              src={frontSrc}
+              alt="Profile"
+              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center' }}
+              onError={(e) => { e.currentTarget.style.display = 'none'; }}
+            />
+          )}
         </div>
         {/* Back — listing photo */}
         <div style={{
@@ -598,22 +607,26 @@ export default function Profile() {
 
       {/* ── Hero (full-bleed) ──────────────────────────────────────────────── */}
       <div style={{ position: 'relative' }}>
-        <div style={{ height: '400px', overflow: 'hidden', background: '#1a2322' }}>
-          <img
-            src={dp.banner_url || "/assets/ben-venturing.png"}
-            alt={dp.full_name}
-            style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center', display: 'block' }}
-          />
+        <div style={{ height: '400px', overflow: 'hidden', background: 'linear-gradient(135deg, #1a2322 0%, #2d4a3e 100%)' }}>
+          {dp.banner_url && (
+            <img
+              src={dp.banner_url}
+              alt={dp.full_name}
+              style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center', display: 'block' }}
+              onError={(e) => { e.currentTarget.style.display = 'none'; }}
+            />
+          )}
           <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '180px', background: 'linear-gradient(to top, #EFECE9 0%, rgba(239,236,233,0.55) 45%, transparent 100%)' }} />
         </div>
 
         {/* Coin flip — bottom-left */}
         <div style={{ position: 'absolute', bottom: '-20px', left: '1.5rem' }}>
           <CoinFlip
-            frontSrc={dp.avatar_url || "/assets/ben-venturing.png"}
+            frontSrc={dp.avatar_url || null}
             backSrc={coinBackSrc}
             editMode={editMode}
             onEdit={() => setShowListingPicker(true)}
+            initials={(dp.full_name || '?').split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()}
           />
           {editMode && (
             <p style={{ fontSize: '0.58rem', color: 'var(--sage)', textAlign: 'center', marginTop: '0.375rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>

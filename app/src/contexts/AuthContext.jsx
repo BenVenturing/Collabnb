@@ -143,6 +143,18 @@ function ClerkAuthInner({ hooks, children }) {
             // If not deployed yet, use the existing result as-is
           }
         }
+        // Sync Google/Clerk avatar if Convex profile has none
+        if (result?._id && !result.avatar_url && clerkUser.imageUrl) {
+          try {
+            await updateProfileMutation({
+              profileId: result._id,
+              updates: { avatar_url: clerkUser.imageUrl },
+            });
+            result = { ...result, avatar_url: clerkUser.imageUrl };
+          } catch {
+            // Non-critical
+          }
+        }
         setProfile(result || MOCK_CREATOR);
       } catch {
         setProfile(MOCK_CREATOR);

@@ -10,19 +10,19 @@ function creatorSteps(profile) {
       id: 'photo',
       label: 'Add a profile photo',
       done: !!profile?.avatar_url,
-      action: { label: 'Go to profile', path: '/profile' },
+      action: { label: 'Add photo', path: '/profile?edit=true' },
     },
     {
       id: 'bio',
       label: 'Write your bio',
       done: !!profile?.bio && profile.bio.length > 10,
-      action: { label: 'Go to profile', path: '/profile' },
+      action: { label: 'Edit profile', path: '/profile?edit=true' },
     },
     {
       id: 'social',
       label: 'Connect at least one social account',
       done: !!(profile?.instagram_handle || profile?.tiktok_handle || profile?.youtube_handle),
-      action: { label: 'Go to profile', path: '/profile' },
+      action: { label: 'Add socials', path: '/profile?edit=true' },
     },
     {
       id: 'explore',
@@ -45,7 +45,7 @@ function hostSteps(profile) {
       id: 'profile',
       label: 'Complete your host profile',
       done: !!profile?.bio && profile.bio.length > 10,
-      action: { label: 'Go to profile', path: '/profile' },
+      action: { label: 'Edit profile', path: '/profile?edit=true' },
     },
     {
       id: 'creators',

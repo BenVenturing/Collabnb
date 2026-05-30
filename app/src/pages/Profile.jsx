@@ -440,6 +440,18 @@ export default function Profile() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // ── Auto-open edit sheet when ?edit=true (e.g. from onboarding checklist) ──
+  const autoEditDone = useRef(false);
+  useEffect(() => {
+    if (autoEditDone.current || loading || !profile) return;
+    const params = new URLSearchParams(location.search);
+    if (params.get('edit') === 'true') {
+      autoEditDone.current = true;
+      setEditDraft({ ...profile });
+      navigate('/profile', { replace: true });
+    }
+  }, [loading, profile, location.search, navigate]);
+
   // ── Scroll reveal observer ──────────────────────────────────────────────
   const sectionsRef = useRef([]);
   useEffect(() => {

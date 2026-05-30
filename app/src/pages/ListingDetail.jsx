@@ -782,24 +782,27 @@ export default function ListingDetail() {
   }, [listing]);
 
   const handleSaveToCollection = useCallback((collectionId) => {
+    if (!listing) return;
     moveToCollection(listing.id, collectionId);
     const col = collections.find((c) => c.id === collectionId);
     showToast(`Saved to "${col?.name || 'collection'}"`);
     setShowSaveModal(false);
-  }, [listing.id, moveToCollection, collections, showToast]);
+  }, [listing, moveToCollection, collections, showToast]);
 
   const handleRemoveFromCollection = useCallback((collectionId) => {
+    if (!listing) return;
     toggleSave(listing.id);
     showToast('Removed from collection');
     setShowSaveModal(false);
-  }, [listing.id, toggleSave, showToast]);
+  }, [listing, toggleSave, showToast]);
 
   const handleCreateAndSave = useCallback((name) => {
+    if (!listing) return;
     const newCol = createCollection(name);
     moveToCollection(listing.id, newCol.id);
     showToast(`Saved to "${name}"`);
     setShowSaveModal(false);
-  }, [listing.id, createCollection, moveToCollection, showToast]);
+  }, [listing, createCollection, moveToCollection, showToast]);
 
   useEffect(() => {
     const onScroll = () => {

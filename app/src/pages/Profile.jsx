@@ -800,7 +800,7 @@ export default function Profile() {
         onClick={() => setShowSettings(true)}
         title="Settings"
         style={{
-          position: 'fixed', bottom: '4.75rem', right: '1.25rem', zIndex: 40,
+          position: 'fixed', bottom: '1.25rem', right: '1.25rem', zIndex: 40,
           width: '44px', height: '44px', borderRadius: '50%',
           background: 'rgba(255,255,255,0.88)',
           backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',

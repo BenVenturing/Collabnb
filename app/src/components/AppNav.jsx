@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
+import collabnbLogo from '../../../assets/collabnb-logo.png';
 import { useAuth } from '../contexts/AuthContext';
 import { useAppBar } from '../contexts/AppBarContext';
 import { useCollabs } from '../contexts/CollabContext';
@@ -186,7 +187,7 @@ export default function AppNav() {
       >
         {/* Logo */}
         <NavLink to="/explore" className="nav-logo" style={{ flexShrink: 0 }}>
-          <img src="/assets/collabnb-logo.png" alt="" role="presentation" width="28" height="28" />
+          <img src={collabnbLogo} alt="" role="presentation" width="28" height="28" />
           <span>Collabnb</span>
         </NavLink>
 

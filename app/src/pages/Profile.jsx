@@ -184,6 +184,121 @@ function FoundingMemberBadge() {
   );
 }
 
+// ─── Image helpers ────────────────────────────────────────────────────────────
+function resizeToDataUrl(file, maxW, maxH, quality = 0.85) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const ratio = Math.min(maxW / img.width, maxH / img.height, 1);
+      const w = Math.round(img.width * ratio);
+      const h = Math.round(img.height * ratio);
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(url);
+      resolve(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.src = url;
+  });
+}
+
+// ─── Banner crop editor ───────────────────────────────────────────────────────
+function BannerCropEditor({ file, onApply, onCancel }) {
+  const imgRef   = useRef(null);
+  const dragRef  = useRef(null);
+  const [src, setSrc]           = useState(null);
+  const [nat, setNat]           = useState({ w: 1, h: 1 });
+  const [zoom, setZoom]         = useState(1);
+  const [offset, setOffset]     = useState({ x: 0, y: 0 });
+
+  const PW = Math.min(typeof window !== 'undefined' ? window.innerWidth - 80 : 700, 700);
+  const PH = Math.round(PW / 3);
+
+  useEffect(() => {
+    const reader = new FileReader();
+    reader.onload = (e) => setSrc(e.target.result);
+    reader.readAsDataURL(file);
+  }, [file]);
+
+  function getBase(nw, nh) {
+    const ca = PW / PH, ia = nw / nh;
+    return ia > ca ? { w: PH * ia, h: PH } : { w: PW, h: PW / ia };
+  }
+
+  function clamp(ox, oy, z) {
+    const b = getBase(nat.w, nat.h);
+    const dw = b.w * z, dh = b.h * z;
+    const cx0 = (PW - dw) / 2, cy0 = (PH - dh) / 2;
+    return {
+      x: Math.min(Math.max(ox, cx0 <= 0 ? cx0 : 0), cx0 >= 0 ? cx0 : 0),
+      y: Math.min(Math.max(oy, cy0 <= 0 ? cy0 : 0), cy0 >= 0 ? cy0 : 0),
+    };
+  }
+
+  function startDrag(clientX, clientY) {
+    dragRef.current = { sx: clientX - offset.x, sy: clientY - offset.y };
+    const move = (e) => {
+      const cx = e.touches ? e.touches[0].clientX : e.clientX;
+      const cy = e.touches ? e.touches[0].clientY : e.clientY;
+      setOffset(clamp(cx - dragRef.current.sx, cy - dragRef.current.sy, zoom));
+    };
+    const end = () => { window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', end); window.removeEventListener('touchmove', move); window.removeEventListener('touchend', end); };
+    window.addEventListener('mousemove', move);
+    window.addEventListener('mouseup', end);
+    window.addEventListener('touchmove', move, { passive: false });
+    window.addEventListener('touchend', end);
+  }
+
+  function handleWheel(e) {
+    e.preventDefault();
+    const z = Math.min(Math.max(zoom - e.deltaY * 0.002, 1), 4);
+    setZoom(z); setOffset(o => clamp(o.x, o.y, z));
+  }
+
+  function handleApply() {
+    const img = imgRef.current; if (!img) return;
+    const b = getBase(nat.w, nat.h);
+    const dw = b.w * zoom, dh = b.h * zoom;
+    const imgX = (PW - dw) / 2 + offset.x, imgY = (PH - dh) / 2 + offset.y;
+    const sx = (-imgX) * (nat.w / dw), sy = (-imgY) * (nat.h / dh);
+    const sw = PW * (nat.w / dw),      sh = PH * (nat.h / dh);
+    const canvas = document.createElement('canvas');
+    canvas.width = 1200; canvas.height = 400;
+    canvas.getContext('2d').drawImage(img, sx, sy, sw, sh, 0, 0, 1200, 400);
+    onApply(canvas.toDataURL('image/jpeg', 0.82));
+  }
+
+  const b = getBase(nat.w, nat.h);
+  const dw = b.w * zoom, dh = b.h * zoom;
+  const imgLeft = (PW - dw) / 2 + offset.x, imgTop = (PH - dh) / 2 + offset.y;
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(25,37,36,0.88)', backdropFilter: 'blur(8px)', padding: '1.5rem' }}>
+      <div style={{ background: 'white', borderRadius: '1.25rem', padding: '1.5rem', maxWidth: PW + 48, width: '100%', boxShadow: '0 24px 64px rgba(0,0,0,0.4)' }}>
+        <h3 style={{ margin: '0 0 0.25rem', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.1rem', color: 'var(--ink)' }}>Position Banner Image</h3>
+        <p style={{ fontSize: '0.78rem', color: 'var(--sage)', margin: '0 0 1rem' }}>Drag to reposition · scroll or slider to zoom</p>
+        <div
+          style={{ width: PW, height: PH, overflow: 'hidden', borderRadius: '0.75rem', cursor: 'grab', userSelect: 'none', position: 'relative', background: '#1a2322', touchAction: 'none' }}
+          onMouseDown={(e) => { e.preventDefault(); startDrag(e.clientX, e.clientY); }}
+          onTouchStart={(e) => { e.preventDefault(); startDrag(e.touches[0].clientX, e.touches[0].clientY); }}
+          onWheel={handleWheel}
+        >
+          {src && <img ref={imgRef} src={src} onLoad={(e) => { setNat({ w: e.target.naturalWidth, h: e.target.naturalHeight }); }} style={{ position: 'absolute', left: imgLeft, top: imgTop, width: dw, height: dh, maxWidth: 'none', pointerEvents: 'none', display: 'block' }} />}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', margin: '1rem 0 1.25rem' }}>
+          <span style={{ fontSize: '0.72rem', color: 'var(--sage)', fontWeight: 600, flexShrink: 0 }}>Zoom</span>
+          <input type="range" min="1" max="4" step="0.05" value={zoom} onChange={(e) => { const z = Number(e.target.value); setZoom(z); setOffset(o => clamp(o.x, o.y, z)); }} style={{ flex: 1 }} />
+        </div>
+        <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+          <button className="btn-glass" onClick={onCancel}>Cancel</button>
+          <button className="btn-primary" onClick={handleApply}>Apply</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Coin flip avatar ─────────────────────────────────────────────────────────
 function CoinFlip({ frontSrc, backSrc, editMode, onEdit, initials = '?' }) {
   const [flipped, setFlipped] = useState(false);
@@ -390,6 +505,7 @@ export default function Profile() {
   const [toastMsg, setToastMsg]       = useState(null);
   const [exitConfirmDraft, setExitConfirmDraft] = useState(null);
   const [portalLoading, setPortalLoading] = useState(false);
+  const [cropEditorFile, setCropEditorFile] = useState(null);
 
   // Notification toggles
   const [notifSettings, setNotifSettings] = useState({
@@ -524,7 +640,7 @@ export default function Profile() {
       region:           dp.region           ?? '',
       country:          dp.country          ?? '',
       avatar_url:       dp.avatar_url       ?? '',
-      banner_url:       dp.banner_url       ?? '/assets/ben-venturing.png',
+      banner_url:       dp.banner_url       ?? '',
       instagram_handle: dp.instagram_handle ?? '',
       tiktok_handle:    dp.tiktok_handle    ?? '',
       youtube_handle:   dp.youtube_handle   ?? '',
@@ -568,6 +684,7 @@ export default function Profile() {
   const editMode = editDraft !== null;
 
   const SETTINGS = [
+    { icon: <PencilIcon />,   label: 'Edit Profile',      sublabel: 'Update your photos, bio, and socials',  onClick: () => { setShowSettings(false); openEditProfile(); } },
     { icon: <FileTextIcon />, label: 'Contracts',         sublabel: 'View and manage your saved contracts', onClick: () => { setShowSettings(false); setShowContracts(true); } },
     { icon: <BellIcon />,    label: 'Notifications',      sublabel: 'Manage email & push preferences',      onClick: () => { setShowSettings(false); setShowNotifications(true); } },
     { icon: <LockIcon />,    label: 'Privacy Policy',     sublabel: 'Review how your data is used',         onClick: () => { setShowSettings(false); setShowPrivacy(true); } },
@@ -680,13 +797,6 @@ export default function Profile() {
 
           {/* Action buttons */}
           <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-            <button
-              className="btn-glass"
-              style={{ fontSize: '0.8rem', padding: '0.6rem 1.1rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
-              onClick={openEditProfile}
-            >
-              <PencilIcon /> Edit Profile
-            </button>
             <button
               className="btn-glass"
               style={{ fontSize: '0.8rem', padding: '0.6rem 1.1rem' }}
@@ -861,13 +971,13 @@ export default function Profile() {
                       <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--sage)', fontSize: '0.7rem' }}>+</div>
                     )}
                   </div>
-                  <input type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => { const f = e.target.files?.[0]; if (f) { const r = new FileReader(); r.onload = (ev) => setEditDraft({ ...editDraft, avatar_url: ev.target.result }); r.readAsDataURL(f); } }} />
+                  <input type="file" accept="image/*" style={{ display: 'none' }} onChange={async (e) => { const f = e.target.files?.[0]; if (f) { const url = await resizeToDataUrl(f, 300, 300); setEditDraft(d => ({ ...d, avatar_url: url })); } }} />
                 </label>
                 <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.4rem', padding: '0.75rem', borderRadius: '0.875rem', background: 'rgba(255,255,255,0.7)', border: '1.5px dashed rgba(60,87,89,0.25)', cursor: 'pointer', transition: 'border-color 150ms, background 150ms' }}
                   onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(60,87,89,0.5)'; e.currentTarget.style.background = 'rgba(255,255,255,0.9)'; }}
                   onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(60,87,89,0.25)'; e.currentTarget.style.background = 'rgba(255,255,255,0.7)'; }}
                 >
-                  <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--sage)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Banner Image</span>
+                  <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--sage)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{dp.role === 'host' ? 'Property Photo' : 'Banner Image'}</span>
                   <div style={{ width: '100%', height: 52, borderRadius: '0.5rem', overflow: 'hidden', background: 'var(--stone)', flexShrink: 0, border: '2px solid white', boxShadow: '0 2px 8px rgba(25,37,36,0.12)' }}>
                     {editDraft.banner_url ? (
                       <img src={editDraft.banner_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
@@ -875,7 +985,7 @@ export default function Profile() {
                       <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--sage)', fontSize: '0.7rem' }}>+</div>
                     )}
                   </div>
-                  <input type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => { const f = e.target.files?.[0]; if (f) { const r = new FileReader(); r.onload = (ev) => setEditDraft({ ...editDraft, banner_url: ev.target.result }); r.readAsDataURL(f); } }} />
+                  <input type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => { const f = e.target.files?.[0]; if (f) setCropEditorFile(f); }} />
                 </label>
               </div>
               <EditField label="Bio" value={editDraft.bio} onChange={(v) => setEditDraft({ ...editDraft, bio: v })} multiline />
@@ -902,6 +1012,15 @@ export default function Profile() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* ── Banner crop editor ──────────────────────────────────────────── */}
+      {cropEditorFile && (
+        <BannerCropEditor
+          file={cropEditorFile}
+          onApply={(dataUrl) => { setEditDraft(d => ({ ...d, banner_url: dataUrl })); setCropEditorFile(null); }}
+          onCancel={() => setCropEditorFile(null)}
+        />
       )}
 
       {/* ── Listing picker ────────────────────────────────────────────────── */}

@@ -22,8 +22,8 @@ function useAdminGuard() {
 
   useEffect(() => {
     if (loading) return;
-    const userEmail = session?.user?.email || profile?.email;
-    if (!!ADMIN_EMAIL && userEmail === ADMIN_EMAIL) {
+    const userEmail = (session?.user?.email || profile?.email || '').toLowerCase();
+    if (!!ADMIN_EMAIL && userEmail === ADMIN_EMAIL.toLowerCase()) {
       setAuthorized(true);
     } else {
       navigate('/explore', { replace: true });

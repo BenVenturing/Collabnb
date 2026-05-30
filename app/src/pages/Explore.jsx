@@ -2,7 +2,8 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
-import { SAMPLE_LISTINGS, IMG_FALLBACK } from '../lib/mockData';
+import { SAMPLE_LISTINGS, SAMPLE_HOST, IMG_FALLBACK } from '../lib/mockData';
+import ProfilePopupCard from '../components/ProfilePopupCard';
 import { formatDateRange } from '../lib/dateUtils';
 import { useAppBar } from '../contexts/AppBarContext';
 import { useCollabs } from '../contexts/CollabContext';
@@ -54,7 +55,7 @@ function normalizeConvexListing(l) {
 }
 
 // ─── Listing Card ─────────────────────────────────────────────────────────────
-function ListingCard({ listing, saved, onSave, delay, onNavigate }) {
+function ListingCard({ listing, saved, onSave, delay, onNavigate, onHostClick }) {
   const [rippling, setRippling] = useState(false);
 
   const handleSave = (e) => {
@@ -155,13 +156,36 @@ function ListingCard({ listing, saved, onSave, delay, onNavigate }) {
             {listing.collab_type}
           </span>
         </div>
+
+        {/* Host byline */}
+        {onHostClick && (
+          <div
+            onClick={e => { e.stopPropagation(); onHostClick(); }}
+            title="View host profile"
+            style={{
+              marginTop: '0.625rem', paddingTop: '0.5rem',
+              borderTop: '1px solid rgba(25,37,36,0.06)',
+              display: 'flex', alignItems: 'center', gap: '0.4rem',
+              cursor: 'pointer', transition: 'opacity 150ms',
+            }}
+            onMouseEnter={e => e.currentTarget.style.opacity = '0.65'}
+            onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+          >
+            <div style={{ width: 18, height: 18, borderRadius: '50%', overflow: 'hidden', flexShrink: 0, border: '1px solid rgba(25,37,36,0.07)', background: 'var(--mint)' }}>
+              <img src={SAMPLE_HOST.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.currentTarget.style.display = 'none'; }} />
+            </div>
+            <span style={{ fontSize: '0.67rem', color: 'var(--sage)' }}>
+              by <span style={{ fontWeight: 600, color: 'var(--slate)' }}>{listing.host_name || SAMPLE_HOST.name}</span>
+            </span>
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
 // ─── Section Row ──────────────────────────────────────────────────────────────
-function SectionRow({ title, subtitle, listings, saved, onSave, onNavigate, expanded, onToggleExpand, hidden }) {
+function SectionRow({ title, subtitle, listings, saved, onSave, onNavigate, expanded, onToggleExpand, hidden, onHostClick }) {
   if (!listings.length || hidden) return null;
   return (
     <div style={{ marginBottom: expanded ? '3rem' : '2.5rem' }}>
@@ -200,6 +224,7 @@ function SectionRow({ title, subtitle, listings, saved, onSave, onNavigate, expa
               onSave={onSave}
               delay={i * 55}
               onNavigate={() => onNavigate(l.id)}
+              onHostClick={onHostClick}
             />
           ))}
         </div>
@@ -213,6 +238,7 @@ function SectionRow({ title, subtitle, listings, saved, onSave, onNavigate, expa
               onSave={onSave}
               delay={i * 55}
               onNavigate={() => onNavigate(l.id)}
+              onHostClick={onHostClick}
             />
           ))}
         </div>
@@ -254,7 +280,26 @@ export default function Explore() {
   const [propFilter,  setPropFilter]  = useState('All');
   const [expandedSection, setExpandedSection] = useState(null); // null | section title
   const { savedIds, toggleSave } = useCollabs();
+  const [popupHost, setPopupHost] = useState(null);
   const searchRef = useRef(null);
+
+  const sampleHostPerson = {
+    name:         SAMPLE_HOST.name,
+    username:     SAMPLE_HOST.username,
+    avatar:       SAMPLE_HOST.avatar_url,
+    location:     'Asheville, NC',
+    bio:          SAMPLE_HOST.bio,
+    tier:         null,
+    followers:    null,
+    engagement:   null,
+    collab_count: SAMPLE_HOST.review_count,
+    platforms:    [],
+    niches:       [],
+    isFounder:    true,
+    past_collab:  false,
+    portfolioUrl: null,
+    travelCalendar: [],
+  };
   const whereRef = useRef(null);
   const whatRef = useRef(null);
   const whenRef = useRef(null);
@@ -611,6 +656,7 @@ export default function Explore() {
               expanded={expandedSection === 'Trending Now'}
               onToggleExpand={() => setExpandedSection(expandedSection === 'Trending Now' ? null : 'Trending Now')}
               hidden={expandedSection !== null && expandedSection !== 'Trending Now'}
+              onHostClick={() => setPopupHost(sampleHostPerson)}
             />
 
             <SectionRow
@@ -623,6 +669,7 @@ export default function Explore() {
               expanded={expandedSection === 'Picked for You'}
               onToggleExpand={() => setExpandedSection(expandedSection === 'Picked for You' ? null : 'Picked for You')}
               hidden={expandedSection !== null && expandedSection !== 'Picked for You'}
+              onHostClick={() => setPopupHost(sampleHostPerson)}
             />
 
             <SectionRow
@@ -635,6 +682,7 @@ export default function Explore() {
               expanded={expandedSection === 'Near Asheville'}
               onToggleExpand={() => setExpandedSection(expandedSection === 'Near Asheville' ? null : 'Near Asheville')}
               hidden={expandedSection !== null && expandedSection !== 'Near Asheville'}
+              onHostClick={() => setPopupHost(sampleHostPerson)}
             />
 
             <SectionRow
@@ -647,6 +695,7 @@ export default function Explore() {
               expanded={expandedSection === 'All Stays'}
               onToggleExpand={() => setExpandedSection(expandedSection === 'All Stays' ? null : 'All Stays')}
               hidden={expandedSection !== null && expandedSection !== 'All Stays'}
+              onHostClick={() => setPopupHost(sampleHostPerson)}
             />
 
             {allFiltered.length === 0 && (
@@ -674,6 +723,14 @@ export default function Explore() {
           </>
         )}
       </div>
+
+      {popupHost && (
+        <ProfilePopupCard
+          person={popupHost}
+          onClose={() => setPopupHost(null)}
+          onMessage={() => { setPopupHost(null); navigate('/inbox'); }}
+        />
+      )}
     </div>
   );
 }

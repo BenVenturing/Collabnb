@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import SkeletonCard from '../../components/SkeletonCard';
 import { cache, cacheKey } from '../../lib/cache';
+import ProfilePopupCard from '../../components/ProfilePopupCard';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const LOCATION_CONSENT_KEY = '@collabnb_location_consent_v1';
@@ -444,10 +445,9 @@ function DateRangePicker({ dateStart, dateEnd, onApply, onClear }) {
   );
 }
 
-// ─── SwipeCardLarge ───────────────────────────────────────────────────────────
+// ─── SwipeCardLarge — minimal, travel-focused ─────────────────────────────────
 function SwipeCardLarge({ creator, exitDir, onClick }) {
   const [entered, setEntered] = useState(false);
-  const [tierHovered, setTierHovered] = useState(false);
   const t = TIER_COLORS[creator.tier] || TIER_COLORS['UGC Beginner'];
 
   useEffect(() => {
@@ -462,238 +462,163 @@ function SwipeCardLarge({ creator, exitDir, onClick }) {
     : exitDir === 'up'    ? { opacity: 0, transform: 'translateY(-120%) scale(0.88)' }
     : { opacity: 1, transform: 'translateY(0) scale(1)' };
 
+  const upcomingTrips = (creator.travelCalendar || [])
+    .filter(trip => new Date(trip.endDate) >= new Date())
+    .sort((a, b) => new Date(a.startDate) - new Date(b.startDate))
+    .slice(0, 3);
+
   return (
     <div
       onClick={onClick}
       style={{
         position: 'absolute', inset: 0, borderRadius: '1.5rem',
-        background: 'rgba(255,255,255,0.93)',
+        background: 'rgba(255,255,255,0.94)',
         backdropFilter: 'blur(24px) saturate(140%)', WebkitBackdropFilter: 'blur(24px) saturate(140%)',
         border: '1.5px solid rgba(255,255,255,0.85)',
         boxShadow: '0 20px 60px rgba(25,37,36,0.16)',
-        padding: '28px 24px 20px',
-        cursor: 'pointer', overflowY: 'auto',
+        overflow: 'hidden',
+        cursor: 'pointer',
         transition: 'transform 340ms cubic-bezier(0.25,1,0.5,1), opacity 300ms ease',
         userSelect: 'none',
+        display: 'flex', flexDirection: 'column',
         ...dynamicStyle,
       }}
     >
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 20 }}>
-        <div style={{ position: 'relative', marginBottom: 12 }}>
-          <img src={creator.avatar} alt={creator.name}
-            style={{ width: 100, height: 100, borderRadius: '50%', objectFit: 'cover', border: '3px solid rgba(25,37,36,0.07)' }} />
+      {/* Gradient header band */}
+      <div style={{
+        height: 84, flexShrink: 0,
+        background: 'linear-gradient(150deg, #D1EBDB 0%, #E6EFE7 45%, #EFECE9 100%)',
+        position: 'relative', overflow: 'hidden',
+      }}>
+        <div style={{
+          position: 'absolute', inset: 0,
+          backgroundImage: 'radial-gradient(circle, rgba(25,37,36,0.07) 1px, transparent 1px)',
+          backgroundSize: '14px 14px', backgroundPosition: '7px 7px',
+          pointerEvents: 'none',
+        }} />
+        {/* Tier badge top-right */}
+        <div style={{ position: 'absolute', top: 14, right: 16 }}>
+          <span style={{ padding: '4px 12px', borderRadius: 9999, fontSize: 10, fontWeight: 700, background: t.bg, color: t.color, boxShadow: '0 1px 6px rgba(25,37,36,0.08)' }}>
+            {creator.tier}
+          </span>
+        </div>
+        {/* Avatar anchored bottom-left */}
+        <div style={{ position: 'absolute', bottom: -26, left: 22 }}>
+          <div style={{
+            width: 54, height: 54, borderRadius: '50%',
+            border: '3px solid rgba(255,255,255,0.97)',
+            overflow: 'hidden', background: 'var(--mint)',
+            boxShadow: '0 3px 14px rgba(25,37,36,0.12)',
+          }}>
+            <img src={creator.avatar} alt={creator.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          </div>
           {creator.past_collab && (
-            <div title="You've collab'd with this creator before" style={{
-              position: 'absolute', bottom: 2, right: 2, width: 22, height: 22, borderRadius: '50%',
-              background: '#4A9B7F', border: '2.5px solid #fff',
+            <div title="Past collab" style={{
+              position: 'absolute', bottom: 1, right: -2, width: 18, height: 18,
+              borderRadius: '50%', background: '#4A9B7F', border: '2px solid #fff',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>
-              <Check size={11} color="#fff" />
+              <Check size={9} color="#fff" />
             </div>
           )}
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', justifyContent: 'center' }}>
-          <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 22, color: 'var(--ink)' }}>{creator.name}</span>
-          {creator.isFounder && (
-            <span title="One of the first 100 creators on Collabnb" style={{ display: 'flex', alignItems: 'center', gap: 3, padding: '2px 8px', borderRadius: 9999, background: 'rgba(25,37,36,0.07)', border: '1px solid rgba(25,37,36,0.1)', fontSize: 10, fontWeight: 700, color: 'var(--ink)' }}>
-              <Sparkles size={9} />Founder
-            </span>
-          )}
-        </div>
-        <div style={{ fontSize: 13, color: 'var(--sage)', marginTop: 3 }}>@{creator.username}</div>
-        <div style={{ fontSize: 12, color: 'var(--sage)', marginTop: 3 }}>📍 {creator.location}</div>
-        <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span
-            onMouseEnter={() => setTierHovered(true)}
-            onMouseLeave={() => setTierHovered(false)}
-            style={{ padding: '4px 14px', borderRadius: 9999, fontSize: 11, fontWeight: 700, background: t.bg, color: t.color, cursor: 'default', position: 'relative' }}>
-            {creator.tier}
-            {tierHovered && (
-              <span title={TIER_DEFS[creator.tier]} style={{ position: 'absolute', top: -10, right: -14, fontSize: 9, color: 'var(--sage)', cursor: 'help', background: 'rgba(255,255,255,0.95)', borderRadius: '50%', width: 16, height: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(25,37,36,0.12)', lineHeight: 1 }}>?</span>
-            )}
-          </span>
-        </div>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 1, background: 'rgba(25,37,36,0.06)', borderRadius: '0.75rem', overflow: 'hidden', marginBottom: 16 }}>
-        {[
-          { label: 'Avg. Reach', value: fmtFollowers(creator.avg_reach_30d) },
-          { label: 'ER @ 30d',  value: `${creator.er_30d}%` },
-          { label: 'Collabs',   value: creator.collab_count },
-        ].map(({ label, value }) => (
-          <div key={label} style={{ padding: '11px 0', background: 'rgba(255,255,255,0.75)', textAlign: 'center' }}>
-            <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 17, color: 'var(--ink)', lineHeight: 1 }}>{value}</div>
-            <div style={{ fontSize: 10, color: 'var(--sage)', marginTop: 3 }}>{label}</div>
-          </div>
-        ))}
-      </div>
-      <div style={{ display: 'flex', gap: 6, justifyContent: 'center', marginBottom: 12 }}>
-        {creator.platforms.map(p => (
-          <span key={p} style={{ padding: '4px 12px', borderRadius: 9999, fontSize: 11, fontWeight: 600, background: 'rgba(60,87,89,0.08)', color: 'var(--ink)' }}>{p}</span>
-        ))}
-      </div>
-      <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', justifyContent: 'center', marginBottom: 14 }}>
-        {creator.niches.map(n => (
-          <span key={n} style={{ padding: '3px 10px', borderRadius: 9999, fontSize: 10, fontWeight: 600, background: 'var(--bone)', color: 'var(--slate)' }}>{n}</span>
-        ))}
-      </div>
-      <p style={{ fontSize: 13, color: 'var(--slate)', lineHeight: 1.6, textAlign: 'center', margin: '0 0 10px' }}>{creator.bio}</p>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span title={`${creator.tier}: ${TIER_DEFS[creator.tier]}`} style={{ fontSize: 10, color: 'rgba(149,157,144,0.55)', cursor: 'help', display: 'flex', alignItems: 'center', gap: 3 }}>
-          <span style={{ border: '1px solid rgba(149,157,144,0.3)', borderRadius: '50%', width: 13, height: 13, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 8, fontWeight: 700, lineHeight: 1 }}>?</span>
-          Tiers explained
-        </span>
-        <p style={{ fontSize: 11, color: 'rgba(149,157,144,0.65)', textAlign: 'right', margin: 0 }}>Tap to expand</p>
-      </div>
-    </div>
-  );
-}
 
-// ─── Creator detail modal ─────────────────────────────────────────────────────
-function CreatorModal({ creator, onClose, onMessage }) {
-  const navigate = useNavigate();
-  const t = TIER_COLORS[creator.tier] || TIER_COLORS['UGC Beginner'];
-
-  useEffect(() => {
-    const handler = (e) => { if (e.key === 'Escape') onClose(); };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [onClose]);
-
-  return (
-    <div
-      onClick={onClose}
-      style={{
-        position: 'fixed', inset: 0, zIndex: 200,
-        background: 'rgba(25,37,36,0.55)',
-        backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        padding: '1.5rem',
-      }}
-    >
-      <div
-        onClick={e => e.stopPropagation()}
-        style={{
-          position: 'relative',
-          background: 'rgba(255,255,255,0.97)',
-          backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)',
-          borderRadius: '1.5rem',
-          border: '1.5px solid rgba(255,255,255,0.9)',
-          boxShadow: '0 24px 80px rgba(25,37,36,0.22)',
-          padding: '28px 24px 24px',
-          width: '100%', maxWidth: 420, maxHeight: '85dvh', overflowY: 'auto',
-          animation: 'swipeModalEnter 280ms cubic-bezier(0.25,1,0.5,1) both',
-        }}
-      >
-        <button onClick={onClose} style={{
-          position: 'absolute', top: 16, right: 16,
-          width: 32, height: 32, borderRadius: '50%',
-          background: 'rgba(25,37,36,0.06)', border: 'none', cursor: 'pointer',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}>
-          <X size={14} color="var(--ink)" />
-        </button>
-
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 20 }}>
-          <div style={{ position: 'relative', marginBottom: 12 }}>
-            <img
-              src={creator.avatar} alt={creator.name}
-              onClick={() => { onClose(); navigate('/profile'); }}
-              title="View profile"
-              style={{ width: 88, height: 88, borderRadius: '50%', objectFit: 'cover', border: '3px solid rgba(25,37,36,0.07)', cursor: 'pointer' }}
-            />
-            {creator.past_collab && (
-              <div title="You've collab'd with this creator before" style={{
-                position: 'absolute', bottom: 2, right: 2, width: 20, height: 20, borderRadius: '50%',
-                background: '#4A9B7F', border: '2px solid #fff',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}>
-                <Check size={9} color="#fff" />
-              </div>
-            )}
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', justifyContent: 'center' }}>
+      {/* Body */}
+      <div style={{ flex: 1, padding: '34px 22px 14px', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
+        {/* Name + location */}
+        <div style={{ marginBottom: 14 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
             <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 20, color: 'var(--ink)' }}>{creator.name}</span>
             {creator.isFounder && (
-              <span title="One of the first 100 creators on Collabnb" style={{ display: 'flex', alignItems: 'center', gap: 3, padding: '2px 8px', borderRadius: 9999, background: 'rgba(25,37,36,0.07)', border: '1px solid rgba(25,37,36,0.1)', fontSize: 10, fontWeight: 700, color: 'var(--ink)' }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '2px 7px', borderRadius: 9999, background: 'rgba(25,37,36,0.07)', border: '1px solid rgba(25,37,36,0.1)', fontSize: 9, fontWeight: 700, color: 'var(--ink)' }}>
                 <Sparkles size={8} />Founder
               </span>
             )}
           </div>
-          <div style={{ fontSize: 12, color: 'var(--sage)', marginTop: 3 }}>@{creator.username}</div>
-          <div style={{ fontSize: 12, color: 'var(--sage)', marginTop: 3 }}>📍 {creator.location}</div>
-          <div style={{ marginTop: 10 }}>
-            <span style={{ padding: '4px 12px', borderRadius: 9999, fontSize: 11, fontWeight: 700, background: t.bg, color: t.color }}>{creator.tier}</span>
+          <div style={{ fontSize: 12, color: 'var(--sage)', marginTop: 3 }}>
+            @{creator.username} · 📍 {creator.location}
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 1, background: 'rgba(25,37,36,0.06)', borderRadius: '0.75rem', overflow: 'hidden', marginBottom: 16 }}>
+        {/* Destinations / collab section */}
+        <div style={{
+          padding: '12px 14px', borderRadius: '0.875rem', marginBottom: 14,
+          background: upcomingTrips.length > 0 ? 'rgba(209,235,219,0.22)' : 'var(--bone)',
+          border: `1px solid ${upcomingTrips.length > 0 ? 'rgba(209,235,219,0.6)' : 'rgba(25,37,36,0.07)'}`,
+        }}>
+          {upcomingTrips.length > 0 ? (
+            <>
+              <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--slate)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>
+                ✈  Heading to
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {upcomingTrips.map(trip => (
+                  <div key={trip.id} style={{
+                    padding: '8px 13px', borderRadius: '0.625rem',
+                    background: 'rgba(255,255,255,0.82)', border: '1px solid rgba(255,255,255,0.9)',
+                    boxShadow: '0 1px 6px rgba(25,37,36,0.06)',
+                  }}>
+                    <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 13, color: 'var(--ink)' }}>{trip.city}</div>
+                    <div style={{ fontSize: 10, color: 'var(--sage)', marginTop: 2 }}>{fmtDate(trip.startDate)}–{fmtDate(trip.endDate)}</div>
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : (
+            <>
+              <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--slate)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>
+                Open to collabs in
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                {creator.niches.slice(0, 4).map(n => (
+                  <span key={n} style={{ padding: '5px 12px', borderRadius: 9999, fontSize: 11, fontWeight: 600, background: 'rgba(255,255,255,0.82)', color: 'var(--slate)', border: '1px solid rgba(25,37,36,0.08)' }}>{n}</span>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Stats — 2-col */}
+        <div style={{
+          display: 'grid', gridTemplateColumns: '1fr 1fr',
+          gap: 1, background: 'rgba(25,37,36,0.06)', borderRadius: '0.75rem', overflow: 'hidden', marginBottom: 12,
+        }}>
           {[
             { label: 'Followers', value: fmtFollowers(creator.followers) },
-            { label: 'Eng. Rate', value: `${creator.engagement}%` },
-            { label: 'Collabs',   value: creator.collab_count },
+            { label: 'Eng. Rate', value: `${creator.engagement}%`        },
           ].map(({ label, value }) => (
-            <div key={label} style={{ padding: '11px 0', background: 'rgba(255,255,255,0.75)', textAlign: 'center' }}>
+            <div key={label} style={{ padding: '11px 0', background: 'rgba(255,255,255,0.78)', textAlign: 'center' }}>
               <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 16, color: 'var(--ink)', lineHeight: 1 }}>{value}</div>
-              <div style={{ fontSize: 10, color: 'var(--sage)', marginTop: 3 }}>{label}</div>
+              <div style={{ fontSize: 10, color: 'var(--sage)', marginTop: 2 }}>{label}</div>
             </div>
           ))}
         </div>
 
-        <p style={{ fontSize: 13, color: 'var(--slate)', lineHeight: 1.6, marginBottom: 14 }}>{creator.bio}</p>
-
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', marginBottom: 10 }}>
-          <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--sage)' }}>Platforms</span>
+        {/* Platforms */}
+        <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
           {creator.platforms.map(p => (
-            <span key={p} style={{ padding: '3px 10px', borderRadius: 9999, fontSize: 11, fontWeight: 600, background: 'rgba(60,87,89,0.08)', color: 'var(--ink)' }}>{p}</span>
+            <span key={p} style={{ padding: '4px 11px', borderRadius: 9999, fontSize: 11, fontWeight: 600, background: 'rgba(60,87,89,0.09)', color: 'var(--ink)' }}>{p}</span>
           ))}
         </div>
+      </div>
 
-        <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', alignItems: 'center', marginBottom: 18 }}>
-          <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--sage)' }}>Niches</span>
-          {creator.niches.map(n => (
-            <span key={n} style={{ padding: '3px 10px', borderRadius: 9999, fontSize: 10, fontWeight: 600, background: 'var(--bone)', color: 'var(--slate)' }}>{n}</span>
-          ))}
-        </div>
-
-        {creator.past_collab && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 14px', borderRadius: '0.75rem', background: 'rgba(74,155,127,0.08)', border: '1px solid rgba(74,155,127,0.2)', marginBottom: 16 }}>
-            <Check size={13} color="#2d7d5e" />
-            <span style={{ fontSize: 12, fontWeight: 600, color: '#2d7d5e' }}>You've collab'd with this creator before</span>
-          </div>
-        )}
-
-        <div style={{ display: 'flex', gap: 8 }}>
-          {creator.portfolioUrl && (
-            <button
-              onClick={() => window.open(creator.portfolioUrl, '_blank')}
-              title="View portfolio"
-              style={{
-                width: 42, height: 42, borderRadius: 9999, flexShrink: 0,
-                border: '1.5px solid rgba(25,37,36,0.12)', background: 'transparent',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
-              }}
-            >
-              <ExternalLink size={14} color="var(--slate)" />
-            </button>
-          )}
-          <button
-            onClick={onMessage}
-            style={{
-              flex: 1, padding: '12px 0', borderRadius: 9999,
-              background: 'var(--ink)', color: 'var(--bone)',
-              fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 700,
-              border: 'none', cursor: 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-            }}
-          >
-            <MessageSquare size={14} />
-            Message {creator.name.split(' ')[0]}
-          </button>
-        </div>
+      {/* Footer hint */}
+      <div style={{
+        padding: '10px 22px', borderTop: '1px solid rgba(25,37,36,0.06)',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        background: 'rgba(255,255,255,0.55)', flexShrink: 0,
+      }}>
+        <span style={{ fontSize: 10, color: 'var(--sage)', fontWeight: 500 }}>← skip · save → · ↑ message</span>
+        <span style={{ fontSize: 10, color: 'var(--sage)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 3 }}>
+          Full profile
+          <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </span>
       </div>
     </div>
   );
 }
+
 
 // ─── Saved contact row ────────────────────────────────────────────────────────
 function SavedContactRow({ creator, onMessage }) {
@@ -907,10 +832,11 @@ function SwipeView({ creators }) {
       )}
 
       {showModal && currentCreator && (
-        <CreatorModal
-          creator={currentCreator}
+        <ProfilePopupCard
+          person={currentCreator}
           onClose={() => setShowModal(false)}
           onMessage={() => { setShowModal(false); goToInbox(currentCreator); }}
+          onViewPastCollabs={currentCreator.past_collab ? () => { setShowModal(false); navigate('/collabs'); } : undefined}
         />
       )}
     </div>
@@ -1319,10 +1245,11 @@ export default function HostCreators() {
 
       {/* ── Expanded creator modal (grid) ── */}
       {expandedCreator && (
-        <CreatorModal
-          creator={expandedCreator}
+        <ProfilePopupCard
+          person={expandedCreator}
           onClose={() => setExpandedCreator(null)}
           onMessage={() => { setExpandedCreator(null); handleMessage(expandedCreator); }}
+          onViewPastCollabs={expandedCreator.past_collab ? () => { setExpandedCreator(null); navigate('/collabs'); } : undefined}
         />
       )}
     </div>

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import ProfilePopupCard from '../../components/ProfilePopupCard';
 import {
   MessageSquare, ChevronDown, ChevronUp, ExternalLink, Check, Sparkles,
   GripVertical, Lock, Download, Pen, CheckCircle2, Trash2,
@@ -366,7 +367,7 @@ function DroppableTab({ stageKey, label, count, active, isFlashing, dragging, cu
 }
 
 // ─── Proposal drawer ──────────────────────────────────────────────────────────
-function ProposalDrawer({ proposal, onStatusChange, onCounter, onSign }) {
+function ProposalDrawer({ proposal, onStatusChange, onCounter, onSign, onCreatorClick }) {
   const navigate = useNavigate();
   const t = TIER_COLORS[proposal.creator.tier] || TIER_COLORS['UGC Beginner'];
   const isPitch = proposal.type === 'pitch';
@@ -382,7 +383,12 @@ function ProposalDrawer({ proposal, onStatusChange, onCounter, onSign }) {
       {/* Creator header */}
       <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid rgba(25,37,36,0.07)' }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16 }}>
-          <img src={proposal.creator.avatar} alt={proposal.creator.name} style={{ width: 60, height: 60, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(25,37,36,0.08)', flexShrink: 0 }} />
+          <img
+          src={proposal.creator.avatar} alt={proposal.creator.name}
+          onClick={() => onCreatorClick(proposal.creator)}
+          title="View profile"
+          style={{ width: 60, height: 60, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(25,37,36,0.08)', flexShrink: 0, cursor: 'pointer' }}
+        />
           <div style={{ flex: 1 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
               <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 15, color: 'var(--ink)' }}>{proposal.creator.name}</span>
@@ -607,7 +613,7 @@ function ProposalDrawer({ proposal, onStatusChange, onCounter, onSign }) {
 }
 
 // ─── Proposal card ────────────────────────────────────────────────────────────
-function ProposalCard({ proposal, expanded, onToggle, onStatusChange, onCounter, onSign, dragHandleListeners, dragHandleAttributes }) {
+function ProposalCard({ proposal, expanded, onToggle, onStatusChange, onCounter, onSign, onCreatorClick, dragHandleListeners, dragHandleAttributes }) {
   const s = STATUS_CFG[proposal.status] || STATUS_CFG.pending;
   const t = TIER_COLORS[proposal.creator.tier] || TIER_COLORS['UGC Beginner'];
   const isPitch = proposal.type === 'pitch';
@@ -629,10 +635,20 @@ function ProposalCard({ proposal, expanded, onToggle, onStatusChange, onCounter,
           onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--stone)'; }} title="Drag to move stage">
           <GripVertical size={15} />
         </div>
-        <img src={proposal.creator.avatar} alt={proposal.creator.name} style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: '1.5px solid rgba(25,37,36,0.07)' }} />
+        <img
+          src={proposal.creator.avatar} alt={proposal.creator.name}
+          onClick={e => { e.stopPropagation(); onCreatorClick(proposal.creator); }}
+          title="View profile"
+          style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: '1.5px solid rgba(25,37,36,0.07)', cursor: 'pointer' }}
+        />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-            <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 14, color: 'var(--ink)' }}>{proposal.creator.name}</span>
+            <span
+              onClick={e => { e.stopPropagation(); onCreatorClick(proposal.creator); }}
+              style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 14, color: 'var(--ink)', cursor: 'pointer', textDecoration: 'none' }}
+              onMouseEnter={e => e.currentTarget.style.textDecoration = 'underline'}
+              onMouseLeave={e => e.currentTarget.style.textDecoration = 'none'}
+            >{proposal.creator.name}</span>
             <span style={{ padding: '2px 8px', borderRadius: 9999, fontSize: 10, fontWeight: 700, background: t.bg, color: t.color, flexShrink: 0 }}>{proposal.creator.tier}</span>
             <span title={TIER_DEFS[proposal.creator.tier]} style={{ fontSize: 9, color: 'var(--sage)', cursor: 'help', lineHeight: 1 }}>ⓘ</span>
             {isPitch ? (
@@ -653,7 +669,7 @@ function ProposalCard({ proposal, expanded, onToggle, onStatusChange, onCounter,
           {expanded ? <ChevronUp size={14} color="var(--sage)" /> : <ChevronDown size={14} color="var(--sage)" />}
         </div>
       </div>
-      {expanded && <ProposalDrawer proposal={proposal} onStatusChange={onStatusChange} onCounter={onCounter} onSign={onSign} />}
+      {expanded && <ProposalDrawer proposal={proposal} onStatusChange={onStatusChange} onCounter={onCounter} onSign={onSign} onCreatorClick={onCreatorClick} />}
     </div>
   );
 }
@@ -681,6 +697,7 @@ export default function HostProposals() {
   const [counterModal, setCounterModal] = useState(null); // { proposalId, fromParty }
   const [signModal, setSignModal]       = useState(null); // { proposalId, party }
   const [showClearDeclined, setShowClearDeclined] = useState(false);
+  const [popupCreator, setPopupCreator] = useState(null);
 
   const [proposals, setProposals] = useState(() => {
     const saved = loadApplications();
@@ -892,6 +909,7 @@ export default function HostProposals() {
                 onStatusChange={handleStatusChange}
                 onCounter={(proposalId, fromParty) => setCounterModal({ proposalId, fromParty })}
                 onSign={(proposalId, party) => setSignModal({ proposalId, party })}
+                onCreatorClick={(creator) => setPopupCreator(creator)}
               />
             ))
           )}
@@ -933,6 +951,30 @@ export default function HostProposals() {
             onClose={() => setSignModal(null)} />
         ) : null;
       })()}
+
+      {/* Creator profile popup */}
+      {popupCreator && (
+        <ProfilePopupCard
+          person={{
+            name:         popupCreator.name,
+            username:     popupCreator.username,
+            avatar:       popupCreator.avatar,
+            location:     popupCreator.location,
+            tier:         popupCreator.tier,
+            followers:    popupCreator.followers,
+            engagement:   popupCreator.engagement,
+            collab_count: popupCreator.collab_count,
+            platforms:    popupCreator.platforms || [],
+            niches:       [],
+            isFounder:    false,
+            past_collab:  false,
+            portfolioUrl: popupCreator.portfolio ? `https://${popupCreator.portfolio}` : null,
+            travelCalendar: [],
+          }}
+          onClose={() => setPopupCreator(null)}
+          onMessage={() => { setPopupCreator(null); navigate('/inbox'); }}
+        />
+      )}
 
       {/* Clear Declined confirmation */}
       {showClearDeclined && (

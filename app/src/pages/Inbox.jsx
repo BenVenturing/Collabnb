@@ -3,6 +3,7 @@ import { useSearchParams, useLocation } from 'react-router-dom';
 import { useCollabs } from '../contexts/CollabContext';
 import { SAMPLE_LISTINGS, THREAD_MESSAGES } from '../lib/mockData';
 import CollabDetail from '../components/CollabDetail';
+import ProfilePopupCard from '../components/ProfilePopupCard';
 import { useAuth } from '../contexts/AuthContext';
 import { useVerification } from '../contexts/VerificationContext';
 import { useSubscription } from '../contexts/SubscriptionContext';
@@ -159,6 +160,7 @@ function ConversationPanel({ thread, onViewCollab, onArchive, onUpdateTag }) {
   const [draft, setDraft] = useState('');
   const [localMessages, setLocalMessages] = useState([]);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [popupPerson, setPopupPerson] = useState(null);
   const bottomRef = useRef(null);
   const tagStyle = TAG_STYLES[thread.tag] || TAG_STYLES.Application;
   const { profile } = useAuth();
@@ -198,7 +200,13 @@ function ConversationPanel({ thread, onViewCollab, onArchive, onUpdateTag }) {
     <div className="flex flex-col h-full">
       {/* Conversation header */}
       <div className="flex items-center gap-3 px-6 py-4 border-b border-stone/30 bg-white/60 backdrop-blur-sm flex-shrink-0">
-        <Avatar name={thread.host_name} src={thread.host_avatar} size={40} isFounder={thread.is_founder} />
+        <button
+          onClick={() => setPopupPerson({ name: thread.host_name, avatar: thread.host_avatar, isFounder: thread.is_founder })}
+          style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', borderRadius: '50%', flexShrink: 0 }}
+          title="View profile"
+        >
+          <Avatar name={thread.host_name} src={thread.host_avatar} size={40} isFounder={thread.is_founder} />
+        </button>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <h2 className="font-display font-bold text-ink text-base truncate">{thread.listing_title}</h2>
@@ -290,6 +298,14 @@ function ConversationPanel({ thread, onViewCollab, onArchive, onUpdateTag }) {
         </div>
         <p className="text-[10px] text-sage/60 text-center mt-1.5">Enter to send · Shift+Enter for new line</p>
       </div>
+
+      {popupPerson && (
+        <ProfilePopupCard
+          person={popupPerson}
+          onClose={() => setPopupPerson(null)}
+          onMessage={() => setPopupPerson(null)}
+        />
+      )}
     </div>
   );
 }

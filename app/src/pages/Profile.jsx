@@ -1,11 +1,11 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useQuery, useAction } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useCollabs } from '../contexts/CollabContext';
 import { useSubscription } from '../contexts/SubscriptionContext';
-import GlobeCanvas from '../components/GlobeCanvas';
+import GlobeCanvas, { countGlobeStats } from '../components/GlobeCanvas';
 import TravelCalendar from '../components/TravelCalendar';
 import { SAMPLE_COLLABORATIONS, SAMPLE_LISTINGS } from '../lib/mockData';
 import { getPitchCount } from '../lib/pitchCount';
@@ -487,6 +487,7 @@ export default function Profile() {
   const userId = profile?._id || profile?.id || 'mock-user-001';
   const serverPitchCount = useQuery(api.pitches.getCount, { userId });
   const allProfiles = useQuery(api.profiles.getAll);
+  const globeStats  = useMemo(() => countGlobeStats(allProfiles), [allProfiles]);
 
   // Edit profile state
   const [profileOverride, setProfileOverride] = useState({});
@@ -908,11 +909,18 @@ export default function Profile() {
           <p style={{ color: 'var(--sage)', fontSize: '0.9rem', marginBottom: '0.875rem' }}>Creators and hosts connecting across the world</p>
           <GlobeCanvas profiles={allProfiles} />
           <div style={{ display: 'flex', justifyContent: 'center', gap: '0.75rem', marginTop: '1.5rem', flexWrap: 'wrap' }}>
-            {[{ color: '#22c55e', label: 'Creators' }, { color: '#ef4444', label: 'Hosts' }, { color: '#D0D5CE', label: '40+ Cities' }].map(({ color, label }) => (
-              <span key={label} className="eyebrow-tag" style={{ gap: '0.5rem' }}>
-                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: color, display: 'inline-block', flexShrink: 0 }} />{label}
-              </span>
-            ))}
+            <span className="eyebrow-tag" style={{ gap: '0.5rem' }}>
+              <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#22c55e', display: 'inline-block', flexShrink: 0 }} />
+              <strong>{globeStats.creators || '—'}</strong>&nbsp;Creators
+            </span>
+            <span className="eyebrow-tag" style={{ gap: '0.5rem' }}>
+              <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#ef4444', display: 'inline-block', flexShrink: 0 }} />
+              <strong>{globeStats.hosts || '—'}</strong>&nbsp;Hosts
+            </span>
+            <span className="eyebrow-tag" style={{ gap: '0.5rem' }}>
+              <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#D0D5CE', display: 'inline-block', flexShrink: 0 }} />
+              <strong>{globeStats.countries > 0 ? `${globeStats.countries}+` : '40+'}</strong>&nbsp;Countries
+            </span>
           </div>
         </section>
       </div>

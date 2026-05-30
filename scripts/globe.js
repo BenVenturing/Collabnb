@@ -8,6 +8,53 @@ import { getAllProfiles } from './convex.js';
 /* ── Safety: uncaught errors ─────────────────────────────────── */
 window.addEventListener('unhandledrejection', e => console.warn('Globe rejection:', e.reason));
 
+/* ── City → Country lookup ───────────────────────────────────── */
+const CITY_COUNTRY = {
+  'new york':'United States','los angeles':'United States','chicago':'United States',
+  'houston':'United States','miami':'United States','san francisco':'United States',
+  'seattle':'United States','austin':'United States','denver':'United States',
+  'boston':'United States','atlanta':'United States','las vegas':'United States',
+  'nashville':'United States','portland':'United States','phoenix':'United States',
+  'san diego':'United States','dallas':'United States','washington':'United States',
+  'charlotte':'United States','orlando':'United States','honolulu':'United States',
+  'asheville':'United States','charleston':'United States','santa fe':'United States',
+  'sedona':'United States','jackson':'United States','napa':'United States',
+  'san antonio':'United States','san jose':'United States','philadelphia':'United States',
+  'toronto':'Canada','vancouver':'Canada','montreal':'Canada',
+  'mexico city':'Mexico','tulum':'Mexico','cancun':'Mexico',
+  'london':'United Kingdom','manchester':'United Kingdom','edinburgh':'United Kingdom',
+  'paris':'France','berlin':'Germany','madrid':'Spain','barcelona':'Spain',
+  'rome':'Italy','milan':'Italy','amsterdam':'Netherlands','lisbon':'Portugal',
+  'dublin':'Ireland','vienna':'Austria','prague':'Czech Republic','budapest':'Hungary',
+  'stockholm':'Sweden','copenhagen':'Denmark','oslo':'Norway','helsinki':'Finland',
+  'athens':'Greece','santorini':'Greece','istanbul':'Turkey',
+  'zurich':'Switzerland','geneva':'Switzerland','dubrovnik':'Croatia',
+  'dubai':'UAE','abu dhabi':'UAE',
+  'tokyo':'Japan','seoul':'South Korea','beijing':'China','shanghai':'China',
+  'hong kong':'China','taipei':'Taiwan','singapore':'Singapore',
+  'kuala lumpur':'Malaysia','bangkok':'Thailand','chiang mai':'Thailand',
+  'phuket':'Thailand','bali':'Indonesia','jakarta':'Indonesia',
+  'manila':'Philippines','ho chi minh city':'Vietnam','hanoi':'Vietnam',
+  'mumbai':'India','delhi':'India','bangalore':'India','goa':'India',
+  'sydney':'Australia','melbourne':'Australia','brisbane':'Australia',
+  'auckland':'New Zealand',
+  'sao paulo':'Brazil','rio de janeiro':'Brazil',
+  'buenos aires':'Argentina','bogota':'Colombia','medellin':'Colombia',
+  'lima':'Peru','santiago':'Chile',
+  'cape town':'South Africa','johannesburg':'South Africa',
+  'nairobi':'Kenya','lagos':'Nigeria','cairo':'Egypt','marrakech':'Morocco',
+};
+
+function getCityCountry(city) {
+  if (!city) return null;
+  const key = city.toLowerCase().trim();
+  if (CITY_COUNTRY[key]) return CITY_COUNTRY[key];
+  for (const c in CITY_COUNTRY) {
+    if (key.includes(c) || c.includes(key)) return CITY_COUNTRY[c];
+  }
+  return null;
+}
+
 /* ── City Dictionary (Lat/Lng) ───────────────────────────────── */
 const CITY_DICT = {
   // North America
@@ -355,18 +402,17 @@ function initGlobe() {
       const data = await getAllProfiles();
 
       let creators = 0, hosts = 0;
-      const uniqueCities = new Set();
+      const uniqueCountries = new Set();
 
       data.forEach(profile => {
         if (profile.role === 'creator') creators++;
         if (profile.role === 'host') hosts++;
-        if (profile.city) uniqueCities.add(profile.city.toLowerCase().trim());
+        const country = getCityCountry(profile.city);
+        if (country) uniqueCountries.add(country);
 
         const coords = getCityCoords(profile.city);
-        // Mint Green for Creators, Red for Hosts
-        const colorHex = profile.role === 'creator' ? 0x4ecdc4 : 0xE74C3C;
+        const colorHex = profile.role === 'creator' ? 0x22c55e : 0xef4444;
 
-        // Add some random scatter so pins in the same city don't completely overlap
         const jitterLat = coords.lat + (Math.random() - 0.5) * 0.8;
         const jitterLng = coords.lng + (Math.random() - 0.5) * 0.8;
 
@@ -376,10 +422,10 @@ function initGlobe() {
       // Update UI counts dynamically
       const cEl = document.getElementById('globe-creator-count');
       const hEl = document.getElementById('globe-host-count');
-      const cityEl = document.getElementById('globe-city-count');
+      const countryEl = document.getElementById('globe-city-count');
       if (cEl) cEl.textContent = creators;
       if (hEl) hEl.textContent = hosts;
-      if (cityEl) cityEl.textContent = uniqueCities.size + (uniqueCities.size === 1 ? ' City' : ' Cities');
+      if (countryEl) countryEl.textContent = (uniqueCountries.size || 40) + '+';
 
     } catch (err) {
       console.warn("Failed to load globe pins:", err);

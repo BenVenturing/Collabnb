@@ -1,48 +1,184 @@
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 
-/* ── Continent polygons ───────────────────────────────────────────────────── */
+/* ── City → Country lookup (for stats) ───────────────────────────────────── */
+const CITY_COUNTRY = {
+  // United States
+  'new york':       'United States', 'los angeles':    'United States',
+  'chicago':        'United States', 'houston':        'United States',
+  'miami':          'United States', 'san francisco':  'United States',
+  'seattle':        'United States', 'austin':         'United States',
+  'denver':         'United States', 'boston':         'United States',
+  'atlanta':        'United States', 'las vegas':      'United States',
+  'nashville':      'United States', 'portland':       'United States',
+  'phoenix':        'United States', 'san diego':      'United States',
+  'dallas':         'United States', 'washington':     'United States',
+  'charlotte':      'United States', 'indianapolis':   'United States',
+  'columbus':       'United States', 'orlando':        'United States',
+  'jacksonville':   'United States', 'fort worth':     'United States',
+  'honolulu':       'United States', 'asheville':      'United States',
+  'charleston':     'United States', 'santa fe':       'United States',
+  'sedona':         'United States', 'jackson':        'United States',
+  'napa':           'United States', 'san antonio':    'United States',
+  'san jose':       'United States', 'philadelphia':   'United States',
+  // Canada
+  'toronto': 'Canada', 'vancouver': 'Canada', 'montreal': 'Canada',
+  // Mexico
+  'mexico city': 'Mexico', 'tulum': 'Mexico', 'cancun': 'Mexico',
+  // Europe
+  'london': 'United Kingdom', 'manchester': 'United Kingdom', 'edinburgh': 'United Kingdom',
+  'paris': 'France', 'lyon': 'France', 'nice': 'France',
+  'berlin': 'Germany', 'munich': 'Germany', 'hamburg': 'Germany',
+  'madrid': 'Spain', 'barcelona': 'Spain', 'ibiza': 'Spain', 'seville': 'Spain',
+  'rome': 'Italy', 'milan': 'Italy', 'florence': 'Italy', 'venice': 'Italy',
+  'amsterdam': 'Netherlands', 'lisbon': 'Portugal', 'dublin': 'Ireland',
+  'vienna': 'Austria', 'prague': 'Czech Republic', 'budapest': 'Hungary',
+  'stockholm': 'Sweden', 'copenhagen': 'Denmark', 'oslo': 'Norway', 'helsinki': 'Finland',
+  'athens': 'Greece', 'santorini': 'Greece', 'istanbul': 'Turkey',
+  'zurich': 'Switzerland', 'geneva': 'Switzerland',
+  'dubrovnik': 'Croatia', 'brussels': 'Belgium',
+  // Middle East
+  'dubai': 'UAE', 'abu dhabi': 'UAE',
+  // Asia
+  'tokyo': 'Japan', 'osaka': 'Japan', 'kyoto': 'Japan',
+  'seoul': 'South Korea', 'busan': 'South Korea',
+  'beijing': 'China', 'shanghai': 'China', 'hong kong': 'China',
+  'taipei': 'Taiwan', 'singapore': 'Singapore',
+  'kuala lumpur': 'Malaysia', 'penang': 'Malaysia',
+  'bangkok': 'Thailand', 'chiang mai': 'Thailand', 'phuket': 'Thailand',
+  'bali': 'Indonesia', 'jakarta': 'Indonesia',
+  'manila': 'Philippines',
+  'ho chi minh city': 'Vietnam', 'hanoi': 'Vietnam',
+  'mumbai': 'India', 'delhi': 'India', 'bangalore': 'India', 'goa': 'India',
+  // Pacific
+  'sydney': 'Australia', 'melbourne': 'Australia', 'brisbane': 'Australia',
+  'auckland': 'New Zealand',
+  // Latin America
+  'sao paulo': 'Brazil', 'rio de janeiro': 'Brazil',
+  'buenos aires': 'Argentina',
+  'bogota': 'Colombia', 'medellin': 'Colombia', 'cartagena': 'Colombia',
+  'lima': 'Peru', 'santiago': 'Chile',
+  // Africa
+  'cape town': 'South Africa', 'johannesburg': 'South Africa',
+  'nairobi': 'Kenya', 'lagos': 'Nigeria',
+  'cairo': 'Egypt', 'marrakech': 'Morocco',
+};
+
+export function countGlobeStats(profiles) {
+  if (!profiles?.length) return { creators: 0, hosts: 0, countries: 0 };
+  let creators = 0, hosts = 0;
+  const countrySet = new Set();
+  profiles.forEach((p) => {
+    if (p.role === 'creator') creators++;
+    if (p.role === 'host') hosts++;
+    const key = p.city?.toLowerCase().trim() || '';
+    let country = CITY_COUNTRY[key];
+    if (!country) {
+      for (const c in CITY_COUNTRY) {
+        if (key.includes(c) || c.includes(key)) { country = CITY_COUNTRY[c]; break; }
+      }
+    }
+    if (country) countrySet.add(country);
+  });
+  return { creators, hosts, countries: countrySet.size };
+}
+
+/* ── Improved continent polygons ─────────────────────────────────────────── */
 const CONTINENT_POLYS = [
-  [[71,-141],[70,-95],[74,-80],[60,-64],[47,-53],[45,-62],[44,-68],[35,-75],[25,-80],
-   [20,-87],[15,-92],[8,-77],[9,-79],[15,-88],[22,-105],[30,-117],[34,-120],[38,-122],
-   [48,-124],[55,-130],[58,-137],[60,-147],[63,-158],[58,-152],[61,-146],[58,-137],
-   [55,-131],[50,-127],[49,-124]],
-  [[83,-45],[82,-20],[76,-18],[72,-22],[70,-28],[68,-52],[70,-62],[75,-68],[80,-66],[83,-45]],
-  [[12,-71],[10,-75],[8,-77],[4,-77],[1,-80],[-2,-80],[-5,-81],[-6,-77],[-4,-73],[-2,-67],
-   [2,-60],[7,-60],[10,-62],[12,-70]],
-  [[-6,-77],[-10,-75],[-15,-75],[-18,-70],[-22,-60],[-23,-43],[-20,-40],[-12,-38],[-5,-35],
-   [-2,-50],[-2,-67],[-4,-73],[-6,-77]],
-  [[-23,-43],[-28,-49],[-33,-52],[-38,-57],[-42,-64],[-48,-66],[-52,-69],[-55,-66],
-   [-47,-65],[-38,-57],[-35,-57]],
-  [[36,-6],[39,-9],[42,-9],[44,-1],[43,5],[47,2],[48,-5],[51,-3],[51,1],[53,5],[55,8],
-   [56,13],[55,21],[54,18],[46,16],[46,19],[44,22],[41,26],[38,24],[37,22],[36,28],
-   [40,26],[42,28],[44,28],[46,22],[46,19],[56,13],[58,12],[60,11],[63,10],[65,14],
-   [68,16],[70,20],[71,26],[70,28],[65,25],[62,22],[60,24],[60,28],[65,28],[68,33],
-   [70,40],[68,44],[64,38],[60,30],[57,28],[56,13]],
-  [[44,8],[44,12],[41,16],[38,16],[37,15],[39,9],[44,8]],
-  [[36,0],[32,13],[25,10],[20,10],[15,0],[10,-5],[5,-5],[5,0],[0,10],[-5,12],[-10,14],
-   [-15,12],[-22,14],[-28,16],[-34,18],[-34,26],[-33,28],[-30,31],[-20,35],[-10,42],
-   [0,42],[5,44],[10,45],[12,44],[10,50],[15,50],[18,40],[22,36],[25,33],[30,32],
-   [32,32],[34,36],[36,10],[36,0]],
-  [[42,28],[40,40],[38,48],[30,48],[25,55],[20,58],[15,52],[10,45],[5,44],[0,42],
-   [5,80],[8,80],[10,77],[15,75],[22,70],[25,65],[30,60],[35,60],[38,58],[40,53],
-   [42,50],[44,38],[42,28]],
-  [[38,36],[30,32],[25,37],[22,39],[12,45],[12,51],[25,57],[30,48],[38,48],[38,36]],
-  [[22,68],[8,78],[8,80],[22,88],[28,88],[28,78],[22,68]],
-  [[22,100],[18,98],[10,98],[5,100],[5,104],[10,105],[15,100],[22,105],[22,100]],
+  // North America
+  [[71,-157],[65,-168],[63,-162],[58,-152],[57,-137],[55,-131],
+   [50,-127],[48,-124],[38,-122],[34,-120],[32,-117],[23,-110],
+   [20,-105],[16,-95],[10,-83],[8,-77],[10,-76],[16,-88],
+   [21,-87],[25,-80],[31,-81],[35,-76],[39,-74],[42,-70],
+   [44,-66],[47,-53],[52,-55],[56,-59],[60,-64],[63,-64],
+   [68,-62],[72,-68],[74,-80],[70,-85],[63,-90],[68,-100],
+   [69,-108],[68,-135],[71,-141],[71,-157]],
+
+  // Greenland
+  [[83,-45],[82,-20],[76,-18],[72,-22],[70,-28],[68,-52],
+   [70,-62],[75,-68],[80,-66],[83,-45]],
+
+  // South America (single polygon)
+  [[12,-72],[10,-62],[7,-58],[5,-52],[2,-50],[0,-49],
+   [-5,-35],[-10,-37],[-15,-39],[-23,-43],[-28,-49],
+   [-33,-52],[-38,-57],[-42,-64],[-48,-66],[-52,-69],
+   [-55,-67],[-52,-70],[-42,-74],[-30,-72],[-18,-70],
+   [-10,-77],[-5,-81],[-2,-80],[0,-80],[4,-77],[8,-77],[12,-72]],
+
+  // Europe (including Scandinavia)
+  [[36,-9],[39,-9],[43,-8],[44,-1],[43,5],[48,-5],
+   [51,-3],[51,1],[53,5],[55,8],[56,13],[58,12],
+   [60,11],[63,10],[65,14],[68,16],[70,20],[71,26],
+   [70,28],[65,25],[62,22],[60,24],[60,28],[65,28],
+   [68,33],[70,40],[68,44],[64,38],[60,30],[57,28],
+   [55,21],[54,18],[46,16],[46,19],[44,22],[41,26],
+   [38,24],[37,22],[36,28],[40,26],[42,28],[44,28],
+   [46,22],[56,13],[36,-9]],
+
+  // Italy
+  [[44,8],[44,12],[41,16],[38,16],[37,15],[38,9],[44,8]],
+
+  // UK
+  [[51,-5],[51,-3],[53,0],[55,-2],[58,-5],[58,-3],
+   [56,-6],[54,-4],[52,-4],[51,-5]],
+
+  // Africa
+  [[36,-5],[28,-12],[22,-16],[15,-17],[11,-15],[8,-13],
+   [4,-8],[5,0],[6,3],[4,9],[0,10],[-5,12],[-8,13],
+   [-15,12],[-22,14],[-29,17],[-34,18],[-34,26],
+   [-28,33],[-15,37],[-10,40],[-5,40],[0,41],[4,42],
+   [11,51],[15,42],[22,37],[27,34],[30,33],[31,32],
+   [31,25],[31,10],[37,8],[36,-5]],
+
+  // Asia main body (Turkey → Siberia → China/SE Asia coast → S baseline)
+  [[42,28],[38,36],[38,50],[40,60],[50,80],[55,82],
+   [62,70],[68,55],[70,70],[72,80],[73,105],[72,130],
+   [68,162],[62,168],[56,135],[50,128],[45,132],[42,130],
+   [38,122],[32,122],[25,120],[22,114],[18,108],[15,100],
+   [10,98],[15,98],[20,93],[22,88],[28,88],[28,68],
+   [22,62],[25,57],[12,44],[30,33],[38,36],[42,28]],
+
+  // Arabian Peninsula
+  [[30,32],[22,37],[12,43],[12,57],[22,60],[26,57],
+   [28,50],[36,50],[38,43],[38,36],[30,32]],
+
+  // Indian Subcontinent
+  [[28,68],[22,68],[8,77],[8,80],[15,80],[22,88],
+   [28,88],[28,80],[28,68]],
+
+  // SE Asia mainland
+  [[28,97],[22,100],[18,98],[10,98],[5,100],[5,104],
+   [10,105],[15,100],[22,105],[28,102],[28,97]],
+
+  // Malay Peninsula
+  [[10,100],[5,100],[2,103],[1,104],[5,104],[10,102],[10,100]],
+
+  // Borneo
   [[7,108],[1,108],[-4,116],[-4,118],[2,118],[7,118],[7,108]],
-  [[5,95],[1,104],[-5,106],[-5,104],[1,98],[5,95]],
-  [[50,105],[55,110],[52,115],[48,120],[45,125],[42,130],[38,122],[32,122],[25,120],
-   [22,114],[18,108],[15,108],[22,100],[22,105],[28,102],[35,105],[40,115],[45,122],
-   [50,105]],
-  [[43,142],[40,141],[34,136],[34,131],[40,132],[42,142],[43,142]],
-  [[55,140],[58,140],[62,140],[65,142],[68,170],[62,170],[55,140]],
-  [[-12,130],[-15,137],[-17,140],[-24,152],[-33,152],[-38,145],[-38,140],[-35,137],
-   [-33,134],[-32,127],[-25,114],[-18,122],[-12,130]],
-  [[-37,174],[-38,176],[-41,175],[-37,174]],
+
+  // Sumatra
+  [[5,95],[0,104],[-5,106],[-5,104],[0,98],[5,95]],
+
+  // Japan (Honshu + Kyushu)
+  [[43,144],[42,141],[40,141],[34,136],[34,131],
+   [36,131],[38,140],[40,140],[43,142],[43,144]],
+
+  // Korea
+  [[38,124],[35,126],[34,129],[38,129],[40,127],[38,124]],
+
+  // Australia
+  [[-12,130],[-15,137],[-17,140],[-22,150],[-24,152],
+   [-33,152],[-38,146],[-38,140],[-35,137],[-33,134],
+   [-32,127],[-25,114],[-22,114],[-18,122],[-14,130],[-12,130]],
+
+  // New Zealand South Island
+  [[-42,171],[-46,168],[-46,170],[-44,172],[-42,174],[-42,171]],
+
+  // New Zealand North Island
+  [[-37,174],[-38,176],[-41,175],[-40,174],[-37,175],[-37,174]],
 ];
 
-/* ── City dictionary ─────────────────────────────────────────────────────── */
+/* ── City dictionary (for pin placement) ─────────────────────────────────── */
 const CITY_DICT = {
   'new york': {lat:40.71,lng:-74.01}, 'los angeles': {lat:34.05,lng:-118.24},
   'chicago': {lat:41.87,lng:-87.62}, 'houston': {lat:29.76,lng:-95.36},
@@ -69,6 +205,9 @@ const CITY_DICT = {
   'asheville': {lat:35.57,lng:-82.55}, 'charleston': {lat:32.77,lng:-79.93},
   'santa fe': {lat:35.68,lng:-105.94}, 'sedona': {lat:34.86,lng:-111.78},
   'jackson': {lat:43.47,lng:-110.76}, 'napa': {lat:38.29,lng:-122.28},
+  'seoul': {lat:37.56,lng:126.97}, 'istanbul': {lat:41.00,lng:28.97},
+  'marrakech': {lat:31.62,lng:-7.98}, 'rio de janeiro': {lat:-22.90,lng:-43.17},
+  'medellin': {lat:6.24,lng:-75.58}, 'santiago': {lat:-33.44,lng:-70.65},
 };
 
 const FALLBACKS = [
@@ -86,7 +225,7 @@ function getCityCoords(city) {
   return FALLBACKS[Math.floor(Math.random() * FALLBACKS.length)];
 }
 
-/* ── Static fallback pins (shown when no live profiles yet) ──────────────── */
+/* ── Static fallback pins ────────────────────────────────────────────────── */
 const FALLBACK_CREATORS = [
   [40.71,-74.01],[34.05,-118.24],[37.77,-122.42],[51.51,-0.13],[48.86,2.35],
   [52.52,13.41],[35.68,139.65],[1.35,103.82],[19.08,72.88],[13.75,100.52],
@@ -97,9 +236,10 @@ const FALLBACK_HOSTS = [
   [20.21,-87.43],[38.29,-122.28],[35.57,-82.55],[34.86,-111.78],[30.04,31.24],
 ];
 
-const CREATOR_COLOR = 0x22c55e; // green
-const HOST_COLOR    = 0xef4444; // red
+const CREATOR_COLOR = 0x22c55e;
+const HOST_COLOR    = 0xef4444;
 
+/* ── Canvas texture ───────────────────────────────────────────────────────── */
 function buildGlobeTexture() {
   const W = 2048, H = 1024;
   const cv = document.createElement('canvas');
@@ -107,7 +247,7 @@ function buildGlobeTexture() {
   const ctx = cv.getContext('2d');
   ctx.fillStyle = '#DCE4E0';
   ctx.fillRect(0, 0, W, H);
-  ctx.strokeStyle = 'rgba(149,157,144,0.18)';
+  ctx.strokeStyle = 'rgba(149,157,144,0.15)';
   ctx.lineWidth = 0.8;
   for (let lat = -80; lat <= 80; lat += 20) {
     const y = (1 - (lat + 90) / 180) * H;
@@ -118,8 +258,8 @@ function buildGlobeTexture() {
     ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
   }
   ctx.fillStyle = 'rgba(130,150,135,0.72)';
-  ctx.strokeStyle = 'rgba(100,125,110,0.6)';
-  ctx.lineWidth = 1.5;
+  ctx.strokeStyle = 'rgba(100,125,110,0.55)';
+  ctx.lineWidth = 1.2;
   CONTINENT_POLYS.forEach((coords) => {
     if (!coords.length) return;
     ctx.beginPath();
@@ -146,10 +286,10 @@ function latLngToVec3(lat, lng, r = 1.306) {
 }
 
 export default function GlobeCanvas({ profiles }) {
-  const mountRef   = useRef(null);
-  const sceneRef   = useRef(null); // { pinsGroup, pinGlows, pinGeo, glowGeo }
+  const mountRef = useRef(null);
+  const sceneRef = useRef(null);
 
-  /* ── Main scene setup — runs once ──────────────────────────────────────── */
+  /* ── Main scene setup ───────────────────────────────────────────────────── */
   useEffect(() => {
     const mount = mountRef.current;
     if (!mount) return;
@@ -168,31 +308,46 @@ export default function GlobeCanvas({ profiles }) {
     camera.position.z = 3.6;
     const R = 1.3;
 
-    const texture  = buildGlobeTexture();
+    const texture = buildGlobeTexture();
+
+    // Main globe — reduced shininess so specular spot is smaller
     const globeMesh = new THREE.Mesh(
       new THREE.SphereGeometry(R, 72, 54),
-      new THREE.MeshPhongMaterial({ map: texture, transparent: true, opacity: 0.82, shininess: 110, specular: new THREE.Color(0xffffff) })
+      new THREE.MeshPhongMaterial({
+        map: texture,
+        transparent: true,
+        opacity: 0.82,
+        shininess: 38,
+        specular: new THREE.Color(0x666666),
+      })
     );
+
     const innerMesh = new THREE.Mesh(
       new THREE.SphereGeometry(R * 0.998, 48, 36),
       new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.08, side: THREE.BackSide })
     );
+
+    // Fresnel rim glow
     const rimMesh = new THREE.Mesh(
       new THREE.SphereGeometry(R * 1.004, 64, 48),
       new THREE.ShaderMaterial({
         vertexShader: `varying vec3 vNormal,vViewDir;void main(){vNormal=normalize(normalMatrix*normal);vec4 mv=modelViewMatrix*vec4(position,1.0);vViewDir=normalize(-mv.xyz);gl_Position=projectionMatrix*mv;}`,
-        fragmentShader: `varying vec3 vNormal,vViewDir;void main(){float f=pow(1.0-max(dot(vNormal,vViewDir),0.0),3.2);gl_FragColor=vec4(1.0,1.0,1.0,f*0.55);}`,
+        fragmentShader: `varying vec3 vNormal,vViewDir;void main(){float f=pow(1.0-max(dot(vNormal,vViewDir),0.0),3.2);gl_FragColor=vec4(1.0,1.0,1.0,f*0.45);}`,
         transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
       })
     );
+
+    // Specular highlight — much tighter & dimmer (pow 60, multiplier 0.10)
     const shineMesh = new THREE.Mesh(
       new THREE.SphereGeometry(R * 1.002, 64, 48),
       new THREE.ShaderMaterial({
         vertexShader: `varying vec3 vNormal;void main(){vNormal=normalize(normalMatrix*normal);gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,
-        fragmentShader: `varying vec3 vNormal;void main(){vec3 l=normalize(vec3(0.6,0.8,0.5));float s=pow(max(dot(vNormal,l),0.0),18.0)*0.35;gl_FragColor=vec4(1.0,1.0,1.0,s);}`,
+        fragmentShader: `varying vec3 vNormal;void main(){vec3 l=normalize(vec3(0.6,0.8,0.5));float s=pow(max(dot(vNormal,l),0.0),60.0)*0.10;gl_FragColor=vec4(1.0,1.0,1.0,s);}`,
         transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
       })
     );
+
+    // Atmosphere halo
     scene.add(new THREE.Mesh(
       new THREE.SphereGeometry(R * 1.13, 48, 36),
       new THREE.ShaderMaterial({
@@ -201,9 +356,10 @@ export default function GlobeCanvas({ profiles }) {
         transparent: true, side: THREE.BackSide, depthWrite: false,
       })
     ));
-    scene.add(new THREE.AmbientLight(0xffffff, 0.55));
-    const sun = new THREE.DirectionalLight(0xffffff, 0.9); sun.position.set(4, 3, 5); scene.add(sun);
-    const rim = new THREE.DirectionalLight(0xd1ebdb, 0.4); rim.position.set(-4, -1, -3); scene.add(rim);
+
+    scene.add(new THREE.AmbientLight(0xffffff, 0.58));
+    const sun = new THREE.DirectionalLight(0xffffff, 0.72); sun.position.set(4, 3, 5); scene.add(sun);
+    const rim = new THREE.DirectionalLight(0xd1ebdb, 0.35); rim.position.set(-4, -1, -3); scene.add(rim);
 
     const pinsGroup = new THREE.Group();
     const pinGeo    = new THREE.SphereGeometry(0.011, 8, 6);
@@ -269,13 +425,12 @@ export default function GlobeCanvas({ profiles }) {
     };
   }, []);
 
-  /* ── Pins update — reruns when profiles changes ────────────────────────── */
+  /* ── Pins update ────────────────────────────────────────────────────────── */
   useEffect(() => {
     const sc = sceneRef.current;
     if (!sc) return;
     const { pinsGroup, pinGlows, pinGeo, glowGeo, R } = sc;
 
-    // Clear existing pins
     while (pinsGroup.children.length > 0) pinsGroup.remove(pinsGroup.children[0]);
     pinGlows.length = 0;
 

@@ -105,7 +105,6 @@ formEl?.addEventListener('submit', async (e) => {
     }
 
     // Success — show spinner then redirect to app
-    const clerk = await getClerk();
     await clerk.setActive({ session: signInAttempt.createdSessionId });
     cardEl.hidden = true;
     successEl.hidden = false;

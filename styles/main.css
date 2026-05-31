@@ -1161,6 +1161,17 @@ h3 { font-weight: 700; }
 .modal-overlay.open .modal-card {
   transform: translateY(0);
 }
+
+/* Login modal card — replace previous inline padding */
+.login-modal-card {
+  padding: 2.5rem 2rem;
+}
+@media (max-width: 480px) {
+  .login-modal-card {
+    padding: 1.5rem 1rem !important;
+  }
+}
+
 .modal-close {
   position: absolute;
   top: 0.75rem;

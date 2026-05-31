@@ -124,12 +124,6 @@ export default function PlatformAnalytics() {
         Live metrics from Convex.
       </p>
 
-      {/* Data warning banner */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', padding: '0.625rem 0.875rem', background: '#FEF3C7', border: '1px solid rgba(146,64,14,0.15)', borderRadius: '0.625rem', marginBottom: '1.75rem', fontSize: '0.78rem', color: '#92400E' }}>
-        <span>⚠️</span>
-        <span>Analytics based on local/test data — live dashboard coming with production backend.</span>
-      </div>
-
       {stats === undefined ? (
         <div style={{ color: SAGE, fontSize: '0.85rem', padding: '3rem 0', textAlign: 'center' }}>Loading…</div>
       ) : (

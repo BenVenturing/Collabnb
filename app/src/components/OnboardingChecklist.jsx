@@ -235,7 +235,7 @@ export default function OnboardingChecklist() {
               color: 'var(--ink, #192524)', margin: 0,
               whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
             }}>
-              {allDone ? '🎉 You\'re all set!' : `Get ready for July 1st`}
+              {allDone ? '🎉 You\'re all set!' : 'Complete your setup'}
             </p>
             <p style={{ fontSize: '0.75rem', color: 'var(--slate, #3C5759)', margin: '0.125rem 0 0' }}>
               {completedCount}/{steps.length} steps complete

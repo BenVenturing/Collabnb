@@ -697,18 +697,8 @@
       <h2 id="login-modal-title" class="login-title">Welcome back</h2>
       <p class="login-desc">Sign in to your account to view your profile and manage collabs.</p>
     </div>
-    <form id="login-modal-form" class="login-form">
-      <div class="form-group">
-        <label class="form-label" for="login-modal-email">Email address</label>
-        <input class="form-input" type="email" id="login-modal-email" name="email" placeholder="you@example.com" autocomplete="email" required />
-      </div>
-      <div class="form-group">
-        <label class="form-label" for="login-modal-password">Password</label>
-        <input class="form-input" type="password" id="login-modal-password" name="password" placeholder="••••••••" autocomplete="current-password" required />
-      </div>
-      <button type="submit" id="login-modal-submit" class="btn-primary" style="width:100%;cursor:pointer;">Sign In</button>
-      <div class="login-error" id="login-modal-error"></div>
-    </form>
+    <!-- Clerk sign-in component mounts here -->
+    <div id="clerk-login-mount"></div>
     <div class="login-footer" style="text-align:center;margin-top:1.5rem;">
       Don't have an account? <a href="join.html">Join the waitlist</a>
     </div>

@@ -113,6 +113,11 @@ function ProfileCard({ profile, onApprove, onReject, isRejected }) {
                 🌟 Founder
               </span>
             )}
+            {profile.referred_by && (
+              <span style={{ fontSize: '0.7rem', background: '#EDE9FE', color: '#5B21B6', padding: '0.1rem 0.5rem', borderRadius: '99px', fontWeight: 600 }}>
+                Referred
+              </span>
+            )}
           </div>
           <div style={{ fontSize: '0.78rem', color: '#959D90', marginTop: '0.2rem', display: 'flex', gap: '0.875rem', flexWrap: 'wrap' }}>
             <span>{profile.email}</span>
@@ -133,6 +138,16 @@ function ProfileCard({ profile, onApprove, onReject, isRejected }) {
       <div style={{ marginTop: '0.75rem' }}>
         <SocialLinks profile={profile} />
       </div>
+
+      {/* ── Referral notice ── */}
+      {profile.referred_by && (
+        <div style={{ marginTop: '0.625rem', padding: '0.4rem 0.75rem', background: '#F5F3FF', borderRadius: '0.5rem', fontSize: '0.78rem', color: '#5B21B6', borderLeft: '3px solid #C4B5FD', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" width="13" height="13">
+            <path d="M8 1v6M5 4l3-3 3 3M4 9.5a4 4 0 008 0"/>
+          </svg>
+          Signed up via referral — will receive <strong style={{ marginLeft: '0.25rem' }}>1 free month</strong> after completing their first collab.
+        </div>
+      )}
 
       {/* ── Rejection reason badge ── */}
       {isRejected && profile.rejection_reason && (

@@ -4,6 +4,7 @@
 
 import { getProfileCounts, waitlistSignUp, updateWaitlistProfile } from './convex.js';
 
+const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL;
 let signedUpName = '';
 
 /* ── Lazy Clerk instance (shared across initNavAuth, submitForm, login) ── */
@@ -387,7 +388,7 @@ function showWizardStep(step) {
       <form id="wl-step2" style="display:flex;flex-direction:column;gap:1rem;">
         ${fields}
         <button type="submit" class="btn-primary" style="width:100%;cursor:pointer;">Continue →</button>
-        <button type="button" id="wl-skip2" style="background:none;border:none;color:var(--sage);font-size:0.8rem;cursor:pointer;padding:0.25rem 0;">Skip for now</button>
+        ${currentRole !== 'creator' ? '<button type="button" id="wl-skip2" style="background:none;border:none;color:var(--sage);font-size:0.8rem;cursor:pointer;padding:0.25rem 0;">Skip for now</button>' : ''}
         <div id="wl-error2" style="display:none;color:#e74c3c;font-size:0.8125rem;text-align:center;"></div>
       </form>`;
     document.getElementById('wl-step2')?.addEventListener('submit', handleStep2Submit);
@@ -529,6 +530,8 @@ function switchRole(role) {
 }
 
 /* --- Login Modal --- */
+let _clerkLoginMounted = false;
+
 function openLoginModal() {
   const overlay = document.querySelector('#login-modal-overlay');
   if (!overlay) return;
@@ -545,9 +548,23 @@ function openLoginModal() {
   const nav = document.querySelector('.nav-pill');
   if (nav) nav.style.display = 'none';
 
-  // Focus first input
-  const emailInput = document.querySelector('#login-modal-email');
-  if (emailInput) emailInput.focus();
+  // Mount Clerk sign-in component (with Google OAuth etc.)
+  getClerk().then((clerk) => {
+    if (!clerk) return;
+    const mountEl = document.getElementById('clerk-login-mount');
+    if (!mountEl) return;
+    // Unmount previous instance to avoid "already mounted" error
+    if (_clerkLoginMounted) {
+      try { clerk.componentUnmount?.('clerk-login-mount'); } catch {}
+    }
+    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    const appUrl_ = isLocalhost ? 'http://localhost:5174/#/explore' : '/app/#/explore';
+    clerk.mountSignIn(mountEl, {
+      afterSignInUrl: appUrl_,
+      signUpUrl: '/join.html',
+    });
+    _clerkLoginMounted = true;
+  });
 }
 
 function closeLoginModal() {
@@ -560,20 +577,6 @@ function closeLoginModal() {
   // Show the nav pill again
   const nav = document.querySelector('.nav-pill');
   if (nav) nav.style.display = '';
-
-  // Reset form
-  const form = document.querySelector('#login-modal-form');
-  if (form) form.reset();
-  const errorEl = document.querySelector('#login-modal-error');
-  if (errorEl) {
-    errorEl.style.display = 'none';
-    errorEl.textContent = '';
-  }
-  const submitBtn = document.querySelector('#login-modal-submit');
-  if (submitBtn) {
-    submitBtn.disabled = false;
-    submitBtn.textContent = 'Sign In';
-  }
 }
 
 function launchConfetti() {
@@ -847,119 +850,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const loginCloseBtn = document.querySelector('#login-modal-close');
   if (loginCloseBtn) loginCloseBtn.addEventListener('click', closeLoginModal);
 
-  // Login modal backdrop click
+  // Login modal backdrop click — also close when clicking outside Clerk component
   const loginOverlay = document.querySelector('#login-modal-overlay');
   if (loginOverlay) {
     loginOverlay.addEventListener('click', (e) => {
       if (e.target === loginOverlay) closeLoginModal();
     });
   }
-
-  // Login modal form submit
-  const loginFormEl = document.querySelector('#login-modal-form');
-  if (loginFormEl) {
-    loginFormEl.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const emailEl = document.querySelector('#login-modal-email');
-      const passwordEl = document.querySelector('#login-modal-password');
-      const errorEl = document.querySelector('#login-modal-error');
-      const submitBtn = document.querySelector('#login-modal-submit');
-
-      const email = emailEl?.value?.trim();
-      const password = passwordEl?.value;
-
-      if (!email || !password) {
-        if (errorEl) {
-          errorEl.textContent = 'Please enter your email and password.';
-          errorEl.style.display = 'block';
-        }
-        return;
-      }
-
-      if (errorEl) errorEl.style.display = 'none';
-      if (submitBtn) {
-        submitBtn.disabled = true;
-        submitBtn.textContent = 'Signing in…';
-      }
-
-      try {
-        const clerk = await getClerk();
-        if (!clerk) throw new Error('Clerk not configured');
-
-        const signInAttempt = await clerk.client.signIn.create({
-          identifier: email,
-          password: password,
-        });
-
-        if (signInAttempt.status !== 'complete') {
-          throw new Error(`Additional authentication required (status: ${signInAttempt.status}).`);
-        }
-
-        // Success — redirect to profile
-        const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-        window.location.href = isLocalhost ? 'http://localhost:5174/#/profile' : '/profile.html';
-
-      } catch (err) {
-        const msg = getClerkErrorMessage(err);
-        if (errorEl) {
-          errorEl.textContent = msg;
-          errorEl.style.display = 'block';
-        }
-        if (submitBtn) {
-          submitBtn.disabled = false;
-          submitBtn.textContent = 'Sign In';
-        }
-      }
-    });
-  }
-
-  // ── Password visibility toggle (modal) ──────────────────────────────
-  const modalPasswordToggle = document.querySelector('#login-modal-password-toggle');
-  const modalPasswordInput = document.querySelector('#login-modal-password');
-  const modalPasswordEye = document.querySelector('#login-modal-password-eye');
-  modalPasswordToggle?.addEventListener('click', () => {
-    if (!modalPasswordInput) return;
-    const isPassword = modalPasswordInput.type === 'password';
-    modalPasswordInput.type = isPassword ? 'text' : 'password';
-    modalPasswordToggle.setAttribute('aria-label', isPassword ? 'Hide password' : 'Show password');
-    if (modalPasswordEye) {
-      modalPasswordEye.innerHTML = isPassword
-        ? '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>'
-        : '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
-    }
-  });
-
-  // ── Forgot password (modal) ─────────────────────────────────────────
-  const modalForgotBtn = document.querySelector('#login-modal-forgot');
-  const modalEmailEl = document.querySelector('#login-modal-email');
-  const modalErrorEl = document.querySelector('#login-modal-error');
-  modalForgotBtn?.addEventListener('click', async () => {
-    const email = modalEmailEl?.value?.trim();
-    if (!email) {
-      if (modalErrorEl) {
-        modalErrorEl.textContent = 'Enter your email address first.';
-        modalErrorEl.style.display = 'block';
-      }
-      return;
-    }
-    modalForgotBtn.disabled = true;
-    modalForgotBtn.textContent = 'Sending…';
-    try {
-      const clerk = await getClerk();
-      if (!clerk) throw new Error('Clerk not configured');
-      await clerk.client.signIn.create({
-        strategy: 'reset_password_email_code',
-        identifier: email,
-      });
-      modalForgotBtn.textContent = 'Check your inbox';
-      if (modalErrorEl) { modalErrorEl.textContent = ''; modalErrorEl.style.display = 'none'; }
-    } catch (err) {
-      const msg = getClerkErrorMessage(err) || 'Could not send reset email. Try again.';
-      if (modalErrorEl) { modalErrorEl.textContent = msg; modalErrorEl.style.display = 'block'; }
-      modalForgotBtn.disabled = false;
-      modalForgotBtn.textContent = 'Forgot password?';
-    }
-  });
 
   // Login link in wizard modal -> open login modal
   const loginLink = document.querySelector('#modal-login-link');

@@ -49,16 +49,15 @@ function PillList({ items, onRemove, color = "var(--mint)" }) {
   );
 }
 
-function generateCollabCode(title, percent) {
+function generateCollabCode(title) {
   const initials = (title || "")
     .split(/\s+/)
     .filter(Boolean)
     .map((w) => w[0].toUpperCase())
     .join("")
-    .slice(0, 5);
-  const pct = parseInt(percent, 10);
-  if (!initials) return "";
-  return `${initials}${isNaN(pct) || pct <= 0 ? "" : pct}`;
+    .slice(0, 4);
+  const suffix = Math.random().toString(36).toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 5);
+  return `COLLABNB-${initials || 'CODE'}${suffix}`;
 }
 
 export default function Step2Offer() {
@@ -119,16 +118,29 @@ export default function Step2Offer() {
             />
           </div>
 
-          <button
-            onClick={() => {
-              const code = generateCollabCode(draft.title, draft.affiliate_percent);
-              if (code) updateDraft({ affiliate_code: code });
-            }}
-            style={{ marginTop: 12, background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, fontFamily: "Satoshi, sans-serif", fontSize: 13, color: "var(--slate)", fontWeight: 600, padding: 0 }}
-          >
-            <Sparkles size={14} />
-            Generate Collabnb Code
-          </button>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 12 }}>
+            <button
+              onClick={() => updateDraft({ affiliate_code: generateCollabCode(draft.title) })}
+              style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, fontFamily: "Satoshi, sans-serif", fontSize: 13, color: "var(--slate)", fontWeight: 600, padding: 0 }}
+            >
+              <Sparkles size={14} />
+              {draft.affiliate_code ? "Regenerate" : "Generate"} Collabnb Code
+            </button>
+            {draft.affiliate_code && (
+              <button
+                onClick={() => updateDraft({ affiliate_code: generateCollabCode(draft.title) })}
+                title="Shuffle code"
+                style={{ background: "none", border: "1.5px solid rgba(25,37,36,0.15)", borderRadius: "0.5rem", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", width: 30, height: 30, color: "var(--sage)", transition: "background 120ms, color 120ms" }}
+                onMouseEnter={e => { e.currentTarget.style.background = "rgba(25,37,36,0.06)"; e.currentTarget.style.color = "var(--ink)"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "none"; e.currentTarget.style.color = "var(--sage)"; }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/>
+                  <polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/>
+                </svg>
+              </button>
+            )}
+          </div>
 
           <p style={{ marginTop: 10, fontFamily: "Satoshi, sans-serif", fontSize: 11.5, color: "var(--sage)", lineHeight: 1.5 }}>
             Collabnb does not currently track affiliate clicks. Code-honoring is on the host. Real tracking coming in a future update.

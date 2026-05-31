@@ -61,6 +61,8 @@ export default function Step4Review() {
   const { draft, clearDraft, fee, totalDeliverables, formatCount } = useListingDraft();
   const { profile } = useAuth();
   const createListing = useMutation(api.listings.create);
+  const updateListing = useMutation(api.listings.update);
+  const editingId = typeof window !== 'undefined' ? localStorage.getItem('collabnb_editing_listing_id_v1') : null;
   const [feesOpen, setFeesOpen] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [confetti, setConfetti] = useState(false);
@@ -69,36 +71,42 @@ export default function Step4Review() {
   const tierLabel = TIER_LABELS[draft.creator_tier] || "";
   const loadLabel = LOAD_LABELS[draft.deliverable_load] || "";
 
+  const listingFields = {
+    title: draft.title,
+    location: `${draft.location_city}, ${draft.location_country}`,
+    location_city: draft.location_city,
+    location_country: draft.location_country,
+    host_id: profile?._id || profile?.id,
+    host_name: profile?.full_name,
+    property_url: draft.property_url,
+    collaboration_brief: draft.collaboration_brief,
+    compensation_type: draft.compensation_type,
+    cash_amount: draft.cash_amount || undefined,
+    nights: draft.nights,
+    creator_tier: draft.creator_tier,
+    deliverable_load: draft.deliverable_load,
+    gallery_images: draft.images,
+    perks: draft.perks,
+    vibe_tags: draft.vibe_tags,
+    affiliate_code: draft.affiliate_code,
+    collab_start: draft.collab_start,
+    collab_end: draft.collab_end,
+    turnaround_days: draft.turnaround_days,
+    deliverables_list: draft.deliverables_list,
+    deliverable_count: totalDeliverables,
+    revision_policy: draft.revision_policy,
+    usage_rights: draft.usage_rights,
+  };
+
   async function handlePublish(status) {
     setPublishing(true);
     try {
-      await createListing({
-        title: draft.title,
-        location: `${draft.location_city}, ${draft.location_country}`,
-        location_city: draft.location_city,
-        location_country: draft.location_country,
-        host_id: profile?._id || profile?.id,
-        host_name: profile?.full_name,
-        status,
-        property_url: draft.property_url,
-        collaboration_brief: draft.collaboration_brief,
-        compensation_type: draft.compensation_type,
-        cash_amount: draft.cash_amount || undefined,
-        nights: draft.nights,
-        creator_tier: draft.creator_tier,
-        deliverable_load: draft.deliverable_load,
-        gallery_images: draft.images,
-        perks: draft.perks,
-        vibe_tags: draft.vibe_tags,
-        affiliate_code: draft.affiliate_code,
-        collab_start: draft.collab_start,
-        collab_end: draft.collab_end,
-        turnaround_days: draft.turnaround_days,
-        deliverables_list: draft.deliverables_list,
-        deliverable_count: totalDeliverables,
-        revision_policy: draft.revision_policy,
-        usage_rights: draft.usage_rights,
-      });
+      if (editingId) {
+        await updateListing({ id: editingId, ...listingFields, status });
+        localStorage.removeItem('collabnb_editing_listing_id_v1');
+      } else {
+        await createListing({ ...listingFields, status });
+      }
       if (status === "published") {
         setConfetti(true);
         setTimeout(() => { setConfetti(false); clearDraft(); navigate("/host"); }, 2200);
@@ -122,10 +130,10 @@ export default function Step4Review() {
         onNext={() => handlePublish("published")}
       >
         <h2 style={{ fontFamily: "Cabinet Grotesk, serif", fontWeight: 800, fontSize: 28, color: "var(--ink)", margin: "0 0 6px", display: "flex", alignItems: "center", gap: 10 }}>
-          Review & publish
+          {editingId ? "Edit & publish" : "Review & publish"}
         </h2>
         <p style={{ fontFamily: "Satoshi, sans-serif", fontSize: 14, color: "var(--slate)", margin: "0 0 32px" }}>
-          Here's how your listing will appear to creators. Review everything before publishing.
+          {editingId ? "Review your changes before saving." : "Here's how your listing will appear to creators. Review everything before publishing."}
         </p>
 
         {/* Header card */}

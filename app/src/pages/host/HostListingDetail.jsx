@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useQuery, useMutation } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
 import { SAMPLE_LISTINGS } from '../../lib/mockData';
-import { ArrowLeft, MapPin, Calendar, Copy, Check, ChevronDown, ChevronUp, MessageSquare, ExternalLink } from 'lucide-react';
+import { ArrowLeft, MapPin, Copy, Check, ChevronDown, ChevronUp, MessageSquare, ExternalLink, X, AlertTriangle } from 'lucide-react';
 
 // ─── Glass card token ─────────────────────────────────────────────────────────
 const GC = {
@@ -151,6 +153,20 @@ const HOST_META_DEFAULT = {
   '1': 'active', '2': 'active', '3': 'paused',
   '4': 'draft',  '5': 'active', '6': 'draft',
 };
+
+function normalizeConvexListing(l) {
+  if (!l) return null;
+  const images = l.gallery_images?.length ? l.gallery_images : (l.image ? [l.image] : []);
+  let compensation = l.compensation || '';
+  if (!compensation) {
+    if (l.compensation_type === 'free_stay') compensation = `Free Stay · ${l.nights || '?'} nights`;
+    else if (l.compensation_type === 'paid') compensation = `$${l.cash_amount || '?'} cash`;
+    else if (l.compensation_type === 'hybrid') compensation = `Free Stay + $${l.cash_amount || '?'}`;
+    else compensation = 'See listing';
+  }
+  const status = l.status === 'published' ? 'active' : (l.status || 'draft');
+  return { ...l, id: String(l._id), status, image: images[0] || '', gallery_images: images, compensation, about: l.collaboration_brief || l.about || '' };
+}
 
 // ─── Photo zoom modal ─────────────────────────────────────────────────────────
 function PhotoModal({ images, startIndex, onClose }) {
@@ -425,18 +441,46 @@ function SectionHead({ title, sub }) {
 export default function HostListingDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const listing = SAMPLE_LISTINGS.find((l) => l.id === id);
 
-  // Derive live status from localStorage (mirrors HostDashboard)
-  const rawStatus = getListingStatus(id) || HOST_META_DEFAULT[id] || 'draft';
+  const isSampleId = SAMPLE_LISTINGS.some((l) => l.id === id);
+  const convexRaw = useQuery(api.listings.getById, !isSampleId ? { id } : 'skip');
+  const updateListing = useMutation(api.listings.update);
+
+  const sampleListing = isSampleId ? SAMPLE_LISTINGS.find((l) => l.id === id) : null;
+  const convexListing = !isSampleId ? normalizeConvexListing(convexRaw) : null;
+  const listing = isSampleId ? sampleListing : convexListing;
+
+  // Reactive status — localStorage overrides, synced with DB on Convex listings
+  const [localStatus, setLocalStatus] = useState(null);
+  useEffect(() => {
+    const stored = getListingStatus(id);
+    if (stored) { setLocalStatus(stored); return; }
+    if (isSampleId) setLocalStatus(HOST_META_DEFAULT[id] || 'draft');
+  }, [id, isSampleId]);
+  useEffect(() => {
+    if (!isSampleId && listing) setLocalStatus((prev) => prev || listing.status);
+  }, [listing, isSampleId]);
+
+  const rawStatus = localStatus || (isSampleId ? HOST_META_DEFAULT[id] || 'draft' : listing?.status || 'draft');
   const statusCfg = LISTING_STATUS_CFG[rawStatus] || LISTING_STATUS_CFG.draft;
 
-  const [modalPhoto, setModalPhoto] = useState(null); // index | null
+  // Status modal state
+  const [statusModal, setStatusModal] = useState(null); // null | 'publish' | 'to-draft'
+  const [draftConfirmText, setDraftConfirmText] = useState('');
+  const [statusSaving, setStatusSaving] = useState(false);
+
+  const [modalPhoto, setModalPhoto] = useState(null);
   const [copiedCode, setCopiedCode] = useState(false);
   const [statusFilter, setStatusFilter] = useState('all');
 
   const applicants = MOCK_APPLICANTS[id] || [];
-  const affiliateCode = AFFILIATE_CODES[id] || null;
+  const affiliateCode = isSampleId
+    ? (AFFILIATE_CODES[id] || null)
+    : (listing?.affiliate_code || null);
+
+  const hasActiveContracts = applicants.some((a) => a.status === 'approved');
+  const hasPendingInquiries = applicants.some((a) => a.status === 'pending' || a.status === 'under_review');
+  const pendingCount = applicants.filter((a) => a.status === 'pending' || a.status === 'under_review').length;
 
   const filteredApplicants = statusFilter === 'all'
     ? applicants
@@ -452,6 +496,65 @@ export default function HostListingDetail() {
     navigator.clipboard.writeText(affiliateCode).catch(() => {});
     setCopiedCode(true);
     setTimeout(() => setCopiedCode(false), 2000);
+  }
+
+  async function applyStatusChange(newDisplayStatus) {
+    setStatusSaving(true);
+    const dbStatus = newDisplayStatus === 'active' ? 'published' : newDisplayStatus;
+    setLocalStatus(newDisplayStatus);
+    // Persist to localStorage
+    try {
+      const stored = JSON.parse(localStorage.getItem('@collabnb_host_listings_local_v1') || '{}');
+      stored[id] = { status: newDisplayStatus };
+      localStorage.setItem('@collabnb_host_listings_local_v1', JSON.stringify(stored));
+    } catch {}
+    // Persist to Convex for real listings
+    if (!isSampleId) {
+      try { await updateListing({ id, status: dbStatus }); } catch (e) { console.error(e); }
+    }
+    setStatusSaving(false);
+    setStatusModal(null);
+    setDraftConfirmText('');
+  }
+
+  function handleEditListing() {
+    if (!listing) return;
+    const draftData = {
+      title: listing.title || '',
+      location_city: listing.location?.split(',')[0]?.trim() || '',
+      location_country: listing.location?.split(',').slice(1).join(',').trim() || '',
+      property_url: listing.property_url || '',
+      collaboration_brief: listing.about || listing.collaboration_brief || '',
+      compensation_type: listing.compensation_type || 'free_stay',
+      nights: listing.nights || 2,
+      cash_amount: listing.cash_amount || 0,
+      creator_tier: listing.creator_tier || '',
+      deliverable_load: listing.deliverable_load || '',
+      images: listing.gallery_images || (listing.image ? [listing.image] : []),
+      perks: listing.perks || [],
+      vibe_tags: listing.vibe_tags || [],
+      affiliate_code: affiliateCode || '',
+      affiliate_percent: 0,
+      maxOffers: '',
+      collab_start: listing.collab_start || '',
+      collab_end: listing.collab_end || '',
+      turnaround_days: listing.turnaround_days || 14,
+      deliverables_list: listing.deliverables_list || [],
+      revision_policy: listing.revision_policy || '',
+      usage_rights: listing.usage_rights || '',
+    };
+    localStorage.setItem('collabnb_listing_draft_v1', JSON.stringify(draftData));
+    if (!isSampleId) localStorage.setItem('collabnb_editing_listing_id_v1', id);
+    navigate('/host/listings/create');
+  }
+
+  // Loading / not-found guards
+  if (!isSampleId && convexRaw === undefined) {
+    return (
+      <div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <p style={{ color: 'var(--sage)', fontFamily: 'var(--font-body)' }}>Loading…</p>
+      </div>
+    );
   }
 
   if (!listing) {
@@ -508,7 +611,7 @@ export default function HostListingDetail() {
               <ExternalLink size={12} /> Creator view
             </button>
             <button
-              onClick={() => navigate('/host/listings/create')}
+              onClick={handleEditListing}
               style={{
                 padding: '0.4rem 0.875rem', borderRadius: 9999,
                 background: 'var(--ink)', border: 'none',
@@ -530,13 +633,27 @@ export default function HostListingDetail() {
             <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 'clamp(1.4rem,4vw,1.8rem)', color: 'var(--ink)', margin: 0, lineHeight: 1.1 }}>
               {listing.title}
             </h1>
-            <span style={{
-              padding: '0.25rem 0.7rem', borderRadius: 9999,
-              fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.04em',
-              background: statusCfg.bg, color: statusCfg.color,
-            }}>
+            <button
+              onClick={() => {
+                if (rawStatus === 'draft') setStatusModal('publish');
+                else if (hasActiveContracts) setStatusModal('blocked');
+                else setStatusModal('to-draft');
+              }}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
+                padding: '0.25rem 0.7rem', borderRadius: 9999,
+                fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.04em',
+                background: statusCfg.bg, color: statusCfg.color,
+                border: 'none', cursor: 'pointer',
+                transition: 'opacity 140ms, transform 140ms',
+              }}
+              onMouseEnter={e => e.currentTarget.style.opacity = '0.82'}
+              onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+              title="Click to change status"
+            >
               {statusCfg.label}
-            </span>
+              <ChevronDown size={9} />
+            </button>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
             <MapPin size={12} color="var(--sage)" />
@@ -765,6 +882,94 @@ export default function HostListingDetail() {
           startIndex={modalPhoto}
           onClose={() => setModalPhoto(null)}
         />
+      )}
+
+      {/* ── Status modal ─────────────────────────────────────────────────── */}
+      {statusModal && (
+        <div
+          onClick={() => { if (!statusSaving) { setStatusModal(null); setDraftConfirmText(''); } }}
+          style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(25,37,36,0.45)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', animation: 'detailFadeIn 160ms ease' }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{ background: 'rgba(255,255,255,0.97)', borderRadius: '1.5rem', padding: '1.75rem', maxWidth: 400, width: '100%', boxShadow: '0 24px 64px rgba(25,37,36,0.2)', border: '1px solid rgba(255,255,255,0.9)', animation: 'fadeUp 180ms ease forwards' }}
+          >
+            {/* Blocked: active contracts */}
+            {statusModal === 'blocked' && (
+              <>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', marginBottom: '0.75rem' }}>
+                  <AlertTriangle size={18} color="#b45309" />
+                  <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1rem', color: 'var(--ink)', margin: 0 }}>Can't move to draft</h3>
+                </div>
+                <p style={{ fontSize: '0.875rem', color: 'var(--slate)', lineHeight: 1.6, marginBottom: '1.25rem' }}>
+                  This listing has creators in an active contract. You must complete or cancel all active collaborations before changing the status to draft.
+                </p>
+                <button onClick={() => setStatusModal(null)} style={{ width: '100%', padding: '0.65rem', borderRadius: 9999, background: 'var(--ink)', border: 'none', color: '#fff', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-body)' }}>
+                  Got it
+                </button>
+              </>
+            )}
+
+            {/* Publish confirmation */}
+            {statusModal === 'publish' && (
+              <>
+                <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1rem', color: 'var(--ink)', margin: '0 0 0.5rem' }}>Publish this listing?</h3>
+                <p style={{ fontSize: '0.875rem', color: 'var(--slate)', lineHeight: 1.6, marginBottom: '1.25rem' }}>
+                  It will become live and visible to creators on Collabnb right away.
+                </p>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button onClick={() => { setStatusModal(null); setDraftConfirmText(''); }} style={{ flex: 1, padding: '0.65rem', borderRadius: 9999, background: 'rgba(25,37,36,0.07)', border: 'none', color: 'var(--ink)', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-body)' }}>
+                    Cancel
+                  </button>
+                  <button onClick={() => applyStatusChange('active')} disabled={statusSaving} style={{ flex: 1, padding: '0.65rem', borderRadius: 9999, background: '#4A9B7F', border: 'none', color: '#fff', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-body)', opacity: statusSaving ? 0.6 : 1 }}>
+                    {statusSaving ? 'Publishing…' : 'Publish'}
+                  </button>
+                </div>
+              </>
+            )}
+
+            {/* To-draft confirmation (with or without pending inquiries) */}
+            {statusModal === 'to-draft' && (
+              <>
+                <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1rem', color: 'var(--ink)', margin: '0 0 0.5rem' }}>Move to draft?</h3>
+                {hasPendingInquiries ? (
+                  <>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', background: 'rgba(212,168,67,0.1)', border: '1px solid rgba(212,168,67,0.3)', borderRadius: '0.75rem', padding: '0.75rem', marginBottom: '0.875rem' }}>
+                      <AlertTriangle size={15} color="#b45309" style={{ flexShrink: 0, marginTop: 1 }} />
+                      <p style={{ fontSize: '0.78rem', color: '#92400E', lineHeight: 1.55, margin: 0 }}>
+                        {pendingCount} creator{pendingCount !== 1 ? 's' : ''} with pending or under-review inquiries will receive a message: <em>"Sorry for the hassle — this listing has been temporarily paused. We'll reach out if it goes live again."</em>
+                      </p>
+                    </div>
+                    <p style={{ fontSize: '0.82rem', color: 'var(--slate)', marginBottom: '0.75rem' }}>Type <strong>draft</strong> to confirm:</p>
+                    <input
+                      value={draftConfirmText}
+                      onChange={e => setDraftConfirmText(e.target.value)}
+                      placeholder="draft"
+                      autoFocus
+                      style={{ width: '100%', padding: '0.6rem 0.875rem', border: '1.5px solid rgba(25,37,36,0.15)', borderRadius: '0.75rem', fontSize: '0.875rem', fontFamily: 'var(--font-body)', color: 'var(--ink)', outline: 'none', marginBottom: '1rem', boxSizing: 'border-box' }}
+                    />
+                  </>
+                ) : (
+                  <p style={{ fontSize: '0.875rem', color: 'var(--slate)', lineHeight: 1.6, marginBottom: '1.25rem' }}>
+                    The listing will be hidden from creators and no new applications will be accepted.
+                  </p>
+                )}
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button onClick={() => { setStatusModal(null); setDraftConfirmText(''); }} style={{ flex: 1, padding: '0.65rem', borderRadius: 9999, background: 'rgba(25,37,36,0.07)', border: 'none', color: 'var(--ink)', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-body)' }}>
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => applyStatusChange('draft')}
+                    disabled={statusSaving || (hasPendingInquiries && draftConfirmText.toLowerCase().trim() !== 'draft')}
+                    style={{ flex: 1, padding: '0.65rem', borderRadius: 9999, background: 'var(--ink)', border: 'none', color: '#fff', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-body)', opacity: (statusSaving || (hasPendingInquiries && draftConfirmText.toLowerCase().trim() !== 'draft')) ? 0.4 : 1, transition: 'opacity 140ms' }}
+                  >
+                    {statusSaving ? 'Saving…' : 'Move to draft'}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );

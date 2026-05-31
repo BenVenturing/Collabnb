@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, MapPin, Users, Calendar, MessageSquare, MoreVertical, X } from 'lucide-react';
+import { Plus, MapPin, Users, Calendar, MessageSquare, MoreVertical, X, UserPlus, Home, CheckCircle2 } from 'lucide-react';
 import { useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { useAuth } from '../contexts/AuthContext';
@@ -192,11 +192,11 @@ const STATUS_CFG = {
 };
 
 const ACTIVITY = [
-  { id: 'a1', icon: '✦', bg: 'rgba(60,87,89,0.12)',   text: 'Priya Nair applied to Glacier Prime Cabin', sub: '2h ago',  cta: 'Review',  route: '/host/proposals' },
-  { id: 'a2', icon: '💬', bg: 'rgba(123,104,200,0.1)', text: 'Jordan Ellis sent you a message',            sub: '5h ago',  cta: 'Reply',   route: '/inbox' },
-  { id: 'a3', icon: '🏡', bg: 'rgba(74,155,127,0.12)', text: "Maya Chen's stay starts in 3 days",          sub: 'July 4',  cta: 'Details', route: '/host/proposals' },
-  { id: 'a4', icon: '✦', bg: 'rgba(60,87,89,0.12)',   text: 'Lena Park applied to Cliffside Villa',       sub: '1d ago',  cta: 'Review',  route: '/host/proposals' },
-  { id: 'a5', icon: '✓', bg: 'rgba(212,168,67,0.12)', text: 'Sam Kowalski completed their collab',        sub: '2d ago',  cta: 'Rate',    route: '/host/proposals' },
+  { id: 'a1', Icon: UserPlus,      iconColor: '#3C5759', bg: 'rgba(60,87,89,0.12)',   text: 'Priya Nair applied to Glacier Prime Cabin', sub: '2h ago',  cta: 'Review',  route: '/host/proposals' },
+  { id: 'a2', Icon: MessageSquare, iconColor: '#7B68C8', bg: 'rgba(123,104,200,0.1)', text: 'Jordan Ellis sent you a message',            sub: '5h ago',  cta: 'Reply',   route: '/inbox' },
+  { id: 'a3', Icon: Home,          iconColor: '#4A9B7F', bg: 'rgba(74,155,127,0.12)', text: "Maya Chen's stay starts in 3 days",          sub: 'July 4',  cta: 'Details', route: '/host/proposals' },
+  { id: 'a4', Icon: UserPlus,      iconColor: '#3C5759', bg: 'rgba(60,87,89,0.12)',   text: 'Lena Park applied to Cliffside Villa',       sub: '1d ago',  cta: 'Review',  route: '/host/proposals' },
+  { id: 'a5', Icon: CheckCircle2,  iconColor: '#D4A843', bg: 'rgba(212,168,67,0.12)', text: 'Sam Kowalski completed their collab',        sub: '2d ago',  cta: 'Rate',    route: '/host/proposals' },
 ];
 
 // ─── Convex listing normalizer ────────────────────────────────────────────────
@@ -233,6 +233,111 @@ function normalizeConvexListing(l) {
     deliverables,
     collab_type: l.collab_type || l.deliverable_load || 'Collab',
   };
+}
+
+// ─── Expanded chart modal ─────────────────────────────────────────────────────
+function ExpandedChartModal({ cardKey, onClose }) {
+  const [hoveredIdx, setHoveredIdx] = useState(null);
+
+  const CFGS = {
+    collabs:  { title: 'Total Collabs',        total: '14',  data: CHART_DATA.collabs,  color: '#4A9B7F', type: 'line' },
+    creators: { title: 'Creators Worked With', total: '31',  data: CHART_DATA.creators, color: '#3C5759', type: 'bar'  },
+    content:  { title: 'Content Pieces',       total: '148', data: CHART_DATA.content,  color: '#7B68C8', type: 'line' },
+  };
+  const cfg = CFGS[cardKey];
+  if (!cfg) return null;
+
+  const W = 380, H = 150, pL = 8, pR = 8, pT = 22, pB = 30;
+  const iW = W - pL - pR, iH = H - pT - pB;
+
+  const months = cfg.data.map((_, i, arr) => {
+    const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - (arr.length - 1 - i));
+    return d.toLocaleDateString('en-US', { month: 'short' });
+  });
+
+  const max = Math.max(...cfg.data);
+  const min = cfg.type === 'line' ? Math.min(...cfg.data) : 0;
+  const range = max - min || 1;
+
+  const pts = cfg.data.map((v, i) => ({
+    x: pL + (i / (cfg.data.length - 1)) * iW,
+    y: pT + iH - ((v - min) / range) * iH,
+    v,
+  }));
+
+  const linePath = pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ');
+  const safeKey = cardKey;
+
+  return (
+    <div
+      style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(25,37,36,0.45)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}
+      onClick={onClose}
+    >
+      <div
+        style={{ ...GC, padding: '1.75rem', width: 440, maxWidth: '100%', animation: 'fadeUp 180ms ease forwards' }}
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem' }}>
+          <div>
+            <div style={{ width: 8, height: 8, borderRadius: '50%', background: cfg.color, marginBottom: '0.4rem' }} />
+            <p style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '2rem', color: 'var(--ink)', margin: 0, lineHeight: 1 }}>{cfg.total}</p>
+            <p style={{ fontSize: '0.82rem', color: 'var(--sage)', marginTop: '0.2rem' }}>{cfg.title} · All time</p>
+          </div>
+          <button onClick={onClose} style={{ width: 32, height: 32, borderRadius: '50%', border: 'none', background: 'rgba(25,37,36,0.07)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <X size={14} color="var(--ink)" />
+          </button>
+        </div>
+
+        {cfg.type === 'line' ? (
+          <svg width={W} height={H} style={{ display: 'block', overflow: 'visible' }}>
+            <defs>
+              <linearGradient id={`exp-fill-${safeKey}`} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={cfg.color} stopOpacity="0.18" />
+                <stop offset="100%" stopColor={cfg.color} stopOpacity="0" />
+              </linearGradient>
+            </defs>
+            <path d={`${linePath} L${pts[pts.length-1].x.toFixed(1)} ${pT+iH} L${pts[0].x.toFixed(1)} ${pT+iH} Z`} fill={`url(#exp-fill-${safeKey})`} />
+            <path d={linePath} fill="none" stroke={cfg.color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            {pts.map((pt, i) => (
+              <g key={i}>
+                <rect x={pt.x - 18} y={pT - 4} width={36} height={iH + pB + 4} fill="transparent" onMouseEnter={() => setHoveredIdx(i)} onMouseLeave={() => setHoveredIdx(null)} style={{ cursor: 'crosshair' }} />
+                <circle cx={pt.x} cy={pt.y} r={hoveredIdx === i ? 5 : 3} fill={cfg.color} stroke="white" strokeWidth="1.5" style={{ transition: 'r 80ms', pointerEvents: 'none' }} />
+                {hoveredIdx === i && (
+                  <text x={pt.x} y={pt.y - 9} textAnchor="middle" fontSize={11} fontWeight={700} fill={cfg.color} fontFamily="var(--font-body)" style={{ pointerEvents: 'none' }}>{pt.v}</text>
+                )}
+                <text x={pt.x} y={pT + iH + 18} textAnchor="middle" fontSize={10} fill="var(--sage)" fontFamily="var(--font-body)">{months[i]}</text>
+              </g>
+            ))}
+          </svg>
+        ) : (
+          <svg width={W} height={H} style={{ display: 'block' }}>
+            {cfg.data.map((v, i) => {
+              const slotW = iW / cfg.data.length;
+              const bw = Math.floor(slotW * 0.62);
+              const bh = Math.max(3, (v / max) * iH);
+              const x = pL + i * slotW + (slotW - bw) / 2;
+              const y = pT + iH - bh;
+              const isHov = hoveredIdx === i;
+              return (
+                <g key={i} onMouseEnter={() => setHoveredIdx(i)} onMouseLeave={() => setHoveredIdx(null)} style={{ cursor: 'crosshair' }}>
+                  <rect x={pL + i * slotW} y={pT} width={slotW} height={iH + pB} fill="transparent" />
+                  <rect x={x} y={pT} width={bw} height={iH} fill="rgba(25,37,36,0.04)" rx={4} />
+                  <rect x={x} y={y} width={bw} height={bh} fill={isHov ? cfg.color : `${cfg.color}bb`} rx={4} style={{ transition: 'fill 80ms' }} />
+                  {isHov && <text x={x + bw / 2} y={y - 6} textAnchor="middle" fontSize={11} fontWeight={700} fill={cfg.color} fontFamily="var(--font-body)">{v}</text>}
+                  <text x={x + bw / 2} y={pT + iH + 18} textAnchor="middle" fontSize={10} fill="var(--sage)" fontFamily="var(--font-body)">{months[i]}</text>
+                </g>
+              );
+            })}
+          </svg>
+        )}
+
+        <p style={{ fontSize: '0.7rem', color: 'var(--sage)', textAlign: 'center', marginTop: '0.875rem' }}>
+          Preview data · Live tracking activates with production backend
+        </p>
+      </div>
+    </div>
+  );
 }
 
 // ─── Host Listing Card ────────────────────────────────────────────────────────
@@ -398,6 +503,7 @@ export default function HostDashboard() {
 
   const [filter, setFilter] = useState('all');
   const [glowState, setGlowState] = useState('idle');
+  const [expandedChart, setExpandedChart] = useState(null);
   const [dismissed, setDismissed] = useState(() => getDismissed());
   const [chartsAnimated, setChartsAnimated] = useState(false);
   const [listingStatuses, setListingStatuses] = useState(() => {
@@ -504,6 +610,7 @@ export default function HostDashboard() {
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
 
   return (
+    <>
     <div style={{ minHeight: '100dvh' }}>
       <style>{`
         @keyframes listing-glow-pulse {
@@ -650,9 +757,8 @@ export default function HostDashboard() {
                     <div style={{
                       width: 38, height: 38, borderRadius: '0.75rem', flexShrink: 0,
                       background: item.bg, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: '0.9rem',
                     }}>
-                      {item.icon}
+                      <item.Icon size={16} color={item.iconColor} strokeWidth={1.75} />
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <p style={{ fontSize: '0.82rem', fontWeight: 500, color: 'var(--ink)', lineHeight: 1.35, marginBottom: '0.1rem' }}>
@@ -707,7 +813,12 @@ export default function HostDashboard() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '1rem' }}>
 
             {/* Total Collabs — cumulative line */}
-            <div style={{ ...GC, padding: '1.25rem 1.5rem' }}>
+            <div
+              style={{ ...GC, padding: '1.25rem 1.5rem', cursor: 'pointer', transition: 'transform 200ms var(--ease-out-quart), box-shadow 200ms var(--ease-out-quart)' }}
+              onClick={() => setExpandedChart('collabs')}
+              onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 10px 30px rgba(25,37,36,0.13), inset 0 1px 0 rgba(255,255,255,0.7)'; }}
+              onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = GC.boxShadow; }}
+            >
               <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#4A9B7F', marginBottom: '0.6rem' }} />
               <p style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.75rem', color: 'var(--ink)', margin: '0 0 0.15rem', lineHeight: 1, letterSpacing: '-0.03em' }}>14</p>
               <p style={{ fontSize: '0.75rem', color: 'var(--sage)', fontFamily: 'var(--font-body)', marginBottom: '0.75rem' }}>Total Collabs</p>
@@ -715,7 +826,12 @@ export default function HostDashboard() {
             </div>
 
             {/* Creators Worked With — bar chart */}
-            <div style={{ ...GC, padding: '1.25rem 1.5rem' }}>
+            <div
+              style={{ ...GC, padding: '1.25rem 1.5rem', cursor: 'pointer', transition: 'transform 200ms var(--ease-out-quart), box-shadow 200ms var(--ease-out-quart)' }}
+              onClick={() => setExpandedChart('creators')}
+              onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 10px 30px rgba(25,37,36,0.13), inset 0 1px 0 rgba(255,255,255,0.7)'; }}
+              onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = GC.boxShadow; }}
+            >
               <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#3C5759', marginBottom: '0.6rem' }} />
               <p style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.75rem', color: 'var(--ink)', margin: '0 0 0.15rem', lineHeight: 1, letterSpacing: '-0.03em' }}>31</p>
               <p style={{ fontSize: '0.75rem', color: 'var(--sage)', fontFamily: 'var(--font-body)', marginBottom: '0.75rem' }}>Creators Worked With</p>
@@ -723,7 +839,12 @@ export default function HostDashboard() {
             </div>
 
             {/* Content Pieces — sparkline */}
-            <div style={{ ...GC, padding: '1.25rem 1.5rem' }}>
+            <div
+              style={{ ...GC, padding: '1.25rem 1.5rem', cursor: 'pointer', transition: 'transform 200ms var(--ease-out-quart), box-shadow 200ms var(--ease-out-quart)' }}
+              onClick={() => setExpandedChart('content')}
+              onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 10px 30px rgba(25,37,36,0.13), inset 0 1px 0 rgba(255,255,255,0.7)'; }}
+              onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = GC.boxShadow; }}
+            >
               <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#7B68C8', marginBottom: '0.6rem' }} />
               <p style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.75rem', color: 'var(--ink)', margin: '0 0 0.15rem', lineHeight: 1, letterSpacing: '-0.03em' }}>148</p>
               <p style={{ fontSize: '0.75rem', color: 'var(--sage)', fontFamily: 'var(--font-body)', marginBottom: '0.75rem' }}>Content Pieces</p>
@@ -743,5 +864,10 @@ export default function HostDashboard() {
 
       </div>
     </div>
+
+    {expandedChart && (
+      <ExpandedChartModal cardKey={expandedChart} onClose={() => setExpandedChart(null)} />
+    )}
+    </>
   );
 }

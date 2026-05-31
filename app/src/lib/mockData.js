@@ -261,12 +261,12 @@ export const SAMPLE_LISTINGS = [
     dates_available: 'Mar–Nov 2026',
     due_days: 14,
 
-    image: 'https://images.unsplash.com/photo-1543362906-acfc16c67564?w=800&q=80',
+    image: 'https://images.unsplash.com/photo-1506377247377-2a5b3b417ebb?w=800&q=80',
     gallery_images: [
-      'https://images.unsplash.com/photo-1543362906-acfc16c67564?w=1200&q=85',
+      'https://images.unsplash.com/photo-1506377247377-2a5b3b417ebb?w=1200&q=85',
+      'https://images.unsplash.com/photo-1568702846914-96b305d2aaeb?w=800&q=80',
       'https://images.unsplash.com/photo-1516594915697-87eb3b1c14ea?w=800&q=80',
       'https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=800&q=80',
-      'https://images.unsplash.com/photo-1506377247377-2a5b3b417ebb?w=800&q=80',
       'https://images.unsplash.com/photo-1601821765780-754fa98637c1?w=800&q=80',
     ],
 

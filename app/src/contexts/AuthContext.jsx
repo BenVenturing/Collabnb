@@ -54,9 +54,30 @@ export function MockAuthProvider({ children }) {
 export function ClerkAuthProvider({ children }) {
   // Dynamic imports to avoid calling Clerk hooks outside ClerkProvider
   const [hooks, setHooks] = useState(null);
+  const [hooksFailed, setHooksFailed] = useState(false);
   useEffect(() => {
-    import('@clerk/clerk-react').then((mod) => setHooks(mod));
+    const timeout = setTimeout(() => {
+      if (!hooks) setHooksFailed(true);
+    }, 8000); // 8s timeout — fall back so page isn't stuck forever
+    import('@clerk/clerk-react').then((mod) => {
+      clearTimeout(timeout);
+      setHooks(mod);
+    }).catch((err) => {
+      clearTimeout(timeout);
+      console.warn('Clerk import failed:', err);
+      setHooksFailed(true);
+    });
+    return () => clearTimeout(timeout);
   }, []);
+
+  if (hooksFailed) {
+    // Clerk failed to load — fall back to unauthenticated state
+    return (
+      <AuthContext.Provider value={{ session: null, profile: null, loading: false, signOut: null, updateProfile: null }}>
+        {children}
+      </AuthContext.Provider>
+    );
+  }
 
   if (!hooks) {
     // Loading Clerk module — show loading

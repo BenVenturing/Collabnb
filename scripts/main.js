@@ -426,13 +426,15 @@ function _showWizardDone() {
   const titleEl = document.getElementById('modal-title');
   if (titleEl) titleEl.textContent = "You're on the list!";
   if (!area) return;
+  const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  const appUrl_ = isLocalhost ? 'http://localhost:5174/#/explore' : '/app/#/explore';
   area.innerHTML = `
     <div style="text-align:center;padding:0.5rem 0 1rem;">
       <div style="width:64px;height:64px;border-radius:50%;background:var(--mint);display:flex;align-items:center;justify-content:center;margin:0 auto 1.25rem;">
         <svg viewBox="0 0 24 24" fill="none" stroke="var(--ink)" stroke-width="2" stroke-linecap="round" style="width:28px;height:28px;"><path d="M20 6L9 17l-5-5"/></svg>
       </div>
       <p style="color:var(--sage);font-size:.875rem;line-height:1.6;margin-bottom:1.5rem;">We'll be in touch before July 1. Set up your profile to get the full experience.</p>
-      <a href="/login.html" class="btn-primary" style="display:inline-block;text-decoration:none;padding:0.75rem 1.75rem;font-size:0.9375rem;">Enter Collabnb →</a>
+      <a href="${appUrl_}" class="btn-primary" style="display:inline-block;text-decoration:none;padding:0.75rem 1.75rem;font-size:0.9375rem;">Enter Collabnb →</a>
     </div>`;
 }
 
@@ -540,6 +542,16 @@ function openLoginModal() {
   const wizardOverlay = document.querySelector('#modal-overlay');
   if (wizardOverlay?.classList.contains('open')) closeModal();
 
+  const mountEl = document.getElementById('clerk-login-mount');
+
+  // Show loading state immediately (before Clerk JS loads)
+  if (mountEl) {
+    mountEl.innerHTML = `<div style="text-align:center;padding:1.5rem;">
+      <div style="width:28px;height:28px;border-radius:50%;border:2.5px solid var(--stone);border-top-color:var(--slate);animation:spin 0.8s linear infinite;margin:0 auto 0.75rem;"></div>
+      <p style="color:var(--sage);font-size:0.8125rem;">Loading sign-in…</p>
+    </div>`;
+  }
+
   overlay.classList.add('open');
   overlay.setAttribute('aria-hidden', 'false');
   document.body.style.overflow = 'hidden';
@@ -550,20 +562,42 @@ function openLoginModal() {
 
   // Mount Clerk sign-in component (with Google OAuth etc.)
   getClerk().then((clerk) => {
-    if (!clerk) return;
-    const mountEl = document.getElementById('clerk-login-mount');
-    if (!mountEl) return;
-    // Unmount previous instance to avoid "already mounted" error
-    if (_clerkLoginMounted) {
-      try { clerk.componentUnmount?.('clerk-login-mount'); } catch {}
+    if (!clerk) {
+      if (mountEl) {
+        mountEl.innerHTML = `<div style="text-align:center;padding:1rem;">
+          <p style="color:var(--sage);font-size:0.875rem;margin-bottom:1.25rem;">Sign in is not available right now.</p>
+          <a href="/login.html" class="btn-primary" style="display:inline-block;text-decoration:none;padding:0.75rem 1.5rem;">Go to Login →</a>
+        </div>`;
+      }
+      return;
     }
+    if (!mountEl) return;
+    // Reset mount area (clears loading state from above)
+    mountEl.innerHTML = '';
+    _clerkLoginMounted = false;
     const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
     const appUrl_ = isLocalhost ? 'http://localhost:5174/#/explore' : '/app/#/explore';
-    clerk.mountSignIn(mountEl, {
-      afterSignInUrl: appUrl_,
-      signUpUrl: '/join.html',
-    });
-    _clerkLoginMounted = true;
+    try {
+      clerk.mountSignIn(mountEl, {
+        afterSignInUrl: appUrl_,
+        signUpUrl: '/join.html',
+      });
+      _clerkLoginMounted = true;
+    } catch (e) {
+      console.warn('Clerk mountSignIn failed:', e);
+      mountEl.innerHTML = `<div style="text-align:center;padding:1rem;">
+        <p style="color:var(--sage);font-size:0.875rem;margin-bottom:1.25rem;">Could not load sign-in. Try again or use the login page.</p>
+        <a href="/login.html" class="btn-primary" style="display:inline-block;text-decoration:none;padding:0.75rem 1.5rem;">Go to Login →</a>
+      </div>`;
+    }
+  }).catch((err) => {
+    console.warn('Clerk load failed:', err);
+    if (mountEl) {
+      mountEl.innerHTML = `<div style="text-align:center;padding:1rem;">
+        <p style="color:var(--sage);font-size:0.875rem;">Sign-in temporarily unavailable.</p>
+        <p style="font-size:0.75rem;color:var(--stone);">Please try again later or use the <a href="/login.html" style="color:var(--slate);">login page</a>.</p>
+      </div>`;
+    }
   });
 }
 

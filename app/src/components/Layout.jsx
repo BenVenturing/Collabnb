@@ -99,23 +99,25 @@ export default function Layout({ children }) {
           position: 'fixed', top: 0, left: 0, right: 0, zIndex: 9998,
           background: 'linear-gradient(90deg, #192524, #2d4a3e)',
           color: '#fff',
-          padding: '0.55rem 1.5rem',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem',
-          fontSize: '0.82rem', fontWeight: 500,
+          padding: '0.45rem 1rem',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
+          flexWrap: 'wrap',
+          fontSize: '0.78rem', fontWeight: 500,
+          textAlign: 'center',
           boxShadow: '0 2px 8px rgba(25,37,36,0.18)',
         }}>
-          <span style={{ color: '#7ecfc4', fontWeight: 700 }}>🚀 {daysLeft} days to launch</span>
+          <span style={{ color: '#7ecfc4', fontWeight: 700, whiteSpace: 'nowrap' }}>🚀 {daysLeft}d to launch</span>
           <span style={{ color: 'rgba(255,255,255,0.7)' }}>·</span>
-          <span>Full listings go live <strong>July 1st</strong></span>
+          <span style={{ whiteSpace: 'nowrap' }}>Live <strong>July 1st</strong></span>
           {userCount !== null && (
             <>
               <span style={{ color: 'rgba(255,255,255,0.7)' }}>·</span>
-              <span style={{ color: '#a8f0e8', fontWeight: 600 }}>👥 {userCount.toLocaleString()} {userCount === 1 ? 'member' : 'members'} joined</span>
+              <span style={{ color: '#a8f0e8', fontWeight: 600, whiteSpace: 'nowrap' }}>👥 {userCount.toLocaleString()}</span>
             </>
           )}
           <button
             onClick={() => { localStorage.setItem(LAUNCH_BANNER_KEY, '1'); setBannerDismissed(true); }}
-            style={{ marginLeft: '0.5rem', background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', fontSize: '1rem', cursor: 'pointer', lineHeight: 1, padding: '0 0.25rem', flexShrink: 0 }}
+            style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', fontSize: '0.9rem', cursor: 'pointer', lineHeight: 1, padding: '0 0.15rem', flexShrink: 0 }}
             aria-label="Dismiss"
           >×</button>
         </div>

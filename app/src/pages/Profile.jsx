@@ -10,6 +10,7 @@ import TravelCalendar from '../components/TravelCalendar';
 import { SAMPLE_COLLABORATIONS, SAMPLE_LISTINGS } from '../lib/mockData';
 import { getPitchCount } from '../lib/pitchCount';
 import { cache } from '../lib/cache';
+import { reopenChecklist } from '../components/OnboardingChecklist';
 
 // ─── Formatters ───────────────────────────────────────────────────────────────
 function fmtFollowers(n) {
@@ -49,6 +50,14 @@ const ArrowOut = () => (
   <svg viewBox="0 0 256 256" fill="none" stroke="currentColor" strokeWidth="14" strokeLinecap="round" strokeLinejoin="round" width="14" height="14">
     <polyline points="136 32 224 32 224 120"/><line x1="224" y1="32" x2="136" y2="120"/>
     <path d="M184,136v72a8,8,0,0,1-8,8H48a8,8,0,0,1-8-8V80a8,8,0,0,1,8-8h72"/>
+  </svg>
+);
+const ChecklistIcon = () => (
+  <svg viewBox="0 0 256 256" fill="none" stroke="currentColor" strokeWidth="14" strokeLinecap="round" strokeLinejoin="round" width="18" height="18">
+    <line x1="40" y1="60" x2="136" y2="60"/><line x1="40" y1="96" x2="184" y2="96"/><line x1="40" y1="132" x2="136" y2="132"/>
+    <circle cx="192" cy="128" r="40"/>
+    <polyline points="184 128 192 136 206 120" strokeWidth="16"/>
+    <line x1="40" y1="168" x2="96" y2="168"/>
   </svg>
 );
 const ChevronR = () => (
@@ -486,6 +495,7 @@ export default function Profile() {
   const { openModal: openSubModal } = useSubscription();
   const userId = profile?._id || profile?.id || 'mock-user-001';
   const serverPitchCount = useQuery(api.pitches.getCount, { userId });
+  const referralStats = useQuery(api.referrals.getMyCode, userId && userId !== 'mock-user-001' ? { profileId: userId } : 'skip');
   const allProfiles = useQuery(api.profiles.getAll);
   const globeStats  = useMemo(() => countGlobeStats(allProfiles), [allProfiles]);
 
@@ -687,6 +697,7 @@ export default function Profile() {
   const SETTINGS = [
     { icon: <PencilIcon />,   label: 'Edit Profile',      sublabel: 'Update your photos, bio, and socials',  onClick: () => { setShowSettings(false); openEditProfile(); } },
     { icon: <FileTextIcon />, label: 'Contracts',         sublabel: 'View and manage your saved contracts', onClick: () => { setShowSettings(false); setShowContracts(true); } },
+    { icon: <ChecklistIcon />, label: 'Setup Checklist',   sublabel: 'Finish setting up your account',        onClick: () => { setShowSettings(false); reopenChecklist(); } },
     { icon: <BellIcon />,    label: 'Notifications',      sublabel: 'Manage email & push preferences',      onClick: () => { setShowSettings(false); setShowNotifications(true); } },
     { icon: <LockIcon />,    label: 'Privacy Policy',     sublabel: 'Review how your data is used',         onClick: () => { setShowSettings(false); setShowPrivacy(true); } },
     { icon: <SealCheck />,   label: 'Verification',       sublabel: 'Submit a re-verification request',     onClick: () => { setShowSettings(false); setShowVerification(true); } },
@@ -1208,6 +1219,46 @@ export default function Profile() {
                       Subscribe
                     </button>
                   </div>
+                </div>
+              );
+            })()}
+
+            {/* Referral code — creators only */}
+            {dp.role !== 'host' && (() => {
+              const code = dp.referral_code || referralStats?.code;
+              const freeMonths = dp.free_months_balance || 0;
+              const signups = referralStats?.signups_rewarded || 0;
+              const collabBonuses = referralStats?.collab_bonuses_earned || 0;
+              if (!code) return null;
+              return (
+                <div style={{ padding: '0.875rem 1.5rem', borderBottom: '1px solid rgba(60,87,89,0.08)', background: 'rgba(209,235,219,0.08)' }}>
+                  <p style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--slate)', margin: '0 0 0.625rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Referral Code</p>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                    <span style={{ fontFamily: 'monospace', fontSize: '1rem', fontWeight: 700, color: 'var(--ink)', letterSpacing: '0.08em', background: 'rgba(25,37,36,0.05)', padding: '0.3rem 0.75rem', borderRadius: '0.5rem' }}>{code}</span>
+                    <button
+                      onClick={() => { navigator.clipboard?.writeText(code); }}
+                      title="Copy code"
+                      style={{ background: 'none', border: '1.5px solid rgba(25,37,36,0.15)', borderRadius: '0.5rem', cursor: 'pointer', padding: '0.3rem 0.6rem', fontSize: '0.72rem', color: 'var(--slate)', fontWeight: 600, fontFamily: 'var(--font-body)' }}
+                    >
+                      Copy
+                    </button>
+                  </div>
+                  <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                    <div style={{ fontSize: '0.72rem', color: 'var(--sage)' }}>
+                      <span style={{ fontWeight: 700, color: 'var(--ink)' }}>{signups}</span> / {referralStats?.max_uses || 12} signups used
+                    </div>
+                    {collabBonuses > 0 && (
+                      <div style={{ fontSize: '0.72rem', color: 'var(--sage)' }}>
+                        <span style={{ fontWeight: 700, color: '#4A9B7F' }}>{collabBonuses}</span> collab bonus{collabBonuses !== 1 ? 'es' : ''} earned
+                      </div>
+                    )}
+                    {freeMonths > 0 && (
+                      <div style={{ fontSize: '0.72rem', fontWeight: 600, color: '#4A9B7F' }}>
+                        +{freeMonths} free month{freeMonths !== 1 ? 's' : ''} balance
+                      </div>
+                    )}
+                  </div>
+                  <p style={{ fontSize: '0.68rem', color: 'var(--sage)', margin: '0.35rem 0 0', lineHeight: 1.5 }}>Share your code. Both you and new members get 1 free month on signup, +1 more when they complete their first collab.</p>
                 </div>
               );
             })()}

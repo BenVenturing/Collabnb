@@ -29,6 +29,9 @@ export default defineSchema({
     subscription_tier: v.optional(v.string()),
     subscription_expires_at: v.optional(v.number()),
     stripe_customer_id: v.optional(v.string()),
+    referral_code: v.optional(v.string()),
+    referred_by: v.optional(v.string()),
+    free_months_balance: v.optional(v.number()),
   }).index("by_email", ["email"]),
 
   listings: defineTable({
@@ -178,4 +181,23 @@ export default defineSchema({
   })
     .index("by_suggestion", ["suggestion_id"])
     .index("by_user_suggestion", ["user_id", "suggestion_id"]),
+
+  referral_codes: defineTable({
+    owner_id: v.string(),
+    code: v.string(),
+    use_count: v.number(),
+    max_uses: v.number(),
+  })
+    .index("by_owner", ["owner_id"])
+    .index("by_code", ["code"]),
+
+  referral_uses: defineTable({
+    code: v.string(),
+    used_by_id: v.string(),
+    referrer_id: v.string(),
+    signup_bonus_awarded: v.boolean(),
+    collab_bonus_awarded: v.boolean(),
+  })
+    .index("by_code", ["code"])
+    .index("by_user", ["used_by_id"]),
 });

@@ -1,8 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
-const STORAGE_KEY = 'collabnb_onboarding_v1_dismissed';
+const STORAGE_KEY     = 'collabnb_onboarding_v2_dismissed';
+const COLLAPSED_KEY   = 'collabnb_onboarding_v2_collapsed';
+const FIRST_VISIT_KEY = 'collabnb_onboarding_v2_seen';
+
+const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL;
 
 function creatorSteps(profile) {
   return [
@@ -20,15 +24,15 @@ function creatorSteps(profile) {
     },
     {
       id: 'social',
-      label: 'Connect at least one social account',
+      label: 'Connect a social account',
       done: !!(profile?.instagram_handle || profile?.tiktok_handle || profile?.youtube_handle),
       action: { label: 'Add socials', path: '/profile?edit=true' },
     },
     {
       id: 'explore',
-      label: 'Browse listings and find a match',
+      label: 'Browse listings & find a match',
       done: false,
-      action: { label: 'Explore listings', path: '/explore' },
+      action: { label: 'Explore', path: '/explore' },
     },
   ];
 }
@@ -56,138 +60,337 @@ function hostSteps(profile) {
   ];
 }
 
+// Shared signal so AppNav can re-open the checklist
+let _reopenListener = null;
+export function reopenChecklist() {
+  if (_reopenListener) _reopenListener();
+}
+
 export default function OnboardingChecklist() {
   const { profile } = useAuth();
   const navigate = useNavigate();
+
   const [dismissed, setDismissed] = useState(
     () => localStorage.getItem(STORAGE_KEY) === '1'
   );
+  const [collapsed, setCollapsed] = useState(
+    () => localStorage.getItem(COLLAPSED_KEY) === '1'
+  );
+  const [visible, setVisible] = useState(false);
+  const [entered, setEntered] = useState(false);
+  const mountedRef = useRef(false);
 
-  if (dismissed) return null;
-  if (!profile || !profile.email) return null;
+  // Register reopen listener
+  useEffect(() => {
+    _reopenListener = () => {
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(COLLAPSED_KEY);
+      setDismissed(false);
+      setCollapsed(false);
+      setVisible(true);
+      setEntered(true);
+    };
+    return () => { _reopenListener = null; };
+  }, []);
 
-  const isHost = profile.role === 'host';
+  // Determine if this user should see the checklist
+  const userEmail = profile?.email;
+  const isAdmin = !!(ADMIN_EMAIL && userEmail && userEmail.toLowerCase() === ADMIN_EMAIL.toLowerCase());
+
+  const isHost = profile?.role === 'host';
   const steps = isHost ? hostSteps(profile) : creatorSteps(profile);
   const completedCount = steps.filter(s => s.done).length;
   const allDone = completedCount === steps.length;
 
+  // Decide whether to show at all
+  // Show for new non-admin users: created within 14 days OR checklist not yet complete
+  const isNewUser = !profile?._creationTime || Date.now() - (profile._creationTime) < 14 * 24 * 60 * 60 * 1000;
+  const notFullyComplete = completedCount < steps.length;
+  const shouldShow = !isAdmin && !!profile?.email && !dismissed && (isNewUser || notFullyComplete);
+
+  useEffect(() => {
+    if (!shouldShow) return;
+    // Show it
+    setVisible(true);
+    // On first-ever visit, auto-expand with entrance animation
+    const hasSeenBefore = localStorage.getItem(FIRST_VISIT_KEY) === '1';
+    if (!hasSeenBefore) {
+      localStorage.setItem(FIRST_VISIT_KEY, '1');
+      setCollapsed(false);
+      localStorage.removeItem(COLLAPSED_KEY);
+    }
+    // Trigger entrance animation after mount
+    const t = setTimeout(() => setEntered(true), 50);
+    return () => clearTimeout(t);
+  }, [shouldShow]);
+
+  if (!visible || !shouldShow) return null;
+
   function dismiss() {
-    localStorage.setItem(STORAGE_KEY, '1');
-    setDismissed(true);
+    setEntered(false);
+    setTimeout(() => {
+      localStorage.setItem(STORAGE_KEY, '1');
+      setDismissed(true);
+    }, 280);
   }
 
-  return (
-    <div style={{
-      background: 'rgba(255,255,255,0.72)',
-      backdropFilter: 'blur(18px)',
-      WebkitBackdropFilter: 'blur(18px)',
-      border: '1px solid rgba(255,255,255,0.6)',
-      borderRadius: '20px',
-      padding: '1.25rem 1.5rem',
-      marginBottom: '1.75rem',
-      boxShadow: '0 4px 24px rgba(25,37,36,0.06)',
-    }}>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-        <div>
-          <p style={{
-            fontFamily: 'var(--font-display, sans-serif)',
-            fontWeight: 700,
-            fontSize: '0.9375rem',
-            color: 'var(--ink, #192524)',
-            margin: 0,
-          }}>
-            {allDone ? '🎉 You\'re all set!' : `Get started — ${completedCount}/${steps.length} done`}
-          </p>
-          <p style={{ fontSize: '0.8125rem', color: 'var(--slate, #3C5759)', margin: '0.15rem 0 0' }}>
-            {isHost ? 'Set up your host presence before July 1st.' : 'Build your creator profile before launch.'}
-          </p>
-        </div>
+  function toggleCollapse() {
+    const next = !collapsed;
+    setCollapsed(next);
+    localStorage.setItem(COLLAPSED_KEY, next ? '1' : '0');
+  }
+
+  const widgetStyle = {
+    position: 'fixed',
+    bottom: '5.5rem',
+    right: '1.5rem',
+    zIndex: 200,
+    width: collapsed ? 'auto' : '300px',
+    maxWidth: 'calc(100vw - 3rem)',
+    transform: entered ? 'translateY(0) scale(1)' : 'translateY(24px) scale(0.96)',
+    opacity: entered ? 1 : 0,
+    transition: 'transform 300ms cubic-bezier(0.16,1,0.3,1), opacity 300ms cubic-bezier(0.16,1,0.3,1), width 300ms cubic-bezier(0.16,1,0.3,1)',
+    transformOrigin: 'bottom right',
+  };
+
+  const cardStyle = {
+    background: 'rgba(255,255,255,0.88)',
+    backdropFilter: 'blur(24px) saturate(160%)',
+    WebkitBackdropFilter: 'blur(24px) saturate(160%)',
+    border: '1px solid rgba(255,255,255,0.75)',
+    borderRadius: '20px',
+    boxShadow:
+      'inset 0 1px 0 rgba(255,255,255,0.8), 0 8px 32px rgba(25,37,36,0.14), 0 2px 8px rgba(25,37,36,0.06)',
+    overflow: 'hidden',
+  };
+
+  // ── Collapsed pill ──────────────────────────────────────────────────────────
+  if (collapsed) {
+    return (
+      <div style={widgetStyle}>
         <button
-          onClick={dismiss}
+          onClick={toggleCollapse}
+          aria-label="Open setup checklist"
           style={{
-            background: 'none', border: 'none', cursor: 'pointer',
-            color: 'var(--sage, #959D90)', fontSize: '1.1rem', padding: '0.25rem', lineHeight: 1,
-          }}
-          aria-label="Dismiss"
-        >×</button>
-      </div>
-
-      {/* Progress bar */}
-      <div style={{ height: '4px', background: 'var(--stone, #D0D5CE)', borderRadius: '2px', marginBottom: '1rem', overflow: 'hidden' }}>
-        <div style={{
-          height: '100%',
-          width: `${(completedCount / steps.length) * 100}%`,
-          background: 'linear-gradient(90deg, #3C5759, #7ecfc4)',
-          borderRadius: '2px',
-          transition: 'width 0.4s ease',
-        }} />
-      </div>
-
-      {/* Steps */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-        {steps.map(step => (
-          <div
-            key={step.id}
-            style={{
-              display: 'flex', alignItems: 'center', gap: '0.75rem',
-              padding: '0.625rem 0.875rem',
-              borderRadius: '12px',
-              background: step.done ? 'rgba(209,235,219,0.4)' : 'rgba(255,255,255,0.5)',
-              border: `1px solid ${step.done ? 'rgba(152,202,169,0.4)' : 'rgba(208,213,206,0.6)'}`,
-            }}
-          >
-            <div style={{
-              width: 20, height: 20, borderRadius: '50%', flexShrink: 0,
-              border: `2px solid ${step.done ? '#3C5759' : 'var(--stone, #D0D5CE)'}`,
-              background: step.done ? '#3C5759' : 'transparent',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}>
-              {step.done && (
-                <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
-                  <path d="M2 6l3 3 5-5" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              )}
-            </div>
-            <span style={{
-              flex: 1,
-              fontSize: '0.875rem',
-              color: step.done ? 'var(--slate, #3C5759)' : 'var(--ink, #192524)',
-              textDecoration: step.done ? 'line-through' : 'none',
-              opacity: step.done ? 0.7 : 1,
-            }}>
-              {step.label}
-            </span>
-            {!step.done && (
-              <button
-                onClick={() => navigate(step.action.path)}
-                style={{
-                  background: 'none', border: '1px solid var(--slate, #3C5759)',
-                  borderRadius: '8px', padding: '0.25rem 0.625rem',
-                  fontSize: '0.75rem', fontWeight: 600, color: 'var(--slate, #3C5759)',
-                  cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
-                }}
-              >
-                {step.action.label}
-              </button>
-            )}
-          </div>
-        ))}
-      </div>
-
-      {allDone && (
-        <button
-          onClick={dismiss}
-          style={{
-            marginTop: '0.875rem', width: '100%',
-            background: 'var(--ink, #192524)', color: '#fff',
-            border: 'none', borderRadius: '12px', padding: '0.625rem',
-            fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer',
+            ...cardStyle,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            padding: '0.625rem 1rem',
+            cursor: 'pointer',
+            border: 'none',
+            fontFamily: 'var(--font-body)',
+            whiteSpace: 'nowrap',
           }}
         >
-          Dismiss
+          {/* Progress ring icon */}
+          <svg width="22" height="22" viewBox="0 0 22 22" style={{ flexShrink: 0 }}>
+            <circle cx="11" cy="11" r="8" fill="none" stroke="var(--stone, #D0D5CE)" strokeWidth="2.5" />
+            <circle
+              cx="11" cy="11" r="8"
+              fill="none"
+              stroke="#3C5759"
+              strokeWidth="2.5"
+              strokeDasharray={`${2 * Math.PI * 8}`}
+              strokeDashoffset={`${2 * Math.PI * 8 * (1 - completedCount / steps.length)}`}
+              strokeLinecap="round"
+              transform="rotate(-90 11 11)"
+              style={{ transition: 'stroke-dashoffset 0.4s ease' }}
+            />
+            <text x="11" y="15" textAnchor="middle" fontSize="8" fontWeight="700" fill="var(--ink, #192524)" fontFamily="sans-serif">
+              {completedCount}/{steps.length}
+            </text>
+          </svg>
+          <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--ink, #192524)' }}>
+            {allDone ? '🎉 All done!' : 'Account setup'}
+          </span>
+          {!allDone && (
+            <span style={{
+              fontSize: '0.6875rem', fontWeight: 700,
+              background: '#3C5759', color: '#fff',
+              borderRadius: '9999px', padding: '0.125rem 0.5rem',
+              lineHeight: 1.5,
+            }}>
+              {steps.length - completedCount} left
+            </span>
+          )}
         </button>
-      )}
+      </div>
+    );
+  }
+
+  // ── Expanded card ────────────────────────────────────────────────────────────
+  return (
+    <div style={widgetStyle}>
+      <div style={cardStyle}>
+        {/* Header */}
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '0.875rem 1rem 0',
+        }}>
+          <div style={{ minWidth: 0 }}>
+            <p style={{
+              fontFamily: 'var(--font-display, sans-serif)',
+              fontWeight: 700, fontSize: '0.9rem',
+              color: 'var(--ink, #192524)', margin: 0,
+              whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+            }}>
+              {allDone ? '🎉 You\'re all set!' : `Get ready for July 1st`}
+            </p>
+            <p style={{ fontSize: '0.75rem', color: 'var(--slate, #3C5759)', margin: '0.125rem 0 0' }}>
+              {completedCount}/{steps.length} steps complete
+            </p>
+          </div>
+          <div style={{ display: 'flex', gap: '0.25rem', flexShrink: 0, marginLeft: '0.5rem' }}>
+            {/* Collapse button */}
+            <button
+              onClick={toggleCollapse}
+              aria-label="Collapse"
+              title="Minimize"
+              style={{
+                background: 'none', border: 'none', cursor: 'pointer',
+                color: 'var(--sage, #959D90)', width: 28, height: 28,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                borderRadius: '8px', fontSize: '1rem', lineHeight: 1,
+                transition: 'background 150ms',
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = 'rgba(25,37,36,0.06)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'none'}
+            >
+              <svg width="12" height="12" viewBox="0 0 12 4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <line x1="1" y1="2" x2="11" y2="2" />
+              </svg>
+            </button>
+            {/* Close / dismiss button */}
+            <button
+              onClick={dismiss}
+              aria-label="Dismiss checklist"
+              title="Dismiss"
+              style={{
+                background: 'none', border: 'none', cursor: 'pointer',
+                color: 'var(--sage, #959D90)', width: 28, height: 28,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                borderRadius: '8px', fontSize: '1rem', lineHeight: 1,
+                transition: 'background 150ms',
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = 'rgba(231,76,60,0.08)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'none'}
+            >
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round">
+                <line x1="1" y1="1" x2="11" y2="11" />
+                <line x1="11" y1="1" x2="1" y2="11" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        {/* Progress bar */}
+        <div style={{ padding: '0.625rem 1rem 0' }}>
+          <div style={{
+            height: '4px', background: 'var(--stone, #D0D5CE)',
+            borderRadius: '2px', overflow: 'hidden',
+          }}>
+            <div style={{
+              height: '100%',
+              width: `${(completedCount / steps.length) * 100}%`,
+              background: 'linear-gradient(90deg, #3C5759, #7ecfc4)',
+              borderRadius: '2px',
+              transition: 'width 0.4s ease',
+            }} />
+          </div>
+        </div>
+
+        {/* Steps */}
+        <div style={{ padding: '0.625rem 0.75rem 0.875rem', display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
+          {steps.map(step => (
+            <div
+              key={step.id}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '0.625rem',
+                padding: '0.5rem 0.625rem',
+                borderRadius: '12px',
+                background: step.done ? 'rgba(209,235,219,0.4)' : 'rgba(255,255,255,0.5)',
+                border: `1px solid ${step.done ? 'rgba(152,202,169,0.4)' : 'rgba(208,213,206,0.6)'}`,
+                transition: 'background 200ms',
+              }}
+            >
+              {/* Check circle */}
+              <div style={{
+                width: 18, height: 18, borderRadius: '50%', flexShrink: 0,
+                border: `2px solid ${step.done ? '#3C5759' : 'var(--stone, #D0D5CE)'}`,
+                background: step.done ? '#3C5759' : 'transparent',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                transition: 'background 200ms, border-color 200ms',
+              }}>
+                {step.done && (
+                  <svg width="9" height="9" viewBox="0 0 12 12" fill="none">
+                    <path d="M2 6l3 3 5-5" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                )}
+              </div>
+
+              <span style={{
+                flex: 1,
+                fontSize: '0.8125rem',
+                color: step.done ? 'var(--slate, #3C5759)' : 'var(--ink, #192524)',
+                textDecoration: step.done ? 'line-through' : 'none',
+                opacity: step.done ? 0.65 : 1,
+                lineHeight: 1.35,
+              }}>
+                {step.label}
+              </span>
+
+              {!step.done && (
+                <button
+                  onClick={() => navigate(step.action.path)}
+                  style={{
+                    background: 'none',
+                    border: '1px solid rgba(60,87,89,0.35)',
+                    borderRadius: '7px',
+                    padding: '0.2rem 0.5rem',
+                    fontSize: '0.7rem',
+                    fontWeight: 600,
+                    color: 'var(--slate, #3C5759)',
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                    flexShrink: 0,
+                    fontFamily: 'var(--font-body)',
+                    transition: 'background 150ms, border-color 150ms',
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.background = 'rgba(60,87,89,0.08)';
+                    e.currentTarget.style.borderColor = 'rgba(60,87,89,0.6)';
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.background = 'none';
+                    e.currentTarget.style.borderColor = 'rgba(60,87,89,0.35)';
+                  }}
+                >
+                  {step.action.label}
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* All done CTA */}
+        {allDone && (
+          <div style={{ padding: '0 0.75rem 0.875rem' }}>
+            <button
+              onClick={dismiss}
+              style={{
+                width: '100%',
+                background: 'var(--ink, #192524)', color: '#fff',
+                border: 'none', borderRadius: '12px', padding: '0.5rem',
+                fontSize: '0.8125rem', fontWeight: 600, cursor: 'pointer',
+                fontFamily: 'var(--font-body)',
+              }}
+            >
+              Got it — dismiss ✓
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

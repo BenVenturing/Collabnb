@@ -77,6 +77,7 @@ function ClerkAuthInner({ hooks, children }) {
   const convex = useConvex();
   const updateProfileMutation = useMutation(api.profiles.updateProfile);
   const getOrCreateMutation = useMutation(api.profiles.getOrCreate);
+  const applyReferralCodeMutation = useMutation(api.referrals.applyReferralCode);
 
   const [session, setSession] = useState(null);
   const [profile, setProfile] = useState(null);
@@ -119,6 +120,7 @@ function ClerkAuthInner({ hooks, children }) {
         }
         const isAdminUser = ADMIN_EMAIL ? email.toLowerCase() === ADMIN_EMAIL.toLowerCase() : false;
         let result = await convex.query(api.profiles.getByEmail, { email });
+        const isNewUser = !result;
         if (!result) {
           try {
             result = await getOrCreateMutation({
@@ -157,6 +159,34 @@ function ClerkAuthInner({ hooks, children }) {
             }
           }
         }
+        // Prefer Clerk/Google full name if waitlist profile has a generic one
+        // (e.g. created from just email prefix before the user typed their name)
+        if (clerkUser.fullName && result && (!result.full_name || result.full_name === email.split('@')[0])) {
+          result = { ...result, full_name: clerkUser.fullName };
+          if (result._id) {
+            try {
+              await updateProfileMutation({
+                profileId: result._id,
+                updates: { full_name: clerkUser.fullName },
+              });
+            } catch { /* non-critical */ }
+          }
+        }
+        // Apply referral code for brand-new signups
+        if (isNewUser && result?._id && !result.referred_by) {
+          const storedCode = localStorage.getItem('collabnb_referral_code');
+          if (storedCode) {
+            try {
+              await applyReferralCodeMutation({ code: storedCode, newUserId: String(result._id) });
+              localStorage.removeItem('collabnb_referral_code');
+              // Refresh profile to pick up free_months_balance / referred_by
+              result = await convex.query(api.profiles.getByEmail, { email }) || result;
+            } catch {
+              // Non-critical
+            }
+          }
+        }
+
         setProfile(result || MOCK_CREATOR);
       } catch {
         setProfile(MOCK_CREATOR);
@@ -164,7 +194,7 @@ function ClerkAuthInner({ hooks, children }) {
         setLoading(false);
       }
     })();
-  }, [clerkLoaded, clerkUser, convex, getOrCreateMutation]);
+  }, [clerkLoaded, clerkUser, convex, getOrCreateMutation, applyReferralCodeMutation]);
 
   const updateProfile = useCallback(async (updates) => {
     const merged = { ...profile, ...updates };

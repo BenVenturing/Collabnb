@@ -366,8 +366,8 @@ function showWizardStep(step) {
     const firstName = _wizardName.split(' ')[0];
     const fields = currentRole === 'creator' ? `
       <div class="form-group">
-        <label class="form-label" for="wl-instagram">Instagram handle <span style="color:var(--sage);font-weight:400;">(optional)</span></label>
-        <input class="form-input" type="text" id="wl-instagram" placeholder="@yourhandle" />
+        <label class="form-label" for="wl-instagram">Instagram handle <span style="color:#92400E;font-weight:700;">(required)</span></label>
+        <input class="form-input" type="text" id="wl-instagram" placeholder="@yourhandle" required />
       </div>
       <div class="form-group">
         <label class="form-label" for="wl-tiktok">TikTok handle <span style="color:var(--sage);font-weight:400;">(optional)</span></label>
@@ -413,7 +413,9 @@ function showWizardStep(step) {
       if (!clerk) { _showWizardDone(); return; }
       const mountEl = document.getElementById('wl-clerk-mount');
       if (!mountEl) return;
-      clerk.mountSignUp(mountEl, { afterSignUpUrl: '/#/profile' });
+      const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+      const appUrl_ = isLocalhost ? 'http://localhost:5174/#/explore?welcome=true' : '/app/#/explore?welcome=true';
+      clerk.mountSignUp(mountEl, { afterSignUpUrl: appUrl_ });
     }).catch(_showWizardDone);
   }
 }
@@ -464,8 +466,20 @@ async function handleStep1Submit(e) {
 
 async function handleStep2Submit(e) {
   e.preventDefault();
+  const errorEl = document.getElementById('wl-error2');
+  // Validate Instagram is required for creators
+  if (currentRole === 'creator') {
+    const instagramVal = document.getElementById('wl-instagram')?.value?.trim();
+    if (!instagramVal) {
+      if (errorEl) { errorEl.textContent = 'Please provide your Instagram handle — it helps properties match with you.'; errorEl.style.display = 'block'; }
+      const btn = e.target.querySelector('[type="submit"]');
+      if (btn) { btn.disabled = false; btn.textContent = 'Continue →'; }
+      return;
+    }
+  }
   const btn = e.target.querySelector('[type="submit"]');
   if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+  if (errorEl) errorEl.style.display = 'none';
   try {
     if (_wizardProfileId) {
       const raw = currentRole === 'creator'

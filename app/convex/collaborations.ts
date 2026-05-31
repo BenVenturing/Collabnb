@@ -85,8 +85,29 @@ export const markCompleted = mutation({
     if (!args.creatorId) return;
 
     const profile = await ctx.db.get(args.creatorId as any);
-    if (profile && !profile.first_collab_completed) {
+    if (!profile) return;
+
+    if (!profile.first_collab_completed) {
       await ctx.db.patch(profile._id, { first_collab_completed: true });
+
+      // Award first-collab referral bonus if this creator was referred
+      const uses = await ctx.db
+        .query("referral_uses")
+        .withIndex("by_user", (q) => q.eq("used_by_id", String(profile._id)))
+        .collect();
+      const use = uses.find((u) => !u.collab_bonus_awarded);
+      if (use) {
+        await ctx.db.patch(profile._id, {
+          free_months_balance: (profile.free_months_balance || 0) + 1,
+        });
+        const referrer = await ctx.db.get(use.referrer_id as any);
+        if (referrer) {
+          await ctx.db.patch(referrer._id, {
+            free_months_balance: (referrer.free_months_balance || 0) + 1,
+          });
+        }
+        await ctx.db.patch(use._id, { collab_bonus_awarded: true });
+      }
     }
   },
 });

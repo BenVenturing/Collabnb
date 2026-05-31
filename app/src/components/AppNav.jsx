@@ -4,6 +4,7 @@ import collabnbLogo from '../../../assets/collabnb-logo.png';
 import { useAuth } from '../contexts/AuthContext';
 import { useAppBar } from '../contexts/AppBarContext';
 import { useCollabs } from '../contexts/CollabContext';
+import { reopenChecklist } from './OnboardingChecklist';
 import { SAMPLE_LISTINGS } from '../lib/mockData';
 import { WhereSearchContent, WhatSearchContent, WhenSearchContent, useAnimatedPlaceholder } from './SearchDropdowns';
 
@@ -505,6 +506,9 @@ export default function AppNav() {
                 <NavLink to="/profile" onClick={() => setProfileOpen(false)} className="block px-4 py-3 text-sm text-ink hover:bg-mint/30 transition-colors">
                   View Profile
                 </NavLink>
+                <button onClick={() => { setProfileOpen(false); reopenChecklist(); }} className="w-full text-left px-4 py-3 text-sm text-ink hover:bg-mint/30 transition-colors">
+                  ✅ Setup Checklist
+                </button>
                 {isAdmin && (
                   <>
                     <div className="border-t border-stone/30" />

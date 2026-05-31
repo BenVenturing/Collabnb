@@ -36,6 +36,17 @@ export const getOrCreate = mutation({
     }
 
     const username = args.email.split('@')[0].replace(/[^a-z0-9_]/gi, '').toLowerCase() || 'user';
+
+    // Generate a unique referral code
+    const prefix = username.replace(/[^a-z0-9]/gi, '').toUpperCase().slice(0, 4) || 'USER';
+    let refCode = '';
+    for (let i = 0; i < 10; i++) {
+      const rand = Math.random().toString(36).toUpperCase().replace(/[^A-Z0-9]/g, '').padEnd(6, '0').slice(0, 6);
+      const candidate = `${prefix}-${rand}`;
+      const collision = await ctx.db.query("referral_codes").withIndex("by_code", (q) => q.eq("code", candidate)).unique();
+      if (!collision) { refCode = candidate; break; }
+    }
+
     const profileId = await ctx.db.insert("profiles", {
       email: args.email,
       full_name: args.full_name || args.email.split('@')[0],
@@ -46,7 +57,18 @@ export const getOrCreate = mutation({
       is_founder: args.is_admin ? true : undefined,
       beta: args.is_admin ? true : undefined,
       avatar_url: args.avatar_url,
+      referral_code: refCode || undefined,
     });
+
+    if (refCode) {
+      await ctx.db.insert("referral_codes", {
+        owner_id: String(profileId),
+        code: refCode,
+        use_count: 0,
+        max_uses: 12,
+      });
+    }
+
     return await ctx.db.get(profileId);
   },
 });

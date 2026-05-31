@@ -2,11 +2,11 @@ import AppNav from './AppNav';
 import VerificationPendingModal from './VerificationPendingModal';
 import SubscriptionModal from './SubscriptionModal';
 import FloatingHelpButton from './FloatingHelpButton';
-import OnboardingChecklist from './OnboardingChecklist';
+import OnboardingChecklist from './OnboardingChecklist'; // self-positions via fixed CSS
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 
 const LAUNCH_DATE = new Date('2026-07-01');
@@ -74,6 +74,23 @@ export default function Layout({ children }) {
   // Hide on contract page and all host pages
   const showContractBtn = location.pathname !== '/contract' && !location.pathname.startsWith('/host');
 
+  // ── Welcome toast (shown once after Clerk/Google signup redirect) ──────────
+  const [welcomeToast, setWelcomeToast] = useState(null);
+  const welcomeHandledRef = useRef(false);
+  useEffect(() => {
+    if (welcomeHandledRef.current) return;
+    const params = new URLSearchParams(location.search);
+    if (params.get('welcome') === 'true') {
+      welcomeHandledRef.current = true;
+      const name = profile?.full_name?.split(' ')[0] || 'there';
+      setWelcomeToast({ name });
+      // Clean URL without full page reload
+      window.history.replaceState({}, '', location.pathname + location.hash);
+      const timer = setTimeout(() => setWelcomeToast(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [location.search, location.pathname, location.hash, profile?.full_name]);
+
   return (
     <div style={{ '--banner-h': bannerVisible ? BANNER_H : '0rem' }}>
       {/* ── Pre-launch countdown banner ─────────────────────────────────────── */}
@@ -122,10 +139,9 @@ export default function Layout({ children }) {
         className="relative z-10"
         style={{ paddingTop: location.pathname === '/profile' ? '0' : (bannerVisible ? `calc(7rem + ${BANNER_H})` : '7rem') }}
       >
-        {location.pathname !== '/profile' && (
+        {location.pathname !== '/profile' && isPending && (
           <div style={{ maxWidth: '820px', margin: '0 auto', padding: '0 1.25rem' }}>
-            {isPending && <PendingVerificationBanner profile={profile} />}
-            <OnboardingChecklist />
+            <PendingVerificationBanner profile={profile} />
           </div>
         )}
         {children}
@@ -137,7 +153,50 @@ export default function Layout({ children }) {
       {/* ── Subscription gate modal ─────────────────────────────────────────── */}
       <SubscriptionModal />
 
-      {/* ── Floating help button (bottom-right) ────────────────────────────── */}
+      {/* ── Welcome toast (post-Clerk-signup) ──────────────────────────────────── */}
+      {welcomeToast && (
+        <div style={{
+          position: 'fixed', top: '5.5rem', left: '50%', transform: 'translateX(-50%)',
+          zIndex: 9999,
+          background: 'rgba(255,255,255,0.96)',
+          backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
+          border: '1px solid rgba(74,155,127,0.3)',
+          borderRadius: '16px',
+          padding: '0.875rem 1.25rem',
+          boxShadow: '0 8px 32px rgba(25,37,36,0.15)',
+          display: 'flex', alignItems: 'center', gap: '0.75rem',
+          animation: 'fadeUp 300ms cubic-bezier(0.16,1,0.3,1) forwards',
+          maxWidth: 'calc(100vw - 2rem)',
+        }}>
+          <div style={{
+            width: '36px', height: '36px', borderRadius: '50%',
+            background: 'rgba(209,235,219,0.8)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+          }}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="var(--slate)" strokeWidth="2" strokeLinecap="round" style={{ width: 16, height: 16 }}>
+              <path d="M20 6L9 17l-5-5"/>
+            </svg>
+          </div>
+          <div>
+            <p style={{ fontWeight: 700, fontSize: '0.875rem', color: 'var(--ink)', margin: 0 }}>
+              Welcome, {welcomeToast.name}! 🎉
+            </p>
+            <p style={{ fontSize: '0.78rem', color: 'var(--sage)', margin: '0.1rem 0 0' }}>
+              Your account is under review — you'll hear from us within 24–48 hours.
+            </p>
+          </div>
+          <button
+            onClick={() => setWelcomeToast(null)}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--stone)', fontSize: '1rem', lineHeight: 1, padding: '0.25rem', flexShrink: 0 }}
+            aria-label="Dismiss"
+          >×</button>
+        </div>
+      )}
+
+      {/* ── Floating onboarding checklist (bottom-right, above AppNav) ────────── */}
+      <OnboardingChecklist />
+
+      {/* ── Floating help button (bottom-left) ─────────────────────────────── */}
       <FloatingHelpButton />
 
       {/* ── Floating contract button (bottom-left) ──────────────────────────── */}

@@ -137,10 +137,16 @@ export const approveProfile = mutation({
     isFounder: v.boolean(),
   },
   handler: async (ctx, args) => {
-    await ctx.db.patch(args.profileId as any, {
+    const profile = await ctx.db.get(args.profileId as any);
+    const patch: Record<string, any> = {
       is_verified: true,
       is_founder: args.isFounder,
-    });
+    };
+    // If referred, stamp the pending collab bonus so their profile shows the indicator
+    if (profile?.referred_by && !profile.first_collab_completed) {
+      patch.referral_bonus_pending = true;
+    }
+    await ctx.db.patch(args.profileId as any, patch);
     const profile = await ctx.db.get(args.profileId as any);
     if (profile?.email) {
       await ctx.scheduler.runAfter(0, internal.emails.sendAccessGrantedEmail, {

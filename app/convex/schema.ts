@@ -32,6 +32,7 @@ export default defineSchema({
     referral_code: v.optional(v.string()),
     referred_by: v.optional(v.string()),
     free_months_balance: v.optional(v.number()),
+    referral_bonus_pending: v.optional(v.boolean()),
   }).index("by_email", ["email"]),
 
   listings: defineTable({

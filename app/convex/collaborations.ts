@@ -88,7 +88,7 @@ export const markCompleted = mutation({
     if (!profile) return;
 
     if (!profile.first_collab_completed) {
-      await ctx.db.patch(profile._id, { first_collab_completed: true });
+      await ctx.db.patch(profile._id, { first_collab_completed: true, referral_bonus_pending: false });
 
       // Award first-collab referral bonus if this creator was referred
       const uses = await ctx.db

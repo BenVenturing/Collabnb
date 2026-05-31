@@ -1117,6 +1117,21 @@ export default function Profile() {
                 </div>
               );
             })()}
+            {/* Referral collab bonus pending notice */}
+            {dp.referral_bonus_pending && !dp.first_collab_completed && (
+              <div style={{ padding: '0.75rem 1.5rem', borderBottom: '1px solid rgba(60,87,89,0.08)', background: 'rgba(139,92,246,0.06)', display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
+                <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(139,92,246,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <svg viewBox="0 0 16 16" fill="none" stroke="#7C3AED" strokeWidth="1.5" strokeLinecap="round" width="13" height="13">
+                    <path d="M8 2a2 2 0 100 4 2 2 0 000-4zM4 9c0-1.1.9-2 2-2h4a2 2 0 012 2v3H4V9z"/>
+                  </svg>
+                </div>
+                <div>
+                  <p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#5B21B6', margin: 0 }}>Referral bonus ready</p>
+                  <p style={{ fontSize: '0.7rem', color: '#7C3AED', margin: '0.1rem 0 0' }}>Complete your first collab to unlock 1 free month</p>
+                </div>
+              </div>
+            )}
+
             {/* Membership status — 4-state subscription section */}
             {(() => {
               const isFounder = dp.is_founder === true;

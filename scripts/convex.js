@@ -59,6 +59,15 @@ export async function getAllProfiles() {
   }
 }
 
+// Update an existing waitlist profile with additional details (step 2 of wizard)
+export async function updateWaitlistProfile(profileId, updates) {
+  try {
+    return await client.mutation('profiles:updateProfile', { profileId, updates });
+  } catch (err) {
+    console.warn('updateWaitlistProfile failed (non-critical):', err.message);
+  }
+}
+
 // Fetch a single profile by email
 export async function getProfileByEmail(email) {
   try {

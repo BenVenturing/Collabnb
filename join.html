@@ -84,20 +84,18 @@
         </p>
 
         <!-- Step indicator -->
-        <div class="step-indicator reveal" style="transition-delay:300ms;" aria-label="Form steps">
+        <div class="step-indicator reveal" id="page-step-indicator" style="transition-delay:300ms;" aria-label="Application steps">
           <div class="step-dot active">1</div>
           <div class="step-line"></div>
           <div class="step-dot">2</div>
           <div class="step-line"></div>
           <div class="step-dot">3</div>
-          <div class="step-line"></div>
-          <div class="step-dot">4</div>
         </div>
 
         <!-- Main CTA -->
         <div style="margin-top:2.5rem;" class="reveal" style="transition-delay:360ms;">
           <button class="btn-primary btn-open-modal" id="join-cta" style="font-size:1.05rem;padding:1rem 2.25rem;">
-            Start your application
+            Finalize your creator profile →
           </button>
         </div>
 
@@ -263,11 +261,10 @@
       </button>
 
       <h2 id="modal-title" style="font-size:1.5rem;margin-bottom:.5rem;">Join Collabnb</h2>
-      <p style="color:var(--sage);font-size:.875rem;margin-bottom:1.5rem;">Six weeks to launch. First 100 on each side
-        get lifetime access.</p>
+      <p id="modal-subtitle" style="color:var(--sage);font-size:.875rem;margin-bottom:1.5rem;">Launching July 1. First 100 on each side get lifetime access.</p>
 
       <!-- Role toggle -->
-      <div style="margin-bottom:1.5rem;">
+      <div id="modal-role-section" style="margin-bottom:1.5rem;">
         <div class="role-toggle glass" role="group" aria-label="Select your role">
           <button class="role-btn active" data-role="creator">I'm a Creator</button>
           <button class="role-btn" data-role="host">I'm a Host</button>

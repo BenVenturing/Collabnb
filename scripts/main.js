@@ -2,7 +2,7 @@
    Collabnb — Main JavaScript
    ============================================================ */
 
-import { getProfileCounts, waitlistSignUp } from './convex.js';
+import { getProfileCounts, waitlistSignUp, updateWaitlistProfile } from './convex.js';
 
 let signedUpName = '';
 
@@ -218,8 +218,11 @@ const counterSection = document.querySelector('.counters-grid');
 const hasMini = document.querySelector('.count-creators-mini');
 
 if (counterSection || hasMini) {
-  // If we have a counters grid, wait for intersection, otherwise run immediately (join page)
-  if (counterSection) {
+  if (hasMini) {
+    // Mini counter is above the fold — fetch immediately so it's never stale
+    initCounters();
+  } else {
+    // No mini counter — animate big grid counters when scrolled into view
     const cObs = new IntersectionObserver((entries) => {
       if (entries[0].isIntersecting) {
         initCounters();
@@ -227,8 +230,6 @@ if (counterSection || hasMini) {
       }
     }, { threshold: 0.1 });
     cObs.observe(counterSection);
-  } else {
-    initCounters();
   }
 }
 
@@ -293,8 +294,32 @@ document.querySelectorAll('.faq-question').forEach(btn => {
   });
 });
 
-/* --- Modal Wizard (Convex waitlist — Clerk bypassed until DNS resolves) --- */
+/* --- 3-Step Application Wizard --- */
 let currentRole = 'creator';
+let _wizardProfileId = null;
+let _wizardEmail = '';
+let _wizardName = '';
+
+function _stepDots(active) {
+  return [1, 2, 3].map((n, i) => {
+    const done = n < active, cur = n === active;
+    const bg = done ? 'var(--mint)' : cur ? 'var(--ink)' : 'rgba(255,255,255,0.4)';
+    const fg = done ? 'var(--ink)' : cur ? 'var(--bone)' : 'var(--sage)';
+    const bd = done ? 'var(--mint)' : cur ? 'var(--ink)' : 'var(--hairline)';
+    return `<div style="width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.72rem;font-weight:600;background:${bg};color:${fg};border:1px solid ${bd};transition:all 300ms;">${done ? '✓' : n}</div>${i < 2 ? '<div style="width:24px;height:2px;background:var(--hairline);border-radius:1px;"></div>' : ''}`;
+  }).join('');
+}
+
+function _stepBar(active) {
+  return `<div style="display:flex;align-items:center;justify-content:center;gap:0.4rem;margin-bottom:0.5rem;">${_stepDots(active)}</div><p style="text-align:center;font-size:0.72rem;color:var(--sage);margin-bottom:1.25rem;">Step ${active} of 3</p>`;
+}
+
+function _updatePageDots(active) {
+  document.querySelectorAll('#page-step-indicator .step-dot').forEach((dot, i) => {
+    dot.classList.toggle('active', i + 1 === active);
+    dot.classList.toggle('done', i + 1 < active);
+  });
+}
 
 async function openModal() {
   const overlay = document.querySelector('#modal-overlay');
@@ -302,133 +327,155 @@ async function openModal() {
   overlay.classList.add('open');
   overlay.setAttribute('aria-hidden', 'false');
   document.body.style.overflow = 'hidden';
+  _wizardProfileId = null;
+  _wizardEmail = '';
+  _wizardName = '';
+  const roleSection = document.getElementById('modal-role-section');
+  if (roleSection) roleSection.style.display = '';
+  showWizardStep(1);
+}
 
-  // Show the simple waitlist form
-  const signUpArea = document.querySelector('#clerk-sign-up-area');
-  if (!signUpArea) return;
+function showWizardStep(step) {
+  const area = document.querySelector('#clerk-sign-up-area');
+  if (!area) return;
+  _updatePageDots(step);
+  const titleEl = document.getElementById('modal-title');
+  const subtitleEl = document.getElementById('modal-subtitle');
 
-  signUpArea.innerHTML = `
-    <form id="waitlist-form" style="display:flex;flex-direction:column;gap:1rem;">
+  if (step === 1) {
+    if (titleEl) titleEl.textContent = `Finalize your ${currentRole} profile`;
+    if (subtitleEl) subtitleEl.style.display = '';
+    area.innerHTML = `
+      <form id="wl-step1" style="display:flex;flex-direction:column;gap:1rem;">
+        <div class="form-group">
+          <label class="form-label" for="wl-name">Full name</label>
+          <input class="form-input" type="text" id="wl-name" placeholder="Jane Smith" autocomplete="name" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="wl-email">Email address</label>
+          <input class="form-input" type="email" id="wl-email" placeholder="jane@example.com" autocomplete="email" required />
+        </div>
+        <button type="submit" id="wl-submit" class="btn-primary" style="width:100%;cursor:pointer;">Save my spot →</button>
+        <div id="wl-error" style="display:none;color:#e74c3c;font-size:0.8125rem;text-align:center;"></div>
+      </form>`;
+    document.getElementById('wl-step1')?.addEventListener('submit', handleStep1Submit);
+
+  } else if (step === 2) {
+    if (titleEl) titleEl.textContent = 'Tell us about yourself';
+    if (subtitleEl) subtitleEl.style.display = 'none';
+    const firstName = _wizardName.split(' ')[0];
+    const fields = currentRole === 'creator' ? `
       <div class="form-group">
-        <label class="form-label" for="wl-name">Full name</label>
-        <input class="form-input" type="text" id="wl-name" placeholder="Jane Smith" autocomplete="name" required />
+        <label class="form-label" for="wl-instagram">Instagram handle <span style="color:var(--sage);font-weight:400;">(optional)</span></label>
+        <input class="form-input" type="text" id="wl-instagram" placeholder="@yourhandle" />
       </div>
       <div class="form-group">
-        <label class="form-label" for="wl-email">Email address</label>
-        <input class="form-input" type="email" id="wl-email" placeholder="jane@example.com" autocomplete="email" required />
+        <label class="form-label" for="wl-tiktok">TikTok handle <span style="color:var(--sage);font-weight:400;">(optional)</span></label>
+        <input class="form-input" type="text" id="wl-tiktok" placeholder="@yourhandle" />
+      </div>` : `
+      <div class="form-group">
+        <label class="form-label" for="wl-business">Property or business name</label>
+        <input class="form-input" type="text" id="wl-business" placeholder="Moss &amp; Pine Cabin" />
       </div>
-      <div id="wl-fields-creator" style="display:flex;flex-direction:column;gap:0.75rem;">
-        <div class="form-group">
-          <label class="form-label" for="wl-instagram">Instagram handle <span style="color:var(--sage);font-weight:400;">(optional)</span></label>
-          <input class="form-input" type="text" id="wl-instagram" placeholder="@yourhandle" />
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="wl-tiktok">TikTok handle <span style="color:var(--sage);font-weight:400;">(optional)</span></label>
-          <input class="form-input" type="text" id="wl-tiktok" placeholder="@yourhandle" />
-        </div>
-      </div>
-      <div id="wl-fields-host" style="display:none;flex-direction:column;gap:0.75rem;">
-        <div class="form-group">
-          <label class="form-label" for="wl-business">Business or property name</label>
-          <input class="form-input" type="text" id="wl-business" placeholder="Moss &amp; Pine Cabin" />
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="wl-city">City</label>
-          <input class="form-input" type="text" id="wl-city" placeholder="Asheville" />
-        </div>
-      </div>
-      <div style="text-align:center;margin-top:0.5rem;">
-        <p style="font-size:0.75rem;color:var(--sage);margin-bottom:0.75rem;">Already have an account? <a href="#" id="modal-login-link" style="color:var(--ink);font-weight:500;">Sign in</a></p>
-      </div>
-      <button type="submit" id="wl-submit" class="btn-primary" style="width:100%;cursor:pointer;">Join the Waitlist</button>
-      <div id="wl-error" style="display:none;color:#e74c3c;font-size:0.8125rem;text-align:center;"></div>
-    </form>
-    <div id="wl-success" style="display:none;text-align:center;padding:1rem 0;">
-      <div style="width:64px;height:64px;border-radius:50%;background:var(--mint);display:flex;align-items:center;justify-content:center;margin:0 auto 1.25rem;">
-        <svg viewBox="0 0 24 24" fill="none" stroke="var(--ink)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:28px;height:28px;"><path d="M20 6L9 17l-5-5"/></svg>
-      </div>
-      <h3 style="font-size:1.25rem;margin-bottom:.5rem;">You're on the list!</h3>
-      <p style="color:var(--sage);font-size:.875rem;line-height:1.6;">We'll be in touch as we approach the July 1 launch. Keep an eye on your inbox.</p>
-    </div>
-  `;
+      <div class="form-group">
+        <label class="form-label" for="wl-city">City</label>
+        <input class="form-input" type="text" id="wl-city" placeholder="Asheville" />
+      </div>`;
+    area.innerHTML = `
+      ${_stepBar(2)}
+      <p style="font-size:0.875rem;color:var(--sage);margin-bottom:1.25rem;text-align:center;">Your spot is saved, <strong style="color:var(--ink);">${firstName}</strong>! These details help match you with the right collabs.</p>
+      <form id="wl-step2" style="display:flex;flex-direction:column;gap:1rem;">
+        ${fields}
+        <button type="submit" class="btn-primary" style="width:100%;cursor:pointer;">Continue →</button>
+        <button type="button" id="wl-skip2" style="background:none;border:none;color:var(--sage);font-size:0.8rem;cursor:pointer;padding:0.25rem 0;">Skip for now</button>
+        <div id="wl-error2" style="display:none;color:#e74c3c;font-size:0.8125rem;text-align:center;"></div>
+      </form>`;
+    document.getElementById('wl-step2')?.addEventListener('submit', handleStep2Submit);
+    document.getElementById('wl-skip2')?.addEventListener('click', () => showWizardStep(3));
 
-  // Show correct role fields
-  toggleRoleFields(currentRole);
-
-  // Wire form submit
-  const form = document.getElementById('waitlist-form');
-  form?.addEventListener('submit', handleWaitlistSubmit);
-
-  // Wire login link
-  const loginLink = form?.querySelector('#modal-login-link');
-  if (loginLink) {
-    loginLink.addEventListener('click', (e) => {
-      e.preventDefault();
-      closeModal();
-      openLoginModal();
-    });
+  } else if (step === 3) {
+    if (titleEl) titleEl.textContent = 'Create your account';
+    if (subtitleEl) subtitleEl.style.display = 'none';
+    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    if (isLocalhost) { _showWizardDone(); return; }
+    area.innerHTML = `
+      ${_stepBar(3)}
+      <div style="text-align:center;margin-bottom:1.25rem;">
+        <div style="width:52px;height:52px;border-radius:50%;background:var(--mint);display:flex;align-items:center;justify-content:center;margin:0 auto 0.875rem;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="var(--ink)" stroke-width="2" stroke-linecap="round" style="width:22px;height:22px;"><path d="M20 6L9 17l-5-5"/></svg>
+        </div>
+        <p style="color:var(--sage);font-size:.8125rem;line-height:1.5;">Sign in or create a password to access your profile and explore the platform.</p>
+      </div>
+      <div id="wl-clerk-mount"></div>
+      <button id="wl-skip3" style="background:none;border:none;color:var(--sage);font-size:0.8rem;cursor:pointer;width:100%;padding:0.75rem 0 0.25rem;">I'll do this later</button>`;
+    document.getElementById('wl-skip3')?.addEventListener('click', closeModal);
+    getClerk().then((clerk) => {
+      if (!clerk) { _showWizardDone(); return; }
+      const mountEl = document.getElementById('wl-clerk-mount');
+      if (!mountEl) return;
+      clerk.mountSignUp(mountEl, { afterSignUpUrl: '/#/profile' });
+    }).catch(_showWizardDone);
   }
 }
 
-function toggleRoleFields(role) {
-  const creatorFields = document.getElementById('wl-fields-creator');
-  const hostFields = document.getElementById('wl-fields-host');
-  if (creatorFields) creatorFields.style.display = role === 'creator' ? 'flex' : 'none';
-  if (hostFields) hostFields.style.display = role === 'host' ? 'flex' : 'none';
+function _showWizardDone() {
+  const area = document.querySelector('#clerk-sign-up-area');
+  const titleEl = document.getElementById('modal-title');
+  if (titleEl) titleEl.textContent = "You're on the list!";
+  if (!area) return;
+  area.innerHTML = `
+    <div style="text-align:center;padding:0.5rem 0 1rem;">
+      <div style="width:64px;height:64px;border-radius:50%;background:var(--mint);display:flex;align-items:center;justify-content:center;margin:0 auto 1.25rem;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="var(--ink)" stroke-width="2" stroke-linecap="round" style="width:28px;height:28px;"><path d="M20 6L9 17l-5-5"/></svg>
+      </div>
+      <p style="color:var(--sage);font-size:.875rem;line-height:1.6;margin-bottom:1.5rem;">We'll be in touch before July 1. Set up your profile to get the full experience.</p>
+      <a href="/login.html" class="btn-primary" style="display:inline-block;text-decoration:none;padding:0.75rem 1.75rem;font-size:0.9375rem;">Enter Collabnb →</a>
+    </div>`;
 }
 
-async function handleWaitlistSubmit(e) {
+async function handleStep1Submit(e) {
   e.preventDefault();
-  const submitBtn = document.getElementById('wl-submit');
+  const btn = document.getElementById('wl-submit');
   const errorEl = document.getElementById('wl-error');
-  const successEl = document.getElementById('wl-success');
-  const form = document.getElementById('waitlist-form');
-
   const name = document.getElementById('wl-name')?.value?.trim();
   const email = document.getElementById('wl-email')?.value?.trim();
-
   if (!name || !email) {
     if (errorEl) { errorEl.textContent = 'Please enter your name and email.'; errorEl.style.display = 'block'; }
     return;
   }
-
   if (errorEl) errorEl.style.display = 'none';
-  if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Joining…'; }
-
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
   try {
-    const data = {
-      full_name: name,
-      email: email,
-      role: currentRole,
-      instagram_handle: document.getElementById('wl-instagram')?.value?.trim(),
-      tiktok_handle: document.getElementById('wl-tiktok')?.value?.trim(),
-      business_name: document.getElementById('wl-business')?.value?.trim(),
-      city: document.getElementById('wl-city')?.value?.trim(),
-    };
-
-    const result = await waitlistSignUp(data);
-
-    if (result.alreadySignedUp) {
-      if (errorEl) { errorEl.textContent = 'This email is already on the waitlist!'; errorEl.style.display = 'block'; }
-      if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Join the Waitlist'; }
-      return;
-    }
-
-    // Show success
-    if (form) form.style.display = 'none';
-    if (successEl) successEl.style.display = '';
-
-    // Confetti burst
+    const result = await waitlistSignUp({ full_name: name, email, role: currentRole });
+    _wizardProfileId = result?.profileId || null;
+    _wizardEmail = email;
+    _wizardName = name;
+    const roleSection = document.getElementById('modal-role-section');
+    if (roleSection) roleSection.style.display = 'none';
     launchConfetti();
-
-    // Refresh counters
     initCounters();
-
+    showWizardStep(2);
   } catch (err) {
-    console.error('Waitlist sign-up error:', err);
+    console.error('Step 1 error:', err);
     if (errorEl) { errorEl.textContent = 'Something went wrong. Please try again.'; errorEl.style.display = 'block'; }
-    if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Join the Waitlist'; }
+    if (btn) { btn.disabled = false; btn.textContent = 'Save my spot →'; }
   }
+}
+
+async function handleStep2Submit(e) {
+  e.preventDefault();
+  const btn = e.target.querySelector('[type="submit"]');
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+  try {
+    if (_wizardProfileId) {
+      const raw = currentRole === 'creator'
+        ? { instagram_handle: document.getElementById('wl-instagram')?.value?.trim(), tiktok_handle: document.getElementById('wl-tiktok')?.value?.trim() }
+        : { city: document.getElementById('wl-city')?.value?.trim() };
+      const updates = Object.fromEntries(Object.entries(raw).filter(([, v]) => v));
+      if (Object.keys(updates).length) await updateWaitlistProfile(_wizardProfileId, updates);
+    }
+  } catch { /* non-critical — still advance */ }
+  showWizardStep(3);
 }
 
 function closeModal() {
@@ -447,7 +494,7 @@ function switchRole(role) {
     btn.classList.toggle('active', btn.dataset.role === role);
   });
 
-  // Update mini counter label
+  // Update mini counter label on join page
   const miniLabel = document.querySelector('.join-mini-counter');
   if (miniLabel) {
     const cCount = document.querySelector('.count-creators-mini');
@@ -456,7 +503,15 @@ function switchRole(role) {
     miniLabel.innerHTML = `<strong>${Math.max(0, 100 - count)} / 100</strong> ${role} spots remaining`;
   }
 
-  toggleRoleFields(role);
+  // Keep CTA button text in sync with selected role
+  const joinCta = document.getElementById('join-cta');
+  if (joinCta) joinCta.textContent = `Finalize your ${role} profile →`;
+
+  // Update modal title if modal is open on step 1
+  const titleEl = document.getElementById('modal-title');
+  if (titleEl && document.querySelector('#modal-overlay.open')) {
+    titleEl.textContent = `Finalize your ${role} profile`;
+  }
 }
 
 /* --- Login Modal --- */

@@ -982,14 +982,15 @@ h3 { font-weight: 700; }
 }
 .faq-toggle {
   flex-shrink: 0;
-  width: 28px;
-  height: 28px;
+  width: 44px;
+  height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 1.25rem;
   color: var(--sage);
   transition: transform 200ms var(--ease-out-quart);
+  margin-right: -0.5rem;
 }
 .faq-answer {
   display: grid;
@@ -1537,6 +1538,8 @@ h3 { font-weight: 700; }
   .nav-links { display: none; }
   .nav-hamburger { display: flex; }
   .nav-pill { padding: 0.5rem 0.75rem; gap: 0.75rem; }
+  /* Hide nav Join button on mobile — use hamburger or hero CTA instead */
+  .nav-pill .btn-primary { display: none; }
 
   .hero { min-height: auto; padding-top: 8rem; }
   .hero h1 { font-size: clamp(2.5rem, 10vw, 3.5rem); }
@@ -1559,10 +1562,31 @@ h3 { font-weight: 700; }
 @media (max-width: 480px) {
   .hero h1 { font-size: 2.25rem; }
   .hero-card { padding: var(--space-4); }
+  .listing-stack { height: 420px; }
   .counters-grid { gap: var(--space-4); }
+  .counter-number { font-size: 1.75rem; }
   .principles-grid { grid-template-columns: 1fr; }
   .share-row { flex-direction: column; align-items: center; }
-  .modal-card { padding: var(--space-6); }
+  .modal-card { padding: var(--space-6); margin: 0 0.5rem; }
+
+  /* Stack hero CTAs full-width on small screens */
+  .hero-ctas { flex-direction: column; }
+  .hero-ctas .btn-primary,
+  .hero-ctas .btn-glass { width: 100%; justify-content: center; white-space: normal; text-align: center; }
+
+  /* Prevent iOS input auto-zoom (requires 16px) */
+  .form-input, .form-select { font-size: 16px; }
+
+  /* Tighter bento padding */
+  .bento-card { padding: var(--space-6); }
+  .bento-small { padding: var(--space-4); }
+
+  /* Footer bottom row stacks */
+  .footer-bottom { flex-direction: column; gap: 0.5rem; text-align: center; }
+
+  /* Shrink countdown numbers and override inline padding */
+  .glass[aria-label="Time until launch"] .counter-number { font-size: 2rem !important; }
+  .glass[aria-label="Time until launch"] > div { padding: 0.625rem 0 !important; }
 }
 
 /* ── POLISH ADDITIONS ── */
@@ -1576,6 +1600,14 @@ h3 { font-weight: 700; }
     align-items: center;
   }
   .bokeh-field { display: none; } /* handled by card on right */
+}
+
+/* Counter second column: remove border-left divider on small screens */
+@media (max-width: 480px) {
+  .counter-item:last-child {
+    border-left: none !important;
+    padding-left: 0 !important;
+  }
 }
 
 /* Countdown responsive */
@@ -1621,9 +1653,9 @@ h3 { font-weight: 700; }
   max-width: calc(100vw - 2rem);
 }
 
-/* Ensure hero h1 font size is applied */
+/* Hero display size — responsive overrides in breakpoints below */
 .hero h1, .hero .display {
-  font-size: var(--fs-hero) !important;
+  font-size: var(--fs-hero);
 }
 
 /* Step indicator center */
@@ -1638,6 +1670,13 @@ h3 { font-weight: 700; }
     flex-direction: column;
     gap: 1rem;
   }
+}
+
+/* Join page: full-width CTA and tighter hero top padding on mobile */
+@media (max-width: 480px) {
+  #join-cta { width: 100%; }
+  .join-hero { padding-top: 7rem; }
+  .join-mini-counter { font-size: var(--fs-xs); }
 }
 
 /* Smooth scroll inside modal */

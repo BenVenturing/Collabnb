@@ -3,6 +3,11 @@ import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { formatDate } from '../../lib/dateUtils';
 
+const btnBase = {
+  fontSize: '0.78rem', padding: '0.35rem 0.75rem', borderRadius: '0.4rem',
+  cursor: 'pointer', fontFamily: 'inherit', border: 'none',
+};
+
 const CATEGORY_COLORS = {
   'Bug Report':       { bg: '#FEE2E2', color: '#991B1B' },
   'Feature Request':  { bg: '#EDE9FE', color: '#5B21B6' },
@@ -21,8 +26,24 @@ function CategoryBadge({ category }) {
 }
 
 function MessageRow({ msg, toggleRead, archiveMessage, unarchiveMessage }) {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded]     = useState(false);
+  const [showInbox, setShowInbox]   = useState(false);
+  const [replyText, setReplyText]   = useState('');
+  const [replySent, setReplySent]   = useState(false);
+  const [sending, setSending]       = useState(false);
+  const addAdminReply = useMutation(api.messages.addAdminReply);
   const isUnread = !msg.is_read;
+
+  const handleInboxReply = async () => {
+    if (!replyText.trim() || sending) return;
+    setSending(true);
+    try {
+      await addAdminReply({ messageId: msg._id, reply: replyText });
+      setReplySent(true);
+      setReplyText('');
+    } catch {}
+    setSending(false);
+  };
 
   return (
     <div style={{
@@ -75,33 +96,93 @@ function MessageRow({ msg, toggleRead, archiveMessage, unarchiveMessage }) {
       {/* ── Expanded detail ── */}
       {expanded && (
         <div style={{ padding: '0 1.25rem 1.25rem 2.625rem' }}>
-          <div style={{ background: '#F7F5F2', borderRadius: '0.625rem', padding: '0.875rem 1rem', fontSize: '0.85rem', color: '#192524', lineHeight: 1.65, whiteSpace: 'pre-wrap', marginBottom: '0.875rem' }}>
+          {/* Original message */}
+          <div style={{ background: '#F7F5F2', borderRadius: '0.625rem', padding: '0.875rem 1rem', fontSize: '0.85rem', color: '#192524', lineHeight: 1.65, whiteSpace: 'pre-wrap', marginBottom: '0.625rem' }}>
             {msg.message}
           </div>
+
+          {/* Existing admin reply (if any) */}
+          {msg.admin_reply && (
+            <div style={{ background: 'rgba(209,235,219,0.35)', border: '1px solid rgba(74,155,127,0.2)', borderRadius: '0.625rem', padding: '0.75rem 1rem', fontSize: '0.82rem', color: '#192524', lineHeight: 1.6, whiteSpace: 'pre-wrap', marginBottom: '0.625rem' }}>
+              <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#3C5759', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '0.3rem' }}>
+                Your reply · {msg.admin_reply_at ? new Date(msg.admin_reply_at).toLocaleDateString() : ''}
+              </span>
+              {msg.admin_reply}
+            </div>
+          )}
+
+          {/* Inline inbox reply form */}
+          {showInbox && !replySent && (
+            <div style={{ marginBottom: '0.625rem' }}>
+              <textarea
+                value={replyText}
+                onChange={(e) => setReplyText(e.target.value)}
+                placeholder="Type your reply — the user will see this when they open the Help Center…"
+                rows={3}
+                style={{
+                  width: '100%', padding: '0.65rem 0.875rem', borderRadius: '0.5rem',
+                  border: '1px solid rgba(25,37,36,0.12)', background: '#fff',
+                  fontFamily: 'inherit', fontSize: '0.83rem', color: '#192524',
+                  resize: 'vertical', outline: 'none', boxSizing: 'border-box',
+                  lineHeight: 1.55,
+                }}
+              />
+              <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.4rem' }}>
+                <button
+                  onClick={handleInboxReply}
+                  disabled={!replyText.trim() || sending}
+                  style={{ ...btnBase, background: '#192524', color: '#fff', opacity: (!replyText.trim() || sending) ? 0.5 : 1 }}
+                >
+                  {sending ? 'Sending…' : 'Send Reply'}
+                </button>
+                <button onClick={() => setShowInbox(false)} style={{ ...btnBase, background: '#F7F5F2', color: '#959D90' }}>
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+          {replySent && (
+            <div style={{ fontSize: '0.78rem', color: '#166534', background: 'rgba(209,235,219,0.5)', borderRadius: '0.4rem', padding: '0.35rem 0.75rem', marginBottom: '0.625rem', display: 'inline-block' }}>
+              ✓ Reply saved — user will see it in their Help Center
+            </div>
+          )}
+
+          {/* Action buttons */}
           <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
             <button
               onClick={() => toggleRead(msg._id)}
-              style={{ fontSize: '0.78rem', padding: '0.35rem 0.75rem', borderRadius: '0.4rem', background: '#fff', border: '1px solid rgba(25,37,36,0.1)', color: '#3C5759', cursor: 'pointer', fontFamily: 'inherit' }}
+              style={{ ...btnBase, background: '#fff', border: '1px solid rgba(25,37,36,0.1)', color: '#3C5759' }}
             >
               {msg.is_read ? 'Mark Unread' : 'Mark Read'}
             </button>
+
+            {/* Reply via Email */}
             <a
               href={`mailto:${msg.email}?subject=${encodeURIComponent('Re: ' + (msg.category || 'Your message') + ' — Collabnb')}`}
-              style={{ fontSize: '0.78rem', padding: '0.35rem 0.75rem', borderRadius: '0.4rem', background: '#192524', color: '#fff', textDecoration: 'none', fontFamily: 'inherit', fontWeight: 500 }}
+              style={{ ...btnBase, background: '#fff', border: '1px solid rgba(25,37,36,0.1)', color: '#3C5759', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
             >
-              Reply ↗
+              ✉ Reply via Email
             </a>
+
+            {/* Reply via Inbox */}
+            <button
+              onClick={() => { setShowInbox(v => !v); setReplySent(false); }}
+              style={{ ...btnBase, background: '#192524', color: '#fff', fontWeight: 500 }}
+            >
+              💬 Reply via Inbox
+            </button>
+
             {!msg.is_archived ? (
               <button
                 onClick={() => { setExpanded(false); archiveMessage(msg._id); }}
-                style={{ fontSize: '0.78rem', padding: '0.35rem 0.75rem', borderRadius: '0.4rem', background: '#F7F5F2', border: '1px solid rgba(25,37,36,0.08)', color: '#959D90', cursor: 'pointer', fontFamily: 'inherit' }}
+                style={{ ...btnBase, background: '#F7F5F2', border: '1px solid rgba(25,37,36,0.08)', color: '#959D90' }}
               >
                 Archive
               </button>
             ) : (
               <button
                 onClick={() => unarchiveMessage(msg._id)}
-                style={{ fontSize: '0.78rem', padding: '0.35rem 0.75rem', borderRadius: '0.4rem', background: '#F7F5F2', border: '1px solid rgba(25,37,36,0.08)', color: '#3C5759', cursor: 'pointer', fontFamily: 'inherit' }}
+                style={{ ...btnBase, background: '#F7F5F2', border: '1px solid rgba(25,37,36,0.08)', color: '#3C5759' }}
               >
                 Unarchive
               </button>

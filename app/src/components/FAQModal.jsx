@@ -266,6 +266,12 @@ function MessageTab({ profile }) {
   const [submitting, setSubmitting] = useState(false);
   const submitMessage = useMutation(api.messages.submitMessage);
 
+  // Previous messages from this user (to show admin replies)
+  const prevMessages = useQuery(
+    api.messages.getMessagesByEmail,
+    profile?.email ? { email: profile.email } : 'skip'
+  );
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitting(true);
@@ -278,12 +284,12 @@ function MessageTab({ profile }) {
 
   if (sent) {
     return (
-      <div style={{ textAlign: 'center', padding: '3rem 1rem' }}>
+      <div style={{ textAlign: 'center', padding: '2.5rem 1rem' }}>
         <div style={{
           width: 56, height: 56, borderRadius: '50%',
           background: 'rgba(209,235,219,0.7)', border: '1px solid rgba(74,155,127,0.25)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          margin: '0 auto 1.25rem',
+          margin: '0 auto 1.125rem',
         }}>
           <svg viewBox="0 0 24 24" fill="none" stroke="#2d6a4f" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 24, height: 24 }}>
             <polyline points="20 6 9 17 4 12" />
@@ -292,8 +298,8 @@ function MessageTab({ profile }) {
         <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.1rem', color: 'var(--ink)', marginBottom: '0.5rem' }}>
           Message sent!
         </p>
-        <p style={{ fontSize: '0.875rem', color: 'var(--slate)' }}>
-          We'll respond within 1–2 business days.
+        <p style={{ fontSize: '0.85rem', color: 'var(--slate)', lineHeight: 1.6, maxWidth: 280, margin: '0 auto' }}>
+          We typically respond within 1–2 business days, often right here in this same window — log back in and check this tab for a reply.
         </p>
       </div>
     );
@@ -309,6 +315,7 @@ function MessageTab({ profile }) {
   };
 
   return (
+    <>
     <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.875rem' }}>
         <div>
@@ -371,6 +378,43 @@ function MessageTab({ profile }) {
         {submitting ? 'Sending…' : 'Send Message'}
       </button>
     </form>
+
+    {/* ── Previous messages + admin replies ── */}
+    {prevMessages && prevMessages.length > 0 && (
+      <div style={{ marginTop: '1.5rem', borderTop: '1px solid rgba(25,37,36,0.07)', paddingTop: '1.25rem' }}>
+        <p style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--slate)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.75rem' }}>
+          Previous Messages
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          {prevMessages.map((m) => (
+            <div key={m._id} style={{ borderRadius: '0.625rem', border: '1px solid rgba(25,37,36,0.07)', overflow: 'hidden' }}>
+              {/* User's original message */}
+              <div style={{ padding: '0.625rem 0.875rem', background: '#F7F5F2' }}>
+                <div style={{ fontSize: '0.68rem', color: 'var(--slate)', marginBottom: '0.25rem' }}>
+                  {m.category && <span style={{ fontWeight: 600, marginRight: '0.4rem' }}>{m.category}</span>}
+                  {new Date(m._creationTime).toLocaleDateString()}
+                </div>
+                <p style={{ fontSize: '0.83rem', color: 'var(--ink)', margin: 0, lineHeight: 1.55 }}>{m.message}</p>
+              </div>
+              {/* Admin reply (if any) */}
+              {m.admin_reply ? (
+                <div style={{ padding: '0.625rem 0.875rem', background: 'rgba(209,235,219,0.25)', borderTop: '1px solid rgba(74,155,127,0.15)' }}>
+                  <div style={{ fontSize: '0.68rem', fontWeight: 700, color: '#2d6a4f', marginBottom: '0.25rem' }}>
+                    Collabnb Support · {m.admin_reply_at ? new Date(m.admin_reply_at).toLocaleDateString() : ''}
+                  </div>
+                  <p style={{ fontSize: '0.83rem', color: 'var(--ink)', margin: 0, lineHeight: 1.55 }}>{m.admin_reply}</p>
+                </div>
+              ) : (
+                <div style={{ padding: '0.5rem 0.875rem', background: 'rgba(255,255,255,0.5)', borderTop: '1px solid rgba(25,37,36,0.05)' }}>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--slate)' }}>Awaiting reply — we'll respond here within 1–2 business days.</span>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    )}
+    </>
   );
 }
 

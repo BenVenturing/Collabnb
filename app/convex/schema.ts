@@ -162,6 +162,8 @@ export default defineSchema({
     message: v.string(),
     is_read: v.optional(v.boolean()),
     is_archived: v.optional(v.boolean()),
+    admin_reply: v.optional(v.string()),
+    admin_reply_at: v.optional(v.number()),
   }),
 
   admin_settings: defineTable({

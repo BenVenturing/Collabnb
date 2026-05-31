@@ -77,3 +77,24 @@ export const unarchiveMessage = mutation({
     await ctx.db.patch(args.messageId as any, { is_archived: false });
   },
 });
+
+export const addAdminReply = mutation({
+  args: { messageId: v.string(), reply: v.string() },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.messageId as any, {
+      admin_reply: args.reply.trim(),
+      admin_reply_at: Date.now(),
+      is_read: true,
+    });
+  },
+});
+
+export const getMessagesByEmail = query({
+  args: { email: v.string() },
+  handler: async (ctx, args) => {
+    const all = await ctx.db.query("messages").collect();
+    return all
+      .filter((m) => m.email.toLowerCase() === args.email.toLowerCase())
+      .sort((a, b) => b._creationTime - a._creationTime);
+  },
+});

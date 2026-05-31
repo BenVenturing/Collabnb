@@ -142,7 +142,7 @@ export default function OnboardingChecklist() {
 
   const widgetStyle = {
     position: 'fixed',
-    bottom: '5.5rem',
+    bottom: '7rem',
     right: '1.5rem',
     zIndex: 200,
     width: collapsed ? 'auto' : '300px',

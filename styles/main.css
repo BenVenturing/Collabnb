@@ -263,6 +263,11 @@ h3 { font-weight: 700; }
 .nav-hamburger.open .line-1 { transform: translateY(6px) rotate(45deg); }
 .nav-hamburger.open .line-2 { opacity: 0; }
 .nav-hamburger.open .line-3 { transform: translateY(-6px) rotate(-45deg); }
+/* Desktop compact mode: hide hamburger when search is open */
+@media (min-width: 769px) {
+  .nav-hamburger[data-compact="true"][data-searchopen="true"] { display: none; }
+  .nav-hamburger[data-compact="true"] { display: flex; }
+}
 
 /* Mobile overlay */
 .nav-overlay {
@@ -613,6 +618,18 @@ h3 { font-weight: 700; }
   pointer-events: none;
 }
 
+/* Loading skeleton for listing stack (shown before JS populates) */
+.listing-stack:empty {
+  background: linear-gradient(135deg, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0.15) 50%, rgba(255,255,255,0.5) 100%);
+  background-size: 200% 100%;
+  animation: lstack-skeleton 1.6s ease-in-out infinite;
+  border-radius: 1.75rem;
+}
+@keyframes lstack-skeleton {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
 @media (max-width: 640px) {
   .listing-stack { max-width: 100%; height: 510px; }
   .lcard-photo   { height: 140px; }
@@ -846,6 +863,9 @@ h3 { font-weight: 700; }
 .final-cta {
   text-align: center;
   padding-block: var(--space-32);
+}
+@media (max-width: 640px) {
+  .final-cta { padding-block: var(--space-16); }
 }
 .final-cta h2 {
   font-size: var(--fs-h2);
@@ -1532,6 +1552,13 @@ h3 { font-weight: 700; }
   .faq-answer {
     transition: none !important;
   }
+  .lcard.is-flipping {
+    animation: none !important;
+    opacity: 0 !important;
+  }
+  .listing-stack:empty {
+    animation: none !important;
+  }
 }
 
 /* --- RESPONSIVE --- */
@@ -1691,8 +1718,11 @@ h3 { font-weight: 700; }
 /* Join page: full-width CTA and tighter hero top padding on mobile */
 @media (max-width: 480px) {
   #join-cta { width: 100%; }
-  .join-hero { padding-top: 7rem; }
+  .join-hero { padding-top: 5rem; }
   .join-mini-counter { font-size: var(--fs-xs); }
+  /* Tighten spacing between join page elements */
+  .join-hero .step-indicator + [style*="margin-top"] { margin-top: 1.5rem !important; }
+  .join-hero .hero-sub { margin-top: 0.75rem !important; }
 }
 
 /* Smooth scroll inside modal */

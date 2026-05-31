@@ -422,7 +422,8 @@ export default function AppNav() {
             aria-label={menuOpen ? 'Close menu' : 'Open menu'}
             aria-expanded={menuOpen}
             onClick={() => setMenuOpen(!menuOpen)}
-            style={showHamburger ? { display: 'flex' } : compactSearch ? { display: 'none' } : undefined}
+            data-compact={compactSearch ? 'true' : undefined}
+            data-searchopen={navSearchOpen ? 'true' : undefined}
           >
             <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
               <line className="line line-1" x1="3" y1="5" x2="17" y2="5"/>

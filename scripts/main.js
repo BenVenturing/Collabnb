@@ -113,6 +113,20 @@ if (hamburger) {
     }
   });
 
+  // Handle orientation change — close mobile overlay when rotating to landscape
+  let _orientationLocked = false;
+  window.addEventListener('resize', () => {
+    if (_orientationLocked) return;
+    if (hamburger?.classList.contains('open') && window.innerWidth > 768) {
+      _orientationLocked = true;
+      hamburger.classList.remove('open');
+      hamburger.setAttribute('aria-expanded', 'false');
+      if (navOverlay) navOverlay.classList.remove('open');
+      document.body.style.overflow = '';
+      setTimeout(() => { _orientationLocked = false; }, 500);
+    }
+  });
+
   // Close on Escape
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
@@ -625,14 +639,21 @@ function launchConfetti() {
   canvas.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;z-index:9999;pointer-events:none;';
   document.body.appendChild(canvas);
 
+  const dpr = window.devicePixelRatio || 1;
+  const cw = window.innerWidth;
+  const ch = window.innerHeight;
+  canvas.width = cw * dpr;
+  canvas.height = ch * dpr;
+  canvas.style.width = cw + 'px';
+  canvas.style.height = ch + 'px';
+
   const ctx = canvas.getContext('2d');
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
+  ctx.scale(dpr, dpr);
 
   const colors = ['#4ecdc4', '#a8e6cf', '#ffd93d', '#ff8c94', '#c8b8ff', '#ffffff', '#7ee8a2'];
   const pieces = Array.from({ length: 160 }, () => ({
-    x: Math.random() * canvas.width,
-    y: -20 - Math.random() * canvas.height * 0.6,
+    x: Math.random() * cw,
+    y: -20 - Math.random() * ch * 0.6,
     r: 5 + Math.random() * 6,
     dx: (Math.random() - 0.5) * 2.5,
     dy: 3 + Math.random() * 5,
@@ -651,7 +672,7 @@ function launchConfetti() {
     const progress = elapsed / duration;
     const alpha = progress > 0.6 ? 1 - (progress - 0.6) / 0.4 : 1;
 
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.clearRect(0, 0, cw, ch);
     ctx.globalAlpha = alpha;
 
     pieces.forEach(p => {
@@ -672,9 +693,9 @@ function launchConfetti() {
       p.y += p.dy;
       p.angle += p.spin;
 
-      if (p.y > canvas.height + 20) {
+      if (p.y > ch + 20) {
         p.y = -20;
-        p.x = Math.random() * canvas.width;
+        p.x = Math.random() * cw;
       }
     });
 

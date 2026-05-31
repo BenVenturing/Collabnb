@@ -185,6 +185,7 @@ export const updateProfile = mutation({
       username: v.optional(v.string()),
       bio: v.optional(v.string()),
       avatar_url: v.optional(v.string()),
+      banner_url: v.optional(v.string()),
       instagram_handle: v.optional(v.string()),
       tiktok_handle: v.optional(v.string()),
       youtube_handle: v.optional(v.string()),

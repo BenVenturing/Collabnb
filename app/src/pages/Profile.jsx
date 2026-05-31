@@ -264,9 +264,9 @@ function BannerCropEditor({ file, onApply, onCancel }) {
     const sx = (-imgX) * (nat.w / dw), sy = (-imgY) * (nat.h / dh);
     const sw = PW * (nat.w / dw),      sh = PH * (nat.h / dh);
     const canvas = document.createElement('canvas');
-    canvas.width = 1200; canvas.height = 400;
-    canvas.getContext('2d').drawImage(img, sx, sy, sw, sh, 0, 0, 1200, 400);
-    onApply(canvas.toDataURL('image/jpeg', 0.82));
+    canvas.width = 900; canvas.height = 300;
+    canvas.getContext('2d').drawImage(img, sx, sy, sw, sh, 0, 0, 900, 300);
+    onApply(canvas.toDataURL('image/jpeg', 0.78));
   }
 
   const b = getBase(nat.w, nat.h);
@@ -735,8 +735,8 @@ export default function Profile() {
         </div>
       )}
 
-      {/* ── Hero (full-bleed) ──────────────────────────────────────────────── */}
-      <div style={{ position: 'relative' }}>
+      {/* ── Hero (full-bleed, starts below floating nav) ──────────────────── */}
+      <div style={{ position: 'relative', paddingTop: 'calc(5rem + var(--banner-h, 0rem))' }}>
         <div style={{ height: '400px', overflow: 'hidden', background: 'linear-gradient(135deg, #1a2322 0%, #2d4a3e 100%)' }}>
           {dp.banner_url && (
             <img
@@ -979,6 +979,7 @@ export default function Profile() {
                       <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--sage)', fontSize: '0.7rem' }}>+</div>
                     )}
                   </div>
+                  <span style={{ fontSize: '0.58rem', color: 'var(--sage)', opacity: 0.7 }}>300 × 300 px</span>
                   <input type="file" accept="image/*" style={{ display: 'none' }} onChange={async (e) => { const f = e.target.files?.[0]; if (f) { const url = await resizeToDataUrl(f, 300, 300); setEditDraft(d => ({ ...d, avatar_url: url })); } }} />
                 </label>
                 <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.4rem', padding: '0.75rem', borderRadius: '0.875rem', background: 'rgba(255,255,255,0.7)', border: '1.5px dashed rgba(60,87,89,0.25)', cursor: 'pointer', transition: 'border-color 150ms, background 150ms' }}
@@ -993,6 +994,7 @@ export default function Profile() {
                       <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--sage)', fontSize: '0.7rem' }}>+</div>
                     )}
                   </div>
+                  <span style={{ fontSize: '0.58rem', color: 'var(--sage)', opacity: 0.7 }}>{dp.role === 'host' ? '3:1 ratio · e.g. 1200 × 400 px' : '3:1 ratio · e.g. 1200 × 400 px'}</span>
                   <input type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => { const f = e.target.files?.[0]; if (f) setCropEditorFile(f); }} />
                 </label>
               </div>

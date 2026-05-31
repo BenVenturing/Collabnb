@@ -169,7 +169,11 @@ function ClerkAuthInner({ hooks, children }) {
   const updateProfile = useCallback(async (updates) => {
     const merged = { ...profile, ...updates };
     setProfile(merged);
-    localStorage.setItem('collabnb_profile', JSON.stringify(merged));
+    // Cache only text fields — base64 images are too large and can block the quota
+    try {
+      const { avatar_url: _a, banner_url: _b, ...textFields } = merged;
+      localStorage.setItem('collabnb_profile', JSON.stringify(textFields));
+    } catch { /* non-critical */ }
 
     if (profile?._id) {
       try {
@@ -180,6 +184,7 @@ function ClerkAuthInner({ hooks, children }) {
             username: updates.username,
             bio: updates.bio,
             avatar_url: updates.avatar_url,
+            banner_url: updates.banner_url,
             instagram_handle: updates.instagram_handle,
             tiktok_handle: updates.tiktok_handle,
             youtube_handle: updates.youtube_handle,

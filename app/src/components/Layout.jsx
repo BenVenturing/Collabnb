@@ -120,12 +120,14 @@ export default function Layout({ children }) {
       <main
         id="main"
         className="relative z-10"
-        style={{ paddingTop: bannerVisible ? `calc(7rem + ${BANNER_H})` : '7rem' }}
+        style={{ paddingTop: location.pathname === '/profile' ? '0' : (bannerVisible ? `calc(7rem + ${BANNER_H})` : '7rem') }}
       >
-        <div style={{ maxWidth: '820px', margin: '0 auto', padding: '0 1.25rem' }}>
-          {isPending && <PendingVerificationBanner profile={profile} />}
-          <OnboardingChecklist />
-        </div>
+        {location.pathname !== '/profile' && (
+          <div style={{ maxWidth: '820px', margin: '0 auto', padding: '0 1.25rem' }}>
+            {isPending && <PendingVerificationBanner profile={profile} />}
+            <OnboardingChecklist />
+          </div>
+        )}
         {children}
       </main>
 

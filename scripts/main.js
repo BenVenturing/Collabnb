@@ -414,27 +414,36 @@ function showWizardStep(step) {
       if (!clerk) { _showWizardDone(); return; }
       const mountEl = document.getElementById('wl-clerk-mount');
       if (!mountEl) return;
-      const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-      const appUrl_ = isLocalhost ? 'http://localhost:5174/#/explore?welcome=true' : '/app/#/explore?welcome=true';
-      clerk.mountSignUp(mountEl, { afterSignUpUrl: appUrl_ });
+      // Flag that sign-up started — used to catch OAuth redirect back to this page
+      try { sessionStorage.setItem('collabnb_signup_started', '1'); } catch {}
+      clerk.mountSignUp(mountEl, { afterSignUpUrl: '/app/' });
     }).catch(_showWizardDone);
   }
 }
 
-function _showWizardDone() {
+function _showWizardDone(userName) {
   const area = document.querySelector('#clerk-sign-up-area');
   const titleEl = document.getElementById('modal-title');
+  const subtitleEl = document.getElementById('modal-subtitle');
+  const roleSection = document.getElementById('modal-role-section');
+  const refSection = document.getElementById('referral-code-section');
   if (titleEl) titleEl.textContent = "You're on the list!";
+  if (subtitleEl) subtitleEl.style.display = 'none';
+  if (roleSection) roleSection.style.display = 'none';
+  if (refSection) refSection.style.display = 'none';
   if (!area) return;
-  const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-  const appUrl_ = isLocalhost ? 'http://localhost:5174/#/explore' : '/app/#/explore';
+  const greeting = userName ? `Thanks, ${userName.split(' ')[0]}!` : "You're signed in!";
   area.innerHTML = `
     <div style="text-align:center;padding:0.5rem 0 1rem;">
       <div style="width:64px;height:64px;border-radius:50%;background:var(--mint);display:flex;align-items:center;justify-content:center;margin:0 auto 1.25rem;">
         <svg viewBox="0 0 24 24" fill="none" stroke="var(--ink)" stroke-width="2" stroke-linecap="round" style="width:28px;height:28px;"><path d="M20 6L9 17l-5-5"/></svg>
       </div>
-      <p style="color:var(--sage);font-size:.875rem;line-height:1.6;margin-bottom:1.5rem;">We'll be in touch before July 1. Set up your profile to get the full experience.</p>
-      <a href="${appUrl_}" class="btn-primary" style="display:inline-block;text-decoration:none;padding:0.75rem 1.75rem;font-size:0.9375rem;">Enter Collabnb →</a>
+      <p style="font-family:var(--font-display);font-weight:700;font-size:1.1rem;color:var(--ink);margin:0 0 0.75rem;">${greeting}</p>
+      <div style="background:rgba(255,251,230,0.9);border:1px solid rgba(212,168,67,0.3);border-radius:0.875rem;padding:1rem 1.125rem;margin-bottom:1.375rem;text-align:left;">
+        <p style="font-family:var(--font-body);font-size:0.8125rem;font-weight:700;color:#92400E;margin:0 0 0.3rem;">⏳ Verification pending</p>
+        <p style="font-family:var(--font-body);font-size:0.78rem;color:#78350F;line-height:1.55;margin:0;">The Collabnb team will review your account before you can apply for a collaboration or publish a listing. You'll get an email once you're approved — usually within 1–2 business days.</p>
+      </div>
+      <a href="/app/" class="btn-primary" style="display:block;text-decoration:none;padding:0.875rem;font-size:0.9375rem;text-align:center;">Explore the platform →</a>
     </div>`;
 }
 
@@ -575,11 +584,9 @@ function openLoginModal() {
     // Reset mount area (clears loading state from above)
     mountEl.innerHTML = '';
     _clerkLoginMounted = false;
-    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    const appUrl_ = isLocalhost ? 'http://localhost:5174/#/explore' : '/app/#/explore';
     try {
       clerk.mountSignIn(mountEl, {
-        afterSignInUrl: appUrl_,
+        afterSignInUrl: '/app/',
         signUpUrl: '/join.html',
       });
       _clerkLoginMounted = true;
@@ -968,6 +975,22 @@ async function initNavAuth() {
 
       btn.parentNode.replaceChild(clone, btn);
     });
+
+    // Post-OAuth / post-signup detection on join.html
+    // Fires when Google OAuth sends the user back here instead of to /app/
+    const onJoinPage = window.location.pathname.endsWith('join.html') || window.location.pathname.endsWith('/join');
+    const signupStarted = (() => { try { return sessionStorage.getItem('collabnb_signup_started'); } catch { return null; } })();
+    if (onJoinPage && signupStarted) {
+      try { sessionStorage.removeItem('collabnb_signup_started'); } catch {}
+      // Open the modal with verification pending state
+      const overlay = document.querySelector('#modal-overlay');
+      if (overlay && !overlay.classList.contains('open')) {
+        overlay.classList.add('open');
+        overlay.setAttribute('aria-hidden', 'false');
+        document.body.style.overflow = 'hidden';
+        _showWizardDone(clerk.user.fullName || clerk.user.firstName);
+      }
+    }
   } catch (_) {
     // silently fail — nav stays as default
   }

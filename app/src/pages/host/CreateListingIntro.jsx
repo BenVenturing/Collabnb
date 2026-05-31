@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
-import { FileText, Sparkles, Package2, CheckCircle, X } from "lucide-react";
+import { FileText, Sparkles, Package2, CheckCircle, X, Lock } from "lucide-react";
+import { useAuth } from "../../contexts/AuthContext";
 
 const STEPS = [
   { icon: FileText, title: "1. The basics", desc: "Tell us about your listing and collaboration type" },
@@ -10,6 +11,8 @@ const STEPS = [
 
 export default function CreateListingIntro() {
   const navigate = useNavigate();
+  const { profile } = useAuth();
+  const isVerified = profile?.is_verified === true || profile?.is_founder === true;
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--bone)", display: "flex", flexDirection: "column" }}>
@@ -55,12 +58,28 @@ export default function CreateListingIntro() {
         </div>
       </div>
 
+      {!isVerified && (
+        <div style={{ padding: "0 24px 16px", maxWidth: 680, margin: "0 auto", width: "100%" }}>
+          <div style={{ background: "rgba(255,251,230,0.9)", border: "1.5px solid rgba(212,168,67,0.3)", borderRadius: "1rem", padding: "1rem 1.25rem", display: "flex", gap: 12, alignItems: "flex-start" }}>
+            <div style={{ width: 36, height: 36, borderRadius: "50%", background: "rgba(212,168,67,0.15)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <Lock size={16} color="#92400E" />
+            </div>
+            <div>
+              <p style={{ fontFamily: "Satoshi, sans-serif", fontWeight: 700, fontSize: 13, color: "#92400E", margin: "0 0 3px" }}>Verification required</p>
+              <p style={{ fontFamily: "Satoshi, sans-serif", fontSize: 12.5, color: "#78350F", margin: 0, lineHeight: 1.55 }}>
+                Your account is under review by the Collabnb team. Once approved you'll be able to publish a listing. This usually takes 1–2 business days.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div style={{ padding: "0 24px 40px", maxWidth: 680, margin: "0 auto", width: "100%" }}>
         <button
-          onClick={() => navigate("/host/listings/create/basics")}
-          style={{ width: "100%", padding: "16px 0", borderRadius: 9999, border: "none", background: "var(--ink)", fontFamily: "Satoshi, sans-serif", fontSize: 16, fontWeight: 700, color: "#fff", cursor: "pointer", letterSpacing: "-0.01em" }}
+          onClick={() => isVerified && navigate("/host/listings/create/basics")}
+          style={{ width: "100%", padding: "16px 0", borderRadius: 9999, border: "none", background: isVerified ? "var(--ink)" : "rgba(25,37,36,0.25)", fontFamily: "Satoshi, sans-serif", fontSize: 16, fontWeight: 700, color: "#fff", cursor: isVerified ? "pointer" : "not-allowed", letterSpacing: "-0.01em", transition: "background 200ms" }}
         >
-          Get started
+          {isVerified ? "Get started" : "Pending verification"}
         </button>
       </div>
     </div>

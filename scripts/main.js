@@ -36,11 +36,12 @@ function getClerkErrorMessage(err) {
 }
 
 /* --- Reveal on scroll (IntersectionObserver) --- */
+let revealObserver = null;
 if (window.innerWidth <= 768) {
   // On mobile: show everything immediately, no threshold-gating
   document.querySelectorAll('.reveal').forEach(el => el.classList.add('in'));
 } else {
-  const revealObserver = new IntersectionObserver((entries) => {
+  revealObserver = new IntersectionObserver((entries) => {
     entries.forEach((e) => {
       if (e.isIntersecting) {
         e.target.classList.add('in');
@@ -942,8 +943,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const closeBtn = document.querySelector('#modal-close');
   if (closeBtn) closeBtn.addEventListener('click', () => closeModal());  
 
-  // Re-init reveal observer after DOM is ready (catches any missed elements)
-  document.querySelectorAll('.reveal:not(.in)').forEach(el => revealObserver.observe(el));
+  // Re-init reveal observer after DOM is ready (catches any missed elements — desktop only)
+  if (revealObserver) {
+    document.querySelectorAll('.reveal:not(.in)').forEach(el => revealObserver.observe(el));
+  }
 
   // Close on overlay backdrop click
   const overlay = document.querySelector('#modal-overlay');

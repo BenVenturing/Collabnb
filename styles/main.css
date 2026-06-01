@@ -634,17 +634,25 @@ h3 { font-weight: 700; }
 @media (max-width: 640px) {
   .listing-stack {
     max-width: 100%;
-    height: auto;         /* let card height be natural */
+    height: auto;
     min-height: 360px;
     perspective: none;
     perspective-origin: unset;
   }
   .lcard-photo { height: 160px; }
 
-  /* All cards: opacity transition only */
+  /* Kill the slow photo zoom — no transform needed on mobile */
+  .lcard-photo img,
+  .lcard.pos-0 .lcard-photo img {
+    transform: none !important;
+    transition: none !important;
+  }
+
+  /* All cards: opacity transition only, no GPU transform layer */
   .lcard {
     transition: opacity 0.4s ease !important;
     transform: none !important;
+    will-change: opacity !important;
     box-shadow: 0 8px 24px rgba(25,37,36,0.12) !important;
   }
 
@@ -1526,17 +1534,17 @@ h3 { font-weight: 700; }
   filter: blur(0);
 }
 
-/* Mobile: opacity-only reveal — no translateY, no blur, no GPU pain */
+/* Mobile: no reveal animation at all — show content immediately */
 @media (max-width: 768px) {
-  .reveal {
-    filter: none;
-    transform: none;
-    transition: opacity 400ms ease;
-  }
+  .reveal,
   .reveal.in {
-    filter: none;
-    transform: none;
+    opacity: 1 !important;
+    filter: none !important;
+    transform: none !important;
+    transition: none !important;
   }
+  /* Cancel all stagger delays on mobile */
+  .stagger > .reveal { transition-delay: 0ms !important; }
 
   /* Reduce glass backdrop-filter blur on mobile */
   .glass {
@@ -1751,6 +1759,20 @@ h3 { font-weight: 700; }
 /* Final CTA: text centered */
 .final-cta h2, .final-cta .display {
   font-family: var(--font-display);
+}
+
+/* Mobile: kill expensive animations not already covered */
+@media (max-width: 768px) {
+  /* Scrolled nav — less blur */
+  .nav-pill.scrolled {
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+  /* About-page phone mockup glow — no filter animation on mobile */
+  .mockup-glow {
+    animation: none;
+    filter: none;
+  }
 }
 
 /* Bento grid gap on mobile */

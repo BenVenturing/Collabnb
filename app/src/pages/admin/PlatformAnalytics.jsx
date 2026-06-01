@@ -1,6 +1,14 @@
 import { useQuery } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 
+// ─── Date helpers ─────────────────────────────────────────────────────────────
+const SHORT_MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function fmtDate(ts) {
+  if (!ts) return '—';
+  const d = new Date(ts);
+  return `${SHORT_MONTHS[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+}
+
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const INK   = '#192524';
 const SLATE = '#3C5759';
@@ -114,6 +122,8 @@ function FounderBar({ label, count, max = 100 }) {
 // ─── Main export ──────────────────────────────────────────────────────────────
 export default function PlatformAnalytics() {
   const stats = useQuery(api.admin.getAnalytics);
+  const pitchStats = useQuery(api.admin.getPitchAnalytics);
+  const geo = useQuery(api.admin.getGeographicDistribution);
 
   return (
     <div style={{ padding: '2rem 2.5rem', maxWidth: 860 }}>
@@ -165,6 +175,57 @@ export default function PlatformAnalytics() {
             </StatGrid>
           </Section>
 
+          {/* ── Pitch Volume ── */}
+          {pitchStats && (
+            <Section title="Pitch Volume">
+              <StatGrid>
+                <Stat label="Total Pitches (This Month)" value={pitchStats.totalThisMonth} accent="#0369A1" />
+                <Stat label="Active Creators (Pitched)"  value={pitchStats.activeCreators} />
+                <Stat label="Avg per Creator"            value={pitchStats.activeCreators > 0 ? (pitchStats.totalThisMonth / pitchStats.activeCreators).toFixed(1) : '—'} />
+                <Stat label="At Limit (10/10)"           value={pitchStats.atLimit.length} accent={pitchStats.atLimit.length > 0 ? '#991B1B' : undefined} />
+                <Stat label="Near Limit (7+)"            value={pitchStats.nearLimit.length} accent={pitchStats.nearLimit.length > 0 ? '#92400E' : undefined} />
+              </StatGrid>
+
+              {/* Monthly pitch trend */}
+              <div style={{ ...CARD, marginTop: '0.75rem' }}>
+                <div style={{ fontSize: '0.78rem', fontWeight: 600, color: SLATE, marginBottom: '1rem' }}>Monthly Pitch Volume — Last 6 Months</div>
+                <div style={{ overflowX: 'auto', paddingBottom: '0.25rem' }}>
+                  <BarChart data={pitchStats.monthlyTrend} color="#C7D9DC" />
+                </div>
+              </div>
+
+              {/* Creators at limit */}
+              {pitchStats.atLimit.length > 0 && (
+                <div style={{ ...CARD, marginTop: '0.75rem', padding: '1rem 1.25rem' }}>
+                  <div style={{ fontSize: '0.78rem', fontWeight: 600, color: '#991B1B', marginBottom: '0.625rem' }}>⚠️ Creators at Pitch Limit (10/10)</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
+                    {pitchStats.atLimit.map((c, i) => (
+                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.78rem', padding: '0.25rem 0.5rem', background: '#FEF2F2', borderRadius: '0.375rem' }}>
+                        <span style={{ color: INK, fontWeight: 500 }}>{c.name}</span>
+                        <span style={{ color: '#991B1B', fontWeight: 700 }}>{c.count} / 10</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Top pitchers */}
+              {pitchStats.topPitchers.length > 0 && (
+                <div style={{ ...CARD, marginTop: '0.75rem' }}>
+                  <div style={{ fontSize: '0.78rem', fontWeight: 600, color: SLATE, marginBottom: '0.75rem' }}>Top Pitchers This Month</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                    {pitchStats.topPitchers.slice(0, 5).map((c, i) => (
+                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.78rem', padding: '0.25rem 0', borderBottom: i < 4 ? '1px solid rgba(25,37,36,0.04)' : 'none' }}>
+                        <span style={{ color: INK }}>#{i + 1} {c.name}</span>
+                        <span style={{ color: SLATE, fontWeight: 600 }}>{c.count} pitches</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </Section>
+          )}
+
           {/* ── Revenue (placeholder) ── */}
           <Section title="Revenue">
             <div style={{ ...CARD, display: 'flex', alignItems: 'flex-start', gap: '0.875rem' }}>
@@ -194,6 +255,44 @@ export default function PlatformAnalytics() {
               </div>
             </div>
           </Section>
+
+          {/* ── Geographic Distribution ── */}
+          {geo && (
+            <Section title="Geographic Distribution">
+              <StatGrid>
+                <Stat label="Total Countries" value={geo.totalCountries} />
+                <Stat label="Total Cities"    value={geo.totalCities} />
+              </StatGrid>
+              {geo.topCountries.length > 0 && (
+                <div style={{ ...CARD, marginTop: '0.75rem' }}>
+                  <div style={{ fontSize: '0.78rem', fontWeight: 600, color: SLATE, marginBottom: '0.75rem' }}>Top Countries</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                    {geo.topCountries.map((c, i) => (
+                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.78rem', padding: '0.25rem 0', borderBottom: i < geo.topCountries.length - 1 ? '1px solid rgba(25,37,36,0.04)' : 'none' }}>
+                        <span style={{ flex: 1, color: INK }}>{c.country}</span>
+                        <span style={{ color: '#0369A1', fontWeight: 600 }}>{c.creators} creators</span>
+                        <span style={{ color: '#92400E', fontWeight: 600 }}>{c.hosts} hosts</span>
+                        <span style={{ color: SLATE, fontWeight: 600, minWidth: 30, textAlign: 'right' }}>{c.count}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {geo.topCities.length > 0 && (
+                <div style={{ ...CARD, marginTop: '0.75rem' }}>
+                  <div style={{ fontSize: '0.78rem', fontWeight: 600, color: SLATE, marginBottom: '0.75rem' }}>Top Cities</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                    {geo.topCities.slice(0, 10).map((c, i) => (
+                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.78rem', padding: '0.25rem 0', borderBottom: i < Math.min(geo.topCities.length, 10) - 1 ? '1px solid rgba(25,37,36,0.04)' : 'none' }}>
+                        <span style={{ color: INK }}>{c.city}</span>
+                        <span style={{ color: SLATE, fontWeight: 600 }}>{c.count}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </Section>
+          )}
         </>
       )}
     </div>

@@ -179,3 +179,162 @@ export const getEmailList = query({
       .map((p) => ({ email: p.email as string, full_name: p.full_name, role: p.role }));
   },
 });
+
+// ─── Pitch & Engagement Analytics ─────────────────────────────────────────────
+export const getPitchAnalytics = query({
+  args: {},
+  handler: async (ctx) => {
+    const [pitchCounts, profiles] = await Promise.all([
+      ctx.db.query("pitch_counts").collect(),
+      ctx.db.query("profiles").collect(),
+    ]);
+
+    const thisMonth = new Date().toISOString().slice(0, 7);
+    const thisMonthPitches = pitchCounts.filter((pc) => pc.month_key === thisMonth);
+    const totalThisMonth = thisMonthPitches.reduce((s, pc) => s + pc.count, 0);
+    const activeCreators = thisMonthPitches.length;
+
+    // Creators at or near limit
+    const atLimit = thisMonthPitches.filter((pc) => pc.count >= 10);
+    const nearLimit = thisMonthPitches.filter((pc) => pc.count >= 7 && pc.count < 10);
+
+    const creatorLookup = Object.fromEntries(profiles.map((p) => [String(p._id), p]));
+
+    // Monthly pitch trend — last 6 months
+    const monthlyTrend = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(1);
+      d.setMonth(d.getMonth() - i);
+      const mk = d.toISOString().slice(0, 7);
+      const count = pitchCounts.filter((pc) => pc.month_key === mk).reduce((s, pc) => s + pc.count, 0);
+      monthlyTrend.push({
+        label: d.toLocaleDateString("en-US", { month: "short" }),
+        value: count,
+      });
+    }
+
+    // Top 10 creators by pitch volume this month
+    const topPitchers = thisMonthPitches
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10)
+      .map((pc) => {
+        const p = creatorLookup[pc.user_id];
+        return {
+          userId: pc.user_id,
+          name: p?.full_name || p?.username || pc.user_id.slice(0, 8),
+          count: pc.count,
+        };
+      });
+
+    return {
+      totalThisMonth,
+      activeCreators,
+      atLimit: atLimit.map((pc) => ({
+        userId: pc.user_id,
+        name: creatorLookup[pc.user_id]?.full_name || pc.user_id.slice(0, 8),
+        count: pc.count,
+      })),
+      nearLimit: nearLimit.map((pc) => ({
+        userId: pc.user_id,
+        name: creatorLookup[pc.user_id]?.full_name || pc.user_id.slice(0, 8),
+        count: pc.count,
+      })),
+      monthlyTrend,
+      topPitchers,
+    };
+  },
+});
+
+// ─── Geographic Distribution ──────────────────────────────────────────────────
+export const getGeographicDistribution = query({
+  args: {},
+  handler: async (ctx) => {
+    const profiles = await ctx.db.query("profiles").collect();
+
+    const countries: Record<string, number> = {};
+    const cities: Record<string, { count: number; country: string }> = {};
+    const countryRoles: Record<string, { creators: number; hosts: number }> = {};
+
+    profiles.forEach((p) => {
+      if (p.country) {
+        countries[p.country] = (countries[p.country] || 0) + 1;
+        if (!countryRoles[p.country]) countryRoles[p.country] = { creators: 0, hosts: 0 };
+        if (p.role === "creator") countryRoles[p.country].creators++;
+        else if (p.role === "host") countryRoles[p.country].hosts++;
+      }
+      if (p.city) {
+        const key = p.country ? `${p.city}, ${p.country}` : p.city;
+        if (!cities[key]) cities[key] = { count: 0, country: p.country || "Unknown" };
+        cities[key].count++;
+      }
+    });
+
+    return {
+      totalCountries: Object.keys(countries).length,
+      totalCities: Object.keys(cities).length,
+      topCountries: Object.entries(countries)
+        .sort(([, a], [, b]) => b - a)
+        .slice(0, 10)
+        .map(([country, count]) => ({
+          country,
+          count,
+          creators: countryRoles[country]?.creators || 0,
+          hosts: countryRoles[country]?.hosts || 0,
+        })),
+      topCities: Object.entries(cities)
+        .sort(([, a], [, b]) => b.count - a.count)
+        .slice(0, 10)
+        .map(([city, data]) => ({ city, count: data.count })),
+    };
+  },
+});
+
+// ─── Admin Listings ───────────────────────────────────────────────────────────
+export const getAdminListings = query({
+  args: {},
+  handler: async (ctx) => {
+    const [listings, collabs] = await Promise.all([
+      ctx.db.query("listings").collect(),
+      ctx.db.query("collaborations").collect(),
+    ]);
+
+    const collabCounts: Record<string, number> = {};
+    collabs.forEach((c) => {
+      if (c.listing_id) collabCounts[c.listing_id] = (collabCounts[c.listing_id] || 0) + 1;
+    });
+
+    return listings
+      .map((l) => ({
+        _id: l._id,
+        _creationTime: l._creationTime,
+        title: l.title,
+        subtitle: l.subtitle,
+        location: l.location,
+        location_city: l.location_city,
+        location_country: l.location_country,
+        property_type: l.property_type,
+        host_name: l.host_name,
+        host_id: l.host_id,
+        is_featured: l.is_featured ?? false,
+        status: l.status || "draft",
+        compensation_type: l.compensation_type,
+        cash_amount: l.cash_amount,
+        collab_type: l.collab_type,
+        creator_tier: l.creator_tier,
+        collaboratorCount: collabCounts[l._id as string] || 0,
+        image: l.image,
+        rating: l.rating,
+        review_count: l.review_count,
+      }))
+      .sort((a, b) => (b._creationTime ?? 0) - (a._creationTime ?? 0));
+  },
+});
+
+// ─── Toggle listing featured status ───────────────────────────────────────────
+export const toggleFeatured = mutation({
+  args: { listingId: v.id("listings"), featured: v.boolean() },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.listingId, { is_featured: args.featured });
+  },
+});

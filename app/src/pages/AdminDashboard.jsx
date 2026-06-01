@@ -11,6 +11,7 @@ import AdminSettings from './admin/AdminSettings';
 import FounderTracker from './admin/FounderTracker';
 import Broadcast from './admin/Broadcast';
 import WaitlistManager from './admin/WaitlistManager';
+import ListingManager from './admin/ListingManager';
 
 const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL;
 
@@ -36,6 +37,7 @@ function useAdminGuard() {
 // ─── Sidebar nav items ────────────────────────────────────────────────────────
 const SECTIONS = [
   { id: 'verification', icon: '📋', label: 'Verification Queue'     },
+  { id: 'listings',     icon: '🏠', label: 'Listing Management'     },
   { id: 'founders',     icon: '🌟', label: 'Founder Tracker'        },
   { id: 'waitlist',     icon: '📝', label: 'Waitlist Manager'       },
   { id: 'broadcast',    icon: '📣', label: 'Broadcast'              },
@@ -46,6 +48,7 @@ const SECTIONS = [
 ];
 
 function VerificationPanel() { return <VerificationQueue />;    }
+function ListingsPanel()     { return <ListingManager />;       }
 function FoundersPanel()     { return <FounderTracker />;       }
 function MessagesPanel()     { return <UserMessages />;         }
 function SuggestionsPanel()  { return <SuggestionsModeration />; }
@@ -56,6 +59,7 @@ function BroadcastPanel()    { return <Broadcast />;            }
 
 const PANEL_MAP = {
   verification: VerificationPanel,
+  listings:     ListingsPanel,
   founders:     FoundersPanel,
   waitlist:     WaitlistPanel,
   broadcast:    BroadcastPanel,

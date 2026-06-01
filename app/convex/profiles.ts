@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { query, mutation } from "./_generated/server";
+import { query, mutation, internalMutation } from "./_generated/server";
 import { internal } from "./_generated/api";
 
 export const countAll = query({
@@ -196,6 +196,46 @@ export const updateSubscription = mutation({
     if (args.subscriptionExpiresAt !== undefined) patch.subscription_expires_at = args.subscriptionExpiresAt;
     if (args.stripeCustomerId !== undefined) patch.stripe_customer_id = args.stripeCustomerId;
     await ctx.db.patch(args.profileId as any, patch);
+  },
+});
+
+// Used by the Stripe webhook to update subscription state via customer ID
+export const updateSubscriptionByCustomerId = internalMutation({
+  args: {
+    stripeCustomerId: v.string(),
+    subscriptionStatus: v.string(),
+    subscriptionExpiresAt: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const profile = await ctx.db
+      .query("profiles")
+      .withIndex("by_stripe_customer", (q) => q.eq("stripe_customer_id", args.stripeCustomerId))
+      .unique();
+    if (!profile) return;
+    const patch: Record<string, any> = { subscription_status: args.subscriptionStatus };
+    if (args.subscriptionExpiresAt !== undefined) patch.subscription_expires_at = args.subscriptionExpiresAt;
+    await ctx.db.patch(profile._id, patch);
+  },
+});
+
+// Used by the monthly cron to consume one free month for creators past their first collab
+export const decrementFreeMonth = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const profiles = await ctx.db
+      .query("profiles")
+      .filter((q) =>
+        q.and(
+          q.eq(q.field("first_collab_completed"), true),
+          q.gt(q.field("free_months_balance"), 0),
+          q.neq(q.field("subscription_status"), "active")
+        )
+      )
+      .collect();
+    for (const p of profiles) {
+      const newBalance = (p.free_months_balance ?? 1) - 1;
+      await ctx.db.patch(p._id, { free_months_balance: newBalance });
+    }
   },
 });
 

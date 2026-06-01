@@ -154,6 +154,8 @@ if (hamburger) {
 /* --- Counter animation --- */
 function runCount(el, target, duration = 2000) {
   if (!el) return;
+  // On mobile: just show the final number, no animation
+  if (window.innerWidth <= 768) { el.textContent = target; return; }
   const start = performance.now();
   const step = (now) => {
     const t = Math.min(1, (now - start) / duration);
@@ -909,11 +911,13 @@ function initListingStack() {
   }
 
   startTyping(0);
-  setInterval(rotate, 4200);
+  // On mobile: keep the card static — no rotation interval
+  if (!isMobileStack) setInterval(rotate, 4200);
 }
 
 /* --- Mockup Carousel (About Page) --- */
 function initMockupCarousel() {
+  if (window.innerWidth <= 768) return; // static on mobile
   const carousel = document.getElementById('mockup-carousel');
   if (!carousel) return;
   

@@ -2358,3 +2358,59 @@ h3 { font-weight: 700; }
   stroke-linejoin: round;
   fill: none;
 }
+
+/* ══════════════════════════════════════════════════════════════
+   MOBILE ZERO-MOTION — everything static, no GPU pressure at all
+   Applies to all pages at ≤768px.
+   ══════════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+
+  /* 1. Kill every animation and transition site-wide */
+  *, *::before, *::after {
+    animation: none !important;
+    transition: none !important;
+    transition-delay: 0ms !important;
+  }
+
+  /* 2. Remove backdrop-filter (the #1 GPU killer on mobile) — use opaque fallback */
+  .glass,
+  .glass-sm,
+  .nav-pill,
+  .nav-pill.scrolled,
+  .nav-overlay,
+  .lcard,
+  .bokeh-card,
+  .bokeh-sphere,
+  .proof-card,
+  .step-card,
+  .hero-card,
+  .modal-card,
+  .legal-modal-card,
+  #modal-overlay,
+  #login-modal-overlay,
+  .legal-modal-overlay {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  /* Solid fallbacks so cards still look clean */
+  .glass                { background: rgba(255,255,255,0.92) !important; }
+  .glass-sm             { background: rgba(255,255,255,0.88) !important; }
+  .nav-pill             { background: rgba(255,255,255,0.92) !important; }
+  .nav-overlay          { background: rgba(239,236,233,0.98) !important; }
+  .lcard                { background: rgba(255,255,255,0.92) !important; }
+  #modal-overlay,
+  #login-modal-overlay,
+  .legal-modal-overlay  { background: rgba(25,37,36,0.55) !important; }
+  .modal-card,
+  .legal-modal-card     { background: rgba(255,255,255,0.98) !important; }
+
+  /* 3. Remove expensive background filters */
+  .bg-clouds { filter: none !important; }
+  .bg-grain  { display: none !important; }
+
+  /* 4. Listing stack — hide back cards entirely, no rotation */
+  .lcard.pos-1,
+  .lcard.pos-2,
+  .lcard.is-flipping { display: none !important; }
+}

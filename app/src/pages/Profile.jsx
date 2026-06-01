@@ -505,6 +505,7 @@ export default function Profile() {
   const navigate = useNavigate();
   const location = useLocation();
   const verifySubscriptionSession = useAction(api.stripe.verifySubscriptionSession);
+  const verifyLifetimeSession      = useAction(api.stripe.verifyLifetimeSession);
   const createBillingPortalSession = useAction(api.stripe.createBillingPortalSession);
   const { openModal: openSubModal } = useSubscription();
   const userId = profile?._id || profile?.id || 'mock-user-001';
@@ -583,6 +584,17 @@ export default function Profile() {
     } else if (subscribePlan === 'monthly' || subscribePlan === 'yearly') {
       navigate('/profile', { replace: true });
       openSubModal();
+    }
+    // Lifetime purchase redirect
+    const lifetimeStatus = params.get('lifetime');
+    const lifetimeSessionId = params.get('session_id');
+    if (lifetimeStatus === 'success' && lifetimeSessionId) {
+      navigate('/profile', { replace: true });
+      verifyLifetimeSession({ sessionId: lifetimeSessionId })
+        .then(() => setToastMsg('Lifetime access activated! Welcome to Collabnb — forever.'))
+        .catch(() => setToastMsg('Could not verify payment — contact support@collabnb.com'));
+    } else if (lifetimeStatus === 'cancelled') {
+      navigate('/profile', { replace: true });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

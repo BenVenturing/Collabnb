@@ -26,8 +26,10 @@ const STATUS_FILTERS = ['all', 'published', 'draft'];
 export default function ListingManager() {
   const listings = useQuery(api.admin.getAdminListings);
   const toggleFeatured = useMutation(api.admin.toggleFeatured);
+  const deleteListing = useMutation(api.listings.deleteListing);
   const [propFilter, setPropFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [deleting, setDeleting] = useState(null);
   const [search, setSearch] = useState('');
   const [toggling, setToggling] = useState(null);
 
@@ -49,6 +51,13 @@ export default function ListingManager() {
     setToggling(listingId);
     await toggleFeatured({ listingId, featured: !current });
     setToggling(null);
+  }
+
+  async function handleDelete(listingId, title) {
+    if (!window.confirm(`Delete "${title}"? This cannot be undone.`)) return;
+    setDeleting(listingId);
+    await deleteListing({ id: listingId });
+    setDeleting(null);
   }
 
   const publishedCount = (listings ?? []).filter((l) => l.status === 'published').length;
@@ -217,20 +226,35 @@ export default function ListingManager() {
 
                   {/* Actions */}
                   <td style={{ padding: '0.75rem' }}>
-                    <button
-                      onClick={() => handleToggleFeatured(l._id, l.is_featured)}
-                      disabled={toggling === l._id}
-                      style={{
-                        fontSize: '0.72rem', padding: '0.25rem 0.6rem', borderRadius: '0.35rem',
-                        background: l.is_featured ? '#FEF2F2' : '#F7F5F2',
-                        color: l.is_featured ? '#991B1B' : SLATE,
-                        border: '1px solid rgba(25,37,36,0.1)',
-                        cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap',
-                        opacity: toggling === l._id ? 0.5 : 1,
-                      }}
-                    >
-                      {l.is_featured ? 'Unfeature' : 'Feature'}
-                    </button>
+                    <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                      <button
+                        onClick={() => handleToggleFeatured(l._id, l.is_featured)}
+                        disabled={toggling === l._id}
+                        style={{
+                          fontSize: '0.72rem', padding: '0.25rem 0.6rem', borderRadius: '0.35rem',
+                          background: l.is_featured ? '#FEF2F2' : '#F7F5F2',
+                          color: l.is_featured ? '#991B1B' : SLATE,
+                          border: '1px solid rgba(25,37,36,0.1)',
+                          cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap',
+                          opacity: toggling === l._id ? 0.5 : 1,
+                        }}
+                      >
+                        {l.is_featured ? 'Unfeature' : 'Feature'}
+                      </button>
+                      <button
+                        onClick={() => handleDelete(l._id, l.title)}
+                        disabled={deleting === l._id}
+                        style={{
+                          fontSize: '0.72rem', padding: '0.25rem 0.6rem', borderRadius: '0.35rem',
+                          background: '#FEF2F2', color: '#991B1B',
+                          border: '1px solid rgba(153,27,27,0.15)',
+                          cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap',
+                          opacity: deleting === l._id ? 0.5 : 1,
+                        }}
+                      >
+                        {deleting === l._id ? '…' : 'Delete'}
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}

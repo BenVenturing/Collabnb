@@ -503,6 +503,63 @@ async function handleStep1Submit(e) {
   }
 }
 
+function showReferralCodeReveal() {
+  const area = document.querySelector('#clerk-sign-up-area');
+  if (!area) { showWizardStep(2); return; }
+  const titleEl  = document.getElementById('modal-title');
+  const subtitleEl = document.getElementById('modal-subtitle');
+  if (titleEl)    titleEl.textContent = "You're on the list! 🎉";
+  if (subtitleEl) subtitleEl.style.display = 'none';
+
+  const firstName = _wizardName.split(' ')[0] || 'friend';
+  const prefix = _wizardName.replace(/[^a-z]/gi, '').toUpperCase().slice(0, 4) || 'USER';
+
+  function genCode() {
+    const rand = Math.random().toString(36).toUpperCase().replace(/[^A-Z0-9]/g, '').padEnd(6, '0').slice(0, 6);
+    return `${prefix}-${rand}`;
+  }
+
+  let code = localStorage.getItem('collabnb_referral_preview') || genCode();
+  localStorage.setItem('collabnb_referral_preview', code);
+
+  function render(c) {
+    area.innerHTML = `
+      <div style="text-align:center;padding:0.25rem 0;">
+        <p style="font-size:0.875rem;color:var(--slate);line-height:1.6;margin-bottom:1.375rem;">
+          Hey <strong>${firstName}</strong>! Here's your personal referral code to share with friends.<br>
+          <span style="color:var(--sage);font-size:0.8125rem;">You both get a free month when they join. 🙌</span>
+        </p>
+        <div style="display:flex;align-items:center;justify-content:center;gap:0.75rem;background:rgba(255,255,255,0.65);border:1.5px solid rgba(208,213,206,0.9);border-radius:1rem;padding:0.875rem 1.25rem;margin-bottom:0.5rem;">
+          <span id="rev-code" style="font-family:monospace;font-size:1.25rem;font-weight:800;color:var(--ink);letter-spacing:0.12em;">${c}</span>
+          <button id="rev-copy" style="background:var(--ink);color:#fff;border:none;border-radius:7px;padding:0.3rem 0.75rem;font-size:0.75rem;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0;">Copy</button>
+        </div>
+        <button id="rev-regen" style="background:none;border:none;color:var(--sage);font-size:0.78rem;cursor:pointer;padding:0.2rem 0;font-family:inherit;text-decoration:underline;text-underline-offset:2px;">↺ Regenerate</button>
+        <div style="margin-top:1.75rem;">
+          <button id="rev-continue" class="btn-primary" style="width:100%;cursor:pointer;">Continue setting up →</button>
+        </div>
+      </div>`;
+
+    let copied = false;
+    document.getElementById('rev-copy')?.addEventListener('click', (ev) => {
+      if (copied) return;
+      navigator.clipboard.writeText(c).catch(() => {});
+      copied = true;
+      ev.currentTarget.textContent = '✓ Copied!';
+      setTimeout(() => { copied = false; if (ev.currentTarget) ev.currentTarget.textContent = 'Copy'; }, 2500);
+    });
+
+    document.getElementById('rev-regen')?.addEventListener('click', () => {
+      const newCode = genCode();
+      localStorage.setItem('collabnb_referral_preview', newCode);
+      render(newCode);
+    });
+
+    document.getElementById('rev-continue')?.addEventListener('click', () => showWizardStep(2));
+  }
+
+  render(code);
+}
+
 async function handleStep2Submit(e) {
   e.preventDefault();
   const errorEl = document.getElementById('wl-error2');

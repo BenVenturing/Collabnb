@@ -325,3 +325,66 @@ export const updateProfile = mutation({
     await ctx.db.patch(profileId as any, cleanUpdates);
   },
 });
+
+// ─── Delete profile and all related records ─────────────────────────────────
+export const deleteProfile = mutation({
+  args: { profileId: v.id("profiles") },
+  handler: async (ctx, args) => {
+    const profile = await ctx.db.get(args.profileId);
+    if (!profile) return { deleted: false, reason: "Profile not found" };
+
+    const pId = String(args.profileId);
+    const email = profile.email;
+
+    // Delete pitch counts
+    const pitchCounts = await ctx.db.query("pitch_counts").withIndex("by_user", (q) => q.eq("user_id", pId)).collect();
+    await Promise.all(pitchCounts.map((c) => ctx.db.delete(c._id)));
+
+    // Delete collaborations
+    const collabs = await ctx.db.query("collaborations").filter((q) => q.eq(q.field("creator_id"), pId)).collect();
+    await Promise.all(collabs.map((c) => ctx.db.delete(c._id)));
+
+    // Delete collections
+    const collections = await ctx.db.query("collections").filter((q) => q.eq(q.field("creator_id"), pId)).collect();
+    await Promise.all(collections.map((c) => ctx.db.delete(c._id)));
+
+    // Delete referral codes owned by this user
+    const refCodes = await ctx.db.query("referral_codes").filter((q) => q.eq(q.field("owner_id"), pId)).collect();
+    const codeIds = refCodes.map((rc) => rc.code);
+    await Promise.all(refCodes.map((rc) => ctx.db.delete(rc._id)));
+
+    // Delete referral uses where this user was the referrer or the used_by
+    const refUses = await ctx.db.query("referral_uses").filter((q) =>
+      q.or(q.eq(q.field("referrer_id"), pId), q.eq(q.field("used_by_id"), pId))
+    ).collect();
+    await Promise.all(refUses.map((ru) => ctx.db.delete(ru._id)));
+
+    // Delete suggestion votes by this user
+    const votes = await ctx.db.query("suggestion_votes").filter((q) => q.eq(q.field("user_id"), pId)).collect();
+    await Promise.all(votes.map((v) => ctx.db.delete(v._id)));
+
+    // If the user submitted suggestions, orphan them (set submitted_by to null)
+    const suggestions = await ctx.db.query("suggestions").filter((q) => q.eq(q.field("submitted_by"), pId)).collect();
+    await Promise.all(suggestions.map((s) => ctx.db.patch(s._id, { submitted_by: undefined })));
+
+    // Delete listings owned by this user (if host)
+    const listings = await ctx.db.query("listings").withIndex("by_host", (q) => q.eq("host_id", pId)).collect();
+    await Promise.all(listings.map((l) => ctx.db.delete(l._id)));
+
+    // Anonymize messages from this user
+    if (email) {
+      const messages = await ctx.db.query("messages").collect();
+      const userMessages = messages.filter((m) => m.email === email);
+      await Promise.all(
+        userMessages.map((m) =>
+          ctx.db.patch(m._id, { name: "[deleted]", email: "[deleted]", message: "[deleted by admin]" })
+        )
+      );
+    }
+
+    // Finally delete the profile itself
+    await ctx.db.delete(args.profileId);
+
+    return { deleted: true };
+  },
+});

@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useQuery } from 'convex/react';
+import { useState, useCallback } from 'react';
+import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
@@ -77,7 +77,25 @@ const TABS = [
 // ═══════════════════════════════════════════════════════════════════════════════
 export default function UserDetailPanel({ profileId, onClose }) {
   const [activeTab, setActiveTab] = useState('overview');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const data = useQuery(api.profiles.getDetailedProfile, profileId ? { profileId } : 'skip');
+  const deleteProfile = useMutation(api.profiles.deleteProfile);
+
+  const handleDelete = useCallback(async () => {
+    if (!profileId) return;
+    setDeleting(true);
+    try {
+      await deleteProfile({ profileId });
+      setDeleting(false);
+      onClose();
+    } catch (err) {
+      setDeleting(false);
+      setShowDeleteConfirm(false);
+      alert('Failed to delete user. Check console for details.');
+      console.error('Delete failed:', err);
+    }
+  }, [profileId, deleteProfile, onClose]);
 
   // ── Close on Escape ─────────────────────────────────────────────────────────
   // (handled by the overlay click below)
@@ -189,7 +207,67 @@ export default function UserDetailPanel({ profileId, onClose }) {
               Profile not found.
             </div>
           ) : (
-            <TabContent tab={activeTab} data={data} />
+            <>
+              <TabContent tab={activeTab} data={data} />
+              {/* ── Danger Zone ── */}
+              <div style={{
+                marginTop: '2rem',
+                padding: '1rem 1.25rem',
+                background: '#FEF2F2',
+                border: '1px solid rgba(239,68,68,0.2)',
+                borderRadius: '0.75rem',
+              }}>
+                <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#991B1B', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.5rem' }}>
+                  ⚠️ Danger Zone
+                </div>
+                <p style={{ fontSize: '0.78rem', color: '#7F1D1D', margin: '0 0 0.75rem', lineHeight: 1.5 }}>
+                  Permanently delete this user and all associated data (collabs, pitches, messages, referral codes).
+                  This cannot be undone. You should also delete them from Clerk separately.
+                </p>
+                {!showDeleteConfirm ? (
+                  <button
+                    onClick={() => setShowDeleteConfirm(true)}
+                    style={{
+                      padding: '0.45rem 1rem', borderRadius: '0.5rem',
+                      background: '#FEE2E2', color: '#991B1B', fontSize: '0.82rem',
+                      fontWeight: 600, border: '1px solid rgba(153,27,27,0.2)',
+                      cursor: 'pointer', fontFamily: 'inherit',
+                    }}
+                  >
+                    Delete this user
+                  </button>
+                ) : (
+                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                    <span style={{ fontSize: '0.78rem', color: '#991B1B', fontWeight: 600 }}>Are you sure?</span>
+                    <button
+                      onClick={handleDelete}
+                      disabled={deleting}
+                      style={{
+                        padding: '0.45rem 1rem', borderRadius: '0.5rem',
+                        background: '#DC2626', color: '#fff', fontSize: '0.82rem',
+                        fontWeight: 600, border: 'none',
+                        cursor: deleting ? 'not-allowed' : 'pointer', fontFamily: 'inherit',
+                        opacity: deleting ? 0.6 : 1,
+                      }}
+                    >
+                      {deleting ? 'Deleting…' : 'Yes, delete permanently'}
+                    </button>
+                    <button
+                      onClick={() => setShowDeleteConfirm(false)}
+                      disabled={deleting}
+                      style={{
+                        padding: '0.45rem 0.75rem', borderRadius: '0.5rem',
+                        background: 'transparent', color: '#959D90', fontSize: '0.82rem',
+                        border: '1px solid rgba(25,37,36,0.1)',
+                        cursor: deleting ? 'not-allowed' : 'pointer', fontFamily: 'inherit',
+                      }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                )}
+              </div>
+            </>
           )}
         </div>
       </div>

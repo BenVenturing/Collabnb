@@ -454,10 +454,12 @@ function showWizardStep(step) {
       if (!clerk) { _showWizardDone(); return; }
       const mountEl = document.getElementById('wl-clerk-mount');
       if (!mountEl) return;
-      // Flag that sign-up started — used to catch OAuth redirect back to this page
-      try { localStorage.setItem('collabnb_signup_started', '1'); } catch {}
+      // Store the name for the celebration screen when OAuth redirects back
+      try { sessionStorage.setItem('collabnb_signup_name', _wizardName || ''); } catch {}
       try { localStorage.setItem('collabnb_new_signup', '1'); } catch {}
-      clerk.mountSignUp(mountEl, { afterSignUpUrl: '/app/', afterSignInUrl: '/app/' });
+      const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+      const returnUrl = isLocalhost ? 'http://localhost:5173/join.html?celebrate=1' : '/join.html?celebrate=1';
+      clerk.mountSignUp(mountEl, { afterSignUpUrl: returnUrl, afterSignInUrl: returnUrl });
     }).catch(_showWizardDone);
   }
 }
@@ -468,24 +470,79 @@ function _showWizardDone(userName) {
   const subtitleEl = document.getElementById('modal-subtitle');
   const roleSection = document.getElementById('modal-role-section');
   const refSection = document.getElementById('referral-code-section');
-  if (titleEl) titleEl.textContent = "You're on the list!";
+  if (titleEl) titleEl.textContent = '';
   if (subtitleEl) subtitleEl.style.display = 'none';
   if (roleSection) roleSection.style.display = 'none';
   if (refSection) refSection.style.display = 'none';
   if (!area) return;
-  const greeting = userName ? `Thanks, ${userName.split(' ')[0]}!` : "You're signed in!";
+
+  const firstName = (userName || '').split(' ')[0] || 'friend';
+  const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  const appUrl_ = isLocalhost ? 'http://localhost:5174/#/profile' : '/app/#/profile';
+
+  const COLLABNB_QUOTE = 'Where creators and boutique stays collab.';
+
   area.innerHTML = `
     <div style="text-align:center;padding:0.5rem 0 1rem;">
-      <div style="width:64px;height:64px;border-radius:50%;background:var(--mint);display:flex;align-items:center;justify-content:center;margin:0 auto 1.25rem;">
+      <!-- Checkmark circle -->
+      <div style="width:64px;height:64px;border-radius:50%;background:var(--mint);display:flex;align-items:center;justify-content:center;margin:0 auto 0.5rem;">
         <svg viewBox="0 0 24 24" fill="none" stroke="var(--ink)" stroke-width="2" stroke-linecap="round" style="width:28px;height:28px;"><path d="M20 6L9 17l-5-5"/></svg>
       </div>
-      <p style="font-family:var(--font-display);font-weight:700;font-size:1.1rem;color:var(--ink);margin:0 0 0.75rem;">${greeting}</p>
-      <div style="background:rgba(255,251,230,0.9);border:1px solid rgba(212,168,67,0.3);border-radius:0.875rem;padding:1rem 1.125rem;margin-bottom:1.375rem;text-align:left;">
-        <p style="font-family:var(--font-body);font-size:0.8125rem;font-weight:700;color:#92400E;margin:0 0 0.3rem;">⏳ Verification pending</p>
-        <p style="font-family:var(--font-body);font-size:0.78rem;color:#78350F;line-height:1.55;margin:0;">The Collabnb team will review your account before you can apply for a collaboration or publish a listing. You'll get an email once you're approved — usually within 1–2 business days.</p>
+
+      <!-- Typewriter quote -->
+      <p id="cw-quote" style="font-family:var(--font-display);font-weight:700;font-size:1.05rem;color:var(--ink);margin:1rem auto 0.75rem;min-height:1.5em;">&nbsp;</p>
+
+      <!-- Subtitle -->
+      <p id="cw-subtitle" style="color:var(--sage);font-size:0.8125rem;line-height:1.55;margin:0 0 1.25rem;display:none;">We're building out the rest of your profile.</p>
+
+      <!-- Verification pending banner -->
+      <div id="cw-verify" style="display:none;background:rgba(255,251,230,0.9);border:1px solid rgba(212,168,67,0.3);border-radius:0.875rem;padding:0.875rem 1rem;margin-bottom:1.375rem;text-align:left;">
+        <p style="font-family:var(--font-body);font-size:0.8125rem;font-weight:700;color:#92400E;margin:0 0 0.2rem;">⏳ Verification pending</p>
+        <p style="font-family:var(--font-body);font-size:0.78rem;color:#78350F;line-height:1.55;margin:0;">The Collabnb team will review your account before you can apply or publish. You'll get an email once you're approved — usually within 1–2 business days.</p>
       </div>
-      <a href="/app/" class="btn-primary" style="display:block;text-decoration:none;padding:0.875rem;font-size:0.9375rem;text-align:center;">Explore the platform →</a>
+
+      <!-- Continue button -->
+      <a id="cw-btn" href="${appUrl_}" class="btn-primary" style="display:none;text-decoration:none;padding:0.875rem;font-size:0.9375rem;text-align:center;">Continue to your profile →</a>
     </div>`;
+
+  // Launch confetti
+  launchConfetti();
+
+  // Typewriter effect on the Collabnb quote
+  const quoteEl = document.getElementById('cw-quote');
+  let idx = 0;
+  function typeChar() {
+    if (idx < COLLABNB_QUOTE.length) {
+      quoteEl.textContent = COLLABNB_QUOTE.slice(0, idx + 1);
+      // Add blinking cursor
+      if (idx < COLLABNB_QUOTE.length - 1) {
+        quoteEl.innerHTML = COLLABNB_QUOTE.slice(0, idx + 1) + '<span class="cw-cursor">|</span>';
+      } else {
+        quoteEl.innerHTML = COLLABNB_QUOTE + '<span class="cw-cursor">|</span>';
+      }
+      idx++;
+      setTimeout(typeChar, 30 + Math.random() * 25);
+    } else {
+      // Typewriter done — show the cursor blink a few times then fade it
+      setTimeout(() => {
+        if (quoteEl) quoteEl.textContent = COLLABNB_QUOTE;
+        // Show subtitle
+        const subEl = document.getElementById('cw-subtitle');
+        if (subEl) subEl.style.display = 'block';
+        // Then show verification banner
+        setTimeout(() => {
+          const verifyEl = document.getElementById('cw-verify');
+          if (verifyEl) verifyEl.style.display = 'block';
+          // Then show button
+          setTimeout(() => {
+            const btnEl = document.getElementById('cw-btn');
+            if (btnEl) btnEl.style.display = 'block';
+          }, 400);
+        }, 500);
+      }, 800);
+    }
+  }
+  typeChar();
 }
 
 async function handleStep1Submit(e) {
@@ -1145,19 +1202,26 @@ async function initNavAuth() {
       btn.parentNode.replaceChild(clone, btn);
     });
 
-    // Post-OAuth / post-signup detection on join.html
-    // Fires when Google OAuth sends the user back here instead of to /app/
+    // Post-OAuth / post-signup celebration on join.html
+    // Fires when Clerk redirects back with ?celebrate=1
     const onJoinPage = window.location.pathname.endsWith('join.html') || window.location.pathname.endsWith('/join');
-    const signupStarted = (() => { try { return sessionStorage.getItem('collabnb_signup_started'); } catch { return null; } })();
-    if (onJoinPage && signupStarted) {
-      try { sessionStorage.removeItem('collabnb_signup_started'); } catch {}
-      // Open the modal with verification pending state
+    const urlParams = new URLSearchParams(window.location.search);
+    if (onJoinPage && urlParams.get('celebrate') === '1') {
+      // Get the name saved before OAuth redirect
+      const savedName = (() => { try { return sessionStorage.getItem('collabnb_signup_name'); } catch { return ''; } })();
+      try { sessionStorage.removeItem('collabnb_signup_name'); } catch {}
+      const name = savedName || clerk.user?.fullName || clerk.user?.firstName || '';
+      // Clean URL param
+      window.history.replaceState({}, '', window.location.pathname);
+      // Open the modal with celebration screen
       const overlay = document.querySelector('#modal-overlay');
       if (overlay && !overlay.classList.contains('open')) {
         overlay.classList.add('open');
         overlay.setAttribute('aria-hidden', 'false');
         document.body.style.overflow = 'hidden';
-        _showWizardDone(clerk.user.fullName || clerk.user.firstName);
+        setTimeout(() => _showWizardDone(name), 100);
+      } else {
+        _showWizardDone(name);
       }
     }
   } catch (_) {

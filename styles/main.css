@@ -1596,6 +1596,8 @@ h3 { font-weight: 700; }
 @keyframes spin { to { transform: rotate(360deg); } }
 @keyframes slideInRight { from { transform: translateX(100%); } to { transform: translateX(0); } }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+.cw-cursor { animation: blink 0.6s step-end infinite; }
 
 @media (prefers-reduced-motion: reduce) {
   .reveal {
@@ -2373,7 +2375,6 @@ h3 { font-weight: 700; }
     transition: none !important;
     transition-delay: 0ms !important;
   }
-
   /* 2. Remove backdrop-filter (the #1 GPU killer on mobile) — use opaque fallback */
   .glass,
   .glass-sm,
@@ -2415,4 +2416,7 @@ h3 { font-weight: 700; }
   .lcard.pos-1,
   .lcard.pos-2,
   .lcard.is-flipping { display: none !important; }
+
+  /* 5. Exception: typewriter cursor still blinks */
+  .cw-cursor { animation: blink 0.6s step-end infinite !important; }
 }

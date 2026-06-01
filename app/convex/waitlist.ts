@@ -99,6 +99,7 @@ export const getWaitlist = query({
       region: p.region,
       is_founder: p.is_founder || false,
       beta: p.beta || false,
+      clerk_registered: p.clerk_registered || false,
       _creationTime: p._creationTime,
     }));
   },

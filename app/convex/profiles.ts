@@ -23,16 +23,17 @@ export const getOrCreate = mutation({
       .withIndex("by_email", (q) => q.eq("email", args.email))
       .unique();
     if (existing) {
+      const adminPatch: Record<string, any> = { clerk_registered: true };
       if (args.is_admin && (!existing.is_verified || existing.tier !== 'UGC Pro')) {
-        await ctx.db.patch(existing._id, {
-          is_verified: true,
-          tier: 'UGC Pro',
-          is_founder: true,
-          beta: true,
-        });
-        return await ctx.db.get(existing._id);
+        adminPatch.is_verified = true;
+        adminPatch.tier = 'UGC Pro';
+        adminPatch.is_founder = true;
+        adminPatch.beta = true;
       }
-      return existing;
+      if (!existing.clerk_registered || args.is_admin) {
+        await ctx.db.patch(existing._id, adminPatch);
+      }
+      return await ctx.db.get(existing._id);
     }
 
     const username = args.email.split('@')[0].replace(/[^a-z0-9_]/gi, '').toLowerCase() || 'user';
@@ -58,6 +59,7 @@ export const getOrCreate = mutation({
       beta: args.is_admin ? true : undefined,
       avatar_url: args.avatar_url,
       referral_code: refCode || undefined,
+      clerk_registered: true,
     });
 
     if (refCode) {

@@ -358,18 +358,24 @@ function showWizardStep(step) {
   const subtitleEl = document.getElementById('modal-subtitle');
 
   if (step === 1) {
-    if (titleEl) titleEl.textContent = `Finalize your ${currentRole} profile`;
+    if (titleEl) titleEl.textContent = `Claim your ${currentRole} spot`;
     if (subtitleEl) subtitleEl.style.display = '';
+    const savedName  = localStorage.getItem('collabnb_waitlist_name')  || '';
+    const savedEmail = localStorage.getItem('collabnb_waitlist_email') || '';
     area.innerHTML = `
       <form id="wl-step1" style="display:flex;flex-direction:column;gap:1rem;">
         <div class="form-group">
           <label class="form-label" for="wl-name">Full name</label>
-          <input class="form-input" type="text" id="wl-name" placeholder="Jane Smith" autocomplete="name" required />
+          <input class="form-input" type="text" id="wl-name" placeholder="Jane Smith" autocomplete="name" required value="${savedName.replace(/"/g,'&quot;')}" />
         </div>
         <div class="form-group">
           <label class="form-label" for="wl-email">Email address</label>
-          <input class="form-input" type="email" id="wl-email" placeholder="jane@example.com" autocomplete="email" required />
+          <input class="form-input" type="email" id="wl-email" placeholder="jane@example.com" autocomplete="email" required value="${savedEmail.replace(/"/g,'&quot;')}" />
         </div>
+        <label style="display:flex;align-items:flex-start;gap:0.625rem;cursor:pointer;padding:0.75rem;background:rgba(255,255,255,0.5);border:1px solid rgba(208,213,206,0.7);border-radius:0.875rem;">
+          <input type="checkbox" id="wl-consent" required style="margin-top:2px;flex-shrink:0;accent-color:var(--slate,#3C5759);width:15px;height:15px;" />
+          <span style="font-size:0.82rem;color:var(--slate,#3C5759);line-height:1.45;">I'm cool with the occasional helpful email — no spam, no daily newsletters, just the good stuff. Pinky promise 🤙</span>
+        </label>
         <button type="submit" id="wl-submit" class="btn-primary" style="width:100%;cursor:pointer;">Save my spot →</button>
         <div id="wl-error" style="display:none;color:#e74c3c;font-size:0.8125rem;text-align:center;"></div>
       </form>`;
@@ -478,6 +484,8 @@ async function handleStep1Submit(e) {
     _wizardProfileId = result?.profileId || null;
     _wizardEmail = email;
     _wizardName = name;
+    localStorage.setItem('collabnb_waitlist_name', name);
+    localStorage.setItem('collabnb_waitlist_email', email);
     const roleSection = document.getElementById('modal-role-section');
     if (roleSection) roleSection.style.display = 'none';
     launchConfetti();
@@ -952,10 +960,62 @@ document.addEventListener('DOMContentLoaded', () => {
   initNavAuth();
 });
 
+function initWaitlistReturnBanner() {
+  const waitlistEmail = localStorage.getItem('collabnb_waitlist_email');
+  if (!waitlistEmail) return;
+  // Don't show on join.html itself (they're mid-flow)
+  if (window.location.pathname.endsWith('join.html')) return;
+
+  const firstName = (localStorage.getItem('collabnb_waitlist_name') || '').split(' ')[0];
+  const greeting  = firstName ? `Hey ${firstName}!` : 'Welcome back!';
+
+  const banner = document.createElement('div');
+  banner.id = 'wl-return-banner';
+  banner.style.cssText = [
+    'position:fixed', 'bottom:1.5rem', 'left:50%', 'transform:translateX(-50%)',
+    'z-index:300', 'display:flex', 'align-items:center', 'gap:0.75rem',
+    'background:var(--ink,#192524)', 'color:#fff', 'border-radius:9999px',
+    'padding:0.625rem 0.75rem 0.625rem 1.25rem',
+    'box-shadow:0 4px 24px rgba(25,37,36,0.28)',
+    'font-family:var(--font-body,sans-serif)', 'font-size:0.875rem',
+    'white-space:nowrap', 'max-width:calc(100vw - 2rem)',
+    'animation:wl-banner-in 0.4s cubic-bezier(0.16,1,0.3,1) both',
+  ].join(';');
+
+  const style = document.createElement('style');
+  style.textContent = '@keyframes wl-banner-in{from{opacity:0;transform:translateX(-50%) translateY(12px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}';
+  document.head.appendChild(style);
+
+  const continueBtn = document.createElement('a');
+  continueBtn.href = '/join.html';
+  continueBtn.textContent = 'Finish creating your account →';
+  continueBtn.style.cssText = 'background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.25);color:#fff;padding:0.375rem 0.875rem;border-radius:9999px;cursor:pointer;font-size:0.8rem;font-weight:600;text-decoration:none;white-space:nowrap;';
+
+  const closeBtn = document.createElement('button');
+  closeBtn.textContent = '×';
+  closeBtn.setAttribute('aria-label', 'Dismiss');
+  closeBtn.style.cssText = 'background:none;border:none;color:rgba(255,255,255,0.55);cursor:pointer;padding:0.25rem 0.375rem;font-size:1.1rem;line-height:1;flex-shrink:0;';
+  closeBtn.addEventListener('click', () => banner.remove());
+
+  const text = document.createElement('span');
+  text.textContent = `${greeting} You're on the waitlist — `;
+
+  banner.appendChild(text);
+  banner.appendChild(continueBtn);
+  banner.appendChild(closeBtn);
+  document.body.appendChild(banner);
+}
+
 async function initNavAuth() {
   try {
     const clerk = await getClerk();
-    if (!clerk?.user) return;
+    if (!clerk?.user) {
+      initWaitlistReturnBanner();
+      return;
+    }
+    // Signed in — clear any pending waitlist re-engagement data
+    localStorage.removeItem('collabnb_waitlist_name');
+    localStorage.removeItem('collabnb_waitlist_email');
 
     const firstName = clerk.user.fullName?.split(' ')[0];
     const label = firstName ? `${firstName}'s Profile` : 'My Profile';

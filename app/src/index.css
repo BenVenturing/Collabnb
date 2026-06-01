@@ -3,6 +3,10 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Admin panel animations ── */
+@keyframes slideInRight { from { transform: translateX(100%); } to { transform: translateX(0); } }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
 /* ── DESIGN TOKENS (match website exactly) ─────────────────────────────────── */
 :root {
   --ink:       #192524;

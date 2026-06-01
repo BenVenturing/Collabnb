@@ -355,6 +355,15 @@ async function openModal() {
   _wizardName = '';
   const roleSection = document.getElementById('modal-role-section');
   if (roleSection) roleSection.style.display = '';
+  // Sync page-level role selection into modal
+  const activePageBtn = document.querySelector('#page-role-creator.active, #page-role-host.active');
+  if (activePageBtn) {
+    const pageRole = activePageBtn.id.includes('creator') ? 'creator' : 'host';
+    currentRole = pageRole;
+    document.querySelectorAll('.role-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.role === pageRole);
+    });
+  }
   showWizardStep(1);
 }
 
@@ -425,6 +434,9 @@ function showWizardStep(step) {
   } else if (step === 3) {
     if (titleEl) titleEl.textContent = 'Create your account';
     if (subtitleEl) subtitleEl.style.display = 'none';
+    // Hide the role section on step 3 (Clerk mounts here)
+    const roleSection = document.getElementById('modal-role-section');
+    if (roleSection) roleSection.style.display = 'none';
     const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
     if (isLocalhost) { _showWizardDone(); return; }
     area.innerHTML = `
@@ -443,7 +455,8 @@ function showWizardStep(step) {
       const mountEl = document.getElementById('wl-clerk-mount');
       if (!mountEl) return;
       // Flag that sign-up started — used to catch OAuth redirect back to this page
-      try { sessionStorage.setItem('collabnb_signup_started', '1'); } catch {}
+      try { localStorage.setItem('collabnb_signup_started', '1'); } catch {}
+      try { localStorage.setItem('collabnb_new_signup', '1'); } catch {}
       clerk.mountSignUp(mountEl, { afterSignUpUrl: '/app/', afterSignInUrl: '/app/' });
     }).catch(_showWizardDone);
   }
@@ -494,8 +507,6 @@ async function handleStep1Submit(e) {
     _wizardName = name;
     localStorage.setItem('collabnb_waitlist_name', name);
     localStorage.setItem('collabnb_waitlist_email', email);
-    const roleSection = document.getElementById('modal-role-section');
-    if (roleSection) roleSection.style.display = 'none';
     launchConfetti();
     initCounters();
     showReferralCodeReveal();

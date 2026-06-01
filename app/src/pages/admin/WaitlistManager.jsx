@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
+import UserDetailPanel from '../../components/admin/UserDetailPanel';
 
 const INK   = '#192524';
 const SLATE = '#3C5759';
@@ -30,6 +31,7 @@ export default function WaitlistManager() {
   const [acctFilter, setAcctFilter] = useState('all');
   const [search,     setSearch]     = useState('');
   const [copied,     setCopied]     = useState(false);
+  const [selectedProfileId, setSelectedProfileId] = useState(null);
 
   if (allProfiles === undefined) {
     return <div style={{ padding: '3rem', textAlign: 'center', color: SAGE, fontSize: '0.85rem' }}>Loading…</div>;
@@ -192,7 +194,8 @@ export default function WaitlistManager() {
               {filtered.map((p, i) => (
                 <tr
                   key={p._id}
-                  style={{ borderBottom: i < filtered.length - 1 ? '1px solid rgba(25,37,36,0.05)' : 'none', transition: 'background 0.1s' }}
+                  onClick={() => setSelectedProfileId(p._id)}
+                  style={{ borderBottom: i < filtered.length - 1 ? '1px solid rgba(25,37,36,0.05)' : 'none', transition: 'background 0.1s', cursor: 'pointer' }}
                   onMouseEnter={(e) => { e.currentTarget.style.background = BONE; }}
                   onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                 >
@@ -259,6 +262,11 @@ export default function WaitlistManager() {
           </table>
         </div>
       )}
+
+      <UserDetailPanel
+        profileId={selectedProfileId}
+        onClose={() => setSelectedProfileId(null)}
+      />
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
+import UserDetailPanel from '../../components/admin/UserDetailPanel';
 import { formatDate as fmtDate } from '../../lib/dateUtils';
 
 // ─── Founder count helpers (localStorage) ────────────────────────────────────
@@ -59,7 +60,7 @@ function SocialLinks({ profile }) {
 }
 
 // ─── Profile card ─────────────────────────────────────────────────────────────
-function ProfileCard({ profile, onApprove, onReject, isRejected }) {
+function ProfileCard({ profile, onApprove, onReject, isRejected, onViewDetails }) {
   const [rejecting, setRejecting] = useState(false);
   const [reason, setReason]       = useState('');
   const [busy, setBusy]           = useState(false);
@@ -97,6 +98,12 @@ function ProfileCard({ profile, onApprove, onReject, isRejected }) {
             <span style={{ fontWeight: 600, fontSize: '0.9rem', color: '#192524', fontFamily: 'Cabinet Grotesk, sans-serif' }}>
               {profile.full_name}
             </span>
+            <button
+              onClick={() => onViewDetails?.(profile._id)}
+              style={{ fontSize: '0.68rem', background: '#F7F5F2', border: '1px solid rgba(25,37,36,0.08)', borderRadius: '99px', padding: '0.1rem 0.55rem', color: '#3C5759', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 500, lineHeight: 1.6 }}
+            >
+              📋 Details
+            </button>
             {profile.username && (
               <span style={{ fontSize: '0.8rem', color: '#959D90' }}>@{profile.username}</span>
             )}
@@ -250,6 +257,7 @@ function CountBadge({ n, variant = 'green' }) {
 // ─── Main export ──────────────────────────────────────────────────────────────
 export default function VerificationQueue() {
   const [tab, setTab] = useState('creators');
+  const [selectedProfileId, setSelectedProfileId] = useState(null);
   const [counts, setCounts] = useState(() => ({
     creator: getCount(CREATOR_COUNT_KEY),
     host:    getCount(HOST_COUNT_KEY),
@@ -357,8 +365,14 @@ export default function VerificationQueue() {
           onApprove={handleApprove}
           onReject={handleReject}
           isRejected={tab === 'rejected'}
+          onViewDetails={setSelectedProfileId}
         />
       ))}
+
+      <UserDetailPanel
+        profileId={selectedProfileId}
+        onClose={() => setSelectedProfileId(null)}
+      />
     </div>
   );
 }

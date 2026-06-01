@@ -180,6 +180,59 @@ export const rejectProfile = mutation({
   },
 });
 
+export const getDetailedProfile = query({
+  args: { profileId: v.id("profiles") },
+  handler: async (ctx, args) => {
+    const profile = await ctx.db.get(args.profileId);
+    if (!profile) return null;
+
+    const pId = String(args.profileId);
+    const monthKey = new Date().toISOString().slice(0, 7); // "YYYY-MM"
+
+    const [pitchCount, collabs, contracts, refCodes, refUses, allRefUses] = await Promise.all([
+      ctx.db.query("pitch_counts").withIndex("by_user", (q) => q.eq("user_id", pId)).first(),
+      ctx.db.query("collaborations").filter((q) => q.eq(q.field("creator_id"), pId)).collect(),
+      ctx.db.query("contracts").collect().then((all) =>
+        all.filter((c) => c.creator_name === profile.full_name || c.host_name === profile.full_name)
+      ),
+      ctx.db.query("referral_codes").filter((q) => q.eq(q.field("owner_id"), pId)).collect(),
+      ctx.db.query("referral_uses").filter((q) => q.eq(q.field("used_by_id"), pId)).collect(),
+      ctx.db.query("referral_uses").collect(),
+    ]);
+
+    const myRefCodes = refCodes.map((rc) => rc.code);
+    const totalReferrals = allRefUses.filter((ru) => myRefCodes.includes(ru.code)).length;
+    const thisMonthPitch = pitchCount?.count ?? 0;
+
+    // Find referrer if referred_by is set
+    let referrer = null;
+    if (profile.referred_by) {
+      referrer = await ctx.db
+        .query("referral_codes")
+        .withIndex("by_code", (q) => q.eq("code", profile.referred_by!))
+        .unique();
+    }
+
+    return {
+      profile: {
+        ...profile,
+        // Convex returns _id as Id type — serialize it
+        _id: String(profile._id),
+        _creationTime: profile._creationTime,
+      },
+      pitchCount: thisMonthPitch,
+      collabCount: collabs.length,
+      collabs,
+      contracts,
+      referralCodes: refCodes,
+      referredBy: allRefUses.filter((ru) => ru.code === profile.referred_by),
+      totalReferrals,
+      referrerOwnerId: referrer?.owner_id ?? null,
+      freeMonthsBalance: profile.free_months_balance ?? 0,
+    };
+  },
+});
+
 export const updateSubscription = mutation({
   args: {
     profileId: v.string(),

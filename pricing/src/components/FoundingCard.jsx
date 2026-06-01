@@ -92,13 +92,6 @@ export default function FoundingCard({ isFull, spotsRemaining, creatorSpotsRemai
         </button>
       )}
 
-      {/* Scarcity text */}
-      {!isFull && (
-        <p className={`text-xs mt-3 tabular-nums ${urgency}`}>
-          {spotsRemaining} founding {spotsRemaining === 1 ? 'spot' : 'spots'} remaining
-          {spotsRemaining <= 20 && ' — almost gone'}
-        </p>
-      )}
     </div>
   );
 }

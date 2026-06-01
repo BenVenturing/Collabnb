@@ -147,7 +147,6 @@ export const approveProfile = mutation({
       patch.referral_bonus_pending = true;
     }
     await ctx.db.patch(args.profileId as any, patch);
-    const profile = await ctx.db.get(args.profileId as any);
     if (profile?.email) {
       await ctx.scheduler.runAfter(0, internal.emails.sendAccessGrantedEmail, {
         email: profile.email,

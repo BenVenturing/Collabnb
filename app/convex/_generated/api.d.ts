@@ -19,6 +19,7 @@ import type * as listings from "../listings.js";
 import type * as messages from "../messages.js";
 import type * as pitches from "../pitches.js";
 import type * as profiles from "../profiles.js";
+import type * as referrals from "../referrals.js";
 import type * as seed from "../seed.js";
 import type * as stripe from "../stripe.js";
 import type * as suggestions from "../suggestions.js";
@@ -44,6 +45,7 @@ declare const fullApi: ApiFromModules<{
   messages: typeof messages;
   pitches: typeof pitches;
   profiles: typeof profiles;
+  referrals: typeof referrals;
   seed: typeof seed;
   stripe: typeof stripe;
   suggestions: typeof suggestions;

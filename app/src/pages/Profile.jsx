@@ -701,7 +701,7 @@ export default function Profile() {
     { icon: <BellIcon />,    label: 'Notifications',      sublabel: 'Manage email & push preferences',      onClick: () => { setShowSettings(false); setShowNotifications(true); } },
     { icon: <LockIcon />,    label: 'Privacy Policy',     sublabel: 'Review how your data is used',         onClick: () => { setShowSettings(false); setShowPrivacy(true); } },
     { icon: <SealCheck />,   label: 'Verification',       sublabel: 'Submit a re-verification request',     onClick: () => { setShowSettings(false); setShowVerification(true); } },
-    { icon: <SwitchIcon />,  label: profile?.role === 'host' ? 'Switch to Creator Mode' : 'Switch to Host Mode', sublabel: profile?.role === 'host' ? 'Browse listings as a creator' : 'List your property as a host', onClick: () => { setShowSettings(false); setShowSwitchConfirm(true); } },
+    { icon: <SwitchIcon />,  label: profile?.role === 'host' ? 'Sign up as Creator' : 'Sign up as Host', sublabel: profile?.role === 'host' ? 'Browse and apply to listings as a creator' : 'Create listings and collaborate with creators', onClick: () => { setShowSettings(false); setShowSwitchConfirm(true); } },
   ];
 
   return (
@@ -1339,30 +1339,64 @@ export default function Profile() {
         </div>
       )}
 
-      {/* ── Switch to Host confirm ─────────────────────────────────────────── */}
+      {/* ── Sign up as Host / Creator sheet ──────────────────────────────── */}
       {showSwitchConfirm && (
         <div
           style={{ position: 'fixed', inset: 0, zIndex: 70, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', padding: '1rem', background: 'rgba(25,37,36,0.4)', backdropFilter: 'blur(6px)' }}
           onClick={() => setShowSwitchConfirm(false)}
         >
-          <div className="glass" style={{ width: '100%', maxWidth: '400px', borderRadius: '1.5rem', padding: '2rem' }} onClick={(e) => e.stopPropagation()}>
-            <h4 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.25rem', color: 'var(--ink)', marginBottom: '0.75rem' }}>
-              {profile?.role === 'host' ? 'Switch to Creator Mode?' : 'Switch to Host Mode?'}
-            </h4>
-            <p style={{ color: 'var(--slate)', fontSize: '0.9rem', lineHeight: 1.6, marginBottom: '1.5rem' }}>
+          <div className="glass" style={{ width: '100%', maxWidth: '420px', borderRadius: '1.5rem', padding: '2rem' }} onClick={(e) => e.stopPropagation()}>
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem', marginBottom: '1.5rem' }}>
+              {profile?.avatar_url && (
+                <img src={profile.avatar_url} alt="" style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: '2px solid rgba(255,255,255,0.8)' }} />
+              )}
+              <div>
+                <p style={{ fontSize: '0.75rem', color: 'var(--sage)', margin: 0, fontWeight: 500 }}>Signing up as</p>
+                <h4 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.15rem', color: 'var(--ink)', margin: 0 }}>
+                  {profile?.role === 'host' ? 'Creator' : 'Host'}
+                </h4>
+              </div>
+            </div>
+
+            {/* Account card */}
+            <div style={{ background: 'rgba(255,255,255,0.5)', border: '1px solid rgba(208,213,206,0.7)', borderRadius: '1rem', padding: '0.875rem 1rem', marginBottom: '0.875rem' }}>
+              <p style={{ fontSize: '0.72rem', color: 'var(--sage)', margin: '0 0 0.25rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Your account</p>
+              <p style={{ fontWeight: 600, color: 'var(--ink)', margin: 0, fontSize: '0.9375rem' }}>{profile?.full_name}</p>
+              <p style={{ color: 'var(--slate)', fontSize: '0.8125rem', margin: '0.125rem 0 0' }}>{profile?.email}</p>
+            </div>
+
+            {/* Referral preservation note */}
+            {referralStats?.code && (
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.625rem', background: 'rgba(209,235,219,0.35)', border: '1px solid rgba(74,155,127,0.25)', borderRadius: '0.875rem', padding: '0.75rem 0.875rem', marginBottom: '1rem' }}>
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#4A9B7F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 2 }}><path d="M13 3L6 10l-3-3"/></svg>
+                <p style={{ fontSize: '0.8rem', color: 'var(--slate)', margin: 0, lineHeight: 1.5 }}>
+                  Your referral code <strong style={{ color: 'var(--ink)', fontFamily: 'monospace', letterSpacing: '0.04em' }}>{referralStats.code}</strong>
+                  {referralStats.use_count > 0 ? ` and ${referralStats.use_count} referral${referralStats.use_count !== 1 ? 's' : ''}` : ''} will carry over.
+                </p>
+              </div>
+            )}
+
+            <p style={{ color: 'var(--slate)', fontSize: '0.875rem', lineHeight: 1.6, marginBottom: '1.5rem' }}>
               {profile?.role === 'host'
-                ? 'You\'ll switch back to browsing and applying to listings as a creator. You can return to Host Mode any time in Settings.'
-                : 'You can create listings for creators to apply to. You can switch back to Creator Mode any time in Settings.'}
+                ? 'You\'ll join as a creator using the same account — browse and apply to listings right away.'
+                : 'You\'ll join as a host using the same account — create listings and connect with creators.'}
             </p>
-            <div style={{ display: 'flex', gap: '0.75rem' }}>
-              <button className="btn-glass" style={{ flex: 1 }} onClick={() => setShowSwitchConfirm(false)}>Cancel</button>
-              <button className="btn-primary" style={{ flex: 1 }} onClick={async () => {
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+              <button className="btn-primary" onClick={async () => {
                 const newRole = profile?.role === 'host' ? 'creator' : 'host';
                 await updateProfile({ role: newRole });
                 setShowSwitchConfirm(false);
                 if (newRole === 'host') navigate('/host');
               }}>
-                Switch
+                {profile?.role === 'host' ? 'Sign up as Creator' : 'Sign up as Host'}
+              </button>
+              <button
+                onClick={() => { setShowSwitchConfirm(false); window.open('/join.html', '_blank'); }}
+                style={{ background: 'none', border: 'none', color: 'var(--sage)', fontSize: '0.8125rem', cursor: 'pointer', padding: '0.375rem 0', textDecoration: 'underline', textUnderlineOffset: '2px', fontFamily: 'var(--font-body)' }}
+              >
+                Use a different account →
               </button>
             </div>
           </div>

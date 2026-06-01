@@ -271,6 +271,31 @@ export const updateSubscriptionByCustomerId = internalMutation({
   },
 });
 
+// Returns number of paid lifetime members (excludes free founders)
+export const countLifetimeMembers = query({
+  args: {},
+  handler: async (ctx) => {
+    const all = await ctx.db.query("profiles").collect();
+    return all.filter(p => p.is_lifetime === true).length;
+  },
+});
+
+// Called by the Stripe webhook after a successful lifetime checkout
+export const grantLifetimeAccess = internalMutation({
+  args: {
+    profileId: v.string(),
+    lifetimeTier: v.string(),
+    stripeCustomerId: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.profileId as any, {
+      is_lifetime: true,
+      lifetime_tier: args.lifetimeTier,
+      stripe_customer_id: args.stripeCustomerId,
+    });
+  },
+});
+
 // Used by the monthly cron to consume one free month for creators past their first collab
 export const decrementFreeMonth = internalMutation({
   args: {},

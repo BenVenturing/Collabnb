@@ -14,7 +14,8 @@ export function SubscriptionProvider({ children }) {
   const { profile } = useAuth();
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const isFounder = profile?.is_founder === true;
+  const isFounder  = profile?.is_founder === true;
+  const isLifetime = profile?.is_lifetime === true;
   const firstCollabCompleted = profile?.first_collab_completed === true;
   const freeMonthsBalance = profile?.free_months_balance ?? 0;
   const hasFreeMonths = freeMonthsBalance > 0;
@@ -23,7 +24,7 @@ export function SubscriptionProvider({ children }) {
     profile?.subscription_status === 'active' &&
     (!expiresAt || Date.now() < expiresAt);
 
-  const isSubscribed = isFounder || !firstCollabCompleted || hasFreeMonths || isActive;
+  const isSubscribed = isFounder || isLifetime || !firstCollabCompleted || hasFreeMonths || isActive;
 
   const openModal = useCallback(() => setIsModalOpen(true), []);
   const closeModal = useCallback(() => setIsModalOpen(false), []);
@@ -32,6 +33,7 @@ export function SubscriptionProvider({ children }) {
     <SubscriptionContext.Provider value={{
       isSubscribed,
       isFounder,
+      isLifetime,
       firstCollabCompleted,
       freeMonthsBalance,
       isModalOpen,

@@ -109,6 +109,25 @@ http.route({
       }
     }
 
+    // Lifetime purchase completed
+    if (event.type === "checkout.session.completed") {
+      const session = event.data.object as Stripe.Checkout.Session;
+      if (session.metadata?.type === "lifetime" && session.payment_status === "paid") {
+        const profileId = session.metadata.profileId;
+        const lifetimeTier = session.metadata.lifetimeTier ?? "Lifetime";
+        const stripeCustomerId = typeof session.customer === "string"
+          ? session.customer
+          : (session.customer as any)?.id ?? undefined;
+        if (profileId) {
+          await ctx.runMutation(internal.profiles.grantLifetimeAccess, {
+            profileId,
+            lifetimeTier,
+            stripeCustomerId,
+          });
+        }
+      }
+    }
+
     if (event.type === "customer.subscription.updated") {
       const sub = event.data.object as Stripe.Subscription;
       const customerId = typeof sub.customer === "string" ? sub.customer : sub.customer.id;

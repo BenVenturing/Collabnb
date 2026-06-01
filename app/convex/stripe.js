@@ -1,7 +1,18 @@
 import { action } from './_generated/server';
-import { api } from './_generated/api';
+import { api, internal } from './_generated/api';
 import { v } from 'convex/values';
 import Stripe from 'stripe';
+
+// Tiered lifetime pricing — price rises as more spots are purchased.
+// First 50 buyers: $100, next 50: $125, next 50: $150, final 50: $200.
+// After 200 lifetime purchases, redirect users to monthly/annual instead.
+function getLifetimeTier(count) {
+  if (count < 50)  return { price: 100, label: 'Early Adopter' };
+  if (count < 100) return { price: 125, label: 'Community' };
+  if (count < 150) return { price: 150, label: 'Community Plus' };
+  if (count < 200) return { price: 200, label: 'Standard Lifetime' };
+  return null; // sold out — use monthly/annual
+}
 
 // One-time Checkout for host platform fee.
 // Requires: npx convex env set STRIPE_SECRET_KEY sk_test_...
@@ -139,5 +150,83 @@ export const createBillingPortalSession = action({
     });
 
     return { url: session.url };
+  },
+});
+
+// One-time lifetime access checkout.
+// Looks up the current tier price based on how many lifetime seats have been sold.
+export const createLifetimeSession = action({
+  args: {
+    profileId: v.string(),
+    role: v.string(),
+    successUrl: v.string(),
+    cancelUrl: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const secretKey = process.env.STRIPE_SECRET_KEY;
+    if (!secretKey) throw new Error('STRIPE_SECRET_KEY is not set in Convex environment variables');
+
+    const lifetimeCount = await ctx.runQuery(api.profiles.countLifetimeMembers);
+    const tier = getLifetimeTier(lifetimeCount);
+    if (!tier) throw new Error('All lifetime spots are sold out. Please choose a monthly or annual plan.');
+
+    const stripe = new Stripe(secretKey);
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      mode: 'payment',
+      line_items: [{
+        price_data: {
+          currency: 'usd',
+          product_data: {
+            name: `Collabnb Lifetime Access — ${tier.label}`,
+            description: `One-time payment for permanent platform access as a ${args.role}`,
+          },
+          unit_amount: tier.price * 100,
+        },
+        quantity: 1,
+      }],
+      success_url: args.successUrl,
+      cancel_url: args.cancelUrl,
+      metadata: {
+        profileId: args.profileId,
+        role: args.role,
+        type: 'lifetime',
+        lifetimeTier: tier.label,
+        lifetimePrice: String(tier.price),
+      },
+    });
+
+    return { url: session.url, sessionId: session.id, price: tier.price, tierLabel: tier.label };
+  },
+});
+
+// Verifies a completed lifetime checkout session and grants permanent access.
+export const verifyLifetimeSession = action({
+  args: { sessionId: v.string() },
+  handler: async (ctx, args) => {
+    const secretKey = process.env.STRIPE_SECRET_KEY;
+    if (!secretKey) throw new Error('STRIPE_SECRET_KEY is not set in Convex environment variables');
+
+    const stripe = new Stripe(secretKey);
+    const session = await stripe.checkout.sessions.retrieve(args.sessionId);
+
+    if (session.status !== 'complete' || session.payment_status !== 'paid') {
+      throw new Error('Payment not complete');
+    }
+    if (session.metadata?.type !== 'lifetime') throw new Error('Not a lifetime session');
+
+    const profileId = session.metadata.profileId;
+    const lifetimeTier = session.metadata.lifetimeTier || 'Lifetime';
+    const stripeCustomerId = typeof session.customer === 'string'
+      ? session.customer
+      : session.customer?.id ?? undefined;
+
+    await ctx.runMutation(internal.profiles.grantLifetimeAccess, {
+      profileId,
+      lifetimeTier,
+      stripeCustomerId,
+    });
+
+    return { success: true, lifetimeTier };
   },
 });

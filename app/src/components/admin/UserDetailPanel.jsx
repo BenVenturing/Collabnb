@@ -93,9 +93,6 @@ export default function UserDetailPanel({ profileId, onClose }) {
         style={{
           position: 'fixed', inset: 0, zIndex: 500,
           background: 'rgba(25,37,36,0.3)',
-          backdropFilter: 'blur(4px)',
-          WebkitBackdropFilter: 'blur(4px)',
-          animation: 'fadeIn 200ms ease',
         }}
         onClick={onClose}
       />
@@ -107,7 +104,6 @@ export default function UserDetailPanel({ profileId, onClose }) {
         background: '#fff',
         boxShadow: '-8px 0 40px rgba(25,37,36,0.12)',
         display: 'flex', flexDirection: 'column',
-        animation: 'slideInRight 250ms cubic-bezier(0.16,1,0.3,1)',
       }}>
         {/* ── Header ── */}
         <div style={{
@@ -186,7 +182,6 @@ export default function UserDetailPanel({ profileId, onClose }) {
         <div style={{ flex: 1, overflow: 'auto', padding: '1rem 1.25rem 2rem' }}>
           {data === undefined ? (
             <div style={{ padding: '2rem 0', textAlign: 'center', color: SAGE, fontSize: '0.85rem' }}>
-              <div style={{ width: 24, height: 24, borderRadius: '50%', border: '2.5px solid #D1EBDB', borderTopColor: SLATE, animation: 'spin 0.8s linear infinite', margin: '0 auto 0.75rem' }} />
               Loading profile data…
             </div>
           ) : data === null ? (

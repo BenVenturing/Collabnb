@@ -630,47 +630,37 @@ h3 { font-weight: 700; }
   100% { background-position: -200% 0; }
 }
 
-/* ── Mobile listing stack: flat stack + slide-up swipe, no 3D ── */
+/* ── Mobile listing stack: single card, fade only, no 3D, no movement ── */
 @media (max-width: 640px) {
   .listing-stack {
     max-width: 100%;
-    height: 480px;
+    height: auto;         /* let card height be natural */
+    min-height: 360px;
     perspective: none;
     perspective-origin: unset;
   }
-  .lcard-photo { height: 130px; }
+  .lcard-photo { height: 160px; }
 
-  /* Override all lcard transitions — remove box-shadow, use transform only */
+  /* All cards: opacity transition only */
   .lcard {
-    transition: transform 0.4s var(--ease-out-expo), opacity 0.4s ease;
-    box-shadow: 0 8px 24px rgba(25,37,36,0.10) !important;
+    transition: opacity 0.4s ease !important;
+    transform: none !important;
+    box-shadow: 0 8px 24px rgba(25,37,36,0.12) !important;
   }
 
-  /* 2D-only stacked positions — no rotateX, no 3D */
-  .lcard.pos-0 {
-    transform: translateY(0) scale(1) !important;
-    box-shadow: 0 12px 32px rgba(25,37,36,0.13) !important;
-    opacity: 1;
-  }
-  .lcard.pos-1 {
-    transform: translateY(10px) scale(0.96) !important;
-    opacity: 0.85;
-  }
+  /* Hide stacked cards — one card at a time */
+  .lcard.pos-1,
   .lcard.pos-2 {
-    transform: translateY(18px) scale(0.92) !important;
-    opacity: 0.65;
+    opacity: 0 !important;
+    pointer-events: none;
   }
+  .lcard.pos-0 { opacity: 1 !important; }
 
-  /* Outgoing card: swipe up and out */
+  /* Outgoing: just fade out, no keyframe animation */
   .lcard.is-flipping {
-    animation: lcard-swipeup 0.38s var(--ease-out-quart) forwards !important;
-    z-index: 4 !important;
+    animation: none !important;
+    opacity: 0 !important;
   }
-}
-
-@keyframes lcard-swipeup {
-  0%   { opacity: 1; transform: translateY(0) scale(1); }
-  100% { opacity: 0; transform: translateY(-56px) scale(0.96); }
 }
 
 /* --- FLOATING BOKEH --- */
@@ -1536,23 +1526,26 @@ h3 { font-weight: 700; }
   filter: blur(0);
 }
 
-/* Mobile: strip expensive blur filter — kills GPU on phones */
+/* Mobile: opacity-only reveal — no translateY, no blur, no GPU pain */
 @media (max-width: 768px) {
   .reveal {
     filter: none;
-    transition: opacity 500ms var(--ease-out-expo),
-                transform 500ms var(--ease-out-expo);
+    transform: none;
+    transition: opacity 400ms ease;
   }
-  .reveal.in { filter: none; }
+  .reveal.in {
+    filter: none;
+    transform: none;
+  }
 
-  /* Reduce glass backdrop-filter blur — full 24px on many stacked elements kills mobile */
+  /* Reduce glass backdrop-filter blur on mobile */
   .glass {
-    backdrop-filter: blur(12px) saturate(130%);
-    -webkit-backdrop-filter: blur(12px) saturate(130%);
+    backdrop-filter: blur(10px) saturate(120%);
+    -webkit-backdrop-filter: blur(10px) saturate(120%);
   }
   .glass-sm {
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
   }
 }
 
@@ -1711,20 +1704,28 @@ h3 { font-weight: 700; }
   }
 }
 
-/* Countdown responsive */
+/* Countdown responsive — force block+flex-column so it centers properly */
 @media (max-width: 640px) {
   .glass[aria-label="Time until launch"] {
+    display: flex !important;   /* override inline-flex from inline style */
     flex-direction: column;
     gap: 0;
-    padding: 1.5rem;
+    padding: 1.25rem 2rem;
+    width: fit-content;
+    min-width: 160px;
+    margin: 0 auto;
+    text-align: center;
   }
   .glass[aria-label="Time until launch"] > div {
     border-right: none !important;
     border-bottom: 1px solid var(--hairline);
-    padding: .75rem 0 !important;
+    padding: 0.65rem 0 !important;
   }
   .glass[aria-label="Time until launch"] > div:last-child {
     border-bottom: none;
+  }
+  .glass[aria-label="Time until launch"] .counter-number {
+    font-size: 2.25rem !important;
   }
 }
 

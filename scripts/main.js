@@ -786,6 +786,8 @@ function initListingStack() {
     return el;
   });
 
+  const isMobileStack = window.innerWidth <= 640;
+
   function getFront() { return cards.find(c => c.classList.contains('pos-0')); }
 
   function startTyping(index) {
@@ -794,8 +796,15 @@ function initListingStack() {
     if (!front) return;
     const el = front.querySelector('.lcard-typing');
     if (!el) return;
-    el.textContent = '';
     const msg = LISTINGS[index].message;
+    // Mobile: show full message instantly so card content is never empty
+    if (isMobileStack) {
+      el.textContent = msg;
+      const cursor = front.querySelector('.lcard-cursor');
+      if (cursor) cursor.style.display = 'none';
+      return;
+    }
+    el.textContent = '';
     let i = 0;
     function tick() {
       if (i < msg.length) {
@@ -812,17 +821,16 @@ function initListingStack() {
 
     front.classList.add('is-flipping');
 
+    // Mobile fade takes 400ms; desktop flip takes 380ms
     setTimeout(() => {
-      // Snap old front to pos-2 without transition
       front.style.transition = 'none';
       front.classList.remove('is-flipping', 'pos-0');
       front.classList.add('pos-2');
       const typing = front.querySelector('.lcard-typing');
       if (typing) typing.textContent = '';
-      front.getBoundingClientRect(); // force reflow
+      front.getBoundingClientRect();
       front.style.transition = '';
 
-      // Slide remaining cards forward (with transition)
       cards.forEach(card => {
         if (card === front) return;
         if (card.classList.contains('pos-1')) {
@@ -834,7 +842,7 @@ function initListingStack() {
 
       const newFront = getFront();
       if (newFront) startTyping(parseInt(newFront.dataset.index));
-    }, 380);
+    }, isMobileStack ? 400 : 380);
   }
 
   startTyping(0);

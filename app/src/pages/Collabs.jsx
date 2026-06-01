@@ -46,31 +46,7 @@ function CollabCard({ collab, onClick, onDismissDemo, onDismissSample }) {
         </button>
       )}
       <div className="flex relative">
-        {/* Photo */}
-        <div className="w-28 h-28 flex-shrink-0 bg-stone overflow-hidden relative">
-          {collab.image ? (
-            <>
-              <img src={collab.image} alt={collab.property_name} className="w-full h-full object-cover" loading="lazy" />
-              {(collab.is_sample || collab.is_demo) && (
-                <div style={{
-                  position: 'absolute', inset: 0, display: 'flex',
-                  alignItems: 'center', justifyContent: 'center', pointerEvents: 'none',
-                }}>
-                  <span style={{
-                    fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '0.9rem',
-                    color: '#192524', opacity: 0.12, transform: 'rotate(-20deg)',
-                    userSelect: 'none', letterSpacing: '0.2em',
-                  }}>SAMPLE</span>
-                </div>
-              )}
-            </>
-          ) : (
-            <div className="w-full h-full flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #D1EBDB, #959D90)' }}>
-              <span style={{ fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.2em', color: 'rgba(25,37,36,0.35)', textTransform: 'uppercase' }}>DEMO</span>
-            </div>
-          )}
-        </div>
-        {/* Details */}
+        {/* Details (no photo) */}
         <div className="flex-1 p-3">
           {collab.is_demo && (
             <span style={{ fontSize: '0.55rem', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#B8922A', marginBottom: '0.15rem', display: 'block' }}>Demo Tour</span>

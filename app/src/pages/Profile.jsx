@@ -484,6 +484,20 @@ function PastCollabCard({ collab }) {
   );
 }
 
+// ─── Ghost collab card (shown when user has no past collabs) ─────────────────
+function GhostCollabCard() {
+  return (
+    <div className="listing-card" style={{ width: '220px', flexShrink: 0, filter: 'blur(2px)', opacity: 0.45, pointerEvents: 'none' }}>
+      <div style={{ height: '140px', background: 'linear-gradient(135deg, #E2E6E4 0%, #C8CEC9 100%)' }} />
+      <div style={{ padding: '0.875rem' }}>
+        <div style={{ height: '11px', background: '#D0D5CE', borderRadius: '6px', marginBottom: '0.5rem', width: '72%' }} />
+        <div style={{ height: '9px', background: '#DDE1DF', borderRadius: '6px', marginBottom: '0.625rem', width: '48%' }} />
+        <div style={{ height: '18px', background: '#D0D5CE', borderRadius: '9999px', width: '58px' }} />
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Profile page ────────────────────────────────────────────────────────
 export default function Profile() {
   const { profile, loading, signOut, updateProfile } = useAuth();
@@ -496,6 +510,8 @@ export default function Profile() {
   const userId = profile?._id || profile?.id || 'mock-user-001';
   const serverPitchCount = useQuery(api.pitches.getCount, { userId });
   const referralStats = useQuery(api.referrals.getMyCode, userId && userId !== 'mock-user-001' ? { profileId: userId } : 'skip');
+  const realCollabs = useQuery(api.collaborations.getByCreator, userId && userId !== 'mock-user-001' ? { creatorId: userId } : 'skip');
+  const hasCollabs = !!(realCollabs && realCollabs.length > 0);
   const allProfiles = useQuery(api.profiles.getAll);
   const globeStats  = useMemo(() => countGlobeStats(allProfiles), [allProfiles]);
 
@@ -895,18 +911,37 @@ export default function Profile() {
           </div>
         </section>
 
-        {/* ── Past Collabs (continuous scroll) ────────────────────────────── */}
+        {/* ── Past Collabs ─────────────────────────────────────────────────── */}
         <section className="section-reveal" ref={(el) => sectionsRef.current[3] = el} style={{ marginBottom: '1.75rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
             <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.125rem', color: 'var(--ink)', margin: 0 }}>Past Collabs</h3>
-            <button onClick={() => setShowAllCollabs(true)} style={{ color: 'var(--slate)', fontSize: '0.875rem', fontWeight: 500, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font-body)' }}>View all →</button>
+            {hasCollabs && (
+              <button onClick={() => setShowAllCollabs(true)} style={{ color: 'var(--slate)', fontSize: '0.875rem', fontWeight: 500, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font-body)' }}>View all →</button>
+            )}
           </div>
-          <div style={{ overflow: 'hidden', paddingBottom: '0.5rem' }}>
-            <div className="scroll-track">
-              {SAMPLE_COLLABORATIONS.map((c) => <PastCollabCard key={c.id} collab={c} />)}
-              {SAMPLE_COLLABORATIONS.map((c) => <PastCollabCard key={`dup-${c.id}`} collab={c} />)}
+          {hasCollabs ? (
+            <div style={{ overflow: 'hidden', paddingBottom: '0.5rem' }}>
+              <div className="scroll-track">
+                {SAMPLE_COLLABORATIONS.map((c) => <PastCollabCard key={c.id} collab={c} />)}
+                {SAMPLE_COLLABORATIONS.map((c) => <PastCollabCard key={`dup-${c.id}`} collab={c} />)}
+              </div>
             </div>
-          </div>
+          ) : (
+            <div style={{ position: 'relative' }}>
+              <div style={{ display: 'flex', gap: '0.875rem', overflow: 'hidden' }}>
+                {[0, 1, 2].map((i) => <GhostCollabCard key={i} />)}
+              </div>
+              <div style={{
+                position: 'absolute', inset: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: 'linear-gradient(to bottom, transparent 0%, rgba(246,244,241,0.6) 100%)',
+              }}>
+                <p style={{ fontSize: '0.8125rem', color: 'var(--slate)', fontWeight: 500, textAlign: 'center', padding: '0 1rem', textShadow: '0 1px 4px rgba(246,244,241,0.9)' }}>
+                  Your completed collabs will appear here
+                </p>
+              </div>
+            </div>
+          )}
         </section>
 
         {/* ── Travel Calendar ──────────────────────────────────────────────── */}

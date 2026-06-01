@@ -202,4 +202,19 @@ export default defineSchema({
   })
     .index("by_code", ["code"])
     .index("by_user", ["used_by_id"]),
+
+  admin_audit_log: defineTable({
+    action: v.string(),
+    target_type: v.string(),
+    target_id: v.string(),
+    details: v.optional(v.string()),
+    created_at: v.number(),
+  }).index("by_action", ["action"]),
+
+  broadcasts: defineTable({
+    audience: v.string(),
+    subject: v.string(),
+    recipient_count: v.number(),
+    sent_at: v.number(),
+  }).index("by_sent", ["sent_at"]),
 });

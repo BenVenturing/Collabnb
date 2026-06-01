@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
+import { internal } from "./_generated/api";
 
 // ─── Analytics ────────────────────────────────────────────────────────────────
 export const getAnalytics = query({
@@ -336,5 +337,204 @@ export const toggleFeatured = mutation({
   args: { listingId: v.id("listings"), featured: v.boolean() },
   handler: async (ctx, args) => {
     await ctx.db.patch(args.listingId, { is_featured: args.featured });
+  },
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Funnel Analytics
+// ═══════════════════════════════════════════════════════════════════════════
+export const getFunnelAnalytics = query({
+  args: {},
+  handler: async (ctx) => {
+    const [profiles, collabs] = await Promise.all([
+      ctx.db.query("profiles").collect(),
+      ctx.db.query("collaborations").collect(),
+    ]);
+
+    const total = profiles.length;
+    const verified = profiles.filter((p) => p.is_verified === true);
+    const waitlist = profiles.filter((p) => p.tier === "waitlist");
+    const waitlistWithAcc = waitlist.filter((p) => p.clerk_registered === true);
+    const activated = verified.filter((p) => p.first_collab_completed === true);
+
+    let totalDaysToVerify = 0;
+    let verifyCount = 0;
+    verified.forEach((p) => {
+      const userCollabs = collabs.filter((c) => c.creator_id === String(p._id));
+      if (userCollabs.length > 0 && p._creationTime) {
+        const first = userCollabs.sort((a, b) => (a._creationTime ?? 0) - (b._creationTime ?? 0))[0];
+        if (first._creationTime) {
+          totalDaysToVerify += (first._creationTime - p._creationTime) / (1000 * 60 * 60 * 24);
+          verifyCount++;
+        }
+      }
+    });
+
+    return {
+      totalUsers: total,
+      waitlistSignups: waitlist.length,
+      waitlistWithAccount: waitlistWithAcc.length,
+      verifiedCount: verified.length,
+      activatedCount: activated.length,
+      conversionToVerified: total > 0 ? Math.round((verified.length / total) * 100) : 0,
+      conversionToActivated: verified.length > 0 ? Math.round((activated.length / verified.length) * 100) : 0,
+      avgDaysToVerify: verifyCount > 0 ? Math.round(totalDaysToVerify / verifyCount) : null,
+    };
+  },
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Referral Analytics
+// ═══════════════════════════════════════════════════════════════════════════
+export const getReferralAnalytics = query({
+  args: {},
+  handler: async (ctx) => {
+    const [profiles, refCodes, refUses] = await Promise.all([
+      ctx.db.query("profiles").collect(),
+      ctx.db.query("referral_codes").collect(),
+      ctx.db.query("referral_uses").collect(),
+    ]);
+
+    const profileLookup = Object.fromEntries(profiles.map((p) => [String(p._id), p]));
+    const usageByOwner: Record<string, number> = {};
+    refCodes.forEach((rc) => {
+      const uses = refUses.filter((ru) => ru.code === rc.code).length;
+      usageByOwner[rc.owner_id] = (usageByOwner[rc.owner_id] || 0) + uses;
+    });
+
+    return {
+      totalCodes: refCodes.length,
+      totalReferrals: refUses.length,
+      totalFreeMonthsGiven: refUses.filter((ru) => ru.signup_bonus_awarded).length,
+      collabBonusesGiven: refUses.filter((ru) => ru.collab_bonus_awarded).length,
+      uniqueReferrers: Object.keys(usageByOwner).length,
+      topReferrers: Object.entries(usageByOwner)
+        .sort(([, a], [, b]) => b - a)
+        .slice(0, 10)
+        .map(([ownerId, count]) => ({
+          name: profileLookup[ownerId]?.full_name || ownerId.slice(0, 8),
+          count,
+        })),
+    };
+  },
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Admin Audit Log
+// ═══════════════════════════════════════════════════════════════════════════
+export const getAuditLog = query({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db.query("admin_audit_log").order("desc").take(100);
+  },
+});
+
+export const addAuditEntry = mutation({
+  args: { action: v.string(), targetType: v.string(), targetId: v.string(), details: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    await ctx.db.insert("admin_audit_log", {
+      action: args.action,
+      target_type: args.targetType,
+      target_id: args.targetId,
+      details: args.details || "",
+      created_at: Date.now(),
+    });
+  },
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Broadcast History
+// ═══════════════════════════════════════════════════════════════════════════
+export const saveBroadcast = mutation({
+  args: { audience: v.string(), subject: v.string(), recipientCount: v.number() },
+  handler: async (ctx, args) => {
+    await ctx.db.insert("broadcasts", {
+      audience: args.audience,
+      subject: args.subject,
+      recipient_count: args.recipientCount,
+      sent_at: Date.now(),
+    });
+  },
+});
+
+export const getBroadcasts = query({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db.query("broadcasts").order("desc").take(50);
+  },
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Search All Profiles (for admin search/export)
+// ═══════════════════════════════════════════════════════════════════════════
+export const searchAllProfiles = query({
+  args: { query: v.string(), role: v.optional(v.string()), limit: v.optional(v.number()) },
+  handler: async (ctx, args) => {
+    let profiles = await ctx.db.query("profiles").collect();
+    const q = args.query.toLowerCase();
+    profiles = profiles.filter(
+      (p) =>
+        p.full_name?.toLowerCase().includes(q) ||
+        p.email?.toLowerCase().includes(q) ||
+        p.username?.toLowerCase().includes(q) ||
+        p.city?.toLowerCase().includes(q)
+    );
+    if (args.role && args.role !== "all") {
+      profiles = profiles.filter((p) => p.role === args.role);
+    }
+    return profiles.slice(0, args.limit || 50).map((p) => ({
+      _id: p._id,
+      full_name: p.full_name,
+      email: p.email,
+      username: p.username,
+      role: p.role,
+      tier: p.tier,
+      is_verified: p.is_verified,
+      city: p.city,
+      _creationTime: p._creationTime,
+    }));
+  },
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Bulk Verification
+// ═══════════════════════════════════════════════════════════════════════════
+export const bulkApproveProfiles = mutation({
+  args: { profileIds: v.array(v.id("profiles")), isFounder: v.boolean() },
+  handler: async (ctx, args) => {
+    for (const profileId of args.profileIds) {
+      const profile = await ctx.db.get(profileId);
+      if (!profile) continue;
+      const patch: Record<string, any> = { is_verified: true, is_founder: args.isFounder };
+      if (profile.referred_by && !profile.first_collab_completed) {
+        patch.referral_bonus_pending = true;
+      }
+      await ctx.db.patch(profileId, patch);
+      if (profile.email) {
+        await ctx.scheduler.runAfter(0, internal.emails.sendAccessGrantedEmail, {
+          email: profile.email,
+          full_name: profile.full_name,
+          role: profile.role,
+        });
+      }
+    }
+  },
+});
+
+export const bulkRejectProfiles = mutation({
+  args: { profileIds: v.array(v.id("profiles")), reason: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    for (const profileId of args.profileIds) {
+      const profile = await ctx.db.get(profileId);
+      if (!profile) continue;
+      await ctx.db.patch(profileId, { is_rejected: true, rejection_reason: args.reason });
+      if (profile.email) {
+        await ctx.scheduler.runAfter(0, internal.emails.sendRejectionEmail, {
+          email: profile.email,
+          full_name: profile.full_name,
+          role: profile.role,
+        });
+      }
+    }
   },
 });

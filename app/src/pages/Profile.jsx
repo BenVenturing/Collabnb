@@ -572,6 +572,7 @@ export default function Profile() {
     const params = new URLSearchParams(location.search);
     const subStatus = params.get('subscription');
     const sessionId = params.get('session_id');
+    const subscribePlan = params.get('subscribe'); // ?subscribe=monthly|yearly from pricing page
     if (subStatus === 'success' && sessionId) {
       navigate('/profile', { replace: true });
       verifySubscriptionSession({ sessionId })
@@ -579,6 +580,9 @@ export default function Profile() {
         .catch(() => setToastMsg('Could not verify payment — contact support@collabnb.com'));
     } else if (subStatus === 'cancelled') {
       navigate('/profile', { replace: true });
+    } else if (subscribePlan === 'monthly' || subscribePlan === 'yearly') {
+      navigate('/profile', { replace: true });
+      openSubModal();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

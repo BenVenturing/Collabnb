@@ -31,10 +31,21 @@
       afterSignInUrl: '/app/',
       afterSignUpUrl: '/app/',
     });
-    // After callback, check if admin and override redirect
+    // After callback, route based on context
     const email = clerk.user?.primaryEmailAddress?.emailAddress || '';
     const isAdmin = adminEmail && email && email.toLowerCase() === adminEmail.toLowerCase();
-    if (isAdmin) window.location.href = '/app/#/admin';
+    const isNewSignup = localStorage.getItem('collabnb_new_signup') === '1'
+      || localStorage.getItem('collabnb_signup_started') === '1';
+    // Clear flags
+    localStorage.removeItem('collabnb_signup_started');
+    if (isAdmin) {
+      window.location.href = '/app/#/admin';
+    } else if (isNewSignup) {
+      // Keep collabnb_new_signup set so the React app can show the celebration
+      window.location.href = '/app/#/profile';
+    } else {
+      window.location.href = '/app/';
+    }
   } catch {
     window.location.href = '/login.html';
   }

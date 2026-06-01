@@ -22,10 +22,10 @@ function CheckItem({ text }) {
   );
 }
 
-export default function FoundingCard({ isFull, spotsRemaining, onClaim }) {
-  const urgency = spotsRemaining <= 10
-    ? 'text-ink font-bold'
-    : 'text-sage';
+export default function FoundingCard({ isFull, spotsRemaining, creatorSpotsRemaining, hostSpotsRemaining, onClaim }) {
+  const urgency = spotsRemaining <= 10 ? 'text-ink font-bold' : 'text-sage';
+  const creatorsFull = creatorSpotsRemaining <= 0;
+  const hostsFull    = hostSpotsRemaining <= 0;
 
   return (
     <div
@@ -53,7 +53,7 @@ export default function FoundingCard({ isFull, spotsRemaining, onClaim }) {
         <p className="text-sm text-slate mt-2">
           {isFull
             ? 'All founding spots have been claimed'
-            : 'For the first 200 founders — forever'}
+            : 'First 100 creators & 100 hosts — forever'}
         </p>
       </div>
 
@@ -61,9 +61,21 @@ export default function FoundingCard({ isFull, spotsRemaining, onClaim }) {
       <div className="border-t border-black/[0.06] my-7" />
 
       {/* Benefits list */}
-      <ul className="text-left space-y-3.5 flex-1 mb-8">
+      <ul className="text-left space-y-3.5 flex-1 mb-6">
         {BENEFITS.map((b, i) => <CheckItem key={i} text={b} />)}
       </ul>
+
+      {/* Live spot counters */}
+      {!isFull && (
+        <div className="flex gap-3 mb-6">
+          <div className={`flex-1 rounded-xl px-3 py-2 text-center text-xs ${creatorsFull ? 'bg-red-50 text-red-600' : 'bg-stone/20 text-sage'}`}>
+            <span className="font-semibold tabular-nums">{creatorSpotsRemaining}</span> creator spots left
+          </div>
+          <div className={`flex-1 rounded-xl px-3 py-2 text-center text-xs ${hostsFull ? 'bg-red-50 text-red-600' : 'bg-stone/20 text-sage'}`}>
+            <span className="font-semibold tabular-nums">{hostSpotsRemaining}</span> host spots left
+          </div>
+        </div>
+      )}
 
       {/* CTA */}
       {isFull ? (
@@ -83,9 +95,7 @@ export default function FoundingCard({ isFull, spotsRemaining, onClaim }) {
       {/* Scarcity text */}
       {!isFull && (
         <p className={`text-xs mt-3 tabular-nums ${urgency}`}>
-          Only{' '}
-          <span className="font-semibold">{spotsRemaining}</span>
-          {' '}of 200 total founding spots remaining
+          {spotsRemaining} founding {spotsRemaining === 1 ? 'spot' : 'spots'} remaining
           {spotsRemaining <= 20 && ' — almost gone'}
         </p>
       )}

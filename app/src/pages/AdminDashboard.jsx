@@ -12,6 +12,9 @@ import FounderTracker from './admin/FounderTracker';
 import Broadcast from './admin/Broadcast';
 import WaitlistManager from './admin/WaitlistManager';
 import ListingManager from './admin/ListingManager';
+import CollabOversight from './admin/CollabOversight';
+import ContractManager from './admin/ContractManager';
+import AuditLog from './admin/AuditLog';
 
 const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL;
 
@@ -38,17 +41,22 @@ function useAdminGuard() {
 const SECTIONS = [
   { id: 'verification', icon: '📋', label: 'Verification Queue'     },
   { id: 'listings',     icon: '🏠', label: 'Listing Management'     },
+  { id: 'collabs',      icon: '🤝', label: 'Collab Oversight'       },
+  { id: 'contracts',    icon: '📄', label: 'Contracts'              },
   { id: 'founders',     icon: '🌟', label: 'Founder Tracker'        },
   { id: 'waitlist',     icon: '📝', label: 'Waitlist Manager'       },
   { id: 'broadcast',    icon: '📣', label: 'Broadcast'              },
   { id: 'messages',     icon: '💬', label: 'User Messages'          },
   { id: 'suggestions',  icon: '💡', label: 'Suggestions Moderation' },
+  { id: 'audit',        icon: '📋', label: 'Audit Log'              },
   { id: 'analytics',    icon: '📊', label: 'Platform Analytics'     },
   { id: 'settings',     icon: '⚙️', label: 'Settings'               },
 ];
 
 function VerificationPanel() { return <VerificationQueue />;    }
 function ListingsPanel()     { return <ListingManager />;       }
+function CollabPanel()       { return <CollabOversight />;     }
+function ContractPanel()     { return <ContractManager />;      }
 function FoundersPanel()     { return <FounderTracker />;       }
 function MessagesPanel()     { return <UserMessages />;         }
 function SuggestionsPanel()  { return <SuggestionsModeration />; }
@@ -56,15 +64,19 @@ function AnalyticsPanel()    { return <PlatformAnalytics />;    }
 function SettingsPanel()     { return <AdminSettings />;        }
 function WaitlistPanel()     { return <WaitlistManager />;      }
 function BroadcastPanel()    { return <Broadcast />;            }
+function AuditPanel()        { return <AuditLog />;             }
 
 const PANEL_MAP = {
   verification: VerificationPanel,
   listings:     ListingsPanel,
+  collabs:      CollabPanel,
+  contracts:    ContractPanel,
   founders:     FoundersPanel,
   waitlist:     WaitlistPanel,
   broadcast:    BroadcastPanel,
   messages:     MessagesPanel,
   suggestions:  SuggestionsPanel,
+  audit:        AuditPanel,
   analytics:    AnalyticsPanel,
   settings:     SettingsPanel,
 };

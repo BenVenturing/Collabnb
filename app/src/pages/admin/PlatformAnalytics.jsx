@@ -1,3 +1,4 @@
+import React from 'react';
 import { useQuery } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 
@@ -124,6 +125,8 @@ export default function PlatformAnalytics() {
   const stats = useQuery(api.admin.getAnalytics);
   const pitchStats = useQuery(api.admin.getPitchAnalytics);
   const geo = useQuery(api.admin.getGeographicDistribution);
+  const funnel = useQuery(api.admin.getFunnelAnalytics);
+  const referralStats = useQuery(api.admin.getReferralAnalytics);
 
   return (
     <div style={{ padding: '2rem 2.5rem', maxWidth: 860 }}>
@@ -174,6 +177,41 @@ export default function PlatformAnalytics() {
               <Stat label="Pitches Submitted" value={stats.totalPitches} />
             </StatGrid>
           </Section>
+
+          {/* ── Funnel ── */}
+          {funnel && (
+            <Section title="Conversion Funnel">
+              <StatGrid>
+                <Stat label="Total Users"         value={funnel.totalUsers} />
+                <Stat label="Waitlist"            value={funnel.waitlistSignups} />
+                <Stat label="Has Account"          value={funnel.waitlistWithAccount} />
+                <Stat label="Verified"             value={funnel.verifiedCount} accent="#166534" />
+                <Stat label="Activated (1st Collab)" value={funnel.activatedCount} accent="#166534" />
+                <Stat label="Signup → Verified"    value={funnel.conversionToVerified ? `${funnel.conversionToVerified}%` : '—'} />
+                <Stat label="Verified → Activated" value={funnel.conversionToActivated ? `${funnel.conversionToActivated}%` : '—'} />
+                <Stat label="Avg Days to Verify"   value={funnel.avgDaysToVerify ?? '—'} />
+              </StatGrid>
+              <div style={{ ...CARD, marginTop: '0.75rem', padding: '1rem 1.25rem' }}>
+                <div style={{ fontSize: '0.78rem', fontWeight: 600, color: SLATE, marginBottom: '0.625rem' }}>Funnel Flow</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', flexWrap: 'wrap' }}>
+                  {[
+                    { label: 'Total', count: funnel.totalUsers, color: INK },
+                    { label: 'Has Acct', count: funnel.waitlistWithAccount, color: '#92400E' },
+                    { label: 'Verified', count: funnel.verifiedCount, color: '#166534' },
+                    { label: 'Activated', count: funnel.activatedCount, color: '#4A9B7F' },
+                  ].map((s, i, arr) => (
+                    <React.Fragment key={s.label}>
+                      <div style={{ textAlign: 'center', padding: '0.5rem 0.75rem', flex: 1, minWidth: 60 }}>
+                        <div style={{ fontSize: '1.25rem', fontWeight: 700, color: s.color, fontFamily: 'Cabinet Grotesk, sans-serif' }}>{s.count}</div>
+                        <div style={{ fontSize: '0.65rem', color: SAGE }}>{s.label}</div>
+                      </div>
+                      {i < arr.length - 1 && <span style={{ color: SAGE, fontSize: '0.8rem' }}>{'→'}</span>}
+                    </React.Fragment>
+                  ))}
+                </div>
+              </div>
+            </Section>
+          )}
 
           {/* ── Pitch Volume ── */}
           {pitchStats && (
@@ -286,6 +324,32 @@ export default function PlatformAnalytics() {
                       <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.78rem', padding: '0.25rem 0', borderBottom: i < Math.min(geo.topCities.length, 10) - 1 ? '1px solid rgba(25,37,36,0.04)' : 'none' }}>
                         <span style={{ color: INK }}>{c.city}</span>
                         <span style={{ color: SLATE, fontWeight: 600 }}>{c.count}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </Section>
+          )}
+
+          {/* ── Referral Analytics ── */}
+          {referralStats && (
+            <Section title="Referral Analytics">
+              <StatGrid>
+                <Stat label="Total Codes"        value={referralStats.totalCodes} />
+                <Stat label="Successful Referrals" value={referralStats.totalReferrals} accent="#166534" />
+                <Stat label="Unique Referrers"     value={referralStats.uniqueReferrers} />
+                <Stat label="Free Months Given"    value={referralStats.totalFreeMonthsGiven} accent="#0369A1" />
+                <Stat label="Collab Bonuses"      value={referralStats.collabBonusesGiven} />
+              </StatGrid>
+              {referralStats.topReferrers.length > 0 && (
+                <div style={{ ...CARD, marginTop: '0.75rem' }}>
+                  <div style={{ fontSize: '0.78rem', fontWeight: 600, color: SLATE, marginBottom: '0.625rem' }}>Top Referrers</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                    {referralStats.topReferrers.map((r, i) => (
+                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.78rem', padding: '0.25rem 0', borderBottom: i < referralStats.topReferrers.length - 1 ? '1px solid rgba(25,37,36,0.04)' : 'none' }}>
+                        <span style={{ color: INK }}>#{i + 1} {r.name}</span>
+                        <span style={{ color: SLATE, fontWeight: 600 }}>{r.count} referrals</span>
                       </div>
                     ))}
                   </div>

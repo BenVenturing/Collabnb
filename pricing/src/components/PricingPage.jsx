@@ -9,12 +9,19 @@ import ClaritySection  from './ClaritySection';
 import FAQSection      from './FAQSection';
 import TermsNote       from './TermsNote';
 
-const FOUNDING_TOTAL = 200;
-const CONVEX_URL = import.meta.env.VITE_CONVEX_URL;
+const CREATOR_CAP  = 100;
+const HOST_CAP     = 100;
+const LAUNCH_DATE  = new Date('2026-07-01T00:00:00Z');
+const CONVEX_URL   = import.meta.env.VITE_CONVEX_URL;
+// After July 1, clicking a paid plan redirects to the app's subscription flow.
+// The app detects ?subscribe=monthly|yearly and auto-opens the payment modal.
+const APP_URL = import.meta.env.VITE_APP_URL || '../app/';
 
 export default function PricingPage() {
   const [creatorCount, setCreatorCount] = useState(0);
-  const [hostCount, setHostCount] = useState(0);
+  const [hostCount, setHostCount]       = useState(0);
+
+  const isUnlocked = new Date() >= LAUNCH_DATE;
 
   // Fetch live counts from Convex
   useEffect(() => {
@@ -43,12 +50,20 @@ export default function PricingPage() {
     };
   }, []);
 
-  const totalJoined = creatorCount + hostCount;
-  const spotsRemaining = Math.max(0, FOUNDING_TOTAL - totalJoined);
-  const isFoundingFull  = spotsRemaining <= 0;
+  const creatorSpotsRemaining = Math.max(0, CREATOR_CAP - creatorCount);
+  const hostSpotsRemaining    = Math.max(0, HOST_CAP - hostCount);
+  // Founding is full when EITHER cap is reached
+  const isFoundingFull = creatorSpotsRemaining <= 0 || hostSpotsRemaining <= 0;
+  const spotsRemaining = Math.min(creatorSpotsRemaining, hostSpotsRemaining);
 
   function handleClaim() {
     window.location.href = '../join.html';
+  }
+
+  function handleSubscribe(tier) {
+    // Redirect to the app; Clerk will prompt login if needed,
+    // then the profile page auto-opens the subscription modal.
+    window.location.href = `${APP_URL}#/profile?subscribe=${tier}`;
   }
 
 
@@ -69,7 +84,7 @@ export default function PricingPage() {
         
         <div className="flex items-center gap-4">
           <span className="text-[0.7rem] uppercase tracking-widest text-sage font-medium bg-black/[0.03] px-3 py-1.5 rounded-full">
-            {creatorCount} Creators & {hostCount} Hosts Joined
+            {creatorCount}/100 Creators · {hostCount}/100 Hosts Joined
           </span>
           <a href="../join.html" className="btn-ink text-sm py-2.5 px-5">
             Join the Waitlist
@@ -81,8 +96,11 @@ export default function PricingPage() {
         <HeroSection spotsRemaining={spotsRemaining} isFoundingFull={isFoundingFull} />
         <PricingCards
           isFoundingFull={isFoundingFull}
-          spotsRemaining={spotsRemaining}
+          creatorSpotsRemaining={creatorSpotsRemaining}
+          hostSpotsRemaining={hostSpotsRemaining}
           onClaim={handleClaim}
+          isUnlocked={isUnlocked}
+          onSubscribe={handleSubscribe}
         />
         <TierLadder />
         <ValueSection />

@@ -455,7 +455,7 @@ function showWizardStep(step) {
       const mountEl = document.getElementById('wl-clerk-mount');
       if (!mountEl) return;
       // Store the name for the celebration screen when OAuth redirects back
-      try { sessionStorage.setItem('collabnb_signup_name', _wizardName || ''); } catch {}
+      try { localStorage.setItem('collabnb_signup_name', _wizardName || ''); } catch {}
       try { localStorage.setItem('collabnb_new_signup', '1'); } catch {}
       const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
       const returnUrl = isLocalhost ? 'http://localhost:5173/join.html?celebrate=1' : '/join.html?celebrate=1';
@@ -1203,13 +1203,16 @@ async function initNavAuth() {
     });
 
     // Post-OAuth / post-signup celebration on join.html
-    // Fires when Clerk redirects back with ?celebrate=1
+    // Fires when Clerk redirects back with ?celebrate=1 OR when SSO callback URL is join.html
     const onJoinPage = window.location.pathname.endsWith('join.html') || window.location.pathname.endsWith('/join');
     const urlParams = new URLSearchParams(window.location.search);
-    if (onJoinPage && urlParams.get('celebrate') === '1') {
-      // Get the name saved before OAuth redirect
-      const savedName = (() => { try { return sessionStorage.getItem('collabnb_signup_name'); } catch { return ''; } })();
-      try { sessionStorage.removeItem('collabnb_signup_name'); } catch {}
+    const isCelebrate = urlParams.get('celebrate') === '1';
+    const isNewSignupFlag = localStorage.getItem('collabnb_new_signup') === '1';
+    if (onJoinPage && (isCelebrate || isNewSignupFlag)) {
+      // Get the name saved before OAuth redirect (localStorage survives cross-origin)
+      const savedName = localStorage.getItem('collabnb_signup_name') || '';
+      localStorage.removeItem('collabnb_signup_name');
+      localStorage.removeItem('collabnb_new_signup');
       const name = savedName || clerk.user?.fullName || clerk.user?.firstName || '';
       // Clean URL param
       window.history.replaceState({}, '', window.location.pathname);

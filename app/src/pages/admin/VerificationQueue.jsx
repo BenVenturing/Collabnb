@@ -267,6 +267,7 @@ export default function VerificationQueue() {
   const rejected   = useQuery(api.profiles.getRejected);
   const approve    = useMutation(api.profiles.approveProfile);
   const reject     = useMutation(api.profiles.rejectProfile);
+  const addAudit   = useMutation(api.admin.addAuditEntry);
 
   const pending          = unverified || [];
   const pendingCreators  = pending.filter(p => p.role === 'creator');
@@ -285,10 +286,12 @@ export default function VerificationQueue() {
     }
 
     await approve({ profileId: profile._id, isFounder });
+    try { await addAudit({ action: 'approved', targetType: 'profile', targetId: String(profile._id), details: profile.full_name }); } catch {}
   }
 
   async function handleReject(profile, reason) {
     await reject({ profileId: profile._id, reason: reason || undefined });
+    try { await addAudit({ action: 'rejected', targetType: 'profile', targetId: String(profile._id), details: `${profile.full_name} — ${reason || 'No reason'}` }); } catch {}
   }
 
   const displayCards =

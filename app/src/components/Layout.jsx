@@ -2,7 +2,7 @@ import AppNav from './AppNav';
 import VerificationPendingModal from './VerificationPendingModal';
 import SubscriptionModal from './SubscriptionModal';
 import FloatingHelpButton from './FloatingHelpButton';
-import OnboardingChecklist from './OnboardingChecklist'; // self-positions via fixed CSS
+import OnboardingChecklist, { reopenChecklist } from './OnboardingChecklist'; // self-positions via fixed CSS
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
@@ -72,9 +72,10 @@ function SandTimer() {
   );
 }
 
-function PendingVerificationBanner({ profile }) {
+function PendingVerificationBanner({ profile, onMinimize }) {
   const firstName = profile?.full_name?.split(' ')[0] || 'there';
   const [minimized, setMinimized] = useState(false);
+  const [shrinking, setShrinking] = useState(false);
   const bannerRef = useRef(null);
   const sentinelRef = useRef(null);
 
@@ -84,8 +85,6 @@ function PendingVerificationBanner({ profile }) {
 
     const observer = new IntersectionObserver(
       ([entry]) => {
-        // When the sentinel is NOT visible (scrolled past it), minimize.
-        // When it IS visible again (scrolled back up), expand.
         setMinimized(!entry.isIntersecting);
       },
       { threshold: 0, rootMargin: '-80px 0px 0px 0px' }
@@ -95,14 +94,33 @@ function PendingVerificationBanner({ profile }) {
     return () => observer.disconnect();
   }, []);
 
+  function handleMinimize() {
+    setShrinking(true);
+    setTimeout(() => {
+      onMinimize?.();
+      // Reset animation state for next time banner shows
+      setTimeout(() => setShrinking(false), 100);
+    }, 400);
+  }
+
   // Expanded banner (shown when sentinel is visible)
   if (!minimized) {
+    const collapsingStyle = shrinking ? {
+      transform: 'scale(0.85) translateY(20px)',
+      opacity: 0,
+      marginBottom: 0,
+      maxHeight: 0,
+      padding: '0 1.25rem',
+      overflow: 'hidden',
+    } : {};
+
     return (
       <>
-        {/* Sentinel — marks where the banner sits in the page flow */}
         <div ref={sentinelRef} style={{ height: 1 }} />
         <div ref={bannerRef} style={{
-          background: 'linear-gradient(135deg, #FFFBEB 0%, #FEF9EE 60%, #FFF7E0 100%)',
+          background: shrinking
+            ? 'linear-gradient(135deg, #FFFBEB 0%, #FEF9EE 60%, #FFF7E0 100%)'
+            : 'linear-gradient(135deg, #FFFBEB 0%, #FEF9EE 60%, #FFF7E0 100%)',
           border: '1.5px solid #D97706',
           borderRadius: '16px',
           padding: '1rem 1.25rem',
@@ -114,14 +132,16 @@ function PendingVerificationBanner({ profile }) {
             'inset 0 1px 0 rgba(255,255,255,0.85), inset 0 -1px 0 rgba(217,119,6,0.08), 0 4px 16px rgba(217,119,6,0.12), 0 1px 4px rgba(217,119,6,0.08)',
           position: 'relative',
           overflow: 'hidden',
-          transition: 'opacity 300ms ease, transform 300ms ease',
+          transition: 'transform 400ms cubic-bezier(0.34,1.56,0.64,1), opacity 350ms ease, margin-bottom 400ms ease, max-height 400ms ease, padding 400ms ease',
+          pointerEvents: shrinking ? 'none' : 'auto',
+          ...collapsingStyle,
         }}>
           <div style={{
             position: 'absolute', inset: 0, borderRadius: '16px', pointerEvents: 'none', opacity: 0.04,
             backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'300\' height=\'300\'%3E%3Cfilter id=\'n\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.9\' numOctaves=\'4\'/%3E%3C/filter%3E%3Crect width=\'300\' height=\'300\' filter=\'url(%23n)\' opacity=\'1\'/%3E%3C/svg%3E")',
           }} />
           <SandTimer />
-          <div style={{ position: 'relative' }}>
+          <div style={{ position: 'relative', flex: 1 }}>
             <p style={{ fontWeight: 700, color: '#92400E', margin: '0 0 0.25rem', fontSize: '0.9375rem', fontFamily: 'var(--font-display, sans-serif)', letterSpacing: '-0.01em' }}>
               Account under review, {firstName}!
             </p>
@@ -130,6 +150,30 @@ function PendingVerificationBanner({ profile }) {
               Messaging and applying will unlock the moment you're approved.
             </p>
           </div>
+          {/* Minimize button */}
+          <button
+            onClick={handleMinimize}
+            style={{
+              background: 'rgba(217,119,6,0.12)',
+              border: 'none',
+              borderRadius: '50%',
+              width: 32, height: 32,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer', flexShrink: 0,
+              color: '#92400E',
+              transition: 'background 150ms',
+              position: 'relative',
+              zIndex: 2,
+            }}
+            onMouseEnter={e => e.currentTarget.style.background = 'rgba(217,119,6,0.25)'}
+            onMouseLeave={e => e.currentTarget.style.background = 'rgba(217,119,6,0.12)'}
+            title="Minimize to checklist"
+            aria-label="Minimize verification banner"
+          >
+            <svg width="12" height="12" viewBox="0 0 12 4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <line x1="1" y1="2" x2="11" y2="2" />
+            </svg>
+          </button>
         </div>
       </>
     );
@@ -183,6 +227,15 @@ export default function Layout({ children }) {
   const [bannerDismissed, setBannerDismissed] = useState(
     () => localStorage.getItem(LAUNCH_BANNER_KEY) === '1'
   );
+  const [verificationMinimized, setVerificationMinimized] = useState(false);
+
+  function handleMinimizeVerification() {
+    setVerificationMinimized(true);
+    // Open the onboarding checklist
+    reopenChecklist();
+    // Re-show the banner after 30 seconds in case user wants it back
+    setTimeout(() => setVerificationMinimized(false), 30000);
+  }
   const bannerVisible = !bannerDismissed && new Date() < LAUNCH_DATE;
   const daysLeft = bannerVisible
     ? Math.ceil((LAUNCH_DATE - new Date()) / (1000 * 60 * 60 * 24))
@@ -258,9 +311,9 @@ export default function Layout({ children }) {
         className="relative z-10"
         style={{ paddingTop: location.pathname === '/profile' ? '0' : (bannerVisible ? `calc(7rem + ${BANNER_H})` : '7rem') }}
       >
-        {location.pathname !== '/profile' && isPending && (
+        {location.pathname !== '/profile' && isPending && !verificationMinimized && (
           <div style={{ maxWidth: '820px', margin: '0 auto', padding: '0 1.25rem' }}>
-            <PendingVerificationBanner profile={profile} />
+            <PendingVerificationBanner profile={profile} onMinimize={handleMinimizeVerification} />
           </div>
         )}
         {children}

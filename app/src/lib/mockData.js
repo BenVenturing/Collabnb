@@ -512,6 +512,7 @@ export const SAMPLE_COLLABORATIONS = [
     deliverables: '3 Reels, 5 Photos, 1 Blog Post',
     days_left: 12,
     is_active: true,
+    is_sample: true,
     current_stage: 'pending',
     stages: makeStages('pending', {
       pending: { date: 'Feb 1, 2026', note: 'Application submitted — waiting for host response' },
@@ -534,6 +535,7 @@ export const SAMPLE_COLLABORATIONS = [
     deliverables: '2 Reels, 8 Photos',
     days_left: 0,
     is_active: true,
+    is_sample: true,
     current_stage: 'uploaded_tagged',
     stages: makeStages('uploaded_tagged', {
       pending:         { date: 'Jan 5, 2026',  note: 'Application submitted and accepted' },
@@ -583,7 +585,7 @@ export const DEMO_COLLAB = {
   property_name: 'Collabnb Demo Tour',
   location: 'San Francisco, CA',
   host_name: 'Collabnb Guide',
-  image: '',
+  image: 'https://images.unsplash.com/photo-1502780809386-6e8c1d349d15?w=800&q=80',
   status: 'demo',
   status_text: 'Demo',
   dates: 'Anytime',
@@ -610,33 +612,23 @@ export const DEMO_COLLAB = {
 // ─── Thread message histories ─────────────────────────────────────────────────
 export const THREAD_MESSAGES = {
   t1: [
-    { id: 'm1', from: 'host', text: "Hey Ben! Just confirming your dates — Feb 15–18 still work for us.", time: 'Apr 17 · 9:14 AM' },
-    { id: 'm2', from: 'me', text: "Yes, those dates are perfect! I'll have my content plan to you by end of week.", time: 'Apr 17 · 10:02 AM' },
-    { id: 'm3', from: 'host', text: "Amazing. We've got the whole cabin reserved just for the shoot. Let me know if you need any gear access.", time: 'Apr 18 · 2:31 PM' },
-    { id: 'm4', from: 'me', text: "That's so helpful, thank you. I'm planning 3 reels and a long-form vlog — golden hour exteriors are top of my list.", time: 'Apr 18 · 3:45 PM' },
-    { id: 'm5', from: 'host', text: "Looking forward to the shoot next week!", time: 'Apr 19 · 8:07 AM' },
-  ],
-  t2: [
-    { id: 'm1', from: 'me', text: "Hi! I'd love to collaborate on this property. I have 413K followers on Instagram with an 8.2% engagement rate.", time: 'Apr 16 · 11:20 AM' },
-    { id: 'm2', from: 'me', text: "I specialise in cozy mountain lodge content — lots of fireplace vibes, morning fog, that sort of thing.", time: 'Apr 16 · 11:21 AM' },
-    { id: 'm3', from: 'host', text: "Thanks Ben, your portfolio looks great. We'd love to have you — can you share more about your deliverables?", time: 'Apr 18 · 9:55 AM' },
-  ],
-  t3: [
-    { id: 'm1', from: 'me', text: "I have some ideas for unique content angles for the vineyard that I think your audience would love.", time: 'Apr 14 · 4:00 PM' },
-    { id: 'm2', from: 'me', text: "Think harvest season reels, drone footage of the vines at sunrise, and a wine-pairing story series.", time: 'Apr 14 · 4:01 PM' },
-    { id: 'm3', from: 'host', text: "Ben, this sounds genuinely exciting. The harvest angle is something we've never explored with a creator.", time: 'Apr 15 · 10:30 AM' },
-    { id: 'm4', from: 'host', text: "Would you be open to extending the stay to capture the full harvest weekend? We can discuss comp.", time: 'Apr 15 · 10:32 AM' },
-    { id: 'm5', from: 'me', text: "Absolutely, I'd love that. Let me draft a revised deliverable list and send it over.", time: 'Apr 15 · 11:00 AM' },
-    { id: 'm6', from: 'host', text: "Perfect. Also — we have a private tasting room that's never been featured anywhere. It's yours.", time: 'Apr 17 · 2:15 PM' },
+    { id: 'm1', from: 'host', text: "Hi Ben! We loved your portfolio — would love to have you at Glacier Prime this season.", time: 'Apr 16 · 8:45 AM' },
+    { id: 'm2', from: 'me', text: "Thanks so much! I've been eyeing this property for a while. The morning fog over Lake Tahoe would make incredible content.", time: 'Apr 16 · 10:12 AM' },
+    { id: 'm3', from: 'host', text: "Exactly what we had in mind. We'd love 3 reels and a collection of photos. Does Feb 15–18 work for you?", time: 'Apr 17 · 9:14 AM' },
+    { id: 'm4', from: 'me', text: "Yes, those dates are perfect! I'll have my content plan to you by end of week.", time: 'Apr 17 · 10:02 AM' },
+    { id: 'm5', from: 'host', text: "Amazing. We've got the whole cabin reserved just for the shoot. Let me know if you need any gear access.", time: 'Apr 18 · 2:31 PM' },
+    { id: 'm6', from: 'me', text: "That's so helpful, thank you. I'm planning 3 reels and a long-form vlog — golden hour exteriors are top of my list.", time: 'Apr 18 · 3:45 PM' },
+    { id: 'm7', from: 'host', text: "Looking forward to the shoot next week! We'll have breakfast ready when you arrive.", time: 'Apr 19 · 8:07 AM' },
   ],
 };
 
 // ─── Sample inbox threads ─────────────────────────────────────────────────────
+// One sample conversation to showcase the messaging experience
 export const SAMPLE_THREADS = [
   {
     id: 't1',
     listing_title: 'Glacier Prime Cabin',
-    host_name: 'Ben Venturing',
+    host_name: 'Sarah at Glacier Stays',
     host_avatar: null,
     tag: 'Collab',
     last_message: 'Looking forward to the shoot next week!',
@@ -644,28 +636,6 @@ export const SAMPLE_THREADS = [
     unread: 0,
     is_founder: true,
     collab_id: 1,
-  },
-  {
-    id: 't2',
-    listing_title: 'Mountain Lodge Escape',
-    host_name: 'Ben Venturing',
-    host_avatar: null,
-    tag: 'Application',
-    last_message: "Hi! I'd love to collaborate on this property...",
-    timestamp: 'Apr 18',
-    unread: 1,
-    is_founder: false,
-    collab_id: 3,
-  },
-  {
-    id: 't3',
-    listing_title: 'Vineyard Wine Estate',
-    host_name: 'Ben Venturing',
-    host_avatar: null,
-    tag: 'Pitch',
-    last_message: 'I have some ideas for unique content angles...',
-    timestamp: 'Apr 17',
-    unread: 3,
-    is_founder: false,
+    is_sample: true,
   },
 ];

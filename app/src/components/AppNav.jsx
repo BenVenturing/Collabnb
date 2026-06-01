@@ -93,11 +93,12 @@ export default function AppNav() {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  // Close profile dropdown on outside click
+  // Close profile dropdown and nav menu on outside click
   useEffect(() => {
     const handler = (e) => {
       if (profileRef.current && !profileRef.current.contains(e.target)) {
         setProfileOpen(false);
+        setMenuOpen(false);
       }
     };
     document.addEventListener('mousedown', handler);
@@ -153,8 +154,6 @@ export default function AppNav() {
 
   // Whether the "Search stays" pill is visible
   const showSearchPill = compactSearch && !menuOpen && !navSearchOpen;
-  // Whether the hamburger is visible (in compact mode, hidden when nav search open)
-  const showHamburger  = compactSearch && !navSearchOpen;
 
   return (
     <>
@@ -416,22 +415,6 @@ export default function AppNav() {
         {/* ── Actions ──────────────────────────────────────────────────────────── */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', flexShrink: 0 }}>
 
-          {/* Hamburger — mobile always; desktop when compact & search not open */}
-          <button
-            className={`nav-hamburger ${menuOpen ? 'open' : ''}`}
-            aria-label={menuOpen ? 'Close menu' : 'Open menu'}
-            aria-expanded={menuOpen}
-            onClick={() => setMenuOpen(!menuOpen)}
-            data-compact={compactSearch ? 'true' : undefined}
-            data-searchopen={navSearchOpen ? 'true' : undefined}
-          >
-            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-              <line className="line line-1" x1="3" y1="5" x2="17" y2="5"/>
-              <line className="line line-2" x1="3" y1="10" x2="17" y2="10"/>
-              <line className="line line-3" x1="3" y1="15" x2="17" y2="15"/>
-            </svg>
-          </button>
-
           {/* "Search stays" compact pill */}
           <button
             onClick={openNavSearch}
@@ -464,10 +447,29 @@ export default function AppNav() {
             </span>
           </button>
 
-          {/* Profile avatar pill */}
-          <div className="relative" ref={profileRef}>
+          {/* Hamburger + Profile avatar — grouped so nav dropdown anchors near avatar */}
+          <div className="relative" ref={profileRef} style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+
+            {/* Hamburger — LEFT of avatar, opens nav link dropdown anchored here */}
+            {!navSearchOpen && (
+              <button
+                className={`nav-hamburger ${menuOpen ? 'open' : ''}`}
+                aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+                aria-expanded={menuOpen}
+                onClick={() => { setMenuOpen(!menuOpen); setProfileOpen(false); }}
+                data-compact={compactSearch ? 'true' : undefined}
+              >
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                  <line className="line line-1" x1="3" y1="5" x2="17" y2="5"/>
+                  <line className="line line-2" x1="3" y1="10" x2="17" y2="10"/>
+                  <line className="line line-3" x1="3" y1="15" x2="17" y2="15"/>
+                </svg>
+              </button>
+            )}
+
+            {/* Profile avatar pill */}
             <button
-              onClick={() => setProfileOpen(!profileOpen)}
+              onClick={() => { setProfileOpen(!profileOpen); setMenuOpen(false); }}
               className="flex items-center gap-2 pl-3 pr-1 py-1 rounded-full border border-stone/60 bg-white/60 hover:bg-white/90 transition-colors"
               style={{ minHeight: '40px' }}
             >
@@ -506,6 +508,9 @@ export default function AppNav() {
                 </div>
                 <NavLink to="/profile" onClick={() => setProfileOpen(false)} className="block px-4 py-3 text-sm text-ink hover:bg-mint/30 transition-colors">
                   View Profile
+                </NavLink>
+                <NavLink to="/profile?settings=true" onClick={() => setProfileOpen(false)} className="block px-4 py-3 text-sm text-ink hover:bg-mint/30 transition-colors">
+                  ⚙️ Settings
                 </NavLink>
                 <button onClick={() => { setProfileOpen(false); reopenChecklist(); }} className="w-full text-left px-4 py-3 text-sm text-ink hover:bg-mint/30 transition-colors">
                   ✅ Setup Checklist

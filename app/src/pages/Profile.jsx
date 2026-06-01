@@ -592,6 +592,10 @@ export default function Profile() {
       autoEditDone.current = true;
       setEditDraft({ ...profile });
       navigate('/profile', { replace: true });
+    } else if (params.get('settings') === 'true') {
+      autoEditDone.current = true;
+      setShowSettings(true);
+      navigate('/profile', { replace: true });
     }
   }, [loading, profile, location.search, navigate]);
 

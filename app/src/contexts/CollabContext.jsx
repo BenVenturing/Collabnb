@@ -446,12 +446,16 @@ export function CollabProvider({ children }) {
     setThreads((prev) => prev.map((t) => t.id === threadId ? { ...t, archived: true } : t));
   }, []);
 
+  const deleteThread = useCallback((threadId) => {
+    setThreads((prev) => prev.filter((t) => t.id !== threadId));
+  }, []);
+
   const updateThreadTag = useCallback((threadId, newTag) => {
     setThreads((prev) => prev.map((t) => t.id === threadId ? { ...t, tag: newTag } : t));
   }, []);
 
   return (
-    <CollabContext.Provider value={{ collabs, threads, contracts, applyCount, savedIds, collections, activeCollectionId, toggleSave, isSaved, createCollection, setActiveCollection, moveToCollection, renameCollection, deleteCollection, applyToListing, hasApplied, saveContract, updateContract, markContractSent, getContracts, sendContractMessage, getCollabById, advanceStage, updateStageData, toggleCloseCollab, createThread, archiveThread, updateThreadTag }}>
+    <CollabContext.Provider value={{ collabs, threads, contracts, applyCount, savedIds, collections, activeCollectionId, toggleSave, isSaved, createCollection, setActiveCollection, moveToCollection, renameCollection, deleteCollection, applyToListing, hasApplied, saveContract, updateContract, markContractSent, getContracts, sendContractMessage, getCollabById, advanceStage, updateStageData, toggleCloseCollab, createThread, archiveThread, deleteThread, updateThreadTag }}>
       {children}
     </CollabContext.Provider>
   );

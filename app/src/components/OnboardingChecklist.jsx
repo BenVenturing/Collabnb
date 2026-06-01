@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -30,9 +30,9 @@ function creatorSteps(profile) {
     },
     {
       id: 'explore',
-      label: 'Browse listings & find a match',
+      label: 'Browse sample listings',
       done: false,
-      action: { label: 'Explore', path: '/explore' },
+      action: { label: 'Browse listings', path: '/explore' },
     },
   ];
 }
@@ -78,7 +78,8 @@ export default function OnboardingChecklist() {
   );
   const [visible, setVisible] = useState(false);
   const [entered, setEntered] = useState(false);
-  const mountedRef = useRef(false);
+  // Steps that have been manually unchecked (shown as reopened even if profile says done)
+  const [unchecked, setUnchecked] = useState({});
 
   // Register reopen listener
   useEffect(() => {
@@ -98,7 +99,12 @@ export default function OnboardingChecklist() {
   const isAdmin = !!(ADMIN_EMAIL && userEmail && userEmail.toLowerCase() === ADMIN_EMAIL.toLowerCase());
 
   const isHost = profile?.role === 'host';
-  const steps = isHost ? hostSteps(profile) : creatorSteps(profile);
+  const rawSteps = isHost ? hostSteps(profile) : creatorSteps(profile);
+  // Apply manual unchecked overrides: a done step can be toggled back to open
+  const steps = rawSteps.map(s => ({
+    ...s,
+    done: s.done && !unchecked[s.id],
+  }));
   const completedCount = steps.filter(s => s.done).length;
   const allDone = completedCount === steps.length;
 
@@ -302,7 +308,10 @@ export default function OnboardingChecklist() {
 
         {/* Steps */}
         <div style={{ padding: '0.625rem 0.75rem 0.875rem', display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
-          {steps.map(step => (
+          {steps.map(step => {
+            const rawDone = rawSteps.find(s => s.id === step.id)?.done ?? false;
+            const isUnchecked = unchecked[step.id];
+            return (
             <div
               key={step.id}
               style={{
@@ -314,20 +323,29 @@ export default function OnboardingChecklist() {
                 transition: 'background 200ms',
               }}
             >
-              {/* Check circle */}
-              <div style={{
-                width: 18, height: 18, borderRadius: '50%', flexShrink: 0,
-                border: `2px solid ${step.done ? '#3C5759' : 'var(--stone, #D0D5CE)'}`,
-                background: step.done ? '#3C5759' : 'transparent',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                transition: 'background 200ms, border-color 200ms',
-              }}>
+              {/* Check circle — clickable to toggle completed steps */}
+              <button
+                onClick={() => {
+                  if (rawDone) {
+                    setUnchecked(prev => ({ ...prev, [step.id]: !isUnchecked }));
+                  }
+                }}
+                title={rawDone ? (isUnchecked ? 'Mark as done' : 'Uncheck to revisit') : undefined}
+                style={{
+                  width: 18, height: 18, borderRadius: '50%', flexShrink: 0,
+                  border: `2px solid ${step.done ? '#3C5759' : 'var(--stone, #D0D5CE)'}`,
+                  background: step.done ? '#3C5759' : 'transparent',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  transition: 'background 200ms, border-color 200ms',
+                  cursor: rawDone ? 'pointer' : 'default',
+                  padding: 0,
+                }}>
                 {step.done && (
                   <svg width="9" height="9" viewBox="0 0 12 12" fill="none">
                     <path d="M2 6l3 3 5-5" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                 )}
-              </div>
+              </button>
 
               <span style={{
                 flex: 1,
@@ -370,7 +388,8 @@ export default function OnboardingChecklist() {
                 </button>
               )}
             </div>
-          ))}
+            );
+          })}
         </div>
 
         {/* All done CTA */}

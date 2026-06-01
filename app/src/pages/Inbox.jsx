@@ -61,34 +61,62 @@ function Avatar({ name, src, size = 44, unread = 0, isFounder = false }) {
 }
 
 // ─── Thread row (left panel) ──────────────────────────────────────────────────
-function ThreadRow({ thread, isActive, onClick }) {
+function ThreadRow({ thread, isActive, onClick, onDelete }) {
+  const [showDelete, setShowDelete] = useState(false);
   const tagStyle = TAG_STYLES[thread.tag] || TAG_STYLES.Application;
+
   return (
-    <button
-      onClick={onClick}
-      className={`w-full flex items-center gap-3 px-4 py-3.5 border-b border-stone/20 text-left transition-colors ${
+    <div
+      className={`w-full flex items-center gap-3 px-4 py-3.5 border-b border-stone/20 text-left transition-colors relative group ${
         isActive ? 'bg-white/90' : 'hover:bg-white/50'
       }`}
+      onMouseEnter={() => setShowDelete(true)}
+      onMouseLeave={() => setShowDelete(false)}
     >
-      <Avatar name={thread.host_name} src={thread.host_avatar} unread={thread.unread} isFounder={thread.is_founder} />
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center justify-between mb-0.5">
-          <p className={`text-sm truncate pr-2 ${thread.unread ? 'font-bold text-ink' : 'font-semibold text-slate'}`}>
-            {thread.listing_title}
+      <button onClick={onClick} className="flex items-center gap-3 flex-1 min-w-0 text-left">
+        <Avatar name={thread.host_name} src={thread.host_avatar} unread={thread.unread} isFounder={thread.is_founder} />
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between mb-0.5">
+            <p className={`text-sm truncate pr-2 ${thread.unread ? 'font-bold text-ink' : 'font-semibold text-slate'}`}>
+              {thread.listing_title}
+            </p>
+            <p className="text-sage text-[11px] flex-shrink-0">{thread.timestamp}</p>
+          </div>
+          <div className="flex items-center gap-1.5 mb-0.5">
+            <span className={`inline-block text-[10px] font-semibold px-1.5 py-0.5 rounded ${tagStyle}`}>
+              {thread.tag}
+            </span>
+            {thread.is_sample && (
+              <span className="inline-block text-[9px] font-bold px-1 py-0.5 rounded bg-amber-100 text-amber-600 uppercase tracking-wide">Sample</span>
+            )}
+            <span className="text-sage text-[11px] truncate">{thread.host_name}</span>
+          </div>
+          <p className={`text-xs truncate ${thread.unread ? 'text-ink/70' : 'text-sage'}`}>
+            {thread.last_message}
           </p>
-          <p className="text-sage text-[11px] flex-shrink-0">{thread.timestamp}</p>
         </div>
-        <div className="flex items-center gap-1.5 mb-0.5">
-          <span className={`inline-block text-[10px] font-semibold px-1.5 py-0.5 rounded ${tagStyle}`}>
-            {thread.tag}
-          </span>
-          <span className="text-sage text-[11px] truncate">{thread.host_name}</span>
-        </div>
-        <p className={`text-xs truncate ${thread.unread ? 'text-ink/70' : 'text-sage'}`}>
-          {thread.last_message}
-        </p>
-      </div>
-    </button>
+      </button>
+
+      {/* Delete button (visible on hover) */}
+      {onDelete && showDelete && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onDelete(); }}
+          className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center transition-colors"
+          style={{ background: 'rgba(200,60,60,0.1)', color: '#c0392b' }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(200,60,60,0.18)'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(200,60,60,0.1)'; }}
+          title="Delete conversation"
+        >
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" width="13" height="13">
+            <polyline points="2 4 14 4"/>
+            <path d="M5 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1"/>
+            <path d="M13 4l-1 9H4L3 4"/>
+            <line x1="6.5" y1="7" x2="6.5" y2="11"/>
+            <line x1="9.5" y1="7" x2="9.5" y2="11"/>
+          </svg>
+        </button>
+      )}
+    </div>
   );
 }
 
@@ -455,8 +483,22 @@ function NewMessageModal({ listings, onSelect, onClose }) {
 }
 
 // ─── Main Inbox ───────────────────────────────────────────────────────────────
+// ─── Shimmer skeleton row ─────────────────────────────────────────────────────
+function ShimmerRow() {
+  return (
+    <div className="w-full flex items-center gap-3 px-4 py-3.5 border-b border-stone/20 animate-pulse">
+      <div className="w-11 h-11 rounded-full bg-stone/40 flex-shrink-0" />
+      <div className="flex-1 min-w-0">
+        <div className="h-3 bg-stone/40 rounded-full w-3/5 mb-2" />
+        <div className="h-2.5 bg-stone/30 rounded-full w-2/5 mb-2" />
+        <div className="h-2.5 bg-stone/25 rounded-full w-4/5" />
+      </div>
+    </div>
+  );
+}
+
 export default function Inbox() {
-  const { threads, collabs, archiveThread, updateThreadTag, createThread } = useCollabs();
+  const { threads, collabs, archiveThread, deleteThread, updateThreadTag, createThread } = useCollabs();
   const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
   const [activeFilter, setActiveFilter] = useState('All');
@@ -626,11 +668,19 @@ export default function Inbox() {
 
         {/* Thread list */}
         <div className="flex-1 overflow-y-auto">
-          {filtered.length === 0 ? (
+          {filtered.length === 0 && !searchQuery ? (
+            // Empty state: shimmer placeholders to show where conversations will appear
+            <div>
+              {[0, 1, 2].map((i) => <ShimmerRow key={i} />)}
+              <div className="px-4 py-5 text-center">
+                <p className="text-sage text-xs leading-relaxed">
+                  Your conversations will appear here once you apply to a listing and start chatting with a host.
+                </p>
+              </div>
+            </div>
+          ) : filtered.length === 0 ? (
             <div className="text-center py-12">
-              <p className="text-sage text-sm">
-                {searchQuery ? 'No matching messages' : 'No messages'}
-              </p>
+              <p className="text-sage text-sm">No matching messages</p>
             </div>
           ) : (
             filtered.map((t) => (
@@ -642,6 +692,10 @@ export default function Inbox() {
                   setSelectedId(t.id);
                   if (t.id !== selectedId) setIsSearching(false);
                 }}
+                onDelete={deleteThread ? () => {
+                  deleteThread(t.id);
+                  if (selectedId === t.id) setSelectedId(null);
+                } : undefined}
               />
             ))
           )}

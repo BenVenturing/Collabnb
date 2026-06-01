@@ -20,31 +20,50 @@ const STATUS_STYLES = {
   demo:     { bg: 'rgba(212,168,67,0.12)', text: '#B8922A', icon: '▶' },
 };
 
-function CollabCard({ collab, onClick, onDismissDemo }) {
+function CollabCard({ collab, onClick, onDismissDemo, onDismissSample }) {
   const style = STATUS_STYLES[collab.status] || STATUS_STYLES.pending;
+  const canDismiss = collab.is_demo || collab.is_sample;
+  const onDismiss = collab.is_demo ? onDismissDemo : onDismissSample;
+
   return (
     <div className="bg-white rounded-2xl overflow-hidden shadow-card border border-stone/30 flex flex-col cursor-pointer transition-shadow hover:shadow-md relative" onClick={() => onClick?.(collab)}>
-      {collab.is_demo && (
+      {canDismiss && (
         <button
-          onClick={(e) => { e.stopPropagation(); onDismissDemo?.(); }}
+          onClick={(e) => { e.stopPropagation(); onDismiss?.(); }}
           style={{
             position: 'absolute', top: '6px', right: '6px', zIndex: 5,
             width: '24px', height: '24px', borderRadius: '50%',
-            background: 'rgba(0,0,0,0.15)', border: 'none', cursor: 'pointer',
+            background: 'rgba(0,0,0,0.22)', border: 'none', cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: 'white', fontSize: '0.65rem', opacity: 0.7,
-            transition: 'opacity 150ms',
+            color: 'white', fontSize: '0.65rem',
+            transition: 'opacity 150ms, background 150ms',
           }}
-          title="Dismiss demo"
+          onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(200,60,60,0.7)'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(0,0,0,0.22)'; }}
+          title={collab.is_demo ? 'Dismiss demo' : 'Remove sample'}
         >
           <XIcon />
         </button>
       )}
       <div className="flex relative">
         {/* Photo */}
-        <div className="w-28 h-28 flex-shrink-0 bg-stone overflow-hidden">
+        <div className="w-28 h-28 flex-shrink-0 bg-stone overflow-hidden relative">
           {collab.image ? (
-            <img src={collab.image} alt={collab.property_name} className="w-full h-full object-cover" loading="lazy" />
+            <>
+              <img src={collab.image} alt={collab.property_name} className="w-full h-full object-cover" loading="lazy" />
+              {(collab.is_sample || collab.is_demo) && (
+                <div style={{
+                  position: 'absolute', inset: 0, display: 'flex',
+                  alignItems: 'center', justifyContent: 'center', pointerEvents: 'none',
+                }}>
+                  <span style={{
+                    fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '0.9rem',
+                    color: '#192524', opacity: 0.12, transform: 'rotate(-20deg)',
+                    userSelect: 'none', letterSpacing: '0.2em',
+                  }}>SAMPLE</span>
+                </div>
+              )}
+            </>
           ) : (
             <div className="w-full h-full flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #D1EBDB, #959D90)' }}>
               <span style={{ fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.2em', color: 'rgba(25,37,36,0.35)', textTransform: 'uppercase' }}>DEMO</span>
@@ -117,16 +136,29 @@ export default function Collabs() {
     return localStorage.getItem('collabnb_demo_dismissed') === 'true';
   });
 
+  // Track dismissed sample collab IDs
+  const [dismissedSamples, setDismissedSamples] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('collabnb_dismissed_samples') || '[]'); }
+    catch { return []; }
+  });
+
   const dismissDemo = () => {
     setDemoDismissed(true);
     localStorage.setItem('collabnb_demo_dismissed', 'true');
   };
 
+  const dismissSample = (collabId) => {
+    const updated = [...dismissedSamples, collabId];
+    setDismissedSamples(updated);
+    try { localStorage.setItem('collabnb_dismissed_samples', JSON.stringify(updated)); } catch {}
+  };
+
   const allCollabs = useMemo(() => {
-    if (demoDismissed) return collabs;
-    const hasDemo = collabs.some((c) => c.is_demo);
-    return hasDemo ? collabs : [...collabs, DEMO_COLLAB];
-  }, [collabs, demoDismissed]);
+    const base = collabs.filter((c) => !c.is_sample || !dismissedSamples.includes(c.id));
+    if (demoDismissed) return base;
+    const hasDemo = base.some((c) => c.is_demo);
+    return hasDemo ? base : [...base, DEMO_COLLAB];
+  }, [collabs, demoDismissed, dismissedSamples]);
 
   const active   = allCollabs.filter((c) =>  c.is_active);
   const archived = allCollabs.filter((c) => !c.is_active);
@@ -202,7 +234,15 @@ export default function Collabs() {
             </button>
           </div>
         ) : (
-          shown.map((c) => <CollabCard key={c.id} collab={c} onClick={setSelectedCollab} onDismissDemo={dismissDemo} />)
+          shown.map((c) => (
+            <CollabCard
+              key={c.id}
+              collab={c}
+              onClick={setSelectedCollab}
+              onDismissDemo={dismissDemo}
+              onDismissSample={() => dismissSample(c.id)}
+            />
+          ))
         )}
       </div>
 

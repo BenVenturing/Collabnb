@@ -184,6 +184,52 @@ function ListingCard({ listing, saved, onSave, delay, onNavigate, onHostClick })
   );
 }
 
+// ─── Ghost listing card (shown when no live listings yet) ────────────────────
+function GhostListingCard() {
+  return (
+    <div
+      style={{
+        width: 260, maxWidth: '100%', borderRadius: '1rem', overflow: 'hidden',
+        background: 'rgba(255,255,255,0.55)', border: '1px solid rgba(25,37,36,0.06)',
+        filter: 'blur(1.5px)', opacity: 0.5, pointerEvents: 'none', flexShrink: 0,
+      }}
+    >
+      <div style={{ height: 176, background: 'linear-gradient(135deg, #E2E6E4 0%, #C8CEC9 100%)' }} />
+      <div style={{ padding: '0.875rem 1rem 1rem' }}>
+        <div style={{ height: '11px', background: '#D0D5CE', borderRadius: '6px', marginBottom: '0.4rem', width: '72%' }} />
+        <div style={{ height: '9px', background: '#DDE1DF', borderRadius: '6px', marginBottom: '0.75rem', width: '44%' }} />
+        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
+          <div>
+            <div style={{ height: '10px', background: '#D0D5CE', borderRadius: '6px', marginBottom: '0.25rem', width: '90px' }} />
+            <div style={{ height: '8px', background: '#DDE1DF', borderRadius: '6px', width: '60px' }} />
+          </div>
+          <div style={{ height: '20px', background: '#D0D5CE', borderRadius: '9999px', width: '56px' }} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Ghost section (full-width overlay with coming soon message) ───────────────
+function GhostSection() {
+  return (
+    <div style={{ marginBottom: '2.5rem' }}>
+      <div style={{ padding: '0 1.5rem', marginBottom: '1rem' }}>
+        <div style={{ height: '18px', background: '#D0D5CE', borderRadius: '8px', width: '160px', marginBottom: '0.4rem' }} />
+        <div style={{ height: '11px', background: '#E2E6E4', borderRadius: '6px', width: '240px' }} />
+      </div>
+      <div
+        className="snap-row no-scrollbar"
+        style={{ padding: '0 1.5rem 0.5rem', position: 'relative' }}
+      >
+        {Array.from({ length: 5 }).map((_, i) => (
+          <GhostListingCard key={i} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ─── Section Row ──────────────────────────────────────────────────────────────
 function SectionRow({ title, subtitle, listings, saved, onSave, onNavigate, expanded, onToggleExpand, hidden, onHostClick }) {
   if (!listings.length || hidden) return null;
@@ -376,9 +422,6 @@ export default function Explore() {
     .filter((l) => listingStatuses[l.id]?.status !== 'paused')
     .map((l) => ({ ...l, _isSample: true }));
 
-  // Use Convex listings once loaded; fall back to samples while loading or if empty
-  const freshListings = convexActive?.length ? convexActive : sampleActive;
-
   // Client-side cache: seed display instantly on repeat visits, update when fresh data arrives
   const cachedListings = cache.get(EXPLORE_CACHE_KEY);
   useEffect(() => {
@@ -387,7 +430,14 @@ export default function Explore() {
     }
   }, [convexRaw]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const allListings = freshListings.length ? freshListings : (cachedListings ?? sampleActive);
+  // convexLoaded: true once Convex responds (even with 0 results)
+  const convexLoaded = convexActive !== null;
+  // showGhost: Convex loaded but no live listings exist yet — show ghost preview
+  const showGhost = convexLoaded && convexActive.length === 0 && !cachedListings?.length;
+
+  const allListings = convexActive?.length
+    ? convexActive
+    : (cachedListings?.length ? cachedListings : sampleActive);
   const isLoading = convexRaw === null && !cachedListings;
 
   function toISODate(v) {
@@ -642,6 +692,34 @@ export default function Explore() {
               {Array.from({ length: 6 }).map((_, i) => (
                 <SkeletonCard key={i} />
               ))}
+            </div>
+          </div>
+        ) : showGhost ? (
+          <div style={{ position: 'relative' }}>
+            <GhostSection />
+            <GhostSection />
+            <div style={{
+              position: 'absolute', inset: 0,
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+              background: 'linear-gradient(to bottom, rgba(239,236,233,0) 0%, rgba(239,236,233,0.7) 40%, rgba(239,236,233,0.85) 100%)',
+              padding: '2rem',
+              pointerEvents: 'none',
+            }}>
+              <div style={{
+                background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(20px)',
+                border: '1px solid rgba(255,255,255,0.8)',
+                borderRadius: '1.25rem', padding: '1.5rem 2rem',
+                textAlign: 'center', maxWidth: '340px',
+                boxShadow: '0 8px 32px rgba(25,37,36,0.1)',
+                pointerEvents: 'auto',
+              }}>
+                <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.1rem', color: 'var(--ink)', margin: '0 0 0.4rem' }}>
+                  Listings coming soon
+                </p>
+                <p style={{ fontSize: '0.82rem', color: 'var(--sage)', lineHeight: 1.5, margin: 0 }}>
+                  We're curating the best stays for launch on July 1st. Save your favorites and you'll be notified first.
+                </p>
+              </div>
             </div>
           </div>
         ) : (

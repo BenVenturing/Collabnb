@@ -29,25 +29,77 @@ function MaintenanceBanner() {
   );
 }
 
+// ── Animated sand timer SVG ────────────────────────────────────────────────────
+function SandTimer() {
+  return (
+    <svg width="28" height="34" viewBox="0 0 28 34" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0 }}>
+      <style>{`
+        @keyframes sand-fall {
+          0%   { transform: translateY(-6px); opacity: 0; }
+          15%  { opacity: 1; }
+          85%  { opacity: 1; }
+          100% { transform: translateY(6px); opacity: 0; }
+        }
+        @keyframes sand-pile-grow {
+          0%,40%  { transform: scaleX(0.3); opacity: 0.4; }
+          100% { transform: scaleX(1);   opacity: 1; }
+        }
+        @keyframes hourglass-flip {
+          0%,45%  { transform: rotate(0deg);   }
+          50%,95% { transform: rotate(180deg); }
+          100%    { transform: rotate(180deg); }
+        }
+        .hg-root { animation: hourglass-flip 4s ease-in-out infinite; transform-origin: 14px 17px; }
+        .sand-stream { animation: sand-fall 4s ease-in-out infinite; }
+        .sand-pile   { animation: sand-pile-grow 4s ease-in-out infinite; transform-origin: center bottom; }
+      `}</style>
+      <g className="hg-root">
+        {/* Frame */}
+        <rect x="3" y="1" width="22" height="3" rx="1.5" fill="#B45309" opacity="0.9"/>
+        <rect x="3" y="30" width="22" height="3" rx="1.5" fill="#B45309" opacity="0.9"/>
+        <line x1="4.5" y1="2.5" x2="4.5" y2="31.5" stroke="#B45309" strokeWidth="1.8" opacity="0.6"/>
+        <line x1="23.5" y1="2.5" x2="23.5" y2="31.5" stroke="#B45309" strokeWidth="1.8" opacity="0.6"/>
+        {/* Upper bulb */}
+        <path d="M5 4 Q5 15 14 17 Q5 19 5 30 L23 30 Q23 19 14 17 Q23 15 23 4 Z" fill="#FEF3C7" opacity="0.85"/>
+        {/* Upper sand (draining) */}
+        <path d="M6 4 Q6 13 14 17 Q22 13 22 4 Z" fill="#F59E0B" opacity="0.7" className="sand-pile"/>
+        {/* Sand stream */}
+        <line className="sand-stream" x1="14" y1="16" x2="14" y2="20" stroke="#D97706" strokeWidth="1.5" strokeLinecap="round" opacity="0.85"/>
+        {/* Lower sand pile */}
+        <path d="M8 30 Q14 24 20 30 Z" fill="#F59E0B" opacity="0.55" className="sand-pile"/>
+      </g>
+    </svg>
+  );
+}
+
 function PendingVerificationBanner({ profile }) {
   const firstName = profile?.full_name?.split(' ')[0] || 'there';
   return (
     <div style={{
-      background: '#FFFBEB',
+      background: 'linear-gradient(135deg, #FFFBEB 0%, #FEF9EE 60%, #FFF7E0 100%)',
       border: '1.5px solid #D97706',
-      borderRadius: '14px',
-      padding: '0.875rem 1.125rem',
+      borderRadius: '16px',
+      padding: '1rem 1.25rem',
       marginBottom: '1.5rem',
       display: 'flex',
-      gap: '0.875rem',
+      gap: '1rem',
       alignItems: 'flex-start',
+      boxShadow:
+        'inset 0 1px 0 rgba(255,255,255,0.85), inset 0 -1px 0 rgba(217,119,6,0.08), 0 4px 16px rgba(217,119,6,0.12), 0 1px 4px rgba(217,119,6,0.08)',
+      position: 'relative',
+      overflow: 'hidden',
     }}>
-      <span style={{ fontSize: '1.25rem', lineHeight: 1, flexShrink: 0, marginTop: '0.05rem' }}>⏳</span>
-      <div>
-        <p style={{ fontWeight: 700, color: '#92400E', margin: '0 0 0.2rem', fontSize: '0.9375rem', fontFamily: 'var(--font-display, sans-serif)' }}>
+      {/* Subtle grain/texture layer */}
+      <div style={{
+        position: 'absolute', inset: 0, borderRadius: '16px', pointerEvents: 'none', opacity: 0.04,
+        backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'300\' height=\'300\'%3E%3Cfilter id=\'n\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.9\' numOctaves=\'4\'/%3E%3C/filter%3E%3Crect width=\'300\' height=\'300\' filter=\'url(%23n)\' opacity=\'1\'/%3E%3C/svg%3E")',
+      }} />
+      <SandTimer />
+      <div style={{ position: 'relative' }}>
+        <p style={{ fontWeight: 700, color: '#92400E', margin: '0 0 0.25rem', fontSize: '0.9375rem', fontFamily: 'var(--font-display, sans-serif)', letterSpacing: '-0.01em' }}>
           Account under review, {firstName}!
         </p>
-        <p style={{ color: '#78350F', margin: 0, fontSize: '0.875rem', lineHeight: 1.5 }}>
+        <p style={{ color: '#78350F', margin: 0, fontSize: '0.8125rem', lineHeight: 1.55, opacity: 0.9 }}>
           We're reviewing your account — typically 24–48 hours. Browse listings freely below.
           Messaging and applying will unlock the moment you're approved.
         </p>

@@ -18,8 +18,9 @@ const CONVEX_URL   = import.meta.env.VITE_CONVEX_URL;
 const APP_URL = import.meta.env.VITE_APP_URL || '../app/';
 
 export default function PricingPage() {
-  const [creatorCount, setCreatorCount] = useState(0);
-  const [hostCount, setHostCount]       = useState(0);
+  const [creatorCount,  setCreatorCount]  = useState(0);
+  const [hostCount,     setHostCount]     = useState(0);
+  const [lifetimeCount, setLifetimeCount] = useState(0);
 
   const isUnlocked = new Date() >= LAUNCH_DATE;
 
@@ -35,6 +36,7 @@ export default function PricingPage() {
         if (cancelled) return;
         setCreatorCount(profiles.filter(p => p.role === 'creator').length);
         setHostCount(profiles.filter(p => p.role === 'host').length);
+        setLifetimeCount(profiles.filter(p => p.is_lifetime === true).length);
       } catch (err) {
         console.warn('Pricing count fetch failed:', err);
       }
@@ -61,17 +63,24 @@ export default function PricingPage() {
   }
 
   function handleSubscribe(tier) {
-    // Redirect to the app; Clerk will prompt login if needed,
-    // then the profile page auto-opens the subscription modal.
     window.location.href = `${APP_URL}#/profile?subscribe=${tier}`;
+  }
+
+  function handleClaimLifetime() {
+    // Redirect to the app; login if needed, then LifetimeAccessModal opens automatically.
+    window.location.href = `${APP_URL}#/profile?lifetime=claim`;
   }
 
 
 
   return (
     <>
-      {/* ... previous background layers ... */}
-      
+      {/* ── Background layers (matches marketing site) ── */}
+      <div aria-hidden="true" style={{ position:'fixed', inset:0, zIndex:-10, pointerEvents:'none', background:'#EFECE9' }} />
+      <div aria-hidden="true" style={{ position:'fixed', inset:0, zIndex:-10, pointerEvents:'none', background:'radial-gradient(ellipse 90% 60% at 50% 0%, #D1EBDB 0%, transparent 70%)' }} />
+      <div aria-hidden="true" style={{ position:'fixed', inset:0, zIndex:-10, pointerEvents:'none', backgroundImage:"url('../assets/bg-clouds-hazy.png')", backgroundSize:'cover', backgroundPosition:'center', opacity:0.18, mixBlendMode:'multiply', filter:'saturate(0.5) brightness(1.1)' }} />
+      <div aria-hidden="true" style={{ position:'fixed', inset:0, zIndex:50, pointerEvents:'none', opacity:0.03, backgroundImage:"url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence baseFrequency='0.9'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>\")" }} />
+
       {/* ── Nav link back to main site ── */}
       <header className="max-w-7xl mx-auto px-4 md:px-8 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
         <a
@@ -98,11 +107,14 @@ export default function PricingPage() {
           isFoundingFull={isFoundingFull}
           creatorSpotsRemaining={creatorSpotsRemaining}
           hostSpotsRemaining={hostSpotsRemaining}
+          lifetimeCount={lifetimeCount}
           onClaim={handleClaim}
+          onClaimLifetime={handleClaimLifetime}
           isUnlocked={isUnlocked}
           onSubscribe={handleSubscribe}
         />
-        <TierLadder />
+        {/* TierLadder is now shown inline in the center card once founding is full */}
+        {!isFoundingFull && <TierLadder />}
         <ValueSection />
         <ClaritySection />
         <FAQSection />

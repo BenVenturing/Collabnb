@@ -20,23 +20,31 @@ const LOCKED_PLANS = [
   },
 ];
 
-export default function PricingCards({ isFoundingFull, creatorSpotsRemaining, hostSpotsRemaining, onClaim, isUnlocked, onSubscribe }) {
+export default function PricingCards({ isFoundingFull, creatorSpotsRemaining, hostSpotsRemaining, lifetimeCount, onClaim, onClaimLifetime, isUnlocked, onSubscribe }) {
   const spotsRemaining = Math.min(creatorSpotsRemaining, hostSpotsRemaining);
   return (
     <section
       className="max-w-5xl mx-auto px-4 md:px-8 pb-4"
       aria-label="Pricing options"
     >
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5 items-center">
-        <LockedCard plan={LOCKED_PLANS[0]} isUnlocked={isUnlocked} onSubscribe={onSubscribe} />
-        <FoundingCard
-          isFull={isFoundingFull}
-          creatorSpotsRemaining={creatorSpotsRemaining}
-          hostSpotsRemaining={hostSpotsRemaining}
-          spotsRemaining={spotsRemaining}
-          onClaim={onClaim}
-        />
-        <LockedCard plan={LOCKED_PLANS[1]} isUnlocked={isUnlocked} onSubscribe={onSubscribe} />
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-0 items-center">
+        <div className="relative z-0">
+          <LockedCard plan={LOCKED_PLANS[0]} isUnlocked={isUnlocked} onSubscribe={onSubscribe} />
+        </div>
+        <div className="relative z-10 md:-mx-8">
+          <FoundingCard
+            isFull={isFoundingFull}
+            creatorSpotsRemaining={creatorSpotsRemaining}
+            hostSpotsRemaining={hostSpotsRemaining}
+            lifetimeCount={lifetimeCount}
+            spotsRemaining={spotsRemaining}
+            onClaim={onClaim}
+            onClaimLifetime={onClaimLifetime}
+          />
+        </div>
+        <div className="relative z-0">
+          <LockedCard plan={LOCKED_PLANS[1]} isUnlocked={isUnlocked} onSubscribe={onSubscribe} />
+        </div>
       </div>
     </section>
   );

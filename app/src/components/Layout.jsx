@@ -134,6 +134,7 @@ function PendingVerificationBanner({ profile, onMinimize }) {
           overflow: 'hidden',
           transition: 'transform 400ms cubic-bezier(0.34,1.56,0.64,1), opacity 350ms ease, margin-bottom 400ms ease, max-height 400ms ease, padding 400ms ease',
           pointerEvents: shrinking ? 'none' : 'auto',
+          alignItems: 'center',
           ...collapsingStyle,
         }}>
           <div style={{

@@ -36,15 +36,20 @@ function getClerkErrorMessage(err) {
 }
 
 /* --- Reveal on scroll (IntersectionObserver) --- */
-const revealObserver = new IntersectionObserver((entries) => {
-  entries.forEach((e) => {
-    if (e.isIntersecting) {
-      e.target.classList.add('in');
-      revealObserver.unobserve(e.target);
-    }
-  });
-}, { threshold: 0.15 });
-document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+if (window.innerWidth <= 768) {
+  // On mobile: show everything immediately, no threshold-gating
+  document.querySelectorAll('.reveal').forEach(el => el.classList.add('in'));
+} else {
+  const revealObserver = new IntersectionObserver((entries) => {
+    entries.forEach((e) => {
+      if (e.isIntersecting) {
+        e.target.classList.add('in');
+        revealObserver.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.15 });
+  document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+}
 
 /* --- Nav: scroll opacity + active link --- */
 const navPill = document.querySelector('.nav-pill');
@@ -436,7 +441,7 @@ function showWizardStep(step) {
       if (!mountEl) return;
       // Flag that sign-up started — used to catch OAuth redirect back to this page
       try { sessionStorage.setItem('collabnb_signup_started', '1'); } catch {}
-      clerk.mountSignUp(mountEl, { afterSignUpUrl: '/app/' });
+      clerk.mountSignUp(mountEl, { afterSignUpUrl: '/app/', afterSignInUrl: '/app/' });
     }).catch(_showWizardDone);
   }
 }
@@ -490,7 +495,7 @@ async function handleStep1Submit(e) {
     if (roleSection) roleSection.style.display = 'none';
     launchConfetti();
     initCounters();
-    showWizardStep(2);
+    showReferralCodeReveal();
   } catch (err) {
     console.error('Step 1 error:', err);
     if (errorEl) { errorEl.textContent = 'Something went wrong. Please try again.'; errorEl.style.display = 'block'; }

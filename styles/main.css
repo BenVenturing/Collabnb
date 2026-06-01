@@ -1729,13 +1729,22 @@ h3 { font-weight: 700; }
   }
 }
 
-/* How it works side-by-side collapse */
+/* How it works two-column grid */
+.hiw-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+}
 @media (max-width: 768px) {
+  .hiw-grid {
+    grid-template-columns: 1fr;
+  }
+  .hiw-grid > div + div {
+    margin-top: 2.5rem;
+  }
+  /* Keep attribute selector fallback for any other inline grids */
   [style*="grid-template-columns:1fr 1fr"] {
     display: block !important;
-  }
-  [style*="grid-template-columns:1fr 1fr"] > div + div {
-    margin-top: 2.5rem;
   }
 }
 

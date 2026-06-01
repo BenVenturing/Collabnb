@@ -271,23 +271,34 @@
         </div>
       </div>
 
-      <!-- Referral code -->
+      <!-- Referral code (collapsed by default) -->
       <div id="referral-code-section" style="margin-bottom:1.25rem;">
-        <label for="referral-code-input" style="display:block;font-family:var(--font-body);font-size:0.8125rem;font-weight:600;color:var(--ink);margin-bottom:0.375rem;">
-          Referral code <span style="font-weight:400;color:var(--sage);">(optional)</span>
-        </label>
-        <input
-          type="text"
-          id="referral-code-input"
-          placeholder="e.g., BEN-A4F2K9"
-          autocomplete="off"
-          maxlength="20"
-          style="width:100%;padding:0.75rem 1rem;border:1.5px solid rgba(25,37,36,0.15);border-radius:0.875rem;font-family:var(--font-body);font-size:0.875rem;color:var(--ink);background:#fff;outline:none;box-sizing:border-box;transition:border-color 150ms;text-transform:uppercase;letter-spacing:0.04em;"
-          onfocus="this.style.borderColor='rgba(25,37,36,0.4)'"
-          onblur="this.style.borderColor='rgba(25,37,36,0.15)'"
-        />
-        <p style="margin:0.375rem 0 0;font-family:var(--font-body);font-size:0.75rem;color:var(--sage);line-height:1.5;">You and your referrer both get 1 free month when you join with a valid code.</p>
+        <button type="button" id="ref-code-toggle" onclick="(function(){var b=document.getElementById('ref-code-body');var open=b.style.display!=='none';b.style.display=open?'none':'block';document.getElementById('ref-toggle-label').textContent=open?'Have a referral code? →':'Hide referral code ↑';})()" style="background:none;border:none;cursor:pointer;font-family:var(--font-body);font-size:0.8rem;color:var(--sage);padding:0;text-decoration:underline;text-underline-offset:2px;">
+          <span id="ref-toggle-label">Have a referral code? →</span>
+        </button>
+        <div id="ref-code-body" style="display:none;margin-top:0.625rem;">
+          <input
+            type="text"
+            id="referral-code-input"
+            placeholder="e.g., BEN-A4F2K9"
+            autocomplete="off"
+            maxlength="20"
+            style="width:100%;padding:0.75rem 1rem;border:1.5px solid rgba(25,37,36,0.15);border-radius:0.875rem;font-family:var(--font-body);font-size:0.875rem;color:var(--ink);background:#fff;outline:none;box-sizing:border-box;transition:border-color 150ms;text-transform:uppercase;letter-spacing:0.04em;"
+            onfocus="this.style.borderColor='rgba(25,37,36,0.4)'"
+            onblur="this.style.borderColor='rgba(25,37,36,0.15)'"
+          />
+          <p style="margin:0.375rem 0 0;font-family:var(--font-body);font-size:0.75rem;color:var(--sage);line-height:1.5;">You and your referrer both get 1 free month when you join with a valid code.</p>
+        </div>
       </div>
+
+      <!-- Suppress Clerk's redundant logo inside the embedded component -->
+      <style>
+        #wl-clerk-mount .cl-logoBox,
+        #wl-clerk-mount .cl-logo,
+        #wl-clerk-mount .cl-logoImage { display: none !important; }
+        #wl-clerk-mount .cl-card { box-shadow: none !important; border: none !important; padding: 0 !important; }
+        #wl-clerk-mount .cl-cardBox { box-shadow: none !important; }
+      </style>
 
       <!-- ── Clerk sign-up area ───────────────────────────────────────────-->
       <div id="clerk-sign-up-area">

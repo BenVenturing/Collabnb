@@ -15,9 +15,9 @@ export default function LifetimeAccessModal({ isOpen, onClose, role = 'creator' 
 
   // Mirror the tier ladder from stripe.js
   function getTier(count) {
-    if (count < 50)  return { price: 100, label: 'Early Adopter', spotsLeft: 50 - count };
-    if (count < 100) return { price: 125, label: 'Community',      spotsLeft: 100 - count };
-    if (count < 150) return { price: 150, label: 'Community Plus', spotsLeft: 150 - count };
+    if (count < 50)  return { price: 100, label: 'Early Adopter',    spotsLeft: 50 - count };
+    if (count < 100) return { price: 125, label: 'Community',         spotsLeft: 100 - count };
+    if (count < 150) return { price: 150, label: 'Community',         spotsLeft: 150 - count };
     if (count < 200) return { price: 200, label: 'Standard Lifetime', spotsLeft: 200 - count };
     return null;
   }

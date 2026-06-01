@@ -9,7 +9,7 @@ import Stripe from 'stripe';
 function getLifetimeTier(count) {
   if (count < 50)  return { price: 100, label: 'Early Adopter' };
   if (count < 100) return { price: 125, label: 'Community' };
-  if (count < 150) return { price: 150, label: 'Community Plus' };
+  if (count < 150) return { price: 150, label: 'Community' };
   if (count < 200) return { price: 200, label: 'Standard Lifetime' };
   return null; // sold out — use monthly/annual
 }

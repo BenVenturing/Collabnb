@@ -6,6 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useCollabs } from '../contexts/CollabContext';
 import { useSubscription } from '../contexts/SubscriptionContext';
 import GlobeCanvas, { countGlobeStats } from '../components/GlobeCanvas';
+import LifetimeAccessModal from '../components/LifetimeAccessModal';
 import TravelCalendar from '../components/TravelCalendar';
 import { SAMPLE_COLLABORATIONS, SAMPLE_LISTINGS } from '../lib/mockData';
 import { getPitchCount } from '../lib/pitchCount';
@@ -530,10 +531,11 @@ export default function Profile() {
   const [showPrivacy,       setShowPrivacy]       = useState(false);
   const [showVerification,  setShowVerification]  = useState(false);
   const [showListingPicker, setShowListingPicker] = useState(false);
-  const [toastMsg, setToastMsg]       = useState(null);
+  const [toastMsg, setToastMsg]               = useState(null);
   const [exitConfirmDraft, setExitConfirmDraft] = useState(null);
-  const [portalLoading, setPortalLoading] = useState(false);
-  const [cropEditorFile, setCropEditorFile] = useState(null);
+  const [portalLoading, setPortalLoading]       = useState(false);
+  const [cropEditorFile, setCropEditorFile]     = useState(null);
+  const [lifetimeModalOpen, setLifetimeModalOpen] = useState(false);
 
   // Notification toggles
   const [notifSettings, setNotifSettings] = useState({
@@ -586,9 +588,12 @@ export default function Profile() {
       openSubModal();
     }
     // Lifetime purchase redirect
-    const lifetimeStatus = params.get('lifetime');
+    const lifetimeStatus    = params.get('lifetime');
     const lifetimeSessionId = params.get('session_id');
-    if (lifetimeStatus === 'success' && lifetimeSessionId) {
+    if (lifetimeStatus === 'claim') {
+      navigate('/profile', { replace: true });
+      setLifetimeModalOpen(true);
+    } else if (lifetimeStatus === 'success' && lifetimeSessionId) {
       navigate('/profile', { replace: true });
       verifyLifetimeSession({ sessionId: lifetimeSessionId })
         .then(() => setToastMsg('Lifetime access activated! Welcome to Collabnb — forever.'))
@@ -1704,6 +1709,13 @@ export default function Profile() {
           </div>
         </div>
       )}
+      {/* ── Lifetime Access modal ────────────────────────────────────── */}
+      <LifetimeAccessModal
+        isOpen={lifetimeModalOpen}
+        onClose={() => setLifetimeModalOpen(false)}
+        role={profile?.role ?? 'creator'}
+      />
+
       {/* ── Exit confirmation modal ───────────────────────────────────── */}
       {exitConfirmDraft && (
         <div

@@ -631,8 +631,16 @@ h3 { font-weight: 700; }
 }
 
 @media (max-width: 640px) {
-  .listing-stack { max-width: 100%; height: 510px; }
+  .listing-stack { max-width: 100%; height: 510px; perspective: none; }
   .lcard-photo   { height: 140px; }
+  /* Replace expensive 3D flip with a simple fade on mobile */
+  .lcard.is-flipping {
+    animation: lcard-fadeout-mobile 0.4s ease forwards !important;
+  }
+}
+@keyframes lcard-fadeout-mobile {
+  0%   { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(0.97); }
 }
 
 /* --- FLOATING BOKEH --- */
@@ -1496,6 +1504,26 @@ h3 { font-weight: 700; }
   opacity: 1;
   transform: translateY(0);
   filter: blur(0);
+}
+
+/* Mobile: strip expensive blur filter — kills GPU on phones */
+@media (max-width: 768px) {
+  .reveal {
+    filter: none;
+    transition: opacity 500ms var(--ease-out-expo),
+                transform 500ms var(--ease-out-expo);
+  }
+  .reveal.in { filter: none; }
+
+  /* Reduce glass backdrop-filter blur — full 24px on many stacked elements kills mobile */
+  .glass {
+    backdrop-filter: blur(12px) saturate(130%);
+    -webkit-backdrop-filter: blur(12px) saturate(130%);
+  }
+  .glass-sm {
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
 }
 
 /* Stagger children */

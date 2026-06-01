@@ -630,17 +630,47 @@ h3 { font-weight: 700; }
   100% { background-position: -200% 0; }
 }
 
+/* ── Mobile listing stack: flat stack + slide-up swipe, no 3D ── */
 @media (max-width: 640px) {
-  .listing-stack { max-width: 100%; height: 510px; perspective: none; }
-  .lcard-photo   { height: 140px; }
-  /* Replace expensive 3D flip with a simple fade on mobile */
+  .listing-stack {
+    max-width: 100%;
+    height: 480px;
+    perspective: none;
+    perspective-origin: unset;
+  }
+  .lcard-photo { height: 130px; }
+
+  /* Override all lcard transitions — remove box-shadow, use transform only */
+  .lcard {
+    transition: transform 0.4s var(--ease-out-expo), opacity 0.4s ease;
+    box-shadow: 0 8px 24px rgba(25,37,36,0.10) !important;
+  }
+
+  /* 2D-only stacked positions — no rotateX, no 3D */
+  .lcard.pos-0 {
+    transform: translateY(0) scale(1) !important;
+    box-shadow: 0 12px 32px rgba(25,37,36,0.13) !important;
+    opacity: 1;
+  }
+  .lcard.pos-1 {
+    transform: translateY(10px) scale(0.96) !important;
+    opacity: 0.85;
+  }
+  .lcard.pos-2 {
+    transform: translateY(18px) scale(0.92) !important;
+    opacity: 0.65;
+  }
+
+  /* Outgoing card: swipe up and out */
   .lcard.is-flipping {
-    animation: lcard-fadeout-mobile 0.4s ease forwards !important;
+    animation: lcard-swipeup 0.38s var(--ease-out-quart) forwards !important;
+    z-index: 4 !important;
   }
 }
-@keyframes lcard-fadeout-mobile {
-  0%   { opacity: 1; transform: scale(1); }
-  100% { opacity: 0; transform: scale(0.97); }
+
+@keyframes lcard-swipeup {
+  0%   { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(-56px) scale(0.96); }
 }
 
 /* --- FLOATING BOKEH --- */

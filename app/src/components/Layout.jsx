@@ -74,37 +74,102 @@ function SandTimer() {
 
 function PendingVerificationBanner({ profile }) {
   const firstName = profile?.full_name?.split(' ')[0] || 'there';
+  const [minimized, setMinimized] = useState(false);
+  const bannerRef = useRef(null);
+  const sentinelRef = useRef(null);
+
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        // When the sentinel is NOT visible (scrolled past it), minimize.
+        // When it IS visible again (scrolled back up), expand.
+        setMinimized(!entry.isIntersecting);
+      },
+      { threshold: 0, rootMargin: '-80px 0px 0px 0px' }
+    );
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, []);
+
+  // Expanded banner (shown when sentinel is visible)
+  if (!minimized) {
+    return (
+      <>
+        {/* Sentinel — marks where the banner sits in the page flow */}
+        <div ref={sentinelRef} style={{ height: 1 }} />
+        <div ref={bannerRef} style={{
+          background: 'linear-gradient(135deg, #FFFBEB 0%, #FEF9EE 60%, #FFF7E0 100%)',
+          border: '1.5px solid #D97706',
+          borderRadius: '16px',
+          padding: '1rem 1.25rem',
+          marginBottom: '1.5rem',
+          display: 'flex',
+          gap: '1rem',
+          alignItems: 'flex-start',
+          boxShadow:
+            'inset 0 1px 0 rgba(255,255,255,0.85), inset 0 -1px 0 rgba(217,119,6,0.08), 0 4px 16px rgba(217,119,6,0.12), 0 1px 4px rgba(217,119,6,0.08)',
+          position: 'relative',
+          overflow: 'hidden',
+          transition: 'opacity 300ms ease, transform 300ms ease',
+        }}>
+          <div style={{
+            position: 'absolute', inset: 0, borderRadius: '16px', pointerEvents: 'none', opacity: 0.04,
+            backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'300\' height=\'300\'%3E%3Cfilter id=\'n\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.9\' numOctaves=\'4\'/%3E%3C/filter%3E%3Crect width=\'300\' height=\'300\' filter=\'url(%23n)\' opacity=\'1\'/%3E%3C/svg%3E")',
+          }} />
+          <SandTimer />
+          <div style={{ position: 'relative' }}>
+            <p style={{ fontWeight: 700, color: '#92400E', margin: '0 0 0.25rem', fontSize: '0.9375rem', fontFamily: 'var(--font-display, sans-serif)', letterSpacing: '-0.01em' }}>
+              Account under review, {firstName}!
+            </p>
+            <p style={{ color: '#78350F', margin: 0, fontSize: '0.8125rem', lineHeight: 1.55, opacity: 0.9 }}>
+              We're reviewing your account — typically 24–48 hours. Browse listings freely below.
+              Messaging and applying will unlock the moment you're approved.
+            </p>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  // Minimized floating sand timer pill (shown when scrolled past the banner)
   return (
-    <div style={{
-      background: 'linear-gradient(135deg, #FFFBEB 0%, #FEF9EE 60%, #FFF7E0 100%)',
-      border: '1.5px solid #D97706',
-      borderRadius: '16px',
-      padding: '1rem 1.25rem',
-      marginBottom: '1.5rem',
-      display: 'flex',
-      gap: '1rem',
-      alignItems: 'flex-start',
-      boxShadow:
-        'inset 0 1px 0 rgba(255,255,255,0.85), inset 0 -1px 0 rgba(217,119,6,0.08), 0 4px 16px rgba(217,119,6,0.12), 0 1px 4px rgba(217,119,6,0.08)',
-      position: 'relative',
-      overflow: 'hidden',
-    }}>
-      {/* Subtle grain/texture layer */}
-      <div style={{
-        position: 'absolute', inset: 0, borderRadius: '16px', pointerEvents: 'none', opacity: 0.04,
-        backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'300\' height=\'300\'%3E%3Cfilter id=\'n\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.9\' numOctaves=\'4\'/%3E%3C/filter%3E%3Crect width=\'300\' height=\'300\' filter=\'url(%23n)\' opacity=\'1\'/%3E%3C/svg%3E")',
-      }} />
-      <SandTimer />
-      <div style={{ position: 'relative' }}>
-        <p style={{ fontWeight: 700, color: '#92400E', margin: '0 0 0.25rem', fontSize: '0.9375rem', fontFamily: 'var(--font-display, sans-serif)', letterSpacing: '-0.01em' }}>
-          Account under review, {firstName}!
-        </p>
-        <p style={{ color: '#78350F', margin: 0, fontSize: '0.8125rem', lineHeight: 1.55, opacity: 0.9 }}>
-          We're reviewing your account — typically 24–48 hours. Browse listings freely below.
-          Messaging and applying will unlock the moment you're approved.
-        </p>
+    <>
+      <div ref={sentinelRef} style={{ height: 1 }} />
+      <div
+        onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+        style={{
+          position: 'fixed',
+          top: '5rem',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 50,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.4rem',
+          padding: '0.4rem 0.75rem 0.4rem 0.5rem',
+          background: 'rgba(255,251,230,0.96)',
+          border: '1.5px solid rgba(217,119,6,0.4)',
+          borderRadius: '9999px',
+          boxShadow: '0 4px 20px rgba(217,119,6,0.18), inset 0 1px 0 rgba(255,255,255,0.85)',
+          cursor: 'pointer',
+          animation: 'fadeDown 300ms cubic-bezier(0.16,1,0.3,1)',
+          transition: 'transform 200ms ease',
+          whiteSpace: 'nowrap',
+        }}
+        onMouseEnter={e => e.currentTarget.style.transform = 'translateX(-50%) scale(1.05)'}
+        onMouseLeave={e => e.currentTarget.style.transform = 'translateX(-50%) scale(1)'}
+        title="Scroll up to see details"
+      >
+        <SandTimer />
+        <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#92400E' }}>
+          Under review
+        </span>
       </div>
-    </div>
+    </>
   );
 }
 

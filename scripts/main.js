@@ -459,7 +459,18 @@ function showWizardStep(step) {
       try { localStorage.setItem('collabnb_new_signup', '1'); } catch {}
       const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
       const returnUrl = isLocalhost ? 'http://localhost:5173/join.html?celebrate=1' : '/join.html?celebrate=1';
-      clerk.mountSignUp(mountEl, { afterSignUpUrl: returnUrl, afterSignInUrl: returnUrl });
+      clerk.mountSignUp(mountEl, {
+        afterSignUpUrl: returnUrl,
+        afterSignInUrl: returnUrl,
+        appearance: {
+          variables: {
+            colorPrimary: '#3C5759',
+            colorBackground: 'transparent',
+            borderRadius: '12px',
+            fontFamily: 'system-ui, -apple-system, sans-serif',
+          },
+        },
+      });
     }).catch(_showWizardDone);
   }
 }
@@ -743,6 +754,14 @@ function openLoginModal() {
       clerk.mountSignIn(mountEl, {
         afterSignInUrl: '/app/',
         signUpUrl: '/join.html',
+        appearance: {
+          variables: {
+            colorPrimary: '#3C5759',
+            colorBackground: 'transparent',
+            borderRadius: '12px',
+            fontFamily: 'system-ui, -apple-system, sans-serif',
+          },
+        },
       });
       _clerkLoginMounted = true;
     } catch (e) {

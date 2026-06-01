@@ -336,7 +336,34 @@
       <h2 id="login-modal-title" class="login-title">Welcome back</h2>
       <p class="login-desc">Sign in to your account to view your profile and manage collabs.</p>
     </div>
-    <!-- Clerk sign-in component mounts here -->
+    <!-- Clerk sign-in component mounts here — strip card chrome so it blends with our modal -->
+    <style>
+      #clerk-login-mount .cl-logoBox,
+      #clerk-login-mount .cl-logo,
+      #clerk-login-mount .cl-logoImage,
+      #clerk-login-mount .cl-headerTitle,
+      #clerk-login-mount .cl-headerSubtitle { display: none !important; }
+      #clerk-login-mount .cl-card,
+      #clerk-login-mount .cl-cardBox { box-shadow: none !important; border: none !important; background: transparent !important; padding: 0 !important; }
+      #clerk-login-mount .cl-rootBox { width: 100% !important; }
+      #clerk-login-mount .cl-socialButtonsBlockButton {
+        border: 1.5px solid var(--stone) !important; border-radius: 12px !important;
+        font-family: var(--font-body) !important; font-size: 0.9375rem !important;
+      }
+      #clerk-login-mount .cl-socialButtonsBlockButton:hover { border-color: var(--slate) !important; }
+      #clerk-login-mount .cl-formButtonPrimary {
+        background: var(--slate) !important; border-radius: 12px !important;
+        font-family: var(--font-body) !important;
+      }
+      #clerk-login-mount .cl-formButtonPrimary:hover { background: #2d4a3e !important; }
+      #clerk-login-mount .cl-formFieldInput {
+        border-radius: 12px !important; border: 1.5px solid var(--stone) !important;
+        font-family: var(--font-body) !important;
+      }
+      #clerk-login-mount .cl-formFieldInput:focus { border-color: var(--slate) !important; box-shadow: 0 0 0 2px rgba(60,87,89,0.12) !important; outline: none !important; }
+      #clerk-login-mount .cl-dividerLine { background: var(--stone) !important; }
+      #clerk-login-mount .cl-footer { display: none !important; }
+    </style>
     <div id="clerk-login-mount"></div>
     <div class="login-footer" style="text-align:center;margin-top:1.5rem;">
       Don't have an account? <a href="join.html">Join the waitlist</a>

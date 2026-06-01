@@ -70,7 +70,10 @@ export const ensureCode = mutation({
       use_count: 0,
       max_uses: 12,
     });
-    await ctx.db.patch(args.profileId as any, { referral_code: code });
+    const profileExists = await ctx.db.get(args.profileId as any);
+    if (profileExists) {
+      await ctx.db.patch(args.profileId as any, { referral_code: code });
+    }
     return code;
   },
 });
@@ -108,8 +111,11 @@ export const applyReferralCode = mutation({
     // Increment use_count
     await ctx.db.patch(codeDoc._id, { use_count: codeDoc.use_count + 1 });
 
-    // Mark new user as referred
-    await ctx.db.patch(args.newUserId as any, { referred_by: codeDoc.owner_id });
+    // Mark new user as referred (guard against deleted profile)
+    const newUserCheck = await ctx.db.get(args.newUserId as any);
+    if (newUserCheck) {
+      await ctx.db.patch(args.newUserId as any, { referred_by: codeDoc.owner_id });
+    }
 
     // +1 free month to referrer
     const referrer = await ctx.db.get(codeDoc.owner_id as any);

@@ -242,6 +242,8 @@ export const updateSubscription = mutation({
     stripeCustomerId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    const exists = await ctx.db.get(args.profileId as any);
+    if (!exists) return;
     const patch: Record<string, any> = {
       subscription_status: args.subscriptionStatus,
     };
@@ -288,6 +290,8 @@ export const grantLifetimeAccess = internalMutation({
     stripeCustomerId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    const exists = await ctx.db.get(args.profileId as any);
+    if (!exists) return;
     await ctx.db.patch(args.profileId as any, {
       is_lifetime: true,
       lifetime_tier: args.lifetimeTier,
@@ -344,6 +348,8 @@ export const updateProfile = mutation({
   },
   handler: async (ctx, args) => {
     const { profileId, updates } = args;
+    const exists = await ctx.db.get(profileId as any);
+    if (!exists) return;
     const cleanUpdates = Object.fromEntries(
       Object.entries(updates).filter(([_, v]) => v !== undefined)
     );

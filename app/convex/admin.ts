@@ -538,3 +538,11 @@ export const bulkRejectProfiles = mutation({
     }
   },
 });
+
+export const getAllCollabs = query({
+  args: {},
+  handler: async (ctx) => {
+    const collabs = await ctx.db.query("collaborations").collect();
+    return collabs.sort((a, b) => (b._creationTime ?? 0) - (a._creationTime ?? 0));
+  },
+});

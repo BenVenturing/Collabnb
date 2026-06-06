@@ -205,6 +205,28 @@ export default defineSchema({
     .index("by_code", ["code"])
     .index("by_user", ["used_by_id"]),
 
+  pitches: defineTable({
+    listing_id: v.string(),
+    listing_title: v.optional(v.string()),
+    host_id: v.optional(v.string()),
+    creator_id: v.string(),
+    creator_name: v.string(),
+    creator_username: v.optional(v.string()),
+    creator_avatar: v.optional(v.string()),
+    creator_tier: v.optional(v.string()),
+    creator_followers: v.optional(v.number()),
+    creator_engagement: v.optional(v.number()),
+    creator_platforms: v.optional(v.array(v.string())),
+    message: v.string(),
+    status: v.string(), // 'pending' | 'under_review' | 'approved' | 'declined'
+    type: v.string(),   // 'application' | 'pitch'
+    created_at: v.number(),
+    host_note: v.optional(v.string()),
+  })
+    .index("by_listing", ["listing_id"])
+    .index("by_creator", ["creator_id"])
+    .index("by_host", ["host_id"]),
+
   admin_audit_log: defineTable({
     action: v.string(),
     target_type: v.string(),

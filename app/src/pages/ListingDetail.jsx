@@ -142,7 +142,7 @@ function PhotoGallery({ images, title, onClose }) {
 }
 
 // ─── Apply Now Modal ──────────────────────────────────────────────────────────
-function ApplyModal({ listing, userId, onClose, onApply, navigate, isVerified, onVerificationRequired, isSubscribed, onSubscriptionRequired }) {
+function ApplyModal({ listing, userId, creatorProfile, onClose, onApply, navigate, isVerified, onVerificationRequired, isSubscribed, onSubscriptionRequired }) {
   const checkAndIncrementCvx = useMutation(api.pitches.checkAndIncrement);
   const defaultPitch =
 `Hi! I'm ${MOCK_CREATOR.full_name} (@${MOCK_CREATOR.instagram_handle}), a ${MOCK_CREATOR.tier} travel creator with ${Math.round(MOCK_CREATOR.follower_count / 1000)}K followers across Instagram and TikTok.
@@ -179,7 +179,7 @@ Let's make something great together.`;
         incrementPitchCount();
       }
     }
-    onApply(listing, pitch);
+    onApply(listing, pitch, creatorProfile);
     setSubmitted(true);
   };
 
@@ -1340,6 +1340,7 @@ export default function ListingDetail() {
         <ApplyModal
           listing={listing}
           userId={profile?._id || profile?.id}
+          creatorProfile={profile}
           onClose={() => setShowApplyModal(false)}
           onApply={applyToListing}
           navigate={navigate}

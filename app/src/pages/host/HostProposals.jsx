@@ -1,5 +1,8 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useQuery, useMutation } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
+import { useAuth } from '../../contexts/AuthContext';
 import ProfilePopupCard from '../../components/ProfilePopupCard';
 import {
   MessageSquare, ChevronDown, ChevronUp, ExternalLink, Check, Sparkles,
@@ -110,8 +113,6 @@ const PITCH_BORDER_CLOSED   = '1.5px solid rgba(209,235,219,0.9)';
 const PITCH_BORDER_EXPANDED = '1.5px solid rgba(149,157,144,0.55)';
 const PITCH_SHADOW_CLOSED   = '0 2px 12px rgba(25,37,36,0.05), 0 0 0 1px rgba(209,235,219,0.5)';
 const PITCH_SHADOW_EXPANDED = '0 4px 20px rgba(25,37,36,0.08), 0 0 0 1px rgba(209,235,219,0.4)';
-
-const LISTING_NAMES = ['All Listings', ...Array.from(new Set(PROPOSALS.map((p) => p.listing)))];
 
 function fmtFollowers(n) {
   if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M`;
@@ -685,8 +686,52 @@ function DraggableProposalCard(props) {
 }
 
 // ─── Main page ────────────────────────────────────────────────────────────────
+function normalizePitch(p) {
+  const elapsed = Date.now() - p.created_at;
+  const hours = Math.floor(elapsed / 3600000);
+  const days  = Math.floor(elapsed / 86400000);
+  const applied = hours < 1 ? 'Just now' : hours < 24 ? `${hours}h ago` : `${days}d ago`;
+  return {
+    id: p._id,
+    listing: p.listing_title || 'Your Listing',
+    status: p.status,
+    type: p.type || 'application',
+    applied,
+    message: p.message,
+    creator: {
+      name: p.creator_name,
+      username: p.creator_username || '',
+      tier: p.creator_tier || 'UGC Pro',
+      avatar: p.creator_avatar || null,
+      followers: p.creator_followers || 0,
+      engagement: p.creator_engagement || 0,
+      collab_count: 0,
+      location: '',
+      platforms: p.creator_platforms || [],
+      portfolio: p.creator_username || '',
+      verified: false,
+    },
+    contractHistory: [],
+    signatures: emptySignatures(),
+    locked: false,
+    counterPending: null,
+    hidden: false,
+    isReal: true,
+    convexId: p._id,
+  };
+}
+
 export default function HostProposals() {
   const location = useLocation();
+  const { profile } = useAuth();
+  const hostId = profile?._id || profile?.id;
+
+  const updateStatusCvx = useMutation(api.pitches.updateStatus);
+  const rawPitches = useQuery(
+    api.pitches.getByHost,
+    hostId ? { hostId: String(hostId) } : 'skip'
+  );
+
   const [tab, setTab]               = useState(location.state?.filter ?? 'all');
   const [typeFilter, setTypeFilter] = useState('all');
   const [listingFilter, setListingFilter] = useState('All Listings');
@@ -694,8 +739,8 @@ export default function HostProposals() {
   const [dropOpen, setDropOpen]     = useState(false);
   const [activeId, setActiveId]     = useState(null);
   const [flashStage, setFlashStage] = useState(null);
-  const [counterModal, setCounterModal] = useState(null); // { proposalId, fromParty }
-  const [signModal, setSignModal]       = useState(null); // { proposalId, party }
+  const [counterModal, setCounterModal] = useState(null);
+  const [signModal, setSignModal]       = useState(null);
   const [showClearDeclined, setShowClearDeclined] = useState(false);
   const [popupCreator, setPopupCreator] = useState(null);
 
@@ -711,14 +756,44 @@ export default function HostProposals() {
         locked:          s.locked          ?? false,
         counterPending:  s.counterPending  ?? null,
         hidden:          s.hidden          ?? false,
+        isReal: false,
       };
     });
   });
+
+  // Merge real Convex pitches (prepended) with mock data
+  const allProposals = useMemo(() => {
+    if (!rawPitches?.length) return proposals;
+    const saved = loadApplications();
+    const real = rawPitches.map((p) => {
+      const normalized = normalizePitch(p);
+      const s = saved[String(p._id)] || {};
+      return {
+        ...normalized,
+        status:          s.status          ?? normalized.status,
+        contractHistory: s.contractHistory ?? [],
+        signatures:      s.signatures      ?? emptySignatures(),
+        locked:          s.locked          ?? false,
+        counterPending:  s.counterPending  ?? null,
+        hidden:          s.hidden          ?? false,
+      };
+    });
+    return [...real, ...proposals];
+  }, [rawPitches, proposals]);
+
+  const listingNames = useMemo(() => (
+    ['All Listings', ...Array.from(new Set(allProposals.map((p) => p.listing)))]
+  ), [allProposals]);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
 
   // ── Status / stage changes ──
   function handleStatusChange(id, newStatus) {
+    // For real Convex pitches, sync status back
+    const target = allProposals.find((p) => p.id === id);
+    if (target?.isReal && target.convexId) {
+      updateStatusCvx({ id: target.convexId, status: newStatus }).catch(() => {});
+    }
     setProposals((prev) => {
       const next = prev.map((p) => (p.id === id ? { ...p, status: newStatus } : p));
       saveApplications(next);
@@ -795,18 +870,18 @@ export default function HostProposals() {
   function handleDragEnd({ active, over }) {
     setActiveId(null);
     if (!over) return;
-    const proposal = proposals.find((p) => p.id === active.id);
+    const proposal = allProposals.find((p) => p.id === active.id);
     if (!proposal || proposal.status === over.id) return;
     handleStatusChange(active.id, over.id);
     setFlashStage(over.id);
     setTimeout(() => setFlashStage(null), 600);
   }
 
-  const activeProposal = activeId ? proposals.find((p) => p.id === activeId) : null;
+  const activeProposal = activeId ? allProposals.find((p) => p.id === activeId) : null;
   const dragging = !!activeId;
 
   // Filtering (hidden proposals excluded everywhere)
-  const visible    = proposals.filter((p) => !p.hidden);
+  const visible    = allProposals.filter((p) => !p.hidden);
   const byListing  = visible.filter((p) => listingFilter === 'All Listings' || p.listing === listingFilter);
   const byStage    = tab === 'all'        ? byListing : byListing.filter((p) => p.status === tab);
   const filtered   = typeFilter === 'all' ? byStage   : byStage.filter((p) => p.type === typeFilter);
@@ -845,7 +920,7 @@ export default function HostProposals() {
               </button>
               {dropOpen && (
                 <div style={{ position: 'absolute', right: 0, top: 'calc(100% + 6px)', background: 'rgba(255,255,255,0.96)', backdropFilter: 'blur(24px) saturate(140%)', border: '1px solid rgba(255,255,255,0.7)', borderRadius: '0.875rem', boxShadow: '0 12px 40px rgba(25,37,36,0.14)', zIndex: 40, minWidth: 200, overflow: 'hidden' }}>
-                  {LISTING_NAMES.map((name) => (
+                  {listingNames.map((name) => (
                     <button key={name} onClick={() => { setListingFilter(name); setDropOpen(false); setExpanded(null); }}
                       style={{ width: '100%', textAlign: 'left', padding: '10px 16px', background: listingFilter === name ? 'var(--mint)' : 'transparent', border: 'none', cursor: 'pointer', fontSize: '0.82rem', fontWeight: listingFilter === name ? 700 : 500, color: 'var(--ink)', fontFamily: 'var(--font-body)' }}
                       onMouseEnter={(e) => { if (listingFilter !== name) e.currentTarget.style.background = 'rgba(25,37,36,0.04)'; }}

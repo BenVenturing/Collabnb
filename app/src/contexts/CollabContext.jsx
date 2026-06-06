@@ -70,6 +70,7 @@ export function CollabProvider({ children }) {
   const markSentCvx = useMutation(api.contracts.markSent);
   const createCollabCvx = useMutation(api.collaborations.create);
   const createThreadCvx = useMutation(api.threads.create);
+  const createPitchCvx = useMutation(api.pitches.create);
   const createCollectionCvx = useMutation(api.collections.create);
   const toggleSaveCvx = useMutation(api.collections.toggleSave);
   const renameCollectionCvx = useMutation(api.collections.rename);
@@ -287,7 +288,7 @@ export function CollabProvider({ children }) {
     }).catch(() => {});
   }, [createThreadCvx]);
 
-  const applyToListing = useCallback((listing, pitchMessage) => {
+  const applyToListing = useCallback((listing, pitchMessage, creatorProfile) => {
     const stageKeys = ['pending', 'accepted', 'updated', 'uploaded_tagged', 'closed', 'archived'];
     const emptyStages = Object.fromEntries(stageKeys.map(k => [k, { completed: false, date: null, note: '' }]));
     emptyStages.pending = { completed: true, date: formatDate(new Date()), note: 'Application sent' };
@@ -355,7 +356,28 @@ export function CollabProvider({ children }) {
       tag: 'Application',
       lastMessage: pitchMessage.slice(0, 100),
     }).catch(() => {});
-  }, [applyCount, createCollabCvx, createThreadCvx]);
+
+    // Write pitch record so host can see the application
+    if (creatorProfile?._id || creatorProfile?.id) {
+      createPitchCvx({
+        listingId: String(listing._id || listing.id),
+        creatorId: String(creatorProfile._id || creatorProfile.id),
+        creatorName: creatorProfile.full_name || creatorProfile.name || 'Creator',
+        creatorUsername: creatorProfile.username,
+        creatorAvatar: creatorProfile.avatar_url,
+        creatorTier: creatorProfile.tier,
+        creatorFollowers: creatorProfile.follower_count,
+        creatorEngagement: creatorProfile.engagement_rate,
+        creatorPlatforms: [
+          creatorProfile.instagram_handle && 'Instagram',
+          creatorProfile.tiktok_handle && 'TikTok',
+          creatorProfile.youtube_handle && 'YouTube',
+        ].filter(Boolean),
+        message: pitchMessage,
+        type: 'application',
+      }).catch(() => {});
+    }
+  }, [applyCount, createCollabCvx, createThreadCvx, createPitchCvx]);
 
   const getCollabById = useCallback((id) =>
     collabs.find((c) => c.id === id) || null,

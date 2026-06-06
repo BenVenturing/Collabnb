@@ -1,8 +1,9 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useMemo } from 'react';
 import { useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { useAuth } from '../contexts/AuthContext';
 import { SAMPLE_LISTINGS, IMG_FALLBACK } from '../lib/mockData';
+import GlobeCanvas, { countGlobeStats } from '../components/GlobeCanvas';
 
 // ─── Canvas confetti ──────────────────────────────────────────────────────────
 function Confetti() {
@@ -169,6 +170,9 @@ export default function WaitlistPreview() {
     if (liveProfile?.is_verified) window.location.reload();
   }, [liveProfile?.is_verified]);
 
+  const allProfiles = useQuery(api.profiles.getAll);
+  const globeStats  = useMemo(() => countGlobeStats(allProfiles), [allProfiles]);
+
   return (
     <>
       <Confetti />
@@ -299,6 +303,31 @@ export default function WaitlistPreview() {
           <p style={{ fontSize: '0.88rem', color: 'var(--slate)', lineHeight: 1.65, margin: 0 }}>
             Once approved, you'll unlock full access to browse, apply to collabs, and message hosts. Full listings go live <strong>July 1st</strong>.
           </p>
+        </div>
+
+        {/* Globe */}
+        <div style={{ textAlign: 'center', marginTop: '4rem', width: '100%', maxWidth: 560, padding: '0 1.5rem 3rem' }}>
+          <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.25rem', color: 'var(--ink)', marginBottom: '0.375rem' }}>
+            Our Global Community
+          </h3>
+          <p style={{ color: 'var(--sage)', fontSize: '0.9rem', marginBottom: '0.875rem' }}>
+            Creators and hosts connecting across the world
+          </p>
+          <GlobeCanvas profiles={allProfiles} />
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '0.75rem', marginTop: '1.5rem', flexWrap: 'wrap' }}>
+            <span className="eyebrow-tag" style={{ gap: '0.5rem' }}>
+              <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#22c55e', display: 'inline-block', flexShrink: 0 }} />
+              <strong>{globeStats.creators || '—'}</strong>&nbsp;Creators
+            </span>
+            <span className="eyebrow-tag" style={{ gap: '0.5rem' }}>
+              <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#ef4444', display: 'inline-block', flexShrink: 0 }} />
+              <strong>{globeStats.hosts || '—'}</strong>&nbsp;Hosts
+            </span>
+            <span className="eyebrow-tag" style={{ gap: '0.5rem' }}>
+              <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#D0D5CE', display: 'inline-block', flexShrink: 0 }} />
+              <strong>{globeStats.countries > 0 ? `${globeStats.countries}+` : '1+'}</strong>&nbsp;Countries
+            </span>
+          </div>
         </div>
 
       </div>

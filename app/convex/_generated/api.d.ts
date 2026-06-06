@@ -18,6 +18,7 @@ import type * as emails from "../emails.js";
 import type * as http from "../http.js";
 import type * as listings from "../listings.js";
 import type * as messages from "../messages.js";
+import type * as notifications from "../notifications.js";
 import type * as pitches from "../pitches.js";
 import type * as profiles from "../profiles.js";
 import type * as referrals from "../referrals.js";
@@ -46,6 +47,7 @@ declare const fullApi: ApiFromModules<{
   http: typeof http;
   listings: typeof listings;
   messages: typeof messages;
+  notifications: typeof notifications;
   pitches: typeof pitches;
   profiles: typeof profiles;
   referrals: typeof referrals;

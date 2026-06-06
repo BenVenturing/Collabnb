@@ -1013,6 +1013,8 @@ export default function HostCreators() {
   const [viewMode,         setViewMode]         = useState('grid');
   const [query,            setQuery]            = useState('');
   const [tierFilter,       setTierFilter]       = useState('All');
+  const [platformFilter,   setPlatformFilter]   = useState([]);
+  const [sortBy,           setSortBy]           = useState('followers');
   const [showPast,         setShowPast]         = useState(false);
   const [nearbyOnly,       setNearbyOnly]       = useState(false);
   const [dateStart,        setDateStart]        = useState('');
@@ -1047,13 +1049,14 @@ export default function HostCreators() {
   const nearbyCreators = CREATORS.filter(c => isNearHost(c));
 
   // Cache key derived from all active filter params
-  const filterParams = { query, tierFilter, showPast, nearbyOnly, dateStart, dateEnd };
+  const filterParams = { query, tierFilter, platformFilter, sortBy, showPast, nearbyOnly, dateStart, dateEnd };
   const searchCacheKey = cacheKey('creator_search', filterParams);
 
   const computeFiltered = () => {
-    const base = CREATORS.filter((c) => {
+    let base = CREATORS.filter((c) => {
       if (showPast && !c.past_collab) return false;
       if (tierFilter !== 'All' && c.tier !== tierFilter) return false;
+      if (platformFilter.length > 0 && !platformFilter.every(p => c.platforms.includes(p))) return false;
       if (nearbyOnly && !isNearHost(c)) return false;
       if (query) {
         const q = query.toLowerCase();
@@ -1067,9 +1070,13 @@ export default function HostCreators() {
       }
       return true;
     });
-    return (dateStart && dateEnd)
-      ? base.filter(c => isNearHost(c) || tripsOverlapWithHost(c, dateStart, dateEnd))
-      : base;
+    if (dateStart && dateEnd) {
+      base = base.filter(c => isNearHost(c) || tripsOverlapWithHost(c, dateStart, dateEnd));
+    }
+    if (sortBy === 'followers') base = [...base].sort((a, b) => b.followers - a.followers);
+    else if (sortBy === 'engagement') base = [...base].sort((a, b) => b.engagement - a.engagement);
+    else if (sortBy === 'collabs') base = [...base].sort((a, b) => b.collab_count - a.collab_count);
+    return base;
   };
 
   // Return cached result for this exact filter combo, or compute + cache it
@@ -1152,6 +1159,49 @@ export default function HostCreators() {
                   </button>
                 ))}
               </div>
+
+              {/* Platform filter */}
+              {['Instagram', 'TikTok', 'YouTube'].map(p => {
+                const active = platformFilter.includes(p);
+                const icons = { Instagram: '📸', TikTok: '🎵', YouTube: '▶️' };
+                return (
+                  <button key={p} onClick={() => setPlatformFilter(prev =>
+                    prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p]
+                  )} style={{
+                    display: 'flex', alignItems: 'center', gap: 5,
+                    padding: '0.4rem 0.875rem', borderRadius: 9999,
+                    fontSize: '0.78rem', fontWeight: 600,
+                    background: active ? 'rgba(25,37,36,0.1)' : 'rgba(255,255,255,0.65)',
+                    color: active ? 'var(--ink)' : 'var(--slate)',
+                    border: `1px solid ${active ? 'rgba(25,37,36,0.25)' : 'rgba(25,37,36,0.12)'}`,
+                    backdropFilter: 'blur(12px)', cursor: 'pointer',
+                    transition: 'all 180ms var(--ease-out-quart)',
+                    fontFamily: 'var(--font-body)',
+                  }}>
+                    <span style={{ fontSize: 10 }}>{icons[p]}</span>{p}
+                  </button>
+                );
+              })}
+
+              {/* Sort */}
+              <select
+                value={sortBy}
+                onChange={e => setSortBy(e.target.value)}
+                style={{
+                  padding: '0.4rem 0.875rem', borderRadius: 9999,
+                  fontSize: '0.78rem', fontWeight: 600,
+                  background: 'rgba(255,255,255,0.65)', color: 'var(--slate)',
+                  border: '1px solid rgba(25,37,36,0.12)',
+                  backdropFilter: 'blur(12px)', cursor: 'pointer',
+                  fontFamily: 'var(--font-body)', outline: 'none',
+                  appearance: 'none', WebkitAppearance: 'none',
+                  paddingRight: '1.5rem',
+                }}
+              >
+                <option value="followers">Most Followers</option>
+                <option value="engagement">Highest Engagement</option>
+                <option value="collabs">Most Collabs</option>
+              </select>
 
               <button onClick={() => setShowPast(!showPast)} style={{
                 display: 'flex', alignItems: 'center', gap: 6,

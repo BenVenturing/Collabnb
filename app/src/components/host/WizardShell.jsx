@@ -18,12 +18,18 @@ export default function WizardShell({ step, children, onBack, onNext, nextLabel 
   }
 
   return (
-    <div style={{ minHeight: "100vh", background: "var(--bone)", display: "flex", flexDirection: "column" }}>
+    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
+      {/* HAZY background layers */}
+      <div aria-hidden="true" className="bg-layers bg-base" />
+      <div aria-hidden="true" className="bg-layers bg-gradient" />
+      <div aria-hidden="true" className="bg-layers bg-clouds" />
+      <div aria-hidden="true" className="bg-grain" />
+
       {/* Top bar */}
       <div style={{
         position: "sticky", top: 0, zIndex: 50,
-        background: "rgba(239,236,233,0.85)", backdropFilter: "blur(20px) saturate(135%)",
-        borderBottom: "1px solid rgba(255,255,255,0.6)",
+        background: "rgba(239,236,233,0.88)", backdropFilter: "blur(24px) saturate(140%)", WebkitBackdropFilter: "blur(24px) saturate(140%)",
+        borderBottom: "1px solid rgba(255,255,255,0.65)",
         padding: "0 24px",
       }}>
         <div style={{ maxWidth: 680, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", height: 56 }}>
@@ -52,7 +58,7 @@ export default function WizardShell({ step, children, onBack, onNext, nextLabel 
       </div>
 
       {/* Scrollable content */}
-      <div style={{ flex: 1, overflowY: "auto", padding: "32px 24px 120px" }}>
+      <div style={{ flex: 1, overflowY: "auto", padding: "32px 24px 120px", position: "relative", zIndex: 1 }}>
         <div style={{ maxWidth: 680, margin: "0 auto" }}>
           {children}
         </div>
@@ -61,7 +67,7 @@ export default function WizardShell({ step, children, onBack, onNext, nextLabel 
       {/* Bottom action bar */}
       <div style={{
         position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 50,
-        background: "rgba(239,236,233,0.92)", backdropFilter: "blur(20px) saturate(135%)",
+        background: "rgba(239,236,233,0.92)", backdropFilter: "blur(24px) saturate(140%)", WebkitBackdropFilter: "blur(24px) saturate(140%)",
         borderTop: "1px solid rgba(255,255,255,0.6)",
         padding: "16px 24px",
       }}>

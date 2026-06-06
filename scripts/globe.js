@@ -247,11 +247,11 @@ function buildGlobeTexture() {
   const ctx = cv.getContext('2d');
 
   // Ocean base — solid bone colour (alpha must be 1 for WebGL texture)
-  ctx.fillStyle = '#DCE4E0';
+  ctx.fillStyle = '#B0BEBA';
   ctx.fillRect(0, 0, W, H);
 
   // Grid lines (very subtle)
-  ctx.strokeStyle = 'rgba(149,157,144,0.18)';
+  ctx.strokeStyle = 'rgba(80,100,90,0.20)';
   ctx.lineWidth = 0.8;
   for (let lat = -80; lat <= 80; lat += 20) {
     const y = (1 - (lat + 90) / 180) * H;
@@ -277,8 +277,8 @@ function buildGlobeTexture() {
   }
 
   // Land fill colour — muted sage
-  ctx.fillStyle = 'rgba(130, 150, 135, 0.72)';
-  ctx.strokeStyle = 'rgba(100, 125, 110, 0.6)';
+  ctx.fillStyle = 'rgba(60, 90, 70, 0.90)';
+  ctx.strokeStyle = 'rgba(40, 70, 55, 0.65)';
   ctx.lineWidth = 1.5;
   CONTINENT_POLYS.forEach(drawPoly);
 
@@ -334,8 +334,8 @@ function initGlobe() {
   const globeMat = new THREE.MeshPhongMaterial({
     map: texture,
     transparent: true,
-    opacity: 0.82,
-    shininess: 38,
+    opacity: 0.92,
+    shininess: 28,
     specular: new THREE.Color(0x666666),
   });
   const globeMesh = new THREE.Mesh(globeGeo, globeMat);
@@ -415,7 +415,7 @@ function initGlobe() {
       varying vec3 vNormal;
       void main() {
         float i = pow(0.65 - dot(vNormal, vec3(0.0, 0.0, 1.0)), 2.2);
-        gl_FragColor = vec4(0.82, 0.93, 0.87, i * 0.52);
+        gl_FragColor = vec4(0.55, 0.72, 0.62, i * 0.60);
       }
     `,
     transparent: true,

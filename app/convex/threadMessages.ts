@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { internal } from "./_generated/api";
 
 export const getByThread = query({
   args: { threadKey: v.string() },
@@ -20,9 +21,10 @@ export const sendMessage = mutation({
     senderAvatar: v.optional(v.string()),
     senderRole: v.string(),
     text: v.string(),
+    recipientId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    return await ctx.db.insert("thread_messages", {
+    const id = await ctx.db.insert("thread_messages", {
       thread_key: args.threadKey,
       sender_id: args.senderId,
       sender_name: args.senderName,
@@ -31,5 +33,18 @@ export const sendMessage = mutation({
       text: args.text,
       created_at: Date.now(),
     });
+
+    if (args.recipientId && args.recipientId !== args.senderId) {
+      const notifType = args.senderRole === "host" ? "host_reply" : "new_message";
+      await ctx.runMutation(internal.notifications.create, {
+        userId: args.recipientId,
+        type: notifType,
+        title: `New message from ${args.senderName}`,
+        body: args.text.length > 80 ? args.text.slice(0, 80) + "…" : args.text,
+        link: "#/inbox",
+      });
+    }
+
+    return id;
   },
 });

@@ -252,4 +252,14 @@ export default defineSchema({
     recipient_count: v.number(),
     sent_at: v.number(),
   }).index("by_sent", ["sent_at"]),
+
+  notifications: defineTable({
+    user_id: v.string(),
+    type: v.string(), // 'pitch_approved' | 'pitch_declined' | 'new_message' | 'host_reply'
+    title: v.string(),
+    body: v.optional(v.string()),
+    link: v.optional(v.string()),
+    read: v.boolean(),
+    created_at: v.number(),
+  }).index("by_user", ["user_id"]),
 });

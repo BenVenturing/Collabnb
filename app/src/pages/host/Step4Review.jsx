@@ -16,7 +16,7 @@ function Section({ title, children }) {
   return (
     <div style={{ marginBottom: 24 }}>
       <div style={{ fontFamily: "Satoshi, sans-serif", fontWeight: 700, fontSize: 16, color: "var(--ink)", marginBottom: 12 }}>{title}</div>
-      <div style={{ background: "#fff", borderRadius: "1rem", border: "1.5px solid rgba(25,37,36,0.08)", padding: "18px 20px", display: "flex", flexDirection: "column", gap: 10 }}>
+      <div style={{ background: "rgba(255,255,255,0.82)", backdropFilter: "blur(14px) saturate(130%)", WebkitBackdropFilter: "blur(14px) saturate(130%)", borderRadius: "1rem", border: "1px solid rgba(255,255,255,0.85)", padding: "18px 20px", display: "flex", flexDirection: "column", gap: 10, boxShadow: "0 2px 12px rgba(25,37,36,0.05)" }}>
         {children}
       </div>
     </div>
@@ -161,7 +161,7 @@ export default function Step4Review() {
         </p>
 
         {/* Header card */}
-        <div style={{ background: "#fff", borderRadius: "1rem", border: "1.5px solid rgba(25,37,36,0.08)", padding: "18px 20px", marginBottom: 16 }}>
+        <div style={{ background: "rgba(255,255,255,0.82)", backdropFilter: "blur(14px) saturate(130%)", WebkitBackdropFilter: "blur(14px) saturate(130%)", borderRadius: "1rem", border: "1px solid rgba(255,255,255,0.85)", padding: "18px 20px", marginBottom: 16, boxShadow: "0 2px 12px rgba(25,37,36,0.05)" }}>
           <div style={{ fontFamily: "Satoshi, sans-serif", fontWeight: 700, fontSize: 16, color: "var(--ink)" }}>{draft.title || "—"}</div>
           <div style={{ fontFamily: "Satoshi, sans-serif", fontSize: 13, color: "var(--slate)", marginTop: 2 }}>{draft.location_city}{draft.location_country ? `, ${draft.location_country}` : ""}</div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 12 }}>

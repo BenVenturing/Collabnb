@@ -22,6 +22,26 @@ const LOCKED_PLANS = [
 
 export default function PricingCards({ isFoundingFull, creatorSpotsRemaining, hostSpotsRemaining, lifetimeCount, onClaim, onClaimLifetime, isUnlocked, onSubscribe }) {
   const spotsRemaining = Math.min(creatorSpotsRemaining, hostSpotsRemaining);
+
+  if (!isUnlocked) {
+    return (
+      <section
+        className="max-w-xl mx-auto px-4 md:px-8 pb-4"
+        aria-label="Pricing options"
+      >
+        <FoundingCard
+          isFull={isFoundingFull}
+          creatorSpotsRemaining={creatorSpotsRemaining}
+          hostSpotsRemaining={hostSpotsRemaining}
+          lifetimeCount={lifetimeCount}
+          spotsRemaining={spotsRemaining}
+          onClaim={onClaim}
+          onClaimLifetime={onClaimLifetime}
+        />
+      </section>
+    );
+  }
+
   return (
     <section
       className="max-w-5xl mx-auto px-4 md:px-8 pb-4"

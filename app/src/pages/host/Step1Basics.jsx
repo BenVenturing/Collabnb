@@ -156,7 +156,7 @@ export default function Step1Basics() {
               <button
                 key={t.id}
                 onClick={() => updateDraft({ compensation_type: t.id })}
-                style={{ padding: "14px 18px", border: `1.5px solid ${draft.compensation_type === t.id ? "var(--ink)" : "rgba(25,37,36,0.15)"}`, borderRadius: "0.875rem", background: draft.compensation_type === t.id ? "var(--mint)" : "#fff", fontFamily: "Satoshi, sans-serif", fontSize: 14, fontWeight: 600, color: "var(--ink)", cursor: "pointer", textAlign: "left" }}
+                style={{ padding: "14px 18px", border: `1.5px solid ${draft.compensation_type === t.id ? "var(--ink)" : "rgba(25,37,36,0.15)"}`, borderRadius: "0.875rem", background: draft.compensation_type === t.id ? "var(--mint)" : "rgba(255,255,255,0.82)", backdropFilter: "blur(10px)", WebkitBackdropFilter: "blur(10px)", fontFamily: "Satoshi, sans-serif", fontSize: 14, fontWeight: 600, color: "var(--ink)", cursor: "pointer", textAlign: "left" }}
               >
                 {t.label}
               </button>
@@ -196,7 +196,7 @@ export default function Step1Basics() {
               <button
                 key={t.id}
                 onClick={() => updateDraft({ creator_tier: t.id })}
-                style={{ padding: "10px 18px", borderRadius: 9999, border: `1.5px solid ${draft.creator_tier === t.id ? "var(--ink)" : "rgba(25,37,36,0.15)"}`, background: draft.creator_tier === t.id ? "var(--ink)" : "#fff", fontFamily: "Satoshi, sans-serif", fontSize: 13, fontWeight: 600, color: draft.creator_tier === t.id ? "#fff" : "var(--ink)", cursor: "pointer" }}
+                style={{ padding: "10px 18px", borderRadius: 9999, border: `1.5px solid ${draft.creator_tier === t.id ? "var(--ink)" : "rgba(25,37,36,0.15)"}`, background: draft.creator_tier === t.id ? "var(--ink)" : "rgba(255,255,255,0.82)", backdropFilter: "blur(10px)", WebkitBackdropFilter: "blur(10px)", fontFamily: "Satoshi, sans-serif", fontSize: 13, fontWeight: 600, color: draft.creator_tier === t.id ? "#fff" : "var(--ink)", cursor: "pointer" }}
               >
                 {t.label}
               </button>
@@ -212,7 +212,7 @@ export default function Step1Basics() {
               <button
                 key={l.id}
                 onClick={() => updateDraft({ deliverable_load: l.id })}
-                style={{ padding: "16px 18px", border: `1.5px solid ${draft.deliverable_load === l.id ? "var(--ink)" : "rgba(25,37,36,0.15)"}`, borderRadius: "0.875rem", background: draft.deliverable_load === l.id ? "var(--mint)" : "#fff", fontFamily: "Satoshi, sans-serif", fontSize: 14, color: "var(--ink)", cursor: "pointer", textAlign: "left" }}
+                style={{ padding: "16px 18px", border: `1.5px solid ${draft.deliverable_load === l.id ? "var(--ink)" : "rgba(25,37,36,0.15)"}`, borderRadius: "0.875rem", background: draft.deliverable_load === l.id ? "var(--mint)" : "rgba(255,255,255,0.82)", backdropFilter: "blur(10px)", WebkitBackdropFilter: "blur(10px)", fontFamily: "Satoshi, sans-serif", fontSize: 14, color: "var(--ink)", cursor: "pointer", textAlign: "left" }}
               >
                 <div style={{ fontWeight: 700 }}>{l.label}</div>
                 <div style={{ fontSize: 12, color: "var(--slate)", marginTop: 2 }}>{l.desc}</div>

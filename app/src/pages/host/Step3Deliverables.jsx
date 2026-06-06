@@ -102,7 +102,7 @@ export default function Step3Deliverables() {
           </div>
           <div style={{ display: "flex", gap: 12, overflowX: "auto", paddingBottom: 8 }}>
             {draft.deliverables_list.map((d, i) => (
-              <div key={i} style={{ minWidth: 180, background: "#fff", borderRadius: "0.875rem", border: "1.5px solid rgba(25,37,36,0.1)", padding: "14px 16px", flexShrink: 0 }}>
+              <div key={i} style={{ minWidth: 180, background: "rgba(255,255,255,0.82)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", borderRadius: "0.875rem", border: "1px solid rgba(255,255,255,0.85)", padding: "14px 16px", flexShrink: 0, boxShadow: "0 1px 8px rgba(25,37,36,0.05)" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 }}>
                   <div style={{ fontFamily: "Satoshi, sans-serif", fontWeight: 700, fontSize: 14, color: "var(--ink)" }}>{d.quantity}x {d.type}</div>
                   <div style={{ display: "flex", gap: 6 }}>
@@ -117,7 +117,7 @@ export default function Step3Deliverables() {
         </div>
 
         {/* Add custom deliverable */}
-        <div style={{ background: "#fff", borderRadius: "0.875rem", border: "1.5px solid rgba(25,37,36,0.1)", padding: "20px" }}>
+        <div style={{ background: "rgba(255,255,255,0.85)", backdropFilter: "blur(14px) saturate(130%)", WebkitBackdropFilter: "blur(14px) saturate(130%)", borderRadius: "0.875rem", border: "1px solid rgba(255,255,255,0.88)", padding: "20px", boxShadow: "0 2px 12px rgba(25,37,36,0.05)" }}>
           <div style={{ fontFamily: "Satoshi, sans-serif", fontWeight: 700, fontSize: 14, color: "var(--ink)", marginBottom: 14 }}>
             {editIdx !== null ? "Edit deliverable" : "Add custom deliverable"}
           </div>

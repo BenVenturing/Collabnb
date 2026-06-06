@@ -1,5 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import { internal } from "./_generated/api";
 
 function currentMonthKey(): string {
   const now = new Date();
@@ -166,5 +167,24 @@ export const updateStatus = mutation({
     const updates: Record<string, unknown> = { status };
     if (hostNote !== undefined) updates.host_note = hostNote;
     await ctx.db.patch(id, updates);
+
+    const pitch = await ctx.db.get(id);
+    if (!pitch) return;
+
+    if (status === "approved" || status === "declined") {
+      const title = status === "approved"
+        ? `Your application was approved!`
+        : `Application update for ${pitch.listing_title || "your listing"}`;
+      const body = status === "approved"
+        ? `Congrats! Your pitch for "${pitch.listing_title || "a listing"}" was accepted.`
+        : hostNote || "Your application wasn't selected this time.";
+      await ctx.runMutation(internal.notifications.create, {
+        userId: pitch.creator_id,
+        type: status === "approved" ? "pitch_approved" : "pitch_declined",
+        title,
+        body,
+        link: "#/collabs",
+      });
+    }
   },
 });

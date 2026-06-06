@@ -7,6 +7,8 @@ import { useCollabs } from '../contexts/CollabContext';
 import { reopenChecklist } from './OnboardingChecklist';
 import { SAMPLE_LISTINGS } from '../lib/mockData';
 import { WhereSearchContent, WhatSearchContent, WhenSearchContent, useAnimatedPlaceholder } from './SearchDropdowns';
+import { useQuery, useMutation } from 'convex/react';
+import { api } from '../../convex/_generated/api';
 
 const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL;
 
@@ -138,6 +140,14 @@ export default function AppNav() {
 
   const profileRef   = useRef(null);
   const navSearchRef = useRef(null);
+  const bellRef      = useRef(null);
+
+  const [notifOpen, setNotifOpen] = useState(false);
+  const userId = profile?._id || profile?.id;
+  const unreadCount = useQuery(api.notifications.getUnreadCount, userId ? { userId } : 'skip') ?? 0;
+  const notifications = useQuery(api.notifications.getForUser, notifOpen && userId ? { userId } : 'skip') ?? [];
+  const markRead = useMutation(api.notifications.markRead);
+  const markAllRead = useMutation(api.notifications.markAllRead);
 
   // Scroll detection
   useEffect(() => {
@@ -168,6 +178,16 @@ export default function AppNav() {
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, []);
+
+  // Close notification sheet on outside click
+  useEffect(() => {
+    if (!notifOpen) return;
+    const handler = (e) => {
+      if (bellRef.current && !bellRef.current.contains(e.target)) setNotifOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [notifOpen]);
 
   // Lock body scroll for full-screen overlay only
   useEffect(() => {
@@ -563,6 +583,91 @@ export default function AppNav() {
               Search stays
             </span>
           </button>
+
+          {/* Bell notification icon */}
+          {userId && (
+            <div ref={bellRef} style={{ position: 'relative' }}>
+              <button
+                onClick={() => { setNotifOpen(o => !o); if (!notifOpen && userId) markAllRead({ userId }); }}
+                style={{
+                  position: 'relative', width: 38, height: 38, borderRadius: '50%',
+                  background: notifOpen ? 'rgba(25,37,36,0.08)' : 'transparent',
+                  border: '1px solid rgba(25,37,36,0.1)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  cursor: 'pointer', flexShrink: 0,
+                  transition: 'background 180ms',
+                }}
+                aria-label="Notifications"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ width: 18, height: 18 }}>
+                  <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                  <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+                </svg>
+                {unreadCount > 0 && (
+                  <span style={{
+                    position: 'absolute', top: 5, right: 5,
+                    width: 8, height: 8, borderRadius: '50%',
+                    background: '#ef4444', border: '1.5px solid white',
+                    flexShrink: 0,
+                  }} />
+                )}
+              </button>
+
+              {notifOpen && (
+                <div style={{
+                  position: 'absolute', top: 'calc(100% + 8px)', right: 0,
+                  width: 320, maxHeight: 420,
+                  background: 'rgba(255,255,255,0.97)',
+                  backdropFilter: 'blur(24px) saturate(140%)',
+                  WebkitBackdropFilter: 'blur(24px) saturate(140%)',
+                  border: '1px solid rgba(255,255,255,0.7)',
+                  borderRadius: '1.25rem',
+                  boxShadow: '0 12px 40px rgba(25,37,36,0.18)',
+                  overflow: 'hidden',
+                  zIndex: 100,
+                  animation: 'fadeUp 180ms cubic-bezier(0.16,1,0.3,1) forwards',
+                }}>
+                  <div style={{ padding: '14px 18px 10px', borderBottom: '1px solid rgba(25,37,36,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 14, color: 'var(--ink)' }}>Notifications</span>
+                  </div>
+                  <div style={{ overflowY: 'auto', maxHeight: 360 }}>
+                    {notifications.length === 0 ? (
+                      <div style={{ padding: '32px 18px', textAlign: 'center', color: 'var(--sage)', fontSize: 13 }}>
+                        No notifications yet
+                      </div>
+                    ) : notifications.map(n => (
+                      <div
+                        key={n._id}
+                        onClick={() => {
+                          markRead({ id: n._id });
+                          if (n.link) { setNotifOpen(false); navigate(n.link.replace('#', '')); }
+                        }}
+                        style={{
+                          padding: '12px 18px',
+                          borderBottom: '1px solid rgba(25,37,36,0.05)',
+                          cursor: n.link ? 'pointer' : 'default',
+                          background: n.read ? 'transparent' : 'rgba(60,87,89,0.04)',
+                          display: 'flex', gap: 10, alignItems: 'flex-start',
+                        }}
+                      >
+                        <span style={{ fontSize: 18, flexShrink: 0, marginTop: 1 }}>
+                          {n.type === 'pitch_approved' ? '✅' : n.type === 'pitch_declined' ? '❌' : n.type === 'host_reply' ? '💬' : '📨'}
+                        </span>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 13, color: 'var(--ink)', lineHeight: 1.3 }}>{n.title}</div>
+                          {n.body && <div style={{ fontSize: 12, color: 'var(--slate)', marginTop: 2, lineHeight: 1.4 }}>{n.body}</div>}
+                          <div style={{ fontSize: 10, color: 'var(--sage)', marginTop: 4 }}>
+                            {new Date(n.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                          </div>
+                        </div>
+                        {!n.read && <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#3C5759', flexShrink: 0, marginTop: 6 }} />}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Hamburger + Profile avatar — grouped so nav dropdown anchors near avatar */}
           <div className="relative" ref={profileRef} style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>

@@ -2,6 +2,8 @@ import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCollabs } from '../contexts/CollabContext';
 import { SAMPLE_LISTINGS } from '../lib/mockData';
+import { useQuery } from 'convex/react';
+import { api } from '../../convex/_generated/api';
 
 // Deterministic rotation/offset from listing ID so cards don't shuffle on re-render
 function getCardStyle(id) {
@@ -286,7 +288,16 @@ export default function Saved() {
   const [showNewCollection, setShowNewCollection] = useState(false);
   const [moveState, setMoveState] = useState(null); // { listingId, pos: {x,y} }
 
-  const allSaved = SAMPLE_LISTINGS.filter((l) => savedIds.has(l.id));
+  const convexListings = useQuery(api.listings.getAll) ?? [];
+  // Normalize Convex listings so they use string `id` like SAMPLE_LISTINGS
+  const convexNormalized = convexListings.map((l) => ({ ...l, id: String(l._id) }));
+  // Merged pool: Convex listings take precedence, then sample (for demos/testing)
+  const allListings = [
+    ...convexNormalized,
+    ...SAMPLE_LISTINGS.filter((s) => !convexNormalized.some((c) => c.id === s.id)),
+  ];
+
+  const allSaved = allListings.filter((l) => savedIds.has(l.id));
   const totalCount = allSaved.length;
 
   const handleCreateCollection = (name) => {
@@ -429,7 +440,7 @@ export default function Saved() {
 
           {/* Render each collection's polaroid board */}
           {collections.map((col) => {
-            const listings = SAMPLE_LISTINGS.filter((l) => col.listingIds.includes(l.id));
+            const listings = allListings.filter((l) => col.listingIds.includes(l.id));
             if (listings.length === 0) return (
               <div key={col.id} style={{ marginBottom: '2.5rem' }}>
                 <p style={{

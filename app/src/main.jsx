@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { ClerkProvider } from '@clerk/clerk-react';
+import { ClerkProvider, useAuth } from '@clerk/clerk-react';
+import { ConvexProviderWithClerk } from 'convex/react-clerk';
 import { ConvexProvider, ConvexReactClient } from 'convex/react';
 import './index.css';
 import App from './App';
@@ -11,7 +12,7 @@ const CONVEX_URL = import.meta.env.VITE_CONVEX_URL;
 const convex = CONVEX_URL ? new ConvexReactClient(CONVEX_URL) : null;
 
 function Root() {
-  // Clerk not configured — render app directly with mock data
+  // Clerk not configured — use plain ConvexProvider (dev / mock mode)
   if (!CLERK_KEY) {
     return (
       <React.StrictMode>
@@ -26,14 +27,14 @@ function Root() {
     );
   }
 
-  // Clerk configured — wrap with ClerkProvider
+  // Clerk + Convex — ConvexProviderWithClerk passes Clerk JWT to Convex automatically
   return (
     <React.StrictMode>
       <ClerkProvider publishableKey={CLERK_KEY}>
         {convex ? (
-          <ConvexProvider client={convex}>
+          <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
             <App />
-          </ConvexProvider>
+          </ConvexProviderWithClerk>
         ) : (
           <App />
         )}

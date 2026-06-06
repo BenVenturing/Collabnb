@@ -33,25 +33,49 @@ function Row({ label, value }) {
   );
 }
 
+const CONFETTI_COLORS = [
+  "#FF3B30","#FF9500","#FFCC00","#34C759","#30D158",
+  "#00C7BE","#32ADE6","#007AFF","#5856D6","#AF52DE",
+  "#FF2D55","#FF6B35","#FFD60A","#30DB5B","#40CBE0",
+  "#BF5AF2","#FF375F","#FF8C00","#ACE608","#0A84FF",
+];
+
+const PARTICLES = Array.from({ length: 90 }, (_, i) => ({
+  id: i,
+  left: Math.random() * 100,
+  color: CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)],
+  size: 6 + Math.random() * 8,
+  isRect: Math.random() > 0.4,
+  duration: 2.8 + Math.random() * 1.6,
+  delay: Math.random() * 0.9,
+  spin: 360 + Math.floor(Math.random() * 4) * 180,
+  drift: (Math.random() - 0.5) * 120,
+}));
+
 function Confetti({ show }) {
   if (!show) return null;
   return (
     <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 999, overflow: "hidden" }}>
-      {Array.from({ length: 30 }).map((_, i) => (
-        <div key={i} style={{
+      {PARTICLES.map((p) => (
+        <div key={p.id} style={{
           position: "absolute",
-          left: `${Math.random() * 100}%`,
-          top: "-10px",
-          width: 8,
-          height: 8,
-          borderRadius: Math.random() > 0.5 ? "50%" : 0,
-          background: ["#D1EBDB", "#192524", "#3C5759", "#959D90", "#fff"][Math.floor(Math.random() * 5)],
-          animation: `fall ${1.5 + Math.random()}s ease-in forwards`,
-          animationDelay: `${Math.random() * 0.5}s`,
-          transform: `rotate(${Math.random() * 360}deg)`,
+          left: `${p.left}%`,
+          top: "-16px",
+          width: p.isRect ? p.size * 0.55 : p.size,
+          height: p.size,
+          borderRadius: p.isRect ? "2px" : "50%",
+          background: p.color,
+          animation: `confettiFall${p.id % 3} ${p.duration}s cubic-bezier(0.25,0.46,0.45,0.94) ${p.delay}s forwards`,
+          transformOrigin: "center center",
+          opacity: 1,
+          boxShadow: `0 0 2px ${p.color}66`,
         }} />
       ))}
-      <style>{`@keyframes fall { to { transform: translateY(110vh) rotate(720deg); opacity: 0; } }`}</style>
+      <style>{`
+        @keyframes confettiFall0 { 0%{transform:translateY(0) rotate(0deg) translateX(0);opacity:1} 80%{opacity:1} 100%{transform:translateY(105vh) rotate(${PARTICLES[0]?.spin ?? 720}deg) translateX(40px);opacity:0} }
+        @keyframes confettiFall1 { 0%{transform:translateY(0) rotate(20deg) translateX(0);opacity:1} 80%{opacity:1} 100%{transform:translateY(105vh) rotate(-${PARTICLES[1]?.spin ?? 540}deg) translateX(-60px);opacity:0} }
+        @keyframes confettiFall2 { 0%{transform:translateY(0) rotate(-15deg) translateX(0);opacity:1} 80%{opacity:1} 100%{transform:translateY(105vh) rotate(${PARTICLES[2]?.spin ?? 900}deg) translateX(20px);opacity:0} }
+      `}</style>
     </div>
   );
 }
@@ -109,7 +133,7 @@ export default function Step4Review() {
       }
       if (status === "published") {
         setConfetti(true);
-        setTimeout(() => { setConfetti(false); clearDraft(); navigate("/host"); }, 2200);
+        setTimeout(() => { setConfetti(false); clearDraft(); navigate("/host"); }, 3800);
       } else {
         clearDraft();
         navigate("/host");
@@ -192,7 +216,7 @@ export default function Step4Review() {
               <div style={{ fontFamily: "Satoshi, sans-serif", fontSize: 13, color: "var(--slate)", marginBottom: 4 }}>Platform fee</div>
               <div style={{ fontFamily: "Satoshi, sans-serif", fontWeight: 800, fontSize: 22, color: "var(--ink)", marginBottom: 2 }}>${fee.toFixed(0)}</div>
               <div style={{ fontFamily: "Satoshi, sans-serif", fontSize: 12, color: "var(--sage)", marginBottom: 12 }}>
-                {draft.compensation_type === "paid" || draft.compensation_type === "hybrid" ? "8% of cash payout (min $20, max $100)" : "Flat fee for free/exchange listing"}
+                {draft.compensation_type === "paid" || draft.compensation_type === "hybrid" ? "5% of cash payout (min $20, max $100)" : "Flat fee for free/exchange listing"}
               </div>
               <div style={{ fontFamily: "Satoshi, sans-serif", fontSize: 12, color: "#b45309", fontWeight: 600 }}>⚠ Creators don't see these fees</div>
             </div>

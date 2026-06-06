@@ -1,20 +1,43 @@
 import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
 
+async function resolveImages(ctx: any, ids: string[] | undefined): Promise<string[]> {
+  if (!ids?.length) return [];
+  const urls = await Promise.all(
+    ids.map(async (id) => {
+      if (id.startsWith("http")) return id;
+      try { return await ctx.storage.getUrl(id); } catch { return null; }
+    })
+  );
+  return urls.filter(Boolean) as string[];
+}
+
+async function withImages(ctx: any, listing: any) {
+  const resolved = await resolveImages(ctx, listing.gallery_images);
+  return {
+    ...listing,
+    gallery_images: resolved.length ? resolved : listing.gallery_images,
+    image: resolved[0] ?? listing.image ?? undefined,
+  };
+}
+
 export const getAll = query({
   args: {},
   handler: async (ctx) => {
-    return await ctx.db.query("listings").collect();
+    const listings = await ctx.db.query("listings").collect();
+    return Promise.all(listings.map((l: any) => withImages(ctx, l)));
   },
 });
 
 export const getById = query({
   args: { id: v.string() },
   handler: async (ctx, args) => {
-    return await ctx.db
+    const listing = await ctx.db
       .query("listings")
       .filter((q) => q.eq(q.field("_id"), args.id))
       .first();
+    if (!listing) return null;
+    return withImages(ctx, listing);
   },
 });
 
@@ -31,10 +54,11 @@ export const getByLocation = query({
 export const getByHost = query({
   args: { host_id: v.string() },
   handler: async (ctx, args) => {
-    return await ctx.db
+    const listings = await ctx.db
       .query("listings")
       .withIndex("by_host", (q) => q.eq("host_id", args.host_id))
       .collect();
+    return Promise.all(listings.map((l: any) => withImages(ctx, l)));
   },
 });
 
@@ -78,7 +102,7 @@ export const search = query({
       listings = listings.filter((l) => l.is_featured === args.is_featured);
     }
 
-    return listings;
+    return Promise.all(listings.map((l: any) => withImages(ctx, l)));
   },
 });
 
@@ -125,6 +149,8 @@ export const update = mutation({
     id: v.id("listings"),
     title: v.optional(v.string()),
     location: v.optional(v.string()),
+    host_id: v.optional(v.string()),
+    host_name: v.optional(v.string()),
     status: v.optional(v.string()),
     location_city: v.optional(v.string()),
     location_country: v.optional(v.string()),

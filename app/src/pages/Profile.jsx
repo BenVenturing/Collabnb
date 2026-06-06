@@ -115,6 +115,14 @@ const PencilIcon = () => (
     <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
   </svg>
 );
+const CreditCardIcon = () => (
+  <svg viewBox="0 0 256 256" fill="none" stroke="currentColor" strokeWidth="14" strokeLinecap="round" strokeLinejoin="round" width="18" height="18">
+    <rect x="24" y="56" width="208" height="144" rx="16"/>
+    <line x1="24" y1="104" x2="232" y2="104"/>
+    <line x1="64" y1="152" x2="96" y2="152"/>
+    <line x1="120" y1="152" x2="136" y2="152"/>
+  </svg>
+);
 
 // ─── Tooltip wrapper ───────────────────────────────────────────────────────────
 function Tooltip({ text, children }) {
@@ -579,7 +587,15 @@ export default function Profile() {
     if (subStatus === 'success' && sessionId) {
       navigate('/profile', { replace: true });
       verifySubscriptionSession({ sessionId })
-        .then(() => setToastMsg('Subscription activated! Welcome to Collabnb Pro.'))
+        .then(({ tier, expiresAt }) => {
+          setProfileOverride((prev) => ({
+            ...prev,
+            subscription_status: 'active',
+            subscription_tier: tier,
+            subscription_expires_at: expiresAt ?? undefined,
+          }));
+          setToastMsg('Subscription activated! Welcome to Collabnb Pro.');
+        })
         .catch(() => setToastMsg('Could not verify payment — contact support@collabnb.com'));
     } else if (subStatus === 'cancelled') {
       navigate('/profile', { replace: true });
@@ -596,7 +612,10 @@ export default function Profile() {
     } else if (lifetimeStatus === 'success' && lifetimeSessionId) {
       navigate('/profile', { replace: true });
       verifyLifetimeSession({ sessionId: lifetimeSessionId })
-        .then(() => setToastMsg('Lifetime access activated! Welcome to Collabnb — forever.'))
+        .then(() => {
+          setProfileOverride((prev) => ({ ...prev, is_lifetime: true }));
+          setToastMsg('Lifetime access activated! Welcome to Collabnb — forever.');
+        })
         .catch(() => setToastMsg('Could not verify payment — contact support@collabnb.com'));
     } else if (lifetimeStatus === 'cancelled') {
       navigate('/profile', { replace: true });
@@ -724,7 +743,7 @@ export default function Profile() {
     try {
       const { url } = await createBillingPortalSession({
         customerId,
-        returnUrl: `${window.location.origin}/#/profile`,
+        returnUrl: `${window.location.href.split('#')[0]}#/profile`,
       });
       window.location.href = url;
     } catch {
@@ -735,14 +754,16 @@ export default function Profile() {
 
   const editMode = editDraft !== null;
 
+  const hasActiveSub = dp.stripe_customer_id && dp.subscription_status === 'active';
   const SETTINGS = [
-    { icon: <PencilIcon />,   label: 'Edit Profile',      sublabel: 'Update your photos, bio, and socials',  onClick: () => { setShowSettings(false); openEditProfile(); } },
-    { icon: <FileTextIcon />, label: 'Contracts',         sublabel: 'View and manage your saved contracts', onClick: () => { setShowSettings(false); setShowContracts(true); } },
-    { icon: <ChecklistIcon />, label: 'Setup Checklist',   sublabel: 'Finish setting up your account',        onClick: () => { setShowSettings(false); reopenChecklist(); } },
-    { icon: <BellIcon />,    label: 'Notifications',      sublabel: 'Manage email & push preferences',      onClick: () => { setShowSettings(false); setShowNotifications(true); } },
-    { icon: <LockIcon />,    label: 'Privacy Policy',     sublabel: 'Review how your data is used',         onClick: () => { setShowSettings(false); setShowPrivacy(true); } },
-    { icon: <SealCheck />,   label: 'Verification',       sublabel: 'Submit a re-verification request',     onClick: () => { setShowSettings(false); setShowVerification(true); } },
-    { icon: <SwitchIcon />,  label: profile?.role === 'host' ? 'Sign up as Creator' : 'Sign up as Host', sublabel: profile?.role === 'host' ? 'Browse and apply to listings as a creator' : 'Create listings and collaborate with creators', onClick: () => { setShowSettings(false); setShowSwitchConfirm(true); } },
+    { icon: <PencilIcon />,      label: 'Edit Profile',    sublabel: 'Update your photos, bio, and socials',           onClick: () => { setShowSettings(false); openEditProfile(); } },
+    { icon: <FileTextIcon />,    label: 'Contracts',       sublabel: 'View and manage your saved contracts',           onClick: () => { setShowSettings(false); setShowContracts(true); } },
+    ...(hasActiveSub ? [{ icon: <CreditCardIcon />, label: 'Manage Plan', sublabel: 'Cancel, upgrade, or update billing', onClick: () => { setShowSettings(false); handleManageSubscription(); } }] : []),
+    { icon: <ChecklistIcon />,   label: 'Setup Checklist', sublabel: 'Finish setting up your account',                 onClick: () => { setShowSettings(false); reopenChecklist(); } },
+    { icon: <BellIcon />,        label: 'Notifications',   sublabel: 'Manage email & push preferences',               onClick: () => { setShowSettings(false); setShowNotifications(true); } },
+    { icon: <LockIcon />,        label: 'Privacy Policy',  sublabel: 'Review how your data is used',                  onClick: () => { setShowSettings(false); setShowPrivacy(true); } },
+    { icon: <SealCheck />,       label: 'Verification',    sublabel: 'Submit a re-verification request',              onClick: () => { setShowSettings(false); setShowVerification(true); } },
+    { icon: <SwitchIcon />,      label: profile?.role === 'host' ? 'Sign up as Creator' : 'Sign up as Host', sublabel: profile?.role === 'host' ? 'Browse and apply to listings as a creator' : 'Create listings and collaborate with creators', onClick: () => { setShowSettings(false); setShowSwitchConfirm(true); } },
   ];
 
   return (

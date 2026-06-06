@@ -89,6 +89,9 @@ export const createSubscriptionSession = action({
       success_url: args.successUrl,
       cancel_url: args.cancelUrl,
       metadata: { profileId: args.profileId, tier: args.tier },
+      custom_text: {
+        submit: { message: 'You can cancel anytime from your profile settings.' },
+      },
     });
 
     return { url: session.url, sessionId: session.id };
@@ -193,6 +196,9 @@ export const createLifetimeSession = action({
         type: 'lifetime',
         lifetimeTier: tier.label,
         lifetimePrice: String(tier.price),
+      },
+      custom_text: {
+        submit: { message: 'One-time payment — no recurring charges, ever.' },
       },
     });
 

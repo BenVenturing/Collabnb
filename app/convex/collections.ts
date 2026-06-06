@@ -2,9 +2,12 @@ import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
 
 export const getByUser = query({
-  args: {},
-  handler: async (ctx) => {
-    return await ctx.db.query("collections").collect();
+  args: { creatorId: v.string() },
+  handler: async (ctx, { creatorId }) => {
+    return await ctx.db
+      .query("collections")
+      .withIndex("by_creator", (q) => q.eq("creator_id", creatorId))
+      .collect();
   },
 });
 

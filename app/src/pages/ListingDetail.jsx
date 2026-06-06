@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../convex/_generated/api';
-import { SAMPLE_LISTINGS, SAMPLE_HOST, MOCK_CREATOR, IMG_FALLBACK } from '../lib/mockData';
+import { SAMPLE_LISTINGS, SAMPLE_HOST, IMG_FALLBACK } from '../lib/mockData';
 import { useCollabs } from '../contexts/CollabContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useVerification } from '../contexts/VerificationContext';
@@ -144,12 +144,21 @@ function PhotoGallery({ images, title, onClose }) {
 // ─── Apply Now Modal ──────────────────────────────────────────────────────────
 function ApplyModal({ listing, userId, creatorProfile, onClose, onApply, navigate, isVerified, onVerificationRequired, isSubscribed, onSubscriptionRequired }) {
   const checkAndIncrementCvx = useMutation(api.pitches.checkAndIncrement);
+
+  const handle = creatorProfile?.instagram_handle || creatorProfile?.tiktok_handle || creatorProfile?.username;
+  const followerCount = creatorProfile?.follower_count;
+  const followerStr = followerCount >= 1000 ? ` with ${Math.round(followerCount / 1000)}K followers` : '';
+  const engagementStr = creatorProfile?.engagement_rate ? ` with a ${creatorProfile.engagement_rate}% engagement rate` : '';
+  const collabStr = creatorProfile?.collab_count ? `${creatorProfile.collab_count}+` : 'several';
+  const tierStr = creatorProfile?.tier || 'travel creator';
+  const nameStr = creatorProfile?.full_name || 'I';
+
   const defaultPitch =
-`Hi! I'm ${MOCK_CREATOR.full_name} (@${MOCK_CREATOR.instagram_handle}), a ${MOCK_CREATOR.tier} travel creator with ${Math.round(MOCK_CREATOR.follower_count / 1000)}K followers across Instagram and TikTok.
+`Hi! I'm ${nameStr}${handle ? ` (@${handle})` : ''}${followerStr ? `, a ${tierStr}${followerStr}` : ''}.
 
 I'd love to collaborate on ${listing.title} in ${listing.location}.
 
-I specialize in ${listing.collab_type} content and have completed ${MOCK_CREATOR.collab_count}+ collabs to date with an ${MOCK_CREATOR.engagement_rate}% engagement rate — meaning my audience is highly active and receptive to authentic travel stories.
+I specialize in ${listing.collab_type || 'travel'} content and have completed ${collabStr} collabs to date${engagementStr ? `${engagementStr} — meaning my audience is highly active and receptive to authentic travel stories` : ''}.
 
 I'm available during ${listing.dates_available} and can deliver ${listing.deliverables} within ${listing.due_days} days of my stay. Looking forward to creating stunning content that showcases your incredible property!
 
@@ -261,7 +270,7 @@ Let's make something great together.`;
                 navigate('/contract', {
                   state: {
                     prefill: {
-                      creator: MOCK_CREATOR.full_name,
+                      creator: creatorProfile?.full_name || nameStr,
                       host: listing.title.split(' ').slice(0, 2).join(' '),
                       property_name: listing.title,
                       location: listing.location,

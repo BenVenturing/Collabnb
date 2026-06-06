@@ -30,12 +30,12 @@ export default function LifetimeAccessModal({ isOpen, onClose, role = 'creator' 
     setLoading(true);
     setError(null);
     try {
-      const base = `${window.location.origin}/#/profile`;
+      const appBase = window.location.href.split('#')[0];
       const result = await createLifetimeSession({
         profileId,
         role,
-        successUrl: `${base}?lifetime=success&session_id={CHECKOUT_SESSION_ID}`,
-        cancelUrl:  `${base}?lifetime=cancelled`,
+        successUrl: `${appBase}#/profile?lifetime=success&session_id={CHECKOUT_SESSION_ID}`,
+        cancelUrl:  `${appBase}#/profile?lifetime=cancelled`,
       });
       if (result?.url) window.location.href = result.url;
     } catch (err) {

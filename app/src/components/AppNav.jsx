@@ -552,6 +552,23 @@ export default function AppNav() {
         {/* ── Actions ──────────────────────────────────────────────────────────── */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', flexShrink: 0 }}>
 
+          {/* Compact hamburger — left of search pill, only when scrolled */}
+          {compactSearch && !navSearchOpen && (
+            <button
+              className={`nav-hamburger ${menuOpen ? 'open' : ''}`}
+              aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+              aria-expanded={menuOpen}
+              onClick={() => { setMenuOpen(!menuOpen); setProfileOpen(false); }}
+              data-compact="true"
+            >
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                <line className="line line-1" x1="3" y1="5" x2="17" y2="5"/>
+                <line className="line line-2" x1="3" y1="10" x2="17" y2="10"/>
+                <line className="line line-3" x1="3" y1="15" x2="17" y2="15"/>
+              </svg>
+            </button>
+          )}
+
           {/* "Search stays" compact pill */}
           <button
             onClick={openNavSearch}
@@ -584,8 +601,8 @@ export default function AppNav() {
             </span>
           </button>
 
-          {/* Bell notification icon */}
-          {userId && (
+          {/* Bell notification icon — hidden when scrolled */}
+          {userId && !compactSearch && (
             <div ref={bellRef} style={{ position: 'relative' }}>
               <button
                 onClick={() => { setNotifOpen(o => !o); if (!notifOpen && userId) markAllRead({ userId }); }}
@@ -672,8 +689,8 @@ export default function AppNav() {
           {/* Hamburger + Profile avatar — grouped so nav dropdown anchors near avatar */}
           <div className="relative" ref={profileRef} style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
 
-            {/* Hamburger — LEFT of avatar, opens nav link dropdown anchored here */}
-            {!navSearchOpen && (
+            {/* Hamburger — LEFT of avatar; hidden when compact (left-side hamburger takes over) */}
+            {!navSearchOpen && !compactSearch && (
               <button
                 className={`nav-hamburger ${menuOpen ? 'open' : ''}`}
                 aria-label={menuOpen ? 'Close menu' : 'Open menu'}

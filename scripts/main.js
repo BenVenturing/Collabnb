@@ -439,6 +439,11 @@ function showWizardStep(step) {
     if (roleSection) roleSection.style.display = 'none';
     const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
     if (isLocalhost) { _showWizardDone(); return; }
+
+    // Expand the modal card so Clerk's component never needs to scroll internally
+    const card = document.querySelector('.modal-card');
+    if (card) card.classList.add('clerk-active');
+
     area.innerHTML = `
       ${_stepBar(3)}
       <div style="text-align:center;margin-bottom:1.25rem;">
@@ -457,20 +462,31 @@ function showWizardStep(step) {
       // Store the name for the celebration screen when OAuth redirects back
       try { localStorage.setItem('collabnb_signup_name', _wizardName || ''); } catch {}
       try { localStorage.setItem('collabnb_new_signup', '1'); } catch {}
-      const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-      const returnUrl = isLocalhost ? 'http://localhost:5173/join.html?celebrate=1' : '/join.html?celebrate=1';
-      clerk.mountSignUp(mountEl, {
-        afterSignUpUrl: returnUrl,
-        afterSignInUrl: returnUrl,
-        appearance: {
-          variables: {
-            colorPrimary: '#3C5759',
-            colorBackground: 'transparent',
-            borderRadius: '12px',
-            fontFamily: 'system-ui, -apple-system, sans-serif',
+      // Use absolute URLs — Clerk requires these to be listed in dashboard → Redirects
+      const origin = window.location.origin;
+      const returnUrl = `${origin}/join.html?celebrate=1`;
+      const appUrl = `${origin}/app/`;
+      try {
+        clerk.mountSignUp(mountEl, {
+          afterSignUpUrl: returnUrl,
+          afterSignInUrl: appUrl,
+          signInUrl: `${origin}/join.html`,
+          appearance: {
+            variables: {
+              colorPrimary: '#3C5759',
+              colorBackground: 'transparent',
+              borderRadius: '12px',
+              fontFamily: 'system-ui, -apple-system, sans-serif',
+            },
           },
-        },
-      });
+        });
+      } catch (err) {
+        console.warn('Clerk mountSignUp failed:', err);
+        mountEl.innerHTML = `<div style="text-align:center;padding:1rem;">
+          <p style="color:var(--sage);font-size:0.875rem;margin-bottom:1.25rem;">Could not load sign-up. Click below to continue.</p>
+          <a href="${appUrl}" class="btn-primary" style="display:inline-block;text-decoration:none;padding:0.75rem 1.5rem;">Open App →</a>
+        </div>`;
+      }
     }).catch(_showWizardDone);
   }
 }
@@ -676,6 +692,9 @@ function closeModal() {
   overlay.classList.remove('open');
   overlay.setAttribute('aria-hidden', 'true');
   document.body.style.overflow = '';
+  // Reset clerk-active expansion so next open starts at normal size
+  const card = overlay.querySelector('.modal-card');
+  if (card) card.classList.remove('clerk-active');
   const trigger = document.querySelector('.btn-open-modal');
   if (trigger) trigger.focus();
 }
@@ -752,8 +771,8 @@ function openLoginModal() {
     _clerkLoginMounted = false;
     try {
       clerk.mountSignIn(mountEl, {
-        afterSignInUrl: '/app/',
-        signUpUrl: '/join.html',
+        afterSignInUrl: `${window.location.origin}/app/`,
+        signUpUrl: `${window.location.origin}/join.html`,
         appearance: {
           variables: {
             colorPrimary: '#3C5759',

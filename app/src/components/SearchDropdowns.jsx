@@ -53,11 +53,86 @@ const MONTHS = [
   'July', 'August', 'September', 'October', 'November', 'December',
 ];
 
+// ─── Custom location icons ──────────────────────────────────────────────────────
+const ICON_DEFS = {
+  mountain: {
+    color: '#3A6B4E', bg: 'rgba(58,107,78,0.10)',
+    path: <><polyline points="2 20 8 8 13 15 16.5 10 22 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></>,
+  },
+  lake: {
+    color: '#2D6B9F', bg: 'rgba(45,107,159,0.10)',
+    path: <><polyline points="2 16 7 8 11 13 14.5 9 19 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/><path d="M2 19.5C4 18 6 21 8 19.5C10 18 12 21 14 19.5C16 18 18 21 20 19.5C21.5 18.5 22 19 22 19" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></>,
+  },
+  beach: {
+    color: '#2178A8', bg: 'rgba(33,120,168,0.10)',
+    path: <><path d="M2 11C4.5 9 6.5 13 9 11C11.5 9 13.5 13 16 11C18.5 9 20.5 13 22 11" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/><path d="M2 16C4.5 14 6.5 18 9 16C11.5 14 13.5 18 16 16C18.5 14 20.5 18 22 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/></>,
+  },
+  desert: {
+    color: '#B06B2A', bg: 'rgba(176,107,42,0.10)',
+    path: <><path d="M12 20V10M9 14V12a3 3 0 0 0-3-3" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/><path d="M12 10a3 3 0 0 0-3 3" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/><path d="M15 15V13a3 3 0 0 1 3-3" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/><path d="M12 10a3 3 0 0 1 3 3" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/></>,
+  },
+  snow: {
+    color: '#5578A0', bg: 'rgba(85,120,160,0.10)',
+    path: <><line x1="12" y1="3" x2="12" y2="21" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/><line x1="3" y1="12" x2="21" y2="12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/><line x1="5.6" y1="5.6" x2="18.4" y2="18.4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/><line x1="18.4" y1="5.6" x2="5.6" y2="18.4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/><circle cx="12" cy="12" r="2" fill="currentColor" stroke="none"/></>,
+  },
+  canyon: {
+    color: '#A0492A', bg: 'rgba(160,73,42,0.10)',
+    path: <><path d="M2 20L6 12L9 16L12 11L15 16L18 12L22 20H2Z" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></>,
+  },
+  wine: {
+    color: '#7A3B5E', bg: 'rgba(122,59,94,0.10)',
+    path: <><path d="M8 3h8l-2 8H10L8 3Z" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/><line x1="12" y1="11" x2="12" y2="19" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/><line x1="8.5" y1="19" x2="15.5" y2="19" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/></>,
+  },
+  forest: {
+    color: '#2D6B42', bg: 'rgba(45,107,66,0.10)',
+    path: <><polygon points="12 3 18 14 6 14" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/><polygon points="12 9 19 21 5 21" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></>,
+  },
+  harbour: {
+    color: '#3C5759', bg: 'rgba(60,87,89,0.10)',
+    path: <><circle cx="12" cy="7" r="2.5" fill="none" stroke="currentColor" strokeWidth="1.6"/><line x1="12" y1="9.5" x2="12" y2="19" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/><path d="M6 16c0 3.5 12 3.5 12 0" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/><line x1="9" y1="19" x2="15" y2="19" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/></>,
+  },
+  pin: {
+    color: '#3C5759', bg: 'rgba(60,87,89,0.10)',
+    path: <><path d="M12 2C8.69 2 6 4.69 6 8c0 5.25 6 13 6 13s6-7.75 6-13c0-3.31-2.69-6-6-6Z" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/><circle cx="12" cy="8" r="2" fill="none" stroke="currentColor" strokeWidth="1.6"/></>,
+  },
+  wave: {
+    color: '#2178A8', bg: 'rgba(33,120,168,0.10)',
+    path: <><path d="M2 11C4.5 9 6.5 13 9 11C11.5 9 13.5 13 16 11C18.5 9 20.5 13 22 11" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></>,
+  },
+};
+
+function LocationIcon({ type, size = 30 }) {
+  const def = ICON_DEFS[type] || ICON_DEFS.mountain;
+  return (
+    <div style={{
+      width: size, height: size,
+      borderRadius: '8px',
+      background: def.bg,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      flexShrink: 0,
+      color: def.color,
+    }}>
+      <svg viewBox="0 0 24 24" width={size * 0.52} height={size * 0.52} fill="none">
+        {def.path}
+      </svg>
+    </div>
+  );
+}
+
+function RegionIcon({ type }) {
+  const def = ICON_DEFS[type] || ICON_DEFS.pin;
+  return (
+    <svg viewBox="0 0 24 24" width="11" height="11" fill="none" style={{ color: def.color, flexShrink: 0 }}>
+      {def.path}
+    </svg>
+  );
+}
+
 // ─── Destination region groupings ──────────────────────────────────────────────
 const REGIONS = [
-  { name: 'Near You',   flag: '📍', labels: ['Asheville, NC', 'Gatlinburg, TN', 'Charleston, SC'] },
-  { name: 'West Coast', flag: '🌊', labels: ['Malibu, CA', 'Lake Tahoe, CA', 'Joshua Tree, CA', 'Napa Valley, CA'] },
-  { name: 'Mountain & Desert', flag: '🏔️', labels: ['Aspen, CO', 'Sedona, AZ'] },
+  { name: 'Near You',          flag: 'pin',      labels: ['Asheville, NC', 'Gatlinburg, TN', 'Charleston, SC'] },
+  { name: 'West Coast',        flag: 'wave',     labels: ['Malibu, CA', 'Lake Tahoe, CA', 'Joshua Tree, CA', 'Napa Valley, CA'] },
+  { name: 'Mountain & Desert', flag: 'mountain', labels: ['Aspen, CO', 'Sedona, AZ'] },
 ];
 
 // ─── Where search content (scrollable, grouped by region + nearby stays) ──────
@@ -94,7 +169,13 @@ export function WhereSearchContent({ whereVal, setWhereVal, onClose, listings = 
             marginBottom: '0.625rem', position: 'sticky', top: 0,
             background: 'rgba(255,255,255,0.95)', zIndex: 1, paddingTop: '0.15rem', paddingBottom: '0.15rem',
           }}>
-            <span style={{ fontSize: '1rem' }}>🇺🇸</span>
+            <svg viewBox="0 0 24 24" width="11" height="11" fill="none" style={{ color: 'var(--sage)', flexShrink: 0 }}>
+              <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.6"/>
+              <path d="M12 3C10 6 9 9 9 12C9 15 10 18 12 21" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+              <path d="M12 3C14 6 15 9 15 12C15 15 14 18 12 21" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+              <line x1="3.5" y1="9" x2="20.5" y2="9" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+              <line x1="3.5" y1="15" x2="20.5" y2="15" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+            </svg>
             <p style={{
               fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase',
               letterSpacing: '0.14em', color: 'var(--sage)', margin: 0,
@@ -104,13 +185,15 @@ export function WhereSearchContent({ whereVal, setWhereVal, onClose, listings = 
           </div>
           {filteredRegions.map((region) => (
             <div key={region.name} style={{ marginBottom: '0.625rem' }}>
-              <p style={{
-                fontSize: '0.6rem', fontWeight: 600, textTransform: 'uppercase',
-                letterSpacing: '0.1em', color: 'var(--slate)', marginBottom: '0.25rem',
-                paddingLeft: '0.25rem',
-              }}>
-                {region.flag} {region.name}
-              </p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', marginBottom: '0.25rem', paddingLeft: '0.25rem' }}>
+                <RegionIcon type={region.flag} />
+                <p style={{
+                  fontSize: '0.6rem', fontWeight: 600, textTransform: 'uppercase',
+                  letterSpacing: '0.1em', color: 'var(--slate)', margin: 0,
+                }}>
+                  {region.name}
+                </p>
+              </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                 {region.dests.map((d) => (
                   <button
@@ -127,9 +210,7 @@ export function WhereSearchContent({ whereVal, setWhereVal, onClose, listings = 
                     onMouseEnter={(e) => { if (whereVal !== d.label) e.currentTarget.style.background = 'rgba(209,235,219,0.35)'; }}
                     onMouseLeave={(e) => { if (whereVal !== d.label) e.currentTarget.style.background = 'transparent'; }}
                   >
-                    <span style={{ fontSize: '1rem', width: '1.5rem', textAlign: 'center', flexShrink: 0 }}>
-                      {d.emoji}
-                    </span>
+                    <LocationIcon type={d.icon} size={30} />
                     <div style={{ minWidth: 0 }}>
                       <p style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--ink)', lineHeight: 1.3 }}>{d.label}</p>
                       <p style={{ fontSize: '0.72rem', color: 'var(--sage)', marginTop: '0.05rem' }}>{d.desc}</p>
@@ -157,7 +238,15 @@ export function WhereSearchContent({ whereVal, setWhereVal, onClose, listings = 
           onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(209,235,219,0.55)'; }}
           onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(209,235,219,0.35)'; }}
         >
-          <span style={{ fontSize: '1rem' }}>🌍</span>
+          <div style={{ width: 30, height: 30, borderRadius: 8, background: 'rgba(60,87,89,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: 'var(--slate)' }}>
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none">
+                <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.6"/>
+                <path d="M12 3C10 6 9 9 9 12C9 15 10 18 12 21" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+                <path d="M12 3C14 6 15 9 15 12C15 15 14 18 12 21" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+                <line x1="3.5" y1="9" x2="20.5" y2="9" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+                <line x1="3.5" y1="15" x2="20.5" y2="15" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+              </svg>
+            </div>
           <div>
             <p style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--ink)' }}>Search for "{whereVal}"</p>
             <p style={{ fontSize: '0.72rem', color: 'var(--sage)', marginTop: '0.1rem' }}>Worldwide location — show results</p>

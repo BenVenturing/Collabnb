@@ -1221,6 +1221,8 @@ h3 { font-weight: 700; }
 /* Login modal card — replace previous inline padding */
 .login-modal-card {
   padding: 2.5rem 2rem;
+  max-height: none;
+  overflow-y: visible;
 }
 @media (max-width: 480px) {
   .login-modal-card {
@@ -1822,6 +1824,14 @@ h3 { font-weight: 700; }
 /* Smooth scroll inside modal */
 .modal-card {
   scroll-behavior: smooth;
+}
+
+/* When Clerk's SignUp/SignIn is mounted — let the card grow to full height,
+   scroll happens on the overlay (not the card) so there's no double-scroll. */
+.modal-card.clerk-active {
+  max-height: none;
+  overflow-y: visible;
+  max-width: 520px;
 }
 
 /* Ensure wizard success is centered in modal */

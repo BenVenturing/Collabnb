@@ -660,15 +660,16 @@ export default function Explore() {
       <div style={{ paddingTop: '2.25rem', paddingBottom: '4rem' }}>
 
         {/* Active search result summary */}
-        {(whereVal || whatVal || whenVal) && (
+        {(whereVal || whatVal || whenVal || propFilter !== 'All') && (
           <div style={{ padding: '0 1.5rem 1.5rem', maxWidth: '680px', margin: '0 auto' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
               <span style={{ fontSize: '0.78rem', color: 'var(--sage)' }}>Showing results for</span>
               {whereVal && <span className="eyebrow-tag">{whereVal}</span>}
               {whatVal  && <span className="eyebrow-tag">{whatVal}</span>}
               {whenVal  && <span className="eyebrow-tag">{whenVal}</span>}
+              {propFilter !== 'All' && <span className="eyebrow-tag">{propFilter}</span>}
               <button
-                onClick={() => { setWhereVal(''); setWhatVal(''); setWhatQuery(''); setWhenVal(''); }}
+                onClick={() => { setWhereVal(''); setWhatVal(''); setWhatQuery(''); setWhenVal(''); setPropFilter('All'); }}
                 style={{
                   fontSize: '0.72rem', color: 'var(--slate)', background: 'none',
                   border: 'none', cursor: 'pointer', textDecoration: 'underline',

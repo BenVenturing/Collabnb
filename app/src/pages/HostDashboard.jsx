@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, MapPin, Users, Calendar, MessageSquare, MoreVertical, X, UserPlus, Home, CheckCircle2 } from 'lucide-react';
 import { useQuery } from 'convex/react';
@@ -462,7 +462,38 @@ function HostListingCard({ listing, meta, delay, glowState, onToggleStatus, onDu
             animation: 'fadeUp 120ms ease forwards',
           }}>
             {[
-              { label: 'Edit',      action: (e) => { e.stopPropagation(); navigate('/host/listings/create'); setMenuOpen(false); } },
+              { label: 'Edit', action: (e) => {
+                e.stopPropagation();
+                const draft = {
+                  title: listing.title || '',
+                  location_city: listing.location_city || listing.location?.split(',')[0]?.trim() || '',
+                  location_country: listing.location_country || '',
+                  property_url: listing.property_url || '',
+                  collaboration_brief: listing.collaboration_brief || '',
+                  compensation_type: listing.compensation_type || 'free_stay',
+                  nights: listing.nights || 2,
+                  cash_amount: listing.cash_amount || 0,
+                  creator_tier: listing.creator_tier || '',
+                  deliverable_load: listing.deliverable_load || '',
+                  images: listing.gallery_images || [],
+                  perks: listing.perks || [],
+                  vibe_tags: listing.vibe_tags || [],
+                  affiliate_code: listing.affiliate_code || '',
+                  affiliate_percent: listing.affiliate_percent || 0,
+                  collab_start: listing.collab_start || '',
+                  collab_end: listing.collab_end || '',
+                  turnaround_days: listing.turnaround_days || 14,
+                  deliverables_list: listing.deliverables_list || [],
+                  revision_policy: listing.revision_policy || '1 round of minor revisions included. Major changes require mutual agreement.',
+                  usage_rights: listing.usage_rights || 'Host receives perpetual, worldwide license for marketing use. Creator retains ownership and portfolio rights.',
+                  maxOffers: listing.maxOffers || '',
+                };
+                localStorage.setItem('collabnb_listing_draft_v1', JSON.stringify(draft));
+                const listingId = listing._id || listing.id;
+                if (listingId) localStorage.setItem('collabnb_editing_listing_id_v1', String(listingId));
+                navigate('/host/listings/create');
+                setMenuOpen(false);
+              } },
               { label: meta.status === 'paused' ? 'Unpause' : 'Pause', action: (e) => { e.stopPropagation(); if (meta.status !== 'draft') onToggleStatus(listing.id); setMenuOpen(false); }, muted: meta.status === 'draft' },
               { label: 'Duplicate', action: (e) => { e.stopPropagation(); onDuplicate(listing); setMenuOpen(false); } },
             ].map(({ label, action, muted }) => (
@@ -500,6 +531,18 @@ export default function HostDashboard() {
     api.listings.getByHost,
     hostId ? { host_id: hostId } : 'skip',
   );
+  const convexPitches = useQuery(api.pitches.getByHost, hostId ? { hostId: String(hostId) } : 'skip');
+  const pitchCountsByListing = useMemo(() => {
+    const map = {};
+    (convexPitches || []).forEach((p) => {
+      const lid = String(p.listing_id);
+      if (!map[lid]) map[lid] = { applicants: 0, confirmed: 0, completed: 0 };
+      map[lid].applicants++;
+      if (p.status === 'approved') map[lid].confirmed++;
+      if (p.status === 'completed') map[lid].completed++;
+    });
+    return map;
+  }, [convexPitches]);
 
   const [filter, setFilter] = useState('all');
   const [glowState, setGlowState] = useState('idle');
@@ -590,11 +633,12 @@ export default function HostDashboard() {
     const defaultStatus = useConvex
       ? (l.status || 'draft')
       : (HOST_META[l.id]?.status || 'draft');
+    const realCounts = useConvex ? (pitchCountsByListing[l.id] || {}) : {};
     const meta = {
       status:     stored?.status     ?? defaultStatus,
-      applicants: HOST_META[l.id]?.applicants ?? 0,
-      confirmed:  HOST_META[l.id]?.confirmed  ?? 0,
-      completed:  HOST_META[l.id]?.completed  ?? 0,
+      applicants: realCounts.applicants ?? HOST_META[l.id]?.applicants ?? 0,
+      confirmed:  realCounts.confirmed  ?? HOST_META[l.id]?.confirmed  ?? 0,
+      completed:  realCounts.completed  ?? HOST_META[l.id]?.completed  ?? 0,
     };
     const autoPaused = meta.status === 'active' && l.maxOffers && meta.confirmed >= l.maxOffers;
     return { ...l, meta: autoPaused ? { ...meta, status: 'paused' } : meta };

@@ -149,8 +149,10 @@ export default function AppNav() {
   const NAV_LINKS = isHost ? HOST_NAV : CREATOR_NAV;
   const initials = profile?.full_name?.split(' ').map((n) => n[0]).join('').slice(0, 2) ?? '?';
   const { session } = useAuth();
-  const userEmail = session?.user?.email || profile?.email;
-  const isAdmin = !!ADMIN_EMAIL && userEmail === ADMIN_EMAIL;
+  const userEmail = (session?.user?.email || profile?.email || '').toLowerCase();
+  const isAdmin = !!ADMIN_EMAIL
+    ? userEmail === ADMIN_EMAIL.toLowerCase()
+    : userEmail === 'benventuring@gmail.com';
 
   // Whether the "Search stays" pill is visible
   const showSearchPill = compactSearch && !menuOpen && !navSearchOpen;
@@ -512,9 +514,11 @@ export default function AppNav() {
                 <NavLink to="/profile?settings=true" onClick={() => setProfileOpen(false)} className="block px-4 py-3 text-sm text-ink hover:bg-mint/30 transition-colors">
                   ⚙️ Settings
                 </NavLink>
-                <button onClick={() => { setProfileOpen(false); reopenChecklist(); }} className="w-full text-left px-4 py-3 text-sm text-ink hover:bg-mint/30 transition-colors">
-                  ✅ Setup Checklist
-                </button>
+                {!isAdmin && (
+                  <button onClick={() => { setProfileOpen(false); reopenChecklist(); }} className="w-full text-left px-4 py-3 text-sm text-ink hover:bg-mint/30 transition-colors">
+                    ✅ Setup Checklist
+                  </button>
+                )}
                 {isAdmin && (
                   <>
                     <div className="border-t border-stone/30" />

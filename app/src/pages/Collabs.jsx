@@ -3,6 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { useCollabs } from '../contexts/CollabContext';
 import { DEMO_COLLAB } from '../lib/mockData';
 import CollabDetail from '../components/CollabDetail';
+import { useQuery } from 'convex/react';
+import { api } from '../../convex/_generated/api';
+import { useAuth } from '../contexts/AuthContext';
 
 const XIcon = () => (
   <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="14" height="14">
@@ -107,6 +110,11 @@ export default function Collabs() {
   const [selectedCollab, setSelectedCollab] = useState(null);
   const [statusFilter, setStatusFilter] = useState('all');
 
+  const { profile } = useAuth();
+  const creatorId = profile?._id ? String(profile._id) : (profile?.id ? String(profile.id) : null);
+  const convexPitches = useQuery(api.pitches.getByCreator, creatorId ? { creatorId } : 'skip');
+  const convexCollabs = useQuery(api.collaborations.getByCreator, creatorId ? { creatorId } : 'skip');
+
   // Inject demo collab into the list
   const [demoDismissed, setDemoDismissed] = useState(() => {
     return localStorage.getItem('collabnb_demo_dismissed') === 'true';
@@ -129,12 +137,54 @@ export default function Collabs() {
     try { localStorage.setItem('collabnb_dismissed_samples', JSON.stringify(updated)); } catch {}
   };
 
+  // Map listing_id → latest pitch status from Convex
+  const pitchStatusMap = useMemo(() => {
+    const map = {};
+    (convexPitches || []).forEach((p) => { map[String(p.listing_id)] = p.status; });
+    return map;
+  }, [convexPitches]);
+
   const allCollabs = useMemo(() => {
     const base = collabs.filter((c) => !c.is_sample || !dismissedSamples.includes(c.id));
-    if (demoDismissed) return base;
-    const hasDemo = base.some((c) => c.is_demo);
-    return hasDemo ? base : [...base, DEMO_COLLAB];
-  }, [collabs, demoDismissed, dismissedSamples]);
+
+    // Merge real Convex collabs (for cross-device persistence): add any not already in local state
+    const localListingIds = new Set(base.map((c) => String(c.listing_id)));
+    const realCollabs = (convexCollabs || [])
+      .filter((c) => !localListingIds.has(String(c.listing_id)))
+      .map((c) => ({
+        id: String(c._id),
+        listing_id: String(c.listing_id),
+        property_name: c.property_name || 'Collab',
+        location: c.location || '',
+        host_name: c.host_name || '',
+        image: c.image || '',
+        status: pitchStatusMap[String(c.listing_id)] || c.status || 'pending',
+        status_text: pitchStatusMap[String(c.listing_id)]
+          ? { pending: 'Pending Review', approved: 'Approved!', declined: 'Declined' }[pitchStatusMap[String(c.listing_id)]] || 'In Progress'
+          : c.status_text || 'Application Sent',
+        dates: c.dates || '',
+        deliverables: c.deliverables || '',
+        days_left: c.days_left,
+        payment: c.payment,
+        is_active: c.is_active ?? true,
+        current_stage: c.current_stage || 'pending',
+        stages: typeof c.stages === 'string' ? JSON.parse(c.stages) : (c.stages || {}),
+      }));
+
+    // Override status for local collabs where we have a real Convex pitch status
+    const merged = base.map((c) => {
+      const realStatus = pitchStatusMap[String(c.listing_id)];
+      if (!realStatus || realStatus === c.status) return c;
+      const statusTextMap = { pending: 'Pending Review', approved: 'Approved!', declined: 'Declined', under_review: 'Under Review', completed: 'Completed' };
+      return { ...c, status: realStatus, status_text: statusTextMap[realStatus] || c.status_text };
+    });
+
+    const withReal = [...realCollabs, ...merged];
+
+    if (demoDismissed) return withReal;
+    const hasDemo = withReal.some((c) => c.is_demo);
+    return hasDemo ? withReal : [...withReal, DEMO_COLLAB];
+  }, [collabs, convexCollabs, pitchStatusMap, demoDismissed, dismissedSamples]);
 
   const active   = allCollabs.filter((c) =>  c.is_active);
   const archived = allCollabs.filter((c) => !c.is_active);

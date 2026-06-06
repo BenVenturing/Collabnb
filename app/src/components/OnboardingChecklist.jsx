@@ -95,8 +95,10 @@ export default function OnboardingChecklist() {
   }, []);
 
   // Determine if this user should see the checklist
-  const userEmail = profile?.email;
-  const isAdmin = !!(ADMIN_EMAIL && userEmail && userEmail.toLowerCase() === ADMIN_EMAIL.toLowerCase());
+  const userEmail = (profile?.email || '').toLowerCase();
+  const isAdmin = ADMIN_EMAIL
+    ? userEmail === ADMIN_EMAIL.toLowerCase()
+    : userEmail === 'benventuring@gmail.com';
 
   const isHost = profile?.role === 'host';
   const rawSteps = isHost ? hostSteps(profile) : creatorSteps(profile);

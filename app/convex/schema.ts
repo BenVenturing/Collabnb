@@ -222,10 +222,21 @@ export default defineSchema({
     type: v.string(),   // 'application' | 'pitch'
     created_at: v.number(),
     host_note: v.optional(v.string()),
+    thread_key: v.optional(v.string()),
   })
     .index("by_listing", ["listing_id"])
     .index("by_creator", ["creator_id"])
     .index("by_host", ["host_id"]),
+
+  thread_messages: defineTable({
+    thread_key: v.string(),
+    sender_id: v.string(),
+    sender_name: v.string(),
+    sender_avatar: v.optional(v.string()),
+    sender_role: v.string(), // 'creator' | 'host'
+    text: v.string(),
+    created_at: v.number(),
+  }).index("by_thread", ["thread_key"]),
 
   admin_audit_log: defineTable({
     action: v.string(),

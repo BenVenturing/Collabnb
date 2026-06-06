@@ -1,15 +1,14 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useSearchParams, useLocation } from 'react-router-dom';
 import { useCollabs } from '../contexts/CollabContext';
-import { SAMPLE_LISTINGS, THREAD_MESSAGES } from '../lib/mockData';
+import { SAMPLE_LISTINGS } from '../lib/mockData';
 import CollabDetail from '../components/CollabDetail';
 import ProfilePopupCard from '../components/ProfilePopupCard';
 import { useAuth } from '../contexts/AuthContext';
 import { useVerification } from '../contexts/VerificationContext';
 import { useSubscription } from '../contexts/SubscriptionContext';
-
-const LAUNCH_DATE = new Date('2026-07-01T00:00:00+07:00');
-const PRE_LAUNCH = new Date() < LAUNCH_DATE;
+import { useQuery, useMutation } from 'convex/react';
+import { api } from '../../convex/_generated/api';
 
 const TAG_STYLES = {
   Collab:      'bg-mint text-slate',
@@ -189,9 +188,9 @@ function ThreadMenu({ thread, onClose, onArchive, onUpdateTag }) {
 // ─── Conversation panel (right side) ─────────────────────────────────────────
 function ConversationPanel({ thread, onViewCollab, onArchive, onUpdateTag }) {
   const [draft, setDraft] = useState('');
-  const [localMessages, setLocalMessages] = useState([]);
   const [menuOpen, setMenuOpen] = useState(false);
   const [popupPerson, setPopupPerson] = useState(null);
+  const [sending, setSending] = useState(false);
   const bottomRef = useRef(null);
   const tagStyle = TAG_STYLES[thread.tag] || TAG_STYLES.Application;
   const { profile } = useAuth();
@@ -199,25 +198,40 @@ function ConversationPanel({ thread, onViewCollab, onArchive, onUpdateTag }) {
   const { isSubscribed, openModal: openSubModal } = useSubscription();
   const isVerified = profile?.is_verified === true;
 
+  const threadKey = thread.thread_key || thread.id;
+  const convexMessages = useQuery(api.threadMessages.getByThread, { threadKey });
+  const sendMutation = useMutation(api.threadMessages.sendMessage);
+
   useEffect(() => {
-    setLocalMessages(THREAD_MESSAGES[thread.id] || []);
     setDraft('');
   }, [thread.id]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [localMessages]);
+  }, [convexMessages]);
 
-  const sendMessage = () => {
+  const sendMessage = async () => {
     if (!isVerified) { openModal(); return; }
     if (!isSubscribed) { openSubModal(); return; }
     const text = draft.trim();
-    if (!text) return;
-    setLocalMessages((prev) => [
-      ...prev,
-      { id: `m${Date.now()}`, from: 'me', text, time: 'Just now' },
-    ]);
+    if (!text || sending) return;
+    setSending(true);
     setDraft('');
+    try {
+      const senderId = profile?._id ? String(profile._id) : (profile?.id ? String(profile.id) : 'unknown');
+      await sendMutation({
+        threadKey,
+        senderId,
+        senderName: profile?.full_name || profile?.name || 'Creator',
+        senderAvatar: profile?.avatar_url,
+        senderRole: 'creator',
+        text,
+      });
+    } catch {
+      // silently ignore send errors
+    } finally {
+      setSending(false);
+    }
   };
 
   const handleKey = (e) => {
@@ -284,67 +298,62 @@ function ConversationPanel({ thread, onViewCollab, onArchive, onUpdateTag }) {
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-6 py-5 space-y-3">
-        {localMessages.length === 0 ? (
+        {convexMessages === undefined ? (
+          <div className="flex items-center justify-center h-full">
+            <p className="text-sage text-sm">Loading…</p>
+          </div>
+        ) : convexMessages.length === 0 ? (
           <div className="flex items-center justify-center h-full">
             <p className="text-sage text-sm">No messages yet. Say hello!</p>
           </div>
         ) : (
-          localMessages.map((msg) => <Bubble key={msg.id} msg={msg} />)
+          convexMessages.map((msg) => {
+            const senderId = profile?._id ? String(profile._id) : (profile?.id ? String(profile.id) : null);
+            return (
+              <Bubble
+                key={String(msg._id)}
+                msg={{ id: String(msg._id), from: msg.sender_id === senderId ? 'me' : 'them', text: msg.text, time: new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }}
+              />
+            );
+          })
         )}
         <div ref={bottomRef} />
       </div>
 
       {/* Compose bar */}
       <div className="px-4 py-3 border-t border-stone/30 bg-white/60 backdrop-blur-sm flex-shrink-0">
-        {PRE_LAUNCH ? (
-          <div style={{
-            background: 'rgba(209,235,219,0.35)',
-            border: '1px solid rgba(152,202,169,0.5)',
-            borderRadius: '16px',
-            padding: '0.875rem 1.125rem',
-            display: 'flex', alignItems: 'center', gap: '0.75rem',
-          }}>
-            <span style={{ fontSize: '1rem', flexShrink: 0 }}>🗓</span>
-            <p style={{ margin: 0, fontSize: '0.8125rem', color: 'var(--slate)', lineHeight: 1.5 }}>
-              <strong>Messaging opens July 1st.</strong> Browse and save listings in the meantime — your conversations will start here on launch day.
-            </p>
-          </div>
-        ) : (
-          <>
-            <div className="flex items-end gap-2 bg-bone rounded-2xl px-4 py-2.5 border border-stone/40">
-              <textarea
-                rows={1}
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                onKeyDown={handleKey}
-                placeholder="Write a message…"
-                className="flex-1 bg-transparent text-sm text-ink placeholder-sage resize-none outline-none leading-relaxed max-h-28"
-                style={{ minHeight: '1.4rem' }}
-              />
-              <button
-                onClick={!isVerified ? openModal : !isSubscribed ? openSubModal : sendMessage}
-                disabled={isVerified && isSubscribed && !draft.trim()}
-                className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-colors"
-                style={{
-                  background: (!isVerified || !isSubscribed) ? 'rgba(60,87,89,0.18)' : draft.trim() ? 'var(--slate)' : 'rgba(60,87,89,0.15)',
-                }}
-              >
-                {(!isVerified || !isSubscribed) ? (
-                  <svg viewBox="0 0 16 16" fill="none" stroke="var(--sage)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5">
-                    <rect x="3" y="8" width="10" height="6" rx="1"/>
-                    <path d="M5 8V5.5a3 3 0 0 1 6 0V8"/>
-                  </svg>
-                ) : (
-                  <svg viewBox="0 0 24 24" fill="none" stroke={draft.trim() ? 'white' : 'var(--sage)'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
-                    <line x1="22" y1="2" x2="11" y2="13"/>
-                    <polygon points="22 2 15 22 11 13 2 9 22 2"/>
-                  </svg>
-                )}
-              </button>
-            </div>
-            <p className="text-[10px] text-sage/60 text-center mt-1.5">Enter to send · Shift+Enter for new line</p>
-          </>
-        )}
+        <div className="flex items-end gap-2 bg-bone rounded-2xl px-4 py-2.5 border border-stone/40">
+          <textarea
+            rows={1}
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={handleKey}
+            placeholder="Write a message…"
+            className="flex-1 bg-transparent text-sm text-ink placeholder-sage resize-none outline-none leading-relaxed max-h-28"
+            style={{ minHeight: '1.4rem' }}
+          />
+          <button
+            onClick={!isVerified ? openModal : !isSubscribed ? openSubModal : sendMessage}
+            disabled={isVerified && isSubscribed && (!draft.trim() || sending)}
+            className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-colors"
+            style={{
+              background: (!isVerified || !isSubscribed) ? 'rgba(60,87,89,0.18)' : draft.trim() ? 'var(--slate)' : 'rgba(60,87,89,0.15)',
+            }}
+          >
+            {(!isVerified || !isSubscribed) ? (
+              <svg viewBox="0 0 16 16" fill="none" stroke="var(--sage)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5">
+                <rect x="3" y="8" width="10" height="6" rx="1"/>
+                <path d="M5 8V5.5a3 3 0 0 1 6 0V8"/>
+              </svg>
+            ) : (
+              <svg viewBox="0 0 24 24" fill="none" stroke={draft.trim() ? 'white' : 'var(--sage)'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+                <line x1="22" y1="2" x2="11" y2="13"/>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+              </svg>
+            )}
+          </button>
+        </div>
+        <p className="text-[10px] text-sage/60 text-center mt-1.5">Enter to send · Shift+Enter for new line</p>
       </div>
 
       {popupPerson && (

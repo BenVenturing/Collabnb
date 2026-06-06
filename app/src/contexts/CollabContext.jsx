@@ -288,10 +288,15 @@ export function CollabProvider({ children }) {
     }).catch(() => {});
   }, [createThreadCvx]);
 
-  const applyToListing = useCallback((listing, pitchMessage, creatorProfile) => {
+  const applyToListing = useCallback(async (listing, pitchMessage, creatorProfile) => {
     const stageKeys = ['pending', 'accepted', 'updated', 'uploaded_tagged', 'closed', 'archived'];
     const emptyStages = Object.fromEntries(stageKeys.map(k => [k, { completed: false, date: null, note: '' }]));
     emptyStages.pending = { completed: true, date: formatDate(new Date()), note: 'Application sent' };
+
+    const creatorId = creatorProfile?._id ? String(creatorProfile._id) : (creatorProfile?.id ? String(creatorProfile.id) : null);
+    const listingId = String(listing._id || listing.id);
+    // Stable shared key both creator and host can derive from pitch record
+    const threadKey = creatorId ? `thread_${listingId}_${creatorId}` : `thread_${listingId}_${Date.now()}`;
 
     const newCollab = {
       id: Date.now(),
@@ -325,6 +330,7 @@ export function CollabProvider({ children }) {
       unread: 0,
       is_founder: false,
       collab_id: newCollab.id,
+      thread_key: threadKey,
     };
 
     setCollabs((prev) => {
@@ -358,10 +364,12 @@ export function CollabProvider({ children }) {
     }).catch(() => {});
 
     // Write pitch record so host can see the application
-    if (creatorProfile?._id || creatorProfile?.id) {
+    if (creatorId) {
       createPitchCvx({
-        listingId: String(listing._id || listing.id),
-        creatorId: String(creatorProfile._id || creatorProfile.id),
+        listingId,
+        listingTitle: listing.title,
+        hostId: listing.host_id ? String(listing.host_id) : undefined,
+        creatorId,
         creatorName: creatorProfile.full_name || creatorProfile.name || 'Creator',
         creatorUsername: creatorProfile.username,
         creatorAvatar: creatorProfile.avatar_url,
@@ -375,6 +383,7 @@ export function CollabProvider({ children }) {
         ].filter(Boolean),
         message: pitchMessage,
         type: 'application',
+        threadKey,
       }).catch(() => {});
     }
   }, [applyCount, createCollabCvx, createThreadCvx, createPitchCvx]);

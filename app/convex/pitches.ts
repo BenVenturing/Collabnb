@@ -52,6 +52,8 @@ export const getCount = query({
 export const create = mutation({
   args: {
     listingId: v.string(),
+    listingTitle: v.optional(v.string()),
+    hostId: v.optional(v.string()),
     creatorId: v.string(),
     creatorName: v.string(),
     creatorUsername: v.optional(v.string()),
@@ -62,15 +64,10 @@ export const create = mutation({
     creatorPlatforms: v.optional(v.array(v.string())),
     message: v.string(),
     type: v.optional(v.string()),
+    threadKey: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    // Fetch listing to get host_id and title
-    const listing = await ctx.db
-      .query("listings")
-      .filter((q) => q.eq(q.field("_id"), args.listingId))
-      .first();
-
-    // Check for duplicate (same creator + listing)
+    // Prevent duplicate applications (same creator + listing)
     const existing = await ctx.db
       .query("pitches")
       .withIndex("by_listing", (q) => q.eq("listing_id", args.listingId))
@@ -80,8 +77,8 @@ export const create = mutation({
 
     const id = await ctx.db.insert("pitches", {
       listing_id: args.listingId,
-      listing_title: listing?.title,
-      host_id: listing?.host_id ?? undefined,
+      listing_title: args.listingTitle,
+      host_id: args.hostId,
       creator_id: args.creatorId,
       creator_name: args.creatorName,
       creator_username: args.creatorUsername,
@@ -94,6 +91,7 @@ export const create = mutation({
       status: "pending",
       type: args.type ?? "application",
       created_at: Date.now(),
+      thread_key: args.threadKey,
     });
     return id;
   },
@@ -102,11 +100,37 @@ export const create = mutation({
 export const getByHost = query({
   args: { hostId: v.string() },
   handler: async (ctx, { hostId }) => {
-    return ctx.db
+    // Primary: pitches that already have host_id stamped
+    const byHostId = await ctx.db
       .query("pitches")
       .withIndex("by_host", (q) => q.eq("host_id", hostId))
       .order("desc")
       .collect();
+
+    // Fallback: find pitches via the host's listings (covers seeded/imported listings
+    // that were created before host_id was stamped on the listing itself)
+    const hostListings = await ctx.db
+      .query("listings")
+      .withIndex("by_host", (q) => q.eq("host_id", hostId))
+      .collect();
+
+    if (hostListings.length === 0) return byHostId;
+
+    const seen = new Set(byHostId.map((p) => String(p._id)));
+    const extra: (typeof byHostId[0])[] = [];
+
+    for (const listing of hostListings) {
+      const pitches = await ctx.db
+        .query("pitches")
+        .withIndex("by_listing", (q) => q.eq("listing_id", String(listing._id)))
+        .order("desc")
+        .collect();
+      pitches.forEach((p) => {
+        if (!seen.has(String(p._id))) { seen.add(String(p._id)); extra.push(p); }
+      });
+    }
+
+    return [...byHostId, ...extra].sort((a, b) => b.created_at - a.created_at);
   },
 });
 

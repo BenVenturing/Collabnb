@@ -24,6 +24,7 @@ import type * as referrals from "../referrals.js";
 import type * as seed from "../seed.js";
 import type * as stripe from "../stripe.js";
 import type * as suggestions from "../suggestions.js";
+import type * as threadMessages from "../threadMessages.js";
 import type * as threads from "../threads.js";
 import type * as uploads from "../uploads.js";
 import type * as waitlist from "../waitlist.js";
@@ -51,6 +52,7 @@ declare const fullApi: ApiFromModules<{
   seed: typeof seed;
   stripe: typeof stripe;
   suggestions: typeof suggestions;
+  threadMessages: typeof threadMessages;
   threads: typeof threads;
   uploads: typeof uploads;
   waitlist: typeof waitlist;

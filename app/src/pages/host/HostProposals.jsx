@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
@@ -367,6 +367,106 @@ function DroppableTab({ stageKey, label, count, active, isFlashing, dragging, cu
   );
 }
 
+// ─── Inline host → creator message panel ─────────────────────────────────────
+function HostMessagePanel({ threadKey, creatorName }) {
+  const { profile } = useAuth();
+  const convexMessages = useQuery(api.threadMessages.getByThread, { threadKey });
+  const sendMutation = useMutation(api.threadMessages.sendMessage);
+  const [draft, setDraft] = useState('');
+  const [sending, setSending] = useState(false);
+  const bottomRef = useRef(null);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [convexMessages]);
+
+  const handleSend = async () => {
+    const text = draft.trim();
+    if (!text || sending) return;
+    setSending(true);
+    setDraft('');
+    try {
+      const senderId = profile?._id ? String(profile._id) : (profile?.id ? String(profile.id) : 'host');
+      await sendMutation({
+        threadKey,
+        senderId,
+        senderName: profile?.full_name || profile?.name || 'Host',
+        senderAvatar: profile?.avatar_url,
+        senderRole: 'host',
+        text,
+      });
+    } catch { /* silently ignore */ }
+    finally { setSending(false); }
+  };
+
+  const hostId = profile?._id ? String(profile._id) : (profile?.id ? String(profile.id) : null);
+
+  return (
+    <div style={{ padding: '16px 24px', borderTop: '1px solid rgba(25,37,36,0.07)', background: 'rgba(239,236,233,0.2)' }}>
+      <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--sage)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 10 }}>
+        Messages with {creatorName}
+      </div>
+
+      {/* Message list */}
+      <div style={{ maxHeight: 200, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
+        {convexMessages === undefined ? (
+          <p style={{ fontSize: 12, color: 'var(--sage)', margin: 0 }}>Loading…</p>
+        ) : convexMessages.length === 0 ? (
+          <p style={{ fontSize: 12, color: 'var(--sage)', margin: 0 }}>No messages yet — start the conversation.</p>
+        ) : (
+          convexMessages.map((msg) => {
+            const isMe = msg.sender_role === 'host' || (hostId && msg.sender_id === hostId);
+            return (
+              <div key={String(msg._id)} style={{ display: 'flex', justifyContent: isMe ? 'flex-end' : 'flex-start' }}>
+                <div style={{
+                  maxWidth: '80%', padding: '8px 12px', borderRadius: isMe ? '12px 12px 2px 12px' : '12px 12px 12px 2px',
+                  background: isMe ? 'var(--ink)' : '#fff',
+                  border: isMe ? 'none' : '1px solid rgba(25,37,36,0.1)',
+                  color: isMe ? '#fff' : 'var(--ink)', fontSize: 13, lineHeight: 1.5,
+                }}>
+                  <p style={{ margin: 0 }}>{msg.text}</p>
+                  <p style={{ margin: '3px 0 0', fontSize: 10, opacity: 0.5, textAlign: 'right' }}>
+                    {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </p>
+                </div>
+              </div>
+            );
+          })
+        )}
+        <div ref={bottomRef} />
+      </div>
+
+      {/* Compose */}
+      <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
+        <textarea
+          rows={1}
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
+          placeholder={`Reply to ${creatorName}…`}
+          style={{ flex: 1, padding: '9px 12px', border: '1.5px solid rgba(25,37,36,0.12)', borderRadius: '0.75rem', fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--ink)', background: '#fff', outline: 'none', resize: 'none', minHeight: '2.25rem', maxHeight: 100 }}
+          onFocus={(e) => { e.target.style.borderColor = 'rgba(25,37,36,0.35)'; }}
+          onBlur={(e) => { e.target.style.borderColor = 'rgba(25,37,36,0.12)'; }}
+        />
+        <button
+          onClick={handleSend}
+          disabled={!draft.trim() || sending}
+          style={{
+            width: 36, height: 36, borderRadius: '50%', border: 'none', flexShrink: 0,
+            background: draft.trim() ? 'var(--ink)' : 'rgba(25,37,36,0.1)',
+            cursor: draft.trim() ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke={draft.trim() ? 'white' : 'var(--sage)'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="14" height="14">
+            <line x1="22" y1="2" x2="11" y2="13"/>
+            <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ─── Proposal drawer ──────────────────────────────────────────────────────────
 function ProposalDrawer({ proposal, onStatusChange, onCounter, onSign, onCreatorClick }) {
   const navigate = useNavigate();
@@ -593,21 +693,28 @@ function ProposalDrawer({ proposal, onStatusChange, onCounter, onSign, onCreator
               Mark Completed
             </button>
           )}
-          <button onClick={() => navigate('/inbox')}
-            style={{ padding: '10px 18px', borderRadius: 9999, border: '1.5px solid rgba(25,37,36,0.12)', background: 'transparent', color: 'var(--ink)', fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
-            <MessageSquare size={13} /> Message
-          </button>
+          {!proposal.thread_key && (
+            <button onClick={() => navigate('/inbox')}
+              style={{ padding: '10px 18px', borderRadius: 9999, border: '1.5px solid rgba(25,37,36,0.12)', background: 'transparent', color: 'var(--ink)', fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <MessageSquare size={13} /> Message
+            </button>
+          )}
         </div>
       )}
 
       {/* Message button always visible for pitch under_review */}
-      {!locked && proposal.status === 'under_review' && isPitch && (
+      {!locked && proposal.status === 'under_review' && isPitch && !proposal.thread_key && (
         <div style={{ padding: '0 24px 14px' }}>
           <button onClick={() => navigate('/inbox')}
             style={{ padding: '9px 18px', borderRadius: 9999, border: '1.5px solid rgba(25,37,36,0.12)', background: 'transparent', color: 'var(--ink)', fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
             <MessageSquare size={13} /> Message Creator
           </button>
         </div>
+      )}
+
+      {/* Real-time message thread (only for real Convex pitches with a thread_key) */}
+      {proposal.thread_key && (
+        <HostMessagePanel threadKey={proposal.thread_key} creatorName={proposal.creator.name} />
       )}
     </div>
   );
@@ -697,6 +804,7 @@ function normalizePitch(p) {
     status: p.status,
     type: p.type || 'application',
     applied,
+    thread_key: p.thread_key,
     message: p.message,
     creator: {
       name: p.creator_name,

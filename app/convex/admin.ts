@@ -1,6 +1,6 @@
 import { v } from "convex/values";
-import { query, mutation } from "./_generated/server";
-import { internal } from "./_generated/api";
+import { query, mutation, action, internalMutation } from "./_generated/server";
+import { internal, api } from "./_generated/api";
 
 // ─── Analytics ────────────────────────────────────────────────────────────────
 export const getAnalytics = query({
@@ -125,6 +125,19 @@ export const getMaintenanceMode = query({
       .withIndex("by_key", (q) => q.eq("key", "maintenance_mode"))
       .first();
     return row?.value === "true";
+  },
+});
+
+// ─── Founder Counts (live from Convex, replaces localStorage) ────────────────
+export const getFounderCounts = query({
+  args: {},
+  handler: async (ctx) => {
+    const profiles = await ctx.db.query("profiles").collect();
+    const founders = profiles.filter((p) => p.is_founder === true);
+    return {
+      creator: founders.filter((p) => p.role === "creator").length,
+      host: founders.filter((p) => p.role === "host").length,
+    };
   },
 });
 
@@ -461,6 +474,78 @@ export const getBroadcasts = query({
   args: {},
   handler: async (ctx) => {
     return await ctx.db.query("broadcasts").order("desc").take(50);
+  },
+});
+
+export const saveBroadcastInternal = internalMutation({
+  args: { audience: v.string(), subject: v.string(), recipientCount: v.number() },
+  handler: async (ctx, args) => {
+    await ctx.db.insert("broadcasts", {
+      audience: args.audience,
+      subject: args.subject,
+      recipient_count: args.recipientCount,
+      sent_at: Date.now(),
+    });
+  },
+});
+
+// ─── Broadcast via Resend ─────────────────────────────────────────────────────
+export const broadcastSend = action({
+  args: { audience: v.string(), subject: v.string(), body: v.string() },
+  handler: async (ctx, { audience, subject, body }) => {
+    const recipients: { email: string; full_name: string; role: string }[] =
+      await ctx.runQuery(api.admin.getEmailList, { audience });
+    if (!recipients.length) return { sent: 0 };
+
+    const apiKey = process.env.RESEND_API_KEY;
+    if (!apiKey) throw new Error("RESEND_API_KEY not configured in Convex environment.");
+
+    const FROM = "Collabnb <hello@collabnb.com>";
+    const htmlBody = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="margin:0;padding:0;background:#F7F5F2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="padding:40px 16px;">
+    <tr><td align="center">
+      <table width="560" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #E8E4DF;">
+        <tr><td style="background:linear-gradient(135deg,#192524,#2d4a3e);padding:28px 40px;text-align:center;">
+          <div style="font-size:22px;font-weight:800;color:#ffffff;letter-spacing:-0.5px;">Collabnb</div>
+        </td></tr>
+        <tr><td style="padding:36px 40px;font-size:15px;color:#3C5759;line-height:1.7;">
+          ${body.replace(/\n/g, "<br>")}
+        </td></tr>
+        <tr><td style="padding:20px 40px;background:#F7F5F2;border-top:1px solid #E8E4DF;text-align:center;font-size:12px;color:#959D90;">
+          © 2026 Collabnb · <a href="https://collabnb.com" style="color:#2dd4bf;text-decoration:none;">collabnb.com</a>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+
+    let sent = 0;
+    for (const r of recipients) {
+      try {
+        const res = await fetch("https://api.resend.com/emails", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ from: FROM, to: [r.email], subject, html: htmlBody, text: body }),
+        });
+        if (res.ok) sent++;
+      } catch {}
+    }
+
+    await ctx.runMutation(internal.admin.saveBroadcastInternal, {
+      audience,
+      subject,
+      recipientCount: sent,
+    });
+
+    return { sent };
   },
 });
 

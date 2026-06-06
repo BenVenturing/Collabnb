@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQuery, useMutation } from 'convex/react';
+import { useQuery, useMutation, useAction } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 
 const INK   = '#192524';
@@ -24,12 +24,15 @@ export default function Broadcast() {
   const [audience, setAudience] = useState('all');
   const [subject,  setSubject]  = useState('');
   const [body,     setBody]     = useState('');
-  const [copied,   setCopied]   = useState(false);
+  const [copied,      setCopied]      = useState(false);
+  const [sending,     setSending]     = useState(false);
+  const [sendResult,  setSendResult]  = useState(null); // { sent: N } | { error: string }
   const [showHistory, setShowHistory] = useState(false);
 
-  const emailList = useQuery(api.admin.getEmailList, { audience });
-  const broadcasts = useQuery(api.admin.getBroadcasts);
+  const emailList     = useQuery(api.admin.getEmailList, { audience });
+  const broadcasts    = useQuery(api.admin.getBroadcasts);
   const saveBroadcast = useMutation(api.admin.saveBroadcast);
+  const broadcastSend = useAction(api.admin.broadcastSend);
 
   const emails = emailList?.map((r) => r.email) ?? [];
   const selected = AUDIENCES.find((a) => a.id === audience);
@@ -49,10 +52,22 @@ export default function Broadcast() {
     if (subject) params.set('subject', subject);
     if (body)    params.set('body', body);
     window.location.href = `mailto:?bcc=${encodeURIComponent(bcc)}${params.toString() ? '&' + params.toString() : ''}`;
-    // Save to history
     if (subject) {
       try { saveBroadcast({ audience, subject, recipientCount: emails.length }); } catch {}
     }
+  }
+
+  async function sendViaResend() {
+    if (!emails.length || !subject.trim() || sending) return;
+    setSending(true);
+    setSendResult(null);
+    try {
+      const result = await broadcastSend({ audience, subject, body });
+      setSendResult({ sent: result.sent });
+    } catch (err) {
+      setSendResult({ error: err?.message || 'Send failed. Check that RESEND_API_KEY is set in Convex.' });
+    }
+    setSending(false);
   }
 
   return (
@@ -127,39 +142,64 @@ export default function Broadcast() {
       </div>
 
       {/* Actions */}
-      <div style={{ display: 'flex', gap: '0.625rem', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: '0.625rem', flexWrap: 'wrap', alignItems: 'center' }}>
+        <button
+          onClick={sendViaResend}
+          disabled={!emails.length || !subject.trim() || sending}
+          style={{
+            padding: '0.6rem 1.375rem', borderRadius: '0.5rem',
+            background: (!emails.length || !subject.trim() || sending) ? '#D0D5CE' : INK,
+            color: '#fff', fontSize: '0.875rem', fontWeight: 600,
+            border: 'none', cursor: (!emails.length || !subject.trim() || sending) ? 'not-allowed' : 'pointer',
+            fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: '0.4rem',
+          }}
+        >
+          {sending ? '⏳ Sending…' : '🚀 Send via Resend'}
+        </button>
         <button onClick={openInMail} disabled={!emails.length} style={{
-          padding: '0.6rem 1.25rem', borderRadius: '0.5rem',
-          background: emails.length ? INK : '#D0D5CE',
-          color: '#fff', fontSize: '0.875rem', fontWeight: 600,
-          border: 'none', cursor: emails.length ? 'pointer' : 'not-allowed',
-          fontFamily: 'inherit',
+          padding: '0.6rem 1rem', borderRadius: '0.5rem',
+          background: '#fff', color: SLATE, fontSize: '0.875rem', fontWeight: 500,
+          border: '1px solid rgba(25,37,36,0.12)',
+          cursor: emails.length ? 'pointer' : 'not-allowed', fontFamily: 'inherit',
         }}>
-          ✉️ Open in Mail
+          ✉️ Mail client
         </button>
         <button onClick={copyEmails} disabled={!emails.length} style={{
-          padding: '0.6rem 1.25rem', borderRadius: '0.5rem',
+          padding: '0.6rem 1rem', borderRadius: '0.5rem',
           background: copied ? MINT : '#fff',
-          color: copied ? '#166534' : SLATE, fontSize: '0.875rem', fontWeight: 600,
+          color: copied ? '#166534' : SLATE, fontSize: '0.875rem', fontWeight: 500,
           border: '1px solid rgba(25,37,36,0.12)',
-          cursor: emails.length ? 'pointer' : 'not-allowed',
-          fontFamily: 'inherit',
+          cursor: emails.length ? 'pointer' : 'not-allowed', fontFamily: 'inherit',
         }}>
           {copied ? '✓ Copied!' : '📋 Copy Emails'}
         </button>
         <button onClick={() => setShowHistory(!showHistory)} style={{
-          padding: '0.6rem 1.25rem', borderRadius: '0.5rem',
-          background: '#fff', color: SLATE, fontSize: '0.875rem', fontWeight: 600,
+          padding: '0.6rem 1rem', borderRadius: '0.5rem',
+          background: '#fff', color: SLATE, fontSize: '0.875rem', fontWeight: 500,
           border: '1px solid rgba(25,37,36,0.12)',
           cursor: 'pointer', fontFamily: 'inherit',
         }}>
-          {showHistory ? '📋 Hide History' : '📜 Show History'}
+          {showHistory ? '↑ Hide History' : '📜 History'}
         </button>
       </div>
 
-      <p style={{ fontSize: '0.75rem', color: SAGE, marginTop: '1rem', lineHeight: 1.5 }}>
-        Opens your default mail client with BCC recipients pre-filled.
-      </p>
+      {!subject.trim() && emails.length > 0 && (
+        <p style={{ fontSize: '0.75rem', color: '#D97706', marginTop: '0.625rem' }}>
+          Add a subject line to enable sending.
+        </p>
+      )}
+
+      {sendResult && (
+        <div style={{
+          marginTop: '0.875rem', padding: '0.625rem 1rem', borderRadius: '0.5rem',
+          background: sendResult.error ? '#FEF2F2' : '#D1EBDB',
+          color: sendResult.error ? '#991B1B' : '#166534',
+          fontSize: '0.82rem', fontWeight: 500,
+          border: `1px solid ${sendResult.error ? 'rgba(153,27,27,0.15)' : 'rgba(22,101,52,0.15)'}`,
+        }}>
+          {sendResult.error ? `⚠️ ${sendResult.error}` : `✓ Sent to ${sendResult.sent} recipient${sendResult.sent !== 1 ? 's' : ''}`}
+        </div>
+      )}
 
       {/* History */}
       {showHistory && (

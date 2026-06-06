@@ -5,16 +5,6 @@ import { api } from '../../../convex/_generated/api';
 const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL;
 const FOUNDER_LIMIT = 100;
 
-const CREATOR_COUNT_KEY = '@collabnb_founder_creator_count_v1';
-const HOST_COUNT_KEY    = '@collabnb_founder_host_count_v1';
-
-function getCount(key) {
-  try { return parseInt(localStorage.getItem(key) || '0', 10); } catch { return 0; }
-}
-function setCount(key, n) {
-  try { localStorage.setItem(key, String(n)); } catch {}
-}
-
 // ─── Shared field styles ──────────────────────────────────────────────────────
 const INPUT = {
   width: '100%', padding: '0.55rem 0.75rem',
@@ -116,16 +106,6 @@ function FounderOverride() {
     setBusy(true);
     try {
       await setFounderStatus({ profileId: found._id, isFounder: grant });
-
-      // Sync local founder counts
-      const countKey = found.role === 'creator' ? CREATOR_COUNT_KEY : HOST_COUNT_KEY;
-      const current  = getCount(countKey);
-      if (grant && current < FOUNDER_LIMIT) {
-        setCount(countKey, current + 1);
-      } else if (!grant && current > 0) {
-        setCount(countKey, current - 1);
-      }
-
       setMsg(grant ? `✓ @${found.username} granted Founder status.` : `✓ @${found.username} Founder status revoked.`);
       setFound(null);
       setHandle('');
@@ -190,8 +170,10 @@ function FounderOverride() {
 
 // ─── Main export ──────────────────────────────────────────────────────────────
 export default function AdminSettings() {
-  const settings    = useQuery(api.admin.getSettings);
-  const setSetting  = useMutation(api.admin.setSetting);
+  const settings          = useQuery(api.admin.getSettings);
+  const maintenanceLive   = useQuery(api.admin.getMaintenanceMode);
+  const founderCounts     = useQuery(api.admin.getFounderCounts);
+  const setSetting        = useMutation(api.admin.setSetting);
 
   // Platform settings
   const [platformName, setPlatformName] = useState('Collabnb');
@@ -204,11 +186,15 @@ export default function AdminSettings() {
   const [notifyCollab,  setNotifyCollab]  = useState(false);
   const [notifSaved,    setNotifSaved]    = useState(false);
 
-  // Sync loaded settings into state
+  // Sync maintenance mode from Convex boolean
+  useEffect(() => {
+    if (maintenanceLive !== undefined) setMaintenance(maintenanceLive);
+  }, [maintenanceLive]);
+
+  // Sync other settings from Convex
   useEffect(() => {
     if (!settings) return;
-    if (settings.platform_name)   setPlatformName(settings.platform_name);
-    if (settings.maintenance_mode !== undefined) setMaintenance(settings.maintenance_mode === 'true');
+    if (settings.platform_name) setPlatformName(settings.platform_name);
     setNotifySignup(settings.notify_signup   === 'true');
     setNotifyMessage(settings.notify_message === 'true');
     setNotifyCollab(settings.notify_collab   === 'true');
@@ -233,10 +219,7 @@ export default function AdminSettings() {
     setTimeout(() => setNotifSaved(false), 2500);
   }
 
-  const founderCounts = {
-    creator: getCount(CREATOR_COUNT_KEY),
-    host:    getCount(HOST_COUNT_KEY),
-  };
+  const counts = founderCounts ?? { creator: 0, host: 0 };
 
   return (
     <div style={{ padding: '2rem 2.5rem', maxWidth: 640 }}>
@@ -284,15 +267,15 @@ export default function AdminSettings() {
           <div style={CARD}>
             <div style={{ display: 'flex', gap: '2rem', marginBottom: '1.25rem' }}>
               <div>
-                <div style={{ fontFamily: 'Cabinet Grotesk, sans-serif', fontSize: '1.5rem', fontWeight: 700, color: founderCounts.creator >= FOUNDER_LIMIT ? '#991B1B' : '#166534' }}>
-                  {founderCounts.creator} <span style={{ fontSize: '0.9rem', color: '#959D90', fontWeight: 400 }}>/ {FOUNDER_LIMIT}</span>
+                <div style={{ fontFamily: 'Cabinet Grotesk, sans-serif', fontSize: '1.5rem', fontWeight: 700, color: counts.creator >= FOUNDER_LIMIT ? '#991B1B' : '#166534' }}>
+                  {counts.creator} <span style={{ fontSize: '0.9rem', color: '#959D90', fontWeight: 400 }}>/ {FOUNDER_LIMIT}</span>
                 </div>
                 <div style={{ fontSize: '0.78rem', color: '#3C5759' }}>Creator Founders</div>
               </div>
               <div style={{ width: 1, background: 'rgba(25,37,36,0.07)' }} />
               <div>
-                <div style={{ fontFamily: 'Cabinet Grotesk, sans-serif', fontSize: '1.5rem', fontWeight: 700, color: founderCounts.host >= FOUNDER_LIMIT ? '#991B1B' : '#166534' }}>
-                  {founderCounts.host} <span style={{ fontSize: '0.9rem', color: '#959D90', fontWeight: 400 }}>/ {FOUNDER_LIMIT}</span>
+                <div style={{ fontFamily: 'Cabinet Grotesk, sans-serif', fontSize: '1.5rem', fontWeight: 700, color: counts.host >= FOUNDER_LIMIT ? '#991B1B' : '#166534' }}>
+                  {counts.host} <span style={{ fontSize: '0.9rem', color: '#959D90', fontWeight: 400 }}>/ {FOUNDER_LIMIT}</span>
                 </div>
                 <div style={{ fontSize: '0.78rem', color: '#3C5759' }}>Host Founders</div>
               </div>

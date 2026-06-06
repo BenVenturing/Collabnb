@@ -136,13 +136,21 @@ export const getRejected = query({
 export const approveProfile = mutation({
   args: {
     profileId: v.string(),
-    isFounder: v.boolean(),
   },
   handler: async (ctx, args) => {
     const profile = await ctx.db.get(args.profileId as any);
+    if (!profile) return;
+
+    // Determine founder status server-side: count existing founders of the same role
+    const allProfiles = await ctx.db.query("profiles").collect();
+    const existingFounders = allProfiles.filter(
+      (p) => p.is_founder === true && p.role === profile.role
+    ).length;
+    const isFounder = existingFounders < 100;
+
     const patch: Record<string, any> = {
       is_verified: true,
-      is_founder: args.isFounder,
+      is_founder: isFounder,
     };
     // If referred, stamp the pending collab bonus so their profile shows the indicator
     if (profile?.referred_by && !profile.first_collab_completed) {

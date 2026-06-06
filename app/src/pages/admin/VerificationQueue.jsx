@@ -4,19 +4,7 @@ import { api } from '../../../convex/_generated/api';
 import UserDetailPanel from '../../components/admin/UserDetailPanel';
 import { formatDate as fmtDate } from '../../lib/dateUtils';
 
-// ─── Founder count helpers (localStorage) ────────────────────────────────────
-const CREATOR_COUNT_KEY = '@collabnb_founder_creator_count_v1';
-const HOST_COUNT_KEY    = '@collabnb_founder_host_count_v1';
-const FOUNDER_LIMIT     = 100;
-
-function getCount(key) {
-  try { return parseInt(localStorage.getItem(key) || '0', 10); } catch { return 0; }
-}
-function bumpCount(key) {
-  const next = getCount(key) + 1;
-  try { localStorage.setItem(key, String(next)); } catch {}
-  return next;
-}
+const FOUNDER_LIMIT = 100;
 
 // ─── Utilities ────────────────────────────────────────────────────────────────
 function formatDate(ts) {
@@ -258,16 +246,15 @@ function CountBadge({ n, variant = 'green' }) {
 export default function VerificationQueue() {
   const [tab, setTab] = useState('creators');
   const [selectedProfileId, setSelectedProfileId] = useState(null);
-  const [counts, setCounts] = useState(() => ({
-    creator: getCount(CREATOR_COUNT_KEY),
-    host:    getCount(HOST_COUNT_KEY),
-  }));
 
-  const unverified = useQuery(api.profiles.getUnverified);
-  const rejected   = useQuery(api.profiles.getRejected);
-  const approve    = useMutation(api.profiles.approveProfile);
-  const reject     = useMutation(api.profiles.rejectProfile);
-  const addAudit   = useMutation(api.admin.addAuditEntry);
+  const unverified    = useQuery(api.profiles.getUnverified);
+  const rejected      = useQuery(api.profiles.getRejected);
+  const founderCounts = useQuery(api.admin.getFounderCounts);
+  const approve       = useMutation(api.profiles.approveProfile);
+  const reject        = useMutation(api.profiles.rejectProfile);
+  const addAudit      = useMutation(api.admin.addAuditEntry);
+
+  const counts = founderCounts ?? { creator: 0, host: 0 };
 
   const pending          = unverified || [];
   const pendingCreators  = pending.filter(p => p.role === 'creator');
@@ -275,17 +262,7 @@ export default function VerificationQueue() {
   const rejectedAll      = rejected  || [];
 
   async function handleApprove(profile) {
-    const isCreator   = profile.role === 'creator';
-    const countKey    = isCreator ? CREATOR_COUNT_KEY : HOST_COUNT_KEY;
-    const currentCount = getCount(countKey);
-    const isFounder   = currentCount < FOUNDER_LIMIT;
-
-    if (isFounder) {
-      const newCount = bumpCount(countKey);
-      setCounts(prev => ({ ...prev, [isCreator ? 'creator' : 'host']: newCount }));
-    }
-
-    await approve({ profileId: profile._id, isFounder });
+    await approve({ profileId: profile._id });
     try { await addAudit({ action: 'approved', targetType: 'profile', targetId: String(profile._id), details: profile.full_name }); } catch {}
   }
 

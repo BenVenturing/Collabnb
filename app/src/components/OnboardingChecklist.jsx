@@ -2,30 +2,31 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
-const STORAGE_KEY     = 'collabnb_onboarding_v2_dismissed';
-const COLLAPSED_KEY   = 'collabnb_onboarding_v2_collapsed';
-const FIRST_VISIT_KEY = 'collabnb_onboarding_v2_seen';
+const STORAGE_KEY       = 'collabnb_onboarding_v2_dismissed';
+const COLLAPSED_KEY     = 'collabnb_onboarding_v2_collapsed';
+const FIRST_VISIT_KEY   = 'collabnb_onboarding_v2_seen';
+const SHARED_REFERRAL_KEY = 'collabnb_onboarding_v2_shared';
 
 const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL;
 
-function creatorSteps(profile) {
+function creatorSteps(profile, isFirstVisit) {
   return [
     {
       id: 'photo',
       label: 'Add a profile photo',
-      done: !!profile?.avatar_url,
+      done: !isFirstVisit && !!profile?.avatar_url,
       action: { label: 'Add photo', path: '/profile?edit=true' },
     },
     {
       id: 'bio',
       label: 'Write your bio',
-      done: !!profile?.bio && profile.bio.length > 10,
+      done: !isFirstVisit && !!profile?.bio && profile.bio.length > 10,
       action: { label: 'Edit profile', path: '/profile?edit=true' },
     },
     {
       id: 'social',
       label: 'Connect a social account',
-      done: !!(profile?.instagram_handle || profile?.tiktok_handle || profile?.youtube_handle),
+      done: !isFirstVisit && !!(profile?.instagram_handle || profile?.tiktok_handle || profile?.youtube_handle),
       action: { label: 'Add socials', path: '/profile?edit=true' },
     },
     {
@@ -34,10 +35,17 @@ function creatorSteps(profile) {
       done: false,
       action: { label: 'Browse listings', path: '/explore' },
     },
+    {
+      id: 'share',
+      label: 'Share with a friend',
+      done: localStorage.getItem(SHARED_REFERRAL_KEY) === '1',
+      optional: true,
+      action: { label: 'Share code', path: null, type: 'share' },
+    },
   ];
 }
 
-function hostSteps(profile) {
+function hostSteps(profile, isFirstVisit) {
   return [
     {
       id: 'listing',
@@ -48,7 +56,7 @@ function hostSteps(profile) {
     {
       id: 'profile',
       label: 'Complete your host profile',
-      done: !!profile?.bio && profile.bio.length > 10,
+      done: !isFirstVisit && !!profile?.bio && profile.bio.length > 10,
       action: { label: 'Edit profile', path: '/profile?edit=true' },
     },
     {
@@ -56,6 +64,13 @@ function hostSteps(profile) {
       label: 'Browse creators who match your vibe',
       done: false,
       action: { label: 'Discover creators', path: '/host/creators' },
+    },
+    {
+      id: 'share',
+      label: 'Share with a friend',
+      done: localStorage.getItem(SHARED_REFERRAL_KEY) === '1',
+      optional: true,
+      action: { label: 'Share code', path: null, type: 'share' },
     },
   ];
 }
@@ -80,6 +95,10 @@ export default function OnboardingChecklist() {
   const [entered, setEntered] = useState(false);
   // Steps that have been manually unchecked (shown as reopened even if profile says done)
   const [unchecked, setUnchecked] = useState({});
+  // Track whether this is the very first time the checklist has loaded
+  const [isFirstVisit, setIsFirstVisit] = useState(
+    () => localStorage.getItem(FIRST_VISIT_KEY) !== '1'
+  );
 
   // Register reopen listener
   useEffect(() => {
@@ -101,19 +120,23 @@ export default function OnboardingChecklist() {
     : userEmail === 'benventuring@gmail.com';
 
   const isHost = profile?.role === 'host';
-  const rawSteps = isHost ? hostSteps(profile) : creatorSteps(profile);
+  const rawSteps = isHost ? hostSteps(profile, isFirstVisit) : creatorSteps(profile, isFirstVisit);
   // Apply manual unchecked overrides: a done step can be toggled back to open
   const steps = rawSteps.map(s => ({
     ...s,
     done: s.done && !unchecked[s.id],
   }));
-  const completedCount = steps.filter(s => s.done).length;
-  const allDone = completedCount === steps.length;
+  // Count only non-optional steps for "required" progress
+  const requiredSteps = steps.filter(s => !s.optional);
+  const requiredCompleted = requiredSteps.filter(s => s.done).length;
+  const requiredTotal = requiredSteps.length;
+  const optionalCompleted = steps.filter(s => s.optional && s.done).length;
+  const allDone = requiredCompleted === requiredTotal;
 
   // Decide whether to show at all
   // Show for new non-admin users: created within 14 days OR checklist not yet complete
   const isNewUser = !profile?._creationTime || Date.now() - (profile._creationTime) < 14 * 24 * 60 * 60 * 1000;
-  const notFullyComplete = completedCount < steps.length;
+  const notFullyComplete = requiredCompleted < requiredTotal;
   const shouldShow = !isAdmin && !!profile?.email && !dismissed && (isNewUser || notFullyComplete);
 
   useEffect(() => {
@@ -127,6 +150,8 @@ export default function OnboardingChecklist() {
       setCollapsed(false);
       localStorage.removeItem(COLLAPSED_KEY);
     }
+    // After first render, mark first visit as done so profile-based checks kick in on next load
+    setIsFirstVisit(false);
     // Trigger entrance animation after mount
     const t = setTimeout(() => setEntered(true), 50);
     return () => clearTimeout(t);
@@ -200,13 +225,13 @@ export default function OnboardingChecklist() {
               stroke="#3C5759"
               strokeWidth="2.5"
               strokeDasharray={`${2 * Math.PI * 8}`}
-              strokeDashoffset={`${2 * Math.PI * 8 * (1 - completedCount / steps.length)}`}
+              strokeDashoffset={`${2 * Math.PI * 8 * (1 - requiredCompleted / requiredTotal)}`}
               strokeLinecap="round"
               transform="rotate(-90 11 11)"
               style={{ transition: 'stroke-dashoffset 0.4s ease' }}
             />
             <text x="11" y="15" textAnchor="middle" fontSize="8" fontWeight="700" fill="var(--ink, #192524)" fontFamily="sans-serif">
-              {completedCount}/{steps.length}
+              {requiredCompleted}/{requiredTotal}
             </text>
           </svg>
           <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--ink, #192524)' }}>
@@ -219,7 +244,7 @@ export default function OnboardingChecklist() {
               borderRadius: '9999px', padding: '0.125rem 0.5rem',
               lineHeight: 1.5,
             }}>
-              {steps.length - completedCount} left
+              {requiredTotal - requiredCompleted} left
             </span>
           )}
         </button>
@@ -246,7 +271,8 @@ export default function OnboardingChecklist() {
               {allDone ? '🎉 You\'re all set!' : 'Complete your setup'}
             </p>
             <p style={{ fontSize: '0.75rem', color: 'var(--slate, #3C5759)', margin: '0.125rem 0 0' }}>
-              {completedCount}/{steps.length} steps complete
+              {requiredCompleted}/{requiredTotal} steps complete
+              {optionalCompleted > 0 && ` + ${optionalCompleted} bonus`}
             </p>
           </div>
           <div style={{ display: 'flex', gap: '0.25rem', flexShrink: 0, marginLeft: '0.5rem' }}>
@@ -300,7 +326,7 @@ export default function OnboardingChecklist() {
           }}>
             <div style={{
               height: '100%',
-              width: `${(completedCount / steps.length) * 100}%`,
+              width: `${(requiredCompleted / requiredTotal) * 100}%`,
               background: 'linear-gradient(90deg, #3C5759, #7ecfc4)',
               borderRadius: '2px',
               transition: 'width 0.4s ease',
@@ -358,11 +384,37 @@ export default function OnboardingChecklist() {
                 lineHeight: 1.35,
               }}>
                 {step.label}
+                {step.optional && !step.done && (
+                  <span style={{
+                    fontSize: '0.6rem', fontWeight: 600, color: 'var(--sage, #959D90)',
+                    marginLeft: '0.375rem', textTransform: 'uppercase', letterSpacing: '0.06em',
+                  }}>
+                    optional
+                  </span>
+                )}
               </span>
 
               {!step.done && (
                 <button
-                  onClick={() => navigate(step.action.path)}
+                  onClick={() => {
+                    if (step.action.type === 'share') {
+                      const code = profile?.referral_code || '';
+                      const shareUrl = code
+                        ? `${window.location.origin}/join?ref=${code}`
+                        : `${window.location.origin}/join`;
+                      if (navigator.share) {
+                        navigator.share({ title: 'Join me on Collabnb', url: shareUrl }).catch(() => {});
+                      } else {
+                        navigator.clipboard?.writeText(shareUrl).then(() => {
+                          localStorage.setItem(SHARED_REFERRAL_KEY, '1');
+                          setUnchecked(prev => ({ ...prev, [step.id]: false }));
+                        }).catch(() => {});
+                      }
+                      localStorage.setItem(SHARED_REFERRAL_KEY, '1');
+                      return;
+                    }
+                    navigate(step.action.path);
+                  }}
                   style={{
                     background: 'none',
                     border: '1px solid rgba(60,87,89,0.35)',

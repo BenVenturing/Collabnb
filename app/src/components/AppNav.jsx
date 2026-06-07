@@ -750,11 +750,11 @@ export default function AppNav() {
                   View Profile
                 </NavLink>
                 <NavLink to="/profile?settings=true" onClick={() => setProfileOpen(false)} className="block px-4 py-3 text-sm text-ink hover:bg-mint/30 transition-colors">
-                  ⚙️ Settings
+                  Settings
                 </NavLink>
                 {!isAdmin && (
                   <button onClick={() => { setProfileOpen(false); reopenChecklist(); }} className="w-full text-left px-4 py-3 text-sm text-ink hover:bg-mint/30 transition-colors">
-                    ✅ Setup Checklist
+                    Setup Checklist
                   </button>
                 )}
                 {isAdmin && (
@@ -766,7 +766,7 @@ export default function AppNav() {
                       className="block px-4 py-3 text-sm font-medium hover:bg-mint/30 transition-colors"
                       style={{ color: '#3C5759' }}
                     >
-                      ⚙️ Admin Panel
+                      Admin Panel
                     </NavLink>
                   </>
                 )}

@@ -805,9 +805,9 @@ export default function ListingDetail() {
     setShowSaveModal(false);
   }, [listing, toggleSave, showToast]);
 
-  const handleCreateAndSave = useCallback((name) => {
+  const handleCreateAndSave = useCallback(async (name) => {
     if (!listing) return;
-    const newCol = createCollection(name);
+    const newCol = await createCollection(name);
     moveToCollection(listing.id, newCol.id);
     showToast(`Saved to "${name}"`);
     setShowSaveModal(false);

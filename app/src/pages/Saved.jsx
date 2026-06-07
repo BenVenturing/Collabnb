@@ -288,7 +288,9 @@ export default function Saved() {
   const [showNewCollection, setShowNewCollection] = useState(false);
   const [moveState, setMoveState] = useState(null); // { listingId, pos: {x,y} }
 
-  const convexListings = useQuery(api.listings.getAll) ?? [];
+  const rawConvexListings = useQuery(api.listings.getAll);
+  const convexDataLoaded = rawConvexListings !== undefined;
+  const convexListings = rawConvexListings ?? [];
   // Normalize Convex listings so they use string `id` like SAMPLE_LISTINGS
   const convexNormalized = convexListings.map((l) => ({ ...l, id: String(l._id) }));
   // Merged pool: Convex listings take precedence, then sample (for demos/testing)
@@ -299,6 +301,9 @@ export default function Saved() {
 
   const allSaved = allListings.filter((l) => savedIds.has(l.id));
   const totalCount = allSaved.length;
+  // Use savedIds.size (from localStorage, immediately available) so we don't show
+  // the empty state while Convex is still loading saved Convex listings
+  const hasSavedIds = savedIds.size > 0;
 
   const handleCreateCollection = (name) => {
     createCollection(name);
@@ -326,14 +331,16 @@ export default function Saved() {
           Saved
         </h1>
         <p style={{ fontSize: '0.82rem', color: 'var(--sage)' }}>
-          {totalCount === 0
+          {!hasSavedIds
             ? 'No saved collaborations yet'
-            : `${totalCount} saved collaboration${totalCount !== 1 ? 's' : ''}`}
+            : totalCount > 0
+              ? `${totalCount} saved collaboration${totalCount !== 1 ? 's' : ''}`
+              : 'Loading…'}
         </p>
       </div>
 
       {/* ── Empty state ── */}
-      {totalCount === 0 && (
+      {!hasSavedIds && (
         <div style={{
           display: 'flex', flexDirection: 'column', alignItems: 'center',
           justifyContent: 'center', paddingTop: '5rem', gap: '1rem', textAlign: 'center',
@@ -373,7 +380,7 @@ export default function Saved() {
       )}
 
       {/* ── Collections ── */}
-      {totalCount > 0 && (
+      {hasSavedIds && (
         <div style={{ padding: '0 1.5rem 5rem' }}>
 
           {/* Collection tabs */}

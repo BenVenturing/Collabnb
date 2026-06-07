@@ -32,6 +32,7 @@ function NavDropdown({ children, align = 'left', width }) {
   return (
     <div
       className="glass-card"
+      onClick={(e) => e.stopPropagation()}
       style={{
         position: 'absolute',
         top: 'calc(100% + 0.5rem)',
@@ -553,7 +554,7 @@ export default function AppNav() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', flexShrink: 0 }}>
 
           {/* Compact hamburger — left of search pill, only when scrolled */}
-          {compactSearch && !navSearchOpen && (
+          {scrolled && !navSearchOpen && (
             <button
               className={`nav-hamburger ${menuOpen ? 'open' : ''}`}
               aria-label={menuOpen ? 'Close menu' : 'Open menu'}
@@ -602,7 +603,7 @@ export default function AppNav() {
           </button>
 
           {/* Bell notification icon — hidden when scrolled */}
-          {userId && !compactSearch && (
+          {userId && !scrolled && (
             <div ref={bellRef} style={{ position: 'relative' }}>
               <button
                 onClick={() => { setNotifOpen(o => !o); if (!notifOpen && userId) markAllRead({ userId }); }}
@@ -689,8 +690,8 @@ export default function AppNav() {
           {/* Hamburger + Profile avatar — grouped so nav dropdown anchors near avatar */}
           <div className="relative" ref={profileRef} style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
 
-            {/* Hamburger — LEFT of avatar; hidden when compact (left-side hamburger takes over) */}
-            {!navSearchOpen && !compactSearch && (
+            {/* Hamburger — LEFT of avatar; hidden when scrolled (left-side hamburger takes over) */}
+            {!navSearchOpen && !scrolled && (
               <button
                 className={`nav-hamburger ${menuOpen ? 'open' : ''}`}
                 aria-label={menuOpen ? 'Close menu' : 'Open menu'}

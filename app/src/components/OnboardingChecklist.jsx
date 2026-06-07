@@ -75,6 +75,18 @@ function hostSteps(profile, isFirstVisit) {
   ];
 }
 
+/**
+ * Compute checklist progress from profile for use in the nav dropdown badge.
+ * Returns { completed, total } counting only required (non-optional) steps.
+ */
+export function getChecklistProgress(profile) {
+  // Use isFirstVisit = false so it reflects actual profile state
+  const isHost = profile?.role === 'host';
+  const raw = isHost ? hostSteps(profile, false) : creatorSteps(profile, false);
+  const required = raw.filter(s => !s.optional);
+  return { completed: required.filter(s => s.done).length, total: required.length };
+}
+
 // Shared signal so AppNav can re-open the checklist
 let _reopenListener = null;
 export function reopenChecklist() {
@@ -159,12 +171,19 @@ export default function OnboardingChecklist() {
 
   if (!visible || !shouldShow) return null;
 
-  function dismiss() {
-    setEntered(false);
-    setTimeout(() => {
-      localStorage.setItem(STORAGE_KEY, '1');
-      setDismissed(true);
-    }, 280);
+  function handleClose() {
+    if (allDone) {
+      // All required steps done — permanently dismiss
+      setEntered(false);
+      setTimeout(() => {
+        localStorage.setItem(STORAGE_KEY, '1');
+        setDismissed(true);
+      }, 280);
+    } else {
+      // Still have steps left — just collapse
+      setCollapsed(true);
+      localStorage.setItem(COLLAPSED_KEY, '1');
+    }
   }
 
   function toggleCollapse() {
@@ -297,9 +316,9 @@ export default function OnboardingChecklist() {
             </button>
             {/* Close / dismiss button */}
             <button
-              onClick={dismiss}
-              aria-label="Dismiss checklist"
-              title="Dismiss"
+              onClick={handleClose}
+              aria-label={allDone ? 'Dismiss checklist' : 'Minimize checklist'}
+              title={allDone ? 'Dismiss' : 'Minimize'}
               style={{
                 background: 'none', border: 'none', cursor: 'pointer',
                 color: 'var(--sage, #959D90)', width: 28, height: 28,
@@ -310,10 +329,16 @@ export default function OnboardingChecklist() {
               onMouseEnter={e => e.currentTarget.style.background = 'rgba(231,76,60,0.08)'}
               onMouseLeave={e => e.currentTarget.style.background = 'none'}
             >
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round">
-                <line x1="1" y1="1" x2="11" y2="11" />
-                <line x1="11" y1="1" x2="1" y2="11" />
-              </svg>
+              {allDone ? (
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round">
+                  <line x1="1" y1="1" x2="11" y2="11" />
+                  <line x1="11" y1="1" x2="1" y2="11" />
+                </svg>
+              ) : (
+                <svg width="12" height="12" viewBox="0 0 12 4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                  <line x1="1" y1="2" x2="11" y2="2" />
+                </svg>
+              )}
             </button>
           </div>
         </div>
@@ -450,7 +475,7 @@ export default function OnboardingChecklist() {
         {allDone && (
           <div style={{ padding: '0 0.75rem 0.875rem' }}>
             <button
-              onClick={dismiss}
+              onClick={handleClose}
               style={{
                 width: '100%',
                 background: 'var(--ink, #192524)', color: '#fff',

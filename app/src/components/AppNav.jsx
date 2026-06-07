@@ -4,7 +4,7 @@ import collabnbLogo from '../../../assets/collabnb-logo.png';
 import { useAuth } from '../contexts/AuthContext';
 import { useAppBar } from '../contexts/AppBarContext';
 import { useCollabs } from '../contexts/CollabContext';
-import { reopenChecklist } from './OnboardingChecklist';
+import { reopenChecklist, getChecklistProgress } from './OnboardingChecklist';
 import { SAMPLE_LISTINGS } from '../lib/mockData';
 import { WhereSearchContent, WhatSearchContent, WhenSearchContent, useAnimatedPlaceholder } from './SearchDropdowns';
 import { formatDate } from '../lib/dateUtils';
@@ -113,6 +113,9 @@ const BOTTOM_NAV_ITEMS = [
 
 export default function AppNav() {
   const { profile, signOut } = useAuth();
+  const isPending = profile?.tier === 'waitlist' && !profile?.is_verified;
+  const checklistProgress = getChecklistProgress(profile);
+  const checklistAllDone = checklistProgress.completed >= checklistProgress.total;
   const { compactSearch } = useAppBar();
   const { savedIds } = useCollabs();
   const navigate = useNavigate();
@@ -331,6 +334,7 @@ export default function AppNav() {
       <nav
         className={`nav-pill glass ${scrolled ? 'scrolled' : ''}`}
         aria-label="Main navigation"
+        style={{ top: isPending ? 'calc(1.8rem + 0.5rem)' : '1rem' }}
       >
         {/* Logo */}
         <NavLink to="/explore" className="nav-logo" style={{ flexShrink: 0 }}>
@@ -762,8 +766,17 @@ export default function AppNav() {
                   Settings
                 </NavLink>
                 {!isAdmin && (
-                  <button onClick={() => { setProfileOpen(false); reopenChecklist(); }} className="w-full text-left px-4 py-3 text-sm text-ink hover:bg-mint/30 transition-colors">
-                    Setup Checklist
+                  <button onClick={() => { setProfileOpen(false); reopenChecklist(); }} className="w-full text-left px-4 py-3 text-sm text-ink hover:bg-mint/30 transition-colors" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <span style={{ flex: 1 }}>Setup Checklist</span>
+                    <span style={{
+                      fontSize: '0.65rem', fontWeight: 700,
+                      background: checklistAllDone ? 'rgba(209,235,219,0.8)' : '#3C5759',
+                      color: checklistAllDone ? '#192524' : '#fff',
+                      borderRadius: '9999px', padding: '0.1rem 0.45rem',
+                      lineHeight: 1.6,
+                    }}>
+                      {checklistAllDone ? '✓' : `${checklistProgress.completed}/${checklistProgress.total}`}
+                    </span>
                   </button>
                 )}
                 {isAdmin && (

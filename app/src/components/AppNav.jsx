@@ -7,8 +7,17 @@ import { useCollabs } from '../contexts/CollabContext';
 import { reopenChecklist } from './OnboardingChecklist';
 import { SAMPLE_LISTINGS } from '../lib/mockData';
 import { WhereSearchContent, WhatSearchContent, WhenSearchContent, useAnimatedPlaceholder } from './SearchDropdowns';
+import { formatDate } from '../lib/dateUtils';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../convex/_generated/api';
+
+function fmtNavWhen(val) {
+  if (!val) return 'Any time';
+  if (val.startsWith('Flexible:')) return val.replace('Flexible: ', '');
+  const parts = val.split(' → ');
+  if (parts.length === 2) return `${formatDate(parts[0])} → ${formatDate(parts[1])}`;
+  return formatDate(parts[0]);
+}
 
 const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL;
 
@@ -519,7 +528,7 @@ export default function AppNav() {
               >
                 <label>When</label>
                 <span className="search-value" style={{ color: navWhen ? 'var(--ink)' : undefined }}>
-                  {navWhen || 'Any time'}
+                  {fmtNavWhen(navWhen)}
                 </span>
 
                 {navField === 'when' && (

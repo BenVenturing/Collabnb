@@ -81,27 +81,34 @@ export default function PricingPage() {
       <div aria-hidden="true" style={{ position:'fixed', inset:0, zIndex:-10, pointerEvents:'none', backgroundImage:"url('../assets/bg-clouds-hazy.png')", backgroundSize:'cover', backgroundPosition:'center', opacity:0.18, mixBlendMode:'multiply', filter:'saturate(0.5) brightness(1.1)' }} />
       <div aria-hidden="true" style={{ position:'fixed', inset:0, zIndex:50, pointerEvents:'none', opacity:0.03, backgroundImage:"url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence baseFrequency='0.9'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>\")" }} />
 
-      {/* ── Nav link back to main site ── */}
-      <header className="max-w-7xl mx-auto px-4 md:px-8 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-        <a
-          href="../index.html"
-          className="flex items-center gap-2 text-ink no-underline hover:opacity-60 transition-opacity"
-        >
-          <img src={logo} alt="" width="28" height="28" />
-          <span className="font-display font-bold text-base tracking-tight">Collabnb</span>
+      {/* ── Floating nav pill (matches marketing site) ── */}
+      <nav
+        className="nav-pill glass scrolled"
+        aria-label="Main navigation"
+        style={{ position:'fixed', top:'1rem', left:'50%', transform:'translateX(-50%)', zIndex:40 }}
+      >
+        <a href="../index.html" className="nav-logo" aria-label="Collabnb home">
+          <img src={logo} alt="" role="presentation" width="28" height="28" />
+          <span>Collabnb</span>
         </a>
-        
-        <div className="flex items-center gap-4">
-          <span className="text-[0.7rem] uppercase tracking-widest text-sage font-medium bg-black/[0.03] px-3 py-1.5 rounded-full">
-            {creatorCount}/100 Creators · {hostCount}/100 Hosts Joined
+        <ul className="nav-links" role="list" style={{ display:'flex', listStyle:'none', gap:'1.25rem', margin:0, padding:0 }}>
+          <li><a href="../index.html" className="text-sm font-medium no-underline" style={{ color:'var(--slate, #3C5759)' }}>Home</a></li>
+          <li><a href="../about.html" className="text-sm font-medium no-underline" style={{ color:'var(--slate, #3C5759)' }}>About</a></li>
+          <li><a href="../how-it-works.html" className="text-sm font-medium no-underline" style={{ color:'var(--slate, #3C5759)' }}>How it works</a></li>
+          <li><a href="../faq.html" className="text-sm font-medium no-underline" style={{ color:'var(--slate, #3C5759)' }}>FAQ</a></li>
+          <li><a href="index.html" className="text-sm font-medium no-underline" style={{ color:'var(--ink, #192524)', fontWeight:700 }}>Pricing</a></li>
+        </ul>
+        <div className="flex items-center gap-3">
+          <span className="text-[0.65rem] uppercase tracking-widest text-sage font-medium bg-black/[0.04] px-2.5 py-1.5 rounded-full whitespace-nowrap">
+            {creatorCount}/100 · {hostCount}/100
           </span>
-          <a href="../join.html" className="btn-ink text-sm py-2.5 px-5">
-            Join the Waitlist
+          <a href="../join.html" className="btn-ink text-xs py-2 px-4 whitespace-nowrap">
+            Join
           </a>
         </div>
-      </header>
+      </nav>
 
-      <main>
+      <main style={{ paddingTop: '5rem' }}>
         <HeroSection spotsRemaining={spotsRemaining} isFoundingFull={isFoundingFull} />
         <PricingCards
           isFoundingFull={isFoundingFull}

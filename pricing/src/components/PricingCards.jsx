@@ -44,14 +44,18 @@ export default function PricingCards({ isFoundingFull, creatorSpotsRemaining, ho
 
   return (
     <section
-      className="max-w-5xl mx-auto px-4 md:px-8 pb-4"
+      className="max-w-5xl mx-auto px-0 md:px-8 pb-4"
       aria-label="Pricing options"
     >
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-0 items-center">
-        <div className="relative z-0">
+      {/* Horizontal scroll on mobile, grid on desktop */}
+      <div
+        className="flex md:grid md:grid-cols-3 gap-6 md:gap-0 items-center overflow-x-auto snap-x snap-mandatory px-4 md:px-0 pb-2 md:pb-0"
+        style={{ scrollSnapType: 'x mandatory', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+      >
+        <div className="relative z-0 min-w-[85vw] md:min-w-0 snap-center shrink-0 md:shrink">
           <LockedCard plan={LOCKED_PLANS[0]} isUnlocked={isUnlocked} onSubscribe={onSubscribe} />
         </div>
-        <div className="relative z-10 md:-mx-8">
+        <div className="relative z-10 md:-mx-8 min-w-[85vw] md:min-w-0 snap-center shrink-0 md:shrink">
           <FoundingCard
             isFull={isFoundingFull}
             creatorSpotsRemaining={creatorSpotsRemaining}
@@ -62,10 +66,12 @@ export default function PricingCards({ isFoundingFull, creatorSpotsRemaining, ho
             onClaimLifetime={onClaimLifetime}
           />
         </div>
-        <div className="relative z-0">
+        <div className="relative z-0 min-w-[85vw] md:min-w-0 snap-center shrink-0 md:shrink">
           <LockedCard plan={LOCKED_PLANS[1]} isUnlocked={isUnlocked} onSubscribe={onSubscribe} />
         </div>
       </div>
+      {/* Mobile hint */}
+      <p className="text-center text-xs text-sage mt-3 md:hidden">← Swipe to compare plans →</p>
     </section>
   );
 }

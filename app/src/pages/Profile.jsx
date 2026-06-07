@@ -962,9 +962,9 @@ export default function Profile() {
           <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.125rem', color: 'var(--ink)', marginBottom: '1rem' }}>Links &amp; Socials</h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
             {portfolioHref && <SocialRow icon={<GlobeIcon />} label="My Link-in-Bio" value={dp.portfolio} href={portfolioHref} />}
-            {dp.instagram_handle && <SocialRow icon={<InstagramIcon />} label="Instagram" value={`@${dp.instagram_handle}`} href={`https://instagram.com/${dp.instagram_handle}`} />}
-            {dp.tiktok_handle    && <SocialRow icon={<TikTokIcon />}    label="TikTok"    value={`@${dp.tiktok_handle}`}    href={`https://tiktok.com/@${dp.tiktok_handle}`} />}
-            {dp.youtube_handle   && <SocialRow icon={<YouTubeIcon />}   label="YouTube"   value={`@${dp.youtube_handle}`}   href={`https://youtube.com/@${dp.youtube_handle}`} />}
+            {dp.instagram_handle && <SocialRow icon={<InstagramIcon />} label="Instagram" value={`@${dp.instagram_handle.replace(/^@/, '')}`} href={`https://instagram.com/${dp.instagram_handle.replace(/^@/, '')}`} />}
+            {dp.tiktok_handle    && <SocialRow icon={<TikTokIcon />}    label="TikTok"    value={`@${dp.tiktok_handle.replace(/^@/, '')}`}    href={`https://tiktok.com/@${dp.tiktok_handle.replace(/^@/, '')}`} />}
+            {dp.youtube_handle   && <SocialRow icon={<YouTubeIcon />}   label="YouTube"   value={`@${dp.youtube_handle.replace(/^@/, '')}`}   href={`https://youtube.com/@${dp.youtube_handle.replace(/^@/, '')}`} />}
           </div>
         </section>
 

@@ -1,7 +1,39 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useQuery, useAction } from 'convex/react';
+import { useQuery, useAction, useMutation } from 'convex/react';
 import { api } from '../../convex/_generated/api';
+
+// Convex storage URL prefix; used to construct public URLs from storage IDs
+const CONVEX_URL = import.meta.env.VITE_CONVEX_URL;
+
+/**
+ * Resize an image file via canvas, upload the resulting JPEG blob to Convex
+ * storage, and return the public URL. Falls back to a base64 data URL when
+ * Convex storage is unavailable (mock/dev mode).
+ */
+async function uploadResizedImage(file, maxW, maxH, uploadFn, quality = 0.85) {
+  const img = await new Promise((resolve, reject) => {
+    const i = new Image();
+    i.onload = () => { URL.revokeObjectURL(i.src); resolve(i); };
+    i.onerror = reject;
+    i.src = URL.createObjectURL(file);
+  });
+  const ratio = Math.min(maxW / img.width, maxH / img.height, 1);
+  const w = Math.round(img.width * ratio);
+  const h = Math.round(img.height * ratio);
+  const canvas = document.createElement('canvas');
+  canvas.width = w; canvas.height = h;
+  canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+  if (uploadFn && CONVEX_URL) {
+    const uploadUrl = await uploadFn();
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', quality));
+    const res = await fetch(uploadUrl, { method: 'POST', headers: { 'Content-Type': 'image/jpeg' }, body: blob });
+    const { storageId } = await res.json();
+    return `${CONVEX_URL}/api/storage/${storageId}`;
+  }
+  // Fallback: base64 data URL (mock / local dev without Convex storage)
+  return canvas.toDataURL('image/jpeg', quality);
+}
 import { useAuth } from '../contexts/AuthContext';
 import { useCollabs } from '../contexts/CollabContext';
 import { useSubscription } from '../contexts/SubscriptionContext';
@@ -200,25 +232,6 @@ function FoundingMemberBadge() {
       </span>
     </Tooltip>
   );
-}
-
-// ─── Image helpers ────────────────────────────────────────────────────────────
-function resizeToDataUrl(file, maxW, maxH, quality = 0.85) {
-  return new Promise((resolve) => {
-    const img = new Image();
-    const url = URL.createObjectURL(file);
-    img.onload = () => {
-      const ratio = Math.min(maxW / img.width, maxH / img.height, 1);
-      const w = Math.round(img.width * ratio);
-      const h = Math.round(img.height * ratio);
-      const canvas = document.createElement('canvas');
-      canvas.width = w; canvas.height = h;
-      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-      URL.revokeObjectURL(url);
-      resolve(canvas.toDataURL('image/jpeg', quality));
-    };
-    img.src = url;
-  });
 }
 
 // ─── Banner crop editor ───────────────────────────────────────────────────────
@@ -516,6 +529,7 @@ export default function Profile() {
   const verifySubscriptionSession = useAction(api.stripe.verifySubscriptionSession);
   const verifyLifetimeSession      = useAction(api.stripe.verifyLifetimeSession);
   const createBillingPortalSession = useAction(api.stripe.createBillingPortalSession);
+  const generateUploadUrl          = useMutation(api.uploads.generateUploadUrl);
   const { openModal: openSubModal } = useSubscription();
   const userId = profile?._id || profile?.id || 'mock-user-001';
   const serverPitchCount = useQuery(api.pitches.getCount, { userId });
@@ -1083,7 +1097,13 @@ export default function Profile() {
                     )}
                   </div>
                   <span style={{ fontSize: '0.58rem', color: 'var(--sage)', opacity: 0.7 }}>300 × 300 px</span>
-                  <input type="file" accept="image/*" style={{ display: 'none' }} onChange={async (e) => { const f = e.target.files?.[0]; if (f) { const url = await resizeToDataUrl(f, 300, 300); setEditDraft(d => ({ ...d, avatar_url: url })); } }} />
+                  <input type="file" accept="image/*" style={{ display: 'none' }} onChange={async (e) => {
+                    const f = e.target.files?.[0];
+                    if (f) {
+                      const url = await uploadResizedImage(f, 300, 300, generateUploadUrl);
+                      setEditDraft(d => ({ ...d, avatar_url: url }));
+                    }
+                  }} />
                 </label>
                 <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.4rem', padding: '0.75rem', borderRadius: '0.875rem', background: 'rgba(255,255,255,0.7)', border: '1.5px dashed rgba(60,87,89,0.25)', cursor: 'pointer', transition: 'border-color 150ms, background 150ms' }}
                   onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(60,87,89,0.5)'; e.currentTarget.style.background = 'rgba(255,255,255,0.9)'; }}
@@ -1131,7 +1151,20 @@ export default function Profile() {
       {cropEditorFile && (
         <BannerCropEditor
           file={cropEditorFile}
-          onApply={(dataUrl) => { setEditDraft(d => ({ ...d, banner_url: dataUrl })); setCropEditorFile(null); }}
+          onApply={async (dataUrl) => {
+            if (generateUploadUrl && CONVEX_URL) {
+              // Convert the cropped data URL to a blob and upload to Convex storage
+              const res = await fetch(dataUrl);
+              const blob = await res.blob();
+              const uploadUrl = await generateUploadUrl();
+              const upRes = await fetch(uploadUrl, { method: 'POST', headers: { 'Content-Type': 'image/jpeg' }, body: blob });
+              const { storageId } = await upRes.json();
+              setEditDraft(d => ({ ...d, banner_url: `${CONVEX_URL}/api/storage/${storageId}` }));
+            } else {
+              setEditDraft(d => ({ ...d, banner_url: dataUrl }));
+            }
+            setCropEditorFile(null);
+          }}
           onCancel={() => setCropEditorFile(null)}
         />
       )}

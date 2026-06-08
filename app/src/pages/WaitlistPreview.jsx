@@ -177,12 +177,6 @@ export default function WaitlistPreview() {
     <>
       <Confetti />
 
-      {/* ── HAZY background ───────────────────────────────────────────────── */}
-      <div aria-hidden="true" className="bg-layers bg-base" />
-      <div aria-hidden="true" className="bg-layers bg-gradient" />
-      <div aria-hidden="true" className="bg-layers bg-clouds" />
-      <div aria-hidden="true" className="bg-grain" />
-
       {/* ── Minimal header ────────────────────────────────────────────────── */}
       <header style={{
         position: 'fixed', top: 0, left: 0, right: 0, zIndex: 40,

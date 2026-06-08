@@ -97,14 +97,14 @@ export default function Layout({ children }) {
           position: 'fixed', top: isPending ? '1.8rem' : 0, left: 0, right: 0, zIndex: 9998,
           background: 'linear-gradient(90deg, #192524, #2d4a3e)',
           color: '#fff',
-          padding: '0.45rem 1rem',
+          padding: '0.45rem 2.5rem',
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
           flexWrap: 'wrap',
           fontSize: '0.78rem', fontWeight: 500,
           textAlign: 'center',
           boxShadow: '0 2px 8px rgba(25,37,36,0.18)',
         }}>
-          <span style={{ color: '#7ecfc4', fontWeight: 700, whiteSpace: 'nowrap' }}>🚀 {daysLeft}d to launch</span>
+          <span style={{ color: '#7ecfc4', fontWeight: 700, whiteSpace: 'nowrap' }}>🚀 {daysLeft} days to launch</span>
           <span style={{ color: 'rgba(255,255,255,0.7)' }}>·</span>
           <span style={{ whiteSpace: 'nowrap' }}>Live <strong>July 1st</strong></span>
           {userCount !== null && (
@@ -115,7 +115,7 @@ export default function Layout({ children }) {
           )}
           <button
             onClick={() => { localStorage.setItem(LAUNCH_BANNER_KEY, '1'); setBannerDismissed(true); }}
-            style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', fontSize: '0.9rem', cursor: 'pointer', lineHeight: 1, padding: '0 0.15rem', flexShrink: 0 }}
+            style={{ position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', fontSize: '1rem', cursor: 'pointer', lineHeight: 1, padding: '0.25rem 0.4rem' }}
             aria-label="Dismiss"
           >×</button>
         </div>
@@ -126,12 +126,6 @@ export default function Layout({ children }) {
 
       {/* ── Verification pending bar (fixed top) ──────────────────────────── */}
       {isPending && <PendingVerificationBanner />}
-
-      {/* ── HAZY background layers (exact match to website) ─────────────────── */}
-      <div aria-hidden="true" className="bg-layers bg-base" />
-      <div aria-hidden="true" className="bg-layers bg-gradient" />
-      <div aria-hidden="true" className="bg-layers bg-clouds" />
-      <div aria-hidden="true" className="bg-grain" />
 
       {/* ── Floating nav pill ───────────────────────────────────────────────── */}
       <AppNav />
@@ -181,7 +175,7 @@ export default function Layout({ children }) {
           </div>
           <div>
             <p style={{ fontWeight: 700, fontSize: '0.875rem', color: 'var(--ink)', margin: 0 }}>
-              Welcome, {welcomeToast.name}! 🎉
+              Welcome, {welcomeToast.name}!
             </p>
             <p style={{ fontSize: '0.78rem', color: 'var(--sage)', margin: '0.1rem 0 0' }}>
               Your account is under review — you'll hear from us within 24–48 hours.

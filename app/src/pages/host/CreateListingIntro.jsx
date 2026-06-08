@@ -16,12 +16,6 @@ export default function CreateListingIntro() {
 
   return (
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
-      {/* HAZY background layers */}
-      <div aria-hidden="true" className="bg-layers bg-base" />
-      <div aria-hidden="true" className="bg-layers bg-gradient" />
-      <div aria-hidden="true" className="bg-layers bg-clouds" />
-      <div aria-hidden="true" className="bg-grain" />
-
       {/* Top bar */}
       <div style={{ position: "relative", zIndex: 10, display: "flex", justifyContent: "space-between", alignItems: "center", padding: "20px 24px" }}>
         <button onClick={() => navigate("/host")} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--ink)" }}>

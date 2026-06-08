@@ -37,20 +37,39 @@ function useAdminGuard() {
   return { authorized, loading, profile };
 }
 
+// ─── Sidebar nav icons ────────────────────────────────────────────────────────
+const IC = (d) => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{d}</svg>
+);
+const ICONS = {
+  verification: IC(<><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></>),
+  listings:     IC(<><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></>),
+  collabs:      IC(<><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></>),
+  contracts:    IC(<><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></>),
+  founders:     IC(<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>),
+  waitlist:     IC(<><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></>),
+  broadcast:    IC(<><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.86a2 2 0 011.72-2.18h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 15.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 22"/><path d="M14.05 2a9 9 0 018 7.94M14.05 6A5 5 0 0119 10"/></>),
+  messages:     IC(<path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>),
+  suggestions:  IC(<><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17" strokeWidth="3"/></>),
+  audit:        IC(<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>),
+  analytics:    IC(<><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></>),
+  settings:     IC(<><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></>),
+};
+
 // ─── Sidebar nav items ────────────────────────────────────────────────────────
 const SECTIONS = [
-  { id: 'verification', icon: '📋', label: 'Verification Queue'     },
-  { id: 'listings',     icon: '🏠', label: 'Listing Management'     },
-  { id: 'collabs',      icon: '🤝', label: 'Collab Oversight'       },
-  { id: 'contracts',    icon: '📄', label: 'Contracts'              },
-  { id: 'founders',     icon: '🌟', label: 'Founder Tracker'        },
-  { id: 'waitlist',     icon: '📝', label: 'Waitlist Manager'       },
-  { id: 'broadcast',    icon: '📣', label: 'Broadcast'              },
-  { id: 'messages',     icon: '💬', label: 'User Messages'          },
-  { id: 'suggestions',  icon: '💡', label: 'Suggestions Moderation' },
-  { id: 'audit',        icon: '📋', label: 'Audit Log'              },
-  { id: 'analytics',    icon: '📊', label: 'Platform Analytics'     },
-  { id: 'settings',     icon: '⚙️', label: 'Settings'               },
+  { id: 'verification', label: 'Verification Queue'     },
+  { id: 'listings',     label: 'Listing Management'     },
+  { id: 'collabs',      label: 'Collab Oversight'       },
+  { id: 'contracts',    label: 'Contracts'              },
+  { id: 'founders',     label: 'Founder Tracker'        },
+  { id: 'waitlist',     label: 'Waitlist Manager'       },
+  { id: 'broadcast',    label: 'Broadcast'              },
+  { id: 'messages',     label: 'User Messages'          },
+  { id: 'suggestions',  label: 'Suggestions'            },
+  { id: 'audit',        label: 'Audit Log'              },
+  { id: 'analytics',    label: 'Platform Analytics'     },
+  { id: 'settings',     label: 'Settings'               },
 ];
 
 function VerificationPanel() { return <VerificationQueue />;    }
@@ -97,26 +116,20 @@ export default function AdminDashboard() {
 
   return (
     <>
-      {/* ── HAZY background layers ──────────────────────────────────────────── */}
-      <div aria-hidden="true" className="bg-layers bg-base" />
-      <div aria-hidden="true" className="bg-layers bg-gradient" />
-      <div aria-hidden="true" className="bg-layers bg-clouds" />
-      <div aria-hidden="true" className="bg-grain" />
-
       <div style={{ display: 'flex', minHeight: '100dvh', fontFamily: 'Satoshi, sans-serif', position: 'relative', zIndex: 10 }}>
 
         {/* ── Sidebar ─────────────────────────────────────────────────────────── */}
         <aside style={{
           width: 232,
           flexShrink: 0,
-          background: 'rgba(255,255,255,0.72)',
-          backdropFilter: 'blur(20px)',
-          WebkitBackdropFilter: 'blur(20px)',
-          borderRight: '1px solid rgba(255,255,255,0.55)',
+          background: 'rgba(255,255,255,0.60)',
+          backdropFilter: 'blur(24px) saturate(160%)',
+          WebkitBackdropFilter: 'blur(24px) saturate(160%)',
+          borderRight: '1px solid rgba(255,255,255,0.65)',
           display: 'flex',
           flexDirection: 'column',
           padding: '1.5rem 0',
-          boxShadow: '2px 0 16px rgba(25,37,36,0.05)',
+          boxShadow: 'inset -1px 0 0 rgba(255,255,255,0.5), 2px 0 20px rgba(25,37,36,0.06)',
         }}>
           {/* Logo / wordmark */}
           <div style={{ padding: '0 1.25rem 1.25rem', borderBottom: '1px solid rgba(25,37,36,0.07)' }}>
@@ -169,7 +182,7 @@ export default function AdminDashboard() {
                   onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'rgba(255,255,255,0.5)'; }}
                   onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent'; }}
                 >
-                  <span style={{ fontSize: '1rem', lineHeight: 1 }}>{s.icon}</span>
+                  <span style={{ display: 'flex', alignItems: 'center', color: active ? '#192524' : '#3C5759', opacity: active ? 1 : 0.7 }}>{ICONS[s.id]}</span>
                   <span style={{ flex: 1 }}>{s.label}</span>
                   {badges[s.id] > 0 && (
                     <span style={{ fontSize: '0.65rem', fontWeight: 700, background: '#D1EBDB', color: '#166534', borderRadius: '99px', padding: '0 0.4rem', lineHeight: 1.7 }}>
@@ -192,15 +205,15 @@ export default function AdminDashboard() {
           {/* Top bar */}
           <div style={{
             height: 52,
-            borderBottom: '1px solid rgba(255,255,255,0.4)',
-            background: 'rgba(255,255,255,0.55)',
-            backdropFilter: 'blur(16px)',
-            WebkitBackdropFilter: 'blur(16px)',
+            borderBottom: '1px solid rgba(255,255,255,0.45)',
+            background: 'rgba(255,255,255,0.48)',
+            backdropFilter: 'blur(18px) saturate(150%)',
+            WebkitBackdropFilter: 'blur(18px) saturate(150%)',
             display: 'flex', alignItems: 'center',
             padding: '0 2rem', gap: '0.75rem',
           }}>
-            <span style={{ fontSize: '0.8rem', color: '#959D90' }}>
-              {SECTIONS.find(s => s.id === activeSection)?.icon}{' '}
+            <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', color: '#959D90' }}>
+              <span style={{ display: 'flex', alignItems: 'center' }}>{ICONS[activeSection]}</span>
               {SECTIONS.find(s => s.id === activeSection)?.label}
             </span>
           </div>
@@ -208,12 +221,12 @@ export default function AdminDashboard() {
           {/* Panel content — glass card wrapper */}
           <div style={{ padding: '1.5rem', minHeight: 'calc(100dvh - 52px)' }}>
             <div style={{
-              background: 'rgba(255,255,255,0.72)',
-              backdropFilter: 'blur(20px)',
-              WebkitBackdropFilter: 'blur(20px)',
+              background: 'rgba(255,255,255,0.58)',
+              backdropFilter: 'blur(24px) saturate(160%)',
+              WebkitBackdropFilter: 'blur(24px) saturate(160%)',
               borderRadius: '1.25rem',
-              border: '1px solid rgba(255,255,255,0.6)',
-              boxShadow: '0 4px 24px rgba(25,37,36,0.06)',
+              border: '1px solid rgba(255,255,255,0.72)',
+              boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.9), 0 8px 32px rgba(25,37,36,0.08)',
               overflow: 'hidden',
               minHeight: 'calc(100dvh - 52px - 3rem)',
             }}>

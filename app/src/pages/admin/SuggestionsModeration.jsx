@@ -6,10 +6,10 @@ import { formatDate } from '../../lib/dateUtils';
 const STATUSES = ['All', 'Pending', 'Approved', 'Implemented', 'Rejected'];
 
 const STATUS_META = {
-  pending:     { label: 'Pending',     bg: '#F7F5F2', color: '#3C5759' },
-  approved:    { label: '⭐ Featured', bg: '#FEF3C7', color: '#92400E' },
-  implemented: { label: '✅ Done',     bg: '#D1FAE5', color: '#166534' },
-  rejected:    { label: 'Hidden',      bg: '#FEE2E2', color: '#991B1B' },
+  pending:     { label: 'Pending',    bg: '#F7F5F2', color: '#3C5759' },
+  approved:    { label: 'Featured',   bg: '#FEF3C7', color: '#92400E' },
+  implemented: { label: 'Done',       bg: '#D1FAE5', color: '#166534' },
+  rejected:    { label: 'Hidden',     bg: '#FEE2E2', color: '#991B1B' },
 };
 
 function statusMeta(s) {
@@ -47,8 +47,25 @@ function ActionBtn({ onClick, children, variant = 'default' }) {
 
 export default function SuggestionsModeration() {
   const [filter, setFilter] = useState('All');
+  const [newText, setNewText] = useState('');
+  const [adding, setAdding] = useState(false);
   const suggestions = useQuery(api.suggestions.getAdminSuggestions);
   const updateStatus = useMutation(api.suggestions.updateStatus);
+  const submitSuggestion = useMutation(api.suggestions.submitSuggestion);
+
+  async function handleAdd(e) {
+    e.preventDefault();
+    const trimmed = newText.trim();
+    if (!trimmed) return;
+    setAdding(true);
+    try {
+      const id = await submitSuggestion({ text: trimmed });
+      await updateStatus({ suggestionId: id, status: 'approved' });
+      setNewText('');
+    } finally {
+      setAdding(false);
+    }
+  }
 
   const filtered = (suggestions || []).filter(s => {
     if (filter === 'All') return true;
@@ -68,6 +85,39 @@ export default function SuggestionsModeration() {
       <p style={{ fontSize: '0.85rem', color: '#959D90', marginTop: '0.3rem', marginBottom: '1.25rem' }}>
         Review user-submitted feature requests. Featured and implemented suggestions appear with badges in the public Help Center.
       </p>
+
+      {/* ── Add suggestion ── */}
+      <form onSubmit={handleAdd} style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.25rem' }}>
+        <input
+          type="text"
+          value={newText}
+          onChange={(e) => setNewText(e.target.value)}
+          placeholder="Add a suggestion as admin (auto-featured)…"
+          maxLength={200}
+          style={{
+            flex: 1, padding: '0.5rem 0.875rem',
+            background: 'rgba(255,255,255,0.7)',
+            border: '1px solid rgba(25,37,36,0.1)', borderRadius: '0.5rem',
+            fontFamily: 'inherit', fontSize: '0.875rem', color: '#192524', outline: 'none',
+          }}
+          onFocus={(e) => { e.target.style.borderColor = 'rgba(25,37,36,0.25)'; }}
+          onBlur={(e) => { e.target.style.borderColor = 'rgba(25,37,36,0.1)'; }}
+        />
+        <button
+          type="submit"
+          disabled={!newText.trim() || adding}
+          style={{
+            padding: '0.5rem 1.125rem', borderRadius: '0.5rem', border: 'none',
+            background: newText.trim() ? '#192524' : 'rgba(25,37,36,0.12)',
+            color: newText.trim() ? '#F7F5F2' : '#959D90',
+            fontFamily: 'inherit', fontSize: '0.875rem', fontWeight: 600,
+            cursor: newText.trim() && !adding ? 'pointer' : 'default',
+            transition: 'background 150ms, color 150ms', whiteSpace: 'nowrap',
+          }}
+        >
+          {adding ? '…' : 'Add + Feature'}
+        </button>
+      </form>
 
       {/* ── Filter bar ── */}
       <div style={{ display: 'flex', gap: '0.25rem', marginBottom: '1.25rem', background: '#F7F5F2', padding: '0.2rem', borderRadius: '0.5rem', width: 'fit-content', border: '1px solid rgba(25,37,36,0.06)' }}>
@@ -162,10 +212,10 @@ export default function SuggestionsModeration() {
                 {/* Actions */}
                 <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
                   {currentStatus !== 'approved' && (
-                    <ActionBtn variant="star" onClick={() => setStatus(s._id, 'approved')}>⭐</ActionBtn>
+                    <ActionBtn variant="star" onClick={() => setStatus(s._id, 'approved')}>Feature</ActionBtn>
                   )}
                   {currentStatus !== 'implemented' && (
-                    <ActionBtn variant="check" onClick={() => setStatus(s._id, 'implemented')}>✅</ActionBtn>
+                    <ActionBtn variant="check" onClick={() => setStatus(s._id, 'implemented')}>Done</ActionBtn>
                   )}
                   {currentStatus !== 'rejected' && (
                     <ActionBtn variant="hide" onClick={() => setStatus(s._id, 'rejected')}>Hide</ActionBtn>

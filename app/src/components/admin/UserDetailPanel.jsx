@@ -79,8 +79,25 @@ export default function UserDetailPanel({ profileId, onClose }) {
   const [activeTab, setActiveTab] = useState('overview');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [granting, setGranting] = useState(false);
+  const [granted, setGranted] = useState(false);
   const data = useQuery(api.profiles.getDetailedProfile, profileId ? { profileId } : 'skip');
   const deleteProfile = useMutation(api.profiles.deleteProfile);
+  const approveProfile = useMutation(api.profiles.approveProfile);
+
+  const handleGrantAccess = useCallback(async () => {
+    if (!profileId) return;
+    setGranting(true);
+    try {
+      await approveProfile({ profileId: String(profileId) });
+      setGranted(true);
+    } catch (err) {
+      alert('Failed to grant access. Check console for details.');
+      console.error(err);
+    } finally {
+      setGranting(false);
+    }
+  }, [profileId, approveProfile]);
 
   const handleDelete = useCallback(async () => {
     if (!profileId) return;
@@ -141,7 +158,7 @@ export default function UserDetailPanel({ profileId, onClose }) {
                       ? <Badge bg="#DCFCE7" color="#166534">✓ Verified</Badge>
                       : <Badge bg="#FEF3C7" color="#B45309">Unverified</Badge>
                     }
-                    {data.profile.is_founder && <Badge bg={MINT} color="#166534">🌟 Founder</Badge>}
+                    {data.profile.is_founder && <Badge bg={MINT} color="#166534">Founder</Badge>}
                   </div>
                   <div style={{ fontSize: '0.78rem', color: SAGE, marginTop: '0.15rem' }}>
                     @{data.profile.username} · {data.profile.email}
@@ -160,8 +177,10 @@ export default function UserDetailPanel({ profileId, onClose }) {
           {/* Close button */}
           <button
             onClick={onClose}
-            style={{ width: 32, height: 32, borderRadius: '50%', background: BONE, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: SAGE, fontSize: '1rem', lineHeight: 1 }}
-          >✕</button>
+            style={{ width: 32, height: 32, borderRadius: '50%', background: BONE, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: SAGE }}
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
         </div>
 
         {/* ── Tab bar ── */}
@@ -209,6 +228,44 @@ export default function UserDetailPanel({ profileId, onClose }) {
           ) : (
             <>
               <TabContent tab={activeTab} data={data} />
+
+              {/* ── Grant Access (waitlist users only) ── */}
+              {data.profile.tier === 'waitlist' && !granted && (
+                <div style={{
+                  marginTop: '2rem',
+                  padding: '1rem 1.25rem',
+                  background: 'rgba(209,235,219,0.3)',
+                  border: '1px solid rgba(74,155,127,0.25)',
+                  borderRadius: '0.75rem',
+                }}>
+                  <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#166534', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.5rem' }}>
+                    Waitlist Action
+                  </div>
+                  <p style={{ fontSize: '0.78rem', color: '#14532D', margin: '0 0 0.75rem', lineHeight: 1.5 }}>
+                    Approve this user, grant full access, and send them the welcome email. Sets verified status and auto-assigns founder badge if under 100 for their role.
+                  </p>
+                  <button
+                    onClick={handleGrantAccess}
+                    disabled={granting}
+                    style={{
+                      padding: '0.45rem 1.125rem', borderRadius: '0.5rem',
+                      background: '#166534', color: '#fff', fontSize: '0.82rem',
+                      fontWeight: 600, border: 'none',
+                      cursor: granting ? 'not-allowed' : 'pointer',
+                      fontFamily: 'inherit', opacity: granting ? 0.7 : 1,
+                      transition: 'opacity 150ms',
+                    }}
+                  >
+                    {granting ? 'Granting…' : 'Grant Access'}
+                  </button>
+                </div>
+              )}
+              {granted && (
+                <div style={{ marginTop: '2rem', padding: '1rem 1.25rem', background: 'rgba(209,235,219,0.5)', border: '1px solid rgba(74,155,127,0.3)', borderRadius: '0.75rem', fontSize: '0.82rem', color: '#166534', fontWeight: 600 }}>
+                  Access granted. Welcome email sent.
+                </div>
+              )}
+
               {/* ── Danger Zone ── */}
               <div style={{
                 marginTop: '2rem',
@@ -217,8 +274,9 @@ export default function UserDetailPanel({ profileId, onClose }) {
                 border: '1px solid rgba(239,68,68,0.2)',
                 borderRadius: '0.75rem',
               }}>
-                <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#991B1B', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.5rem' }}>
-                  ⚠️ Danger Zone
+                <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#991B1B', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17" strokeWidth="3"/></svg>
+                  Danger Zone
                 </div>
                 <p style={{ fontSize: '0.78rem', color: '#7F1D1D', margin: '0 0 0.75rem', lineHeight: 1.5 }}>
                   Permanently delete this user and all associated data (collabs, pitches, messages, referral codes).
@@ -291,7 +349,7 @@ function TabContent({ tab, data }) {
             <Stat label="Engagement Rate"   value={p.engagement_rate ? `${p.engagement_rate}%` : '—'} />
             <Stat label="Collab Count"      value={data.collabCount ?? 0} />
             <Stat label="Tier"              value={p.tier || '—'} />
-            <Stat label="First Collab"      value={p.first_collab_completed ? '✅ Completed' : '⏳ Not yet'} />
+            <Stat label="First Collab"      value={p.first_collab_completed ? 'Completed' : 'Not yet'} />
           </Section>
 
           <Section title="Pitch Usage This Month">
@@ -312,11 +370,11 @@ function TabContent({ tab, data }) {
           </Section>
 
           <Section title="Status">
-            <Stat label="Verified"          value={p.is_verified ? '✅ Yes' : '❌ No'} />
-            <Stat label="Founder"           value={p.is_founder ? '🌟 Yes' : '—'} />
-            <Stat label="Beta Tester"       value={p.beta ? '✅ Yes' : '—'} />
-            <Stat label="Rejected"          value={p.is_rejected ? `❌ Yes — ${p.rejection_reason || 'No reason given'}` : '—'} />
-            <Stat label="Clerk Registered"  value={p.clerk_registered ? '✅ Yes' : '—'} />
+            <Stat label="Verified"          value={p.is_verified ? 'Yes' : 'No'} accent={p.is_verified ? '#166534' : '#991B1B'} />
+            <Stat label="Founder"           value={p.is_founder ? 'Yes' : '—'} accent={p.is_founder ? '#166534' : undefined} />
+            <Stat label="Beta Tester"       value={p.beta ? 'Yes' : '—'} />
+            <Stat label="Rejected"          value={p.is_rejected ? `Yes — ${p.rejection_reason || 'No reason given'}` : '—'} accent={p.is_rejected ? '#991B1B' : undefined} />
+            <Stat label="Clerk Registered"  value={p.clerk_registered ? 'Yes' : '—'} />
             {p.banner_url && <Stat label="Banner Image" value="Uploaded" />}
           </Section>
         </>
@@ -404,7 +462,7 @@ function TabContent({ tab, data }) {
             <Stat label="Referred By" value={data.referrerOwnerId ? `User ID: ${data.referrerOwnerId.slice(0, 12)}…` : '—'} />
             <Stat label="Total Referrals" value={data.totalReferrals ?? 0} />
             <Stat label="Free Months Balance" value={data.freeMonthsBalance ?? 0} />
-            <Stat label="Collab Bonus Pending" value={p.referral_bonus_pending ? '⏳ Pending' : '—'} />
+            <Stat label="Collab Bonus Pending" value={p.referral_bonus_pending ? 'Pending' : '—'} />
           </Section>
 
           {data.referralCodes?.length > 0 && (

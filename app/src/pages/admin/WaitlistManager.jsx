@@ -37,8 +37,8 @@ export default function WaitlistManager() {
     return <div style={{ padding: '3rem', textAlign: 'center', color: SAGE, fontSize: '0.85rem' }}>Loading…</div>;
   }
 
-  // Waitlist = profiles with tier 'waitlist'
-  const waitlist = allProfiles.filter((p) => p.tier === 'waitlist');
+  // Waitlist = profiles with tier 'waitlist' who haven't been approved yet
+  const waitlist = allProfiles.filter((p) => p.tier === 'waitlist' && !p.is_verified);
 
   const filtered = waitlist
     .filter((p) => roleFilter === 'all' || p.role === roleFilter)
@@ -128,8 +128,8 @@ export default function WaitlistManager() {
         <div style={{ display: 'flex', gap: '0.35rem' }}>
           {[
             { key: 'all',         label: 'All Status' },
-            { key: 'no_account',  label: '⚠ No Account' },
-            { key: 'has_account', label: '✓ Has Account' },
+            { key: 'no_account',  label: 'No Account' },
+            { key: 'has_account', label: 'Has Account' },
           ].map(({ key, label }) => (
             <button
               key={key}
@@ -169,7 +169,7 @@ export default function WaitlistManager() {
             fontFamily: 'inherit', transition: 'all 0.2s', whiteSpace: 'nowrap',
           }}
         >
-          {copied ? '✓ Copied!' : `📋 Copy ${filtered.length} emails`}
+          {copied ? 'Copied!' : `Copy ${filtered.length} emails`}
         </button>
       </div>
 
@@ -241,7 +241,7 @@ export default function WaitlistManager() {
                   {/* Tags */}
                   <td style={{ padding: '0.875rem 1rem' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
-                      {p.is_founder && <Badge bg={MINT} color="#166534">🌟 Founder</Badge>}
+                      {p.is_founder && <Badge bg={MINT} color="#166534">Founder</Badge>}
                       {p.beta       && <Badge bg="#F3E8FF" color="#7E22CE">Beta</Badge>}
                     </div>
                   </td>
@@ -251,9 +251,9 @@ export default function WaitlistManager() {
                     <button
                       onClick={() => mailOne(p.email, p.full_name)}
                       title={`Email ${p.full_name}`}
-                      style={{ padding: '0.3rem 0.6rem', borderRadius: '0.375rem', background: '#fff', border: '1px solid rgba(25,37,36,0.12)', cursor: 'pointer', fontSize: '0.78rem', color: SLATE, fontFamily: 'inherit' }}
+                      style={{ padding: '0.3rem 0.5rem', borderRadius: '0.375rem', background: '#fff', border: '1px solid rgba(25,37,36,0.12)', cursor: 'pointer', color: SLATE, display: 'flex', alignItems: 'center' }}
                     >
-                      ✉️
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
                     </button>
                   </td>
                 </tr>

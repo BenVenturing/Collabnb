@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useQuery } from 'convex/react';
+import { api } from '../../convex/_generated/api';
 import { useAuth } from '../contexts/AuthContext';
 
 const KEY_PREFIX = 'collabnb_onboarding_v3';
@@ -9,14 +11,16 @@ const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL;
 function userKeys(userId) {
   if (!userId) return null;
   return {
-    dismissed: `${KEY_PREFIX}_dismissed_${userId}`,
-    collapsed:  `${KEY_PREFIX}_collapsed_${userId}`,
-    seen:       `${KEY_PREFIX}_seen_${userId}`,
-    shared:     `${KEY_PREFIX}_shared_${userId}`,
+    dismissed:       `${KEY_PREFIX}_dismissed_${userId}`,
+    collapsed:       `${KEY_PREFIX}_collapsed_${userId}`,
+    seen:            `${KEY_PREFIX}_seen_${userId}`,
+    shared:          `${KEY_PREFIX}_shared_${userId}`,
+    explored:        `${KEY_PREFIX}_explored_${userId}`,
+    browsedCreators: `${KEY_PREFIX}_browsedcreators_${userId}`,
   };
 }
 
-function creatorSteps(profile, isFirstVisit, hasShared) {
+function creatorSteps(profile, isFirstVisit, hasShared, hasExplored) {
   return [
     {
       id: 'photo',
@@ -39,7 +43,7 @@ function creatorSteps(profile, isFirstVisit, hasShared) {
     {
       id: 'explore',
       label: 'Browse sample listings',
-      done: false,
+      done: hasExplored,
       action: { label: 'Browse listings', path: '/explore' },
     },
     {
@@ -52,12 +56,12 @@ function creatorSteps(profile, isFirstVisit, hasShared) {
   ];
 }
 
-function hostSteps(profile, isFirstVisit, hasShared) {
+function hostSteps(profile, isFirstVisit, hasShared, hasListing, hasBrowsedCreators) {
   return [
     {
       id: 'listing',
       label: 'Create your first listing',
-      done: false,
+      done: hasListing,
       action: { label: 'Create listing', path: '/host/listings/create' },
     },
     {
@@ -69,7 +73,7 @@ function hostSteps(profile, isFirstVisit, hasShared) {
     {
       id: 'creators',
       label: 'Browse creators who match your vibe',
-      done: false,
+      done: hasBrowsedCreators,
       action: { label: 'Discover creators', path: '/host/creators' },
     },
     {
@@ -87,7 +91,7 @@ function hostSteps(profile, isFirstVisit, hasShared) {
  */
 export function getChecklistProgress(profile) {
   const isHost = profile?.role === 'host';
-  const raw = isHost ? hostSteps(profile, false, false) : creatorSteps(profile, false, false);
+  const raw = isHost ? hostSteps(profile, false, false, false, false) : creatorSteps(profile, false, false, false);
   const required = raw.filter(s => !s.optional);
   return { completed: required.filter(s => s.done).length, total: required.length };
 }
@@ -101,19 +105,30 @@ export function reopenChecklist() {
 export default function OnboardingChecklist() {
   const { profile } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   // Derive stable user ID — String() so Convex Id object becomes a plain string
   const userId = profile?._id ? String(profile._id) : null;
 
   // All checklist state starts fresh (blank slate for every new user context).
   // A useEffect below syncs from per-user localStorage once userId is known.
-  const [dismissed,    setDismissed]    = useState(false);
-  const [collapsed,    setCollapsed]    = useState(false);
-  const [visible,      setVisible]      = useState(false);
-  const [entered,      setEntered]      = useState(false);
-  const [unchecked,    setUnchecked]    = useState({});
-  const [isFirstVisit, setIsFirstVisit] = useState(true);
-  const [hasShared,    setHasShared]    = useState(false);
+  const [dismissed,          setDismissed]          = useState(false);
+  const [collapsed,          setCollapsed]          = useState(false);
+  const [visible,            setVisible]            = useState(false);
+  const [entered,            setEntered]            = useState(false);
+  const [unchecked,          setUnchecked]          = useState({});
+  const [isFirstVisit,       setIsFirstVisit]       = useState(true);
+  const [hasShared,          setHasShared]          = useState(false);
+  const [hasExplored,        setHasExplored]        = useState(false);
+  const [hasBrowsedCreators, setHasBrowsedCreators] = useState(false);
+
+  const isHost = profile?.role === 'host';
+  // Query whether this host has created any listings yet
+  const hostListings = useQuery(
+    api.listings.getByHost,
+    isHost && userId ? { host_id: String(userId) } : 'skip'
+  );
+  const hasListing = isHost && (hostListings?.length ?? 0) > 0;
 
   // Track the last userId we loaded so we reset state on account switch
   const loadedForUser = useRef(null);
@@ -129,11 +144,27 @@ export default function OnboardingChecklist() {
     setCollapsed(localStorage.getItem(k.collapsed) === '1');
     setIsFirstVisit(localStorage.getItem(k.seen) !== '1');
     setHasShared(localStorage.getItem(k.shared) === '1');
+    setHasExplored(localStorage.getItem(k.explored) === '1');
+    setHasBrowsedCreators(localStorage.getItem(k.browsedCreators) === '1');
     // Always clear unchecked overrides on account switch
     setUnchecked({});
     setVisible(false);
     setEntered(false);
   }, [userId]);
+
+  // Auto-complete page-visit steps when user navigates to those routes
+  useEffect(() => {
+    if (!userId) return;
+    const k = userKeys(userId);
+    if (location.pathname === '/explore' && localStorage.getItem(k.explored) !== '1') {
+      localStorage.setItem(k.explored, '1');
+      setHasExplored(true);
+    }
+    if (location.pathname === '/host/creators' && localStorage.getItem(k.browsedCreators) !== '1') {
+      localStorage.setItem(k.browsedCreators, '1');
+      setHasBrowsedCreators(true);
+    }
+  }, [location.pathname, userId]);
 
   // Register reopen listener (uses current userId closure)
   useEffect(() => {
@@ -155,10 +186,9 @@ export default function OnboardingChecklist() {
     ? userEmail === ADMIN_EMAIL.toLowerCase()
     : userEmail === 'benventuring@gmail.com';
 
-  const isHost = profile?.role === 'host';
   const rawSteps = isHost
-    ? hostSteps(profile, isFirstVisit, hasShared)
-    : creatorSteps(profile, isFirstVisit, hasShared);
+    ? hostSteps(profile, isFirstVisit, hasShared, hasListing, hasBrowsedCreators)
+    : creatorSteps(profile, isFirstVisit, hasShared, hasExplored);
 
   const steps = rawSteps.map(s => ({ ...s, done: s.done && !unchecked[s.id] }));
   const requiredSteps     = steps.filter(s => !s.optional);
@@ -288,7 +318,7 @@ export default function OnboardingChecklist() {
             </text>
           </svg>
           <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--ink, #192524)' }}>
-            {allDone ? '🎉 All done!' : 'Account setup'}
+            {allDone ? 'All done!' : 'Account setup'}
           </span>
           {!allDone && (
             <span style={{
@@ -321,7 +351,7 @@ export default function OnboardingChecklist() {
               color: 'var(--ink, #192524)', margin: 0,
               whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
             }}>
-              {allDone ? '🎉 You\'re all set!' : 'Complete your setup'}
+              {allDone ? 'You\'re all set!' : 'Complete your setup'}
             </p>
             <p style={{ fontSize: '0.75rem', color: 'var(--slate, #3C5759)', margin: '0.125rem 0 0' }}>
               {requiredCompleted}/{requiredTotal} steps complete
@@ -348,9 +378,17 @@ export default function OnboardingChecklist() {
               </svg>
             </button>
             <button
-              onClick={handleClose}
-              aria-label={allDone ? 'Dismiss checklist' : 'Minimize checklist'}
-              title={allDone ? 'Dismiss' : 'Minimize'}
+              onClick={() => {
+                if (!userId) return;
+                const k = userKeys(userId);
+                setEntered(false);
+                setTimeout(() => {
+                  localStorage.setItem(k.dismissed, '1');
+                  setDismissed(true);
+                }, 280);
+              }}
+              aria-label="Dismiss checklist"
+              title="Dismiss"
               style={{
                 background: 'none', border: 'none', cursor: 'pointer',
                 color: 'var(--sage, #959D90)', width: 28, height: 28,
@@ -361,16 +399,10 @@ export default function OnboardingChecklist() {
               onMouseEnter={e => e.currentTarget.style.background = 'rgba(231,76,60,0.08)'}
               onMouseLeave={e => e.currentTarget.style.background = 'none'}
             >
-              {allDone ? (
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round">
-                  <line x1="1" y1="1" x2="11" y2="11" />
-                  <line x1="11" y1="1" x2="1" y2="11" />
-                </svg>
-              ) : (
-                <svg width="12" height="12" viewBox="0 0 12 4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                  <line x1="1" y1="2" x2="11" y2="2" />
-                </svg>
-              )}
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round">
+                <line x1="1" y1="1" x2="11" y2="11" />
+                <line x1="11" y1="1" x2="1" y2="11" />
+              </svg>
             </button>
           </div>
         </div>
@@ -399,6 +431,11 @@ export default function OnboardingChecklist() {
             return (
               <div
                 key={step.id}
+                onClick={() => {
+                  if (step.done) return;
+                  if (step.action.type === 'share') { handleShare(); return; }
+                  if (step.action.path) navigate(step.action.path);
+                }}
                 style={{
                   display: 'flex', alignItems: 'center', gap: '0.625rem',
                   padding: '0.5rem 0.625rem',
@@ -406,7 +443,10 @@ export default function OnboardingChecklist() {
                   background: step.done ? 'rgba(209,235,219,0.4)' : 'rgba(255,255,255,0.5)',
                   border: `1px solid ${step.done ? 'rgba(152,202,169,0.4)' : 'rgba(208,213,206,0.6)'}`,
                   transition: 'background 200ms',
+                  cursor: step.done ? 'default' : 'pointer',
                 }}
+                onMouseEnter={e => { if (!step.done) e.currentTarget.style.background = 'rgba(60,87,89,0.06)'; }}
+                onMouseLeave={e => { if (!step.done) e.currentTarget.style.background = 'rgba(255,255,255,0.5)'; }}
               >
                 {/* Check circle — clickable to toggle completed steps */}
                 <button

@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { useAuth } from '../contexts/AuthContext';
-import { formatDate } from '../lib/dateUtils';
 
 // ─── FAQ data ──────────────────────────────────────────────────────────────────
 const FAQ_SECTIONS = [
@@ -19,7 +18,7 @@ const FAQ_SECTIONS = [
       },
       {
         q: "Can I apply for collabs if I'm a small creator?",
-        a: "Yes. Collabnb was explicitly built with beginner tiers: UGC Beginner (building a portfolio, no follower requirement) and UGC Pro (paid UGC output, not necessarily a large following). Follower count isn't the only metric.\n\nA focused UGC creator producing high-quality vertical video for boutique properties is exactly what many hosts want — even with 2,000 followers. Quality of output and fit matter more than size.",
+        a: "Yes. Collabnb was explicitly built with beginner tiers: UGC Beginner (under 5K followers, building a portfolio) and UGC Pro (5K–20K followers, paid UGC output). Follower count isn't the only metric.\n\nA focused UGC creator producing high-quality vertical video for boutique properties is exactly what many hosts want — even with 2,000 followers. Quality of output and fit matter more than size.",
       },
       {
         q: 'I run a boutique property — how do I post a collab listing?',
@@ -57,7 +56,7 @@ const FAQ_SECTIONS = [
     items: [
       {
         q: 'What are the creator tiers?',
-        a: 'Collabnb has four tiers based on follower count:\n• UGC Beginner — under 5K followers\n• UGC Pro — 5K to 20K followers\n• Micro Influencer — 5K to 50K followers\n• Influencer — 50K+ followers\n\nTier affects which listings you can apply to.',
+        a: 'Collabnb has four tiers. UGC tiers are content-output tracks; Influencer tiers are audience-reach tracks:\n• UGC Beginner — under 5K followers, building a portfolio\n• UGC Pro — paid UGC producer, typically 5K–20K followers\n• Micro Influencer — 5K to 50K followers, audience-reach focus\n• Influencer — 50K+ followers\n\nTier affects which listings you can apply to. Hosts set minimum tier requirements per listing.',
       },
       {
         q: 'How do I know which tier I qualify for?',
@@ -488,10 +487,16 @@ function SuggestionsTab({ userId }) {
                   {s.text}
                 </p>
                 {s.status === 'approved' && (
-                  <span style={{ fontSize: '0.7rem', color: '#92400E', background: '#FEF3C7', padding: '0.1rem 0.45rem', borderRadius: '99px', display: 'inline-block', marginTop: '0.35rem' }}>⭐ Featured</span>
+                  <span style={{ fontSize: '0.7rem', color: '#92400E', background: 'rgba(212,168,67,0.15)', padding: '0.1rem 0.45rem', borderRadius: '99px', display: 'inline-flex', alignItems: 'center', gap: '0.2rem', marginTop: '0.35rem' }}>
+                    <svg viewBox="0 0 16 16" width="8" height="8" fill="currentColor"><path d="M8 1l1.85 3.75L14 5.5l-3 2.92.7 4.08L8 10.4l-3.7 2.1.7-4.08L2 5.5l4.15-.75z"/></svg>
+                    Featured
+                  </span>
                 )}
                 {s.status === 'implemented' && (
-                  <span style={{ fontSize: '0.7rem', color: '#166534', background: '#D1FAE5', padding: '0.1rem 0.45rem', borderRadius: '99px', display: 'inline-block', marginTop: '0.35rem' }}>✅ Implemented</span>
+                  <span style={{ fontSize: '0.7rem', color: '#166534', background: '#D1FAE5', padding: '0.1rem 0.45rem', borderRadius: '99px', display: 'inline-flex', alignItems: 'center', gap: '0.2rem', marginTop: '0.35rem' }}>
+                    <svg viewBox="0 0 16 16" width="8" height="8" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 8 6.5 11.5 13 4.5"/></svg>
+                    Implemented
+                  </span>
                 )}
               </div>
 

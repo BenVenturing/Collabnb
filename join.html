@@ -95,7 +95,7 @@
         <!-- Main CTA -->
         <div style="margin-top:2.5rem;" class="reveal" style="transition-delay:360ms;">
           <button class="btn-primary btn-open-modal" id="join-cta" style="font-size:1.05rem;padding:1rem 2.25rem;">
-            Finalize your creator profile →
+            Join the waitlist →
           </button>
         </div>
 
@@ -291,13 +291,28 @@
         </div>
       </div>
 
-      <!-- Suppress Clerk's redundant logo inside the embedded component -->
+      <!-- Clerk component styling overrides -->
       <style>
         #wl-clerk-mount .cl-logoBox,
         #wl-clerk-mount .cl-logo,
         #wl-clerk-mount .cl-logoImage { display: none !important; }
         #wl-clerk-mount .cl-card { box-shadow: none !important; border: none !important; padding: 0 !important; }
         #wl-clerk-mount .cl-cardBox { box-shadow: none !important; }
+        /* Fix dark footer background */
+        #wl-clerk-mount .cl-footer,
+        #wl-clerk-mount .cl-footerAction,
+        #wl-clerk-mount .cl-footerPages,
+        #wl-clerk-mount [class*="cl-footer"] {
+          background: transparent !important;
+          background-color: transparent !important;
+          box-shadow: none !important;
+        }
+        #wl-clerk-mount .cl-footerActionText { color: var(--sage) !important; font-size: 0.8125rem !important; }
+        #wl-clerk-mount .cl-footerActionLink { color: var(--ink) !important; font-size: 0.8125rem !important; }
+        #wl-clerk-mount .cl-footerPagesLink  { color: var(--sage) !important; font-size: 0.72rem !important; }
+        /* Modal role-toggle — prevent pill clipping */
+        #modal-role-section .role-toggle { display: flex !important; width: 100%; box-sizing: border-box; margin-top: 0 !important; }
+        #modal-role-section .role-btn    { flex: 1; }
       </style>
 
       <!-- ── Clerk sign-up area ───────────────────────────────────────────-->

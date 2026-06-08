@@ -6,6 +6,7 @@ import { getProfileCounts, waitlistSignUp, updateWaitlistProfile } from './conve
 
 const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL;
 let signedUpName = '';
+let _hasJoinedWaitlist = !!localStorage.getItem('collabnb_waitlist_email');
 
 /* ── Lazy Clerk instance (shared across initNavAuth, submitForm, login) ── */
 let _clerkPromise = null;
@@ -351,9 +352,19 @@ async function openModal() {
   overlay.setAttribute('aria-hidden', 'false');
   document.body.style.overflow = 'hidden';
   _wizardProfileId = null;
-  _wizardEmail = '';
-  _wizardName = '';
   const roleSection = document.getElementById('modal-role-section');
+
+  if (_hasJoinedWaitlist) {
+    _wizardEmail = localStorage.getItem('collabnb_waitlist_email') || '';
+    _wizardName  = localStorage.getItem('collabnb_waitlist_name')  || '';
+    currentRole  = localStorage.getItem('collabnb_waitlist_role')  || currentRole;
+    if (roleSection) roleSection.style.display = 'none';
+    showWizardStep(2);
+    return;
+  }
+
+  _wizardEmail = '';
+  _wizardName  = '';
   if (roleSection) roleSection.style.display = '';
   // Sync page-level role selection into modal
   const activePageBtn = document.querySelector('#page-role-creator.active, #page-role-host.active');
@@ -390,7 +401,7 @@ function showWizardStep(step) {
           <input class="form-input" type="email" id="wl-email" placeholder="jane@example.com" autocomplete="email" required value="${savedEmail.replace(/"/g,'&quot;')}" />
         </div>
         <label style="display:flex;align-items:flex-start;gap:0.625rem;cursor:pointer;padding:0.75rem;background:rgba(255,255,255,0.5);border:1px solid rgba(208,213,206,0.7);border-radius:0.875rem;">
-          <input type="checkbox" id="wl-consent" required style="margin-top:2px;flex-shrink:0;accent-color:var(--slate,#3C5759);width:15px;height:15px;" />
+          <input type="checkbox" id="wl-consent" style="margin-top:2px;flex-shrink:0;accent-color:var(--slate,#3C5759);width:15px;height:15px;" />
           <span style="font-size:0.82rem;color:var(--slate,#3C5759);line-height:1.45;">I'm cool with the occasional helpful email — no spam, no daily newsletters, just the good stuff. Pinky promise 🤙</span>
         </label>
         <button type="submit" id="wl-submit" class="btn-primary" style="width:100%;cursor:pointer;">Save my spot →</button>
@@ -593,6 +604,9 @@ async function handleStep1Submit(e) {
     localStorage.setItem('collabnb_waitlist_email', email);
     launchConfetti();
     initCounters();
+    _hasJoinedWaitlist = true;
+    localStorage.setItem('collabnb_waitlist_role', currentRole);
+    updatePageAfterWaitlistJoin(currentRole);
     showReferralCodeReveal();
   } catch (err) {
     console.error('Step 1 error:', err);
@@ -699,6 +713,18 @@ function closeModal() {
   if (trigger) trigger.focus();
 }
 
+function updatePageAfterWaitlistJoin(role) {
+  const joinCta = document.getElementById('join-cta');
+  if (joinCta) joinCta.textContent = `Finalize your ${role} profile →`;
+  const pageToggle = document.querySelector('.join-hero .role-toggle');
+  if (pageToggle) {
+    const wrapper = pageToggle.closest('.reveal') || pageToggle.parentElement;
+    if (wrapper) wrapper.style.display = 'none';
+  }
+  const miniCounter = document.querySelector('.join-mini-counter');
+  if (miniCounter) miniCounter.style.display = 'none';
+}
+
 function switchRole(role) {
   currentRole = role;
   document.querySelectorAll('.role-btn').forEach(btn => {
@@ -714,9 +740,9 @@ function switchRole(role) {
     miniLabel.innerHTML = `<strong>${Math.max(0, 100 - count)} / 100</strong> ${role} spots remaining`;
   }
 
-  // Keep CTA button text in sync with selected role
+  // Keep CTA button text in sync with selected role (only after waitlist join)
   const joinCta = document.getElementById('join-cta');
-  if (joinCta) joinCta.textContent = `Finalize your ${role} profile →`;
+  if (joinCta && _hasJoinedWaitlist) joinCta.textContent = `Finalize your ${role} profile →`;
 
   // Update modal title if modal is open on step 1
   const titleEl = document.getElementById('modal-title');
@@ -1043,6 +1069,12 @@ function initMockupCarousel() {
 document.addEventListener('DOMContentLoaded', () => {
   initListingStack();
   initMockupCarousel();
+
+  // If already joined, update page button and hide role toggle immediately
+  if (_hasJoinedWaitlist) {
+    const savedRole = localStorage.getItem('collabnb_waitlist_role') || 'creator';
+    updatePageAfterWaitlistJoin(savedRole);
+  }
 
   // Modal open buttons
   document.querySelectorAll('.btn-open-modal').forEach(btn => {

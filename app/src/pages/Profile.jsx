@@ -885,13 +885,15 @@ export default function Profile() {
 
           {/* Action buttons */}
           <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-            <button
-              className="btn-glass"
-              style={{ fontSize: '0.8rem', padding: '0.6rem 1.1rem' }}
-              onClick={() => navigate('/explore')}
-            >
-              My Listings
-            </button>
+            {profile?.role === 'host' && (
+              <button
+                className="btn-glass"
+                style={{ fontSize: '0.8rem', padding: '0.6rem 1.1rem' }}
+                onClick={() => navigate('/host')}
+              >
+                My Listings
+              </button>
+            )}
             <button
               className="btn-glass"
               style={{ fontSize: '0.8rem', padding: '0.6rem 1.1rem' }}

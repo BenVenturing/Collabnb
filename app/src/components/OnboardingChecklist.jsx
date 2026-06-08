@@ -1,15 +1,22 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
-const STORAGE_KEY       = 'collabnb_onboarding_v2_dismissed';
-const COLLAPSED_KEY     = 'collabnb_onboarding_v2_collapsed';
-const FIRST_VISIT_KEY   = 'collabnb_onboarding_v2_seen';
-const SHARED_REFERRAL_KEY = 'collabnb_onboarding_v2_shared';
-
+const KEY_PREFIX = 'collabnb_onboarding_v3';
 const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL;
 
-function creatorSteps(profile, isFirstVisit) {
+// Build per-user localStorage keys (scoped by Convex user _id)
+function userKeys(userId) {
+  if (!userId) return null;
+  return {
+    dismissed: `${KEY_PREFIX}_dismissed_${userId}`,
+    collapsed:  `${KEY_PREFIX}_collapsed_${userId}`,
+    seen:       `${KEY_PREFIX}_seen_${userId}`,
+    shared:     `${KEY_PREFIX}_shared_${userId}`,
+  };
+}
+
+function creatorSteps(profile, isFirstVisit, hasShared) {
   return [
     {
       id: 'photo',
@@ -37,15 +44,15 @@ function creatorSteps(profile, isFirstVisit) {
     },
     {
       id: 'share',
-      label: 'Share with a friend',
-      done: localStorage.getItem(SHARED_REFERRAL_KEY) === '1',
+      label: 'Share your sign-up with a friend',
+      done: hasShared,
       optional: true,
-      action: { label: 'Share code', path: null, type: 'share' },
+      action: { label: 'Share link', path: null, type: 'share' },
     },
   ];
 }
 
-function hostSteps(profile, isFirstVisit) {
+function hostSteps(profile, isFirstVisit, hasShared) {
   return [
     {
       id: 'listing',
@@ -67,22 +74,20 @@ function hostSteps(profile, isFirstVisit) {
     },
     {
       id: 'share',
-      label: 'Share with a friend',
-      done: localStorage.getItem(SHARED_REFERRAL_KEY) === '1',
+      label: 'Share your sign-up with a friend',
+      done: hasShared,
       optional: true,
-      action: { label: 'Share code', path: null, type: 'share' },
+      action: { label: 'Share link', path: null, type: 'share' },
     },
   ];
 }
 
 /**
  * Compute checklist progress from profile for use in the nav dropdown badge.
- * Returns { completed, total } counting only required (non-optional) steps.
  */
 export function getChecklistProgress(profile) {
-  // Use isFirstVisit = false so it reflects actual profile state
   const isHost = profile?.role === 'host';
-  const raw = isHost ? hostSteps(profile, false) : creatorSteps(profile, false);
+  const raw = isHost ? hostSteps(profile, false, false) : creatorSteps(profile, false, false);
   const required = raw.filter(s => !s.optional);
   return { completed: required.filter(s => s.done).length, total: required.length };
 }
@@ -97,99 +102,129 @@ export default function OnboardingChecklist() {
   const { profile } = useAuth();
   const navigate = useNavigate();
 
-  const [dismissed, setDismissed] = useState(
-    () => localStorage.getItem(STORAGE_KEY) === '1'
-  );
-  const [collapsed, setCollapsed] = useState(
-    () => localStorage.getItem(COLLAPSED_KEY) === '1'
-  );
-  const [visible, setVisible] = useState(false);
-  const [entered, setEntered] = useState(false);
-  // Steps that have been manually unchecked (shown as reopened even if profile says done)
-  const [unchecked, setUnchecked] = useState({});
-  // Track whether this is the very first time the checklist has loaded
-  const [isFirstVisit, setIsFirstVisit] = useState(
-    () => localStorage.getItem(FIRST_VISIT_KEY) !== '1'
-  );
+  // Derive stable user ID — String() so Convex Id object becomes a plain string
+  const userId = profile?._id ? String(profile._id) : null;
 
-  // Register reopen listener
+  // All checklist state starts fresh (blank slate for every new user context).
+  // A useEffect below syncs from per-user localStorage once userId is known.
+  const [dismissed,    setDismissed]    = useState(false);
+  const [collapsed,    setCollapsed]    = useState(false);
+  const [visible,      setVisible]      = useState(false);
+  const [entered,      setEntered]      = useState(false);
+  const [unchecked,    setUnchecked]    = useState({});
+  const [isFirstVisit, setIsFirstVisit] = useState(true);
+  const [hasShared,    setHasShared]    = useState(false);
+
+  // Track the last userId we loaded so we reset state on account switch
+  const loadedForUser = useRef(null);
+
+  // Load per-user state whenever the logged-in user changes
+  useEffect(() => {
+    if (!userId) return;
+    if (loadedForUser.current === userId) return; // already loaded for this user
+    loadedForUser.current = userId;
+
+    const k = userKeys(userId);
+    setDismissed(localStorage.getItem(k.dismissed) === '1');
+    setCollapsed(localStorage.getItem(k.collapsed) === '1');
+    setIsFirstVisit(localStorage.getItem(k.seen) !== '1');
+    setHasShared(localStorage.getItem(k.shared) === '1');
+    // Always clear unchecked overrides on account switch
+    setUnchecked({});
+    setVisible(false);
+    setEntered(false);
+  }, [userId]);
+
+  // Register reopen listener (uses current userId closure)
   useEffect(() => {
     _reopenListener = () => {
-      localStorage.removeItem(STORAGE_KEY);
-      localStorage.removeItem(COLLAPSED_KEY);
+      if (!userId) return;
+      const k = userKeys(userId);
+      localStorage.removeItem(k.dismissed);
+      localStorage.removeItem(k.collapsed);
       setDismissed(false);
       setCollapsed(false);
       setVisible(true);
       setEntered(true);
     };
     return () => { _reopenListener = null; };
-  }, []);
+  }, [userId]);
 
-  // Determine if this user should see the checklist
   const userEmail = (profile?.email || '').toLowerCase();
   const isAdmin = ADMIN_EMAIL
     ? userEmail === ADMIN_EMAIL.toLowerCase()
     : userEmail === 'benventuring@gmail.com';
 
   const isHost = profile?.role === 'host';
-  const rawSteps = isHost ? hostSteps(profile, isFirstVisit) : creatorSteps(profile, isFirstVisit);
-  // Apply manual unchecked overrides: a done step can be toggled back to open
-  const steps = rawSteps.map(s => ({
-    ...s,
-    done: s.done && !unchecked[s.id],
-  }));
-  // Count only non-optional steps for "required" progress
-  const requiredSteps = steps.filter(s => !s.optional);
+  const rawSteps = isHost
+    ? hostSteps(profile, isFirstVisit, hasShared)
+    : creatorSteps(profile, isFirstVisit, hasShared);
+
+  const steps = rawSteps.map(s => ({ ...s, done: s.done && !unchecked[s.id] }));
+  const requiredSteps     = steps.filter(s => !s.optional);
   const requiredCompleted = requiredSteps.filter(s => s.done).length;
-  const requiredTotal = requiredSteps.length;
+  const requiredTotal     = requiredSteps.length;
   const optionalCompleted = steps.filter(s => s.optional && s.done).length;
   const allDone = requiredCompleted === requiredTotal;
 
-  // Decide whether to show at all
-  // Show for new non-admin users: created within 14 days OR checklist not yet complete
-  const isNewUser = !profile?._creationTime || Date.now() - (profile._creationTime) < 14 * 24 * 60 * 60 * 1000;
+  const isNewUser = !profile?._creationTime || Date.now() - profile._creationTime < 14 * 24 * 60 * 60 * 1000;
   const notFullyComplete = requiredCompleted < requiredTotal;
   const shouldShow = !isAdmin && !!profile?.email && !dismissed && (isNewUser || notFullyComplete);
 
   useEffect(() => {
-    if (!shouldShow) return;
-    // Show it
+    if (!shouldShow || !userId) return;
     setVisible(true);
-    // On first-ever visit, auto-expand with entrance animation
-    const hasSeenBefore = localStorage.getItem(FIRST_VISIT_KEY) === '1';
+    const k = userKeys(userId);
+    const hasSeenBefore = localStorage.getItem(k.seen) === '1';
     if (!hasSeenBefore) {
-      localStorage.setItem(FIRST_VISIT_KEY, '1');
+      localStorage.setItem(k.seen, '1');
       setCollapsed(false);
-      localStorage.removeItem(COLLAPSED_KEY);
+      localStorage.removeItem(k.collapsed);
     }
-    // After first render, mark first visit as done so profile-based checks kick in on next load
     setIsFirstVisit(false);
-    // Trigger entrance animation after mount
     const t = setTimeout(() => setEntered(true), 50);
     return () => clearTimeout(t);
-  }, [shouldShow]);
+  }, [shouldShow, userId]);
 
   if (!visible || !shouldShow) return null;
 
   function handleClose() {
+    if (!userId) return;
+    const k = userKeys(userId);
     if (allDone) {
-      // All required steps done — permanently dismiss
       setEntered(false);
       setTimeout(() => {
-        localStorage.setItem(STORAGE_KEY, '1');
+        localStorage.setItem(k.dismissed, '1');
         setDismissed(true);
       }, 280);
     } else {
-      // Still have steps left — just collapse
       setCollapsed(true);
-      localStorage.setItem(COLLAPSED_KEY, '1');
+      localStorage.setItem(k.collapsed, '1');
     }
   }
 
   function toggleCollapse() {
+    if (!userId) return;
+    const k = userKeys(userId);
     const next = !collapsed;
     setCollapsed(next);
-    localStorage.setItem(COLLAPSED_KEY, next ? '1' : '0');
+    localStorage.setItem(k.collapsed, next ? '1' : '0');
+  }
+
+  function handleShare() {
+    if (!userId) return;
+    const k = userKeys(userId);
+    const code = profile?.referral_code || '';
+    const shareUrl = code
+      ? `${window.location.origin}/join?ref=${code}`
+      : `${window.location.origin}/join`;
+    if (navigator.share) {
+      navigator.share({ title: 'Join me on Collabnb', url: shareUrl }).catch(() => {});
+    } else {
+      navigator.clipboard?.writeText(shareUrl).catch(() => {});
+    }
+    localStorage.setItem(k.shared, '1');
+    setHasShared(true);
   }
 
   const widgetStyle = {
@@ -235,7 +270,6 @@ export default function OnboardingChecklist() {
             whiteSpace: 'nowrap',
           }}
         >
-          {/* Progress ring icon */}
           <svg width="22" height="22" viewBox="0 0 22 22" style={{ flexShrink: 0 }}>
             <circle cx="11" cy="11" r="8" fill="none" stroke="var(--stone, #D0D5CE)" strokeWidth="2.5" />
             <circle
@@ -295,7 +329,6 @@ export default function OnboardingChecklist() {
             </p>
           </div>
           <div style={{ display: 'flex', gap: '0.25rem', flexShrink: 0, marginLeft: '0.5rem' }}>
-            {/* Collapse button */}
             <button
               onClick={toggleCollapse}
               aria-label="Collapse"
@@ -314,7 +347,6 @@ export default function OnboardingChecklist() {
                 <line x1="1" y1="2" x2="11" y2="2" />
               </svg>
             </button>
-            {/* Close / dismiss button */}
             <button
               onClick={handleClose}
               aria-label={allDone ? 'Dismiss checklist' : 'Minimize checklist'}
@@ -365,108 +397,96 @@ export default function OnboardingChecklist() {
             const rawDone = rawSteps.find(s => s.id === step.id)?.done ?? false;
             const isUnchecked = unchecked[step.id];
             return (
-            <div
-              key={step.id}
-              style={{
-                display: 'flex', alignItems: 'center', gap: '0.625rem',
-                padding: '0.5rem 0.625rem',
-                borderRadius: '12px',
-                background: step.done ? 'rgba(209,235,219,0.4)' : 'rgba(255,255,255,0.5)',
-                border: `1px solid ${step.done ? 'rgba(152,202,169,0.4)' : 'rgba(208,213,206,0.6)'}`,
-                transition: 'background 200ms',
-              }}
-            >
-              {/* Check circle — clickable to toggle completed steps */}
-              <button
-                onClick={() => {
-                  if (rawDone) {
-                    setUnchecked(prev => ({ ...prev, [step.id]: !isUnchecked }));
-                  }
-                }}
-                title={rawDone ? (isUnchecked ? 'Mark as done' : 'Uncheck to revisit') : undefined}
+              <div
+                key={step.id}
                 style={{
-                  width: 18, height: 18, borderRadius: '50%', flexShrink: 0,
-                  border: `2px solid ${step.done ? '#3C5759' : 'var(--stone, #D0D5CE)'}`,
-                  background: step.done ? '#3C5759' : 'transparent',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  transition: 'background 200ms, border-color 200ms',
-                  cursor: rawDone ? 'pointer' : 'default',
-                  padding: 0,
-                }}>
-                {step.done && (
-                  <svg width="9" height="9" viewBox="0 0 12 12" fill="none">
-                    <path d="M2 6l3 3 5-5" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                )}
-              </button>
-
-              <span style={{
-                flex: 1,
-                fontSize: '0.8125rem',
-                color: step.done ? 'var(--slate, #3C5759)' : 'var(--ink, #192524)',
-                textDecoration: step.done ? 'line-through' : 'none',
-                opacity: step.done ? 0.65 : 1,
-                lineHeight: 1.35,
-              }}>
-                {step.label}
-                {step.optional && !step.done && (
-                  <span style={{
-                    fontSize: '0.6rem', fontWeight: 600, color: 'var(--sage, #959D90)',
-                    marginLeft: '0.375rem', textTransform: 'uppercase', letterSpacing: '0.06em',
-                  }}>
-                    optional
-                  </span>
-                )}
-              </span>
-
-              {!step.done && (
+                  display: 'flex', alignItems: 'center', gap: '0.625rem',
+                  padding: '0.5rem 0.625rem',
+                  borderRadius: '12px',
+                  background: step.done ? 'rgba(209,235,219,0.4)' : 'rgba(255,255,255,0.5)',
+                  border: `1px solid ${step.done ? 'rgba(152,202,169,0.4)' : 'rgba(208,213,206,0.6)'}`,
+                  transition: 'background 200ms',
+                }}
+              >
+                {/* Check circle — clickable to toggle completed steps */}
                 <button
                   onClick={() => {
-                    if (step.action.type === 'share') {
-                      const code = profile?.referral_code || '';
-                      const shareUrl = code
-                        ? `${window.location.origin}/join?ref=${code}`
-                        : `${window.location.origin}/join`;
-                      if (navigator.share) {
-                        navigator.share({ title: 'Join me on Collabnb', url: shareUrl }).catch(() => {});
-                      } else {
-                        navigator.clipboard?.writeText(shareUrl).then(() => {
-                          localStorage.setItem(SHARED_REFERRAL_KEY, '1');
-                          setUnchecked(prev => ({ ...prev, [step.id]: false }));
-                        }).catch(() => {});
-                      }
-                      localStorage.setItem(SHARED_REFERRAL_KEY, '1');
-                      return;
+                    if (rawDone) {
+                      setUnchecked(prev => ({ ...prev, [step.id]: !isUnchecked }));
                     }
-                    navigate(step.action.path);
                   }}
+                  title={rawDone ? (isUnchecked ? 'Mark as done' : 'Uncheck to revisit') : undefined}
                   style={{
-                    background: 'none',
-                    border: '1px solid rgba(60,87,89,0.35)',
-                    borderRadius: '7px',
-                    padding: '0.2rem 0.5rem',
-                    fontSize: '0.7rem',
-                    fontWeight: 600,
-                    color: 'var(--slate, #3C5759)',
-                    cursor: 'pointer',
-                    whiteSpace: 'nowrap',
-                    flexShrink: 0,
-                    fontFamily: 'var(--font-body)',
-                    transition: 'background 150ms, border-color 150ms',
-                  }}
-                  onMouseEnter={e => {
-                    e.currentTarget.style.background = 'rgba(60,87,89,0.08)';
-                    e.currentTarget.style.borderColor = 'rgba(60,87,89,0.6)';
-                  }}
-                  onMouseLeave={e => {
-                    e.currentTarget.style.background = 'none';
-                    e.currentTarget.style.borderColor = 'rgba(60,87,89,0.35)';
-                  }}
-                >
-                  {step.action.label}
+                    width: 18, height: 18, borderRadius: '50%', flexShrink: 0,
+                    border: `2px solid ${step.done ? '#3C5759' : 'var(--stone, #D0D5CE)'}`,
+                    background: step.done ? '#3C5759' : 'transparent',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    transition: 'background 200ms, border-color 200ms',
+                    cursor: rawDone ? 'pointer' : 'default',
+                    padding: 0,
+                  }}>
+                  {step.done && (
+                    <svg width="9" height="9" viewBox="0 0 12 12" fill="none">
+                      <path d="M2 6l3 3 5-5" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  )}
                 </button>
-              )}
-            </div>
+
+                <span style={{
+                  flex: 1,
+                  fontSize: '0.8125rem',
+                  color: step.done ? 'var(--slate, #3C5759)' : 'var(--ink, #192524)',
+                  textDecoration: step.done ? 'line-through' : 'none',
+                  opacity: step.done ? 0.65 : 1,
+                  lineHeight: 1.35,
+                }}>
+                  {step.label}
+                  {step.optional && !step.done && (
+                    <span style={{
+                      fontSize: '0.6rem', fontWeight: 600, color: 'var(--sage, #959D90)',
+                      marginLeft: '0.375rem', textTransform: 'uppercase', letterSpacing: '0.06em',
+                    }}>
+                      optional
+                    </span>
+                  )}
+                </span>
+
+                {!step.done && (
+                  <button
+                    onClick={() => {
+                      if (step.action.type === 'share') {
+                        handleShare();
+                        return;
+                      }
+                      navigate(step.action.path);
+                    }}
+                    style={{
+                      background: 'none',
+                      border: '1px solid rgba(60,87,89,0.35)',
+                      borderRadius: '7px',
+                      padding: '0.2rem 0.5rem',
+                      fontSize: '0.7rem',
+                      fontWeight: 600,
+                      color: 'var(--slate, #3C5759)',
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap',
+                      flexShrink: 0,
+                      fontFamily: 'var(--font-body)',
+                      transition: 'background 150ms, border-color 150ms',
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.background = 'rgba(60,87,89,0.08)';
+                      e.currentTarget.style.borderColor = 'rgba(60,87,89,0.6)';
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.background = 'none';
+                      e.currentTarget.style.borderColor = 'rgba(60,87,89,0.35)';
+                    }}
+                  >
+                    {step.action.label}
+                  </button>
+                )}
+              </div>
             );
           })}
         </div>

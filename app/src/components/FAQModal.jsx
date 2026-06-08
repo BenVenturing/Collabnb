@@ -495,14 +495,14 @@ function SuggestionsTab({ userId }) {
                 )}
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.2rem', flexShrink: 0 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.125rem', flexShrink: 0, minWidth: 32 }}>
                 {/* Upvote */}
                 <button
                   onClick={() => handleVote(s._id, 'up')}
                   title={userId ? 'Upvote' : 'Sign in to vote'}
                   style={{
-                    display: 'flex', flexDirection: 'column', alignItems: 'center',
-                    gap: '1px', padding: '0.3rem 0.5rem',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    width: 28, height: 28,
                     borderRadius: '0.5rem', border: 'none', cursor: userId ? 'pointer' : 'default',
                     background: s.userVote === 'up' ? 'rgba(209,235,219,0.85)' : 'transparent',
                     color: s.userVote === 'up' ? '#2d6a4f' : 'var(--slate)',
@@ -515,14 +515,13 @@ function SuggestionsTab({ userId }) {
                   <svg width="13" height="13" viewBox="0 0 24 24" fill={s.userVote === 'up' ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
                     <polyline points="18 15 12 9 6 15" />
                   </svg>
-                  <span style={{ fontSize: '0.7rem', fontWeight: 600, lineHeight: 1 }}>{s.upvotes}</span>
                 </button>
 
-                {/* Net score */}
+                {/* Net score only */}
                 <span style={{
-                  fontSize: '0.7rem', fontWeight: 700,
+                  fontSize: '0.75rem', fontWeight: 700,
                   color: s.netScore > 0 ? '#2d6a4f' : s.netScore < 0 ? '#b04040' : 'var(--sage)',
-                  lineHeight: 1, padding: '0.1rem 0',
+                  lineHeight: 1, textAlign: 'center', minWidth: 20,
                 }}>
                   {s.netScore > 0 ? `+${s.netScore}` : s.netScore}
                 </span>
@@ -532,8 +531,8 @@ function SuggestionsTab({ userId }) {
                   onClick={() => handleVote(s._id, 'down')}
                   title={userId ? 'Downvote' : 'Sign in to vote'}
                   style={{
-                    display: 'flex', flexDirection: 'column', alignItems: 'center',
-                    gap: '1px', padding: '0.3rem 0.5rem',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    width: 28, height: 28,
                     borderRadius: '0.5rem', border: 'none', cursor: userId ? 'pointer' : 'default',
                     background: s.userVote === 'down' ? 'rgba(255,220,220,0.7)' : 'transparent',
                     color: s.userVote === 'down' ? '#b04040' : 'var(--slate)',
@@ -543,7 +542,6 @@ function SuggestionsTab({ userId }) {
                   onMouseEnter={(e) => { if (userId) e.currentTarget.style.background = s.userVote === 'down' ? 'rgba(255,220,220,0.7)' : 'rgba(25,37,36,0.05)'; }}
                   onMouseLeave={(e) => { e.currentTarget.style.background = s.userVote === 'down' ? 'rgba(255,220,220,0.7)' : 'transparent'; }}
                 >
-                  <span style={{ fontSize: '0.7rem', fontWeight: 600, lineHeight: 1 }}>{s.downvotes}</span>
                   <svg width="13" height="13" viewBox="0 0 24 24" fill={s.userVote === 'down' ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
                     <polyline points="6 9 12 15 18 9" />
                   </svg>

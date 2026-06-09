@@ -664,21 +664,47 @@ export default function FAQModal({ isOpen, onClose }) {
               Help Center
             </span>
           </div>
-          <button
-            onClick={onClose}
-            style={{
-              width: 32, height: 32, borderRadius: '50%', border: 'none',
-              background: 'rgba(25,37,36,0.07)', display: 'flex', alignItems: 'center',
-              justifyContent: 'center', cursor: 'pointer', transition: 'background 150ms',
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(25,37,36,0.13)'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(25,37,36,0.07)'; }}
-            aria-label="Close"
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-              <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+            <button
+              onClick={() => {
+                onClose();
+                setTimeout(() => {
+                  localStorage.removeItem('collabnb_demo_dismissed');
+                  window.location.hash = '#/collabs';
+                }, 100);
+              }}
+              title="Reopen Demo Tour"
+              style={{
+                background: 'none', border: 'none', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', gap: '0.25rem',
+                padding: '0.3rem 0.5rem', borderRadius: '9999px',
+                fontFamily: 'var(--font-body)', fontSize: '0.7rem', fontWeight: 600,
+                color: 'var(--sage)', transition: 'background 150ms, color 150ms',
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(25,37,36,0.06)'; e.currentTarget.style.color = 'var(--slate)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = 'var(--sage)'; }}
+            >
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                <polygon points="5 3 19 12 5 21 5 3"/>
+              </svg>
+              Demo Tour
+            </button>
+            <button
+              onClick={onClose}
+              style={{
+                width: 32, height: 32, borderRadius: '50%', border: 'none',
+                background: 'rgba(25,37,36,0.07)', display: 'flex', alignItems: 'center',
+                justifyContent: 'center', cursor: 'pointer', transition: 'background 150ms',
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(25,37,36,0.13)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(25,37,36,0.07)'; }}
+              aria-label="Close"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          </div>
         </div>
 
         {/* ── Tabs ── */}

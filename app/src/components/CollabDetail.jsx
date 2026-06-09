@@ -621,7 +621,7 @@ export default function CollabDetail({ collab, onClose }) {
 
   // Demo auto-advance
   const [demoPlaying, setDemoPlaying] = useState(isDemo);
-  const [demoCardKey, setDemoCardKey] = useState(null);
+  const [demoCardKey, setDemoCardKey] = useState(() => isDemo ? collab.current_stage : null);
   const demoCurIdx = stageKeys.indexOf(effectiveStageKey);
   const lastStageIdx = stageKeys.length - 1;
   const demoIntervalRef = useRef(null);
@@ -635,7 +635,6 @@ export default function CollabDetail({ collab, onClose }) {
           setViewingStageKey(stageKeys[curIdx + 1]);
         } else {
           setDemoPlaying(false);
-          setDemoCardKey(null);
         }
       }, 3000);
       return () => clearTimeout(demoIntervalRef.current);
@@ -653,7 +652,9 @@ export default function CollabDetail({ collab, onClose }) {
 
   const handleStageClick = useCallback((key) => {
     if (isDemo && demoPlaying) return; // ignore clicks while auto-playing
-    setViewingStageKey(key === viewingStageKey ? null : key);
+    const nextKey = key === viewingStageKey ? null : key;
+    setViewingStageKey(nextKey);
+    if (nextKey) setDemoCardKey(nextKey); // update the demo card when clicking through stages while paused
   }, [isDemo, demoPlaying, viewingStageKey]);
 
   // Save drive URL when it changes

@@ -147,6 +147,12 @@ const PencilIcon = () => (
     <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
   </svg>
 );
+const PlayIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="18" height="18">
+    <polygon points="5 3 19 12 5 21 5 3" fill="currentColor" stroke="none" opacity="0.5"/>
+    <polygon points="5 3 19 12 5 21 5 3"/>
+  </svg>
+);
 const CreditCardIcon = () => (
   <svg viewBox="0 0 256 256" fill="none" stroke="currentColor" strokeWidth="14" strokeLinecap="round" strokeLinejoin="round" width="18" height="18">
     <rect x="24" y="56" width="208" height="144" rx="16"/>
@@ -751,6 +757,7 @@ export default function Profile() {
     ...(hasActiveSub ? [{ icon: <CreditCardIcon />, label: 'Manage Plan', sublabel: 'Cancel, upgrade, or update billing', onClick: () => { setShowSettings(false); handleManageSubscription(); } }] : []),
     { icon: <ChecklistIcon />,   label: 'Setup Checklist', sublabel: 'Finish setting up your account',                 onClick: () => { setShowSettings(false); reopenChecklist(); } },
     { icon: <GlobeIcon />,       label: 'Location Settings', sublabel: 'Set your city & country for the globe map',    onClick: () => { setShowSettings(false); setShowLocation(true); } },
+    { icon: <PlayIcon />,        label: 'Demo Collab Tour', sublabel: 'Replay the guided collaboration walkthrough',    onClick: () => { setShowSettings(false); localStorage.removeItem('collabnb_demo_dismissed'); navigate('/collabs'); } },
     { icon: <BellIcon />,        label: 'Notifications',   sublabel: 'Manage email & push preferences',               onClick: () => { setShowSettings(false); setShowNotifications(true); } },
     { icon: <LockIcon />,        label: 'Privacy Policy',  sublabel: 'Review how your data is used',                  onClick: () => { setShowSettings(false); setShowPrivacy(true); } },
     { icon: <SealCheck />,       label: 'Verification',    sublabel: 'Submit a re-verification request',              onClick: () => { setShowSettings(false); setShowVerification(true); } },

@@ -91,6 +91,12 @@ export default function Layout({ children }) {
 
   return (
     <div style={{ '--banner-h': bannerVisible ? BANNER_H : '0rem' }}>
+      {/* ── Background layers (match marketing site) ───────────────────── */}
+      <div aria-hidden="true" className="bg-layers bg-base" />
+      <div aria-hidden="true" className="bg-layers bg-gradient" />
+      <div aria-hidden="true" className="bg-layers bg-clouds" />
+      <div aria-hidden="true" className="bg-grain" />
+
       {/* ── Pre-launch countdown banner ─────────────────────────────────────── */}
       {bannerVisible && (
         <div style={{

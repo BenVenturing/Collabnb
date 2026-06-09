@@ -345,7 +345,29 @@ export default function Collabs() {
       </div>
 
       {selectedCollab && (
-        <CollabDetail collab={selectedCollab} onClose={() => setSelectedCollab(null)} />
+        <CollabDetail
+          collab={selectedCollab}
+          onClose={() => {
+            setSelectedCollab(null);
+            // Show dismiss toast for demo tour
+            if (selectedCollab.is_demo) {
+              (async () => {
+                // Wait a tick then show the notification
+                await new Promise(r => setTimeout(r, 100));
+                const toast = document.createElement('div');
+                toast.style.cssText = 'position:fixed;bottom:5rem;left:50%;transform:translateX(-50%);z-index:9999;background:rgba(25,37,36,0.92);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);color:#EFECE9;padding:0.75rem 1.5rem;border-radius:9999px;font-size:0.875rem;font-weight:600;font-family:var(--font-body);box-shadow:0 8px 24px rgba(25,37,36,0.25);display:flex;align-items:center;gap:0.5rem;animation:fadeUp 300ms cubic-bezier(0.16,1,0.3,1) forwards;max-width:calc(100vw - 2rem);';
+                toast.innerHTML = 'Demo tour closed — find it again in <strong>Settings</strong> or the <strong>Help Center (? icon)</strong>';
+                document.body.appendChild(toast);
+                setTimeout(() => {
+                  toast.style.transition = 'opacity 300ms, transform 300ms';
+                  toast.style.opacity = '0';
+                  toast.style.transform = 'translateX(-50%) translateY(12px)';
+                  setTimeout(() => toast.remove(), 300);
+                }, 5000);
+              })();
+            }
+          }}
+        />
       )}
     </div>
   );

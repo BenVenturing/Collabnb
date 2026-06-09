@@ -334,7 +334,7 @@ export default function AppNav() {
       <nav
         className={`nav-pill glass ${scrolled ? 'scrolled' : ''}`}
         aria-label="Main navigation"
-        style={{ top: isPending ? 'calc(1.8rem + 0.5rem)' : '1rem' }}
+        style={{ top: isPending ? 'calc(var(--banner-h, 0rem) + 1.8rem + 0.5rem)' : 'calc(var(--banner-h, 0rem) + 1rem)' }}
       >
         {/* Logo */}
         <NavLink to="/explore" className="nav-logo" style={{ flexShrink: 0 }}>
@@ -681,8 +681,26 @@ export default function AppNav() {
                           display: 'flex', gap: 10, alignItems: 'flex-start',
                         }}
                       >
-                        <span style={{ fontSize: 18, flexShrink: 0, marginTop: 1 }}>
-                          {n.type === 'pitch_approved' ? '✅' : n.type === 'pitch_declined' ? '❌' : n.type === 'host_reply' ? '💬' : '📨'}
+                        <span style={{
+                          width: 28, height: 28, borderRadius: '0.5rem', flexShrink: 0,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          background: n.type === 'pitch_approved' ? 'rgba(74,155,127,0.14)'
+                            : n.type === 'pitch_declined' ? 'rgba(200,104,104,0.14)'
+                            : n.type === 'host_reply' ? 'rgba(60,87,89,0.1)'
+                            : 'rgba(25,37,36,0.07)',
+                        }}>
+                          {n.type === 'pitch_approved' && (
+                            <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="#4A9B7F" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="2.5 8 6 11.5 13.5 4"/></svg>
+                          )}
+                          {n.type === 'pitch_declined' && (
+                            <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="#C86868" strokeWidth="2.5" strokeLinecap="round"><line x1="4" y1="4" x2="12" y2="12"/><line x1="12" y1="4" x2="4" y2="12"/></svg>
+                          )}
+                          {n.type === 'host_reply' && (
+                            <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="#3C5759" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14 10a2 2 0 01-2 2H5l-3 2V4a2 2 0 012-2h8a2 2 0 012 2z"/></svg>
+                          )}
+                          {!['pitch_approved','pitch_declined','host_reply'].includes(n.type) && (
+                            <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="#959D90" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="12" height="10" rx="1.5"/><polyline points="2 5 8 9.5 14 5"/></svg>
+                          )}
                         </span>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 13, color: 'var(--ink)', lineHeight: 1.3 }}>{n.title}</div>

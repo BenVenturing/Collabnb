@@ -50,7 +50,7 @@ function normalizeConvexListing(l) {
     amenities: l.amenities || [],
     what_you_get: l.what_you_get || [],
     requirements: l.requirements || [],
-    _isSample: false,
+    _isSample: l.is_sample === true,
   };
 }
 
@@ -83,15 +83,19 @@ function ListingCard({ listing, saved, onSave, delay, onNavigate, onHostClick })
 
         {/* SAMPLE watermark — demo listings only */}
         {listing._isSample !== false && (
-          <div style={{
-            position: 'absolute', inset: 0, display: 'flex',
-            alignItems: 'center', justifyContent: 'center', pointerEvents: 'none',
-          }}>
-            <span style={{
-              fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.75rem',
-              color: '#192524', opacity: 0.07, transform: 'rotate(-25deg)',
-              userSelect: 'none', letterSpacing: '0.25em',
-            }}>SAMPLE</span>
+          <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden' }}>
+            {[18, 50, 82].map((top, i) => (
+              <div key={i} style={{
+                position: 'absolute', top: `${top}%`, left: '50%',
+                transform: 'translateX(-50%) rotate(-35deg)',
+                fontFamily: 'var(--font-display)', fontWeight: 900,
+                fontSize: '0.8rem', color: 'rgba(255,255,255,0.72)',
+                letterSpacing: '0.3em', whiteSpace: 'nowrap', userSelect: 'none',
+                textShadow: '0 1px 4px rgba(0,0,0,0.45)',
+              }}>
+                SAMPLE · SAMPLE · SAMPLE
+              </div>
+            ))}
           </div>
         )}
 

@@ -9,10 +9,10 @@ const BONE  = '#F7F5F2';
 const MINT  = '#D1EBDB';
 
 const AUDIENCES = [
-  { id: 'all',      label: 'All Verified',   icon: '👥', desc: 'Every verified user' },
-  { id: 'creators', label: 'Creators',        icon: '🎬', desc: 'Verified creators'    },
-  { id: 'hosts',    label: 'Hosts',           icon: '🏡', desc: 'Verified hosts'       },
-  { id: 'founders', label: 'Founders',        icon: '🌟', desc: 'Founder-status users' },
+  { id: 'all',      label: 'All Verified',   icon: 'A', desc: 'Every verified user' },
+  { id: 'creators', label: 'Creators',        icon: 'C', desc: 'Verified creators'    },
+  { id: 'hosts',    label: 'Hosts',           icon: 'H', desc: 'Verified hosts'       },
+  { id: 'founders', label: 'Founders',        icon: 'F', desc: 'Founder-status users' },
 ];
 
 function fmtDate(ts) {
@@ -98,7 +98,7 @@ export default function Broadcast() {
                   cursor: 'pointer', fontFamily: 'inherit',
                 }}
               >
-                <span style={{ fontSize: '1.25rem', lineHeight: 1, marginTop: '0.1rem' }}>{a.icon}</span>
+                <span style={{ width: 28, height: 28, borderRadius: '0.4rem', background: 'rgba(25,37,36,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem', fontWeight: 700, flexShrink: 0 }}>{a.icon}</span>
                 <div>
                   <div style={{ fontWeight: 600, fontSize: '0.875rem' }}>{a.label}</div>
                   <div style={{ fontSize: '0.72rem', opacity: 0.7, marginTop: '0.1rem' }}>{a.desc}</div>
@@ -179,7 +179,7 @@ export default function Broadcast() {
           border: '1px solid rgba(25,37,36,0.12)',
           cursor: 'pointer', fontFamily: 'inherit',
         }}>
-          {showHistory ? '↑ Hide History' : '📜 History'}
+          {showHistory ? '↑ Hide History' : 'History'}
         </button>
       </div>
 

@@ -513,3 +513,27 @@ button { font: inherit; cursor: pointer; border: none; background: none; }
   0%   { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
 }
+
+/* ── BLOG CONTENT ─────────────────────────────────────────────────────────── */
+.blog-content h2 {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.35rem;
+  color: var(--ink);
+  margin: 2.25rem 0 0.75rem;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+}
+.blog-content p { margin: 0 0 1.25rem; }
+.blog-content ul, .blog-content ol { margin: 0 0 1.25rem; padding-left: 1.5rem; }
+.blog-content li { margin-bottom: 0.5rem; line-height: 1.7; }
+.blog-content strong { font-weight: 700; color: var(--ink); }
+.blog-content em { font-style: italic; }
+.blog-content a { color: #7B68C8; text-underline-offset: 3px; }
+.blog-content a:hover { opacity: 0.8; }
+
+/* ── PULSE SKELETON ───────────────────────────────────────────────────────── */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.45; }
+}

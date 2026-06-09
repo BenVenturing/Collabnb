@@ -24,6 +24,8 @@ import Step2Offer           from './pages/host/Step2Offer';
 import Step3Deliverables    from './pages/host/Step3Deliverables';
 import Step4Review          from './pages/host/Step4Review';
 import AdminDashboard       from './pages/AdminDashboard';
+import Blog                 from './pages/Blog';
+import BlogPost             from './pages/BlogPost';
 
 // Catch any render crash and show it instead of a blank page
 class ErrorBoundary extends Component {
@@ -121,10 +123,9 @@ function NewSignupCelebration({ onDone }) {
         {quote}
       </p>
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', color: 'var(--slate)', fontSize: '0.82rem', opacity: showSpinner ? 1 : 0, transition: 'opacity 600ms', marginTop: '0.5rem', position: 'relative' }}>
-        <div style={{ width: 14, height: 14, border: '2px solid #D0D5CE', borderTopColor: '#3C5759', borderRadius: '50%', animation: 'spin 0.8s linear infinite', flexShrink: 0 }} />
+        <BlobLoader size="sm" />
         <span>Building your profile…</span>
       </div>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }
@@ -192,6 +193,9 @@ function AppRoutes() {
                 <Route path="/inbox"             element={<Inbox />} />
                 <Route path="/profile"           element={<Profile />} />
                 <Route path="/contract"          element={<ContractBuilder />} />
+                {/* Public blog — no auth required */}
+                <Route path="/blog"              element={<Blog />} />
+                <Route path="/blog/:slug"        element={<BlogPost />} />
                 <Route path="*"                  element={<Navigate to="/explore" replace />} />
               </Routes>
             </Layout>
@@ -204,12 +208,59 @@ function AppRoutes() {
   );
 }
 
+// ── Blob loader — two orbs that liquid-merge and separate ────────────────────
+function BlobLoader({ size = 'md' }) {
+  const sm = size === 'sm';
+  const r  = sm ? 3.5 : 5.5;
+  const w  = sm ? 30  : 44;
+  const h  = r * 2 + 2;
+  const cy = h / 2;
+  const x1 = r + 1;
+  const x2 = w - r - 1;
+  const travel = ((x2 - x1) / 2).toFixed(2);
+  const sd = sm ? 1.8 : 2.8;
+
+  return (
+    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`}
+      style={{ overflow: 'visible', display: 'block', flexShrink: 0 }}
+    >
+      <defs>
+        <filter id="cnb-goo" x="-30%" y="-30%" width="160%" height="160%">
+          <feGaussianBlur in="SourceGraphic" stdDeviation={sd} result="blur" />
+          <feColorMatrix in="blur" type="matrix"
+            values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 22 -9"
+          />
+        </filter>
+      </defs>
+      <style>{`
+        @keyframes cnb-l {
+          0%,18%   { transform:translateX(0); }
+          47%,57%  { transform:translateX(${travel}px); }
+          86%,100% { transform:translateX(0); }
+        }
+        @keyframes cnb-r {
+          0%,18%   { transform:translateX(0); }
+          47%,57%  { transform:translateX(-${travel}px); }
+          86%,100% { transform:translateX(0); }
+        }
+      `}</style>
+      <g filter="url(#cnb-goo)">
+        <circle cx={x1} cy={cy} r={r} fill="#3C5759"
+          style={{ animation: 'cnb-l 2.2s ease-in-out infinite' }} />
+        <circle cx={x2} cy={cy} r={r} fill="#3C5759"
+          style={{ animation: 'cnb-r 2.2s ease-in-out infinite' }} />
+      </g>
+    </svg>
+  );
+}
+
 function LoadingScreen() {
   return (
-    <div style={{ minHeight: '100dvh', background: '#EFECE9', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1rem' }}>
-      <p style={{ fontFamily: 'sans-serif', color: '#3C5759', fontSize: '1rem' }}>Loading Collabnb…</p>
-      <div style={{ width: 24, height: 24, border: '3px solid #D1EBDB', borderTopColor: '#3C5759', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    <div style={{ minHeight: '100dvh', background: '#F7F5F2', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1.25rem' }}>
+      <BlobLoader size="md" />
+      <p style={{ fontFamily: 'var(--font-body, sans-serif)', color: '#959D90', fontSize: '0.78rem', letterSpacing: '0.04em', margin: 0 }}>
+        Loading…
+      </p>
     </div>
   );
 }

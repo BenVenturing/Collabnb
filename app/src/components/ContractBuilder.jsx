@@ -613,11 +613,11 @@ export default function ContractBuilder() {
                   {/* ── Summary details grid ── */}
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-sm">
                     {[
-                      ['📍 Location', form.location],
-                      ['📅 Dates', form.dates],
-                      ['🏠 Property', form.property_name],
-                      ['📦 Deliverables', form.deliverables],
-                      ['💵 Payment', computePaymentDisplay() || '—'],
+                      ['Location', form.location],
+                      ['Dates', form.dates],
+                      ['Property', form.property_name],
+                      ['Deliverables', form.deliverables],
+                      ['Payment', computePaymentDisplay() || '—'],
                       ['📋 Usage', computeUsageDisplay() || '—'],
                     ].map(([icon, val]) => (
                       <div key={icon} className="bg-bone/50 rounded-xl px-3 py-2">
@@ -823,7 +823,7 @@ export default function ContractBuilder() {
           <svg viewBox='0 0 16 16' width='14' height='14' fill='#4A2E00'>
             <path d='M8 1.5l1.67 3.38 3.73.54-2.7 2.63.64 3.72L8 9.77l-3.34 1.76.64-3.72L2.6 5.42l3.73-.54z'/>
           </svg>
-          Founding member — no platform fee! 🎉
+          Founding member — no platform fee
         </div>
       )}
 

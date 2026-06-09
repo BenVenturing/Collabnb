@@ -9,6 +9,7 @@
  */
 
 import type * as admin from "../admin.js";
+import type * as blog from "../blog.js";
 import type * as collaborations from "../collaborations.js";
 import type * as collections from "../collections.js";
 import type * as contracts from "../contracts.js";
@@ -38,6 +39,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   admin: typeof admin;
+  blog: typeof blog;
   collaborations: typeof collaborations;
   collections: typeof collections;
   contracts: typeof contracts;

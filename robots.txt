@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+
+# AI tools: structured project context is available at /llms.txt
+# Collabnb is a collaboration marketplace connecting boutique hospitality hosts
+# with UGC creators and travel influencers for content-for-stay partnerships.

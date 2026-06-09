@@ -2,5 +2,10 @@
   "buildCommand": "npm run build",
   "installCommand": "npm install && cd app && npm install",
   "outputDirectory": "dist",
-  "framework": null
+  "framework": null,
+  "trailingSlash": true,
+  "routes": [
+    { "src": "^/app$", "headers": { "Location": "/app/" }, "status": 301 },
+    { "src": "^/app/(?!assets/).*", "dest": "/app/index.html" }
+  ]
 }

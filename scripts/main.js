@@ -791,6 +791,14 @@ function openLoginModal() {
       }
       return;
     }
+    // Already signed in — skip the modal and go straight to the app
+    if (clerk.user) {
+      closeLoginModal();
+      const email = clerk.user.primaryEmailAddress?.emailAddress || '';
+      const isAdmin = ADMIN_EMAIL && email && email.toLowerCase() === ADMIN_EMAIL.toLowerCase();
+      window.location.href = isAdmin ? '/app/#/admin' : '/app/#/explore';
+      return;
+    }
     if (!mountEl) return;
     // Reset mount area (clears loading state from above)
     mountEl.innerHTML = '';

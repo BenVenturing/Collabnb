@@ -15,6 +15,7 @@ import ListingManager from './admin/ListingManager';
 import CollabOversight from './admin/CollabOversight';
 import ContractManager from './admin/ContractManager';
 import AuditLog from './admin/AuditLog';
+import BlogManager from './admin/BlogManager';
 
 const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL;
 
@@ -49,6 +50,9 @@ const ICONS = {
   founders:     IC(<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>),
   waitlist:     IC(<><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></>),
   broadcast:    IC(<><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.86a2 2 0 011.72-2.18h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 15.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 22"/><path d="M14.05 2a9 9 0 018 7.94M14.05 6A5 5 0 0119 10"/></>),
+  marketing:    IC(<><path d="M3 3h18v4H3z"/><path d="M3 10h11v11H3z"/><path d="M17 10h4v4h-4z"/><path d="M17 17h4v4h-4z"/></>),
+  blog:         IC(<><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></>),
+  social:       IC(<><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></>),
   messages:     IC(<path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>),
   suggestions:  IC(<><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17" strokeWidth="3"/></>),
   audit:        IC(<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>),
@@ -64,12 +68,17 @@ const SECTIONS = [
   { id: 'contracts',    label: 'Contracts'              },
   { id: 'founders',     label: 'Founder Tracker'        },
   { id: 'waitlist',     label: 'Waitlist Manager'       },
-  { id: 'broadcast',    label: 'Broadcast'              },
   { id: 'messages',     label: 'User Messages'          },
   { id: 'suggestions',  label: 'Suggestions'            },
   { id: 'audit',        label: 'Audit Log'              },
   { id: 'analytics',    label: 'Platform Analytics'     },
   { id: 'settings',     label: 'Settings'               },
+];
+
+const MARKETING_TABS = [
+  { id: 'blog',      label: 'Blog'        },
+  { id: 'broadcast', label: 'Emails'      },
+  { id: 'social',    label: 'Social'      },
 ];
 
 function VerificationPanel() { return <VerificationQueue />;    }
@@ -84,6 +93,15 @@ function SettingsPanel()     { return <AdminSettings />;        }
 function WaitlistPanel()     { return <WaitlistManager />;      }
 function BroadcastPanel()    { return <Broadcast />;            }
 function AuditPanel()        { return <AuditLog />;             }
+function BlogPanel()         { return <BlogManager />;          }
+function SocialPanel() {
+  return (
+    <div style={{ padding: '2rem', textAlign: 'center' }}>
+      <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.1rem', color: 'var(--ink)', margin: '0 0 0.5rem' }}>Social Media</p>
+      <p style={{ fontSize: '0.85rem', color: 'var(--sage)' }}>Coming soon — connect Instagram, TikTok & LinkedIn scheduling here.</p>
+    </div>
+  );
+}
 
 const PANEL_MAP = {
   verification: VerificationPanel,
@@ -98,18 +116,26 @@ const PANEL_MAP = {
   audit:        AuditPanel,
   analytics:    AnalyticsPanel,
   settings:     SettingsPanel,
+  blog:         BlogPanel,
+  social:       SocialPanel,
 };
 
 // ─── AdminDashboard ───────────────────────────────────────────────────────────
 export default function AdminDashboard() {
   const { authorized, loading, profile } = useAdminGuard();
   const [activeSection, setActiveSection] = useState('verification');
+  const [marketingOpen, setMarketingOpen] = useState(false);
   const unreadCount = useQuery(api.messages.getUnreadCount);
+
+  const isMarketingTab = MARKETING_TABS.some(t => t.id === activeSection);
 
   if (loading || !authorized) return null;
 
-  const ActivePanel = PANEL_MAP[activeSection];
+  const ActivePanel = PANEL_MAP[activeSection] || PANEL_MAP['verification'];
   const badges = { messages: unreadCount || 0 };
+  const activeLabel = isMarketingTab
+    ? `Marketing › ${MARKETING_TABS.find(t => t.id === activeSection)?.label}`
+    : SECTIONS.find(s => s.id === activeSection)?.label;
 
   // Decide where "Back to my account" goes based on role
   const backPath = profile?.role === 'host' ? '/host' : '/profile';
@@ -192,6 +218,56 @@ export default function AdminDashboard() {
                 </button>
               );
             })}
+
+            {/* ── Marketing group ─────────────────────────────────────── */}
+            <button
+              onClick={() => { setMarketingOpen(o => !o); if (!isMarketingTab) setActiveSection('blog'); }}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '0.625rem',
+                width: '100%', padding: '0.55rem 0.75rem',
+                borderRadius: '0.625rem', marginBottom: '0.15rem',
+                background: isMarketingTab ? 'rgba(255,255,255,0.85)' : 'transparent',
+                color: isMarketingTab ? '#192524' : '#3C5759',
+                fontWeight: isMarketingTab ? 600 : 400,
+                fontSize: '0.875rem', textAlign: 'left',
+                transition: 'background 0.15s, color 0.15s',
+                cursor: 'pointer', border: 'none',
+                boxShadow: isMarketingTab ? '0 1px 4px rgba(25,37,36,0.08)' : 'none',
+              }}
+              onMouseEnter={e => { if (!isMarketingTab) e.currentTarget.style.background = 'rgba(255,255,255,0.5)'; }}
+              onMouseLeave={e => { if (!isMarketingTab) e.currentTarget.style.background = isMarketingTab ? 'rgba(255,255,255,0.85)' : 'transparent'; }}
+            >
+              <span style={{ display: 'flex', alignItems: 'center', color: isMarketingTab ? '#192524' : '#3C5759', opacity: isMarketingTab ? 1 : 0.7 }}>{ICONS.marketing}</span>
+              <span style={{ flex: 1 }}>Marketing</span>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ transition: 'transform 150ms', transform: (marketingOpen || isMarketingTab) ? 'rotate(90deg)' : 'rotate(0deg)', opacity: 0.5 }}>
+                <path d="M9 18l6-6-6-6"/>
+              </svg>
+            </button>
+            {(marketingOpen || isMarketingTab) && MARKETING_TABS.map(t => {
+              const active = activeSection === t.id;
+              return (
+                <button
+                  key={t.id}
+                  onClick={() => setActiveSection(t.id)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '0.5rem',
+                    width: '100%', padding: '0.45rem 0.75rem 0.45rem 2rem',
+                    borderRadius: '0.625rem', marginBottom: '0.1rem',
+                    background: active ? 'rgba(255,255,255,0.75)' : 'transparent',
+                    color: active ? '#192524' : '#5a7070',
+                    fontWeight: active ? 600 : 400,
+                    fontSize: '0.82rem', textAlign: 'left',
+                    cursor: 'pointer', border: 'none',
+                    transition: 'background 0.15s',
+                  }}
+                  onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'rgba(255,255,255,0.4)'; }}
+                  onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent'; }}
+                >
+                  <span style={{ display: 'flex', alignItems: 'center', opacity: active ? 1 : 0.6 }}>{ICONS[t.id]}</span>
+                  {t.label}
+                </button>
+              );
+            })}
           </nav>
 
           {/* Footer */}
@@ -213,8 +289,8 @@ export default function AdminDashboard() {
             padding: '0 2rem', gap: '0.75rem',
           }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', color: '#959D90' }}>
-              <span style={{ display: 'flex', alignItems: 'center' }}>{ICONS[activeSection]}</span>
-              {SECTIONS.find(s => s.id === activeSection)?.label}
+              <span style={{ display: 'flex', alignItems: 'center' }}>{ICONS[activeSection] || ICONS.marketing}</span>
+              {activeLabel}
             </span>
           </div>
 

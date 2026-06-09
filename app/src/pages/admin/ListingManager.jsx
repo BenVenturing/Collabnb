@@ -32,6 +32,7 @@ export default function ListingManager() {
   const [deleting, setDeleting] = useState(null);
   const [search, setSearch] = useState('');
   const [toggling, setToggling] = useState(null);
+  const [confirmModal, setConfirmModal] = useState(null); // { id, title }
 
   const filtered = (listings ?? []).filter((l) => {
     if (propFilter !== 'all' && l.property_type !== propFilter) return false;
@@ -53,10 +54,15 @@ export default function ListingManager() {
     setToggling(null);
   }
 
-  async function handleDelete(listingId, title) {
-    if (!window.confirm(`Delete "${title}"? This cannot be undone.`)) return;
-    setDeleting(listingId);
-    await deleteListing({ id: listingId });
+  function handleDelete(listingId, title) {
+    setConfirmModal({ id: listingId, title });
+  }
+
+  async function handleConfirmDelete() {
+    const { id } = confirmModal;
+    setConfirmModal(null);
+    setDeleting(id);
+    await deleteListing({ id });
     setDeleting(null);
   }
 
@@ -219,7 +225,10 @@ export default function ListingManager() {
                   {/* Featured */}
                   <td style={{ padding: '0.75rem' }}>
                     {l.is_featured
-                      ? <span style={{ fontSize: '0.65rem', fontWeight: 700, background: '#F3E8FF', color: '#7E22CE', padding: '0.1rem 0.45rem', borderRadius: 99 }}>⭐ Featured</span>
+                      ? <span style={{ fontSize: '0.65rem', fontWeight: 700, background: 'rgba(212,168,67,0.15)', color: '#92400E', padding: '0.15rem 0.55rem', borderRadius: 99, display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                          <svg viewBox="0 0 16 16" width="9" height="9" fill="currentColor"><path d="M8 1l1.85 3.75L14 5.5l-3 2.92.7 4.08L8 10.4l-3.7 2.1.7-4.08L2 5.5l4.15-.75z"/></svg>
+                          Featured
+                        </span>
                       : <span style={{ fontSize: '0.65rem', color: SAGE }}>—</span>
                     }
                   </td>
@@ -260,6 +269,91 @@ export default function ListingManager() {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* ── Branded delete confirmation modal ── */}
+      {confirmModal && (
+        <div
+          onClick={() => setConfirmModal(null)}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 500,
+            background: 'rgba(25,37,36,0.4)',
+            backdropFilter: 'blur(10px)',
+            WebkitBackdropFilter: 'blur(10px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: '1rem',
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: 'rgba(255,255,255,0.94)',
+              backdropFilter: 'blur(24px) saturate(140%)',
+              WebkitBackdropFilter: 'blur(24px) saturate(140%)',
+              border: '1px solid rgba(255,255,255,0.85)',
+              boxShadow: '0 20px 60px rgba(25,37,36,0.18), inset 0 1px 0 rgba(255,255,255,0.7)',
+              borderRadius: '1.25rem',
+              padding: '2rem',
+              width: 380,
+              maxWidth: '100%',
+              animation: 'fadeUp 160ms ease forwards',
+            }}
+          >
+            <style>{`@keyframes fadeUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }`}</style>
+
+            {/* Icon */}
+            <div style={{
+              width: 44, height: 44, borderRadius: '0.875rem',
+              background: 'rgba(200,104,104,0.12)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              marginBottom: '1rem',
+            }}>
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#C86868" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
+              </svg>
+            </div>
+
+            <p style={{ fontFamily: 'Cabinet Grotesk, sans-serif', fontWeight: 700, fontSize: '1rem', color: INK, margin: '0 0 0.4rem' }}>
+              Delete listing
+            </p>
+            <p style={{ fontSize: '0.82rem', color: SLATE, margin: '0 0 1.5rem', lineHeight: 1.5 }}>
+              Delete <strong style={{ color: INK }}>"{confirmModal.title}"</strong>? This cannot be undone.
+            </p>
+
+            <div style={{ display: 'flex', gap: '0.625rem', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setConfirmModal(null)}
+                style={{
+                  padding: '0.55rem 1.1rem', borderRadius: '0.625rem',
+                  background: 'rgba(25,37,36,0.06)',
+                  border: '1px solid rgba(25,37,36,0.1)',
+                  color: SLATE, fontSize: '0.82rem', fontWeight: 600,
+                  cursor: 'pointer', fontFamily: 'inherit',
+                  transition: 'background 140ms',
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(25,37,36,0.1)'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(25,37,36,0.06)'}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmDelete}
+                style={{
+                  padding: '0.55rem 1.1rem', borderRadius: '0.625rem',
+                  background: '#C86868',
+                  border: '1px solid transparent',
+                  color: '#fff', fontSize: '0.82rem', fontWeight: 600,
+                  cursor: 'pointer', fontFamily: 'inherit',
+                  transition: 'opacity 140ms',
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.opacity = '0.85'}
+                onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

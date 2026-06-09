@@ -105,7 +105,7 @@ function ProfileCard({ profile, onApprove, onReject, isRejected, onViewDetails }
             )}
             {profile.is_founder && !isRejected && (
               <span style={{ fontSize: '0.7rem', background: '#FEF3C7', color: '#92400E', padding: '0.1rem 0.5rem', borderRadius: '99px', fontWeight: 500 }}>
-                🌟 Founder
+                Founder
               </span>
             )}
             {profile.referred_by && (
@@ -333,7 +333,7 @@ export default function VerificationQueue() {
       {/* ── Empty state ── */}
       {!isLoading && displayCards.length === 0 && (
         <div style={{ color: '#959D90', fontSize: '0.85rem', padding: '3.5rem 0', textAlign: 'center' }}>
-          {tab === 'rejected' ? 'No rejected users.' : 'Queue is empty 🎉'}
+          {tab === 'rejected' ? 'No rejected users.' : 'Queue is empty — all caught up.'}
         </div>
       )}
 

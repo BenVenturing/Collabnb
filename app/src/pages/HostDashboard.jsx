@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, MapPin, Users, Calendar, MessageSquare, MoreVertical, X, UserPlus, Home, CheckCircle2 } from 'lucide-react';
-import { useQuery } from 'convex/react';
+import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { useAuth } from '../contexts/AuthContext';
 import { SAMPLE_LISTINGS, IMG_FALLBACK } from '../lib/mockData';
@@ -40,13 +40,11 @@ function saveListingStatuses(statuses) {
   try { localStorage.setItem(LISTINGS_STATUS_KEY, JSON.stringify(statuses)); } catch {}
 }
 
-// ─── Impact chart data (mock) ─────────────────────────────────────────────────
-const CHART_DATA = {
-  collabs:  [0, 1, 3, 5, 8, 11, 14],
-  creators: [3, 4, 5, 6, 8, 5, 6],
-  content:  [12, 18, 22, 30, 28, 38],
-  reach:    [0.2, 0.4, 0.7, 1.1, 1.6, 2.0, 2.4],
-};
+function fmtStat(n) {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
+  return String(n);
+}
 
 function sparkPath(data, w, h, pad = 3) {
   const min = Math.min(...data);
@@ -236,13 +234,13 @@ function normalizeConvexListing(l) {
 }
 
 // ─── Expanded chart modal ─────────────────────────────────────────────────────
-function ExpandedChartModal({ cardKey, onClose }) {
+function ExpandedChartModal({ cardKey, onClose, stats, chartData }) {
   const [hoveredIdx, setHoveredIdx] = useState(null);
 
   const CFGS = {
-    collabs:  { title: 'Total Collabs',        total: '14',  data: CHART_DATA.collabs,  color: '#4A9B7F', type: 'line' },
-    creators: { title: 'Creators Worked With', total: '31',  data: CHART_DATA.creators, color: '#3C5759', type: 'bar'  },
-    content:  { title: 'Content Pieces',       total: '148', data: CHART_DATA.content,  color: '#7B68C8', type: 'line' },
+    collabs:  { title: 'Total Collabs',        total: fmtStat(stats.totalCollabs),   data: chartData.collabs,  color: '#4A9B7F', type: 'line' },
+    creators: { title: 'Creators Worked With', total: fmtStat(stats.uniqueCreators), data: chartData.creators, color: '#3C5759', type: 'bar'  },
+    content:  { title: 'Content Pieces',       total: fmtStat(stats.contentPieces),  data: chartData.content,  color: '#7B68C8', type: 'line' },
   };
   const cfg = CFGS[cardKey];
   if (!cfg) return null;
@@ -341,7 +339,7 @@ function ExpandedChartModal({ cardKey, onClose }) {
 }
 
 // ─── Host Listing Card ────────────────────────────────────────────────────────
-function HostListingCard({ listing, meta, delay, glowState, onToggleStatus, onDuplicate }) {
+function HostListingCard({ listing, meta, delay, glowState, onToggleStatus, onDuplicate, onRemoveSample }) {
   const navigate = useNavigate();
   const [hovered, setHovered] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -387,6 +385,22 @@ function HostListingCard({ listing, meta, delay, glowState, onToggleStatus, onDu
             onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = IMG_FALLBACK; }}
             style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
           />
+          {listing.is_sample && (
+            <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden' }}>
+              {[18, 50, 82].map((top, i) => (
+                <div key={i} style={{
+                  position: 'absolute', top: `${top}%`, left: '50%',
+                  transform: 'translateX(-50%) rotate(-35deg)',
+                  fontFamily: 'var(--font-display)', fontWeight: 900,
+                  fontSize: '0.8rem', color: 'rgba(255,255,255,0.72)',
+                  letterSpacing: '0.3em', whiteSpace: 'nowrap', userSelect: 'none',
+                  textShadow: '0 1px 4px rgba(0,0,0,0.45)',
+                }}>
+                  SAMPLE · SAMPLE · SAMPLE
+                </div>
+              ))}
+            </div>
+          )}
           <span style={{
             position: 'absolute', top: '0.75rem', left: '0.75rem',
             padding: '0.25rem 0.6rem', borderRadius: 9999,
@@ -462,6 +476,7 @@ function HostListingCard({ listing, meta, delay, glowState, onToggleStatus, onDu
             animation: 'fadeUp 120ms ease forwards',
           }}>
             {[
+              ...(listing.is_sample ? [{ label: 'Remove sample', danger: true, action: (e) => { e.stopPropagation(); onRemoveSample?.(listing); setMenuOpen(false); } }] : []),
               { label: 'Edit', action: (e) => {
                 e.stopPropagation();
                 const draft = {
@@ -496,7 +511,7 @@ function HostListingCard({ listing, meta, delay, glowState, onToggleStatus, onDu
               } },
               { label: meta.status === 'paused' ? 'Unpause' : 'Pause', action: (e) => { e.stopPropagation(); if (meta.status !== 'draft') onToggleStatus(listing.id); setMenuOpen(false); }, muted: meta.status === 'draft' },
               { label: 'Duplicate', action: (e) => { e.stopPropagation(); onDuplicate(listing); setMenuOpen(false); } },
-            ].map(({ label, action, muted }) => (
+            ].map(({ label, action, muted, danger }) => (
               <button
                 key={label}
                 onClick={action}
@@ -504,7 +519,8 @@ function HostListingCard({ listing, meta, delay, glowState, onToggleStatus, onDu
                   display: 'block', width: '100%', padding: '0.625rem 1rem',
                   textAlign: 'left', background: 'none', border: 'none',
                   cursor: muted ? 'default' : 'pointer',
-                  fontSize: '0.82rem', fontWeight: 500, color: muted ? 'var(--sage)' : 'var(--ink)',
+                  fontSize: '0.82rem', fontWeight: 500,
+                  color: danger ? '#C86868' : muted ? 'var(--sage)' : 'var(--ink)',
                   fontFamily: 'var(--font-body)', transition: 'background 120ms',
                 }}
                 onMouseEnter={(e) => { if (!muted) e.currentTarget.style.background = 'rgba(25,37,36,0.04)'; }}
@@ -525,6 +541,9 @@ export default function HostDashboard() {
   const navigate = useNavigate();
   const { profile } = useAuth();
 
+  const seedSampleListingsMutation = useMutation(api.listings.seedSampleListings);
+  const deleteListingMutation = useMutation(api.listings.deleteListing);
+
   // ── Convex: fetch only this host's listings ──────────────────────────────────
   const hostId = profile?._id || profile?.id;
   const convexHostListings = useQuery(
@@ -542,6 +561,47 @@ export default function HostDashboard() {
       if (p.status === 'completed') map[lid].completed++;
     });
     return map;
+  }, [convexPitches]);
+
+  // ── Real impact stats derived from live Convex data ──────────────────────────
+  const hostStats = useMemo(() => {
+    const pitches = convexPitches || [];
+    const listings = convexHostListings || [];
+    const active = pitches.filter(p => p.status === 'approved' || p.status === 'accepted' || p.status === 'completed');
+    const totalCollabs = active.length;
+    const uniqueCreators = new Set(active.map(p => p.creator_id)).size;
+    const estReach = active.reduce((sum, p) => sum + (p.creator_followers || 0), 0);
+    const approvedListingIds = new Set(active.map(p => String(p.listing_id)));
+    const contentPieces = listings
+      .filter(l => !l.is_sample && approvedListingIds.has(String(l._id)))
+      .reduce((sum, l) => sum + (l.deliverable_count || 0), 0);
+    return { totalCollabs, uniqueCreators, contentPieces, estReach };
+  }, [convexPitches, convexHostListings]);
+
+  // ── 6-month time-series for sparklines ───────────────────────────────────────
+  const hostChartData = useMemo(() => {
+    const pitches = convexPitches || [];
+    const MONTHS = 6;
+    const now = new Date();
+    const buckets = Array.from({ length: MONTHS }, (_, i) => {
+      const d = new Date(now.getFullYear(), now.getMonth() - (MONTHS - 1 - i), 1);
+      return { year: d.getFullYear(), month: d.getMonth(), collabs: 0, creators: new Set(), reach: 0 };
+    });
+    pitches.forEach(p => {
+      if (p.status !== 'approved' && p.status !== 'accepted' && p.status !== 'completed') return;
+      const d = new Date(p.created_at);
+      const b = buckets.find(b => b.year === d.getFullYear() && b.month === d.getMonth());
+      if (!b) return;
+      b.collabs++;
+      b.creators.add(p.creator_id);
+      b.reach += (p.creator_followers || 0);
+    });
+    return {
+      collabs:  buckets.map(b => b.collabs),
+      creators: buckets.map(b => b.creators.size),
+      content:  buckets.map(b => b.collabs),
+      reach:    buckets.map(b => b.reach / 1_000_000),
+    };
   }, [convexPitches]);
 
   const [filter, setFilter] = useState('all');
@@ -568,6 +628,32 @@ export default function HostDashboard() {
     const t = setTimeout(() => setChartsAnimated(true), 300);
     return () => clearTimeout(t);
   }, []);
+
+  // ── Auto-seed sample listings for first-time hosts ────────────────────────────
+  const seedKeyRef = useRef(null);
+  useEffect(() => {
+    if (
+      convexHostListings !== undefined &&
+      convexHostListings.length === 0 &&
+      hostId
+    ) {
+      const key = `@collabnb_sample_seeded_${hostId}`;
+      if (!localStorage.getItem(key) && seedKeyRef.current !== key) {
+        seedKeyRef.current = key;
+        localStorage.setItem(key, 'true');
+        seedSampleListingsMutation({
+          host_id: String(hostId),
+          host_name: profile?.full_name || 'Host',
+        });
+      }
+    }
+  }, [convexHostListings, hostId]);
+
+  async function removeSampleListing(listing) {
+    const id = listing._id || listing.id;
+    if (!id) return;
+    try { await deleteListingMutation({ id }); } catch {}
+  }
 
   function triggerActiveGlow() {
     listingsSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -776,10 +862,33 @@ export default function HostDashboard() {
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1.25rem', alignItems: 'start' }}>
               {filtered.map((listing, i) => (
-                <HostListingCard key={listing.id} listing={listing} meta={listing.meta} delay={i * 55} glowState={glowState} onToggleStatus={toggleListingStatus} onDuplicate={duplicateListing} />
+                <HostListingCard key={listing.id} listing={listing} meta={listing.meta} delay={i * 55} glowState={glowState} onToggleStatus={toggleListingStatus} onDuplicate={duplicateListing} onRemoveSample={removeSampleListing} />
               ))}
             </div>
           )}
+        </div>
+
+        {/* ── Explore marketplace banner ── */}
+        <div style={{ ...GC, padding: '1.5rem', marginBottom: '2.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
+          <div>
+            <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.1rem', color: 'var(--ink)', margin: '0 0 0.25rem' }}>Explore the marketplace</h2>
+            <p style={{ fontSize: '0.78rem', color: 'var(--sage)', margin: 0 }}>Browse other properties for inspiration and see what creators are looking for.</p>
+          </div>
+          <button
+            onClick={() => navigate('/explore')}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '0.4rem',
+              padding: '0.6rem 1.25rem', borderRadius: 9999,
+              background: 'var(--ink)', color: 'var(--bone)',
+              border: 'none', cursor: 'pointer', flexShrink: 0,
+              fontSize: '0.82rem', fontWeight: 600, fontFamily: 'var(--font-body)',
+              transition: 'opacity 150ms',
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.opacity = '0.85'}
+            onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
+          >
+            Browse listings →
+          </button>
         </div>
 
         {/* ── Activity Feed ── */}
@@ -864,9 +973,9 @@ export default function HostDashboard() {
               onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = GC.boxShadow; }}
             >
               <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#4A9B7F', marginBottom: '0.6rem' }} />
-              <p style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.75rem', color: 'var(--ink)', margin: '0 0 0.15rem', lineHeight: 1, letterSpacing: '-0.03em' }}>14</p>
+              <p style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.75rem', color: 'var(--ink)', margin: '0 0 0.15rem', lineHeight: 1, letterSpacing: '-0.03em' }}>{fmtStat(hostStats.totalCollabs)}</p>
               <p style={{ fontSize: '0.75rem', color: 'var(--sage)', fontFamily: 'var(--font-body)', marginBottom: '0.75rem' }}>Total Collabs</p>
-              {chartsAnimated && <MiniLineChart data={CHART_DATA.collabs} color="#4A9B7F" delay={0} />}
+              {chartsAnimated && <MiniLineChart data={hostChartData.collabs} color="#4A9B7F" delay={0} />}
             </div>
 
             {/* Creators Worked With — bar chart */}
@@ -877,9 +986,9 @@ export default function HostDashboard() {
               onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = GC.boxShadow; }}
             >
               <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#3C5759', marginBottom: '0.6rem' }} />
-              <p style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.75rem', color: 'var(--ink)', margin: '0 0 0.15rem', lineHeight: 1, letterSpacing: '-0.03em' }}>31</p>
+              <p style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.75rem', color: 'var(--ink)', margin: '0 0 0.15rem', lineHeight: 1, letterSpacing: '-0.03em' }}>{fmtStat(hostStats.uniqueCreators)}</p>
               <p style={{ fontSize: '0.75rem', color: 'var(--sage)', fontFamily: 'var(--font-body)', marginBottom: '0.75rem' }}>Creators Worked With</p>
-              {chartsAnimated && <MiniBarChart data={CHART_DATA.creators} color="#3C5759" delay={80} />}
+              {chartsAnimated && <MiniBarChart data={hostChartData.creators} color="#3C5759" delay={80} />}
             </div>
 
             {/* Content Pieces — sparkline */}
@@ -890,17 +999,17 @@ export default function HostDashboard() {
               onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = GC.boxShadow; }}
             >
               <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#7B68C8', marginBottom: '0.6rem' }} />
-              <p style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.75rem', color: 'var(--ink)', margin: '0 0 0.15rem', lineHeight: 1, letterSpacing: '-0.03em' }}>148</p>
+              <p style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.75rem', color: 'var(--ink)', margin: '0 0 0.15rem', lineHeight: 1, letterSpacing: '-0.03em' }}>{fmtStat(hostStats.contentPieces)}</p>
               <p style={{ fontSize: '0.75rem', color: 'var(--sage)', fontFamily: 'var(--font-body)', marginBottom: '0.75rem' }}>Content Pieces</p>
-              {chartsAnimated && <MiniLineChart data={CHART_DATA.content} color="#7B68C8" delay={160} />}
+              {chartsAnimated && <MiniLineChart data={hostChartData.content} color="#7B68C8" delay={160} />}
             </div>
 
             {/* Est. Reach — blurred + tooltip */}
             <div style={{ ...GC, padding: '1.25rem 1.5rem' }}>
               <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#D4A843', marginBottom: '0.6rem' }} />
-              <p style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.75rem', color: 'var(--ink)', margin: '0 0 0.15rem', lineHeight: 1, letterSpacing: '-0.03em' }}>2.4M</p>
+              <p style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.75rem', color: 'var(--ink)', margin: '0 0 0.15rem', lineHeight: 1, letterSpacing: '-0.03em' }}>{hostStats.estReach > 0 ? fmtStat(hostStats.estReach) : '—'}</p>
               <p style={{ fontSize: '0.75rem', color: 'var(--sage)', fontFamily: 'var(--font-body)', marginBottom: '0.75rem' }}>Est. Reach</p>
-              {chartsAnimated && <BlurredReachChart data={CHART_DATA.reach} color="#D4A843" delay={240} />}
+              {chartsAnimated && <BlurredReachChart data={hostChartData.reach} color="#D4A843" delay={240} />}
             </div>
 
           </div>
@@ -910,7 +1019,7 @@ export default function HostDashboard() {
     </div>
 
     {expandedChart && (
-      <ExpandedChartModal cardKey={expandedChart} onClose={() => setExpandedChart(null)} />
+      <ExpandedChartModal cardKey={expandedChart} onClose={() => setExpandedChart(null)} stats={hostStats} chartData={hostChartData} />
     )}
     </>
   );

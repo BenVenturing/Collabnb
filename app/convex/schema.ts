@@ -87,6 +87,7 @@ export default defineSchema({
       quantity: v.number(),
       description: v.string(),
     }))),
+    is_sample: v.optional(v.boolean()),
   }).index("by_location", ["location"]).index("by_host", ["host_id"]),
 
   collaborations: defineTable({
@@ -262,4 +263,28 @@ export default defineSchema({
     read: v.boolean(),
     created_at: v.number(),
   }).index("by_user", ["user_id"]),
+
+  blog_posts: defineTable({
+    title: v.string(),
+    slug: v.string(),
+    excerpt: v.string(),
+    content: v.string(),            // HTML string
+    status: v.string(),             // 'draft' | 'published' | 'rejected'
+    category: v.string(),           // 'creators' | 'hosts' | 'industry' | 'stats'
+    tags: v.optional(v.array(v.string())),
+    hero_image_url: v.optional(v.string()),
+    hero_image_alt: v.optional(v.string()),
+    hero_image_credit: v.optional(v.string()),      // photographer name
+    hero_image_credit_url: v.optional(v.string()),  // unsplash profile link
+    instagram_embed_url: v.optional(v.string()),
+    sources: v.optional(v.array(v.string())),
+    seo_description: v.optional(v.string()),
+    reading_time: v.optional(v.number()),           // minutes
+    generated_at: v.number(),
+    published_at: v.optional(v.number()),
+    is_stats_post: v.optional(v.boolean()),
+  })
+    .index("by_status", ["status"])
+    .index("by_slug", ["slug"])
+    .index("by_generated", ["generated_at"]),
 });

@@ -169,7 +169,7 @@ function MessageRow({ msg, toggleRead, archiveMessage, unarchiveMessage }) {
               onClick={() => { setShowInbox(v => !v); setReplySent(false); }}
               style={{ ...btnBase, background: '#192524', color: '#fff', fontWeight: 500 }}
             >
-              💬 Reply via Inbox
+              Reply via Inbox
             </button>
 
             {!msg.is_archived ? (
@@ -268,7 +268,7 @@ export default function UserMessages() {
       {/* ── Empty ── */}
       {!isLoading && displayList.length === 0 && (
         <div style={{ color: '#959D90', fontSize: '0.85rem', padding: '3.5rem 0', textAlign: 'center' }}>
-          {tab === 'unread' ? 'No unread messages 🎉' : tab === 'archived' ? 'No archived messages.' : 'No messages yet.'}
+          {tab === 'unread' ? 'No unread messages.' : tab === 'archived' ? 'No archived messages.' : 'No messages yet.'}
         </div>
       )}
 

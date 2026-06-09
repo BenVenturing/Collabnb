@@ -1,0 +1,80 @@
+# Collabnb
+
+> **Collaboration marketplace** — connects boutique hospitality hosts with UGC creators and travel influencers for content-for-stay partnerships. Hosts offer free or discounted stays; creators deliver content (UGC video, Reels, TikTok, photography). No agencies. Launching July 1, 2026 at collabnb.com.
+
+## What this project is
+
+Collabnb is a host–creator collaboration platform. It is **not** a traditional booking site — every stay is a content collaboration agreement. Two user types:
+
+- **Hosts** — boutique hotel owners, Airbnb superhosts, vacation rental operators who want authentic social content without paying agency rates.
+- **Creators** — UGC creators, travel influencers, and photographers who want subsidized or free travel stays in exchange for deliverables.
+
+The platform handles discovery, matching, messaging, and collaboration agreements between the two sides.
+
+## Tech stack
+
+| Layer | Technology |
+|---|---|
+| Frontend | React + Vite SPA (HashRouter) in `app/` |
+| Auth | Clerk (Google OAuth, production) + MockAuthProvider (localhost) |
+| Database / backend | Convex (cloud functions + document DB) at `outgoing-anaconda-357.convex.cloud` |
+| Email | Resend |
+| Hosting | Vercel at `collabnb.com` |
+| Marketing pages | Plain HTML + Tailwind in root directory |
+| Styling | Tailwind CSS + custom HAZY palette, glass morphism design system |
+
+Two separate Vite builds:
+- Root build → `dist/` (marketing site)
+- App build → `dist/app/` (React SPA, served at `/app/`)
+
+## Key directories and files
+
+```
+/                          Root marketing site (HTML pages)
+  index.html               Landing page
+  about.html, faq.html, pricing/, join.html, how-it-works.html
+  assets/                  Shared images, logo, fonts
+  styles/                  Global CSS
+
+app/                       React SPA
+  src/
+    App.jsx                Routes, admin guard, waitlist logic
+    contexts/
+      AuthContext.jsx      Clerk + Convex bridge; syncs Google avatar
+    components/
+      AppNav.jsx           Floating glass nav
+      Layout.jsx           Pre-launch banner, onboarding checklist
+      OnboardingChecklist.jsx  Role-based checklist (creator / host)
+      FAQModal.jsx         In-app FAQ modal
+    pages/
+      Explore.jsx          Browse listings
+      Profile.jsx          Full-bleed banner hero, avatar, edit flow
+      AdminDashboard.jsx   8-section admin panel
+      Inbox.jsx            Messaging (locked until launch)
+      ListingDetail.jsx    /listing/:id — apply now flow
+  convex/
+    profiles.ts            getByEmail, getOrCreate, updateProfile
+    messages.ts            getUnreadCount (admin badge)
+```
+
+## Business rules worth knowing
+
+- Admin account: `benventuring@gmail.com` — auto-routes to `/app/#/admin` after login.
+- Messaging is locked to launch date (July 1, 2026).
+- Waitlist signup is collected but no longer blocks browsing.
+- Convex does **not** auto-deploy on `git push` — requires `cd app && npx convex deploy` separately.
+
+## Design system
+
+- Palette: HAZY — muted teal, dusty rose, warm sand, fog white. No pure whites or blacks.
+- Glass morphism cards: `backdrop-blur`, semi-transparent backgrounds, soft borders.
+- Fonts: display headings use a serif; UI uses a clean sans-serif.
+- CSS utility classes live in `styles/` and Tailwind config at `tailwind.config.js`.
+
+## Important constraints for AI tools
+
+- **Never assume Supabase** — the database is Convex.
+- **Do not use Edge Functions** — the Vercel deployment uses Fluid Compute (Node.js).
+- **Do not add unsolicited features or refactors** — only implement what is explicitly asked.
+- **Prefer editing existing files** over creating new ones.
+- Routing is HashRouter-based (e.g., `/#/explore`, `/#/profile`) — do not suggest switching to BrowserRouter.

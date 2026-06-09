@@ -138,7 +138,7 @@ function FounderOverride() {
         <div style={{ background: '#F7F5F2', borderRadius: '0.625rem', padding: '0.875rem 1rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <div style={{ flex: 1 }}>
             <div style={{ fontWeight: 600, fontSize: '0.875rem', color: '#192524' }}>{found.full_name}</div>
-            <div style={{ fontSize: '0.78rem', color: '#959D90' }}>@{found.username} · {found.role} · {found.is_founder ? '🌟 Founder' : 'Not a founder'}</div>
+            <div style={{ fontSize: '0.78rem', color: '#959D90' }}>@{found.username} · {found.role} · {found.is_founder ? 'Founder' : 'Not a founder'}</div>
           </div>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
             {!found.is_founder && (

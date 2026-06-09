@@ -1,16 +1,30 @@
 import { cronJobs } from "convex/server";
-import { internal } from "./_generated/api";
+import { internal, api } from "./_generated/api";
 
 const crons = cronJobs();
 
 // Runs on the 1st of each month at midnight UTC.
-// Consumes one free month from creators who have completed their first collab
-// and earned referral credits but haven't subscribed yet.
 crons.monthly(
   "decrement free months balance",
   { day: 1, hourUTC: 0, minuteUTC: 0 },
   internal.profiles.decrementFreeMonth,
   {}
+);
+
+// Daily at 9am UTC — generate a new blog post draft for admin review.
+crons.daily(
+  "generate daily blog post",
+  { hourUTC: 9, minuteUTC: 0 },
+  api.blog.generatePost,
+  { isStatsPost: false }
+);
+
+// Monthly on the 1st at 10am UTC — generate a platform stats roundup post.
+crons.monthly(
+  "generate monthly stats post",
+  { day: 1, hourUTC: 10, minuteUTC: 0 },
+  api.blog.generatePost,
+  { isStatsPost: true }
 );
 
 export default crons;

@@ -869,11 +869,11 @@ export default function HostProposals() {
     });
   });
 
-  // Merge real Convex pitches (prepended) with mock data
+  // Use only real Convex pitches once loaded; show empty state instead of mock data
   const allProposals = useMemo(() => {
-    if (!rawPitches?.length) return proposals;
+    if (rawPitches === undefined) return []; // still loading
     const saved = loadApplications();
-    const real = rawPitches.map((p) => {
+    return rawPitches.map((p) => {
       const normalized = normalizePitch(p);
       const s = saved[String(p._id)] || {};
       return {
@@ -886,8 +886,7 @@ export default function HostProposals() {
         hidden:          s.hidden          ?? false,
       };
     });
-    return [...real, ...proposals];
-  }, [rawPitches, proposals]);
+  }, [rawPitches]);
 
   const listingNames = useMemo(() => (
     ['All Listings', ...Array.from(new Set(allProposals.map((p) => p.listing)))]
@@ -1080,9 +1079,15 @@ export default function HostProposals() {
           {filtered.length === 0 ? (
             <div style={{ background: 'rgba(255,255,255,0.6)', backdropFilter: 'blur(20px)', border: '1.5px solid rgba(255,255,255,0.7)', borderRadius: '1.25rem', padding: '3rem', textAlign: 'center' }}>
               <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1rem', color: 'var(--ink)', marginBottom: '0.4rem' }}>
-                No {typeFilter !== 'all' ? typeFilter + 's' : ''} {tab !== 'all' ? (STAGE_TABS.find((t) => t.key === tab)?.label.toLowerCase() + ' ') : ''}proposals
+                {allProposals.length === 0
+                  ? 'No proposals yet'
+                  : `No ${typeFilter !== 'all' ? typeFilter + 's' : ''}${tab !== 'all' ? ' ' + (STAGE_TABS.find((t) => t.key === tab)?.label.toLowerCase()) : ''} proposals`}
               </p>
-              <p style={{ fontSize: '0.82rem', color: 'var(--sage)', margin: 0 }}>Try a different filter.</p>
+              <p style={{ fontSize: '0.82rem', color: 'var(--sage)', margin: 0 }}>
+                {allProposals.length === 0
+                  ? 'Once creators apply to your listings, their proposals will appear here.'
+                  : 'Try a different filter.'}
+              </p>
             </div>
           ) : (
             filtered.map((p) => (

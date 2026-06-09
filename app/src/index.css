@@ -68,7 +68,7 @@ button { font: inherit; cursor: pointer; border: none; background: none; }
   background-image: url('./assets/bg-clouds-hazy.png');
   background-size: cover;
   background-position: center;
-  opacity: 0.38;
+  opacity: 0.18;
   mix-blend-mode: multiply;
   filter: saturate(0.5) brightness(1.1);
 }
@@ -102,14 +102,14 @@ button { font: inherit; cursor: pointer; border: none; background: none; }
   border-radius: 1rem;
 }
 .glass-card {
-  background: rgba(255,255,255,0.95);
-  backdrop-filter: blur(20px) saturate(130%);
-  -webkit-backdrop-filter: blur(20px) saturate(130%);
-  border: 1px solid rgba(255,255,255,0.75);
+  background: rgba(255,255,255,0.55);
+  backdrop-filter: blur(24px) saturate(140%);
+  -webkit-backdrop-filter: blur(24px) saturate(140%);
+  border: 1px solid rgba(255,255,255,0.6);
   box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.75),
-    0 4px 16px rgba(25,37,36,0.06),
-    0 16px 40px rgba(25,37,36,0.04);
+    inset 0 1px 0 rgba(255,255,255,0.6),
+    inset 0 -1px 0 rgba(25,37,36,0.04),
+    0 20px 40px -15px rgba(25,37,36,0.10);
   border-radius: 1.25rem;
 }
 
@@ -343,14 +343,17 @@ button { font: inherit; cursor: pointer; border: none; background: none; }
 /* ── LISTING CARD (matches home page bokeh card style) ──────────────────────── */
 .listing-card {
   flex: none;
-  background: rgba(255,255,255,0.70);
-  backdrop-filter: blur(20px) saturate(130%);
-  -webkit-backdrop-filter: blur(20px) saturate(130%);
-  border: 1px solid rgba(255,255,255,0.75);
+  background: rgba(255,255,255,0.55);
+  backdrop-filter: blur(24px) saturate(140%);
+  -webkit-backdrop-filter: blur(24px) saturate(140%);
+  border: 1px solid rgba(255,255,255,0.6);
   border-radius: 1.25rem;
   overflow: hidden;
   transition: transform 300ms var(--ease-out-quart), box-shadow 300ms var(--ease-out-quart);
-  box-shadow: 0 2px 8px rgba(25,37,36,0.06), 0 8px 24px rgba(25,37,36,0.04);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.6),
+    inset 0 -1px 0 rgba(25,37,36,0.04),
+    0 20px 40px -15px rgba(25,37,36,0.10);
   cursor: pointer;
 }
 .listing-card:hover {
@@ -362,10 +365,14 @@ button { font: inherit; cursor: pointer; border: none; background: none; }
 .search-bar {
   display: flex;
   align-items: stretch;
-  background: rgba(255,255,255,0.75);
+  background: rgba(255,255,255,0.55);
   backdrop-filter: blur(24px) saturate(140%);
   -webkit-backdrop-filter: blur(24px) saturate(140%);
-  border: 1.5px solid rgba(255,255,255,0.85);
+  border: 1px solid rgba(255,255,255,0.6);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.6),
+    inset 0 -1px 0 rgba(25,37,36,0.04),
+    0 20px 40px -15px rgba(25,37,36,0.10);
   border-radius: 9999px;
   box-shadow:
     inset 0 1px 0 rgba(255,255,255,0.8),

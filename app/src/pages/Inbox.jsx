@@ -321,7 +321,7 @@ function ConversationPanel({ thread, onViewCollab, onArchive, onUpdateTag }) {
   return (
     <div className="flex flex-col h-full">
       {/* Conversation header */}
-      <div className="flex items-center gap-3 px-6 py-4 border-b border-stone/30 bg-white/60 backdrop-blur-sm flex-shrink-0">
+      <div className="flex items-center gap-3 px-6 py-4 border-b border-stone/30 bg-white/25 backdrop-blur-md flex-shrink-0">
         <button
           onClick={() => setPopupPerson({ name: thread.host_name, avatar: thread.host_avatar, isFounder: thread.is_founder })}
           style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', borderRadius: '50%', flexShrink: 0 }}
@@ -699,11 +699,11 @@ export default function Inbox() {
   const listingsForNewMessage = SAMPLE_LISTINGS.filter((l) => !existingTitles.has(l.title));
 
   return (
-    <div className="flex bg-bone overflow-hidden" style={{ height: 'calc(100dvh - 7rem)' }}>
+    <div className="flex overflow-hidden" style={{ height: 'calc(100dvh - 7rem)' }}>
 
       {/* ── Left panel: thread list ── */}
       <div
-        className="flex flex-col border-r border-stone/30 bg-white/40 backdrop-blur-md flex-shrink-0"
+        className="flex flex-col border-r border-stone/30 bg-white/25 backdrop-blur-md flex-shrink-0"
         style={{ width: 340 }}
       >
         {/* Header */}

@@ -321,7 +321,7 @@ export default function Saved() {
   };
 
   return (
-    <div style={{ minHeight: '100dvh' }}>
+    <div>
       {/* ── Header ── */}
       <div style={{ padding: '2rem 1.5rem 1.25rem' }}>
         <h1 style={{

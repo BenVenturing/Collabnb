@@ -489,7 +489,7 @@ export default function Explore() {
   const allFiltered = byPropType(searchFiltered);
 
   return (
-    <div style={{ minHeight: '100dvh' }}>
+    <div>
 
       {/* ── Search header — hidden instantly once nav goes compact ─────────── */}
       <div style={{

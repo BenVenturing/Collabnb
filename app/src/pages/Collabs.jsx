@@ -37,15 +37,15 @@ function CollabCard({ collab, onClick, onDismissDemo, onDismissSample }) {
         overflow: 'hidden',
         cursor: 'pointer',
         position: 'relative',
-        background: 'rgba(255,255,255,0.62)',
+        background: 'rgba(255,255,255,0.55)',
         backdropFilter: 'blur(24px) saturate(140%)',
         WebkitBackdropFilter: 'blur(24px) saturate(140%)',
-        border: '1px solid rgba(255,255,255,0.75)',
-        boxShadow: '0 4px 28px rgba(25,37,36,0.10), inset 0 1px 0 rgba(255,255,255,0.65)',
+        border: '1px solid rgba(255,255,255,0.6)',
+        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.6), inset 0 -1px 0 rgba(25,37,36,0.04), 0 20px 40px -15px rgba(25,37,36,0.10)',
         transition: 'transform 180ms cubic-bezier(0.16,1,0.3,1), box-shadow 180ms',
       }}
-      onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 36px rgba(25,37,36,0.14), inset 0 1px 0 rgba(255,255,255,0.65)'; }}
-      onMouseLeave={(e) => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '0 4px 28px rgba(25,37,36,0.10), inset 0 1px 0 rgba(255,255,255,0.65)'; }}
+      onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 36px rgba(25,37,36,0.14), inset 0 1px 0 rgba(255,255,255,0.6)'; }}
+      onMouseLeave={(e) => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = 'inset 0 1px 0 rgba(255,255,255,0.6), inset 0 -1px 0 rgba(25,37,36,0.04), 0 20px 40px -15px rgba(25,37,36,0.10)'; }}
     >
       {/* ── Hero image ─────────────────────────────────────────────────────── */}
       <div style={{ height: 172, position: 'relative', overflow: 'hidden', background: 'linear-gradient(135deg, #EFECE9 0%, #D1EBDB 100%)' }}>
@@ -268,7 +268,7 @@ export default function Collabs() {
     : baseList;
 
   return (
-    <div className="min-h-dvh">
+    <div>
 
       {/* Header */}
       <div className="bg-white/70 backdrop-blur-md border-b border-stone/50 px-4 pt-6 pb-4 lg:px-8">

@@ -10,6 +10,8 @@
   },
   "dependencies": {
     "@clerk/clerk-js": "^5.61.6",
+    "@vercel/sandbox": "^2.1.1",
+    "@vercel/speed-insights": "^2.0.0",
     "convex": "^1.38.0",
     "framer-motion": "^11.1.7",
     "html2pdf.js": "^0.14.0",

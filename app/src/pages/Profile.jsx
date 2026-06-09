@@ -552,6 +552,7 @@ export default function Profile() {
   const [showAllCollabs,    setShowAllCollabs]    = useState(false);
   const [showPrivacy,       setShowPrivacy]       = useState(false);
   const [showVerification,  setShowVerification]  = useState(false);
+  const [showLocation,      setShowLocation]      = useState(false);
   const [showListingPicker, setShowListingPicker] = useState(false);
   const [toastMsg, setToastMsg]               = useState(null);
   const [exitConfirmDraft, setExitConfirmDraft] = useState(null);
@@ -774,6 +775,7 @@ export default function Profile() {
     { icon: <FileTextIcon />,    label: 'Contracts',       sublabel: 'View and manage your saved contracts',           onClick: () => { setShowSettings(false); setShowContracts(true); } },
     ...(hasActiveSub ? [{ icon: <CreditCardIcon />, label: 'Manage Plan', sublabel: 'Cancel, upgrade, or update billing', onClick: () => { setShowSettings(false); handleManageSubscription(); } }] : []),
     { icon: <ChecklistIcon />,   label: 'Setup Checklist', sublabel: 'Finish setting up your account',                 onClick: () => { setShowSettings(false); reopenChecklist(); } },
+    { icon: <GlobeIcon />,       label: 'Location Settings', sublabel: 'Set your city & country for the globe map',    onClick: () => { setShowSettings(false); setShowLocation(true); } },
     { icon: <BellIcon />,        label: 'Notifications',   sublabel: 'Manage email & push preferences',               onClick: () => { setShowSettings(false); setShowNotifications(true); } },
     { icon: <LockIcon />,        label: 'Privacy Policy',  sublabel: 'Review how your data is used',                  onClick: () => { setShowSettings(false); setShowPrivacy(true); } },
     { icon: <SealCheck />,       label: 'Verification',    sublabel: 'Submit a re-verification request',              onClick: () => { setShowSettings(false); setShowVerification(true); } },
@@ -1776,6 +1778,112 @@ export default function Profile() {
           </div>
         </div>
       )}
+      {/* ── Location Settings modal ────────────────────────────────────── */}
+      {showLocation && (
+        <div
+          style={{ position: 'fixed', inset: 0, zIndex: 70, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', padding: '1rem', background: 'rgba(25,37,36,0.5)', backdropFilter: 'blur(6px)' }}
+          onClick={() => setShowLocation(false)}
+        >
+          <div
+            style={{ width: '100%', maxWidth: '460px', borderRadius: '1.5rem', padding: 'clamp(1.25rem, 5vw, 2rem)', background: 'rgba(255,255,255,0.97)', border: '1px solid rgba(255,255,255,0.85)', boxShadow: '0 20px 60px rgba(25,37,36,0.18)' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
+              <h4 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.15rem', color: 'var(--slate)', margin: 0 }}>Location Settings</h4>
+              <button onClick={() => setShowLocation(false)} style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'rgba(209,235,219,0.5)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--slate)' }}>✕</button>
+            </div>
+
+            <p style={{ fontSize: '0.8rem', color: 'var(--sage)', margin: '0 0 1.25rem', lineHeight: 1.5 }}>
+              Your location appears as a pin on the Collabnb globe map so hosts and creators can see where the community is. You can update it anytime.
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem', marginBottom: '1.5rem' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 700, color: 'var(--sage)', marginBottom: '0.375rem', textTransform: 'uppercase', letterSpacing: '0.08em' }}>City</label>
+                <input
+                  type="text"
+                  value={dp.city || ''}
+                  onChange={(e) => {
+                    const newCity = e.target.value;
+                    setProfileOverride(prev => ({ ...prev, city: newCity }));
+                    updateProfile({ ...dp, city: newCity });
+                  }}
+                  placeholder="e.g., Asheville"
+                  style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '0.875rem', background: 'rgba(255,255,255,0.75)', border: '1px solid rgba(25,37,36,0.12)', fontFamily: 'var(--font-body)', fontSize: '0.875rem', color: 'var(--ink)', outline: 'none', boxSizing: 'border-box' }}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 700, color: 'var(--sage)', marginBottom: '0.375rem', textTransform: 'uppercase', letterSpacing: '0.08em' }}>State / Region</label>
+                <input
+                  type="text"
+                  value={dp.region || ''}
+                  onChange={(e) => {
+                    const newRegion = e.target.value;
+                    setProfileOverride(prev => ({ ...prev, region: newRegion }));
+                    updateProfile({ ...dp, region: newRegion });
+                  }}
+                  placeholder="e.g., North Carolina"
+                  style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '0.875rem', background: 'rgba(255,255,255,0.75)', border: '1px solid rgba(25,37,36,0.12)', fontFamily: 'var(--font-body)', fontSize: '0.875rem', color: 'var(--ink)', outline: 'none', boxSizing: 'border-box' }}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 700, color: 'var(--sage)', marginBottom: '0.375rem', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Country</label>
+                <input
+                  type="text"
+                  value={dp.country || ''}
+                  onChange={(e) => {
+                    const newCountry = e.target.value;
+                    setProfileOverride(prev => ({ ...prev, country: newCountry }));
+                    updateProfile({ ...dp, country: newCountry });
+                  }}
+                  placeholder="e.g., United States"
+                  style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '0.875rem', background: 'rgba(255,255,255,0.75)', border: '1px solid rgba(25,37,36,0.12)', fontFamily: 'var(--font-body)', fontSize: '0.875rem', color: 'var(--ink)', outline: 'none', boxSizing: 'border-box' }}
+                />
+              </div>
+            </div>
+
+            {typeof navigator !== 'undefined' && 'geolocation' in navigator && (
+              <button
+                onClick={() => {
+                  navigator.geolocation.getCurrentPosition(
+                    async (pos) => {
+                      // Reverse geocode via OpenStreetMap Nominatim
+                      try {
+                        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&format=json`);
+                        const data = await res.json();
+                        const addr = data.address || {};
+                        const newCity = addr.city || addr.town || addr.village || addr.municipality || '';
+                        const newRegion = addr.state || '';
+                        const newCountry = addr.country || '';
+                        const updates = {};
+                        if (newCity) updates.city = newCity;
+                        if (newRegion) updates.region = newRegion;
+                        if (newCountry) updates.country = newCountry;
+                        setProfileOverride(prev => ({ ...prev, ...updates }));
+                        updateProfile({ ...dp, ...updates });
+                      } catch {
+                        // Fallback: just use lat/lng as a hint
+                      }
+                    },
+                    () => { /* permission denied — silently ignore */ },
+                    { enableHighAccuracy: false, timeout: 10000 },
+                  );
+                }}
+                style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '0.875rem', border: '1.5px dashed rgba(60,87,89,0.3)', background: 'rgba(209,235,219,0.15)', cursor: 'pointer', fontFamily: 'var(--font-body)', fontSize: '0.85rem', fontWeight: 600, color: 'var(--slate)', marginBottom: '0.75rem', transition: 'background 150ms, border-color 150ms' }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(209,235,219,0.3)'; e.currentTarget.style.borderColor = 'rgba(60,87,89,0.5)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(209,235,219,0.15)'; e.currentTarget.style.borderColor = 'rgba(60,87,89,0.3)'; }}
+              >
+                📍 Use current location
+              </button>
+            )}
+
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <button className="btn-glass" style={{ flex: 1, fontSize: '0.85rem' }} onClick={() => setShowLocation(false)}>Done</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Lifetime Access modal ────────────────────────────────────── */}
       <LifetimeAccessModal
         isOpen={lifetimeModalOpen}

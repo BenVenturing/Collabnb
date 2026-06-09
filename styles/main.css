@@ -1831,7 +1831,7 @@ h3 { font-weight: 700; }
 .modal-card.clerk-active {
   max-height: none;
   overflow-y: visible;
-  max-width: 520px;
+  max-width: 560px;
 }
 
 /* Ensure wizard success is centered in modal */

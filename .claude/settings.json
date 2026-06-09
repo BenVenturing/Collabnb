@@ -4,5 +4,12 @@
       "type": "http",
       "url": "https://mcp.supabase.com/mcp?project_ref=zlsopfgynkdakzbxaizj"
     }
+  },
+  "permissions": {
+    "allow": [
+      "Bash(open *)",
+      "Bash(curl -s *)",
+      "Bash(dig *)"
+    ]
   }
 }

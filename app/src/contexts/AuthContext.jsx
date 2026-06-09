@@ -242,6 +242,7 @@ function ClerkAuthInner({ hooks, children }) {
             portfolio: updates.portfolio,
             city: updates.city,
             region: updates.region,
+            country: updates.country,
             role: updates.role,
           },
         });

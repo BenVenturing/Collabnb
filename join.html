@@ -252,7 +252,7 @@
   <!-- ── MODAL WIZARD ── -->
   <div id="modal-overlay" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title"
     aria-hidden="true">
-    <div class="modal-card" style="position:relative;max-width:480px;">
+    <div class="modal-card" style="position:relative;max-width:520px;">
       <button id="modal-close" class="modal-close" aria-label="Close form">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
           stroke-linecap="round">
@@ -298,7 +298,62 @@
         #wl-clerk-mount .cl-logoImage { display: none !important; }
         #wl-clerk-mount .cl-card { box-shadow: none !important; border: none !important; padding: 0 !important; }
         #wl-clerk-mount .cl-cardBox { box-shadow: none !important; }
-        /* Fix dark footer background */
+        #wl-clerk-mount .cl-rootBox { width: 100% !important; }
+        /* Fix dark/black button styling — force our sage palette */
+        #wl-clerk-mount .cl-formButtonPrimary {
+          background: #192524 !important;
+          border-radius: 12px !important;
+          font-family: var(--font-body) !important;
+          font-size: 0.9375rem !important;
+          font-weight: 600 !important;
+          padding: 0.75rem 1rem !important;
+          min-height: 48px !important;
+          color: #EFECE9 !important;
+          border: none !important;
+        }
+        #wl-clerk-mount .cl-formButtonPrimary:hover {
+          background: #2d4a3e !important;
+        }
+        /* Input fields — consistent styling */
+        #wl-clerk-mount .cl-formFieldInput {
+          border-radius: 12px !important;
+          border: 1.5px solid #D0D5CE !important;
+          font-family: var(--font-body) !important;
+          font-size: 0.9375rem !important;
+          padding: 0.75rem 1rem !important;
+          min-height: 48px !important;
+          background: #fff !important;
+          color: #192524 !important;
+        }
+        #wl-clerk-mount .cl-formFieldInput:focus {
+          border-color: #3C5759 !important;
+          box-shadow: 0 0 0 2px rgba(60,87,89,0.12) !important;
+          outline: none !important;
+        }
+        /* Input labels */
+        #wl-clerk-mount .cl-formFieldLabel {
+          color: #3C5759 !important;
+          font-size: 0.8125rem !important;
+          font-weight: 600 !important;
+          font-family: var(--font-body) !important;
+        }
+        /* Divider lines */
+        #wl-clerk-mount .cl-dividerLine { background: #D0D5CE !important; }
+        #wl-clerk-mount .cl-dividerText { color: #959D90 !important; font-size: 0.8125rem !important; font-family: var(--font-body) !important; }
+        /* Social auth buttons */
+        #wl-clerk-mount .cl-socialButtonsBlockButton {
+          border: 1.5px solid #D0D5CE !important;
+          border-radius: 12px !important;
+          font-family: var(--font-body) !important;
+          font-size: 0.9375rem !important;
+          min-height: 48px !important;
+        }
+        #wl-clerk-mount .cl-socialButtonsBlockButton:hover { border-color: #3C5759 !important; background: rgba(60,87,89,0.04) !important; }
+        /* Alternative action links */
+        #wl-clerk-mount .cl-footerActionText { color: #959D90 !important; font-size: 0.8125rem !important; }
+        #wl-clerk-mount .cl-footerActionLink { color: #192524 !important; font-size: 0.8125rem !important; font-weight: 600 !important; }
+        #wl-clerk-mount .cl-footerPagesLink  { color: #959D90 !important; font-size: 0.72rem !important; }
+        /* Footer area — fix dark backgrounds */
         #wl-clerk-mount .cl-footer,
         #wl-clerk-mount .cl-footerAction,
         #wl-clerk-mount .cl-footerPages,
@@ -307,9 +362,26 @@
           background-color: transparent !important;
           box-shadow: none !important;
         }
-        #wl-clerk-mount .cl-footerActionText { color: var(--sage) !important; font-size: 0.8125rem !important; }
-        #wl-clerk-mount .cl-footerActionLink { color: var(--ink) !important; font-size: 0.8125rem !important; }
-        #wl-clerk-mount .cl-footerPagesLink  { color: var(--sage) !important; font-size: 0.72rem !important; }
+        /* Form field action links (e.g. forgot password) */
+        #wl-clerk-mount .cl-formFieldAction {
+          color: #3C5759 !important;
+          font-size: 0.75rem !important;
+          font-family: var(--font-body) !important;
+        }
+        /* Alert/error messages */
+        #wl-clerk-mount .cl-alertText,
+        #wl-clerk-mount .cl-formFieldErrorText {
+          color: #dc2626 !important;
+          font-size: 0.75rem !important;
+          font-family: var(--font-body) !important;
+        }
+        /* Password field toggle */
+        #wl-clerk-mount .cl-formFieldPasswordToggleButton {
+          color: #3C5759 !important;
+        }
+        /* Identity preview (already-signed-in state) */
+        #wl-clerk-mount .cl-identityPreviewText { color: #192524 !important; font-size: 0.875rem !important; }
+        #wl-clerk-mount .cl-identityPreviewEditButton { color: #3C5759 !important; }
         /* Modal role-toggle — prevent pill clipping */
         #modal-role-section .role-toggle { display: flex !important; width: 100%; box-sizing: border-box; margin-top: 0 !important; }
         #modal-role-section .role-btn    { flex: 1; }
@@ -342,7 +414,7 @@
 
   <!-- ── LOGIN MODAL ── -->
 <div id="login-modal-overlay" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="login-modal-title" aria-hidden="true">
-  <div class="modal-card login-modal-card" style="max-width:420px;">
+  <div class="modal-card login-modal-card" style="max-width:460px;">
     <button id="login-modal-close" class="modal-close" aria-label="Close login form">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
     </button>
@@ -364,20 +436,26 @@
       #clerk-login-mount .cl-socialButtonsBlockButton {
         border: 1.5px solid var(--stone) !important; border-radius: 12px !important;
         font-family: var(--font-body) !important; font-size: 0.9375rem !important;
+        min-height: 48px !important;
       }
       #clerk-login-mount .cl-socialButtonsBlockButton:hover { border-color: var(--slate) !important; }
       #clerk-login-mount .cl-formButtonPrimary {
-        background: var(--slate) !important; border-radius: 12px !important;
-        font-family: var(--font-body) !important;
+        background: #192524 !important; border-radius: 12px !important;
+        font-family: var(--font-body) !important; font-size: 0.9375rem !important;
+        font-weight: 600 !important; padding: 0.75rem 1rem !important;
+        min-height: 48px !important; color: #EFECE9 !important; border: none !important;
       }
       #clerk-login-mount .cl-formButtonPrimary:hover { background: #2d4a3e !important; }
       #clerk-login-mount .cl-formFieldInput {
         border-radius: 12px !important; border: 1.5px solid var(--stone) !important;
-        font-family: var(--font-body) !important;
+        font-family: var(--font-body) !important; font-size: 0.9375rem !important;
+        padding: 0.75rem 1rem !important; min-height: 48px !important;
       }
       #clerk-login-mount .cl-formFieldInput:focus { border-color: var(--slate) !important; box-shadow: 0 0 0 2px rgba(60,87,89,0.12) !important; outline: none !important; }
       #clerk-login-mount .cl-dividerLine { background: var(--stone) !important; }
       #clerk-login-mount .cl-footer { display: none !important; }
+      #clerk-login-mount .cl-formFieldLabel { color: var(--slate) !important; font-size: 0.8125rem !important; font-weight: 600 !important; }
+      #clerk-login-mount .cl-dividerText { color: var(--sage) !important; font-size: 0.8125rem !important; }
     </style>
     <div id="clerk-login-mount"></div>
     <div class="login-footer" style="text-align:center;margin-top:1.5rem;">

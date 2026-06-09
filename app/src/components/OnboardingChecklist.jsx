@@ -211,7 +211,10 @@ export default function OnboardingChecklist() {
       setCollapsed(false);
       localStorage.removeItem(k.collapsed);
     }
-    setIsFirstVisit(false);
+    // Don't set isFirstVisit(false) here — that would pre-populate
+    // checkboxes as done for brand-new users on their first visit.
+    // isFirstVisit becomes false naturally on the next page load
+    // after localStorage.seen is set.
     const t = setTimeout(() => setEntered(true), 50);
     return () => clearTimeout(t);
   }, [shouldShow, userId]);

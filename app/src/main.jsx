@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import { ClerkProvider, useAuth } from '@clerk/clerk-react';
 import { ConvexProviderWithClerk } from 'convex/react-clerk';
 import { ConvexProvider, ConvexReactClient } from 'convex/react';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 import './index.css';
 import App from './App';
 
@@ -19,9 +20,13 @@ function Root() {
         {convex ? (
           <ConvexProvider client={convex}>
             <App />
+            <SpeedInsights />
           </ConvexProvider>
         ) : (
-          <App />
+          <>
+            <App />
+            <SpeedInsights />
+          </>
         )}
       </React.StrictMode>
     );
@@ -34,9 +39,13 @@ function Root() {
         {convex ? (
           <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
             <App />
+            <SpeedInsights />
           </ConvexProviderWithClerk>
         ) : (
-          <App />
+          <>
+            <App />
+            <SpeedInsights />
+          </>
         )}
       </ClerkProvider>
     </React.StrictMode>

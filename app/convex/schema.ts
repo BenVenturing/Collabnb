@@ -21,6 +21,7 @@ export default defineSchema({
     beta: v.optional(v.boolean()),
     city: v.optional(v.string()),
     region: v.optional(v.string()),
+    country: v.optional(v.string()),
     is_verified: v.optional(v.boolean()),
     is_rejected: v.optional(v.boolean()),
     rejection_reason: v.optional(v.string()),

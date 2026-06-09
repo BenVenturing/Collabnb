@@ -366,6 +366,9 @@ async function openModal() {
   _wizardEmail = '';
   _wizardName  = '';
   if (roleSection) roleSection.style.display = '';
+  // Reset referral code section visibility for step 1
+  const refSection = document.getElementById('referral-code-section');
+  if (refSection) refSection.style.display = '';
   // Sync page-level role selection into modal
   const activePageBtn = document.querySelector('#page-role-creator.active, #page-role-host.active');
   if (activePageBtn) {
@@ -412,6 +415,11 @@ function showWizardStep(step) {
   } else if (step === 2) {
     if (titleEl) titleEl.textContent = 'Tell us about yourself';
     if (subtitleEl) subtitleEl.style.display = 'none';
+    // Hide the role & referral sections on step 2 (user already joined)
+    const roleSection = document.getElementById('modal-role-section');
+    if (roleSection) roleSection.style.display = 'none';
+    const refSection = document.getElementById('referral-code-section');
+    if (refSection) refSection.style.display = 'none';
     const firstName = _wizardName.split(' ')[0];
     const fields = currentRole === 'creator' ? `
       <div class="form-group">
@@ -421,6 +429,10 @@ function showWizardStep(step) {
       <div class="form-group">
         <label class="form-label" for="wl-tiktok">TikTok handle <span style="color:var(--sage);font-weight:400;">(optional)</span></label>
         <input class="form-input" type="text" id="wl-tiktok" placeholder="@yourhandle" />
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="wl-portfolio">Website / Portfolio <span style="color:var(--sage);font-weight:400;">(optional)</span></label>
+        <input class="form-input" type="text" id="wl-portfolio" placeholder="https://yourportfolio.com" />
       </div>` : `
       <div class="form-group">
         <label class="form-label" for="wl-business">Property or business name</label>
@@ -434,6 +446,10 @@ function showWizardStep(step) {
       ${_stepBar(2)}
       <p style="font-size:0.875rem;color:var(--sage);margin-bottom:1.25rem;text-align:center;">Your spot is saved, <strong style="color:var(--ink);">${firstName}</strong>! These details help match you with the right collabs.</p>
       <form id="wl-step2" style="display:flex;flex-direction:column;gap:1rem;">
+        <div class="form-group">
+          <label class="form-label" for="wl-country">Home country <span style="color:var(--sage);font-weight:400;">(optional)</span></label>
+          <input class="form-input" type="text" id="wl-country" placeholder="United States" />
+        </div>
         ${fields}
         <button type="submit" class="btn-primary" style="width:100%;cursor:pointer;">Continue →</button>
         ${currentRole !== 'creator' ? '<button type="button" id="wl-skip2" style="background:none;border:none;color:var(--sage);font-size:0.8rem;cursor:pointer;padding:0.25rem 0;">Skip for now</button>' : ''}
@@ -445,9 +461,11 @@ function showWizardStep(step) {
   } else if (step === 3) {
     if (titleEl) titleEl.textContent = 'Create your account';
     if (subtitleEl) subtitleEl.style.display = 'none';
-    // Hide the role section on step 3 (Clerk mounts here)
+    // Hide the role section and referral code section on step 3 (Clerk mounts here)
     const roleSection = document.getElementById('modal-role-section');
     if (roleSection) roleSection.style.display = 'none';
+    const refSection = document.getElementById('referral-code-section');
+    if (refSection) refSection.style.display = 'none';
     const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
     if (isLocalhost) { _showWizardDone(); return; }
 
@@ -470,6 +488,8 @@ function showWizardStep(step) {
       if (!clerk) { _showWizardDone(); return; }
       const mountEl = document.getElementById('wl-clerk-mount');
       if (!mountEl) return;
+      // Prevent browser autofill from using saved credentials
+      mountEl.setAttribute('autocomplete', 'off');
       // Store the name for the celebration screen when OAuth redirects back
       try { localStorage.setItem('collabnb_signup_name', _wizardName || ''); } catch {}
       try { localStorage.setItem('collabnb_new_signup', '1'); } catch {}
@@ -481,13 +501,19 @@ function showWizardStep(step) {
         clerk.mountSignUp(mountEl, {
           afterSignUpUrl: returnUrl,
           afterSignInUrl: appUrl,
-          signInUrl: `${origin}/join.html`,
+          signUpUrl: `${origin}/join.html`,
           appearance: {
             variables: {
               colorPrimary: '#3C5759',
               colorBackground: 'transparent',
+              colorText: '#192524',
+              colorTextSecondary: '#3C5759',
+              colorInputBackground: '#ffffff',
+              colorInputText: '#192524',
+              colorDanger: '#dc2626',
               borderRadius: '12px',
               fontFamily: 'system-ui, -apple-system, sans-serif',
+              fontSize: '0.9375rem',
             },
           },
         });
@@ -690,9 +716,10 @@ async function handleStep2Submit(e) {
   if (errorEl) errorEl.style.display = 'none';
   try {
     if (_wizardProfileId) {
+      const countryVal = document.getElementById('wl-country')?.value?.trim();
       const raw = currentRole === 'creator'
-        ? { instagram_handle: document.getElementById('wl-instagram')?.value?.trim(), tiktok_handle: document.getElementById('wl-tiktok')?.value?.trim() }
-        : { city: document.getElementById('wl-city')?.value?.trim() };
+        ? { instagram_handle: document.getElementById('wl-instagram')?.value?.trim(), tiktok_handle: document.getElementById('wl-tiktok')?.value?.trim(), portfolio: document.getElementById('wl-portfolio')?.value?.trim(), country: countryVal }
+        : { city: document.getElementById('wl-city')?.value?.trim(), country: countryVal };
       const updates = Object.fromEntries(Object.entries(raw).filter(([, v]) => v));
       if (Object.keys(updates).length) await updateWaitlistProfile(_wizardProfileId, updates);
     }
@@ -715,7 +742,7 @@ function closeModal() {
 
 function updatePageAfterWaitlistJoin(role) {
   const joinCta = document.getElementById('join-cta');
-  if (joinCta) joinCta.textContent = `Finalize your ${role} profile →`;
+  if (joinCta) joinCta.textContent = 'Continue setting up →';
   const pageToggle = document.querySelector('.join-hero .role-toggle');
   if (pageToggle) {
     const wrapper = pageToggle.closest('.reveal') || pageToggle.parentElement;
@@ -723,6 +750,9 @@ function updatePageAfterWaitlistJoin(role) {
   }
   const miniCounter = document.querySelector('.join-mini-counter');
   if (miniCounter) miniCounter.style.display = 'none';
+  // Hide the page-level "Have a referral code?" section
+  const pageRefSection = document.getElementById('referral-code-section');
+  if (pageRefSection) pageRefSection.style.display = 'none';
 }
 
 function switchRole(role) {
@@ -742,7 +772,7 @@ function switchRole(role) {
 
   // Keep CTA button text in sync with selected role (only after waitlist join)
   const joinCta = document.getElementById('join-cta');
-  if (joinCta && _hasJoinedWaitlist) joinCta.textContent = `Finalize your ${role} profile →`;
+  if (joinCta && _hasJoinedWaitlist) joinCta.textContent = 'Continue setting up →';
 
   // Update modal title if modal is open on step 1
   const titleEl = document.getElementById('modal-title');
@@ -802,6 +832,8 @@ function openLoginModal() {
     if (!mountEl) return;
     // Reset mount area (clears loading state from above)
     mountEl.innerHTML = '';
+    // Prevent browser autofill from using saved credentials
+    mountEl.setAttribute('autocomplete', 'off');
     _clerkLoginMounted = false;
     try {
       clerk.mountSignIn(mountEl, {
@@ -811,8 +843,13 @@ function openLoginModal() {
           variables: {
             colorPrimary: '#3C5759',
             colorBackground: 'transparent',
+            colorText: '#192524',
+            colorTextSecondary: '#3C5759',
+            colorInputBackground: '#ffffff',
+            colorInputText: '#192524',
             borderRadius: '12px',
             fontFamily: 'system-ui, -apple-system, sans-serif',
+            fontSize: '0.9375rem',
           },
         },
       });

@@ -854,7 +854,7 @@ export default function ListingDetail() {
   const hostAvatar  = hostImgError ? SAMPLE_HOST.avatar_fallback : SAMPLE_HOST.avatar_url;
 
   return (
-    <div style={{ minHeight: '100dvh', paddingBottom: isDesktop ? '2rem' : '7rem' }}>
+    <div style={{ paddingBottom: isDesktop ? '2rem' : '7rem' }}>
 
       {/* ── Keyframes ── */}
       <style>{`

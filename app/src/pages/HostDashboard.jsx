@@ -741,7 +741,7 @@ export default function HostDashboard() {
 
   return (
     <>
-    <div style={{ minHeight: '100dvh' }}>
+    <div>
       <style>{`
         @keyframes listing-glow-pulse {
           0%   { box-shadow: 0 4px 16px rgba(25,37,36,0.07); }

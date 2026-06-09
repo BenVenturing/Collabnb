@@ -330,54 +330,33 @@ function BannerCropEditor({ file, onApply, onCancel }) {
   );
 }
 
-// ─── Coin flip avatar ─────────────────────────────────────────────────────────
-function CoinFlip({ frontSrc, backSrc, editMode, onEdit, initials = '?' }) {
-  const [flipped, setFlipped] = useState(false);
+// ─── Static avatar circle (no flip, no listing photo) ──────────────────────────
+function AvatarCircle({ src, editMode, onEdit, initials = '?' }) {
   return (
     <div
-      style={{ position: 'relative', width: '76px', height: '76px', perspective: '300px', cursor: editMode ? 'pointer' : 'default' }}
-      onMouseEnter={() => { if (!editMode) setFlipped(true); }}
-      onMouseLeave={() => { if (!editMode) setFlipped(false); }}
+      style={{ position: 'relative', width: '76px', height: '76px', cursor: editMode ? 'pointer' : 'default' }}
       onClick={() => { if (editMode) onEdit(); }}
     >
-      {/* White border ring (stays still) */}
+      {/* White border ring */}
       <div style={{
         position: 'absolute', inset: '-3px', borderRadius: '50%',
         border: '3px solid white', boxShadow: '0 4px 18px rgba(25,37,36,0.24)',
         zIndex: 2, pointerEvents: 'none',
       }} />
-      {/* Flipping card */}
+      {/* Profile photo */}
       <div style={{
-        width: '100%', height: '100%',
-        transformStyle: 'preserve-3d',
-        transition: 'transform 0.65s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
-        transform: flipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
-        position: 'relative',
+        position: 'absolute', inset: 0, borderRadius: '50%', overflow: 'hidden',
+        background: 'var(--mint)', display: 'flex', alignItems: 'center', justifyContent: 'center',
       }}>
-        {/* Front — profile photo */}
-        <div style={{
-          position: 'absolute', inset: 0, borderRadius: '50%', overflow: 'hidden',
-          backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden',
-          background: 'var(--mint)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}>
-          <span style={{ fontFamily: 'var(--font-display, sans-serif)', fontWeight: 700, fontSize: '1.5rem', color: 'var(--slate)' }}>{initials}</span>
-          {frontSrc && (
-            <img
-              src={frontSrc}
-              alt="Profile"
-              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center' }}
-              onError={(e) => { e.currentTarget.style.display = 'none'; }}
-            />
-          )}
-        </div>
-        {/* Back — listing photo */}
-        <div style={{
-          position: 'absolute', inset: 0, borderRadius: '50%', overflow: 'hidden',
-          backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden',
-          transform: 'rotateY(180deg)',
-        }}>
-          <img src={backSrc} alt="Listing" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-        </div>
+        <span style={{ fontFamily: 'var(--font-display, sans-serif)', fontWeight: 700, fontSize: '1.5rem', color: 'var(--slate)' }}>{initials}</span>
+        {src && (
+          <img
+            src={src}
+            alt="Profile"
+            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center' }}
+            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+          />
+        )}
       </div>
       {/* Edit overlay (only in edit mode) */}
       {editMode && (
@@ -534,15 +513,14 @@ export default function Profile() {
   const userId = profile?._id || profile?.id || 'mock-user-001';
   const serverPitchCount = useQuery(api.pitches.getCount, { userId });
   const referralStats = useQuery(api.referrals.getMyCode, userId && userId !== 'mock-user-001' ? { profileId: userId } : 'skip');
-  const realCollabs = useQuery(api.collaborations.getByCreator, userId && userId !== 'mock-user-001' ? { creatorId: userId } : 'skip');
-  const hasCollabs = !!(realCollabs && realCollabs.length > 0);
+  // Always show demo collabs — real collaborations aren't shown on the profile
+  const hasCollabs = true;
   const allProfiles = useQuery(api.profiles.getAll);
   const globeStats  = useMemo(() => countGlobeStats(allProfiles), [allProfiles]);
 
   // Edit profile state
   const [profileOverride, setProfileOverride] = useState({});
   const [editDraft, setEditDraft]             = useState(null); // null = closed
-  const [selectedListingIdx, setSelectedListingIdx] = useState(0);
 
   // Modal visibility
   const [showSettings,      setShowSettings]      = useState(false);
@@ -553,7 +531,6 @@ export default function Profile() {
   const [showPrivacy,       setShowPrivacy]       = useState(false);
   const [showVerification,  setShowVerification]  = useState(false);
   const [showLocation,      setShowLocation]      = useState(false);
-  const [showListingPicker, setShowListingPicker] = useState(false);
   const [toastMsg, setToastMsg]               = useState(null);
   const [exitConfirmDraft, setExitConfirmDraft] = useState(null);
   const [portalLoading, setPortalLoading]       = useState(false);
@@ -711,8 +688,6 @@ export default function Profile() {
     ? (dp.portfolio.startsWith('http') ? dp.portfolio : `https://${dp.portfolio}`)
     : null;
 
-  const coinBackSrc = SAMPLE_LISTINGS[selectedListingIdx]?.image ?? '';
-
   function hasUnsavedChanges() {
     const fields = ['full_name','bio','city','region','country','avatar_url','banner_url','instagram_handle','tiktok_handle','youtube_handle','portfolio'];
     return fields.some(f => editDraft[f] !== (dp[f] ?? ''));
@@ -838,13 +813,25 @@ export default function Profile() {
           <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '180px', background: 'linear-gradient(to top, #EFECE9 0%, rgba(239,236,233,0.55) 45%, transparent 100%)' }} />
         </div>
 
-        {/* Coin flip — bottom-left */}
+        {/* Avatar circle — bottom-left */}
         <div style={{ position: 'absolute', bottom: '-20px', left: '1.5rem' }}>
-          <CoinFlip
-            frontSrc={dp.avatar_url || null}
-            backSrc={coinBackSrc}
+          <AvatarCircle
+            src={dp.avatar_url || null}
             editMode={editMode}
-            onEdit={() => setShowListingPicker(true)}
+            onEdit={() => {
+              const fileInput = document.createElement('input');
+              fileInput.type = 'file';
+              fileInput.accept = 'image/*';
+              fileInput.onchange = async (e) => {
+                const f = e.target.files?.[0];
+                if (f) {
+                  const url = await uploadResizedImage(f, 300, 300, generateUploadUrl);
+                  const updated = { ...editDraft, avatar_url: url };
+                  setEditDraft(updated);
+                }
+              };
+              fileInput.click();
+            }}
             initials={(dp.full_name || '?').split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()}
           />
           {editMode && (
@@ -1171,50 +1158,6 @@ export default function Profile() {
           }}
           onCancel={() => setCropEditorFile(null)}
         />
-      )}
-
-      {/* ── Listing picker ────────────────────────────────────────────────── */}
-      {showListingPicker && (
-        <div
-          style={{ position: 'fixed', inset: 0, zIndex: 80, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', background: 'rgba(25,37,36,0.45)', backdropFilter: 'blur(6px)' }}
-          onClick={() => setShowListingPicker(false)}
-        >
-          <div
-            className="glass"
-            style={{ width: '100%', maxWidth: '520px', borderRadius: '1.5rem 1.5rem 0 0', padding: '1.5rem 1.5rem 2.5rem' }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1rem', color: 'var(--ink)', marginBottom: '1rem' }}>
-              Choose a listing to show on your profile coin
-            </p>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
-              {SAMPLE_LISTINGS.map((l, idx) => (
-                <button
-                  key={l.id}
-                  onClick={() => { setSelectedListingIdx(idx); setShowListingPicker(false); }}
-                  style={{
-                    borderRadius: '0.875rem', overflow: 'hidden', padding: 0,
-                    cursor: 'pointer', background: 'none', aspectRatio: '1',
-                    border: `2.5px solid ${selectedListingIdx === idx ? 'var(--slate)' : 'transparent'}`,
-                    position: 'relative', transition: 'border-color 150ms',
-                  }}
-                >
-                  <img src={l.image} alt={l.title} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-                  {selectedListingIdx === idx && (
-                    <div style={{ position: 'absolute', inset: 0, background: 'rgba(60,87,89,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <svg viewBox="0 0 14 14" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" width="20" height="20">
-                        <polyline points="2 7 5.5 10.5 12 3.5" />
-                      </svg>
-                    </div>
-                  )}
-                  <p style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '0.3rem 0.4rem', background: 'linear-gradient(to top, rgba(25,37,36,0.7), transparent)', color: 'white', fontSize: '0.58rem', fontWeight: 600, margin: 0, lineHeight: 1.2 }}>
-                    {l.title}
-                  </p>
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
       )}
 
       {/* ── Settings gear sheet ───────────────────────────────────────────── */}

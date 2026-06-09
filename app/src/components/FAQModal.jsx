@@ -460,7 +460,7 @@ function SuggestionsTab({ userId }) {
           Shape the future of Collabnb
         </p>
         <p style={{ fontSize: '0.875rem', color: 'var(--slate)' }}>
-          Vote on features and ideas. Top suggestions help us prioritize the roadmap.
+          Upvote features and ideas you want to see. Top suggestions help us prioritize the roadmap.
         </p>
       </div>
 
@@ -501,7 +501,7 @@ function SuggestionsTab({ userId }) {
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.125rem', flexShrink: 0, minWidth: 32 }}>
-                {/* Upvote */}
+                {/* Upvote only (no downvote) */}
                 <button
                   onClick={() => handleVote(s._id, 'up')}
                   title={userId ? 'Upvote' : 'Sign in to vote'}
@@ -522,37 +522,16 @@ function SuggestionsTab({ userId }) {
                   </svg>
                 </button>
 
-                {/* Net score only */}
+                {/* Upvote tally (raw count) */}
                 <span style={{
                   fontSize: '0.75rem', fontWeight: 700,
-                  color: s.netScore > 0 ? '#2d6a4f' : s.netScore < 0 ? '#b04040' : 'var(--sage)',
+                  color: s.upvotes > 0 ? '#2d6a4f' : 'var(--sage)',
                   lineHeight: 1, textAlign: 'center', minWidth: 20,
                 }}>
-                  {s.netScore > 0 ? `+${s.netScore}` : s.netScore}
+                  {s.upvotes}
                 </span>
-
-                {/* Downvote */}
-                <button
-                  onClick={() => handleVote(s._id, 'down')}
-                  title={userId ? 'Downvote' : 'Sign in to vote'}
-                  style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    width: 28, height: 28,
-                    borderRadius: '0.5rem', border: 'none', cursor: userId ? 'pointer' : 'default',
-                    background: s.userVote === 'down' ? 'rgba(255,220,220,0.7)' : 'transparent',
-                    color: s.userVote === 'down' ? '#b04040' : 'var(--slate)',
-                    transition: 'background 150ms',
-                    opacity: !userId ? 0.5 : 1,
-                  }}
-                  onMouseEnter={(e) => { if (userId) e.currentTarget.style.background = s.userVote === 'down' ? 'rgba(255,220,220,0.7)' : 'rgba(25,37,36,0.05)'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = s.userVote === 'down' ? 'rgba(255,220,220,0.7)' : 'transparent'; }}
-                >
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill={s.userVote === 'down' ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                    <polyline points="6 9 12 15 18 9" />
-                  </svg>
-                </button>
-              </div>
             </div>
+          </div>
           ))}
         </div>
       )}

@@ -102,6 +102,109 @@ export function reopenChecklist() {
   if (_reopenListener) _reopenListener();
 }
 
+// ─── Draggable collapsed pill ───────────────────────────────────────────────────
+function DraggablePill({ widgetStyle, cardStyle, toggleCollapse, allDone, requiredCompleted, requiredTotal }) {
+  const [pos, setPos] = useState({ x: 0, y: 0 });
+  const [dragging, setDragging] = useState(false);
+  const dragRef = useRef({ startX: 0, startY: 0, origX: 0, origY: 0, moved: false });
+  const pillRef = useRef(null);
+
+  const onMouseDown = (e) => {
+    dragRef.current.startX = e.clientX;
+    dragRef.current.startY = e.clientY;
+    dragRef.current.origX = pos.x;
+    dragRef.current.origY = pos.y;
+    dragRef.current.moved = false;
+    setDragging(true);
+  };
+
+  useEffect(() => {
+    if (!dragging) return;
+    const onMove = (e) => {
+      const dx = e.clientX - dragRef.current.startX;
+      const dy = e.clientY - dragRef.current.startY;
+      if (Math.abs(dx) > 3 || Math.abs(dy) > 3) dragRef.current.moved = true;
+      setPos({ x: dragRef.current.origX + dx, y: dragRef.current.origY + dy });
+    };
+    const onUp = () => {
+      setDragging(false);
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    return () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+  }, [dragging]);
+
+  const handleClick = () => {
+    // Only toggle if we didn't actually drag
+    if (!dragRef.current.moved) toggleCollapse();
+  };
+
+  return (
+    <div
+      ref={pillRef}
+      style={{
+        ...widgetStyle,
+        cursor: dragging ? 'grabbing' : 'grab',
+        transform: `${widgetStyle.transform} translate(${pos.x}px, ${pos.y}px)`,
+        transition: dragging ? 'none' : widgetStyle.transition,
+        userSelect: 'none',
+      }}
+      onMouseDown={onMouseDown}
+    >
+      <button
+        onClick={handleClick}
+        aria-label="Open setup checklist"
+        style={{
+          ...cardStyle,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.5rem',
+          padding: '0.625rem 1rem',
+          cursor: dragging ? 'grabbing' : 'grab',
+          border: 'none',
+          fontFamily: 'var(--font-body)',
+          whiteSpace: 'nowrap',
+          width: '100%',
+        }}
+      >
+        <svg width="22" height="22" viewBox="0 0 22 22" style={{ flexShrink: 0, pointerEvents: 'none' }}>
+          <circle cx="11" cy="11" r="8" fill="none" stroke="var(--stone, #D0D5CE)" strokeWidth="2.5" />
+          <circle
+            cx="11" cy="11" r="8"
+            fill="none"
+            stroke="#3C5759"
+            strokeWidth="2.5"
+            strokeDasharray={`${2 * Math.PI * 8}`}
+            strokeDashoffset={`${2 * Math.PI * 8 * (1 - requiredCompleted / requiredTotal)}`}
+            strokeLinecap="round"
+            transform="rotate(-90 11 11)"
+            style={{ transition: 'stroke-dashoffset 0.4s ease' }}
+          />
+          <text x="11" y="15" textAnchor="middle" fontSize="8" fontWeight="700" fill="var(--ink, #192524)" fontFamily="sans-serif" pointerEvents="none">
+            {requiredCompleted}/{requiredTotal}
+          </text>
+        </svg>
+        <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--ink, #192524)', pointerEvents: 'none' }}>
+          {allDone ? 'All done!' : 'Account setup'}
+        </span>
+        {!allDone && (
+          <span style={{
+            fontSize: '0.6875rem', fontWeight: 700,
+            background: '#3C5759', color: '#fff',
+            borderRadius: '9999px', padding: '0.125rem 0.5rem',
+            lineHeight: 1.5, pointerEvents: 'none',
+          }}>
+            {requiredTotal - requiredCompleted} left
+          </span>
+        )}
+      </button>
+    </div>
+  );
+}
+
 export default function OnboardingChecklist() {
   const { profile } = useAuth();
   const navigate = useNavigate();
@@ -284,57 +387,17 @@ export default function OnboardingChecklist() {
     overflow: 'hidden',
   };
 
-  // ── Collapsed pill ──────────────────────────────────────────────────────────
+  // ── Draggable collapsed pill ─────────────────────────────────────────────────
   if (collapsed) {
     return (
-      <div style={widgetStyle}>
-        <button
-          onClick={toggleCollapse}
-          aria-label="Open setup checklist"
-          style={{
-            ...cardStyle,
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            padding: '0.625rem 1rem',
-            cursor: 'pointer',
-            border: 'none',
-            fontFamily: 'var(--font-body)',
-            whiteSpace: 'nowrap',
-          }}
-        >
-          <svg width="22" height="22" viewBox="0 0 22 22" style={{ flexShrink: 0 }}>
-            <circle cx="11" cy="11" r="8" fill="none" stroke="var(--stone, #D0D5CE)" strokeWidth="2.5" />
-            <circle
-              cx="11" cy="11" r="8"
-              fill="none"
-              stroke="#3C5759"
-              strokeWidth="2.5"
-              strokeDasharray={`${2 * Math.PI * 8}`}
-              strokeDashoffset={`${2 * Math.PI * 8 * (1 - requiredCompleted / requiredTotal)}`}
-              strokeLinecap="round"
-              transform="rotate(-90 11 11)"
-              style={{ transition: 'stroke-dashoffset 0.4s ease' }}
-            />
-            <text x="11" y="15" textAnchor="middle" fontSize="8" fontWeight="700" fill="var(--ink, #192524)" fontFamily="sans-serif">
-              {requiredCompleted}/{requiredTotal}
-            </text>
-          </svg>
-          <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--ink, #192524)' }}>
-            {allDone ? 'All done!' : 'Account setup'}
-          </span>
-          {!allDone && (
-            <span style={{
-              fontSize: '0.6875rem', fontWeight: 700,
-              background: '#3C5759', color: '#fff',
-              borderRadius: '9999px', padding: '0.125rem 0.5rem',
-              lineHeight: 1.5,
-            }}>
-              {requiredTotal - requiredCompleted} left
-            </span>
-          )}
-        </button>
-      </div>
+      <DraggablePill
+        widgetStyle={widgetStyle}
+        cardStyle={cardStyle}
+        toggleCollapse={toggleCollapse}
+        allDone={allDone}
+        requiredCompleted={requiredCompleted}
+        requiredTotal={requiredTotal}
+      />
     );
   }
 

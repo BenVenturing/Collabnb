@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useSearchParams, useLocation } from 'react-router-dom';
 import { useCollabs } from '../contexts/CollabContext';
-import { SAMPLE_LISTINGS } from '../lib/mockData';
+import { SAMPLE_LISTINGS, THREAD_MESSAGES } from '../lib/mockData';
 import CollabDetail from '../components/CollabDetail';
 import ProfilePopupCard from '../components/ProfilePopupCard';
 import { useAuth } from '../contexts/AuthContext';
@@ -122,6 +122,8 @@ function ThreadRow({ thread, isActive, onClick, onDelete }) {
 // ─── Message bubble ───────────────────────────────────────────────────────────
 function Bubble({ msg }) {
   const isMe = msg.from === 'me';
+  const isImage = msg.type === 'image';
+  const isFile = msg.type === 'file';
   return (
     <div className={`flex gap-2.5 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
       <div
@@ -131,7 +133,22 @@ function Bubble({ msg }) {
             : 'bg-white border border-stone/30 text-ink rounded-bl-sm'
         }`}
       >
-        <p>{msg.text}</p>
+        {isImage && (
+          <div className="mb-2 rounded-xl overflow-hidden">
+            <img src={msg.blobUrl} alt="Attached" className="w-full max-h-48 object-cover rounded-xl" />
+          </div>
+        )}
+        {isFile && (
+          <div className="mb-2 flex items-center gap-2 px-3 py-2 rounded-xl bg-white/20 border border-stone/20">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 flex-shrink-0">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+            </svg>
+            <span className="text-xs truncate flex-1">{msg.fileName}</span>
+            <span className={`text-[10px] ${isMe ? 'text-bone/50' : 'text-sage'}`}>{msg.fileSize}</span>
+          </div>
+        )}
+        {msg.text && <p>{msg.text}</p>}
         <p className={`text-[10px] mt-1 ${isMe ? 'text-bone/50 text-right' : 'text-sage'}`}>
           {msg.time}
         </p>
@@ -191,7 +208,9 @@ function ConversationPanel({ thread, onViewCollab, onArchive, onUpdateTag }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [popupPerson, setPopupPerson] = useState(null);
   const [sending, setSending] = useState(false);
+  const [attachments, setAttachments] = useState([]);
   const bottomRef = useRef(null);
+  const fileInputRef = useRef(null);
   const tagStyle = TAG_STYLES[thread.tag] || TAG_STYLES.Application;
   const { profile } = useAuth();
   const { openModal } = useVerification();
@@ -202,13 +221,71 @@ function ConversationPanel({ thread, onViewCollab, onArchive, onUpdateTag }) {
   const convexMessages = useQuery(api.threadMessages.getByThread, { threadKey });
   const sendMutation = useMutation(api.threadMessages.sendMessage);
 
+  // Use sample messages for the demo thread
+  const sampleMessages = thread.is_sample && THREAD_MESSAGES[thread.id]
+    ? THREAD_MESSAGES[thread.id]
+    : null;
+
+  // Build message list: prefer Convex messages, fall back to sample
+  const messages = (() => {
+    if (convexMessages && convexMessages.length > 0) {
+      const senderId = profile?._id ? String(profile._id) : (profile?.id ? String(profile.id) : null);
+      return convexMessages.map((msg) => ({
+        id: String(msg._id),
+        from: msg.sender_id === senderId ? 'me' : 'them',
+        text: msg.text,
+        time: new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      }));
+    }
+    // Fall back to sample messages
+    if (sampleMessages) {
+      return sampleMessages;
+    }
+    return [];
+  })();
+
+  // Prepend local attachments to messages
+  const allMessages = attachments.length > 0
+    ? [...attachments.map((a, i) => ({ id: `attach-${i}`, ...a })), ...messages]
+    : messages;
+
   useEffect(() => {
     setDraft('');
+    setAttachments([]);
   }, [thread.id]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [convexMessages]);
+  }, [messages, attachments]);
+
+  const handleAttach = (e) => {
+    const files = e.target.files;
+    if (!files?.length) return;
+    Array.from(files).forEach((file) => {
+      // Only accept small files (< 100KB)
+      if (file.size > 100 * 1024) return;
+      const isImage = file.type.startsWith('image/');
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const blobUrl = ev.target.result;
+        setAttachments((prev) => [...prev, {
+          from: 'me',
+          type: isImage ? 'image' : 'file',
+          blobUrl,
+          fileName: file.name,
+          fileSize: `${(file.size / 1024).toFixed(1)} KB`,
+          time: 'Just now',
+        }]);
+      };
+      reader.readAsDataURL(file);
+    });
+    // Clear the input so the same file can be picked again
+    e.target.value = '';
+    // Auto-cleanup attachments after 30 minutes
+    setTimeout(() => {
+      setAttachments((prev) => prev.filter((a) => a.time === 'Just now'));
+    }, 30 * 60 * 1000);
+  };
 
   const sendMessage = async () => {
     if (!isVerified) { openModal(); return; }
@@ -298,24 +375,18 @@ function ConversationPanel({ thread, onViewCollab, onArchive, onUpdateTag }) {
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-6 py-5 space-y-3">
-        {convexMessages === undefined ? (
-          <div className="flex items-center justify-center h-full">
-            <p className="text-sage text-sm">Loading…</p>
-          </div>
-        ) : convexMessages.length === 0 ? (
+        {thread.is_sample && !convexMessages?.length ? (
+          allMessages.map((msg) => (
+            <Bubble key={msg.id} msg={msg} />
+          ))
+        ) : messages.length === 0 ? (
           <div className="flex items-center justify-center h-full">
             <p className="text-sage text-sm">No messages yet. Say hello!</p>
           </div>
         ) : (
-          convexMessages.map((msg) => {
-            const senderId = profile?._id ? String(profile._id) : (profile?.id ? String(profile.id) : null);
-            return (
-              <Bubble
-                key={String(msg._id)}
-                msg={{ id: String(msg._id), from: msg.sender_id === senderId ? 'me' : 'them', text: msg.text, time: new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }}
-              />
-            );
-          })
+          messages.map((msg) => (
+            <Bubble key={msg.id} msg={msg} />
+          ))
         )}
         <div ref={bottomRef} />
       </div>
@@ -331,6 +402,25 @@ function ConversationPanel({ thread, onViewCollab, onArchive, onUpdateTag }) {
             placeholder="Write a message…"
             className="flex-1 bg-transparent text-sm text-ink placeholder-sage resize-none outline-none leading-relaxed max-h-28"
             style={{ minHeight: '1.4rem' }}
+          />
+          {/* Attachment button */}
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-colors hover:bg-stone/30"
+            title="Attach a file (max 100KB)"
+            style={{ background: 'rgba(60,87,89,0.12)' }}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="var(--slate)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+              <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+            </svg>
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.txt"
+            onChange={handleAttach}
+            style={{ display: 'none' }}
+            multiple
           />
           <button
             onClick={!isVerified ? openModal : !isSubscribed ? openSubModal : sendMessage}
@@ -353,7 +443,14 @@ function ConversationPanel({ thread, onViewCollab, onArchive, onUpdateTag }) {
             )}
           </button>
         </div>
-        <p className="text-[10px] text-sage/60 text-center mt-1.5">Enter to send · Shift+Enter for new line</p>
+        <div className="flex items-center justify-center gap-3 mt-1.5">
+          <p className="text-[10px] text-sage/60">Enter to send · Shift+Enter for new line</p>
+          {attachments.length > 0 && (
+            <p className="text-[10px] font-semibold text-slate/60">
+              {attachments.length} file{attachments.length > 1 ? 's' : ''} attached (auto-removed after 30 min)
+            </p>
+          )}
+        </div>
       </div>
 
       {popupPerson && (

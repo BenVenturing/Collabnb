@@ -24,7 +24,7 @@ export const getSuggestions = query({
         return { ...s, upvotes, downvotes, netScore: upvotes - downvotes, userVote };
       })
       .filter((s) => s.status !== "rejected")
-      .sort((a, b) => b.netScore - a.netScore);
+      .sort((a, b) => b.upvotes - a.upvotes);
   },
 });
 
@@ -40,7 +40,7 @@ export const getAdminSuggestions = query({
         const downvotes = votes.filter((v) => v.vote === "down").length;
         return { ...s, upvotes, downvotes, netScore: upvotes - downvotes };
       })
-      .sort((a, b) => b.netScore - a.netScore);
+      .sort((a, b) => b.upvotes - a.upvotes);
   },
 });
 
@@ -76,9 +76,9 @@ export const vote = mutation({
   args: {
     suggestionId: v.id("suggestions"),
     userId: v.string(),
-    direction: v.union(v.literal("up"), v.literal("down")),
+    direction: v.literal("up"),
   },
-  handler: async (ctx, { suggestionId, userId, direction }) => {
+  handler: async (ctx, { suggestionId, userId }) => {
     const existing = await ctx.db
       .query("suggestion_votes")
       .withIndex("by_user_suggestion", (q) =>
@@ -87,16 +87,13 @@ export const vote = mutation({
       .first();
 
     if (existing) {
-      if (existing.vote === direction) {
-        await ctx.db.delete(existing._id);
-      } else {
-        await ctx.db.patch(existing._id, { vote: direction });
-      }
+      // Toggle: remove vote if already upvoted
+      await ctx.db.delete(existing._id);
     } else {
       await ctx.db.insert("suggestion_votes", {
         suggestion_id: suggestionId,
         user_id: userId,
-        vote: direction,
+        vote: "up",
       });
     }
   },

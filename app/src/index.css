@@ -68,7 +68,9 @@ button { font: inherit; cursor: pointer; border: none; background: none; }
   background-image: url('./assets/bg-clouds-hazy.png');
   background-size: cover;
   background-position: center;
-  opacity: 0.42;
+  opacity: 0.38;
+  mix-blend-mode: multiply;
+  filter: saturate(0.5) brightness(1.1);
 }
 .bg-grain {
   position: fixed;

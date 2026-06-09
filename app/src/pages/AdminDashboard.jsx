@@ -129,6 +129,14 @@ export default function AdminDashboard() {
 
   const isMarketingTab = MARKETING_TABS.some(t => t.id === activeSection);
 
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.detail?.tab && PANEL_MAP[e.detail.tab]) setActiveSection(e.detail.tab);
+    };
+    window.addEventListener('collabnb-admin-tab', handler);
+    return () => window.removeEventListener('collabnb-admin-tab', handler);
+  }, []);
+
   if (loading || !authorized) return null;
 
   const ActivePanel = PANEL_MAP[activeSection] || PANEL_MAP['verification'];

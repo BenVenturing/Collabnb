@@ -71,7 +71,7 @@ export default function ListingManager() {
   const featuredCount = (listings ?? []).filter((l) => l.is_featured).length;
 
   return (
-    <div style={{ padding: '2rem 2.5rem', maxWidth: 960 }}>
+    <div style={{ padding: '2rem 2.5rem', maxWidth: 1200 }}>
       <h1 style={{ fontFamily: 'Cabinet Grotesk, sans-serif', fontSize: '1.5rem', fontWeight: 700, color: INK, letterSpacing: '-0.025em', margin: 0 }}>
         Listing Management
       </h1>
@@ -153,8 +153,8 @@ export default function ListingManager() {
           No listings match your filters.
         </div>
       ) : (
-        <div style={{ background: '#fff', border: '1px solid rgba(25,37,36,0.07)', borderRadius: '0.875rem', overflow: 'hidden' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+        <div style={{ background: '#fff', border: '1px solid rgba(25,37,36,0.07)', borderRadius: '0.875rem', overflowX: 'auto' }}>
+          <table style={{ width: '100%', minWidth: 800, borderCollapse: 'collapse', fontSize: '0.82rem' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid rgba(25,37,36,0.07)' }}>
                 {['Listing', 'Host', 'Type', 'Location', 'Comp', 'Collabs', 'Status', 'Featured', ''].map((h) => (

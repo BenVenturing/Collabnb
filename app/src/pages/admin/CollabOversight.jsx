@@ -91,7 +91,7 @@ export default function CollabOversight() {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid rgba(25,37,36,0.07)' }}>
-                {['Property', 'Host', 'Creator ID', 'Status', 'Stage', 'Dates', 'Active', 'Created'].map((h) => (
+                {['Property', 'Host', 'Creator', 'Status', 'Stage', 'Dates', 'Active', 'Created'].map((h) => (
                   <th key={h} style={{ padding: '0.75rem', textAlign: 'left', fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: SAGE, whiteSpace: 'nowrap' }}>
                     {h}
                   </th>
@@ -113,8 +113,28 @@ export default function CollabOversight() {
                       {c.property_name || '—'}
                     </td>
                     <td style={{ padding: '0.75rem', color: SLATE }}>{c.host_name || '—'}</td>
-                    <td style={{ padding: '0.75rem', color: SAGE, fontSize: '0.72rem', fontFamily: 'monospace' }}>
-                      {c.creator_id ? String(c.creator_id).slice(0, 12) + '…' : '—'}
+                    <td style={{ padding: '0.75rem' }}>
+                      {c.creator_name ? (
+                        <button
+                          onClick={() => window.dispatchEvent(new CustomEvent('collabnb-admin-tab', { detail: { tab: 'messages' } }))}
+                          title="View in Messages"
+                          style={{
+                            background: 'none', border: 'none', padding: 0, cursor: 'pointer',
+                            textAlign: 'left', display: 'flex', flexDirection: 'column', gap: '0.1rem',
+                          }}
+                        >
+                          <span style={{ color: SLATE, fontWeight: 600, fontSize: '0.82rem', textDecoration: 'underline', textDecorationColor: 'rgba(60,87,89,0.3)', textUnderlineOffset: 2 }}>
+                            {c.creator_name}
+                          </span>
+                          <span style={{ color: SAGE, fontSize: '0.68rem', fontFamily: 'monospace' }}>
+                            {c.creator_id ? String(c.creator_id).slice(0, 10) + '…' : ''}
+                          </span>
+                        </button>
+                      ) : (
+                        <span style={{ color: SAGE, fontSize: '0.72rem', fontFamily: 'monospace' }}>
+                          {c.creator_id ? String(c.creator_id).slice(0, 12) + '…' : '—'}
+                        </span>
+                      )}
                     </td>
                     <td style={{ padding: '0.75rem' }}>
                       <span style={{ fontSize: '0.65rem', fontWeight: 600, padding: '0.1rem 0.45rem', borderRadius: 99, background: sColors.bg, color: sColors.color, textTransform: 'capitalize' }}>

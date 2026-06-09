@@ -367,14 +367,13 @@ export default function OnboardingChecklist() {
                 background: 'none', border: 'none', cursor: 'pointer',
                 color: 'var(--sage, #959D90)', width: 28, height: 28,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                borderRadius: '8px', fontSize: '1rem', lineHeight: 1,
-                transition: 'background 150ms',
+                borderRadius: '8px', transition: 'background 150ms',
               }}
               onMouseEnter={e => e.currentTarget.style.background = 'rgba(25,37,36,0.06)'}
               onMouseLeave={e => e.currentTarget.style.background = 'none'}
             >
-              <svg width="12" height="12" viewBox="0 0 12 4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                <line x1="1" y1="2" x2="11" y2="2" />
+              <svg width="12" height="2" viewBox="0 0 12 2" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <line x1="1" y1="1" x2="11" y2="1" />
               </svg>
             </button>
             <button
@@ -387,21 +386,26 @@ export default function OnboardingChecklist() {
                   setDismissed(true);
                 }, 280);
               }}
-              aria-label="Dismiss checklist"
-              title="Dismiss"
+              aria-label="Close checklist"
+              title="Close"
               style={{
                 background: 'none', border: 'none', cursor: 'pointer',
                 color: 'var(--sage, #959D90)', width: 28, height: 28,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                borderRadius: '8px', fontSize: '1rem', lineHeight: 1,
-                transition: 'background 150ms',
+                borderRadius: '8px', transition: 'background 150ms, color 150ms',
               }}
-              onMouseEnter={e => e.currentTarget.style.background = 'rgba(231,76,60,0.08)'}
-              onMouseLeave={e => e.currentTarget.style.background = 'none'}
+              onMouseEnter={e => {
+                e.currentTarget.style.background = 'rgba(200,104,104,0.1)';
+                e.currentTarget.style.color = '#C86868';
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.background = 'none';
+                e.currentTarget.style.color = 'var(--sage, #959D90)';
+              }}
             >
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round">
-                <line x1="1" y1="1" x2="11" y2="11" />
-                <line x1="11" y1="1" x2="1" y2="11" />
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round">
+                <line x1="2" y1="2" x2="12" y2="12" />
+                <line x1="12" y1="2" x2="2" y2="12" />
               </svg>
             </button>
           </div>
@@ -493,7 +497,8 @@ export default function OnboardingChecklist() {
 
                 {!step.done && (
                   <button
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.stopPropagation();
                       if (step.action.type === 'share') {
                         handleShare();
                         return;

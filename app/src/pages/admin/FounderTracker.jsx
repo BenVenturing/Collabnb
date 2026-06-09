@@ -110,7 +110,7 @@ export default function FounderTracker() {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid rgba(25,37,36,0.07)' }}>
-                {['Founder', 'Role', 'Location', 'Joined', 'Collabs', 'Status'].map((h) => (
+                {['Founder', 'Role', 'Location', 'Joined', 'Collabs', 'Collab Live?'].map((h) => (
                   <th key={h} style={{ padding: '0.75rem 1rem', textAlign: 'left', fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: SAGE }}>
                     {h}
                   </th>
@@ -160,8 +160,8 @@ export default function FounderTracker() {
                   {/* Gone live status */}
                   <td style={{ padding: '0.875rem 1rem' }}>
                     {f.goneLive
-                      ? <Badge bg={MINT} color="#166534">🟢 Gone Live</Badge>
-                      : <Badge bg={BONE} color={SAGE}>Not yet</Badge>
+                      ? <Badge bg={MINT} color="#166534">Gone Live</Badge>
+                      : <Badge bg={BONE} color={SAGE}>Pending</Badge>
                     }
                   </td>
                 </tr>

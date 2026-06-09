@@ -127,9 +127,9 @@ export default function WaitlistManager() {
         {/* Account status filter */}
         <div style={{ display: 'flex', gap: '0.35rem' }}>
           {[
-            { key: 'all',         label: 'All Status' },
-            { key: 'no_account',  label: 'No Account' },
-            { key: 'has_account', label: 'Has Account' },
+            { key: 'all',         label: 'All' },
+            { key: 'no_account',  label: 'Email only' },
+            { key: 'has_account', label: 'Full account' },
           ].map(({ key, label }) => (
             <button
               key={key}
@@ -216,15 +216,15 @@ export default function WaitlistManager() {
                   {/* Account status */}
                   <td style={{ padding: '0.875rem 1rem' }}>
                     {p.clerk_registered
-                      ? <Badge bg="#DCFCE7" color="#166534">✓ Account</Badge>
-                      : <Badge bg="#FEF3C7" color="#B45309">Waitlist only</Badge>
+                      ? <Badge bg="#DCFCE7" color="#166534">Full account</Badge>
+                      : <Badge bg="rgba(25,37,36,0.06)" color={SAGE}>Email only</Badge>
                     }
                   </td>
 
                   {/* Social */}
                   <td style={{ padding: '0.875rem 1rem', color: SLATE, fontSize: '0.78rem' }}>
-                    {p.instagram_handle && <div>@{p.instagram_handle} (IG)</div>}
-                    {p.tiktok_handle    && <div>@{p.tiktok_handle} (TT)</div>}
+                    {p.instagram_handle && <div>@{p.instagram_handle.replace(/^@+/, '')} (IG)</div>}
+                    {p.tiktok_handle    && <div>@{p.tiktok_handle.replace(/^@+/, '')} (TT)</div>}
                     {!p.instagram_handle && !p.tiktok_handle && <span style={{ color: SAGE }}>—</span>}
                   </td>
 

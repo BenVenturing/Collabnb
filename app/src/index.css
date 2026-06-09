@@ -65,7 +65,7 @@ button { font: inherit; cursor: pointer; border: none; background: none; }
 .bg-base     { background: var(--bone); }
 .bg-gradient { background: radial-gradient(ellipse 90% 60% at 50% 0%, #D1EBDB 0%, transparent 70%); }
 .bg-clouds {
-  background-image: url('/assets/bg-clouds-hazy.png');
+  background-image: url('./assets/bg-clouds-hazy.png');
   background-size: cover;
   background-position: center;
   opacity: 0.42;

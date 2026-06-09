@@ -29,8 +29,7 @@ export default function AuditLog() {
         <div style={{ padding: '2rem', textAlign: 'center', color: SAGE, fontSize: '0.85rem' }}>Loading…</div>
       ) : logs.length === 0 ? (
         <div style={{ background: '#fff', border: '1px solid rgba(25,37,36,0.07)', borderRadius: '0.875rem', padding: '2rem', textAlign: 'center' }}>
-          <p style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>📋</p>
-          <p style={{ color: SAGE, fontSize: '0.85rem' }}>No admin actions logged yet. Actions will appear here as you approve/reject users and change settings.</p>
+          <p style={{ color: SAGE, fontSize: '0.85rem' }}>No actions logged yet. Every time you approve or reject a user, grant access, or change settings, a record appears here.</p>
         </div>
       ) : (
         <div style={{ background: '#fff', border: '1px solid rgba(25,37,36,0.07)', borderRadius: '0.875rem', overflow: 'hidden' }}>

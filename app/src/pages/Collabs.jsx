@@ -27,77 +27,149 @@ function CollabCard({ collab, onClick, onDismissDemo, onDismissSample }) {
   const style = STATUS_STYLES[collab.status] || STATUS_STYLES.pending;
   const canDismiss = collab.is_demo || collab.is_sample;
   const onDismiss = collab.is_demo ? onDismissDemo : onDismissSample;
+  const hasImage = !!collab.image;
 
   return (
-    <div className="bg-white rounded-2xl overflow-hidden shadow-card border border-stone/30 flex flex-col cursor-pointer transition-shadow hover:shadow-md relative" onClick={() => onClick?.(collab)}>
-      {canDismiss && (
-        <button
-          onClick={(e) => { e.stopPropagation(); onDismiss?.(); }}
-          style={{
-            position: 'absolute', top: '6px', right: '6px', zIndex: 5,
-            width: '24px', height: '24px', borderRadius: '50%',
-            background: 'rgba(0,0,0,0.22)', border: 'none', cursor: 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: 'white', fontSize: '0.65rem',
-            transition: 'opacity 150ms, background 150ms',
-          }}
-          onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(200,60,60,0.7)'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(0,0,0,0.22)'; }}
-          title={collab.is_demo ? 'Dismiss demo' : 'Remove sample'}
-        >
-          <XIcon />
-        </button>
-      )}
-      <div className="flex relative">
-        {/* Details (no photo) */}
-        <div className="flex-1 p-3">
-          {collab.is_demo && (
-            <span style={{ fontSize: '0.55rem', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#B8922A', marginBottom: '0.15rem', display: 'block' }}>Demo Tour</span>
+    <div
+      onClick={() => onClick?.(collab)}
+      style={{
+        borderRadius: '1.375rem',
+        overflow: 'hidden',
+        cursor: 'pointer',
+        position: 'relative',
+        background: 'rgba(255,255,255,0.62)',
+        backdropFilter: 'blur(24px) saturate(140%)',
+        WebkitBackdropFilter: 'blur(24px) saturate(140%)',
+        border: '1px solid rgba(255,255,255,0.75)',
+        boxShadow: '0 4px 28px rgba(25,37,36,0.10), inset 0 1px 0 rgba(255,255,255,0.65)',
+        transition: 'transform 180ms cubic-bezier(0.16,1,0.3,1), box-shadow 180ms',
+      }}
+      onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 36px rgba(25,37,36,0.14), inset 0 1px 0 rgba(255,255,255,0.65)'; }}
+      onMouseLeave={(e) => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '0 4px 28px rgba(25,37,36,0.10), inset 0 1px 0 rgba(255,255,255,0.65)'; }}
+    >
+      {/* ── Hero image ─────────────────────────────────────────────────────── */}
+      <div style={{ height: 172, position: 'relative', overflow: 'hidden', background: 'linear-gradient(135deg, #EFECE9 0%, #D1EBDB 100%)' }}>
+        {hasImage && (
+          <img
+            src={collab.image}
+            alt={collab.property_name}
+            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+          />
+        )}
+
+        {/* Bottom gradient for text legibility */}
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(20,30,28,0.68) 0%, rgba(20,30,28,0.18) 55%, transparent 100%)' }} />
+
+        {/* Demo badge */}
+        {collab.is_demo && (
+          <span style={{
+            position: 'absolute', top: '0.625rem', left: '0.75rem',
+            fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase',
+            color: '#fff', background: 'rgba(184,146,42,0.88)',
+            padding: '0.2rem 0.55rem', borderRadius: '9999px',
+            backdropFilter: 'blur(8px)',
+          }}>Demo Tour</span>
+        )}
+
+        {/* Dismiss button */}
+        {canDismiss && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onDismiss?.(); }}
+            style={{
+              position: 'absolute', top: '0.5rem', right: '0.5rem', zIndex: 5,
+              width: '26px', height: '26px', borderRadius: '50%',
+              background: 'rgba(0,0,0,0.28)', border: 'none', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: 'white', backdropFilter: 'blur(8px)',
+              transition: 'background 150ms',
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(200,60,60,0.75)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(0,0,0,0.28)'; }}
+            title={collab.is_demo ? 'Dismiss demo' : 'Remove sample'}
+          >
+            <XIcon />
+          </button>
+        )}
+
+        {/* Property name + meta overlaid on image */}
+        <div style={{ position: 'absolute', bottom: '0.75rem', left: '0.875rem', right: '0.875rem' }}>
+          <p style={{
+            fontFamily: 'var(--font-display)', fontWeight: 800,
+            fontSize: '1rem', color: '#fff', lineHeight: 1.25,
+            textShadow: '0 1px 6px rgba(0,0,0,0.35)', marginBottom: '0.2rem',
+          }}>{collab.property_name}</p>
+          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+            {collab.location && (
+              <span style={{ fontSize: '0.76rem', color: 'rgba(255,255,255,0.88)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                <svg viewBox="0 0 16 16" fill="currentColor" style={{ width: 10, height: 10, opacity: 0.8 }}><path d="M8 0C5.24 0 3 2.24 3 5c0 3.75 5 11 5 11s5-7.25 5-11c0-2.76-2.24-5-5-5zm0 7a2 2 0 1 1 0-4 2 2 0 0 1 0 4z"/></svg>
+                {collab.location}
+              </span>
+            )}
+            {collab.dates && (
+              <span style={{ fontSize: '0.76rem', color: 'rgba(255,255,255,0.88)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 10, height: 10, opacity: 0.8 }}><rect x="1" y="2" width="14" height="13" rx="2"/><line x1="1" y1="6" x2="15" y2="6"/><line x1="5" y1="0" x2="5" y2="4"/><line x1="11" y1="0" x2="11" y2="4"/></svg>
+                {collab.dates}
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Glass info panel ───────────────────────────────────────────────── */}
+      <div style={{ padding: '0.875rem 1rem' }}>
+
+        {/* Host row */}
+        {collab.host_name && (
+          <p style={{ fontSize: '0.78rem', color: 'var(--slate)', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" style={{ width: 12, height: 12, color: 'var(--sage)', flexShrink: 0 }}>
+              <circle cx="8" cy="5" r="3"/><path d="M2 14c0-3.31 2.69-6 6-6s6 2.69 6 6"/>
+            </svg>
+            <span style={{ color: 'var(--sage)' }}>Host:</span> {collab.host_name}
+          </p>
+        )}
+
+        {/* Status + chevron */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem', paddingBottom: '0.75rem', borderBottom: '1px solid rgba(25,37,36,0.07)' }}>
+          <span style={{
+            display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
+            padding: '0.3rem 0.75rem', borderRadius: '9999px',
+            background: style.bg, color: style.text,
+            fontSize: '0.74rem', fontWeight: 600,
+            backdropFilter: 'blur(8px)',
+          }}>
+            <span style={{ fontSize: '0.6rem' }}>{style.icon}</span> {collab.status_text}
+          </span>
+          <svg viewBox="0 0 16 16" fill="none" stroke="var(--stone)" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" style={{ width: 16, height: 16 }}>
+            <polyline points="6 3 11 8 6 13"/>
+          </svg>
+        </div>
+
+        {/* Deliverables + due/payment */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+          <div>
+            <p style={{ fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--sage)', marginBottom: '0.2rem' }}>Deliverables</p>
+            <p style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--ink)' }}>{collab.deliverables}</p>
+          </div>
+          {collab.days_left && (
+            <div style={{ textAlign: 'right' }}>
+              <p style={{ fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--sage)', marginBottom: '0.2rem' }}>Due in</p>
+              <p style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--slate)' }}>{collab.days_left} days</p>
+            </div>
           )}
-          <p className="font-display font-bold text-ink text-sm leading-tight pr-2 line-clamp-1">{collab.property_name}</p>
-          <p className="text-slate text-xs mt-1 flex items-center gap-1">
-            <span>📍</span>{collab.location}
-          </p>
-          <p className="text-slate text-xs flex items-center gap-1">
-            <span>👤</span>Host: {collab.host_name}
-          </p>
-          <p className="text-slate text-xs flex items-center gap-1">
-            <span>📅</span>{collab.dates}
-          </p>
+          {collab.payment && !collab.days_left && (
+            <div style={{ textAlign: 'right' }}>
+              <p style={{ fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--sage)', marginBottom: '0.2rem' }}>Payment</p>
+              <p style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--slate)' }}>{collab.payment}</p>
+            </div>
+          )}
+          {!collab.days_left && !collab.payment && (
+            <div style={{ textAlign: 'right' }}>
+              <p style={{ fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--sage)', marginBottom: '0.2rem' }}>Stay</p>
+              <p style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--slate)' }}>Complimentary</p>
+            </div>
+          )}
         </div>
-      </div>
-      {/* Status row */}
-      <div className="px-3 py-2.5 border-t border-stone/30 flex items-center justify-between">
-        <span style={{
-          display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
-          padding: '0.25rem 0.65rem', borderRadius: '9999px',
-          background: style.bg, color: style.text,
-          fontSize: '0.74rem', fontWeight: 600,
-        }}>
-          <span style={{ fontSize: '0.6rem' }}>{style.icon}</span> {collab.status_text}
-        </span>
-        <svg viewBox="0 0 256 256" fill="none" stroke="#959D90" strokeWidth="14" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
-          <polyline points="96 48 176 128 96 208"/>
-        </svg>
-      </div>
-      {/* Deliverables + due */}
-      <div className="px-3 pb-3 flex justify-between">
-        <div>
-          <p className="text-sage text-[10px] uppercase tracking-wider mb-0.5">Deliverables</p>
-          <p className="text-ink text-sm font-semibold">{collab.deliverables}</p>
-        </div>
-        {collab.days_left && (
-          <div className="text-right">
-            <p className="text-sage text-[10px] uppercase tracking-wider mb-0.5">Due in</p>
-            <p className="text-slate text-sm font-semibold">{collab.days_left} days</p>
-          </div>
-        )}
-        {collab.payment && (
-          <div className="text-right">
-            <p className="text-sage text-[10px] uppercase tracking-wider mb-0.5">Payment</p>
-            <p className="text-slate text-sm font-semibold">{collab.payment}</p>
-          </div>
-        )}
       </div>
     </div>
   );

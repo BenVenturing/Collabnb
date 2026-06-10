@@ -289,6 +289,8 @@ export default function OnboardingChecklist() {
     ? userEmail === ADMIN_EMAIL.toLowerCase()
     : userEmail === 'benventuring@gmail.com';
 
+  if (isAdmin) return null;
+
   const rawSteps = isHost
     ? hostSteps(profile, isFirstVisit, hasShared, hasListing, hasBrowsedCreators)
     : creatorSteps(profile, isFirstVisit, hasShared, hasExplored);

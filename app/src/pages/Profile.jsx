@@ -1761,11 +1761,8 @@ export default function Profile() {
                 <input
                   type="text"
                   value={dp.city || ''}
-                  onChange={(e) => {
-                    const newCity = e.target.value;
-                    setProfileOverride(prev => ({ ...prev, city: newCity }));
-                    updateProfile({ ...dp, city: newCity });
-                  }}
+                  onChange={(e) => setProfileOverride(prev => ({ ...prev, city: e.target.value }))}
+                  onBlur={(e) => updateProfile({ city: e.target.value })}
                   placeholder="e.g., Asheville"
                   style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '0.875rem', background: 'rgba(255,255,255,0.75)', border: '1px solid rgba(25,37,36,0.12)', fontFamily: 'var(--font-body)', fontSize: '0.875rem', color: 'var(--ink)', outline: 'none', boxSizing: 'border-box' }}
                 />
@@ -1775,11 +1772,8 @@ export default function Profile() {
                 <input
                   type="text"
                   value={dp.region || ''}
-                  onChange={(e) => {
-                    const newRegion = e.target.value;
-                    setProfileOverride(prev => ({ ...prev, region: newRegion }));
-                    updateProfile({ ...dp, region: newRegion });
-                  }}
+                  onChange={(e) => setProfileOverride(prev => ({ ...prev, region: e.target.value }))}
+                  onBlur={(e) => updateProfile({ region: e.target.value })}
                   placeholder="e.g., North Carolina"
                   style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '0.875rem', background: 'rgba(255,255,255,0.75)', border: '1px solid rgba(25,37,36,0.12)', fontFamily: 'var(--font-body)', fontSize: '0.875rem', color: 'var(--ink)', outline: 'none', boxSizing: 'border-box' }}
                 />
@@ -1789,11 +1783,8 @@ export default function Profile() {
                 <input
                   type="text"
                   value={dp.country || ''}
-                  onChange={(e) => {
-                    const newCountry = e.target.value;
-                    setProfileOverride(prev => ({ ...prev, country: newCountry }));
-                    updateProfile({ ...dp, country: newCountry });
-                  }}
+                  onChange={(e) => setProfileOverride(prev => ({ ...prev, country: e.target.value }))}
+                  onBlur={(e) => updateProfile({ country: e.target.value })}
                   placeholder="e.g., United States"
                   style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '0.875rem', background: 'rgba(255,255,255,0.75)', border: '1px solid rgba(25,37,36,0.12)', fontFamily: 'var(--font-body)', fontSize: '0.875rem', color: 'var(--ink)', outline: 'none', boxSizing: 'border-box' }}
                 />
@@ -1818,7 +1809,7 @@ export default function Profile() {
                         if (newRegion) updates.region = newRegion;
                         if (newCountry) updates.country = newCountry;
                         setProfileOverride(prev => ({ ...prev, ...updates }));
-                        updateProfile({ ...dp, ...updates });
+                        updateProfile(updates);
                       } catch {
                         // Fallback: just use lat/lng as a hint
                       }

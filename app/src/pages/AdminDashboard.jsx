@@ -28,7 +28,10 @@ function useAdminGuard() {
   useEffect(() => {
     if (loading) return;
     const userEmail = (session?.user?.email || profile?.email || '').toLowerCase();
-    if (!!ADMIN_EMAIL && userEmail === ADMIN_EMAIL.toLowerCase()) {
+    const isAdmin = ADMIN_EMAIL
+      ? userEmail === ADMIN_EMAIL.toLowerCase()
+      : userEmail === 'benventuring@gmail.com';
+    if (isAdmin) {
       setAuthorized(true);
     } else {
       navigate('/explore', { replace: true });
@@ -137,7 +140,12 @@ export default function AdminDashboard() {
     return () => window.removeEventListener('collabnb-admin-tab', handler);
   }, []);
 
-  if (loading || !authorized) return null;
+  if (loading || !authorized) return (
+    <div style={{ minHeight: '100dvh', background: '#EFECE9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ width: 28, height: 28, border: '2.5px solid rgba(25,37,36,0.1)', borderTopColor: '#3C5759', borderRadius: '50%', animation: 'spin 0.75s linear infinite' }} />
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  );
 
   const ActivePanel = PANEL_MAP[activeSection] || PANEL_MAP['verification'];
   const badges = { messages: unreadCount || 0 };

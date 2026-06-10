@@ -1178,17 +1178,19 @@ export default function Profile() {
       {/* ── Settings gear sheet ───────────────────────────────────────────── */}
       {showSettings && (
         <div
-          style={{ position: 'fixed', inset: 0, zIndex: 60, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', padding: '1rem', background: 'rgba(25,37,36,0.5)', backdropFilter: 'blur(6px)' }}
+          style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', background: 'rgba(25,37,36,0.5)', backdropFilter: 'blur(6px)' }}
           onClick={() => setShowSettings(false)}
         >
           <div
-            style={{ width: '100%', maxWidth: '480px', borderRadius: '1.5rem', overflow: 'hidden', padding: 0, background: 'rgba(255,255,255,0.97)', border: '1px solid rgba(255,255,255,0.85)', boxShadow: '0 20px 60px rgba(25,37,36,0.18), inset 0 1px 0 rgba(255,255,255,0.9)' }}
+            style={{ width: '100%', maxWidth: '480px', maxHeight: '88dvh', borderRadius: '1.5rem', overflow: 'hidden', padding: 0, background: 'rgba(255,255,255,0.97)', border: '1px solid rgba(255,255,255,0.85)', boxShadow: '0 20px 60px rgba(25,37,36,0.18), inset 0 1px 0 rgba(255,255,255,0.9)', display: 'flex', flexDirection: 'column' }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid rgba(60,87,89,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid rgba(60,87,89,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
               <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1rem', color: 'var(--slate)', margin: 0, letterSpacing: '-0.01em' }}>Settings</p>
               <button onClick={() => setShowSettings(false)} style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'rgba(209,235,219,0.5)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--slate)' }}>✕</button>
             </div>
+            {/* Scrollable body */}
+            <div style={{ flex: 1, overflowY: 'auto' }}>
             {dp.role === 'creator' && (() => {
               const count = serverPitchCount ?? getPitchCount().count;
               return (
@@ -1404,7 +1406,8 @@ export default function Profile() {
               );
             })()}
 
-            <div style={{ borderTop: '1px solid rgba(60,87,89,0.1)' }}>
+            </div>{/* end scrollable body */}
+            <div style={{ borderTop: '1px solid rgba(60,87,89,0.1)', flexShrink: 0 }}>
               <button
                 onClick={signOut}
                 style={{

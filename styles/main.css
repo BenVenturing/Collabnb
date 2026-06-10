@@ -1218,11 +1218,12 @@ h3 { font-weight: 700; }
   transform: translateY(0);
 }
 
-/* Login modal card — replace previous inline padding */
+/* Login modal card */
 .login-modal-card {
   padding: 2.5rem 2rem;
-  max-height: none;
-  overflow-y: visible;
+  max-height: calc(92dvh - 2rem);
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 @media (max-width: 480px) {
   .login-modal-card {

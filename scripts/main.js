@@ -504,16 +504,26 @@ function showWizardStep(step) {
           signUpUrl: `${origin}/join.html`,
           appearance: {
             variables: {
-              colorPrimary: '#3C5759',
-              colorBackground: 'transparent',
+              colorPrimary: '#192524',
+              colorBackground: '#ffffff',
               colorText: '#192524',
               colorTextSecondary: '#3C5759',
-              colorInputBackground: '#ffffff',
+              colorInputBackground: '#f9f9f7',
               colorInputText: '#192524',
+              colorNeutral: '#3C5759',
               colorDanger: '#dc2626',
               borderRadius: '12px',
               fontFamily: 'system-ui, -apple-system, sans-serif',
               fontSize: '0.9375rem',
+            },
+            elements: {
+              card: 'box-shadow:none!important;border:none!important;padding:0!important;background:transparent!important;',
+              cardBox: 'box-shadow:none!important;',
+              header: 'display:none!important;',
+              logoBox: 'display:none!important;',
+              footer: 'background:#ffffff!important;background-color:#ffffff!important;',
+              footerPages: 'background:#ffffff!important;',
+              footerAction: 'background:#ffffff!important;',
             },
           },
         });
@@ -783,6 +793,7 @@ function switchRole(role) {
 
 /* --- Login Modal --- */
 let _clerkLoginMounted = false;
+let _signInUnsubscribe = null;
 
 function openLoginModal() {
   const overlay = document.querySelector('#login-modal-overlay');
@@ -832,24 +843,45 @@ function openLoginModal() {
     if (!mountEl) return;
     // Reset mount area (clears loading state from above)
     mountEl.innerHTML = '';
-    // Prevent browser autofill from using saved credentials
     mountEl.setAttribute('autocomplete', 'off');
     _clerkLoginMounted = false;
+    // Tear down any previous listener
+    if (_signInUnsubscribe) { _signInUnsubscribe(); _signInUnsubscribe = null; }
+    // Handle post-sign-in routing (email/password path — OAuth goes via sso-callback)
+    _signInUnsubscribe = clerk.addListener(({ user }) => {
+      if (user) {
+        if (_signInUnsubscribe) { _signInUnsubscribe(); _signInUnsubscribe = null; }
+        closeLoginModal();
+        const signedInEmail = user.primaryEmailAddress?.emailAddress || '';
+        const toAdmin = ADMIN_EMAIL && signedInEmail && signedInEmail.toLowerCase() === ADMIN_EMAIL.toLowerCase();
+        window.location.href = toAdmin ? '/app/#/admin' : '/app/#/explore';
+      }
+    });
     try {
       clerk.mountSignIn(mountEl, {
-        afterSignInUrl: `${window.location.origin}/app/`,
         signUpUrl: `${window.location.origin}/join.html`,
         appearance: {
           variables: {
-            colorPrimary: '#3C5759',
-            colorBackground: 'transparent',
+            colorPrimary: '#192524',
+            colorBackground: '#ffffff',
             colorText: '#192524',
             colorTextSecondary: '#3C5759',
-            colorInputBackground: '#ffffff',
+            colorInputBackground: '#f9f9f7',
             colorInputText: '#192524',
+            colorNeutral: '#3C5759',
+            colorDanger: '#dc2626',
             borderRadius: '12px',
             fontFamily: 'system-ui, -apple-system, sans-serif',
             fontSize: '0.9375rem',
+          },
+          elements: {
+            card: 'box-shadow:none!important;border:none!important;background:transparent!important;padding:0!important;',
+            cardBox: 'box-shadow:none!important;',
+            header: 'display:none!important;',
+            logoBox: 'display:none!important;',
+            footer: 'background:#ffffff!important;background-color:#ffffff!important;',
+            footerPages: 'background:#ffffff!important;',
+            footerAction: 'background:#ffffff!important;',
           },
         },
       });
@@ -878,6 +910,7 @@ function closeLoginModal() {
   overlay.classList.remove('open');
   overlay.setAttribute('aria-hidden', 'true');
   document.body.style.overflow = '';
+  if (_signInUnsubscribe) { _signInUnsubscribe(); _signInUnsubscribe = null; }
 
   // Show the nav pill again
   const nav = document.querySelector('.nav-pill');

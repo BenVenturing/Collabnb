@@ -13,10 +13,21 @@ const CONVEX_URL = import.meta.env.VITE_CONVEX_URL;
 const convex = CONVEX_URL ? new ConvexReactClient(CONVEX_URL) : null;
 
 function Root() {
+  // Global background layers — render on every route, every account
+  const bg = (
+    <>
+      <div aria-hidden="true" className="bg-layers bg-base" />
+      <div aria-hidden="true" className="bg-layers bg-gradient" />
+      <div aria-hidden="true" className="bg-layers bg-clouds" />
+      <div aria-hidden="true" className="bg-grain" />
+    </>
+  );
+
   // Clerk not configured — use plain ConvexProvider (dev / mock mode)
   if (!CLERK_KEY) {
     return (
       <React.StrictMode>
+        {bg}
         {convex ? (
           <ConvexProvider client={convex}>
             <App />
@@ -35,6 +46,7 @@ function Root() {
   // Clerk + Convex — ConvexProviderWithClerk passes Clerk JWT to Convex automatically
   return (
     <React.StrictMode>
+      {bg}
       <ClerkProvider publishableKey={CLERK_KEY}>
         {convex ? (
           <ConvexProviderWithClerk client={convex} useAuth={useAuth}>

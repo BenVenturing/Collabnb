@@ -5,6 +5,7 @@ import { api } from '../../convex/_generated/api';
 
 // Convex storage URL prefix; used to construct public URLs from storage IDs
 const CONVEX_URL = import.meta.env.VITE_CONVEX_URL;
+const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL;
 
 /**
  * Resize an image file via canvas, upload the resulting JPEG blob to Convex
@@ -510,6 +511,10 @@ export default function Profile() {
   const { profile, loading, signOut, updateProfile } = useAuth();
   const { contracts } = useCollabs();
   const navigate = useNavigate();
+  const profileEmail = (profile?.email || '').toLowerCase();
+  const isAdmin = ADMIN_EMAIL
+    ? profileEmail === ADMIN_EMAIL.toLowerCase()
+    : profileEmail === 'benventuring@gmail.com';
   const location = useLocation();
   const verifySubscriptionSession = useAction(api.stripe.verifySubscriptionSession);
   const verifyLifetimeSession      = useAction(api.stripe.verifyLifetimeSession);
@@ -755,13 +760,16 @@ export default function Profile() {
     { icon: <PencilIcon />,      label: 'Edit Profile',    sublabel: 'Update your photos, bio, and socials',           onClick: () => { setShowSettings(false); openEditProfile(); } },
     { icon: <FileTextIcon />,    label: 'Contracts',       sublabel: 'View and manage your saved contracts',           onClick: () => { setShowSettings(false); setShowContracts(true); } },
     ...(hasActiveSub ? [{ icon: <CreditCardIcon />, label: 'Manage Plan', sublabel: 'Cancel, upgrade, or update billing', onClick: () => { setShowSettings(false); handleManageSubscription(); } }] : []),
-    { icon: <ChecklistIcon />,   label: 'Setup Checklist', sublabel: 'Finish setting up your account',                 onClick: () => { setShowSettings(false); reopenChecklist(); } },
+    ...(isAdmin
+      ? [{ icon: <ChecklistIcon />, label: 'Admin Panel', sublabel: 'Open the Collabnb admin dashboard', onClick: () => { setShowSettings(false); navigate('/admin'); } }]
+      : [{ icon: <ChecklistIcon />, label: 'Setup Checklist', sublabel: 'Finish setting up your account', onClick: () => { setShowSettings(false); reopenChecklist(); } }]
+    ),
     { icon: <GlobeIcon />,       label: 'Location Settings', sublabel: 'Set your city & country for the globe map',    onClick: () => { setShowSettings(false); setShowLocation(true); } },
     { icon: <PlayIcon />,        label: 'Demo Collab Tour', sublabel: 'Replay the guided collaboration walkthrough',    onClick: () => { setShowSettings(false); localStorage.removeItem('collabnb_demo_dismissed'); navigate('/collabs'); } },
     { icon: <BellIcon />,        label: 'Notifications',   sublabel: 'Manage email & push preferences',               onClick: () => { setShowSettings(false); setShowNotifications(true); } },
     { icon: <LockIcon />,        label: 'Privacy Policy',  sublabel: 'Review how your data is used',                  onClick: () => { setShowSettings(false); setShowPrivacy(true); } },
     { icon: <SealCheck />,       label: 'Verification',    sublabel: 'Submit a re-verification request',              onClick: () => { setShowSettings(false); setShowVerification(true); } },
-    { icon: <SwitchIcon />,      label: profile?.role === 'host' ? 'Sign up as Creator' : 'Sign up as Host', sublabel: profile?.role === 'host' ? 'Browse and apply to listings as a creator' : 'Create listings and collaborate with creators', onClick: () => { setShowSettings(false); setShowSwitchConfirm(true); } },
+    ...(!isAdmin ? [{ icon: <SwitchIcon />, label: profile?.role === 'host' ? 'Sign up as Creator' : 'Sign up as Host', sublabel: profile?.role === 'host' ? 'Browse and apply to listings as a creator' : 'Create listings and collaborate with creators', onClick: () => { setShowSettings(false); setShowSwitchConfirm(true); } }] : []),
   ];
 
   return (

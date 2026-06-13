@@ -29,7 +29,7 @@ const CREATOR_NAV = [
 ];
 
 const HOST_NAV = [
-  { to: '/host',           label: 'Dashboard' },
+  { to: '/host',           label: 'Dashboard', end: true },
   { to: '/host/proposals', label: 'Proposals' },
   { to: '/inbox',          label: 'Inbox'     },
   { to: '/host/creators',  label: 'Creators'  },
@@ -164,7 +164,11 @@ export default function AppNav() {
 
   // Scroll detection
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 40);
+    const onScroll = () => {
+      const y = window.scrollY;
+      if (y <= 80) setMenuOpen(false);
+      setScrolled(y > 80);
+    };
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
@@ -204,7 +208,7 @@ export default function AppNav() {
 
   // Lock body scroll for full-screen overlay only
   useEffect(() => {
-    const lock = menuOpen && !compactSearch;
+    const lock = menuOpen && !compactSearch && !scrolled;
     document.body.style.overflow = lock ? 'hidden' : '';
     return () => { document.body.style.overflow = ''; };
   }, [menuOpen, compactSearch]);
@@ -247,15 +251,16 @@ export default function AppNav() {
     <>
       {/* ── Full-screen overlay — mobile / non-compact mode only ─────────────── */}
       <div
-        className={`nav-overlay glass ${!compactSearch && menuOpen ? 'open' : ''}`}
+        className={`nav-overlay glass ${!scrolled && !compactSearch && menuOpen ? 'open' : ''}`}
         role="dialog"
         aria-modal="true"
         aria-label="Mobile navigation"
       >
-        {NAV_LINKS.map(({ to, label }) => (
+        {NAV_LINKS.map(({ to, label, end }) => (
           <NavLink
             key={to}
             to={to}
+            end={end}
             onClick={() => setMenuOpen(false)}
             className="font-display font-bold text-ink"
             style={{ fontSize: 'clamp(1.75rem, 5vw, 2.5rem)' }}
@@ -355,9 +360,9 @@ export default function AppNav() {
 
           {/* Desktop nav links (hidden when scrolled via CSS) */}
           <ul className="nav-links" role="list">
-            {NAV_LINKS.map(({ to, label }) => (
+            {NAV_LINKS.map(({ to, label, end }) => (
               <li key={to} style={{ position: 'relative' }}>
-                <NavLink to={to} className={({ isActive }) => isActive ? 'active' : ''}>
+                <NavLink to={to} end={end} className={({ isActive }) => isActive ? 'active' : ''}>
                   {label}
                 </NavLink>
                 {label === 'Saved' && showBadge && (
@@ -390,10 +395,11 @@ export default function AppNav() {
               transition: 'max-width 360ms cubic-bezier(0.16,1,0.3,1), opacity 240ms cubic-bezier(0.16,1,0.3,1)',
               pointerEvents: (compactSearch && menuOpen) ? 'auto' : 'none',
             }}>
-              {NAV_LINKS.map(({ to, label }) => (
+              {NAV_LINKS.map(({ to, label, end }) => (
                 <NavLink
                   key={to}
                   to={to}
+                  end={end}
                   onClick={() => setMenuOpen(false)}
                   className={({ isActive }) => isActive ? 'active' : ''}
                   style={{
@@ -566,23 +572,6 @@ export default function AppNav() {
         {/* ── Actions ──────────────────────────────────────────────────────────── */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', flexShrink: 0 }}>
 
-          {/* Compact hamburger — left of search pill, only when scrolled */}
-          {scrolled && !navSearchOpen && (
-            <button
-              className={`nav-hamburger ${menuOpen ? 'open' : ''}`}
-              aria-label={menuOpen ? 'Close menu' : 'Open menu'}
-              aria-expanded={menuOpen}
-              onClick={() => { setMenuOpen(!menuOpen); setProfileOpen(false); }}
-              data-compact="true"
-            >
-              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-                <line className="line line-1" x1="3" y1="5" x2="17" y2="5"/>
-                <line className="line line-2" x1="3" y1="10" x2="17" y2="10"/>
-                <line className="line line-3" x1="3" y1="15" x2="17" y2="15"/>
-              </svg>
-            </button>
-          )}
-
           {/* "Search stays" compact pill */}
           <button
             onClick={openNavSearch}
@@ -721,8 +710,8 @@ export default function AppNav() {
           {/* Hamburger + Profile avatar — grouped so nav dropdown anchors near avatar */}
           <div className="relative" ref={profileRef} style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
 
-            {/* Hamburger — LEFT of avatar; hidden when scrolled (left-side hamburger takes over) */}
-            {!navSearchOpen && !scrolled && (
+            {/* Hamburger — left of avatar; visible on mobile always, and on desktop when scrolled */}
+            {!navSearchOpen && (
               <button
                 className={`nav-hamburger ${menuOpen ? 'open' : ''}`}
                 aria-label={menuOpen ? 'Close menu' : 'Open menu'}
@@ -814,6 +803,39 @@ export default function AppNav() {
                 <button onClick={signOut} className="w-full text-left px-4 py-3 text-sm text-red-500 hover:bg-red-50/50 transition-colors">
                   Log Out
                 </button>
+              </div>
+            )}
+
+            {/* Scrolled compact nav dropdown */}
+            {scrolled && menuOpen && !compactSearch && (
+              <div
+                style={{
+                  position: 'absolute',
+                  right: 0,
+                  top: 'calc(100% + 0.625rem)',
+                  minWidth: '190px',
+                  background: 'rgba(255,255,255,0.97)',
+                  backdropFilter: 'blur(24px) saturate(140%)',
+                  WebkitBackdropFilter: 'blur(24px) saturate(140%)',
+                  border: '1px solid rgba(255,255,255,0.7)',
+                  borderRadius: '1.25rem',
+                  boxShadow: '0 12px 40px rgba(25,37,36,0.18), inset 0 1px 0 rgba(255,255,255,0.7)',
+                  overflow: 'hidden',
+                  zIndex: 50,
+                  animation: 'fadeUp 200ms cubic-bezier(0.16,1,0.3,1) forwards',
+                }}
+              >
+                {NAV_LINKS.map(({ to, label }) => (
+                  <NavLink
+                    key={to}
+                    to={to}
+                    onClick={() => setMenuOpen(false)}
+                    className="block px-4 py-3 text-sm text-ink hover:bg-mint/30 transition-colors"
+                    style={{ fontFamily: 'var(--font-body)', fontWeight: 500 }}
+                  >
+                    {label}
+                  </NavLink>
+                ))}
               </div>
             )}
           </div>

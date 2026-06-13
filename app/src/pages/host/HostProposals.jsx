@@ -4,6 +4,8 @@ import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { useAuth } from '../../contexts/AuthContext';
 import ProfilePopupCard from '../../components/ProfilePopupCard';
+import CreatorAvatar from '../../components/CreatorAvatar';
+import SkeletonCard from '../../components/SkeletonCard';
 import {
   MessageSquare, ChevronDown, ChevronUp, ExternalLink, Check, Sparkles,
   GripVertical, Lock, Download, Pen, CheckCircle2, Trash2,
@@ -410,7 +412,7 @@ function HostMessagePanel({ threadKey, creatorName }) {
       {/* Message list */}
       <div style={{ maxHeight: 200, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
         {convexMessages === undefined ? (
-          <p style={{ fontSize: 12, color: 'var(--sage)', margin: 0 }}>Loading…</p>
+          <SkeletonCard variant="message" />
         ) : convexMessages.length === 0 ? (
           <p style={{ fontSize: 12, color: 'var(--sage)', margin: 0 }}>No messages yet — start the conversation.</p>
         ) : (
@@ -484,12 +486,13 @@ function ProposalDrawer({ proposal, onStatusChange, onCounter, onSign, onCreator
       {/* Creator header */}
       <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid rgba(25,37,36,0.07)' }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16 }}>
-          <img
-          src={proposal.creator.avatar} alt={proposal.creator.name}
-          onClick={() => onCreatorClick(proposal.creator)}
-          title="View profile"
-          style={{ width: 60, height: 60, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(25,37,36,0.08)', flexShrink: 0, cursor: 'pointer' }}
-        />
+          <CreatorAvatar
+            src={proposal.creator.avatar} name={proposal.creator.name}
+            size={60}
+            onClick={() => onCreatorClick(proposal.creator)}
+            title="View profile"
+            style={{ border: '2px solid rgba(25,37,36,0.08)', cursor: 'pointer' }}
+          />
           <div style={{ flex: 1 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
               <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 15, color: 'var(--ink)' }}>{proposal.creator.name}</span>
@@ -743,11 +746,12 @@ function ProposalCard({ proposal, expanded, onToggle, onStatusChange, onCounter,
           onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--stone)'; }} title="Drag to move stage">
           <GripVertical size={15} />
         </div>
-        <img
-          src={proposal.creator.avatar} alt={proposal.creator.name}
+        <CreatorAvatar
+          src={proposal.creator.avatar} name={proposal.creator.name}
+          size={44}
           onClick={e => { e.stopPropagation(); onCreatorClick(proposal.creator); }}
           title="View profile"
-          style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: '1.5px solid rgba(25,37,36,0.07)', cursor: 'pointer' }}
+          style={{ border: '1.5px solid rgba(25,37,36,0.07)', cursor: 'pointer' }}
         />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
@@ -1076,7 +1080,13 @@ export default function HostProposals() {
           )}
 
           {/* List */}
-          {filtered.length === 0 ? (
+          {rawPitches === undefined ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
+              {Array.from({ length: 4 }).map((_, i) => (
+                <SkeletonCard key={i} variant="proposal" />
+              ))}
+            </div>
+          ) : filtered.length === 0 ? (
             <div style={{ background: 'rgba(255,255,255,0.6)', backdropFilter: 'blur(20px)', border: '1.5px solid rgba(255,255,255,0.7)', borderRadius: '1.25rem', padding: '3rem', textAlign: 'center' }}>
               <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1rem', color: 'var(--ink)', marginBottom: '0.4rem' }}>
                 {allProposals.length === 0
@@ -1107,7 +1117,7 @@ export default function HostProposals() {
         <DragOverlay dropAnimation={{ duration: 220, easing: 'cubic-bezier(0.18,0.67,0.6,1.22)' }}>
           {activeProposal ? (
             <div style={{ background: 'rgba(255,255,255,0.97)', border: '1.5px solid rgba(25,37,36,0.14)', borderRadius: '1rem', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, boxShadow: '0 24px 48px rgba(25,37,36,0.22)', transform: 'rotate(1.5deg) scale(1.03)', cursor: 'grabbing', width: 340 }}>
-              <img src={activeProposal.creator.avatar} alt={activeProposal.creator.name} style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+              <CreatorAvatar src={activeProposal.creator.avatar} name={activeProposal.creator.name} size={40} />
               <div style={{ minWidth: 0 }}>
                 <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 13, color: 'var(--ink)', lineHeight: 1.2 }}>{activeProposal.creator.name}</div>
                 <div style={{ fontSize: 11, color: 'var(--sage)', marginTop: 2 }}>{activeProposal.listing}</div>

@@ -9,6 +9,7 @@ import { useVerification } from '../contexts/VerificationContext';
 import { useSubscription } from '../contexts/SubscriptionContext';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../convex/_generated/api';
+import SkeletonCard from '../components/SkeletonCard';
 
 const TAG_STYLES = {
   Collab:      'bg-mint text-slate',
@@ -589,18 +590,8 @@ function NewMessageModal({ listings, onSelect, onClose }) {
 }
 
 // ─── Main Inbox ───────────────────────────────────────────────────────────────
-// ─── Shimmer skeleton row ─────────────────────────────────────────────────────
 function ShimmerRow() {
-  return (
-    <div className="w-full flex items-center gap-3 px-4 py-3.5 border-b border-stone/20 animate-pulse">
-      <div className="w-11 h-11 rounded-full bg-stone/40 flex-shrink-0" />
-      <div className="flex-1 min-w-0">
-        <div className="h-3 bg-stone/40 rounded-full w-3/5 mb-2" />
-        <div className="h-2.5 bg-stone/30 rounded-full w-2/5 mb-2" />
-        <div className="h-2.5 bg-stone/25 rounded-full w-4/5" />
-      </div>
-    </div>
-  );
+  return <SkeletonCard variant="thread" />;
 }
 
 export default function Inbox() {

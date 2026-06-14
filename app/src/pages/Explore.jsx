@@ -403,7 +403,7 @@ export default function Explore() {
 
   // Sync compact search with scroll threshold
   useEffect(() => {
-    const onScroll = () => setCompactSearch(window.scrollY > 40);
+    const onScroll = () => setCompactSearch(window.scrollY > 80);
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => { window.removeEventListener('scroll', onScroll); setCompactSearch(false); };
   }, [setCompactSearch]);

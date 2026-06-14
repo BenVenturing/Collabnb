@@ -139,7 +139,7 @@ button { font: inherit; cursor: pointer; border: none; background: none; }
   padding: 0.75rem 1rem;
   border-radius: 1.5rem;
 }
-.nav-pill.scrolled .nav-links  { display: none; }
+.nav-pill.scrolled .nav-links  { opacity: 0; pointer-events: none; }
 .nav-pill.scrolled .nav-hamburger { display: flex; }
 
 .nav-logo {
@@ -164,6 +164,7 @@ button { font: inherit; cursor: pointer; border: none; background: none; }
   gap: 1.25rem;
   padding: 0;
   margin: 0;
+  transition: opacity 300ms var(--ease-out-quart);
 }
 .nav-links a {
   font-size: 0.875rem;

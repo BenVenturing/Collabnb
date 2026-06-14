@@ -582,7 +582,7 @@ export default function AppNav() {
             maxWidth: showSearchPill ? '200px' : '0px',
             overflow: 'hidden',
             flexShrink: 0,
-            transition: 'max-width 260ms cubic-bezier(0.16,1,0.3,1)',
+            transition: 'max-width 300ms var(--ease-out-quart)',
           }}>
             <button
               onClick={openNavSearch}

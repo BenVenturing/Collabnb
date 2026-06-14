@@ -577,37 +577,45 @@ export default function AppNav() {
         {/* ── Actions ──────────────────────────────────────────────────────────── */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', flexShrink: 0 }}>
 
-          {/* "Search stays" compact pill */}
-          <button
-            onClick={openNavSearch}
-            aria-label="Open search"
-            style={{
-              display: 'flex', alignItems: 'center', gap: '0.4rem',
-              padding: '0.375rem 0.875rem 0.375rem 0.5rem',
-              borderRadius: '9999px',
-              background: 'rgba(255,255,255,0.75)',
-              border: '1px solid rgba(25,37,36,0.12)',
-              boxShadow: '0 2px 8px rgba(25,37,36,0.08)',
-              cursor: 'pointer',
-              opacity: showSearchPill ? 1 : 0,
-              transform: showSearchPill ? 'scale(1)' : 'scale(0.88)',
-              pointerEvents: showSearchPill ? 'auto' : 'none',
-              transition: 'opacity 220ms cubic-bezier(0.16,1,0.3,1), transform 220ms cubic-bezier(0.16,1,0.3,1)',
-            }}
-          >
-            <div style={{
-              width: '1.5rem', height: '1.5rem', borderRadius: '50%', background: 'var(--ink)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-            }}>
-              <svg viewBox="0 0 20 20" fill="none" stroke="white" strokeWidth="2.25" strokeLinecap="round" style={{ width: 11, height: 11 }}>
-                <circle cx="8.5" cy="8.5" r="5.25"/>
-                <line x1="13.25" y1="13.25" x2="18" y2="18"/>
-              </svg>
-            </div>
-            <span style={{ fontSize: '0.8rem', fontWeight: 500, color: 'var(--ink)', whiteSpace: 'nowrap' }}>
-              Search stays
-            </span>
-          </button>
+          {/* "Search stays" compact pill — collapses width when hidden so hamburger stays flush */}
+          <div style={{
+            maxWidth: showSearchPill ? '200px' : '0px',
+            overflow: 'hidden',
+            flexShrink: 0,
+            transition: 'max-width 260ms cubic-bezier(0.16,1,0.3,1)',
+          }}>
+            <button
+              onClick={openNavSearch}
+              aria-label="Open search"
+              style={{
+                display: 'flex', alignItems: 'center', gap: '0.4rem',
+                padding: '0.375rem 0.875rem 0.375rem 0.5rem',
+                borderRadius: '9999px',
+                background: 'rgba(255,255,255,0.75)',
+                border: '1px solid rgba(25,37,36,0.12)',
+                boxShadow: '0 2px 8px rgba(25,37,36,0.08)',
+                cursor: 'pointer',
+                opacity: showSearchPill ? 1 : 0,
+                transform: showSearchPill ? 'scale(1)' : 'scale(0.88)',
+                pointerEvents: showSearchPill ? 'auto' : 'none',
+                transition: 'opacity 220ms cubic-bezier(0.16,1,0.3,1), transform 220ms cubic-bezier(0.16,1,0.3,1)',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              <div style={{
+                width: '1.5rem', height: '1.5rem', borderRadius: '50%', background: 'var(--ink)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+              }}>
+                <svg viewBox="0 0 20 20" fill="none" stroke="white" strokeWidth="2.25" strokeLinecap="round" style={{ width: 11, height: 11 }}>
+                  <circle cx="8.5" cy="8.5" r="5.25"/>
+                  <line x1="13.25" y1="13.25" x2="18" y2="18"/>
+                </svg>
+              </div>
+              <span style={{ fontSize: '0.8rem', fontWeight: 500, color: 'var(--ink)', whiteSpace: 'nowrap' }}>
+                Search stays
+              </span>
+            </button>
+          </div>
 
           {/* Bell notification icon — hidden when scrolled */}
           {userId && !scrolled && (

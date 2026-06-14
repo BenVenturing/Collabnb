@@ -317,9 +317,9 @@ export default function OnboardingChecklist() {
   }, [userId]);
 
   const userEmail = (profile?.email || '').toLowerCase();
-  const isAdmin = ADMIN_EMAIL
-    ? userEmail === ADMIN_EMAIL.toLowerCase()
-    : userEmail === 'benventuring@gmail.com';
+  const isAdmin = profile?.is_admin === true
+    || userEmail === 'benventuring@gmail.com'
+    || (!!ADMIN_EMAIL && userEmail === ADMIN_EMAIL.toLowerCase());
 
   if (isAdmin) return null;
 

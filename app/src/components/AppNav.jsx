@@ -247,9 +247,9 @@ export default function AppNav() {
   const initials = profile?.full_name?.split(' ').map((n) => n[0]).join('').slice(0, 2) ?? '?';
   const { session } = useAuth();
   const userEmail = (session?.user?.email || profile?.email || '').toLowerCase();
-  const isAdmin = !!ADMIN_EMAIL
-    ? userEmail === ADMIN_EMAIL.toLowerCase()
-    : userEmail === 'benventuring@gmail.com';
+  const isAdmin = profile?.is_admin === true
+    || userEmail === 'benventuring@gmail.com'
+    || (!!ADMIN_EMAIL && userEmail === ADMIN_EMAIL.toLowerCase());
 
   // Whether the "Search stays" pill is visible
   const showSearchPill = compactSearch && !menuOpen && !navSearchOpen;

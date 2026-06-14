@@ -512,9 +512,9 @@ export default function Profile() {
   const { contracts, collabs } = useCollabs();
   const navigate = useNavigate();
   const profileEmail = (profile?.email || '').toLowerCase();
-  const isAdmin = ADMIN_EMAIL
-    ? profileEmail === ADMIN_EMAIL.toLowerCase()
-    : profileEmail === 'benventuring@gmail.com';
+  const isAdmin = profile?.is_admin === true
+    || profileEmail === 'benventuring@gmail.com'
+    || (!!ADMIN_EMAIL && profileEmail === ADMIN_EMAIL.toLowerCase());
   const location = useLocation();
   const verifySubscriptionSession = useAction(api.stripe.verifySubscriptionSession);
   const verifyLifetimeSession      = useAction(api.stripe.verifyLifetimeSession);

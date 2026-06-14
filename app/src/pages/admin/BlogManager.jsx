@@ -261,10 +261,11 @@ export default function BlogManager() {
   const allPosts    = useQuery(api.blog.getAll) || [];
   const generatePost = useAction(api.blog.generatePost);
 
-  const [tab,       setTab]       = useState('drafts');
-  const [editing,   setEditing]   = useState(null);
+  const [tab,        setTab]        = useState('drafts');
+  const [editing,    setEditing]    = useState(null);
   const [generating, setGenerating] = useState(false);
-  const [genError,  setGenError]  = useState(null);
+  const [genError,   setGenError]   = useState(null);
+  const [topic,      setTopic]      = useState('');
 
   const drafts    = allPosts.filter(p => p.status === 'draft');
   const published = allPosts.filter(p => p.status === 'published');
@@ -276,10 +277,10 @@ export default function BlogManager() {
     setGenerating(true);
     setGenError(null);
     try {
-      await generatePost({ isStatsPost: false });
+      await generatePost({ isStatsPost: false, topicHint: topic.trim() || undefined });
       setTab('drafts');
     } catch (e) {
-      setGenError(e.message || 'Generation failed. Check that API keys are set in Convex.');
+      setGenError(e.message || 'Generation failed. Check that NVIDIA_API_KEY and UNSPLASH_ACCESS_KEY are set in Convex.');
     } finally {
       setGenerating(false);
     }
@@ -288,25 +289,36 @@ export default function BlogManager() {
   return (
     <div>
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
-        <div>
-          <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.25rem', color: 'var(--ink)', margin: 0 }}>Blog</h2>
-          <p style={{ fontSize: '0.78rem', color: 'var(--sage)', margin: '0.2rem 0 0' }}>
-            {drafts.length} draft{drafts.length !== 1 ? 's' : ''} · {published.length} published · auto-generates daily at 9am UTC
-          </p>
+      <div style={{ marginBottom: '1.5rem' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.875rem' }}>
+          <div>
+            <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.25rem', color: 'var(--ink)', margin: 0 }}>Blog</h2>
+            <p style={{ fontSize: '0.78rem', color: 'var(--sage)', margin: '0.2rem 0 0' }}>
+              {drafts.length} draft{drafts.length !== 1 ? 's' : ''} · {published.length} published
+            </p>
+          </div>
         </div>
-        <button
-          onClick={handleGenerate}
-          disabled={generating}
-          style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 1.25rem', borderRadius: 9999, border: 'none', background: generating ? 'rgba(25,37,36,0.4)' : '#192524', fontFamily: 'var(--font-body)', fontSize: '0.82rem', fontWeight: 700, color: '#fff', cursor: generating ? 'default' : 'pointer', transition: 'background 150ms' }}
-        >
-          {generating ? (
-            <>
-              <span style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.7s linear infinite', display: 'inline-block' }} />
-              Generating…
-            </>
-          ) : '✦ Generate Now'}
-        </button>
+        <div style={{ display: 'flex', gap: '0.625rem', alignItems: 'center' }}>
+          <input
+            value={topic}
+            onChange={e => setTopic(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter' && !generating) handleGenerate(); }}
+            placeholder="Topic (optional) — e.g. &quot;how UGC creators pick their collab stays&quot;"
+            style={{ flex: 1, padding: '0.6rem 0.875rem', border: '1.5px solid rgba(25,37,36,0.12)', borderRadius: 9999, fontFamily: 'var(--font-body)', fontSize: '0.82rem', color: 'var(--ink)', background: '#fafafa', outline: 'none', minWidth: 0 }}
+          />
+          <button
+            onClick={handleGenerate}
+            disabled={generating}
+            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 1.25rem', borderRadius: 9999, border: 'none', background: generating ? 'rgba(25,37,36,0.4)' : '#192524', fontFamily: 'var(--font-body)', fontSize: '0.82rem', fontWeight: 700, color: '#fff', cursor: generating ? 'default' : 'pointer', transition: 'background 150ms', whiteSpace: 'nowrap', flexShrink: 0 }}
+          >
+            {generating ? (
+              <>
+                <span style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.7s linear infinite', display: 'inline-block' }} />
+                Generating…
+              </>
+            ) : '✦ Generate'}
+          </button>
+        </div>
       </div>
 
       {genError && (
@@ -317,17 +329,11 @@ export default function BlogManager() {
 
       {/* API key setup notice */}
       {allPosts.length === 0 && !generating && (
-        <div style={{ marginBottom: '1.25rem', padding: '0.875rem 1rem', borderRadius: '0.875rem', background: 'rgba(212,168,67,0.1)', border: '1px solid rgba(212,168,67,0.3)' }}>
-          <p style={{ fontSize: '0.82rem', fontWeight: 600, color: '#b45309', margin: '0 0 0.35rem' }}>API keys required before generating</p>
-          <p style={{ fontSize: '0.78rem', color: '#b45309', margin: 0, opacity: 0.85 }}>
-            Run these in your terminal to activate blog generation:
+        <div style={{ marginBottom: '1.25rem', padding: '0.875rem 1rem', borderRadius: '0.875rem', background: 'rgba(74,155,127,0.08)', border: '1px solid rgba(74,155,127,0.25)' }}>
+          <p style={{ fontSize: '0.82rem', fontWeight: 600, color: '#2d7d5e', margin: '0 0 0.25rem' }}>Powered by NVIDIA + Unsplash</p>
+          <p style={{ fontSize: '0.78rem', color: '#2d7d5e', margin: 0, opacity: 0.85 }}>
+            Enter a topic above and hit Generate — NVIDIA researches and writes, Unsplash adds the hero photo. Post lands in Drafts for your review.
           </p>
-          <pre style={{ fontSize: '0.72rem', color: '#b45309', background: 'rgba(212,168,67,0.12)', padding: '0.625rem 0.75rem', borderRadius: '0.5rem', marginTop: '0.5rem', overflowX: 'auto', whiteSpace: 'pre-wrap' }}>
-{`cd app
-npx convex env set PERPLEXITY_API_KEY  pplx-YOUR_KEY_HERE
-npx convex env set ANTHROPIC_API_KEY   sk-ant-YOUR_KEY_HERE
-npx convex env set UNSPLASH_ACCESS_KEY YOUR_KEY_HERE`}
-          </pre>
         </div>
       )}
 

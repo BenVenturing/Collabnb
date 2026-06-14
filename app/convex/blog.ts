@@ -162,157 +162,124 @@ export const getPlatformStats = query({
   },
 });
 
-// ─── Action: generate a blog post via Perplexity + Claude + Unsplash ─────────
+// ─── Action: generate a blog post via NVIDIA NIM + Unsplash ──────────────────
 //
-// Required Convex environment variables (set via: npx convex env set KEY value):
-//   PERPLEXITY_API_KEY   — from console.perplexity.ai
-//   ANTHROPIC_API_KEY    — from console.anthropic.com
+// Required Convex environment variables:
+//   NVIDIA_API_KEY       — from build.nvidia.com
 //   UNSPLASH_ACCESS_KEY  — from unsplash.com/developers
 //
 // ─────────────────────────────────────────────────────────────────────────────
 
+async function nvidiaChat(apiKey: string, messages: {role: string; content: string}[], maxTokens = 2048): Promise<string> {
+  const res = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "meta/llama-3.3-70b-instruct",
+      messages,
+      max_tokens: maxTokens,
+      temperature: 0.7,
+      stream: false,
+    }),
+  });
+  if (!res.ok) {
+    const err = await res.text().catch(() => res.status.toString());
+    throw new Error(`NVIDIA API error ${res.status}: ${err}`);
+  }
+  const data = await res.json();
+  return data.choices?.[0]?.message?.content || "";
+}
+
 export const generatePost = action({
   args: {
     isStatsPost: v.optional(v.boolean()),
-    topicHint: v.optional(v.string()), // optional override topic from admin
+    topicHint: v.optional(v.string()),
   },
   handler: async (ctx, { isStatsPost = false, topicHint }) => {
-    const perplexityKey = process.env.PERPLEXITY_API_KEY;
-    const anthropicKey  = process.env.ANTHROPIC_API_KEY;
-    const unsplashKey   = process.env.UNSPLASH_ACCESS_KEY;
+    const nvidiaKey  = process.env.NVIDIA_API_KEY;
+    const unsplashKey = process.env.UNSPLASH_ACCESS_KEY;
 
-    if (!perplexityKey || !anthropicKey || !unsplashKey) {
-      throw new Error(
-        "Missing API keys. Set PERPLEXITY_API_KEY, ANTHROPIC_API_KEY, and UNSPLASH_ACCESS_KEY in Convex env."
-      );
+    if (!nvidiaKey || !unsplashKey) {
+      throw new Error("Missing API keys. Set NVIDIA_API_KEY and UNSPLASH_ACCESS_KEY in Convex env.");
     }
 
-    // ── 1. Research via Perplexity ────────────────────────────────────────────
-    let researchPrompt: string;
-
+    // ── 1. Research phase via NVIDIA ──────────────────────────────────────────
+    let statsContext = "";
     if (isStatsPost) {
       const stats: any = await ctx.runQuery(api.blog.getPlatformStats_internal, {});
-      researchPrompt = `
-        Write a monthly platform update blog post for Collabnb (a marketplace connecting boutique hospitality hosts with UGC creators).
-        Real platform stats: ${stats.creators} creators, ${stats.hosts} hosts, ${stats.approvedCollabs} completed collabs, ${stats.activeListings} active listings.
-        Research recent UGC creator travel trends and boutique hospitality news from the past month to add context.
-        Include relevant industry benchmarks.
-      `;
-    } else {
-      const topic = topicHint || "latest trends in UGC creator travel collabs and boutique hospitality marketing";
-      researchPrompt = `
-        Research ${topic}. Find:
-        1. Recent successful examples of creator-property content collaborations (2024-2025)
-        2. Statistics on UGC marketing effectiveness for boutique hotels and vacation rentals
-        3. What creators and hosts look for in collab partnerships
-        4. Competitor approaches (Airbnb Experiences, GetYourGuide, Stay Bnb, etc.)
-        Focus on actionable insights for boutique hosts and UGC travel creators.
-        Cite specific examples and numbers where possible.
-      `;
+      statsContext = `Platform stats: ${stats.creators} creators, ${stats.hosts} hosts, ${stats.approvedCollabs} completed collabs, ${stats.activeListings} active listings.`;
     }
 
-    const perplexityRes = await fetch("https://api.perplexity.ai/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${perplexityKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "llama-3.1-sonar-large-128k-online",
-        messages: [{ role: "user", content: researchPrompt }],
-        return_citations: true,
-        search_recency_filter: "month",
-      }),
-    });
+    const topic = topicHint || "UGC creator travel collabs and boutique hospitality marketing";
+    const researchPrompt = isStatsPost
+      ? `You are a content strategist for Collabnb, a marketplace connecting boutique hotel/Airbnb hosts with UGC travel creators for content-for-stay partnerships. ${statsContext}
 
-    if (!perplexityRes.ok) {
-      throw new Error(`Perplexity error: ${perplexityRes.status}`);
-    }
+Produce a detailed research brief covering: recent UGC marketing trends in hospitality (2024-2025), key statistics on creator-driven bookings, what's working for boutique properties vs large chains, and relevant industry developments. Include specific data points, percentages, and real-world examples. Be comprehensive — this brief will be used to write a blog post.`
+      : `You are a content strategist for Collabnb, a marketplace connecting boutique hotel/Airbnb hosts with UGC travel creators for content-for-stay partnerships.
 
-    const perplexityData = await perplexityRes.json();
-    const research = perplexityData.choices?.[0]?.message?.content || "";
-    const sources: string[] = (perplexityData.citations || []).slice(0, 5);
+Produce a detailed research brief on: ${topic}. Cover: key trends and statistics (2024-2025), successful real-world examples of creator-property collaborations, what boutique hosts and UGC creators each need from partnerships, and actionable insights. Include specific data points and percentages where possible. Be comprehensive — this brief will be used to write a blog post.`;
 
-    // ── 2. Write post via Claude ──────────────────────────────────────────────
+    const research = await nvidiaChat(nvidiaKey, [
+      { role: "system", content: "You are an expert content strategist specializing in travel, hospitality, and creator economy trends. Produce detailed, fact-rich research briefs." },
+      { role: "user", content: researchPrompt },
+    ], 1500);
+
+    // ── 2. Write post via NVIDIA ──────────────────────────────────────────────
     const today = new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
     const category = isStatsPost ? "stats" : (
-      research.toLowerCase().includes("host") ? "hosts" :
-      research.toLowerCase().includes("creator") ? "creators" : "industry"
+      topic.toLowerCase().includes("host") ? "hosts" :
+      topic.toLowerCase().includes("creator") ? "creators" : "industry"
     );
 
-    const writePrompt = `
-You are the content editor for Collabnb — a marketplace where boutique hospitality hosts offer free or discounted stays to UGC creators and travel influencers in exchange for content (Reels, TikToks, photography).
+    const writePrompt = `You are the content editor for Collabnb — a marketplace where boutique hospitality hosts offer free or discounted stays to UGC creators and travel influencers in exchange for content (Reels, TikToks, photography).
 
-Based on this research:
+Based on this research brief:
 ${research}
 
-Write a polished, engaging blog post (650-900 words) for the Collabnb blog. Audience: boutique hotel owners, Airbnb superhosts, and UGC travel creators.
+Write a polished, engaging blog post (700-950 words) for The Collabnb Journal. Audience: boutique hotel owners, Airbnb superhosts, and UGC travel creators.
 
 Requirements:
-- Headline that is specific and compelling (not generic)
-- Natural, conversational but authoritative tone — NOT corporate fluff
+- Compelling, specific headline (NOT generic clickbait)
+- Conversational but authoritative tone — no corporate fluff
 - 3-4 clearly structured sections with h2 headings
-- At least one specific data point or real example per section
-- End with a short CTA to join Collabnb's waitlist at collabnb.com/join
-- Format: clean HTML using only h2, p, ul, li, strong, em, a tags
-- Do NOT include h1 (that's the title), do NOT wrap in html/body tags
-- Today's date for context: ${today}
+- Concrete data point or real example in each section
+- Short CTA at the end pointing to <a href="https://collabnb.com/join">collabnb.com/join</a>
+- HTML using ONLY: h2, p, ul, li, strong, em, a tags — NO h1, NO html/body wrapper
+- Today: ${today}
 
-Also provide (separated by |||):
-TITLE: [compelling post title, 50-70 chars]
-EXCERPT: [1-2 sentence summary for the blog listing, 120-160 chars]
+Respond with EXACTLY this format (no markdown, no extra commentary):
+TITLE: [your title here]
+EXCERPT: [1-2 sentence teaser, 120-160 chars]
 SEO_DESC: [meta description, 150-160 chars]
-TAGS: [3-5 comma-separated tags]
-IMAGE_QUERY: [2-4 word Unsplash search query for hero image, e.g. "boutique hotel room" or "travel creator photography"]
-
-Format your response exactly as:
-TITLE: ...
-EXCERPT: ...
-SEO_DESC: ...
-TAGS: ...
-IMAGE_QUERY: ...
+TAGS: [3-5 comma-separated lowercase tags]
+IMAGE_QUERY: [2-4 word Unsplash search term for hero photo, e.g. boutique hotel room]
 CONTENT:
-[html content here]
-    `;
+[your HTML content here]`;
 
-    const claudeRes = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "x-api-key": anthropicKey,
-        "anthropic-version": "2023-06-01",
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "claude-opus-4-8-20251101",
-        max_tokens: 2500,
-        messages: [{ role: "user", content: writePrompt }],
-      }),
-    });
+    const raw = await nvidiaChat(nvidiaKey, [
+      { role: "system", content: "You are an expert blog writer for a travel-tech startup. Follow the output format exactly." },
+      { role: "user", content: writePrompt },
+    ], 2500);
 
-    if (!claudeRes.ok) {
-      throw new Error(`Claude error: ${claudeRes.status}`);
-    }
-
-    const claudeData = await claudeRes.json();
-    const raw = claudeData.content?.[0]?.text || "";
-
-    // Parse the structured response
     const extract = (key: string) => {
       const match = raw.match(new RegExp(`${key}:\\s*(.+)`));
       return match ? match[1].trim() : "";
     };
     const contentMatch = raw.match(/CONTENT:\s*([\s\S]+)/);
 
-    const title       = extract("TITLE");
-    const excerpt     = extract("EXCERPT");
-    const seoDesc     = extract("SEO_DESC");
-    const tagsRaw     = extract("TAGS");
-    const imageQuery  = extract("IMAGE_QUERY");
-    const content     = contentMatch ? contentMatch[1].trim() : raw;
-    const tags        = tagsRaw.split(",").map((t: string) => t.trim()).filter(Boolean);
+    const title      = extract("TITLE");
+    const excerpt    = extract("EXCERPT");
+    const seoDesc    = extract("SEO_DESC");
+    const tagsRaw    = extract("TAGS");
+    const imageQuery = extract("IMAGE_QUERY");
+    const content    = contentMatch ? contentMatch[1].trim() : raw;
+    const tags       = tagsRaw.split(",").map((t: string) => t.trim()).filter(Boolean);
 
     if (!title || !content) {
-      throw new Error("Claude returned incomplete post data");
+      throw new Error("NVIDIA returned incomplete post data — try again");
     }
 
     // ── 3. Fetch hero image from Unsplash ─────────────────────────────────────
@@ -322,27 +289,26 @@ CONTENT:
     let heroCreditUrl: string | undefined;
 
     try {
-      const query = encodeURIComponent(imageQuery || "boutique hotel travel");
+      const q = encodeURIComponent(imageQuery || "boutique hotel travel");
       const unsplashRes = await fetch(
-        `https://api.unsplash.com/search/photos?query=${query}&per_page=3&orientation=landscape&content_filter=high`,
+        `https://api.unsplash.com/search/photos?query=${q}&per_page=3&orientation=landscape&content_filter=high`,
         { headers: { "Authorization": `Client-ID ${unsplashKey}` } }
       );
       if (unsplashRes.ok) {
         const unsplashData = await unsplashRes.json();
         const photo = unsplashData.results?.[0];
         if (photo) {
-          heroUrl = photo.urls?.regular;
-          heroAlt = photo.alt_description || imageQuery || "Blog hero image";
-          heroCredit = photo.user?.name;
+          heroUrl       = photo.urls?.regular;
+          heroAlt       = photo.alt_description || imageQuery || "Blog hero image";
+          heroCredit    = photo.user?.name;
           heroCreditUrl = `https://unsplash.com/@${photo.user?.username}?utm_source=collabnb&utm_medium=referral`;
-          // Trigger Unsplash download event (required by their API terms)
           await fetch(photo.links?.download_location, {
             headers: { "Authorization": `Client-ID ${unsplashKey}` }
           }).catch(() => {});
         }
       }
     } catch {
-      // Image is optional — continue without it
+      // Image is optional
     }
 
     // ── 4. Store as draft ─────────────────────────────────────────────────────
@@ -358,7 +324,7 @@ CONTENT:
       hero_image_alt: heroAlt,
       hero_image_credit: heroCredit,
       hero_image_credit_url: heroCreditUrl,
-      sources,
+      sources: [],
       seo_description: seoDesc,
       reading_time: readingTime(content),
       is_stats_post: isStatsPost,

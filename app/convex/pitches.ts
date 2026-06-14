@@ -94,6 +94,18 @@ export const create = mutation({
       created_at: Date.now(),
       thread_key: args.threadKey,
     });
+
+    // Notify host of new application
+    if (args.hostId && args.hostId !== args.creatorId) {
+      await ctx.runMutation(internal.notifications.create, {
+        userId: args.hostId,
+        type: "new_application",
+        title: `New application from ${args.creatorName}`,
+        body: args.message.length > 80 ? args.message.slice(0, 80) + "…" : args.message,
+        link: "#/host/proposals",
+      });
+    }
+
     return id;
   },
 });

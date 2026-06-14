@@ -688,7 +688,8 @@ export default function AppNav() {
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                           background: n.type === 'pitch_approved' ? 'rgba(74,155,127,0.14)'
                             : n.type === 'pitch_declined' ? 'rgba(200,104,104,0.14)'
-                            : n.type === 'host_reply' ? 'rgba(60,87,89,0.1)'
+                            : n.type === 'host_reply' || n.type === 'new_message' ? 'rgba(60,87,89,0.1)'
+                            : n.type === 'new_application' ? 'rgba(212,168,67,0.14)'
                             : 'rgba(25,37,36,0.07)',
                         }}>
                           {n.type === 'pitch_approved' && (
@@ -697,10 +698,13 @@ export default function AppNav() {
                           {n.type === 'pitch_declined' && (
                             <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="#C86868" strokeWidth="2.5" strokeLinecap="round"><line x1="4" y1="4" x2="12" y2="12"/><line x1="12" y1="4" x2="4" y2="12"/></svg>
                           )}
-                          {n.type === 'host_reply' && (
+                          {(n.type === 'host_reply' || n.type === 'new_message') && (
                             <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="#3C5759" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14 10a2 2 0 01-2 2H5l-3 2V4a2 2 0 012-2h8a2 2 0 012 2z"/></svg>
                           )}
-                          {!['pitch_approved','pitch_declined','host_reply'].includes(n.type) && (
+                          {n.type === 'new_application' && (
+                            <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="#D4A843" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="8" cy="5.5" r="2.5"/><path d="M2.5 13c0-2.485 2.462-4.5 5.5-4.5s5.5 2.015 5.5 4.5"/></svg>
+                          )}
+                          {!['pitch_approved','pitch_declined','host_reply','new_message','new_application'].includes(n.type) && (
                             <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="#959D90" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="12" height="10" rx="1.5"/><polyline points="2 5 8 9.5 14 5"/></svg>
                           )}
                         </span>

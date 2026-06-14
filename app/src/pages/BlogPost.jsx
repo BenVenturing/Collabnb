@@ -2,60 +2,159 @@ import { useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { useParams, useNavigate } from 'react-router-dom';
 
-const CAT_COLORS = {
-  creators: '#7B68C8',
-  hosts:    '#4A9B7F',
-  industry: '#3C5759',
-  stats:    '#D4A843',
+const CAT = {
+  creators: { label: 'Creators', color: '#7B68C8', bg: 'rgba(123,104,200,0.1)' },
+  hosts:    { label: 'Hosts',    color: '#4A9B7F', bg: 'rgba(74,155,127,0.1)' },
+  industry: { label: 'Industry', color: '#3C5759', bg: 'rgba(60,87,89,0.1)'   },
+  stats:    { label: 'Stats',    color: '#D4A843', bg: 'rgba(212,168,67,0.1)' },
 };
 
+function CategoryPill({ cat }) {
+  const cfg = CAT[cat] || { label: cat, color: '#3C5759', bg: 'rgba(60,87,89,0.1)' };
+  return (
+    <span style={{
+      fontSize: '0.68rem', fontWeight: 700, padding: '0.25rem 0.7rem',
+      borderRadius: 9999, background: cfg.bg, color: cfg.color,
+      textTransform: 'uppercase', letterSpacing: '0.06em',
+    }}>
+      {cfg.label || cat}
+    </span>
+  );
+}
+
+// ─── Loading skeleton ─────────────────────────────────────────────────────────
+function PostSkeleton() {
+  return (
+    <div style={{ maxWidth: 720, margin: '0 auto', padding: '2rem 1.5rem 5rem' }}>
+      <div style={{ height: 360, borderRadius: '1.25rem', background: 'rgba(25,37,36,0.06)', animation: 'pulse 1.5s ease infinite', marginBottom: '2.5rem' }} />
+      {[80, 60, 100, 90, 75].map((w, i) => (
+        <div key={i} style={{ height: i === 0 ? 32 : 16, width: `${w}%`, borderRadius: 8, background: 'rgba(25,37,36,0.06)', animation: 'pulse 1.5s ease infinite', marginBottom: i === 0 ? '1rem' : '0.6rem' }} />
+      ))}
+    </div>
+  );
+}
+
+// ─── Main page ────────────────────────────────────────────────────────────────
 export default function BlogPost() {
   const { slug } = useParams();
   const navigate = useNavigate();
   const post = useQuery(api.blog.getBySlug, { slug: slug || '' });
 
-  if (post === undefined) {
-    return (
-      <div style={{ maxWidth: 720, margin: '4rem auto', padding: '0 1.25rem' }}>
-        <div style={{ height: 320, borderRadius: '1rem', background: 'rgba(255,255,255,0.5)', animation: 'pulse 1.5s ease infinite', marginBottom: '1.5rem' }} />
-        <div style={{ height: 32, borderRadius: '0.5rem', background: 'rgba(255,255,255,0.5)', animation: 'pulse 1.5s ease infinite', marginBottom: '0.75rem', width: '80%' }} />
-        <div style={{ height: 20, borderRadius: '0.5rem', background: 'rgba(255,255,255,0.5)', animation: 'pulse 1.5s ease infinite', width: '60%' }} />
-      </div>
-    );
-  }
+  if (post === undefined) return <PostSkeleton />;
 
   if (!post) {
     return (
-      <div style={{ maxWidth: 720, margin: '6rem auto', padding: '0 1.25rem', textAlign: 'center' }}>
-        <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.25rem', color: 'var(--ink)', marginBottom: '0.5rem' }}>Post not found</p>
-        <button onClick={() => navigate('/blog')} style={{ marginTop: '1rem', padding: '0.65rem 1.5rem', borderRadius: 9999, border: 'none', background: '#192524', color: '#fff', fontFamily: 'var(--font-body)', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer' }}>
-          Back to Journal
+      <div style={{ maxWidth: 720, margin: '6rem auto', padding: '0 1.5rem', textAlign: 'center' }}>
+        <p style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.5rem', color: 'var(--ink)', marginBottom: '0.5rem' }}>
+          Article not found
+        </p>
+        <p style={{ fontSize: '0.875rem', color: 'var(--sage)', marginBottom: '1.5rem' }}>
+          This post may have been moved or removed.
+        </p>
+        <button
+          onClick={() => navigate('/blog')}
+          style={{ padding: '0.65rem 1.5rem', borderRadius: 9999, border: 'none', background: 'var(--ink)', color: '#fff', fontFamily: 'var(--font-body)', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer' }}
+        >
+          Back to the Journal
         </button>
       </div>
     );
   }
 
   return (
-    <div style={{ maxWidth: 720, margin: '0 auto', padding: '2rem 1.25rem 5rem' }}>
+    <article style={{ maxWidth: 720, margin: '0 auto', padding: '2rem 1.5rem 6rem' }}>
 
-      {/* Back */}
+      {/* ── Back button ───────────────────────────────────────────────────────── */}
       <button
         onClick={() => navigate('/blog')}
-        style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '2rem', padding: '0.45rem 0.875rem', borderRadius: 9999, border: '1px solid rgba(25,37,36,0.12)', background: 'rgba(255,255,255,0.6)', fontFamily: 'var(--font-body)', fontSize: '0.8rem', fontWeight: 600, color: 'var(--sage)', cursor: 'pointer' }}
+        style={{
+          display: 'inline-flex', alignItems: 'center', gap: '0.375rem',
+          marginBottom: '2.5rem',
+          padding: '0.45rem 1rem',
+          borderRadius: 9999,
+          border: '1.5px solid rgba(25,37,36,0.12)',
+          background: 'rgba(255,255,255,0.6)',
+          backdropFilter: 'blur(8px)',
+          fontFamily: 'var(--font-body)',
+          fontSize: '0.78rem',
+          fontWeight: 600,
+          color: 'var(--sage)',
+          cursor: 'pointer',
+          transition: 'border-color 140ms, color 140ms',
+        }}
+        onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--slate)'; e.currentTarget.style.color = 'var(--slate)'; }}
+        onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(25,37,36,0.12)'; e.currentTarget.style.color = 'var(--sage)'; }}
       >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+          <path d="M19 12H5M12 19l-7-7 7-7"/>
+        </svg>
         The Journal
       </button>
 
-      {/* Hero image */}
+      {/* ── Meta row ──────────────────────────────────────────────────────────── */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.625rem', marginBottom: '1.5rem' }}>
+        <CategoryPill cat={post.category} />
+        {post.reading_time && (
+          <span style={{ fontSize: '0.72rem', color: 'var(--sage)', fontWeight: 500 }}>
+            {post.reading_time} min read
+          </span>
+        )}
+        {post.published_at && (
+          <>
+            <span style={{ color: 'var(--stone)', fontSize: '0.72rem' }}>·</span>
+            <span style={{ fontSize: '0.72rem', color: 'var(--sage)' }}>
+              {new Date(post.published_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+            </span>
+          </>
+        )}
+      </div>
+
+      {/* ── Title ─────────────────────────────────────────────────────────────── */}
+      <h1 style={{
+        fontFamily: 'var(--font-display)',
+        fontWeight: 900,
+        fontSize: 'clamp(1.75rem, 4vw, 2.75rem)',
+        color: 'var(--ink)',
+        letterSpacing: '-0.03em',
+        lineHeight: 1.15,
+        margin: '0 0 1.25rem',
+      }}>
+        {post.title}
+      </h1>
+
+      {/* ── Excerpt ───────────────────────────────────────────────────────────── */}
+      <p style={{
+        fontSize: '1.05rem',
+        color: 'var(--slate)',
+        lineHeight: 1.75,
+        fontStyle: 'italic',
+        margin: '0 0 2rem',
+        paddingBottom: '2rem',
+        borderBottom: '1px solid rgba(25,37,36,0.1)',
+      }}>
+        {post.excerpt}
+      </p>
+
+      {/* ── Hero image ────────────────────────────────────────────────────────── */}
       {post.hero_image_url && (
-        <div style={{ borderRadius: '1rem', overflow: 'hidden', position: 'relative', marginBottom: '2rem' }}>
-          <img src={post.hero_image_url} alt={post.hero_image_alt || ''} style={{ width: '100%', maxHeight: 400, objectFit: 'cover', display: 'block' }} />
+        <div style={{ borderRadius: '1rem', overflow: 'hidden', position: 'relative', marginBottom: '2.5rem', background: 'var(--stone)' }}>
+          <img
+            src={post.hero_image_url}
+            alt={post.hero_image_alt || post.title}
+            style={{ width: '100%', maxHeight: 420, objectFit: 'cover', display: 'block' }}
+          />
           {post.hero_image_credit && (
             <a
               href={post.hero_image_credit_url || '#'}
-              target="_blank" rel="noopener noreferrer"
-              style={{ position: 'absolute', bottom: '0.5rem', right: '0.75rem', fontSize: '0.62rem', color: 'rgba(255,255,255,0.8)', background: 'rgba(0,0,0,0.35)', padding: '0.2rem 0.5rem', borderRadius: 4, textDecoration: 'none' }}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                position: 'absolute', bottom: '0.625rem', right: '0.75rem',
+                fontSize: '0.62rem', color: 'rgba(255,255,255,0.85)',
+                background: 'rgba(0,0,0,0.38)', backdropFilter: 'blur(4px)',
+                padding: '0.2rem 0.5rem', borderRadius: 4,
+                textDecoration: 'none', letterSpacing: '0.01em',
+              }}
             >
               Photo: {post.hero_image_credit} / Unsplash
             </a>
@@ -63,67 +162,82 @@ export default function BlogPost() {
         </div>
       )}
 
-      {/* Meta */}
-      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center', marginBottom: '1rem' }}>
-        <span style={{ fontSize: '0.65rem', fontWeight: 700, padding: '0.18rem 0.55rem', borderRadius: 9999, background: `${CAT_COLORS[post.category] || '#3C5759'}18`, color: CAT_COLORS[post.category] || '#3C5759', textTransform: 'capitalize' }}>{post.category}</span>
-        {post.reading_time && <span style={{ fontSize: '0.7rem', color: 'var(--stone)' }}>{post.reading_time} min read</span>}
-        {post.published_at && <span style={{ fontSize: '0.7rem', color: 'var(--stone)' }}>· {new Date(post.published_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</span>}
-      </div>
-
-      {/* Title */}
-      <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: 'clamp(1.6rem,4vw,2.25rem)', color: 'var(--ink)', margin: '0 0 0.875rem', lineHeight: 1.2, letterSpacing: '-0.02em' }}>
-        {post.title}
-      </h1>
-
-      {/* Excerpt */}
-      <p style={{ fontSize: '1.05rem', color: 'var(--sage)', margin: '0 0 2rem', lineHeight: 1.7, fontStyle: 'italic' }}>
-        {post.excerpt}
-      </p>
-
-      <hr style={{ border: 'none', borderTop: '1px solid rgba(25,37,36,0.1)', marginBottom: '2rem' }} />
-
-      {/* Body */}
+      {/* ── Body content ──────────────────────────────────────────────────────── */}
       <div
         className="blog-content"
         style={{ fontSize: '1rem', lineHeight: 1.85, color: 'var(--ink)' }}
         dangerouslySetInnerHTML={{ __html: post.content }}
       />
 
-      {/* Instagram embed */}
+      {/* ── Instagram embed ───────────────────────────────────────────────────── */}
       {post.instagram_embed_url && (
-        <div style={{ margin: '2.5rem 0', padding: '1.25rem', background: 'rgba(255,255,255,0.6)', borderRadius: '0.875rem', border: '1px solid rgba(25,37,36,0.08)' }}>
-          <p style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--sage)', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 0.5rem' }}>Featured Post</p>
-          <a href={post.instagram_embed_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.85rem', color: '#7B68C8', wordBreak: 'break-all' }}>{post.instagram_embed_url}</a>
+        <div style={{ margin: '2.5rem 0', padding: '1.25rem 1.5rem', background: 'rgba(255,255,255,0.6)', borderRadius: '0.875rem', border: '1px solid rgba(25,37,36,0.08)' }}>
+          <p style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--sage)', textTransform: 'uppercase', letterSpacing: '0.1em', margin: '0 0 0.5rem' }}>Featured Post</p>
+          <a href={post.instagram_embed_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.85rem', color: '#7B68C8', wordBreak: 'break-all', textDecoration: 'underline', textUnderlineOffset: 3 }}>
+            {post.instagram_embed_url}
+          </a>
         </div>
       )}
 
-      {/* Tags */}
+      {/* ── Tags ──────────────────────────────────────────────────────────────── */}
       {(post.tags || []).length > 0 && (
-        <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', margin: '2.5rem 0 0' }}>
+        <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', margin: '2.5rem 0 0', paddingTop: '2rem', borderTop: '1px solid rgba(25,37,36,0.08)' }}>
           {(post.tags || []).map(tag => (
-            <span key={tag} style={{ fontSize: '0.72rem', padding: '0.2rem 0.6rem', borderRadius: 9999, background: 'rgba(25,37,36,0.06)', color: 'var(--sage)' }}>#{tag}</span>
+            <span key={tag} style={{ fontSize: '0.72rem', padding: '0.22rem 0.65rem', borderRadius: 9999, background: 'rgba(25,37,36,0.05)', color: 'var(--sage)', letterSpacing: '0.01em' }}>
+              #{tag}
+            </span>
           ))}
         </div>
       )}
 
-      {/* Sources */}
+      {/* ── Sources ───────────────────────────────────────────────────────────── */}
       {(post.sources || []).length > 0 && (
-        <div style={{ marginTop: '3rem', paddingTop: '1.5rem', borderTop: '1px solid rgba(25,37,36,0.08)' }}>
-          <p style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--sage)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.625rem' }}>Sources</p>
+        <div style={{ marginTop: '2.5rem', paddingTop: '1.5rem', borderTop: '1px solid rgba(25,37,36,0.08)' }}>
+          <p style={{ fontSize: '0.62rem', fontWeight: 800, color: 'var(--sage)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '0.625rem' }}>Sources</p>
           {(post.sources || []).map((s, i) => (
-            <a key={i} href={s} target="_blank" rel="noopener noreferrer" style={{ display: 'block', fontSize: '0.75rem', color: '#7B68C8', marginBottom: '0.35rem', wordBreak: 'break-all' }}>{s}</a>
+            <a key={i} href={s} target="_blank" rel="noopener noreferrer" style={{ display: 'block', fontSize: '0.75rem', color: '#7B68C8', marginBottom: '0.3rem', wordBreak: 'break-all', textDecoration: 'underline', textUnderlineOffset: 3 }}>
+              {s}
+            </a>
           ))}
         </div>
       )}
 
-      {/* CTA */}
-      <div style={{ marginTop: '3.5rem', padding: '2rem', borderRadius: '1.25rem', background: 'rgba(60,87,89,0.07)', border: '1px solid rgba(60,87,89,0.12)', textAlign: 'center' }}>
-        <p style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.1rem', color: 'var(--ink)', margin: '0 0 0.5rem' }}>Ready to collab?</p>
-        <p style={{ fontSize: '0.85rem', color: 'var(--sage)', margin: '0 0 1.25rem' }}>Join Collabnb's waitlist and get early access to content-for-stay partnerships.</p>
-        <a href="/join.html" style={{ display: 'inline-block', padding: '0.75rem 1.75rem', borderRadius: 9999, background: '#192524', color: '#fff', fontFamily: 'var(--font-body)', fontSize: '0.9rem', fontWeight: 700, textDecoration: 'none' }}>
-          Join the Waitlist
+      {/* ── CTA ───────────────────────────────────────────────────────────────── */}
+      <div style={{
+        marginTop: '4rem',
+        padding: '2.5rem',
+        borderRadius: '1.25rem',
+        background: 'rgba(25,37,36,0.04)',
+        border: '1px solid rgba(25,37,36,0.1)',
+        textAlign: 'center',
+      }}>
+        <p style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.25rem', color: 'var(--ink)', margin: '0 0 0.5rem', letterSpacing: '-0.02em' }}>
+          Ready to collab?
+        </p>
+        <p style={{ fontSize: '0.9rem', color: 'var(--sage)', margin: '0 0 1.5rem', lineHeight: 1.65 }}>
+          Join Collabnb's waitlist and get early access to content-for-stay partnerships.
+        </p>
+        <a
+          href="/join.html"
+          style={{
+            display: 'inline-block',
+            padding: '0.8rem 2rem',
+            borderRadius: 9999,
+            background: 'var(--ink)',
+            color: '#fff',
+            fontFamily: 'var(--font-body)',
+            fontSize: '0.9rem',
+            fontWeight: 700,
+            textDecoration: 'none',
+            letterSpacing: '0.01em',
+            transition: 'opacity 150ms',
+          }}
+          onMouseEnter={e => { e.currentTarget.style.opacity = '0.85'; }}
+          onMouseLeave={e => { e.currentTarget.style.opacity = '1'; }}
+        >
+          Join the Waitlist →
         </a>
       </div>
-    </div>
+    </article>
   );
 }

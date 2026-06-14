@@ -534,19 +534,45 @@ button { font: inherit; cursor: pointer; border: none; background: none; }
 .blog-content h2 {
   font-family: var(--font-display);
   font-weight: 800;
-  font-size: 1.35rem;
+  font-size: 1.5rem;
   color: var(--ink);
-  margin: 2.25rem 0 0.75rem;
-  line-height: 1.25;
+  margin: 2.75rem 0 0.875rem;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+.blog-content h3 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: var(--ink);
+  margin: 2rem 0 0.625rem;
   letter-spacing: -0.01em;
 }
-.blog-content p { margin: 0 0 1.25rem; }
-.blog-content ul, .blog-content ol { margin: 0 0 1.25rem; padding-left: 1.5rem; }
-.blog-content li { margin-bottom: 0.5rem; line-height: 1.7; }
+.blog-content p {
+  margin: 0 0 1.5rem;
+  line-height: 1.85;
+  font-size: 1rem;
+  color: var(--ink);
+}
+.blog-content ul, .blog-content ol {
+  margin: 0 0 1.5rem;
+  padding-left: 1.5rem;
+}
+.blog-content li {
+  margin-bottom: 0.625rem;
+  line-height: 1.75;
+}
 .blog-content strong { font-weight: 700; color: var(--ink); }
-.blog-content em { font-style: italic; }
-.blog-content a { color: #7B68C8; text-underline-offset: 3px; }
-.blog-content a:hover { opacity: 0.8; }
+.blog-content em { font-style: italic; color: var(--slate); }
+.blog-content a { color: #7B68C8; text-underline-offset: 4px; text-decoration: underline; }
+.blog-content a:hover { opacity: 0.75; }
+.blog-content blockquote {
+  border-left: 3px solid var(--mint);
+  margin: 1.75rem 0;
+  padding: 0.75rem 0 0.75rem 1.5rem;
+  font-style: italic;
+  color: var(--slate);
+}
 
 /* ── PULSE SKELETON ───────────────────────────────────────────────────────── */
 @keyframes pulse {

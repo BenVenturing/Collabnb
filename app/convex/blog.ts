@@ -334,6 +334,26 @@ CONTENT:
   },
 });
 
+// ─── Action: suggest topic ideas via NVIDIA ───────────────────────────────────
+
+export const suggestTopics = action({
+  args: {},
+  handler: async (): Promise<string[]> => {
+    const apiKey = process.env.NVIDIA_API_KEY;
+    if (!apiKey) return [];
+    const content = await nvidiaChat(apiKey, [
+      { role: "system", content: "You are a content strategist for Collabnb — a marketplace connecting boutique hotel/Airbnb hosts with UGC travel creators for content-for-stay partnerships. Be creative and specific." },
+      { role: "user", content: 'Give me exactly 8 fresh, specific blog post topic ideas for The Collabnb Journal. Mix topics for boutique hosts and UGC creators. Return ONLY a valid JSON array of 8 strings, nothing else. Example: ["topic one", "topic two"]' },
+    ], 400);
+    const match = content.match(/\[[\s\S]*?\]/);
+    if (!match) return [];
+    try {
+      const parsed = JSON.parse(match[0]);
+      return Array.isArray(parsed) ? parsed.filter((t: unknown) => typeof t === "string") : [];
+    } catch { return []; }
+  },
+});
+
 // Internal version of getPlatformStats for use in actions
 export const getPlatformStats_internal = query({
   args: {},

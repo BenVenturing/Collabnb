@@ -240,7 +240,7 @@ function PendingPanel({ collab, advanceStage, onRemove }) {
         >
           Advance to Accepted
         </button>
-        {onRemove && !confirmWithdraw && (
+        {onRemove && (
           <button
             className="btn-glass"
             style={{ fontSize: '0.8rem', padding: '0.6rem 1.25rem', color: '#c0392b', borderColor: 'rgba(192,57,43,0.2)' }}
@@ -249,32 +249,86 @@ function PendingPanel({ collab, advanceStage, onRemove }) {
             Withdraw Proposal
           </button>
         )}
-        {onRemove && confirmWithdraw && (
-          <>
-            <span style={{ fontSize: '0.75rem', color: 'var(--slate)' }}>Are you sure?</span>
-            <button
-              className="btn-glass"
-              style={{ fontSize: '0.8rem', padding: '0.6rem 1rem', color: '#c0392b' }}
-              onClick={onRemove}
-            >
-              Yes, Remove
-            </button>
-            <button
-              className="btn-glass"
-              style={{ fontSize: '0.8rem', padding: '0.6rem 1rem' }}
-              onClick={() => setConfirmWithdraw(false)}
-            >
-              Cancel
-            </button>
-          </>
-        )}
       </div>
       {prompted && (
         <p style={{ fontSize: '0.72rem', color: 'var(--sage)', marginTop: '0.5rem' }}>
           Notification sent to host — they'll be prompted to review your application.
         </p>
       )}
+      {confirmWithdraw && (
+        <WithdrawConfirmModal
+          onConfirm={onRemove}
+          onCancel={() => setConfirmWithdraw(false)}
+        />
+      )}
     </div>
+  );
+}
+
+/* ─── Withdraw confirmation popup ─────────────────────────────────────────── */
+function WithdrawConfirmModal({ onConfirm, onCancel }) {
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') onCancel(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onCancel]);
+
+  return createPortal(
+    <div
+      style={{
+        position: 'fixed', inset: 0, zIndex: 300,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        background: 'rgba(25,37,36,0.5)', backdropFilter: 'blur(6px)',
+        WebkitBackdropFilter: 'blur(6px)', padding: '1.5rem',
+        animation: 'fadeIn 150ms ease',
+      }}
+      onClick={(e) => { if (e.target === e.currentTarget) onCancel(); }}
+    >
+      <div
+        style={{
+          width: '100%', maxWidth: '380px',
+          background: 'rgba(255,255,255,0.98)',
+          border: '1px solid rgba(255,255,255,0.85)',
+          borderRadius: '1.25rem', padding: '1.5rem',
+          boxShadow: '0 20px 60px rgba(25,37,36,0.28)',
+          textAlign: 'center',
+        }}
+      >
+        <div style={{
+          width: 44, height: 44, borderRadius: '50%', margin: '0 auto 0.875rem',
+          background: 'rgba(192,57,43,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: '1.25rem',
+        }}>
+          🗑
+        </div>
+        <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1rem', color: 'var(--ink)', margin: '0 0 0.5rem' }}>
+          Withdraw proposal?
+        </h3>
+        <p style={{ fontSize: '0.82rem', color: 'var(--slate)', lineHeight: 1.55, margin: '0 0 1.25rem' }}>
+          This permanently removes your proposal from your collabs. This can't be undone.
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          <button
+            onClick={onConfirm}
+            style={{
+              width: '100%', padding: '0.7rem', borderRadius: '0.75rem',
+              background: '#c0392b', color: '#fff', border: 'none',
+              fontFamily: 'var(--font-body)', fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer',
+            }}
+          >
+            Yes, Remove Proposal
+          </button>
+          <button
+            onClick={onCancel}
+            className="btn-glass"
+            style={{ width: '100%', padding: '0.7rem', fontSize: '0.85rem', fontWeight: 600 }}
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
   );
 }
 

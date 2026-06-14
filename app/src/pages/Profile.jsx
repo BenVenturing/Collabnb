@@ -815,12 +815,11 @@ export default function Profile() {
     { icon: <BellIcon />,        label: 'Notifications',   sublabel: 'Manage email & push preferences',               onClick: () => { setShowSettings(false); setShowNotifications(true); } },
     { icon: <LockIcon />,        label: 'Privacy Policy',  sublabel: 'Review how your data is used',                  onClick: () => { setShowSettings(false); setShowPrivacy(true); } },
     { icon: <SealCheck />,       label: 'Verification',    sublabel: 'Submit a re-verification request',              onClick: () => { setShowSettings(false); setShowVerification(true); } },
-    ...(isAdmin
-      ? [{ icon: <SwitchIcon />, label: 'Switch to Host View', sublabel: 'Go to your host dashboard and listings', onClick: () => { setShowSettings(false); navigate('/host'); } }]
-      : [isHostVerified
-          ? { icon: <SwitchIcon />, label: 'Switch to Host View', sublabel: 'Go to your host dashboard and listings', onClick: () => { setShowSettings(false); navigate('/host'); } }
-          : { icon: <SwitchIcon />, label: profile?.role === 'host' ? 'Sign up as Creator' : 'Sign up as Host', sublabel: profile?.role === 'host' ? 'Browse and apply to listings as a creator' : 'Create listings and collaborate with creators', onClick: () => { setShowSettings(false); setShowSwitchConfirm(true); } }
-      ]
+    ...(profile?.role === 'host'
+      ? [{ icon: <SwitchIcon />, label: 'Switch to Creator View', sublabel: 'Browse and apply to listings as a creator', onClick: async () => { setShowSettings(false); await updateProfile({ role: 'creator' }); navigate('/explore'); } }]
+      : (isAdmin || isHostVerified)
+        ? [{ icon: <SwitchIcon />, label: 'Switch to Host View', sublabel: 'Go to your host dashboard and listings', onClick: async () => { setShowSettings(false); await updateProfile({ role: 'host' }); navigate('/host'); } }]
+        : [{ icon: <SwitchIcon />, label: 'Sign up as Host', sublabel: 'Create listings and collaborate with creators', onClick: () => { setShowSettings(false); setShowSwitchConfirm(true); } }]
     ),
   ];
 

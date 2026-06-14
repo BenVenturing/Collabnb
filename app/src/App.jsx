@@ -133,11 +133,9 @@ function NewSignupCelebration({ onDone }) {
 function AppRoutes() {
   const { session, loading, profile } = useAuth();
   const navigate = useNavigate();
-  const isAdmin = profile?.email && (
-    ADMIN_EMAIL
-      ? profile.email.toLowerCase() === ADMIN_EMAIL.toLowerCase()
-      : profile.email.toLowerCase() === 'benventuring@gmail.com'
-  );
+  const isAdmin = profile?.is_admin === true
+    || profile?.email?.toLowerCase() === 'benventuring@gmail.com'
+    || (!!ADMIN_EMAIL && profile?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase());
 
   const [showCelebration, setShowCelebration] = useState(() => {
     const flag = localStorage.getItem('collabnb_new_signup') === '1';

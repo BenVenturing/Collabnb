@@ -112,7 +112,7 @@ const BOTTOM_NAV_ITEMS = [
 ];
 
 export default function AppNav() {
-  const { profile, signOut } = useAuth();
+  const { profile, signOut, updateProfile } = useAuth();
   const isPending = profile?.tier === 'waitlist' && !profile?.is_verified;
   const [checklistTick, setChecklistTick] = useState(0);
   useEffect(() => onChecklistProgress(() => setChecklistTick(t => t + 1)), []);
@@ -829,11 +829,13 @@ export default function AppNav() {
                 )}
                 {!isAdmin && (
                   <button
-                    onClick={() => {
+                    onClick={async () => {
                       setProfileOpen(false);
                       if (isHost) {
+                        await updateProfile?.({ role: 'creator' });
                         navigate('/explore');
                       } else if (isHostVerified) {
+                        await updateProfile?.({ role: 'host' });
                         navigate('/host');
                       } else {
                         navigate('/profile?settings=true');

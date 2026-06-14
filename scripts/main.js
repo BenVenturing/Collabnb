@@ -496,7 +496,7 @@ function showWizardStep(step) {
       // Use absolute URLs — Clerk requires these to be listed in dashboard → Redirects
       const origin = window.location.origin;
       const returnUrl = `${origin}/join.html?celebrate=1`;
-      const appUrl = `${origin}/app/`;
+      const appUrl = `${origin}/explore`;
       try {
         clerk.mountSignUp(mountEl, {
           afterSignUpUrl: returnUrl,
@@ -552,7 +552,7 @@ function _showWizardDone(userName) {
 
   const firstName = (userName || '').split(' ')[0] || 'friend';
   const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-  const appUrl_ = isLocalhost ? 'http://localhost:5174/#/profile' : '/app/#/profile';
+  const appUrl_ = isLocalhost ? 'http://localhost:5174/profile' : '/profile';
 
   const COLLABNB_QUOTE = 'Where creators and boutique stays collab.';
 
@@ -837,7 +837,7 @@ function openLoginModal() {
       closeLoginModal();
       const email = clerk.user.primaryEmailAddress?.emailAddress || '';
       const isAdmin = ADMIN_EMAIL && email && email.toLowerCase() === ADMIN_EMAIL.toLowerCase();
-      window.location.href = isAdmin ? '/app/#/admin' : '/app/#/explore';
+      window.location.href = isAdmin ? '/admin' : '/explore';
       return;
     }
     if (!mountEl) return;
@@ -854,7 +854,7 @@ function openLoginModal() {
         closeLoginModal();
         const signedInEmail = user.primaryEmailAddress?.emailAddress || '';
         const toAdmin = ADMIN_EMAIL && signedInEmail && signedInEmail.toLowerCase() === ADMIN_EMAIL.toLowerCase();
-        window.location.href = toAdmin ? '/app/#/admin' : '/app/#/explore';
+        window.location.href = toAdmin ? '/admin' : '/explore';
       }
     });
     try {
@@ -863,7 +863,7 @@ function openLoginModal() {
         appearance: {
           variables: {
             colorPrimary: '#192524',
-            colorBackground: '#ffffff',
+            colorBackground: 'transparent',
             colorText: '#192524',
             colorTextSecondary: '#3C5759',
             colorInputBackground: '#f9f9f7',
@@ -875,13 +875,17 @@ function openLoginModal() {
             fontSize: '0.9375rem',
           },
           elements: {
-            card: 'box-shadow:none!important;border:none!important;background:transparent!important;padding:0!important;',
-            cardBox: 'box-shadow:none!important;',
-            header: 'display:none!important;',
-            logoBox: 'display:none!important;',
-            footer: 'background:#ffffff!important;background-color:#ffffff!important;',
-            footerPages: 'background:#ffffff!important;',
-            footerAction: 'background:#ffffff!important;',
+            card: { boxShadow: 'none', border: 'none', background: 'transparent', padding: '0', margin: '0' },
+            cardBox: { boxShadow: 'none', background: 'transparent' },
+            header: { display: 'none' },
+            logoBox: { display: 'none' },
+            logoImage: { display: 'none' },
+            headerTitle: { display: 'none' },
+            headerSubtitle: { display: 'none' },
+            footer: { background: 'transparent', boxShadow: 'none' },
+            footerPages: { background: 'transparent' },
+            footerAction: { background: 'transparent' },
+            rootBox: { width: '100%', maxWidth: '100%' },
           },
         },
       });
@@ -1320,7 +1324,7 @@ async function initNavAuth() {
     const navCta = document.querySelector('.nav-pill .btn-primary');
     if (navCta) {
       navCta.textContent = label;
-      navCta.href = '/profile.html';
+      navCta.href = '/profile';
       navCta.removeAttribute('data-modal');
     }
 
@@ -1328,7 +1332,7 @@ async function initNavAuth() {
     const overlayCta = document.querySelector('.nav-overlay .btn-primary');
     if (overlayCta) {
       overlayCta.textContent = label;
-      overlayCta.href = '/profile.html';
+      overlayCta.href = '/profile';
       overlayCta.removeAttribute('data-modal');
     }
 
@@ -1340,7 +1344,7 @@ async function initNavAuth() {
       const clone = document.createElement('a');
       clone.className = btn.className.replace('btn-open-modal', '');
       clone.textContent = label;
-      clone.href = '/profile.html';
+      clone.href = '/profile';
 
       // Copy inline styles
       if (btn.getAttribute('style')) {

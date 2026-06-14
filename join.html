@@ -425,57 +425,14 @@
 
   <!-- ── LOGIN MODAL ── -->
 <div id="login-modal-overlay" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="login-modal-title" aria-hidden="true">
-  <div class="modal-card login-modal-card" style="max-width:460px;">
+  <div class="modal-card login-modal-card" style="max-width:560px;">
     <button id="login-modal-close" class="modal-close" aria-label="Close login form">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
     </button>
-    <div style="text-align:center;">
-      <div class="login-icon" style="margin:0 auto 1.25rem;">🔑</div>
-      <h2 id="login-modal-title" class="login-title">Welcome back</h2>
-      <p class="login-desc">Sign in to your account to view your profile and manage collabs.</p>
-    </div>
-    <!-- Clerk sign-in component mounts here — strip card chrome so it blends with our modal -->
-    <style>
-      #clerk-login-mount .cl-logoBox,
-      #clerk-login-mount .cl-logo,
-      #clerk-login-mount .cl-logoImage,
-      #clerk-login-mount .cl-headerTitle,
-      #clerk-login-mount .cl-headerSubtitle { display: none !important; }
-      #clerk-login-mount .cl-card,
-      #clerk-login-mount .cl-cardBox { box-shadow: none !important; border: none !important; background: transparent !important; padding: 0 !important; }
-      #clerk-login-mount .cl-rootBox { width: 100% !important; }
-      #clerk-login-mount .cl-socialButtonsBlockButton {
-        border: 1.5px solid var(--stone) !important; border-radius: 12px !important;
-        font-family: var(--font-body) !important; font-size: 0.9375rem !important;
-        min-height: 48px !important;
-      }
-      #clerk-login-mount .cl-socialButtonsBlockButton:hover { border-color: var(--slate) !important; }
-      #clerk-login-mount .cl-formButtonPrimary {
-        background: #192524 !important; border-radius: 12px !important;
-        font-family: var(--font-body) !important; font-size: 0.9375rem !important;
-        font-weight: 600 !important; padding: 0.75rem 1rem !important;
-        min-height: 48px !important; color: #EFECE9 !important; border: none !important;
-      }
-      #clerk-login-mount .cl-formButtonPrimary:hover { background: #2d4a3e !important; }
-      #clerk-login-mount .cl-formFieldInput {
-        border-radius: 12px !important; border: 1.5px solid var(--stone) !important;
-        font-family: var(--font-body) !important; font-size: 0.9375rem !important;
-        padding: 0.75rem 1rem !important; min-height: 48px !important;
-        background: #f9f9f7 !important; color: #192524 !important;
-        width: 100% !important; box-sizing: border-box !important;
-      }
-      #clerk-login-mount .cl-formFieldInput:focus { border-color: var(--slate) !important; box-shadow: 0 0 0 2px rgba(60,87,89,0.12) !important; outline: none !important; }
-      #clerk-login-mount .cl-dividerLine { background: var(--stone) !important; }
-      #clerk-login-mount .cl-footer,
-      #clerk-login-mount [class*="cl-footer"],
-      #clerk-login-mount [class*="footer"] { background: #ffffff !important; background-color: #ffffff !important; box-shadow: none !important; }
-      #clerk-login-mount, #clerk-login-mount .cl-rootBox { width: 100% !important; overflow: hidden !important; }
-      #clerk-login-mount .cl-formFieldLabel { color: var(--slate) !important; font-size: 0.8125rem !important; font-weight: 600 !important; }
-      #clerk-login-mount .cl-dividerText { color: var(--sage) !important; font-size: 0.8125rem !important; }
-    </style>
+    <!-- Clerk sign-in mounts here (styled via main.css #clerk-login-mount overrides) -->
     <div id="clerk-login-mount"></div>
-    <div class="login-footer" style="text-align:center;margin-top:1.5rem;">
-      Don't have an account? <a href="join.html">Join the waitlist</a>
+    <div class="login-footer" style="text-align:center;margin-top:1rem;font-size:0.8125rem;color:var(--sage);">
+      Don't have an account? <a href="join.html" style="color:var(--ink);font-weight:600;">Join the waitlist</a>
     </div>
   </div>
 </div>

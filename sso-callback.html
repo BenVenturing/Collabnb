@@ -41,12 +41,12 @@
     // Clear flags
     localStorage.removeItem('collabnb_signup_started');
     if (isAdmin) {
-      window.location.href = '/app/#/admin';
+      window.location.href = '/admin';
     } else if (isNewSignup) {
       // Keep collabnb_new_signup set so the React app can show the celebration
-      window.location.href = '/app/#/profile';
+      window.location.href = '/profile';
     } else {
-      window.location.href = '/app/';
+      window.location.href = '/explore';
     }
   } catch {
     window.location.href = '/login.html';

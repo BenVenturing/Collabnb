@@ -29,8 +29,8 @@ const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL;
 function appUrl(email) {
   const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
   const isAdmin = ADMIN_EMAIL && email && email.toLowerCase() === ADMIN_EMAIL.toLowerCase();
-  const path = isAdmin ? '#/admin' : '#/explore';
-  return isLocalhost ? `http://localhost:5174/${path}` : `/app/${path}`;
+  const path = isAdmin ? 'admin' : 'explore';
+  return isLocalhost ? `http://localhost:5174/${path}` : `/${path}`;
 }
 
 // If arriving from a sign-out, clear any stale session first
@@ -330,7 +330,7 @@ googleBtn?.addEventListener('click', async () => {
     const signInAttempt = await clerk.client.signIn.create({
       strategy: 'oauth_google',
       redirectUrl: `${origin}/sso-callback.html`,
-      actionCompleteRedirectUrl: `${origin}/app/#/explore`,
+      actionCompleteRedirectUrl: `${origin}/explore`,
     });
     const redirectTarget = signInAttempt.firstFactorVerification?.externalVerificationRedirectURL;
     if (redirectTarget) {

@@ -15,7 +15,7 @@ const LAUNCH_DATE  = new Date('2026-07-01T00:00:00Z');
 const CONVEX_URL   = import.meta.env.VITE_CONVEX_URL;
 // After July 1, clicking a paid plan redirects to the app's subscription flow.
 // The app detects ?subscribe=monthly|yearly and auto-opens the payment modal.
-const APP_URL = import.meta.env.VITE_APP_URL || '../app/';
+const APP_URL = import.meta.env.VITE_APP_URL || '/';
 
 export default function PricingPage() {
   const [creatorCount,  setCreatorCount]  = useState(0);
@@ -63,12 +63,12 @@ export default function PricingPage() {
   }
 
   function handleSubscribe(tier) {
-    window.location.href = `${APP_URL}#/profile?subscribe=${tier}`;
+    window.location.href = `${APP_URL}profile?subscribe=${tier}`;
   }
 
   function handleClaimLifetime() {
     // Redirect to the app; login if needed, then LifetimeAccessModal opens automatically.
-    window.location.href = `${APP_URL}#/profile?lifetime=claim`;
+    window.location.href = `${APP_URL}profile?lifetime=claim`;
   }
 
 

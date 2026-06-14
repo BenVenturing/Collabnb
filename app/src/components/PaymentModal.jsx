@@ -18,7 +18,7 @@ export default function PaymentModal({ isOpen, onClose, fee, isFreeStay, cashAmo
     setLoading(true);
     setError(null);
     try {
-      const base = `${window.location.origin}/#/contract`;
+      const base = `${window.location.origin}/contract`;
       const successUrl = `${base}?payment=success&contract_id=${encodeURIComponent(contractId || '')}&session_id={CHECKOUT_SESSION_ID}`;
       const cancelUrl = `${base}?payment=cancelled`;
 

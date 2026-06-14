@@ -790,7 +790,7 @@ export default function Profile() {
     try {
       const { url } = await createBillingPortalSession({
         customerId,
-        returnUrl: `${window.location.href.split('#')[0]}#/profile`,
+        returnUrl: `${window.location.origin}/profile`,
       });
       window.location.href = url;
     } catch {
@@ -807,7 +807,7 @@ export default function Profile() {
     { icon: <FileTextIcon />,    label: 'Contracts',       sublabel: 'View and manage your saved contracts',           onClick: () => { setShowSettings(false); setShowContracts(true); } },
     ...(hasActiveSub ? [{ icon: <CreditCardIcon />, label: 'Manage Plan', sublabel: 'Cancel, upgrade, or update billing', onClick: () => { setShowSettings(false); handleManageSubscription(); } }] : []),
     ...(isAdmin
-      ? [{ icon: <ChecklistIcon />, label: 'Admin Panel', sublabel: 'Open the Collabnb admin dashboard', onClick: () => { setShowSettings(false); navigate('/admin'); } }]
+      ? [{ icon: <ChecklistIcon />, label: 'Admin Dashboard', sublabel: 'Open the Collabnb admin dashboard', onClick: () => { setShowSettings(false); navigate('/admin'); } }]
       : [{ icon: <ChecklistIcon />, label: 'Setup Checklist', sublabel: 'Finish setting up your account', onClick: () => { setShowSettings(false); reopenChecklist(); } }]
     ),
     { icon: <GlobeIcon />,       label: 'Location Settings', sublabel: 'Set your city & country for the globe map',    onClick: () => { setShowSettings(false); setShowLocation(true); } },
@@ -815,11 +815,13 @@ export default function Profile() {
     { icon: <BellIcon />,        label: 'Notifications',   sublabel: 'Manage email & push preferences',               onClick: () => { setShowSettings(false); setShowNotifications(true); } },
     { icon: <LockIcon />,        label: 'Privacy Policy',  sublabel: 'Review how your data is used',                  onClick: () => { setShowSettings(false); setShowPrivacy(true); } },
     { icon: <SealCheck />,       label: 'Verification',    sublabel: 'Submit a re-verification request',              onClick: () => { setShowSettings(false); setShowVerification(true); } },
-    ...(!isAdmin ? [
-      isHostVerified
-        ? { icon: <SwitchIcon />, label: 'Switch to Host View', sublabel: 'Go to your host dashboard and listings', onClick: () => { setShowSettings(false); navigate('/host'); } }
-        : { icon: <SwitchIcon />, label: profile?.role === 'host' ? 'Sign up as Creator' : 'Sign up as Host', sublabel: profile?.role === 'host' ? 'Browse and apply to listings as a creator' : 'Create listings and collaborate with creators', onClick: () => { setShowSettings(false); setShowSwitchConfirm(true); } }
-    ] : []),
+    ...(isAdmin
+      ? [{ icon: <SwitchIcon />, label: 'Switch to Host View', sublabel: 'Go to your host dashboard and listings', onClick: () => { setShowSettings(false); navigate('/host'); } }]
+      : [isHostVerified
+          ? { icon: <SwitchIcon />, label: 'Switch to Host View', sublabel: 'Go to your host dashboard and listings', onClick: () => { setShowSettings(false); navigate('/host'); } }
+          : { icon: <SwitchIcon />, label: profile?.role === 'host' ? 'Sign up as Creator' : 'Sign up as Host', sublabel: profile?.role === 'host' ? 'Browse and apply to listings as a creator' : 'Create listings and collaborate with creators', onClick: () => { setShowSettings(false); setShowSwitchConfirm(true); } }
+      ]
+    ),
   ];
 
   return (
@@ -1173,7 +1175,8 @@ export default function Profile() {
                   <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--sage)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{dp.role === 'host' ? 'Property Photo' : 'Banner Image'}</span>
                   <div style={{ width: '100%', height: 52, borderRadius: '0.5rem', overflow: 'hidden', background: 'var(--stone)', flexShrink: 0, border: '2px solid white', boxShadow: '0 2px 8px rgba(25,37,36,0.12)' }}>
                     {editDraft.banner_url ? (
-                      <img src={editDraft.banner_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                      <img src={editDraft.banner_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                        onError={() => setEditDraft(d => ({ ...d, banner_url: '' }))} />
                     ) : (
                       <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--sage)', fontSize: '0.7rem' }}>+</div>
                     )}
@@ -1213,17 +1216,20 @@ export default function Profile() {
         <BannerCropEditor
           file={cropEditorFile}
           onApply={async (dataUrl) => {
+            let finalUrl = dataUrl;
             if (generateUploadUrl && CONVEX_URL) {
-              // Convert the cropped data URL to a blob and upload to Convex storage
-              const res = await fetch(dataUrl);
-              const blob = await res.blob();
-              const uploadUrl = await generateUploadUrl();
-              const upRes = await fetch(uploadUrl, { method: 'POST', headers: { 'Content-Type': 'image/jpeg' }, body: blob });
-              const { storageId } = await upRes.json();
-              setEditDraft(d => ({ ...d, banner_url: `${CONVEX_URL}/api/storage/${storageId}` }));
-            } else {
-              setEditDraft(d => ({ ...d, banner_url: dataUrl }));
+              try {
+                const res = await fetch(dataUrl);
+                const blob = await res.blob();
+                const uploadUrl = await generateUploadUrl();
+                const upRes = await fetch(uploadUrl, { method: 'POST', headers: { 'Content-Type': 'image/jpeg' }, body: blob });
+                const { storageId } = await upRes.json();
+                if (storageId) finalUrl = `${CONVEX_URL}/api/storage/${storageId}`;
+              } catch {
+                // Upload failed — keep dataUrl as fallback so the preview still shows
+              }
             }
+            setEditDraft(d => ({ ...d, banner_url: finalUrl }));
             setCropEditorFile(null);
           }}
           onCancel={() => setCropEditorFile(null)}

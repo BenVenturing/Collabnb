@@ -35,6 +35,7 @@ export default defineSchema({
     free_months_balance: v.optional(v.number()),
     referral_bonus_pending: v.optional(v.boolean()),
     clerk_registered: v.optional(v.boolean()),
+    is_admin: v.optional(v.boolean()),
     is_lifetime: v.optional(v.boolean()),
     lifetime_tier: v.optional(v.string()),
     metrics_instagram_followers: v.optional(v.number()),

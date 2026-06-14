@@ -3,9 +3,19 @@
   "installCommand": "npm install && cd app && npm install",
   "outputDirectory": "dist",
   "framework": null,
-  "trailingSlash": true,
-  "routes": [
-    { "src": "^/app$", "headers": { "Location": "/app/" }, "status": 301 },
-    { "src": "^/app/(?!assets/).*", "dest": "/app/index.html" }
+  "rewrites": [
+    { "source": "/explore",        "destination": "/app/index.html" },
+    { "source": "/profile",        "destination": "/app/index.html" },
+    { "source": "/profile/:path*", "destination": "/app/index.html" },
+    { "source": "/host",           "destination": "/app/index.html" },
+    { "source": "/host/:path*",    "destination": "/app/index.html" },
+    { "source": "/collabs",        "destination": "/app/index.html" },
+    { "source": "/saved",          "destination": "/app/index.html" },
+    { "source": "/inbox",          "destination": "/app/index.html" },
+    { "source": "/listing/:path*", "destination": "/app/index.html" },
+    { "source": "/contract",       "destination": "/app/index.html" },
+    { "source": "/admin",          "destination": "/app/index.html" },
+    { "source": "/blog",           "destination": "/app/index.html" },
+    { "source": "/blog/:path*",    "destination": "/app/index.html" }
   ]
 }

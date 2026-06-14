@@ -1,5 +1,5 @@
 import { Component, useRef, useState, useEffect, useCallback } from 'react';
-import { HashRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { AppBarProvider } from './contexts/AppBarContext';
 import { CollabProvider } from './contexts/CollabContext';
@@ -318,9 +318,9 @@ export default function App() {
     <ErrorBoundary>
       <AppBarProvider>
         <AuthProvider>
-          <HashRouter>
+          <BrowserRouter>
             <AppRoutes />
-          </HashRouter>
+          </BrowserRouter>
         </AuthProvider>
       </AppBarProvider>
     </ErrorBoundary>

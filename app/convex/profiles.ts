@@ -24,7 +24,8 @@ export const getOrCreate = mutation({
       .unique();
     if (existing) {
       const adminPatch: Record<string, any> = { clerk_registered: true };
-      if (args.is_admin && (!existing.is_verified || existing.tier !== 'UGC Pro')) {
+      if (args.is_admin) {
+        adminPatch.is_admin = true;
         adminPatch.is_verified = true;
         adminPatch.tier = 'UGC Pro';
         adminPatch.is_founder = true;
@@ -56,6 +57,7 @@ export const getOrCreate = mutation({
       tier: args.is_admin ? 'UGC Pro' : 'waitlist',
       is_verified: args.is_admin ? true : false,
       is_founder: args.is_admin ? true : undefined,
+      is_admin: args.is_admin ? true : undefined,
       beta: args.is_admin ? true : undefined,
       avatar_url: args.avatar_url,
       referral_code: refCode || undefined,

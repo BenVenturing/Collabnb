@@ -23,9 +23,9 @@ export default function SubscriptionModal() {
     setLoading(tier);
     setError(null);
     try {
-      const appBase = window.location.href.split('#')[0];
-      const successUrl = `${appBase}#/profile?subscription=success&session_id={CHECKOUT_SESSION_ID}`;
-      const cancelUrl = `${appBase}#/profile?subscription=cancelled`;
+      const appBase = window.location.origin;
+      const successUrl = `${appBase}/profile?subscription=success&session_id={CHECKOUT_SESSION_ID}`;
+      const cancelUrl = `${appBase}/profile?subscription=cancelled`;
 
       const result = await createSubscriptionSession({
         profileId,

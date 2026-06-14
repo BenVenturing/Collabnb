@@ -670,7 +670,7 @@ export default function FAQModal({ isOpen, onClose }) {
                 onClose();
                 setTimeout(() => {
                   localStorage.removeItem('collabnb_demo_dismissed');
-                  window.location.hash = '#/collabs';
+                  window.location.assign('/collabs');
                 }, 100);
               }}
               title="Reopen Demo Tour"

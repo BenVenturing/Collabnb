@@ -10,7 +10,7 @@ export const MOCK_CREATOR = {
   role: 'creator',
   tier: 'UGC Pro',
   bio: 'Travel & lifestyle creator documenting unique stays and hidden gems around the world. Passionate about authentic content that inspires people to explore.',
-  avatar_url: '/assets/ben-venturing.png',
+  avatar_url: 'https://ucarecdn.com/6d425040-e4c3-46f0-a774-91ac597ebe24/-/format/auto/',
   follower_count: 413500,
   engagement_rate: 8.2,
   collab_count: 47,
@@ -26,11 +26,10 @@ export const MOCK_CREATOR = {
 };
 
 // ─── Sample host profile (always Ben Venturing on listing detail pages) ───────
-// Replace avatar_url with '/assets/ben-venturing.jpg' once photo is saved there
 export const SAMPLE_HOST = {
   name: 'Ben Venturing',
   username: 'ben.venturing',
-  avatar_url: '/assets/ben-venturing.png',
+  avatar_url: null,
   avatar_fallback: 'https://ucarecdn.com/6d425040-e4c3-46f0-a774-91ac597ebe24/-/format/auto/',
   role: 'Collabnb Host',
   verified: true,

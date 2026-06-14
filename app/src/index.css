@@ -139,7 +139,8 @@ button { font: inherit; cursor: pointer; border: none; background: none; }
   padding: 0.75rem 1rem;
   border-radius: 1.5rem;
 }
-.nav-pill.scrolled .nav-links { display: none; }
+.nav-pill.scrolled .nav-links  { display: none; }
+.nav-pill.scrolled .nav-hamburger { display: flex; }
 
 .nav-logo {
   display: flex;

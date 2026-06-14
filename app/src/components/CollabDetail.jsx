@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from 'convex/react';
+import { api } from '../../convex/_generated/api';
 import { useCollabs } from '../contexts/CollabContext';
 import { SAMPLE_LISTINGS, SAMPLE_HOST, STAGES, DEMO_STAGE_CARDS } from '../lib/mockData';
 
@@ -497,12 +499,39 @@ function UploadedPanel({ collab, advanceStage }) {
   );
 }
 
+const INPUT_S = {
+  width: '100%', padding: '0.45rem 0.6rem', borderRadius: '0.625rem',
+  background: 'rgba(255,255,255,0.75)', border: '1px solid rgba(25,37,36,0.12)',
+  fontFamily: 'var(--font-body)', fontSize: '0.82rem', color: 'var(--ink)', outline: 'none',
+};
+const LABEL_S = { fontSize: '0.65rem', fontWeight: 700, color: 'var(--sage)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: '0.3rem' };
+
 function ClosedPanel({ collab, toggleCloseCollab }) {
   const stage = collab.stages?.closed || {};
   const creatorDone = !!stage.creator_closed;
   const hostDone = !!stage.host_closed;
   const bothDone = creatorDone && hostDone;
   const closedCount = [creatorDone, hostDone].filter(Boolean).length;
+  const { submitContentMetrics } = useCollabs();
+
+  const [form, setForm] = useState({ post_url: '', views: '', likes: '', comments: '', saves: '' });
+  const [metricsSubmitted, setMetricsSubmitted] = useState(!!collab.content_metrics);
+  const [computedER, setComputedER] = useState(collab.content_er ?? null);
+
+  const setField = (f) => (e) => setForm((m) => ({ ...m, [f]: e.target.value }));
+  const canSubmit = form.views && form.likes !== '' && form.comments !== '';
+
+  const handleSubmitMetrics = () => {
+    if (!canSubmit) return;
+    const v = parseInt(form.views, 10) || 0;
+    const l = parseInt(form.likes, 10) || 0;
+    const c = parseInt(form.comments, 10) || 0;
+    const s = parseInt(form.saves, 10) || 0;
+    const er = v > 0 ? parseFloat((((l + c) / v) * 100).toFixed(2)) : 0;
+    submitContentMetrics(collab.id, { post_url: form.post_url, views: v, likes: l, comments: c, saves: s });
+    setComputedER(er);
+    setMetricsSubmitted(true);
+  };
 
   return (
     <div style={{ background: 'rgba(255,255,255,0.65)', borderRadius: '1rem', padding: '1.25rem', border: '1px solid rgba(255,255,255,0.8)' }}>
@@ -556,6 +585,73 @@ function ClosedPanel({ collab, toggleCloseCollab }) {
         </div>
       </div>
 
+      {/* Content performance — shown once creator has confirmed */}
+      {creatorDone && (
+        <div style={{ marginBottom: '1.25rem', padding: '1rem', borderRadius: '0.875rem', background: 'rgba(255,255,255,0.5)', border: '1px solid rgba(25,37,36,0.08)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+            <span style={{ fontSize: '0.9rem' }}>📊</span>
+            <h5 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.85rem', color: 'var(--ink)', margin: 0 }}>Share Your Content Performance</h5>
+          </div>
+
+          {metricsSubmitted ? (
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                <CheckIcon />
+                <p style={{ fontSize: '0.82rem', fontWeight: 600, color: '#4A9B7F', margin: 0 }}>
+                  Metrics saved! Collabnb Content ER: <strong>{computedER}%</strong>
+                </p>
+              </div>
+              <p style={{ fontSize: '0.7rem', color: 'var(--stone)', margin: 0, fontStyle: 'italic' }}>
+                Instagram API integration coming soon — metrics will update automatically.
+              </p>
+            </div>
+          ) : (
+            <div>
+              <p style={{ fontSize: '0.8rem', color: 'var(--slate)', margin: '0 0 0.875rem', lineHeight: 1.5 }}>
+                How did your Collabnb post perform? Your data stays private and helps us improve matches.
+              </p>
+              <div style={{ marginBottom: '0.625rem' }}>
+                <label style={LABEL_S}>Post URL (Instagram / TikTok / YouTube)</label>
+                <input type="url" placeholder="https://www.instagram.com/p/..." value={form.post_url} onChange={setField('post_url')} style={INPUT_S} />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.625rem', marginBottom: '0.625rem' }}>
+                <div>
+                  <label style={LABEL_S}>Views *</label>
+                  <input type="number" min="0" placeholder="0" value={form.views} onChange={setField('views')} style={INPUT_S} />
+                </div>
+                <div>
+                  <label style={LABEL_S}>Likes *</label>
+                  <input type="number" min="0" placeholder="0" value={form.likes} onChange={setField('likes')} style={INPUT_S} />
+                </div>
+                <div>
+                  <label style={LABEL_S}>Comments *</label>
+                  <input type="number" min="0" placeholder="0" value={form.comments} onChange={setField('comments')} style={INPUT_S} />
+                </div>
+                <div>
+                  <label style={LABEL_S}>Saves / Shares (optional)</label>
+                  <input type="number" min="0" placeholder="0" value={form.saves} onChange={setField('saves')} style={INPUT_S} />
+                </div>
+              </div>
+              <button
+                onClick={handleSubmitMetrics}
+                disabled={!canSubmit}
+                style={{
+                  width: '100%', padding: '0.6rem', borderRadius: '0.75rem', cursor: canSubmit ? 'pointer' : 'not-allowed',
+                  background: canSubmit ? 'var(--ink)' : 'rgba(25,37,36,0.25)',
+                  color: '#fff', fontFamily: 'var(--font-body)', fontSize: '0.8rem', fontWeight: 600,
+                  border: 'none', transition: 'background 150ms',
+                }}
+              >
+                Save Performance Data
+              </button>
+              <p style={{ fontSize: '0.68rem', color: 'var(--stone)', margin: '0.5rem 0 0', fontStyle: 'italic', textAlign: 'center' }}>
+                Instagram API integration coming soon — metrics will update automatically.
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Payment placeholder */}
       <div style={{
         padding: '1rem', borderRadius: '0.875rem',
@@ -608,6 +704,7 @@ export default function CollabDetail({ collab, onClose }) {
   const [driveUrl, setDriveUrl] = useState(collab.drive_url || '');
   const listing = SAMPLE_LISTINGS.find((l) => l.id === collab.listing_id);
   const host = SAMPLE_HOST;
+  const hostProfile = useQuery(api.profiles.getByUsername, { username: host.username });
   const contract = collab.contract_id
     ? contracts.find((c) => c.id === collab.contract_id)
     : null;
@@ -896,8 +993,8 @@ export default function CollabDetail({ collab, onClose }) {
                   background: 'var(--mint)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
                   color: 'var(--slate)', fontSize: '0.8rem', fontWeight: 700,
                 }}>
-                  {host.avatar_url ? (
-                    <img src={host.avatar_url} alt={host.name} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                  {(hostProfile?.avatar_url || host.avatar_fallback) ? (
+                    <img src={hostProfile?.avatar_url || host.avatar_fallback} alt={host.name} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
                   ) : (
                     'H'
                   )}

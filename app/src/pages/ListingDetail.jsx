@@ -10,6 +10,11 @@ import { useSubscription } from '../contexts/SubscriptionContext';
 import { canSubmitPitch, incrementPitchCount, syncPitchCount } from '../lib/pitchCount';
 import { formatDateRange } from '../lib/dateUtils';
 import { cache } from '../lib/cache';
+import {
+  Sprout, BadgeCheck, Radio, Zap,
+  Home, DollarSign, Gift,
+  Image, Film, Smartphone, PlayCircle, Camera, FileText, Package,
+} from 'lucide-react';
 
 function normalizeConvexListingDetail(l) {
   const images = l.gallery_images?.length ? l.gallery_images : (l.image ? [l.image] : []);
@@ -51,6 +56,36 @@ function normalizeConvexListingDetail(l) {
 }
 
 const SECTIONS = ['Photos', 'The Offer', 'Requirements', 'Location'];
+
+// ── Tier / Comp / Deliverable icon helpers ────────────────────────────────────
+function TierIcon({ tier, size = 18 }) {
+  const props = { size, strokeWidth: 1.75 };
+  if (tier === 'UGC Beginner')     return <Sprout     {...props} color="var(--sage)" />;
+  if (tier === 'UGC Pro')          return <BadgeCheck {...props} color="#3C5759" />;
+  if (tier === 'Micro Influencer') return <Radio      {...props} color="#7b68c8" />;
+  if (tier === 'Influencer')       return <Zap        {...props} color="#b45309" />;
+  return <Sprout {...props} color="var(--sage)" />;
+}
+
+function CompIcon({ type, size = 18 }) {
+  const props = { size, strokeWidth: 1.75 };
+  if (type === 'paid')    return <DollarSign {...props} color="#2d6a4f" />;
+  if (type === 'hybrid')  return <DollarSign {...props} color="#b45309" />;
+  if (type === 'product') return <Gift       {...props} color="#7b68c8" />;
+  return <Home {...props} color="var(--sage)" />; // free_stay
+}
+
+function DeliverableIcon({ type = '', size = 15 }) {
+  const t = type.toLowerCase();
+  const props = { size, strokeWidth: 1.75, color: 'var(--slate)' };
+  if (t.includes('reel'))           return <Film        {...props} />;
+  if (t.includes('instagram'))      return <Image       {...props} />;
+  if (t.includes('tiktok'))         return <Smartphone  {...props} />;
+  if (t.includes('youtube'))        return <PlayCircle  {...props} />;
+  if (t.includes('photo') || t.includes('ugc')) return <Camera {...props} />;
+  if (t.includes('blog'))           return <FileText    {...props} />;
+  return <Package {...props} />;
+}
 
 const LOAD_COLOR = {
   Light:    { bg: 'rgba(209,235,219,0.6)',  text: '#2d6a4f' },
@@ -740,6 +775,18 @@ export default function ListingDetail() {
   const { isSubscribed, openModal: openSubModal } = useSubscription();
   const isVerified = profile?.is_verified === true;
 
+  // Fetch host profile from Convex to get their Clerk-synced avatar
+  const sampleHostProfile = useQuery(
+    api.profiles.getByUsername,
+    sampleListing ? { username: 'ben.venturing' } : 'skip'
+  );
+  const convexHostId = listing?.host_id;
+  const convexHostProfile = useQuery(
+    api.profiles.getById,
+    convexHostId ? { id: convexHostId } : 'skip'
+  );
+  const hostProfile = convexHostProfile ?? sampleHostProfile;
+
   const isDesktop = useIsDesktop();
   const isMd      = useIsMd();
 
@@ -851,7 +898,8 @@ export default function ListingDetail() {
 
   const applied     = hasApplied(listing.id);
   const loadStyle   = LOAD_COLOR[listing.deliverable_load] || LOAD_COLOR.Moderate;
-  const hostAvatar  = hostImgError ? SAMPLE_HOST.avatar_fallback : SAMPLE_HOST.avatar_url;
+  const resolvedHostAvatarUrl = hostProfile?.avatar_url || SAMPLE_HOST.avatar_fallback;
+  const hostAvatar  = hostImgError ? SAMPLE_HOST.avatar_fallback : resolvedHostAvatarUrl;
 
   return (
     <div style={{ paddingBottom: isDesktop ? '2rem' : '7rem' }}>
@@ -1083,12 +1131,26 @@ export default function ListingDetail() {
               marginBottom: '2rem', boxShadow: '0 4px 16px rgba(25,37,36,0.06)',
             }}>
               {[
-                { emoji: '🎯', label: 'Creator Tier',  value: listing.creator_tier },
-                { emoji: '💰', label: 'Compensation',  value: listing.compensation_type === 'cash' ? `$${listing.cash_amount} Cash` : 'Complimentary Stay' },
-                { emoji: '📦', label: 'Deliverables',  value: `${listing.deliverable_load} load` },
-              ].map(({ emoji, label, value }) => (
+                {
+                  icon: <TierIcon tier={listing.creator_tier} size={20} />,
+                  label: 'Creator Tier',
+                  value: listing.creator_tier,
+                },
+                {
+                  icon: <CompIcon type={listing.compensation_type} size={20} />,
+                  label: 'Compensation',
+                  value: listing.compensation_type === 'paid' ? `$${listing.cash_amount} Cash`
+                       : listing.compensation_type === 'hybrid' ? `$${listing.cash_amount} + Stay`
+                       : 'Complimentary Stay',
+                },
+                {
+                  icon: <Package size={20} strokeWidth={1.75} color="var(--slate)" />,
+                  label: 'Deliverables',
+                  value: `${listing.deliverable_load} load`,
+                },
+              ].map(({ icon, label, value }) => (
                 <div key={label} style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '1.5rem', marginBottom: '0.35rem' }}>{emoji}</div>
+                  <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.35rem' }}>{icon}</div>
                   <p style={{ fontSize: '0.67rem', color: 'var(--sage)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, marginBottom: '0.2rem' }}>{label}</p>
                   <p style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--ink)', fontFamily: 'var(--font-display)' }}>{value}</p>
                 </div>
@@ -1140,9 +1202,28 @@ export default function ListingDetail() {
                   ))}
                 </ul>
                 <div style={{ borderTop: '1px solid rgba(25,37,36,0.08)', paddingTop: '1.25rem' }}>
-                  <p style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--sage)', marginBottom: '0.5rem' }}>What you deliver</p>
-                  <p style={{ fontSize: '0.95rem', color: 'var(--ink)', fontWeight: 600, marginBottom: '0.2rem' }}>{listing.deliverables}</p>
-                  <p style={{ fontSize: '0.82rem', color: 'var(--sage)' }}>{listing.what_you_deliver}</p>
+                  <p style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--sage)', marginBottom: '0.75rem' }}>What you deliver</p>
+                  {listing.deliverables_list?.length > 0 ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                      {listing.deliverables_list.map((d, i) => (
+                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
+                          <span style={{
+                            width: 28, height: 28, borderRadius: '0.5rem', flexShrink: 0,
+                            background: 'rgba(25,37,36,0.05)', border: '1px solid rgba(25,37,36,0.08)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          }}>
+                            <DeliverableIcon type={d.type} size={14} />
+                          </span>
+                          <span style={{ fontSize: '0.9rem', color: 'var(--ink)', fontWeight: 600 }}>
+                            {d.quantity}× {d.type}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p style={{ fontSize: '0.95rem', color: 'var(--ink)', fontWeight: 600, marginBottom: '0.2rem' }}>{listing.deliverables}</p>
+                  )}
+                  <p style={{ fontSize: '0.82rem', color: 'var(--sage)', marginTop: '0.25rem' }}>{listing.what_you_deliver}</p>
                 </div>
               </div>
             </div>
@@ -1152,9 +1233,17 @@ export default function ListingDetail() {
             {/* REQUIREMENTS */}
             <div ref={reqRef} style={{ marginBottom: '2rem', scrollMarginTop: '80px' }}>
               <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.2rem', color: 'var(--ink)', marginBottom: '0.4rem' }}>Requirements</h2>
-              <p style={{ fontSize: '0.85rem', color: 'var(--sage)', marginBottom: '1.25rem' }}>
-                Creator tier required: <strong style={{ color: 'var(--slate)' }}>{listing.creator_tier}</strong>
-              </p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '0.85rem', color: 'var(--sage)' }}>Creator tier required:</span>
+                <span style={{
+                  display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
+                  padding: '3px 10px 3px 7px', borderRadius: 9999,
+                  background: 'rgba(25,37,36,0.06)', border: '1px solid rgba(25,37,36,0.1)',
+                }}>
+                  <TierIcon tier={listing.creator_tier} size={13} />
+                  <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--slate)' }}>{listing.creator_tier}</span>
+                </span>
+              </div>
               <ul style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
                 {listing.requirements.map((req) => (
                   <li key={req} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.875rem' }}>
@@ -1257,11 +1346,18 @@ export default function ListingDetail() {
                 borderRadius: '1.5rem', padding: '1.75rem',
                 boxShadow: '0 20px 40px -15px rgba(25,37,36,0.12), inset 0 1px 0 rgba(255,255,255,0.6)',
               }}>
-                <p style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.5rem', color: 'var(--ink)', marginBottom: '0.2rem' }}>
-                  {listing.compensation_type === 'cash' ? `$${listing.cash_amount}` : 'Free Stay'}
-                </p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
+                  <CompIcon type={listing.compensation_type} size={22} />
+                  <p style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.5rem', color: 'var(--ink)', margin: 0 }}>
+                    {listing.compensation_type === 'paid' ? `$${listing.cash_amount}`
+                   : listing.compensation_type === 'hybrid' ? `$${listing.cash_amount} + Stay`
+                   : 'Free Stay'}
+                  </p>
+                </div>
                 <p style={{ fontSize: '0.82rem', color: 'var(--sage)', marginBottom: '1.25rem' }}>
-                  {listing.compensation_type === 'cash' ? `+ stay included · ${listing.deliverable_count} deliverables` : `${listing.deliverable_count} deliverables`}
+                  {listing.compensation_type === 'paid' ? `· ${listing.deliverable_count} deliverables`
+                 : listing.compensation_type === 'hybrid' ? `stay included · ${listing.deliverable_count} deliverables`
+                 : `${listing.deliverable_count} deliverables`}
                 </p>
 
                 {/* Details grid */}

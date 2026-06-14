@@ -2,11 +2,12 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Search, MessageSquare, Check, X,
-  Sparkles, ExternalLink, MapPin, Calendar, ChevronRight,
+  Sparkles, ExternalLink, MapPin, Calendar, ChevronRight, ChevronLeft, Trash2,
 } from 'lucide-react';
 import SkeletonCard from '../../components/SkeletonCard';
 import { cache, cacheKey } from '../../lib/cache';
 import ProfilePopupCard from '../../components/ProfilePopupCard';
+import CreatorAvatar from '../../components/CreatorAvatar';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const LOCATION_CONSENT_KEY = '@collabnb_location_consent_v1';
@@ -72,7 +73,7 @@ const CREATORS = [
     avatar: 'https://i.pravatar.cc/80?img=47', followers: 84200, engagement: 9.4, collab_count: 18,
     location: 'San Francisco, CA', lat: 37.7749, lng: -122.4194,
     platforms: ['Instagram', 'TikTok'], niches: ['Travel', 'Cabins', 'Mountain'],
-    isFounder: true, avg_reach_30d: 24600, er_30d: 7.8, past_collab: false,
+    isFounder: true, isSample: true, avg_reach_30d: 24600, er_30d: 7.8, past_collab: false,
     bio: 'Mountain stays and city escapes — documenting authentic travel moments that inspire.',
     portfolioUrl: 'https://priya.wanders.co', travelCalendar: [],
   },
@@ -81,7 +82,7 @@ const CREATORS = [
     avatar: 'https://i.pravatar.cc/80?img=5', followers: 218000, engagement: 6.8, collab_count: 47,
     location: 'Los Angeles, CA', lat: 34.0522, lng: -118.2437,
     platforms: ['Instagram', 'YouTube'], niches: ['Luxury', 'Coastal', 'Villa'],
-    isFounder: true, avg_reach_30d: 58200, er_30d: 5.4, past_collab: true,
+    isFounder: true, isSample: true, avg_reach_30d: 58200, er_30d: 5.4, past_collab: true,
     bio: 'Luxury hospitality creator. Editorial-quality content for boutique properties.',
     portfolioUrl: 'https://mayachen.travel',
     travelCalendar: [
@@ -94,7 +95,7 @@ const CREATORS = [
     avatar: 'https://i.pravatar.cc/80?img=59', followers: 58300, engagement: 8.9, collab_count: 23,
     location: 'Miami, FL', lat: 25.7617, lng: -80.1918,
     platforms: ['Instagram', 'TikTok'], niches: ['Coastal', 'Ocean', 'Lifestyle'],
-    isFounder: true, avg_reach_30d: 18900, er_30d: 7.2, past_collab: true,
+    isFounder: true, isSample: true, avg_reach_30d: 18900, er_30d: 7.2, past_collab: true,
     bio: 'Coastal and ocean lifestyle content. My last villa collab drove 140k in direct bookings.',
     portfolioUrl: null,
     travelCalendar: [
@@ -106,7 +107,7 @@ const CREATORS = [
     avatar: 'https://i.pravatar.cc/80?img=32', followers: 31500, engagement: 12.1, collab_count: 31,
     location: 'Portland, OR', lat: 45.5051, lng: -122.6750,
     platforms: ['TikTok', 'Instagram'], niches: ['Adventure', 'Cabin', 'Nature'],
-    isFounder: false, avg_reach_30d: 14200, er_30d: 10.8, past_collab: false,
+    isFounder: false, isSample: true, avg_reach_30d: 14200, er_30d: 10.8, past_collab: false,
     bio: 'Off-the-beaten-path travel and adventure stays. Fast turnaround, high engagement.',
     portfolioUrl: 'https://lena.explores.io',
     travelCalendar: [
@@ -118,7 +119,7 @@ const CREATORS = [
     avatar: 'https://i.pravatar.cc/80?img=44', followers: 67100, engagement: 10.5, collab_count: 14,
     location: 'Chicago, IL', lat: 41.8781, lng: -87.6298,
     platforms: ['Instagram', 'TikTok'], niches: ['Design', 'Boutique', 'Urban'],
-    isFounder: true, avg_reach_30d: 22400, er_30d: 8.9, past_collab: false,
+    isFounder: true, isSample: true, avg_reach_30d: 22400, er_30d: 8.9, past_collab: false,
     bio: 'Boutique properties and design-forward spaces. Strong storytelling focus.',
     portfolioUrl: null, travelCalendar: [],
   },
@@ -127,7 +128,7 @@ const CREATORS = [
     avatar: 'https://i.pravatar.cc/80?img=11', followers: 12400, engagement: 14.2, collab_count: 4,
     location: 'Oakland, CA', lat: 37.8044, lng: -122.2711,
     platforms: ['TikTok'], niches: ['Eco', 'Sustainable', 'Design'],
-    isFounder: false, avg_reach_30d: 8800, er_30d: 12.6, past_collab: false,
+    isFounder: false, isSample: true, avg_reach_30d: 8800, er_30d: 12.6, past_collab: false,
     bio: 'Sustainable travel and eco-design creator. Rapidly growing audience, very high ER.',
     portfolioUrl: 'https://jordanellis.co', travelCalendar: [],
   },
@@ -136,7 +137,7 @@ const CREATORS = [
     avatar: 'https://i.pravatar.cc/80?img=21', followers: 43900, engagement: 7.3, collab_count: 9,
     location: 'Berkeley, CA', lat: 37.8716, lng: -122.2727,
     platforms: ['Instagram'], niches: ['Water', 'Boats', 'Coastal'],
-    isFounder: false, avg_reach_30d: 13700, er_30d: 5.8, past_collab: false,
+    isFounder: false, isSample: true, avg_reach_30d: 13700, er_30d: 5.8, past_collab: false,
     bio: 'Water-based travel content. Floating homes, boats, and coastal adventures.',
     portfolioUrl: null, travelCalendar: [],
   },
@@ -145,7 +146,7 @@ const CREATORS = [
     avatar: 'https://i.pravatar.cc/80?img=68', followers: 9200, engagement: 18.7, collab_count: 2,
     location: 'Asheville, NC', lat: 35.5951, lng: -82.5515,
     platforms: ['TikTok'], niches: ['Nature', 'Treehouse', 'Wellness'],
-    isFounder: false, avg_reach_30d: 6100, er_30d: 16.4, past_collab: false,
+    isFounder: false, isSample: true, avg_reach_30d: 6100, er_30d: 16.4, past_collab: false,
     bio: 'Off-grid nature experiences and wellness retreats. Tiny audience, extraordinary ER.',
     portfolioUrl: null, travelCalendar: [],
   },
@@ -154,7 +155,7 @@ const CREATORS = [
     avatar: 'https://i.pravatar.cc/80?img=16', followers: 342000, engagement: 5.2, collab_count: 62,
     location: 'New York, NY', lat: 40.7128, lng: -74.0060,
     platforms: ['Instagram', 'YouTube', 'TikTok'], niches: ['Luxury', 'Fashion', 'City'],
-    isFounder: true, avg_reach_30d: 87300, er_30d: 4.1, past_collab: false,
+    isFounder: true, isSample: true, avg_reach_30d: 87300, er_30d: 4.1, past_collab: false,
     bio: 'Luxury travel and fashion crossover. High-end hospitality and editorial content.',
     portfolioUrl: 'https://isabelle.unpack.co',
     travelCalendar: [
@@ -166,7 +167,7 @@ const CREATORS = [
     avatar: 'https://i.pravatar.cc/80?img=52', followers: 44800, engagement: 9.1, collab_count: 29,
     location: 'Denver, CO', lat: 39.7392, lng: -104.9903,
     platforms: ['Instagram', 'YouTube'], niches: ['Photography', 'Mountain', 'Outdoors'],
-    isFounder: true, avg_reach_30d: 15600, er_30d: 7.5, past_collab: false,
+    isFounder: true, isSample: true, avg_reach_30d: 15600, er_30d: 7.5, past_collab: false,
     bio: 'Travel photographer turning stays into cinematic content. 4K video, editorial stills.',
     portfolioUrl: null, travelCalendar: [],
   },
@@ -195,9 +196,10 @@ function fmtFollowers(n) {
 }
 
 // ─── localStorage helpers ─────────────────────────────────────────────────────
-const SAVED_KEY  = '@collabnb_swipe_saved_v1';
-const DEPRIO_KEY = '@collabnb_swipe_deprioritized_v1';
-const HIST_KEY   = '@collabnb_swipe_history_v1';
+const SAVED_KEY        = '@collabnb_swipe_saved_v1';
+const DEPRIO_KEY       = '@collabnb_swipe_deprioritized_v1';
+const HIST_KEY         = '@collabnb_swipe_history_v1';
+const HIDDEN_SAMPLE_KEY = '@collabnb_hidden_sample_creators_v1';
 function lsGet(k) { try { return JSON.parse(localStorage.getItem(k) || '[]'); } catch { return []; } }
 function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
 
@@ -254,79 +256,291 @@ function LocationConsentModal({ onAllow, onDisable }) {
 }
 
 // ─── Nearby creator card (compact, for horizontal scroll row) ─────────────────
-function NearbyCreatorCard({ creator, onExpand }) {
+function NearbyCreatorCard({ creator, onExpand, onHide, onMessage }) {
   const [hovered, setHovered] = useState(false);
   const t = TIER_COLORS[creator.tier] || TIER_COLORS['UGC Beginner'];
+  const city = creator.location?.split(',')[0] ?? '';
+
   return (
     <div
       onClick={() => onExpand(creator)}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
-        flexShrink: 0, width: 154,
-        background: hovered ? 'rgba(255,255,255,0.96)' : 'rgba(255,255,255,0.82)',
-        backdropFilter: 'blur(20px) saturate(135%)', WebkitBackdropFilter: 'blur(20px) saturate(135%)',
-        border: '1.5px solid rgba(255,255,255,0.85)',
-        borderRadius: '1rem', padding: '14px 12px',
+        position: 'relative',
+        flexShrink: 0,
+        width: 188,
+        scrollSnapAlign: 'start',
+        background: hovered ? 'rgba(255,255,255,0.97)' : 'rgba(255,255,255,0.84)',
+        backdropFilter: 'blur(24px) saturate(140%)',
+        WebkitBackdropFilter: 'blur(24px) saturate(140%)',
+        border: '1px solid rgba(255,255,255,0.85)',
+        borderRadius: '1.375rem',
+        padding: '16px 14px 14px',
         cursor: 'pointer',
-        transform: hovered ? 'translateY(-2px)' : 'none',
-        boxShadow: hovered ? '0 10px 30px rgba(25,37,36,0.12)' : '0 3px 12px rgba(25,37,36,0.06)',
+        transform: hovered ? 'translateY(-3px)' : 'none',
+        boxShadow: hovered
+          ? '0 14px 36px rgba(25,37,36,0.14), inset 0 1px 0 rgba(255,255,255,0.7)'
+          : '0 4px 18px rgba(25,37,36,0.07), inset 0 1px 0 rgba(255,255,255,0.6)',
         transition: 'all 200ms var(--ease-out-quart)',
-        textAlign: 'center',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: 0,
       }}
     >
-      <img src={creator.avatar} alt={creator.name}
-        style={{ width: 52, height: 52, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(25,37,36,0.07)', marginBottom: 8 }} />
-      <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 12, color: 'var(--ink)', marginBottom: 3 }}>
+      {/* Sample badge */}
+      {creator.isSample && (
+        <span style={{
+          position: 'absolute', top: 10, left: 10,
+          padding: '2px 7px', borderRadius: 9999,
+          fontSize: 8, fontWeight: 700, letterSpacing: '0.06em',
+          background: 'rgba(149,157,144,0.15)', color: '#959D90',
+          pointerEvents: 'none', lineHeight: 1.8,
+        }}>
+          SAMPLE
+        </span>
+      )}
+
+      {/* Trash button */}
+      {creator.isSample && onHide && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onHide(creator.id); }}
+          title="Hide this creator"
+          style={{
+            position: 'absolute', top: 8, right: 8,
+            background: 'transparent', border: 'none', cursor: 'pointer',
+            padding: 4, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: 'rgba(149,157,144,0.55)',
+            transition: 'color 150ms',
+          }}
+        >
+          <Trash2 size={12} />
+        </button>
+      )}
+
+      {/* Avatar */}
+      <div style={{ marginBottom: 10, marginTop: creator.isSample ? 14 : 2 }}>
+        <CreatorAvatar
+          src={creator.avatar}
+          name={creator.name}
+          size={72}
+          style={{
+            border: '2.5px solid rgba(255,255,255,0.95)',
+            boxShadow: '0 3px 14px rgba(25,37,36,0.13)',
+          }}
+        />
+      </div>
+
+      {/* Name */}
+      <div style={{
+        fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 13.5,
+        color: 'var(--ink)', marginBottom: 2, lineHeight: 1.25, textAlign: 'center',
+      }}>
         {creator.name}
       </div>
-      <div style={{ fontSize: 10, color: 'var(--sage)', marginBottom: 7 }}>
-        📍 {creator.location.split(',')[0]}
+
+      {/* Handle */}
+      <div style={{
+        fontSize: 10.5, color: 'var(--sage)', marginBottom: 9,
+        fontFamily: 'var(--font-body)',
+      }}>
+        @{creator.username}
       </div>
-      <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: 9999, fontSize: 9, fontWeight: 700, background: t.bg, color: t.color }}>
+
+      {/* Location pill */}
+      <div style={{
+        display: 'inline-flex', alignItems: 'center', gap: 4,
+        padding: '3px 9px', borderRadius: 9999, marginBottom: 8,
+        background: 'rgba(25,37,36,0.05)',
+        border: '1px solid rgba(25,37,36,0.08)',
+      }}>
+        <MapPin size={9} color="var(--sage)" />
+        <span style={{ fontSize: 10, color: 'var(--slate)', fontFamily: 'var(--font-body)' }}>
+          {city}
+        </span>
+      </div>
+
+      {/* Tier badge */}
+      <span style={{
+        display: 'inline-block', padding: '3px 10px', borderRadius: 9999,
+        fontSize: 9.5, fontWeight: 700, background: t.bg, color: t.color,
+        marginBottom: 14,
+      }}>
         {creator.tier}
       </span>
+
+      {/* Message button */}
+      <button
+        onClick={(e) => { e.stopPropagation(); onMessage(creator); }}
+        style={{
+          width: '100%',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+          padding: '8px 0', borderRadius: '0.875rem',
+          background: 'var(--ink)', color: 'var(--bone)',
+          border: 'none', cursor: 'pointer',
+          fontSize: 11.5, fontWeight: 600, fontFamily: 'var(--font-body)',
+          transition: 'background 160ms',
+          flexShrink: 0,
+        }}
+      >
+        <MessageSquare size={12} />
+        Message
+      </button>
     </div>
   );
 }
 
 // ─── Nearby creators section ──────────────────────────────────────────────────
-function NearbyCreatorsSection({ creators, onExpand, onSeeAll }) {
-  if (creators.length === 0) return null;
-  const shown   = creators.slice(0, NEARBY_SECTION_LIMIT);
-  const hasMore = creators.length > NEARBY_SECTION_LIMIT;
+function NearbyCreatorsSection({ creators, onExpand, onSeeAll, onMessage }) {
+  const [hiddenIds, setHiddenIds] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(HIDDEN_SAMPLE_KEY) || '[]'); } catch { return []; }
+  });
+  const scrollRef = useRef(null);
+  const [canScrollLeft,  setCanScrollLeft]  = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  function hideCreator(id) {
+    const next = [...hiddenIds, id];
+    setHiddenIds(next);
+    try { localStorage.setItem(HIDDEN_SAMPLE_KEY, JSON.stringify(next)); } catch {}
+  }
+
+  const visible = creators.filter(c => !hiddenIds.includes(c.id));
+  if (visible.length === 0) return null;
+  const shown   = visible.slice(0, NEARBY_SECTION_LIMIT);
+  const hasMore = visible.length > NEARBY_SECTION_LIMIT;
+
+  function syncArrows() {
+    const el = scrollRef.current;
+    if (!el) return;
+    setCanScrollLeft(el.scrollLeft > 4);
+    setCanScrollRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 4);
+  }
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    syncArrows();
+    el.addEventListener('scroll', syncArrows, { passive: true });
+    return () => el.removeEventListener('scroll', syncArrows);
+  }, [shown.length]);
+
+  const CARD_STRIDE = 200; // card width + gap
 
   return (
-    <div style={{ marginBottom: '2rem' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.875rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-          <MapPin size={13} color="var(--sage)" style={{ flexShrink: 0 }} />
-          <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 13, color: 'var(--ink)' }}>
-            Creators in your area right now
-          </span>
-          <span style={{
-            padding: '2px 9px', borderRadius: 9999,
-            fontSize: 10, fontWeight: 700,
-            background: 'rgba(209,235,219,0.75)', color: 'var(--ink)',
+    <div style={{ marginBottom: '2.25rem' }}>
+
+      {/* Section header */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <div style={{
+              width: 28, height: 28, borderRadius: '50%',
+              background: 'rgba(209,235,219,0.65)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              flexShrink: 0,
+            }}>
+              <MapPin size={13} color="#3C5759" />
+            </div>
+            <span style={{
+              fontFamily: 'var(--font-display)', fontWeight: 800,
+              fontSize: 17, color: 'var(--ink)', lineHeight: 1.2,
+            }}>
+              Creators Near You
+            </span>
+            <span style={{
+              padding: '2px 9px', borderRadius: 9999,
+              fontSize: 10, fontWeight: 700,
+              background: 'rgba(209,235,219,0.75)', color: 'var(--ink)',
+              fontFamily: 'var(--font-body)',
+            }}>
+              {HOST_LOCATION.city}, {HOST_LOCATION.state}
+            </span>
+          </div>
+          <p style={{
+            fontSize: 11.5, color: 'var(--sage)', margin: '4px 0 0 36px',
+            fontFamily: 'var(--font-body)',
           }}>
-            {HOST_LOCATION.city}, {HOST_LOCATION.state}
-          </span>
+            Based on creator profiles in your metro area
+          </p>
         </div>
         {hasMore && (
           <button onClick={onSeeAll} style={{
             display: 'flex', alignItems: 'center', gap: 2,
             background: 'none', border: 'none', cursor: 'pointer',
             fontSize: 11, fontWeight: 700, color: 'var(--sage)',
-            fontFamily: 'var(--font-body)', flexShrink: 0,
+            fontFamily: 'var(--font-body)', flexShrink: 0, marginTop: 6,
           }}>
             See All <ChevronRight size={11} />
           </button>
         )}
       </div>
-      <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 6, scrollbarWidth: 'none' }}>
-        {shown.map(c => (
-          <NearbyCreatorCard key={c.id} creator={c} onExpand={onExpand} />
-        ))}
+
+      {/* Scroll strip with arrow buttons */}
+      <div style={{ position: 'relative' }}>
+
+        {/* Left arrow */}
+        {canScrollLeft && (
+          <button
+            onClick={() => { scrollRef.current?.scrollBy({ left: -CARD_STRIDE, behavior: 'smooth' }); }}
+            aria-label="Scroll left"
+            style={{
+              position: 'absolute', left: -14, top: '50%', transform: 'translateY(-50%)',
+              zIndex: 5, width: 32, height: 32, borderRadius: '50%',
+              background: 'rgba(255,255,255,0.96)',
+              backdropFilter: 'blur(12px) saturate(140%)',
+              border: '1px solid rgba(255,255,255,0.8)',
+              boxShadow: '0 4px 14px rgba(25,37,36,0.14)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer',
+            }}
+          >
+            <ChevronLeft size={15} color="var(--ink)" />
+          </button>
+        )}
+
+        {/* Cards row */}
+        <div
+          ref={scrollRef}
+          style={{
+            display: 'flex', gap: 12,
+            overflowX: 'auto', paddingBottom: 8, paddingTop: 4,
+            scrollbarWidth: 'none', msOverflowStyle: 'none',
+            WebkitOverflowScrolling: 'touch',
+            scrollSnapType: 'x mandatory',
+          }}
+        >
+          {shown.map(c => (
+            <NearbyCreatorCard
+              key={c.id}
+              creator={c}
+              onExpand={onExpand}
+              onHide={hideCreator}
+              onMessage={onMessage}
+            />
+          ))}
+        </div>
+
+        {/* Right arrow */}
+        {canScrollRight && (
+          <button
+            onClick={() => { scrollRef.current?.scrollBy({ left: CARD_STRIDE, behavior: 'smooth' }); }}
+            aria-label="Scroll right"
+            style={{
+              position: 'absolute', right: -14, top: '50%', transform: 'translateY(-50%)',
+              zIndex: 5, width: 32, height: 32, borderRadius: '50%',
+              background: 'rgba(255,255,255,0.96)',
+              backdropFilter: 'blur(12px) saturate(140%)',
+              border: '1px solid rgba(255,255,255,0.8)',
+              boxShadow: '0 4px 14px rgba(25,37,36,0.14)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer',
+            }}
+          >
+            <ChevronRight size={15} color="var(--ink)" />
+          </button>
+        )}
       </div>
     </div>
   );
@@ -496,6 +710,14 @@ function SwipeCardLarge({ creator, exitDir, onClick }) {
           backgroundSize: '14px 14px', backgroundPosition: '7px 7px',
           pointerEvents: 'none',
         }} />
+        {/* Sample Creator badge top-left */}
+        {creator.isSample && (
+          <div style={{ position: 'absolute', top: 14, left: 16 }}>
+            <span style={{ padding: '3px 9px', borderRadius: 9999, fontSize: 9, fontWeight: 700, background: 'rgba(149,157,144,0.22)', color: '#959D90', letterSpacing: '0.02em' }}>
+              Sample Creator
+            </span>
+          </div>
+        )}
         {/* Tier badge top-right */}
         <div style={{ position: 'absolute', top: 14, right: 16 }}>
           <span style={{ padding: '4px 12px', borderRadius: 9999, fontSize: 10, fontWeight: 700, background: t.bg, color: t.color, boxShadow: '0 1px 6px rgba(25,37,36,0.08)' }}>
@@ -510,7 +732,7 @@ function SwipeCardLarge({ creator, exitDir, onClick }) {
             overflow: 'hidden', background: 'var(--mint)',
             boxShadow: '0 3px 14px rgba(25,37,36,0.12)',
           }}>
-            <img src={creator.avatar} alt={creator.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            <CreatorAvatar src={creator.avatar} name={creator.name} size={54} style={{ border: 'none' }} />
           </div>
           {creator.past_collab && (
             <div title="Past collab" style={{
@@ -631,8 +853,8 @@ function SavedContactRow({ creator, onMessage }) {
       border: '1px solid rgba(255,255,255,0.85)',
       borderRadius: '1rem', boxShadow: '0 2px 10px rgba(25,37,36,0.05)',
     }}>
-      <img src={creator.avatar} alt={creator.name}
-        style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(25,37,36,0.06)', flexShrink: 0 }} />
+      <CreatorAvatar src={creator.avatar} name={creator.name} size={44}
+        style={{ border: '2px solid rgba(25,37,36,0.06)' }} />
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 13, color: 'var(--ink)' }}>{creator.name}</div>
         <div style={{ fontSize: 11, color: 'var(--sage)', marginTop: 1 }}>@{creator.username} · {creator.location}</div>
@@ -859,6 +1081,7 @@ function CreatorCard({ creator, delay, onExpand, onMessage, visitingBadge }) {
       <div
         onClick={() => onExpand(creator)}
         style={{
+          position: 'relative',
           background: hovered ? 'rgba(255,255,255,0.96)' : 'rgba(255,255,255,0.82)',
           backdropFilter: 'blur(20px) saturate(135%)', WebkitBackdropFilter: 'blur(20px) saturate(135%)',
           border: '1.5px solid rgba(255,255,255,0.85)',
@@ -869,14 +1092,25 @@ function CreatorCard({ creator, delay, onExpand, onMessage, visitingBadge }) {
           cursor: 'pointer',
         }}
       >
+        {creator.isSample && (
+          <span style={{
+            position: 'absolute', top: 12, left: 12,
+            padding: '2px 8px', borderRadius: 9999,
+            fontSize: 9, fontWeight: 700,
+            background: 'rgba(149,157,144,0.15)', color: '#959D90',
+            letterSpacing: '0.02em', pointerEvents: 'none',
+          }}>
+            Sample Creator
+          </span>
+        )}
         {/* Top row */}
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: 14 }}>
           <div style={{ position: 'relative', flexShrink: 0 }}>
-            <img
-              src={creator.avatar} alt={creator.name}
+            <CreatorAvatar
+              src={creator.avatar} name={creator.name} size={52}
               onClick={(e) => { e.stopPropagation(); navigate('/profile'); }}
               title="View profile"
-              style={{ width: 52, height: 52, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(25,37,36,0.07)', cursor: 'pointer' }}
+              style={{ border: '2px solid rgba(25,37,36,0.07)', cursor: 'pointer' }}
             />
             {creator.past_collab && (
               <>
@@ -1121,6 +1355,7 @@ export default function HostCreators() {
                 creators={nearbyCreators}
                 onExpand={setExpandedCreator}
                 onSeeAll={handleSeeAllNearby}
+                onMessage={handleMessage}
               />
             )}
 

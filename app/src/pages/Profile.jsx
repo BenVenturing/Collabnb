@@ -509,7 +509,7 @@ function GhostCollabCard() {
 // ─── Main Profile page ────────────────────────────────────────────────────────
 export default function Profile() {
   const { profile, loading, signOut, updateProfile } = useAuth();
-  const { contracts } = useCollabs();
+  const { contracts, collabs } = useCollabs();
   const navigate = useNavigate();
   const profileEmail = (profile?.email || '').toLowerCase();
   const isAdmin = ADMIN_EMAIL
@@ -520,6 +520,7 @@ export default function Profile() {
   const verifyLifetimeSession      = useAction(api.stripe.verifyLifetimeSession);
   const createBillingPortalSession = useAction(api.stripe.createBillingPortalSession);
   const generateUploadUrl          = useMutation(api.uploads.generateUploadUrl);
+  const updateMetricsMutation      = useMutation(api.profiles.updateMetrics);
   const { openModal: openSubModal } = useSubscription();
   const userId = profile?._id || profile?.id || 'mock-user-001';
   const serverPitchCount = useQuery(api.pitches.getCount, { userId });
@@ -547,6 +548,11 @@ export default function Profile() {
   const [portalLoading, setPortalLoading]       = useState(false);
   const [cropEditorFile, setCropEditorFile]     = useState(null);
   const [lifetimeModalOpen, setLifetimeModalOpen] = useState(false);
+
+  // Metrics form state
+  const [metricsDraft, setMetricsDraft] = useState({ instagram: '', tiktok: '', youtube: '', avg_views: '', avg_likes: '', avg_comments: '' });
+  const [metricsSaving, setMetricsSaving] = useState(false);
+  const [metricsSaved,  setMetricsSaved]  = useState(false);
 
   // Notification toggles
   const [notifSettings, setNotifSettings] = useState({
@@ -580,6 +586,19 @@ export default function Profile() {
 
   // Bio expand
   const [bioExpanded, setBioExpanded] = useState(false);
+
+  // Sync metrics form from profile on load
+  useEffect(() => {
+    if (!profile) return;
+    setMetricsDraft({
+      instagram: profile.metrics_instagram_followers ?? '',
+      tiktok:    profile.metrics_tiktok_followers    ?? '',
+      youtube:   profile.metrics_youtube_subscribers ?? '',
+      avg_views:    profile.metrics_avg_views    ?? '',
+      avg_likes:    profile.metrics_avg_likes    ?? '',
+      avg_comments: profile.metrics_avg_comments ?? '',
+    });
+  }, [profile]);
 
   // ── Stripe subscription redirect handler ────────────────────────────
   useEffect(() => {
@@ -727,6 +746,27 @@ export default function Profile() {
     setToastMsg('All changes saved');
     // Invalidate creator search cache so updated profile surfaces in host search
     cache.clearAll();
+  }
+
+  async function saveMetrics() {
+    if (userId === 'mock-user-001') return;
+    setMetricsSaving(true);
+    try {
+      const parse = (v) => v !== '' && !isNaN(parseInt(v, 10)) ? parseInt(v, 10) : undefined;
+      await updateMetricsMutation({
+        profileId:   userId,
+        instagram:    parse(metricsDraft.instagram),
+        tiktok:       parse(metricsDraft.tiktok),
+        youtube:      parse(metricsDraft.youtube),
+        avg_views:    parse(metricsDraft.avg_views),
+        avg_likes:    parse(metricsDraft.avg_likes),
+        avg_comments: parse(metricsDraft.avg_comments),
+      });
+      setMetricsSaved(true);
+      setTimeout(() => setMetricsSaved(false), 2500);
+    } finally {
+      setMetricsSaving(false);
+    }
   }
 
   function handleShare() {
@@ -910,19 +950,45 @@ export default function Profile() {
 
         {/* ── Stats card ─────────────────────────────────────────────────── */}
         <div className="glass section-reveal" ref={(el) => sectionsRef.current[0] = el} style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)' }}>
-            {[
-              { value: dp.collab_count ?? 0,                                    label: 'Collabs'    },
-              { value: fmtFollowers(dp.follower_count),                          label: 'Followers'  },
-              { value: dp.engagement_rate ? `${dp.engagement_rate}%` : '—',     label: 'Engagement' },
-            ].map((stat, i) => (
-              <div key={stat.label} style={{ textAlign: 'center', padding: '0.5rem 0.75rem', borderRight: i < 2 ? '1px solid rgba(25,37,36,0.06)' : 'none' }}>
-                <p style={{ fontFamily: 'var(--font-display)', fontSize: '1.5rem', fontWeight: 800, color: 'var(--ink)', margin: '0 0 0.2rem' }}>{stat.value}</p>
-                <p style={{ fontSize: '0.75rem', color: 'var(--sage)', margin: 0 }}>{stat.label}</p>
+          {(() => {
+            const collabERs = collabs.filter((c) => c.content_er != null).map((c) => c.content_er);
+            const contentER = collabERs.length > 0 ? parseFloat((collabERs.reduce((a, b) => a + b, 0) / collabERs.length).toFixed(2)) : null;
+            const isCreator = dp.role === 'creator';
+            const stats = isCreator ? [
+              { value: dp.collab_count ?? 0,                                    label: 'Collabs',    tooltip: null },
+              { value: fmtFollowers(dp.follower_count),                          label: 'Followers',  tooltip: null },
+              { value: dp.engagement_rate ? `${dp.engagement_rate}%` : '—',     label: 'Profile ER', tooltip: null },
+              { value: contentER != null ? `${contentER}%` : '—',               label: 'Content ER', tooltip: 'Based on content created through Collabnb collaborations' },
+            ] : [
+              { value: dp.collab_count ?? 0,                                    label: 'Collabs',    tooltip: null },
+              { value: fmtFollowers(dp.follower_count),                          label: 'Followers',  tooltip: null },
+              { value: dp.engagement_rate ? `${dp.engagement_rate}%` : '—',     label: 'Engagement', tooltip: null },
+            ];
+            return (
+              <div style={{ display: 'grid', gridTemplateColumns: `repeat(${stats.length}, 1fr)` }}>
+                {stats.map((stat, i) => (
+                  <div key={stat.label} title={stat.tooltip || undefined} style={{ textAlign: 'center', padding: '0.5rem 0.5rem', borderRight: i < stats.length - 1 ? '1px solid rgba(25,37,36,0.06)' : 'none', cursor: stat.tooltip ? 'help' : 'default' }}>
+                    <p style={{ fontFamily: 'var(--font-display)', fontSize: isCreator ? '1.25rem' : '1.5rem', fontWeight: 800, color: 'var(--ink)', margin: '0 0 0.2rem' }}>{stat.value}</p>
+                    <p style={{ fontSize: '0.72rem', color: 'var(--sage)', margin: 0 }}>
+                      {stat.label}{stat.tooltip && <span style={{ marginLeft: '0.2rem', opacity: 0.55, fontSize: '0.65rem' }}>ⓘ</span>}
+                    </p>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-          <p style={{ textAlign: 'center', fontSize: '0.7rem', color: 'var(--sage)', marginTop: '0.625rem' }}>↻ Updated just now</p>
+            );
+          })()}
+          {(dp.metrics_instagram_followers || dp.metrics_tiktok_followers || dp.metrics_youtube_subscribers) && (
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '0.75rem', flexWrap: 'wrap', marginTop: '0.75rem', paddingTop: '0.625rem', borderTop: '1px solid rgba(25,37,36,0.06)' }}>
+              {dp.metrics_instagram_followers ? <span style={{ fontSize: '0.7rem', color: 'var(--sage)' }}>IG {fmtFollowers(dp.metrics_instagram_followers)}</span> : null}
+              {dp.metrics_tiktok_followers    ? <span style={{ fontSize: '0.7rem', color: 'var(--sage)' }}>TT {fmtFollowers(dp.metrics_tiktok_followers)}</span>    : null}
+              {dp.metrics_youtube_subscribers ? <span style={{ fontSize: '0.7rem', color: 'var(--sage)' }}>YT {fmtFollowers(dp.metrics_youtube_subscribers)}</span>  : null}
+            </div>
+          )}
+          <p style={{ textAlign: 'center', fontSize: '0.7rem', color: 'var(--sage)', marginTop: '0.625rem' }}>
+            {dp.metrics_updated_at
+              ? `↻ Updated ${Math.floor((Date.now() - dp.metrics_updated_at) / (1000 * 60 * 60 * 24)) === 0 ? 'today' : `${Math.floor((Date.now() - dp.metrics_updated_at) / (1000 * 60 * 60 * 24))}d ago`}`
+              : '↻ Updated just now'}
+          </p>
         </div>
 
         {/* ── Payout card (creator only) ─────────────────────────────────── */}
@@ -1042,7 +1108,7 @@ export default function Profile() {
             </span>
             <span className="eyebrow-tag" style={{ gap: '0.5rem' }}>
               <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#D0D5CE', display: 'inline-block', flexShrink: 0 }} />
-              <strong>{globeStats.countries > 0 ? `${globeStats.countries}+` : '40+'}</strong>&nbsp;Countries
+              <strong>{allProfiles === undefined ? '—' : globeStats.countries > 0 ? `${globeStats.countries}` : '—'}</strong>&nbsp;Countries
             </span>
           </div>
         </section>
@@ -1206,6 +1272,83 @@ export default function Profile() {
                 </div>
               );
             })()}
+            {/* My Metrics — creator only */}
+            {dp.role === 'creator' && (() => {
+              const updatedAt   = dp.metrics_updated_at;
+              const daysSince   = updatedAt ? Math.floor((Date.now() - updatedAt) / (1000 * 60 * 60 * 24)) : null;
+              const isStale     = daysSince !== null && daysSince > 60;
+              const avgViews    = parseFloat(metricsDraft.avg_views)    || 0;
+              const avgLikes    = parseFloat(metricsDraft.avg_likes)    || 0;
+              const avgComments = parseFloat(metricsDraft.avg_comments) || 0;
+              const calcER      = avgViews > 0 ? ((avgLikes + avgComments) / avgViews * 100).toFixed(1) : null;
+              const inputStyle  = { width: '100%', boxSizing: 'border-box', padding: '0.45rem 0.5rem', border: '1px solid rgba(60,87,89,0.18)', borderRadius: '0.5rem', fontSize: '0.8rem', color: 'var(--ink)', background: 'rgba(247,245,242,0.7)', fontFamily: 'var(--font-body)', outline: 'none' };
+              const labelStyle  = { fontSize: '0.66rem', color: 'var(--sage)', margin: '0 0 0.25rem', display: 'block', fontWeight: 600 };
+              return (
+                <div style={{ padding: '0.875rem 1.5rem', borderBottom: '1px solid rgba(60,87,89,0.08)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.625rem' }}>
+                    <p style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--slate)', margin: 0, textTransform: 'uppercase', letterSpacing: '0.06em' }}>My Metrics</p>
+                    {daysSince !== null && (
+                      <p style={{ fontSize: '0.68rem', color: isStale ? '#ef4444' : 'var(--sage)', margin: 0 }}>
+                        {daysSince === 0 ? 'Updated today' : `Updated ${daysSince}d ago`}{isStale ? ' — stale' : ''}
+                      </p>
+                    )}
+                  </div>
+                  {isStale && (
+                    <div style={{ background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '0.5rem', padding: '0.5rem 0.625rem', marginBottom: '0.75rem' }}>
+                      <p style={{ fontSize: '0.72rem', color: '#dc2626', margin: 0 }}>Stats are over 60 days old — hosts may see outdated numbers.</p>
+                    </div>
+                  )}
+                  <p style={{ fontSize: '0.7rem', color: 'var(--sage)', margin: '0 0 0.375rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Platform followers</p>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.5rem', marginBottom: '0.875rem' }}>
+                    {[['instagram', 'Instagram'], ['tiktok', 'TikTok'], ['youtube', 'YouTube']].map(([key, lbl]) => (
+                      <div key={key}>
+                        <label style={labelStyle}>{lbl}</label>
+                        <input
+                          type="number"
+                          min="0"
+                          inputMode="numeric"
+                          value={metricsDraft[key]}
+                          onChange={e => setMetricsDraft(d => ({ ...d, [key]: e.target.value }))}
+                          placeholder="0"
+                          style={inputStyle}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  <p style={{ fontSize: '0.7rem', color: 'var(--sage)', margin: '0 0 0.375rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>30-day averages per post</p>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.5rem', marginBottom: '0.875rem' }}>
+                    {[['avg_views', 'Views'], ['avg_likes', 'Likes'], ['avg_comments', 'Comments']].map(([key, lbl]) => (
+                      <div key={key}>
+                        <label style={labelStyle}>{lbl}</label>
+                        <input
+                          type="number"
+                          min="0"
+                          inputMode="numeric"
+                          value={metricsDraft[key]}
+                          onChange={e => setMetricsDraft(d => ({ ...d, [key]: e.target.value }))}
+                          placeholder="0"
+                          style={inputStyle}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.875rem' }}>
+                    <p style={{ fontSize: '0.78rem', color: 'var(--slate)', margin: 0 }}>Engagement Rate</p>
+                    <p style={{ fontFamily: 'var(--font-display)', fontSize: '0.95rem', fontWeight: 700, color: calcER ? '#4A9B7F' : 'var(--sage)', margin: 0 }}>
+                      {calcER ? `${calcER}%` : '—'}
+                    </p>
+                  </div>
+                  <button
+                    onClick={saveMetrics}
+                    disabled={metricsSaving}
+                    style={{ width: '100%', padding: '0.6rem', borderRadius: '999px', border: 'none', cursor: metricsSaving ? 'default' : 'pointer', background: metricsSaved ? '#4A9B7F' : 'var(--slate)', color: '#fff', fontSize: '0.82rem', fontWeight: 600, fontFamily: 'var(--font-body)', transition: 'background 300ms' }}
+                  >
+                    {metricsSaving ? 'Saving…' : metricsSaved ? 'Saved' : 'Save Metrics'}
+                  </button>
+                </div>
+              );
+            })()}
+
             {/* Referral collab bonus pending notice */}
             {dp.referral_bonus_pending && !dp.first_collab_completed && (
               <div style={{ padding: '0.75rem 1.5rem', borderBottom: '1px solid rgba(60,87,89,0.08)', background: 'rgba(139,92,246,0.06)', display: 'flex', alignItems: 'center', gap: '0.625rem' }}>

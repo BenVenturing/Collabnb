@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import CreatorAvatar from './CreatorAvatar';
 
 // Reusable grain texture (matches .bg-grain in index.css)
 const GRAIN_BG = "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence baseFrequency='0.9'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>\")";
@@ -170,21 +171,10 @@ export default function ProfilePopupCard({ person, onClose, onMessage, onViewLis
         {/* ── Avatar (straddles header + body) ─────────────────────────────── */}
         <div style={{ display: 'flex', justifyContent: 'center', marginTop: -52 }}>
           <div style={{ position: 'relative' }}>
-            <div style={{
-              width: 100, height: 100, borderRadius: '50%',
-              border: '4px solid rgba(255,255,255,0.98)',
-              boxShadow: '0 4px 22px rgba(25,37,36,0.15)',
-              overflow: 'hidden', background: 'var(--mint)', flexShrink: 0,
-            }}>
-              {person.avatar
-                ? <img src={person.avatar} alt={person.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                : (
-                  <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #D1EBDB, #959D90)' }}>
-                    <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 34, color: 'var(--slate)' }}>{person.name?.[0]}</span>
-                  </div>
-                )
-              }
-            </div>
+            <CreatorAvatar
+              src={person.avatar} name={person.name} size={100}
+              style={{ border: '4px solid rgba(255,255,255,0.98)', boxShadow: '0 4px 22px rgba(25,37,36,0.15)' }}
+            />
 
             {/* Past collab green check */}
             {person.past_collab && (

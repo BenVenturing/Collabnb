@@ -428,3 +428,61 @@ export const deleteProfile = mutation({
     return { deleted: true };
   },
 });
+
+export const updateMetrics = mutation({
+  args: {
+    profileId: v.string(),
+    instagram: v.optional(v.number()),
+    tiktok: v.optional(v.number()),
+    youtube: v.optional(v.number()),
+    avg_views: v.optional(v.number()),
+    avg_likes: v.optional(v.number()),
+    avg_comments: v.optional(v.number()),
+  },
+  handler: async (ctx, { profileId, instagram, tiktok, youtube, avg_views, avg_likes, avg_comments }) => {
+    const profile = await ctx.db.get(profileId as any);
+    if (!profile) return;
+    const totalFollowers = (instagram ?? 0) + (tiktok ?? 0) + (youtube ?? 0);
+    const er =
+      avg_views && avg_views > 0
+        ? parseFloat((((avg_likes ?? 0) + (avg_comments ?? 0)) / avg_views * 100).toFixed(1))
+        : undefined;
+    const patch: Record<string, any> = {
+      metrics_instagram_followers: instagram,
+      metrics_tiktok_followers: tiktok,
+      metrics_youtube_subscribers: youtube,
+      metrics_avg_views: avg_views,
+      metrics_avg_likes: avg_likes,
+      metrics_avg_comments: avg_comments,
+      metrics_updated_at: Date.now(),
+    };
+    if (totalFollowers > 0) patch.follower_count = totalFollowers;
+    if (er !== undefined) patch.engagement_rate = er;
+    await ctx.db.patch(profileId as any, patch);
+  },
+});
+
+export const checkMetricsReminders = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const now = Date.now();
+    const thirtyDays     = 30 * 24 * 60 * 60 * 1000;
+    const thirtySevenDays = 37 * 24 * 60 * 60 * 1000;
+    const profiles = await ctx.db.query("profiles").collect();
+    for (const p of profiles) {
+      if (p.role !== 'creator') continue;
+      if (!p.metrics_updated_at) continue;
+      const age = now - p.metrics_updated_at;
+      if (age < thirtyDays || age > thirtySevenDays) continue;
+      await ctx.db.insert("notifications", {
+        user_id: String(p._id),
+        type: 'metrics_reminder',
+        title: 'Time to update your metrics',
+        body: 'Your audience stats are over 30 days old. Keep them fresh so hosts can find you.',
+        link: '/#/profile',
+        read: false,
+        created_at: now,
+      });
+    }
+  },
+});

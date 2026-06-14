@@ -27,4 +27,12 @@ crons.monthly(
   { isStatsPost: true }
 );
 
+// Weekly on Monday at 9am UTC — remind creators whose metrics are 30–37 days stale.
+crons.weekly(
+  "metrics reminder notifications",
+  { dayOfWeek: "monday", hourUTC: 9, minuteUTC: 0 },
+  internal.profiles.checkMetricsReminders,
+  {}
+);
+
 export default crons;

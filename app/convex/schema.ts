@@ -37,6 +37,13 @@ export default defineSchema({
     clerk_registered: v.optional(v.boolean()),
     is_lifetime: v.optional(v.boolean()),
     lifetime_tier: v.optional(v.string()),
+    metrics_instagram_followers: v.optional(v.number()),
+    metrics_tiktok_followers: v.optional(v.number()),
+    metrics_youtube_subscribers: v.optional(v.number()),
+    metrics_avg_views: v.optional(v.number()),
+    metrics_avg_likes: v.optional(v.number()),
+    metrics_avg_comments: v.optional(v.number()),
+    metrics_updated_at: v.optional(v.number()),
   }).index("by_email", ["email"]).index("by_stripe_customer", ["stripe_customer_id"]),
 
   listings: defineTable({
@@ -125,6 +132,7 @@ export default defineSchema({
   }).index("by_collab", ["collab_id"]),
 
   contracts: defineTable({
+    owner_id: v.optional(v.string()),
     creator_name: v.string(),
     host_name: v.string(),
     property_name: v.optional(v.string()),
@@ -144,7 +152,7 @@ export default defineSchema({
     payment_amount: v.optional(v.number()),
     stripe_session_id: v.optional(v.string()),
     sent_at: v.optional(v.number()),
-  }),
+  }).index("by_owner", ["owner_id"]),
 
   collections: defineTable({
     name: v.string(),

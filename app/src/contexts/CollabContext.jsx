@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useCallback, useMemo } from 'react';
-import { useMutation } from 'convex/react';
+import { useMutation, useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
+import { useAuth } from './AuthContext';
 import { SAMPLE_COLLABORATIONS, SAMPLE_THREADS, MOCK_CREATOR, STAGES } from '../lib/mockData';
 import { formatDate } from '../lib/dateUtils';
 
@@ -63,6 +64,38 @@ export function CollabProvider({ children }) {
     }
     return migrated;
   });
+
+  // Owner ID for Convex contract ownership
+  const { profile } = useAuth();
+  const ownerId = profile?._id ? String(profile._id) : null;
+
+  // Query Convex for this user's contracts (real-time source of truth when authenticated)
+  const convexContractsRaw = useQuery(
+    api.contracts.getByOwner,
+    ownerId ? { ownerId } : 'skip'
+  );
+  const convexContracts = useMemo(() => {
+    if (!convexContractsRaw?.length) return null;
+    return convexContractsRaw.map((c) => ({
+      id: String(c._id),
+      created_at: new Date(c._creationTime).toISOString(),
+      creator_name: c.creator_name,
+      host_name: c.host_name,
+      property_name: c.property_name,
+      location: c.location,
+      dates: c.dates,
+      deliverables: c.deliverables,
+      currency: c.currency,
+      payment: c.payment,
+      usage_rights: c.usage_rights,
+      status: c.status,
+      creator_signed: c.creator_signed,
+      host_signed: c.host_signed,
+      summary_note: c.summary_note,
+      paid: c.paid,
+      sent_at: c.sent_at,
+    }));
+  }, [convexContractsRaw]);
 
   // Convex mutations (will be no-op if Clerk/Convex not connected)
   const saveContractCvx = useMutation(api.contracts.save);
@@ -206,8 +239,9 @@ export function CollabProvider({ children }) {
       return updated;
     });
 
-    // Sync to Convex
+    // Sync to Convex (fire-and-forget)
     saveContractCvx({
+      ownerId: ownerId || undefined,
       creatorName: contractData.creator_name || '',
       hostName: contractData.host_name || '',
       propertyName: contractData.property_name,
@@ -236,19 +270,19 @@ export function CollabProvider({ children }) {
     updateContractCvx({
       id,
       updates: {
-        creatorName: updates.creator_name,
-        hostName: updates.host_name,
-        propertyName: updates.property_name,
+        creator_name: updates.creator_name,
+        host_name: updates.host_name,
+        property_name: updates.property_name,
         location: updates.location,
         dates: updates.dates,
         deliverables: updates.deliverables,
         currency: updates.currency,
         payment: updates.payment,
-        usageRights: updates.usage_rights,
+        usage_rights: updates.usage_rights,
         status: updates.status,
-        creatorSigned: updates.creator_signed,
-        hostSigned: updates.host_signed,
-        summaryNote: updates.summary_note,
+        creator_signed: updates.creator_signed,
+        host_signed: updates.host_signed,
+        summary_note: updates.summary_note,
       },
     }).catch(() => {});
   }, [updateContractCvx]);
@@ -460,6 +494,20 @@ export function CollabProvider({ children }) {
     });
   }, []);
 
+  // TODO: Replace manual entry with Instagram Graph API / TikTok Research API when approved. Target: post-launch v2.
+  const submitContentMetrics = useCallback((id, { post_url, views, likes, comments, saves }) => {
+    const er = views > 0 ? parseFloat((((likes + comments) / views) * 100).toFixed(2)) : 0;
+    setCollabs((prev) => {
+      const updated = prev.map((c) =>
+        c.id === id
+          ? { ...c, content_metrics: { post_url, views, likes, comments, saves }, content_er: er }
+          : c
+      );
+      saveCollabsToStorage(updated);
+      return updated;
+    });
+  }, []);
+
   const hasApplied = useCallback((listingId) =>
     collabs.some((c) => c.listing_id === listingId),
   [collabs]);
@@ -485,8 +533,11 @@ export function CollabProvider({ children }) {
     setThreads((prev) => prev.map((t) => t.id === threadId ? { ...t, tag: newTag } : t));
   }, []);
 
+  // When authenticated, Convex is the source of truth; fall back to localStorage
+  const effectiveContracts = convexContracts ?? contracts;
+
   return (
-    <CollabContext.Provider value={{ collabs, threads, contracts, applyCount, savedIds, collections, activeCollectionId, toggleSave, isSaved, createCollection, setActiveCollection, moveToCollection, renameCollection, deleteCollection, applyToListing, hasApplied, saveContract, updateContract, markContractSent, getContracts, sendContractMessage, getCollabById, advanceStage, updateStageData, toggleCloseCollab, createThread, archiveThread, deleteThread, updateThreadTag }}>
+    <CollabContext.Provider value={{ collabs, threads, contracts: effectiveContracts, ownerId, applyCount, savedIds, collections, activeCollectionId, toggleSave, isSaved, createCollection, setActiveCollection, moveToCollection, renameCollection, deleteCollection, applyToListing, hasApplied, saveContract, updateContract, markContractSent, getContracts, sendContractMessage, getCollabById, advanceStage, updateStageData, toggleCloseCollab, submitContentMetrics, createThread, archiveThread, deleteThread, updateThreadTag }}>
       {children}
     </CollabContext.Provider>
   );

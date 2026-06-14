@@ -50,22 +50,65 @@ export default function ContractBuilder() {
   const [showList, setShowList] = useState(false);
   const [selectedHost, setSelectedHost] = useState(null);
 
-  const [form, setForm] = useState({
-    creator: prefill?.creator || profile?.full_name || '',
-    host: prefill?.host || '',
-    property_name: prefill?.property_name || '',
-    location: prefill?.location || '',
-    dates: prefill?.dates || '',
-    deliverables: prefill?.deliverables || '',
-    currency: 'USD',
-    paymentAmount: '',
-    isFreeStay: false,
-    usageRights: '',
+  const FORM_DRAFT_KEY = 'collabnb_contract_form_draft';
+
+  const [form, setForm] = useState(() => {
+    // On first mount restore any in-progress draft (unless navigated with prefill)
+    if (!prefill) {
+      try {
+        const raw = localStorage.getItem(FORM_DRAFT_KEY);
+        if (raw) {
+          const d = JSON.parse(raw);
+          if (d.form) return d.form;
+        }
+      } catch {}
+    }
+    return {
+      creator: prefill?.creator || profile?.full_name || '',
+      host: prefill?.host || '',
+      property_name: prefill?.property_name || '',
+      location: prefill?.location || '',
+      dates: prefill?.dates || '',
+      deliverables: prefill?.deliverables || '',
+      currency: 'USD',
+      paymentAmount: '',
+      isFreeStay: false,
+      usageRights: '',
+    };
   });
 
-  const [status, setStatus] = useState('draft');
-  const [creatorSig, setCreatorSig] = useState('');
-  const [hostSig, setHostSig] = useState('');
+  const [status, setStatus] = useState(() => {
+    if (!prefill) {
+      try {
+        const raw = localStorage.getItem(FORM_DRAFT_KEY);
+        if (raw) return JSON.parse(raw).status || 'draft';
+      } catch {}
+    }
+    return 'draft';
+  });
+  const [creatorSig, setCreatorSig] = useState(() => {
+    if (!prefill) {
+      try {
+        const raw = localStorage.getItem(FORM_DRAFT_KEY);
+        if (raw) return JSON.parse(raw).creatorSig || '';
+      } catch {}
+    }
+    return '';
+  });
+  const [hostSig, setHostSig] = useState(() => {
+    if (!prefill) {
+      try {
+        const raw = localStorage.getItem(FORM_DRAFT_KEY);
+        if (raw) return JSON.parse(raw).hostSig || '';
+      } catch {}
+    }
+    return '';
+  });
+
+  // ── Auto-save state ──
+  const [saveStatus, setSaveStatus] = useState('idle'); // 'idle' | 'saving' | 'saved'
+  const autoSaveTimer = useRef(null);
+  const savedStatusTimer = useRef(null);
 
   // ── Send modal state ──
   const [showSendModal, setShowSendModal] = useState(false);
@@ -115,10 +158,56 @@ export default function ContractBuilder() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.creator, form.host, form.property_name, form.location, form.dates, form.deliverables, form.paymentAmount, form.isFreeStay, form.currency, form.usageRights]);
 
-  // Load contracts from context on mount
+  // Load contracts from context on mount; restore editingId from draft
   useEffect(() => {
     setContractList(contracts || []);
   }, [contracts]);
+
+  useEffect(() => {
+    if (prefill) return;
+    try {
+      const raw = localStorage.getItem(FORM_DRAFT_KEY);
+      if (raw) {
+        const d = JSON.parse(raw);
+        if (d.editingId) setEditingId(d.editingId);
+      }
+    } catch {}
+  }, []); // eslint-disable-line
+
+  // Persist form draft to localStorage on every change
+  useEffect(() => {
+    try {
+      localStorage.setItem(FORM_DRAFT_KEY, JSON.stringify({ form, status, creatorSig, hostSig, editingId }));
+    } catch {}
+  }, [form, status, creatorSig, hostSig, editingId]);
+
+  // Debounced auto-save when editing an existing contract
+  useEffect(() => {
+    if (!editingId) return;
+    setSaveStatus('saving');
+    clearTimeout(autoSaveTimer.current);
+    autoSaveTimer.current = setTimeout(() => {
+      updateContract(editingId, {
+        creator_name: form.creator,
+        host_name: form.host,
+        property_name: form.property_name,
+        location: form.location,
+        dates: form.dates,
+        deliverables: form.deliverables,
+        currency: form.isFreeStay ? FREE_STAY_VALUE : form.currency,
+        payment: form.isFreeStay ? 'Free Stay' : (form.currency && form.paymentAmount ? `${form.currency} ${form.paymentAmount}` : ''),
+        usage_rights: USAGE_RIGHTS.find((u) => u.value === form.usageRights)?.label || form.usageRights,
+        summary_note: summaryNote,
+        status,
+        creator_signed: !!creatorSig,
+        host_signed: !!hostSig,
+      });
+      setSaveStatus('saved');
+      clearTimeout(savedStatusTimer.current);
+      savedStatusTimer.current = setTimeout(() => setSaveStatus('idle'), 2500);
+    }, 1000);
+    return () => clearTimeout(autoSaveTimer.current);
+  }, [form, status, creatorSig, hostSig, summaryNote]); // eslint-disable-line
 
   const updateField = (field, value) => {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -144,6 +233,7 @@ export default function ContractBuilder() {
     setEditingId(null);
     setSendSuccess(false);
     setIsSent(false);
+    try { localStorage.removeItem(FORM_DRAFT_KEY); } catch {}
   };
 
   const loadContract = (c) => {
@@ -316,6 +406,7 @@ export default function ContractBuilder() {
     markContractSent(id);
     setIsSent(true);
     setSendSuccess(true);
+    try { localStorage.removeItem(FORM_DRAFT_KEY); } catch {}
     setTimeout(() => {
       setShowSendModal(false);
       setSendSuccess(false);
@@ -389,9 +480,20 @@ export default function ContractBuilder() {
             {/* ── FORM SIDE (1/3) ── */}
             <div className="w-full lg:w-1/3">
               <div className="glass-card p-6">
-                <h2 className="font-display font-bold text-ink text-lg mb-5">
-                  {editingId ? 'Edit Contract' : 'Build Contract'}
-                </h2>
+                <div className="flex items-center justify-between mb-5">
+                  <h2 className="font-display font-bold text-ink text-lg">
+                    {editingId ? 'Edit Contract' : 'Build Contract'}
+                  </h2>
+                  {saveStatus !== 'idle' && (
+                    <span style={{
+                      fontSize: '0.7rem', fontWeight: 600,
+                      color: saveStatus === 'saved' ? '#4A9B7F' : 'var(--sage)',
+                      transition: 'color 200ms',
+                    }}>
+                      {saveStatus === 'saving' ? 'Saving…' : 'Saved ✓'}
+                    </span>
+                  )}
+                </div>
 
                 {fieldEntries.map(({ key, label }) => (
                   <div key={key} className="mb-3">

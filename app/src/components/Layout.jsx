@@ -133,7 +133,7 @@ export default function Layout({ children }) {
       {/* ── Page content (padded below the fixed nav + any top bars) ────────── */}
       <main
         id="main"
-        className="relative z-10"
+        className="relative"
         style={{
           paddingTop: location.pathname === '/profile'
             ? '0'

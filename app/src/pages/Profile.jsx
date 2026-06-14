@@ -312,7 +312,7 @@ function BannerCropEditor({ file, onApply, onCancel }) {
   const imgLeft = (PW - dw) / 2 + offset.x, imgTop = (PH - dh) / 2 + offset.y;
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(25,37,36,0.88)', backdropFilter: 'blur(8px)', padding: '1.5rem' }}>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 10300, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(25,37,36,0.88)', backdropFilter: 'blur(8px)', padding: '1.5rem' }}>
       <div style={{ background: 'white', borderRadius: '1.25rem', padding: '1.5rem', maxWidth: PW + 48, width: '100%', boxShadow: '0 24px 64px rgba(0,0,0,0.4)' }}>
         <h3 style={{ margin: '0 0 0.25rem', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.1rem', color: 'var(--ink)' }}>Position Banner Image</h3>
         <p style={{ fontSize: '0.78rem', color: 'var(--sage)', margin: '0 0 1rem' }}>Drag to reposition · scroll or slider to zoom</p>
@@ -525,6 +525,12 @@ export default function Profile() {
   const userId = profile?._id || profile?.id || 'mock-user-001';
   const serverPitchCount = useQuery(api.pitches.getCount, { userId });
   const referralStats = useQuery(api.referrals.getMyCode, userId && userId !== 'mock-user-001' ? { profileId: userId } : 'skip');
+  const hostListings = useQuery(
+    api.listings.getByHost,
+    userId && userId !== 'mock-user-001' ? { host_id: String(userId) } : 'skip'
+  );
+  const hasListing = (hostListings?.length ?? 0) > 0;
+  const isHostVerified = (profile?.is_verified === true || profile?.is_founder === true) && hasListing;
   // Always show demo collabs — real collaborations aren't shown on the profile
   const hasCollabs = true;
   const allProfiles = useQuery(api.profiles.getAll);
@@ -809,7 +815,11 @@ export default function Profile() {
     { icon: <BellIcon />,        label: 'Notifications',   sublabel: 'Manage email & push preferences',               onClick: () => { setShowSettings(false); setShowNotifications(true); } },
     { icon: <LockIcon />,        label: 'Privacy Policy',  sublabel: 'Review how your data is used',                  onClick: () => { setShowSettings(false); setShowPrivacy(true); } },
     { icon: <SealCheck />,       label: 'Verification',    sublabel: 'Submit a re-verification request',              onClick: () => { setShowSettings(false); setShowVerification(true); } },
-    ...(!isAdmin ? [{ icon: <SwitchIcon />, label: profile?.role === 'host' ? 'Sign up as Creator' : 'Sign up as Host', sublabel: profile?.role === 'host' ? 'Browse and apply to listings as a creator' : 'Create listings and collaborate with creators', onClick: () => { setShowSettings(false); setShowSwitchConfirm(true); } }] : []),
+    ...(!isAdmin ? [
+      isHostVerified
+        ? { icon: <SwitchIcon />, label: 'Switch to Host View', sublabel: 'Go to your host dashboard and listings', onClick: () => { setShowSettings(false); navigate('/host'); } }
+        : { icon: <SwitchIcon />, label: profile?.role === 'host' ? 'Sign up as Creator' : 'Sign up as Host', sublabel: profile?.role === 'host' ? 'Browse and apply to listings as a creator' : 'Create listings and collaborate with creators', onClick: () => { setShowSettings(false); setShowSwitchConfirm(true); } }
+    ] : []),
   ];
 
   return (
@@ -1138,7 +1148,7 @@ export default function Profile() {
       {/* ── Edit Profile sheet ────────────────────────────────────────────── */}
       {editMode && (
         <div
-          style={{ position: 'fixed', inset: 0, zIndex: 70, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', background: 'rgba(25,37,36,0.4)', backdropFilter: 'blur(6px)' }}
+          style={{ position: 'fixed', inset: 0, zIndex: 10000, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', background: 'rgba(25,37,36,0.4)', backdropFilter: 'blur(6px)' }}
           onClick={() => { if (hasUnsavedChanges()) setExitConfirmDraft(editDraft); else setEditDraft(null); }}
         >
           <div
@@ -1244,7 +1254,7 @@ export default function Profile() {
       {/* ── Settings gear sheet ───────────────────────────────────────────── */}
       {showSettings && (
         <div
-          style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', background: 'rgba(25,37,36,0.5)', backdropFilter: 'blur(6px)' }}
+          style={{ position: 'fixed', inset: 0, zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', background: 'rgba(25,37,36,0.5)', backdropFilter: 'blur(6px)' }}
           onClick={() => setShowSettings(false)}
         >
           <div
@@ -1575,7 +1585,7 @@ export default function Profile() {
       {/* ── Sign up as Host / Creator sheet ──────────────────────────────── */}
       {showSwitchConfirm && (
         <div
-          style={{ position: 'fixed', inset: 0, zIndex: 70, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', padding: '1rem', background: 'rgba(25,37,36,0.4)', backdropFilter: 'blur(6px)' }}
+          style={{ position: 'fixed', inset: 0, zIndex: 10000, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', padding: '1rem', background: 'rgba(25,37,36,0.4)', backdropFilter: 'blur(6px)' }}
           onClick={() => setShowSwitchConfirm(false)}
         >
           <div className="glass" style={{ width: '100%', maxWidth: '420px', borderRadius: '1.5rem', padding: '2rem' }} onClick={(e) => e.stopPropagation()}>
@@ -1639,7 +1649,7 @@ export default function Profile() {
       {/* ── Contracts modal ───────────────────────────────────────────────── */}
       {showContracts && (
         <div
-          style={{ position: 'fixed', inset: 0, zIndex: 70, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', padding: '1rem', background: 'rgba(25,37,36,0.4)', backdropFilter: 'blur(6px)' }}
+          style={{ position: 'fixed', inset: 0, zIndex: 10000, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', padding: '1rem', background: 'rgba(25,37,36,0.4)', backdropFilter: 'blur(6px)' }}
           onClick={() => setShowContracts(false)}
         >
           <div
@@ -1692,7 +1702,7 @@ export default function Profile() {
       {/* ── All Collabs modal ────────────────────────────────────────────── */}
       {showAllCollabs && (
         <div
-          style={{ position: 'fixed', inset: 0, zIndex: 70, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', padding: '1rem', background: 'rgba(25,37,36,0.5)', backdropFilter: 'blur(6px)' }}
+          style={{ position: 'fixed', inset: 0, zIndex: 10000, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', padding: '1rem', background: 'rgba(25,37,36,0.5)', backdropFilter: 'blur(6px)' }}
           onClick={() => setShowAllCollabs(false)}
         >
           <div
@@ -1751,7 +1761,7 @@ export default function Profile() {
       {/* ── Notifications modal ──────────────────────────────────────────── */}
       {showNotifications && (
         <div
-          style={{ position: 'fixed', inset: 0, zIndex: 70, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', padding: '1rem', background: 'rgba(25,37,36,0.5)', backdropFilter: 'blur(6px)' }}
+          style={{ position: 'fixed', inset: 0, zIndex: 10000, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', padding: '1rem', background: 'rgba(25,37,36,0.5)', backdropFilter: 'blur(6px)' }}
           onClick={() => setShowNotifications(false)}
         >
           <div
@@ -1819,7 +1829,7 @@ export default function Profile() {
       {/* ── Privacy Policy modal ─────────────────────────────────────────── */}
       {showPrivacy && (
         <div
-          style={{ position: 'fixed', inset: 0, zIndex: 70, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', background: 'rgba(25,37,36,0.5)', backdropFilter: 'blur(6px)' }}
+          style={{ position: 'fixed', inset: 0, zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', background: 'rgba(25,37,36,0.5)', backdropFilter: 'blur(6px)' }}
           onClick={() => setShowPrivacy(false)}
         >
           <div
@@ -1850,7 +1860,7 @@ export default function Profile() {
       {/* ── Verification modal ───────────────────────────────────────────── */}
       {showVerification && (
         <div
-          style={{ position: 'fixed', inset: 0, zIndex: 70, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', padding: '1rem', background: 'rgba(25,37,36,0.5)', backdropFilter: 'blur(6px)' }}
+          style={{ position: 'fixed', inset: 0, zIndex: 10000, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', padding: '1rem', background: 'rgba(25,37,36,0.5)', backdropFilter: 'blur(6px)' }}
           onClick={() => setShowVerification(false)}
         >
           <div
@@ -1885,7 +1895,7 @@ export default function Profile() {
       {/* ── Location Settings modal ────────────────────────────────────── */}
       {showLocation && (
         <div
-          style={{ position: 'fixed', inset: 0, zIndex: 70, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', padding: '1rem', background: 'rgba(25,37,36,0.5)', backdropFilter: 'blur(6px)' }}
+          style={{ position: 'fixed', inset: 0, zIndex: 10000, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', padding: '1rem', background: 'rgba(25,37,36,0.5)', backdropFilter: 'blur(6px)' }}
           onClick={() => setShowLocation(false)}
         >
           <div
@@ -1989,7 +1999,7 @@ export default function Profile() {
       {/* ── Exit confirmation modal ───────────────────────────────────── */}
       {exitConfirmDraft && (
         <div
-          style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', background: 'rgba(25,37,36,0.5)', backdropFilter: 'blur(6px)' }}
+          style={{ position: 'fixed', inset: 0, zIndex: 10100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', background: 'rgba(25,37,36,0.5)', backdropFilter: 'blur(6px)' }}
           onClick={() => setExitConfirmDraft(null)}
         >
           <div
@@ -2012,7 +2022,7 @@ export default function Profile() {
       {toastMsg && (
         <div style={{
           position: 'fixed', bottom: '5rem', left: '50%', transform: 'translateX(-50%)',
-          zIndex: 110, background: 'rgba(25,37,36,0.92)', backdropFilter: 'blur(12px)',
+          zIndex: 10200, background: 'rgba(25,37,36,0.92)', backdropFilter: 'blur(12px)',
           color: '#EFECE9', padding: '0.75rem 1.5rem', borderRadius: '9999px',
           fontSize: '0.875rem', fontWeight: 600, fontFamily: 'var(--font-body)',
           boxShadow: '0 8px 24px rgba(25,37,36,0.25)',

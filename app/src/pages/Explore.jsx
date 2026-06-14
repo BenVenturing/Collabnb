@@ -176,7 +176,7 @@ function ListingCard({ listing, saved, onSave, delay, onNavigate, onHostClick })
             onMouseLeave={e => e.currentTarget.style.opacity = '1'}
           >
             <div style={{ width: 18, height: 18, borderRadius: '50%', overflow: 'hidden', flexShrink: 0, border: '1px solid rgba(25,37,36,0.07)', background: 'var(--mint)' }}>
-              <img src={SAMPLE_HOST.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.currentTarget.style.display = 'none'; }} />
+              <img src={listing.host_avatar || SAMPLE_HOST.avatar_fallback} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.currentTarget.style.display = 'none'; }} />
             </div>
             <span style={{ fontSize: '0.67rem', color: 'var(--sage)' }}>
               by <span style={{ fontWeight: 600, color: 'var(--slate)' }}>{listing.host_name || SAMPLE_HOST.name}</span>

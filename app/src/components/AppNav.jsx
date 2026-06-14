@@ -161,6 +161,11 @@ export default function AppNav() {
   const notifications = useQuery(api.notifications.getForUser, notifOpen && userId ? { userId } : 'skip') ?? [];
   const markRead = useMutation(api.notifications.markRead);
   const markAllRead = useMutation(api.notifications.markAllRead);
+  const hostListings = useQuery(
+    api.listings.getByHost,
+    userId && userId !== 'mock-user-001' ? { host_id: String(userId) } : 'skip'
+  );
+  const isHostVerified = (profile?.is_verified === true || profile?.is_founder === true) && (hostListings?.length ?? 0) > 0;
 
   // Scroll detection
   useEffect(() => {
@@ -784,6 +789,25 @@ export default function AppNav() {
                     }}>
                       {checklistAllDone ? '✓' : `${checklistProgress.completed}/${checklistProgress.total}`}
                     </span>
+                  </button>
+                )}
+                {!isAdmin && (
+                  <div className="border-t border-stone/20" />
+                )}
+                {!isAdmin && (
+                  <button
+                    onClick={() => {
+                      setProfileOpen(false);
+                      if (isHostVerified) {
+                        navigate('/host');
+                      } else {
+                        navigate('/profile?settings=true');
+                      }
+                    }}
+                    className="w-full text-left px-4 py-3 text-sm hover:bg-mint/30 transition-colors"
+                    style={{ color: 'var(--slate)', fontWeight: 500 }}
+                  >
+                    {isHostVerified ? 'Switch to Host View' : 'Sign up as Host'}
                   </button>
                 )}
                 {isAdmin && (

@@ -93,7 +93,22 @@ export function getChecklistProgress(profile) {
   const isHost = profile?.role === 'host';
   const raw = isHost ? hostSteps(profile, false, false, false, false) : creatorSteps(profile, false, false, false);
   const required = raw.filter(s => !s.optional);
-  return { completed: required.filter(s => s.done).length, total: required.length };
+  
+  let manualChecked = {};
+  const userId = profile?._id ? String(profile._id) : null;
+  if (userId) {
+    try {
+      const val = localStorage.getItem(`${KEY_PREFIX}_manual_${userId}`);
+      if (val) manualChecked = JSON.parse(val);
+    } catch {}
+  }
+
+  const completedCount = required.filter(s => {
+    const isManuallyChecked = manualChecked[s.id];
+    return isManuallyChecked !== undefined ? isManuallyChecked : s.done;
+  }).length;
+
+  return { completed: completedCount, total: required.length };
 }
 
 // Shared signal so AppNav can re-open the checklist
@@ -220,6 +235,7 @@ export default function OnboardingChecklist() {
   const [visible,            setVisible]            = useState(false);
   const [entered,            setEntered]            = useState(false);
   const [unchecked,          setUnchecked]          = useState({});
+  const [manualChecked,      setManualChecked]      = useState({});
   const [isFirstVisit,       setIsFirstVisit]       = useState(true);
   const [hasShared,          setHasShared]          = useState(false);
   const [hasExplored,        setHasExplored]        = useState(false);
@@ -251,6 +267,12 @@ export default function OnboardingChecklist() {
     setHasBrowsedCreators(localStorage.getItem(k.browsedCreators) === '1');
     // Always clear unchecked overrides on account switch
     setUnchecked({});
+    try {
+      const val = localStorage.getItem(`${KEY_PREFIX}_manual_${userId}`);
+      setManualChecked(val ? JSON.parse(val) : {});
+    } catch {
+      setManualChecked({});
+    }
     setVisible(false);
     setEntered(false);
   }, [userId]);
@@ -295,7 +317,11 @@ export default function OnboardingChecklist() {
     ? hostSteps(profile, isFirstVisit, hasShared, hasListing, hasBrowsedCreators)
     : creatorSteps(profile, isFirstVisit, hasShared, hasExplored);
 
-  const steps = rawSteps.map(s => ({ ...s, done: s.done && !unchecked[s.id] }));
+  const steps = rawSteps.map(s => {
+    const isManuallyChecked = manualChecked[s.id];
+    const done = isManuallyChecked !== undefined ? isManuallyChecked : (s.done && !unchecked[s.id]);
+    return { ...s, done };
+  });
   const requiredSteps     = steps.filter(s => !s.optional);
   const requiredCompleted = requiredSteps.filter(s => s.done).length;
   const requiredTotal     = requiredSteps.length;
@@ -522,19 +548,23 @@ export default function OnboardingChecklist() {
               >
                 {/* Check circle — clickable to toggle completed steps */}
                 <button
-                  onClick={() => {
-                    if (rawDone) {
-                      setUnchecked(prev => ({ ...prev, [step.id]: !isUnchecked }));
-                    }
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const nextChecked = !step.done;
+                    setManualChecked(prev => {
+                      const updated = { ...prev, [step.id]: nextChecked };
+                      localStorage.setItem(`${KEY_PREFIX}_manual_${userId}`, JSON.stringify(updated));
+                      return updated;
+                    });
                   }}
-                  title={rawDone ? (isUnchecked ? 'Mark as done' : 'Uncheck to revisit') : undefined}
+                  title={step.done ? 'Uncheck to revisit' : 'Mark as done'}
                   style={{
                     width: 18, height: 18, borderRadius: '50%', flexShrink: 0,
                     border: `2px solid ${step.done ? '#3C5759' : 'var(--stone, #D0D5CE)'}`,
                     background: step.done ? '#3C5759' : 'transparent',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     transition: 'background 200ms, border-color 200ms',
-                    cursor: rawDone ? 'pointer' : 'default',
+                    cursor: 'pointer',
                     padding: 0,
                   }}>
                   {step.done && (

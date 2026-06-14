@@ -118,6 +118,8 @@ export default defineSchema({
     contract_id: v.optional(v.string()),
     listing_description: v.optional(v.string()),
     creator_id: v.optional(v.string()),
+    creator_name: v.optional(v.string()),
+    is_sample: v.optional(v.boolean()),
   }).index("by_creator", ["creator_id"]),
 
   threads: defineTable({
@@ -134,6 +136,8 @@ export default defineSchema({
 
   contracts: defineTable({
     owner_id: v.optional(v.string()),
+    host_id: v.optional(v.string()),
+    creator_id: v.optional(v.string()),
     creator_name: v.string(),
     host_name: v.string(),
     property_name: v.optional(v.string()),
@@ -153,6 +157,7 @@ export default defineSchema({
     payment_amount: v.optional(v.number()),
     stripe_session_id: v.optional(v.string()),
     sent_at: v.optional(v.number()),
+    last_reminder_at: v.optional(v.number()),
   }).index("by_owner", ["owner_id"]),
 
   collections: defineTable({
@@ -234,6 +239,11 @@ export default defineSchema({
     created_at: v.number(),
     host_note: v.optional(v.string()),
     thread_key: v.optional(v.string()),
+    contract_id: v.optional(v.string()),
+    contract_history: v.optional(v.string()), // JSON: [{version, fields, modifiedBy, timestamp, note}]
+    signatures: v.optional(v.string()),       // JSON: {hostSignature, hostSignedAt, hostSignedVersion, creatorSignature, ...}
+    counter_pending: v.optional(v.string()),  // 'host' | 'creator' | null
+    contract_locked: v.optional(v.boolean()),
   })
     .index("by_listing", ["listing_id"])
     .index("by_creator", ["creator_id"])

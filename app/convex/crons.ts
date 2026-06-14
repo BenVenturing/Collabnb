@@ -35,4 +35,12 @@ crons.weekly(
   {}
 );
 
+// Daily at 9am UTC — nudge unsigned contract parties; recurs ~every 3 days via gate.
+crons.daily(
+  "contract signature reminders",
+  { hourUTC: 9, minuteUTC: 0 },
+  internal.contracts.checkContractReminders,
+  {}
+);
+
 export default crons;

@@ -30,6 +30,15 @@ export const getAll = query({
   },
 });
 
+export const getSamples = query({
+  args: {},
+  handler: async (ctx) => {
+    const listings = await ctx.db.query("listings").collect();
+    const samples = listings.filter((l: any) => l.is_sample === true);
+    return Promise.all(samples.map((l: any) => withImages(ctx, l)));
+  },
+});
+
 export const getById = query({
   args: { id: v.string() },
   handler: async (ctx, args) => {
@@ -415,5 +424,60 @@ export const seedSampleListings = mutation({
     }
 
     return { seeded: true };
+  },
+});
+
+// One-time cleanup: collapse all duplicate sample-titled listings down to a single
+// canonical international row per title, owned by Ben, marked is_sample + published.
+// Only the 6 sample titles are touched — real user listings are left alone.
+const SAMPLE_CANONICAL: Record<string, string> = {
+  "Glacier Prime Cabin": "Lake Tahoe",
+  "Tranquil Waterfront Retreat": "Bariloche",
+  "Mountain Lodge Escape": "Chiang Mai",
+  "Vineyard Wine Estate": "Stellenbosch",
+  "Lakeside Forest Treehouse": "Asheville",
+  "Desert Dome Glamping": "Paphos",
+};
+
+export const cleanupSampleListings = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const profiles = await ctx.db.query("profiles").collect();
+    const ben = profiles.find(
+      (p: any) => (p.email || "").toLowerCase() === "benventuring@gmail.com"
+    );
+    const benId = ben?._id ? String(ben._id) : undefined;
+    const benName = ben?.full_name || "Ben Venturing";
+
+    const all = await ctx.db.query("listings").collect();
+    const summary: Record<string, { kept: string; deleted: number }> = {};
+
+    for (const [title, loc] of Object.entries(SAMPLE_CANONICAL)) {
+      const rows = all.filter((l: any) => l.title === title);
+      if (rows.length === 0) continue;
+
+      const keeper =
+        rows.find((l: any) => (l.location || "").includes(loc)) ||
+        rows.find((l: any) => l.is_sample) ||
+        rows[0];
+
+      await ctx.db.patch(keeper._id, {
+        is_sample: true,
+        status: "published",
+        host_id: benId ?? keeper.host_id,
+        host_name: benName,
+      });
+
+      let deleted = 0;
+      for (const l of rows) {
+        if (l._id !== keeper._id) {
+          await ctx.db.delete(l._id);
+          deleted++;
+        }
+      }
+      summary[title] = { kept: keeper.location, deleted };
+    }
+
+    return summary;
   },
 });

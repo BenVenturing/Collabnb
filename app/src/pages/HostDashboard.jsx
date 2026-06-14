@@ -540,8 +540,6 @@ function HostListingCard({ listing, meta, delay, glowState, onToggleStatus, onDu
 export default function HostDashboard() {
   const navigate = useNavigate();
   const { profile } = useAuth();
-
-  const seedSampleListingsMutation = useMutation(api.listings.seedSampleListings);
   const deleteListingMutation = useMutation(api.listings.deleteListing);
 
   // ── Convex: fetch only this host's listings ──────────────────────────────────
@@ -637,25 +635,9 @@ export default function HostDashboard() {
     return () => clearTimeout(t);
   }, []);
 
-  // ── Auto-seed sample listings for first-time hosts ────────────────────────────
-  const seedKeyRef = useRef(null);
-  useEffect(() => {
-    if (
-      convexHostListings !== undefined &&
-      convexHostListings.length === 0 &&
-      hostId
-    ) {
-      const key = `@collabnb_sample_seeded_${hostId}`;
-      if (!localStorage.getItem(key) && seedKeyRef.current !== key) {
-        seedKeyRef.current = key;
-        localStorage.setItem(key, 'true');
-        seedSampleListingsMutation({
-          host_id: String(hostId),
-          host_name: profile?.full_name || 'Host',
-        });
-      }
-    }
-  }, [convexHostListings, hostId]);
+  // Sample listings are now a single global set (owned by Ben, shown on Explore via
+  // api.listings.getSamples). Per-host auto-seeding was removed because it created a
+  // duplicate set of 6 listings for every account that opened the dashboard.
 
   async function removeSampleListing(listing) {
     const id = listing._id || listing.id;

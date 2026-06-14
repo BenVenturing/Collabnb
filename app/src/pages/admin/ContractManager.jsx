@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useQuery } from 'convex/react';
+import { useState, useEffect } from 'react';
+import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 
 const INK   = '#192524';
@@ -41,6 +41,9 @@ export default function ContractManager() {
   const contracts = useQuery(api.contracts.getAll);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [openId, setOpenId] = useState(null);
+
+  const openContract = (contracts ?? []).find((c) => String(c._id) === String(openId)) || null;
 
   const filtered = (contracts ?? []).filter((c) => {
     if (statusFilter !== 'all' && c.status !== statusFilter) return false;
@@ -135,7 +138,7 @@ export default function ContractManager() {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid rgba(25,37,36,0.07)' }}>
-                {['Creator', 'Host', 'Property', 'Status', 'Dates', 'Payment', 'Signatures', 'Created'].map((h) => (
+                {['Creator', 'Host', 'Property', 'Status', 'Dates', 'Payment', 'Signatures', 'Created', 'Nudge'].map((h) => (
                   <th key={h} style={{ padding: '0.75rem', textAlign: 'left', fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: SAGE, whiteSpace: 'nowrap' }}>
                     {h}
                   </th>
@@ -146,7 +149,8 @@ export default function ContractManager() {
               {filtered.map((c, i) => (
                 <tr
                   key={String(c._id)}
-                  style={{ borderBottom: i < filtered.length - 1 ? '1px solid rgba(25,37,36,0.05)' : 'none' }}
+                  onClick={() => setOpenId(c._id)}
+                  style={{ borderBottom: i < filtered.length - 1 ? '1px solid rgba(25,37,36,0.05)' : 'none', cursor: 'pointer' }}
                   onMouseEnter={(e) => { e.currentTarget.style.background = BONE; }}
                   onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                 >
@@ -173,12 +177,162 @@ export default function ContractManager() {
                   <td style={{ padding: '0.75rem', color: SAGE, fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
                     {fmtDate(c._creationTime)}
                   </td>
+                  <td style={{ padding: '0.75rem', whiteSpace: 'nowrap' }} onClick={(e) => e.stopPropagation()}>
+                    <PromptButtons contract={c} size="sm" />
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       )}
+
+      {openContract && (
+        <ContractDetailModal contract={openContract} onClose={() => setOpenId(null)} />
+      )}
+    </div>
+  );
+}
+
+function PromptButtons({ contract: c, size = 'md' }) {
+  const promptParty = useMutation(api.contracts.promptParty);
+  const [busy, setBusy] = useState(null);   // 'host' | 'creator'
+  const [done, setDone] = useState(null);   // { party, ok, reason }
+
+  const send = async (party) => {
+    setBusy(party);
+    setDone(null);
+    try {
+      const res = await promptParty({ contractId: c._id, party });
+      setDone({ party, ...(res || { ok: true }) });
+    } catch {
+      setDone({ party, ok: false, reason: 'error' });
+    } finally {
+      setBusy(null);
+      setTimeout(() => setDone(null), 3500);
+    }
+  };
+
+  const pad = size === 'sm' ? '0.25rem 0.55rem' : '0.4rem 0.8rem';
+  const fs = size === 'sm' ? '0.7rem' : '0.8rem';
+
+  const btn = (party, label, disabled) => (
+    <button
+      onClick={() => send(party)}
+      disabled={disabled || busy === party}
+      title={disabled ? `${label.replace('Prompt ', '')} has already signed` : ''}
+      style={{
+        padding: pad, fontSize: fs, fontWeight: 600, borderRadius: '0.4rem',
+        border: `1px solid ${disabled ? 'rgba(25,37,36,0.08)' : 'rgba(60,87,89,0.3)'}`,
+        background: disabled ? '#F7F5F2' : '#fff',
+        color: disabled ? SAGE : SLATE,
+        cursor: disabled || busy === party ? 'default' : 'pointer',
+        fontFamily: 'inherit', whiteSpace: 'nowrap', opacity: busy === party ? 0.6 : 1,
+      }}
+    >
+      {busy === party ? 'Sending…' : label}
+    </button>
+  );
+
+  return (
+    <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'center', flexWrap: 'wrap' }}>
+      {btn('host', 'Prompt Host', !!c.host_signed)}
+      {btn('creator', 'Prompt Creator', !!c.creator_signed)}
+      {done && (
+        <span style={{ fontSize: '0.7rem', color: done.ok ? '#166534' : '#991B1B', fontWeight: 600 }}>
+          {done.ok
+            ? `Sent to ${done.party}`
+            : done.reason === 'no_account' ? 'No linked account' : 'Failed'}
+        </span>
+      )}
+    </div>
+  );
+}
+
+function Row({ label, value }) {
+  if (value === undefined || value === null || value === '') return null;
+  return (
+    <div style={{ display: 'flex', gap: '1rem', padding: '0.55rem 0', borderBottom: '1px solid rgba(25,37,36,0.05)' }}>
+      <span style={{ flex: '0 0 130px', fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: SAGE, paddingTop: '0.1rem' }}>{label}</span>
+      <span style={{ flex: 1, fontSize: '0.85rem', color: INK, lineHeight: 1.5 }}>{value}</span>
+    </div>
+  );
+}
+
+function ContractDetailModal({ contract: c, onClose }) {
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  const sigLine = (signed, at, label) => (
+    <span style={{ color: signed ? '#166534' : SAGE, fontSize: '0.85rem', fontWeight: signed ? 600 : 400 }}>
+      {signed ? '✓' : '○'} {label}{signed && at ? ` · ${at}` : ''}
+    </span>
+  );
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: '1.5rem', background: 'rgba(25,37,36,0.4)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          position: 'relative', width: '100%', maxWidth: 560, maxHeight: '88vh', overflowY: 'auto',
+          background: '#fff', borderRadius: '1.25rem', padding: '1.75rem 1.75rem 1.5rem',
+          boxShadow: '0 24px 60px rgba(25,37,36,0.25)',
+        }}
+      >
+        <button
+          onClick={onClose}
+          aria-label="Close"
+          style={{
+            position: 'absolute', top: '1rem', right: '1rem', width: 36, height: 36, borderRadius: '50%',
+            border: 'none', background: BONE, color: SLATE, cursor: 'pointer', fontSize: '1.1rem', lineHeight: 1,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}
+        >
+          ×
+        </button>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.25rem', paddingRight: '2.5rem' }}>
+          <h2 style={{ fontFamily: 'Cabinet Grotesk, sans-serif', fontSize: '1.25rem', fontWeight: 700, color: INK, margin: 0 }}>
+            {c.property_name || c.location || 'Contract'}
+          </h2>
+          <StatusBadge status={c.status} />
+        </div>
+        <p style={{ fontSize: '0.8rem', color: SAGE, margin: '0 0 1rem' }}>
+          {c.creator_name} &nbsp;↔&nbsp; {c.host_name}
+        </p>
+
+        <div style={{ marginBottom: '1.25rem' }}>
+          <PromptButtons contract={c} />
+        </div>
+
+        <Row label="Creator" value={c.creator_name} />
+        <Row label="Host" value={c.host_name} />
+        <Row label="Property" value={c.property_name} />
+        <Row label="Location" value={c.location} />
+        <Row label="Dates" value={c.dates} />
+        <Row label="Deliverables" value={c.deliverables} />
+        <Row label="Payment" value={c.paid ? `Paid${c.payment_amount ? ` · $${c.payment_amount}` : ''}` : (c.payment || '—')} />
+        <Row label="Currency" value={c.currency} />
+        <Row label="Usage Rights" value={c.usage_rights} />
+        <Row label="Summary" value={c.summary_note} />
+        <Row label="Signatures" value={
+          <span style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+            {sigLine(c.creator_signed, c.creator_signed_at, 'Creator')}
+            {sigLine(c.host_signed, c.host_signed_at, 'Host')}
+          </span>
+        } />
+        <Row label="Sent" value={c.sent_at ? fmtDate(c.sent_at) : undefined} />
+        <Row label="Created" value={fmtDate(c._creationTime)} />
+      </div>
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Trash2 } from 'lucide-react';
 import { useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { SAMPLE_LISTINGS, SAMPLE_HOST, IMG_FALLBACK } from '../lib/mockData';
@@ -13,6 +14,7 @@ import SkeletonCard from '../components/SkeletonCard';
 import { cache } from '../lib/cache';
 
 const EXPLORE_CACHE_KEY = 'explore_listings_all';
+const HIDDEN_SAMPLE_LISTINGS_KEY = '@collabnb_hidden_sample_listings_v1';
 
 const PROP_FILTERS = ['All', 'Cabin', 'Villa', 'Treehouse', 'Glamping', 'Lodge', 'Estate', 'Cottage'];
 
@@ -56,9 +58,10 @@ function normalizeConvexListing(l) {
 }
 
 // ─── Listing Card ─────────────────────────────────────────────────────────────
-function ListingCard({ listing, saved, onSave, delay, onNavigate, onHostClick }) {
+function ListingCard({ listing, saved, onSave, delay, onNavigate, onHostClick, onHide }) {
   const { profile } = useAuth();
   const [rippling, setRippling] = useState(false);
+  const isSample = listing._isSample === true;
 
   const handleSave = (e) => {
     e.stopPropagation();
@@ -83,8 +86,8 @@ function ListingCard({ listing, saved, onSave, delay, onNavigate, onHostClick })
           style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
         />
 
-        {/* SAMPLE watermark — demo listings only */}
-        {listing._isSample !== false && (
+        {/* SAMPLE LISTING watermark — demo listings only */}
+        {isSample && (
           <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden' }}>
             {[18, 50, 82].map((top, i) => (
               <div key={i} style={{
@@ -95,7 +98,7 @@ function ListingCard({ listing, saved, onSave, delay, onNavigate, onHostClick })
                 letterSpacing: '0.3em', whiteSpace: 'nowrap', userSelect: 'none',
                 textShadow: '0 1px 4px rgba(0,0,0,0.45)',
               }}>
-                SAMPLE · SAMPLE · SAMPLE
+                SAMPLE LISTING
               </div>
             ))}
           </div>
@@ -111,11 +114,32 @@ function ListingCard({ listing, saved, onSave, delay, onNavigate, onHostClick })
           </span>
         )}
 
+        {/* Trash — dismiss sample listing (top-right), only on samples */}
+        {isSample && onHide && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onHide(listing.id); }}
+            title="Hide this sample listing"
+            style={{
+              position: 'absolute', top: '0.75rem', right: '0.75rem',
+              width: '2rem', height: '2rem', borderRadius: '50%',
+              background: 'rgba(255,255,255,0.88)', backdropFilter: 'blur(8px)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              border: 'none', cursor: 'pointer',
+              transition: 'transform 200ms var(--ease-out-quart), color 150ms',
+              boxShadow: '0 2px 8px rgba(25,37,36,0.1)', color: '#959D90',
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.1)'; e.currentTarget.style.color = '#dc2626'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.color = '#959D90'; }}
+          >
+            <Trash2 size={13} />
+          </button>
+        )}
+
         {/* Save heart */}
         <button
           onClick={handleSave}
           style={{
-            position: 'absolute', top: '0.75rem', right: '0.75rem',
+            position: 'absolute', top: '0.75rem', right: isSample ? '3rem' : '0.75rem',
             width: '2rem', height: '2rem', borderRadius: '50%',
             background: 'rgba(255,255,255,0.88)', backdropFilter: 'blur(8px)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -237,7 +261,7 @@ function GhostSection() {
 }
 
 // ─── Section Row ──────────────────────────────────────────────────────────────
-function SectionRow({ title, subtitle, listings, saved, onSave, onNavigate, expanded, onToggleExpand, hidden, onHostClick }) {
+function SectionRow({ title, subtitle, listings, saved, onSave, onNavigate, expanded, onToggleExpand, hidden, onHostClick, onHide }) {
   if (!listings.length || hidden) return null;
   return (
     <div style={{ marginBottom: expanded ? '3rem' : '2.5rem' }}>
@@ -277,6 +301,7 @@ function SectionRow({ title, subtitle, listings, saved, onSave, onNavigate, expa
               delay={i * 55}
               onNavigate={() => onNavigate(l.id)}
               onHostClick={onHostClick}
+              onHide={onHide}
             />
           ))}
         </div>
@@ -291,6 +316,7 @@ function SectionRow({ title, subtitle, listings, saved, onSave, onNavigate, expa
               delay={i * 55}
               onNavigate={() => onNavigate(l.id)}
               onHostClick={onHostClick}
+              onHide={onHide}
             />
           ))}
         </div>
@@ -412,8 +438,23 @@ export default function Explore() {
     return () => { window.removeEventListener('scroll', onScroll); setCompactSearch(false); };
   }, [setCompactSearch]);
 
-  // ── Data source: Convex (active/published) with sample fallback ──────────────
-  const convexRaw = useQuery(api.listings.getAll) ?? null;
+  // ── Data source: real Convex listings + global sample listings ───────────────
+  const convexRaw  = useQuery(api.listings.getAll) ?? null;       // real (excludes is_sample)
+  const samplesRaw = useQuery(api.listings.getSamples) ?? null;   // global sample listings
+
+  // Per-device hidden sample listing ids
+  const [hiddenSampleIds, setHiddenSampleIds] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(HIDDEN_SAMPLE_LISTINGS_KEY) || '[]'); }
+    catch { return []; }
+  });
+  const hideListing = (id) => {
+    setHiddenSampleIds((prev) => {
+      if (prev.includes(id)) return prev;
+      const next = [...prev, id];
+      try { localStorage.setItem(HIDDEN_SAMPLE_LISTINGS_KEY, JSON.stringify(next)); } catch {}
+      return next;
+    });
+  };
 
   const convexActive = convexRaw
     ? convexRaw
@@ -421,14 +462,21 @@ export default function Explore() {
         .map(normalizeConvexListing)
     : null; // null = still loading
 
-  // Sample listings: respect the host's localStorage pause toggles
+  // Sample listings: respect the host's localStorage pause toggles (bundled fallback)
   const listingStatuses = (() => {
     try { return JSON.parse(localStorage.getItem('@collabnb_host_listings_local_v1') || '{}'); }
     catch { return {}; }
   })();
-  const sampleActive = SAMPLE_LISTINGS
+  const sampleFallback = SAMPLE_LISTINGS
     .filter((l) => listingStatuses[l.id]?.status !== 'paused')
     .map((l) => ({ ...l, _isSample: true }));
+
+  // Prefer real Convex sample listings; fall back to bundled samples while loading / pre-seed.
+  // Filter out any the user has dismissed on this device.
+  const sampleActive = (samplesRaw && samplesRaw.length
+    ? samplesRaw.map((l) => ({ ...normalizeConvexListing(l), _isSample: true }))
+    : sampleFallback
+  ).filter((l) => !hiddenSampleIds.includes(l.id));
 
   // Client-side cache: seed display instantly on repeat visits, update when fresh data arrives
   const cachedListings = cache.get(EXPLORE_CACHE_KEY);
@@ -438,15 +486,19 @@ export default function Explore() {
     }
   }, [convexRaw]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Real listings (live or cached)
+  const realActive = convexActive?.length
+    ? convexActive
+    : (cachedListings?.length ? cachedListings : []);
+
   // convexLoaded: true once Convex responds (even with 0 results)
   const convexLoaded = convexActive !== null;
-  // showGhost: Convex loaded but no live listings exist yet — show ghost preview
-  const showGhost = convexLoaded && convexActive.length === 0 && !cachedListings?.length;
+  // showGhost: nothing real and no samples to show
+  const showGhost = convexLoaded && realActive.length === 0 && sampleActive.length === 0;
 
-  const allListings = convexActive?.length
-    ? convexActive
-    : (cachedListings?.length ? cachedListings : sampleActive);
-  const isLoading = convexRaw === null && !cachedListings;
+  // Everyone sees the sample listings alongside any real listings
+  const allListings = [...realActive, ...sampleActive];
+  const isLoading = convexRaw === null && samplesRaw === null && !cachedListings;
 
   function toISODate(v) {
     if (!v) return '';

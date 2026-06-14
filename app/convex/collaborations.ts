@@ -143,3 +143,64 @@ export const advanceStage = mutation({
     });
   },
 });
+
+// One-time seed: create one sample collaboration per sample listing so the admin
+// Collaboration Oversight is populated with clearly-labelled demo data. Idempotent —
+// wipes existing is_sample collaborations first. Attributed to fake sample creator
+// ids so they never surface in any real creator's Collabs page.
+const SAMPLE_COLLAB_PLAN: Record<
+  string,
+  { status: string; stage: string; creator: string; dates: string; active: boolean }
+> = {
+  "Glacier Prime Cabin":         { status: "pending",   stage: "pending",         creator: "Maya Chen",   dates: "Feb 15–18, 2026", active: true },
+  "Tranquil Waterfront Retreat": { status: "active",    stage: "accepted",        creator: "Sam Rivera",  dates: "Jan 28–31, 2026", active: true },
+  "Mountain Lodge Escape":       { status: "active",    stage: "uploaded_tagged", creator: "Priya Nair",  dates: "Jan 10–13, 2026", active: true },
+  "Vineyard Wine Estate":        { status: "approved",  stage: "approved",        creator: "Lena Park",   dates: "Mar 5–9, 2026",   active: true },
+  "Lakeside Forest Treehouse":   { status: "completed", stage: "completed",       creator: "Marcus Webb", dates: "Apr 2–5, 2026",   active: false },
+  "Desert Dome Glamping":        { status: "closed",    stage: "archived",        creator: "Nina Okafor", dates: "Dec 1–3, 2025",   active: false },
+};
+
+export const seedSampleCollaborations = mutation({
+  args: {},
+  handler: async (ctx) => {
+    // Idempotency — clear existing sample collaborations
+    const existing = await ctx.db.query("collaborations").collect();
+    for (const c of existing) {
+      if ((c as any).is_sample) await ctx.db.delete(c._id);
+    }
+
+    const profiles = await ctx.db.query("profiles").collect();
+    const ben = profiles.find(
+      (p: any) => (p.email || "").toLowerCase() === "benventuring@gmail.com"
+    );
+    const benName = ben?.full_name || "Ben Venturing";
+
+    const listings = await ctx.db.query("listings").collect();
+    const samples = listings.filter((l: any) => l.is_sample === true);
+
+    let created = 0;
+    for (const l of samples) {
+      const plan = SAMPLE_COLLAB_PLAN[l.title];
+      if (!plan) continue;
+      await ctx.db.insert("collaborations", {
+        listing_id: String(l._id),
+        property_name: l.title,
+        location: l.location,
+        host_name: benName,
+        image: l.image,
+        status: plan.status,
+        status_text: plan.status,
+        dates: plan.dates,
+        deliverables: l.deliverables,
+        is_active: plan.active,
+        current_stage: plan.stage,
+        creator_id: `sample-creator-${created + 1}`,
+        creator_name: plan.creator,
+        is_sample: true,
+      });
+      created++;
+    }
+
+    return { created };
+  },
+});

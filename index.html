@@ -428,15 +428,19 @@
 
 <!-- ── LOGIN MODAL ── -->
 <div id="login-modal-overlay" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="login-modal-title" aria-hidden="true">
-  <div class="modal-card login-modal-card" style="max-width:560px;">
+  <div class="modal-card login-modal-card" style="max-width:420px;">
     <button id="login-modal-close" class="modal-close" aria-label="Close login form">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
     </button>
-    <!-- Clerk sign-in component mounts here (styled via main.css #clerk-login-mount overrides) -->
-    <div id="clerk-login-mount"></div>
-    <div style="text-align:center;margin-top:1rem;font-size:0.8125rem;color:#959D90;">
-      Don't have an account? <a href="join.html" style="color:#192524;font-weight:600;">Join the waitlist</a>
+
+    <div style="text-align:center;">
+      <div class="login-icon" id="login-modal-icon" style="margin:0 auto 1.25rem;">🔑</div>
+      <h2 id="login-modal-title" class="login-title">Welcome back</h2>
+      <p class="login-desc">Sign in to your account to view your profile and manage collabs.</p>
     </div>
+
+    <!-- Clerk sign-in component mounts here -->
+    <div id="clerk-login-mount"></div>
   </div>
 </div>
 

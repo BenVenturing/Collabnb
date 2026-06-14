@@ -1220,125 +1220,15 @@ h3 { font-weight: 700; }
 
 /* Login modal card */
 .login-modal-card {
-  padding: 2rem 1.75rem 1.5rem;
-  max-width: 560px !important;
+  padding: 2.5rem 2rem;
   max-height: calc(92dvh - 2rem);
   overflow-y: auto;
-  overflow-x: visible;
+  overflow-x: hidden;
 }
-@media (max-width: 600px) {
+@media (max-width: 480px) {
   .login-modal-card {
-    padding: 1.5rem 1rem 1rem !important;
-    max-width: calc(100vw - 2rem) !important;
+    padding: 1.5rem 1rem !important;
   }
-}
-
-/* ── Clerk sign-in component overrides (login modal, all pages) ───────────── */
-#clerk-login-mount [class*="logoBox"],
-#clerk-login-mount [class*="logoImage"],
-#clerk-login-mount [class*="headerTitle"],
-#clerk-login-mount [class*="headerSubtitle"],
-#clerk-login-mount [class*="cl-header"],
-#clerk-login-mount [class*="cl-logo"] { display: none !important; }
-
-#clerk-login-mount [class*="cardBox"],
-#clerk-login-mount [class*="cl-card"] {
-  box-shadow: none !important;
-  border: none !important;
-  background: transparent !important;
-  padding: 0 !important;
-  margin: 0 !important;
-}
-
-#clerk-login-mount,
-#clerk-login-mount [class*="rootBox"] {
-  width: 100% !important;
-  max-width: 100% !important;
-  overflow: visible !important;
-}
-
-#clerk-login-mount [class*="footer"],
-#clerk-login-mount [class*="Footer"] {
-  background: transparent !important;
-  background-color: transparent !important;
-  box-shadow: none !important;
-}
-
-#clerk-login-mount [class*="socialButtonsBlockButton"] {
-  border: 1.5px solid #D0D5CE !important;
-  border-radius: 12px !important;
-  font-family: var(--font-body) !important;
-  font-size: 0.9375rem !important;
-  min-height: 48px !important;
-}
-#clerk-login-mount [class*="socialButtonsBlockButton"]:hover {
-  border-color: #3C5759 !important;
-  background: rgba(60,87,89,0.04) !important;
-}
-
-#clerk-login-mount [class*="formButtonPrimary"] {
-  background: #192524 !important;
-  border-radius: 12px !important;
-  font-family: var(--font-body) !important;
-  font-size: 0.9375rem !important;
-  font-weight: 600 !important;
-  padding: 0.75rem 1rem !important;
-  min-height: 48px !important;
-  color: #EFECE9 !important;
-  border: none !important;
-}
-#clerk-login-mount [class*="formButtonPrimary"]:hover { background: #2d4a3e !important; }
-
-#clerk-login-mount [class*="formFieldInput"] {
-  border-radius: 12px !important;
-  border: 1.5px solid #D0D5CE !important;
-  font-family: var(--font-body) !important;
-  font-size: 0.9375rem !important;
-  padding: 0.75rem 1rem !important;
-  min-height: 48px !important;
-  background: #f9f9f7 !important;
-  color: #192524 !important;
-  width: 100% !important;
-  box-sizing: border-box !important;
-}
-#clerk-login-mount [class*="formFieldInput"]:focus {
-  border-color: #3C5759 !important;
-  box-shadow: 0 0 0 2px rgba(60,87,89,0.12) !important;
-  outline: none !important;
-}
-
-#clerk-login-mount [class*="formFieldLabel"] {
-  color: #3C5759 !important;
-  font-size: 0.8125rem !important;
-  font-weight: 600 !important;
-  font-family: var(--font-body) !important;
-}
-
-#clerk-login-mount [class*="dividerLine"] { background: #D0D5CE !important; }
-#clerk-login-mount [class*="dividerText"] {
-  color: #959D90 !important;
-  font-size: 0.8125rem !important;
-  font-family: var(--font-body) !important;
-}
-
-#clerk-login-mount [class*="footerActionText"] { color: #959D90 !important; font-size: 0.8125rem !important; }
-#clerk-login-mount [class*="footerActionLink"] { color: #192524 !important; font-size: 0.8125rem !important; font-weight: 600 !important; }
-#clerk-login-mount [class*="footerPagesLink"]  { color: #959D90 !important; font-size: 0.72rem !important; }
-
-#clerk-login-mount [class*="alertText"],
-#clerk-login-mount [class*="formFieldErrorText"] {
-  color: #dc2626 !important;
-  font-size: 0.75rem !important;
-  font-family: var(--font-body) !important;
-}
-
-#clerk-login-mount [class*="formFieldPasswordToggleButton"] { color: #3C5759 !important; }
-#clerk-login-mount [class*="identityPreviewText"] { color: #192524 !important; font-size: 0.875rem !important; }
-#clerk-login-mount [class*="identityPreviewEditButton"] { color: #3C5759 !important; }
-#clerk-login-mount [class*="formFieldAction"] {
-  color: #3C5759 !important;
-  font-size: 0.75rem !important;
-  font-family: var(--font-body) !important;
 }
 
 .modal-close {

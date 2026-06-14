@@ -837,7 +837,7 @@ function openLoginModal() {
       closeLoginModal();
       const email = clerk.user.primaryEmailAddress?.emailAddress || '';
       const isAdmin = ADMIN_EMAIL && email && email.toLowerCase() === ADMIN_EMAIL.toLowerCase();
-      window.location.href = isAdmin ? '/admin' : '/explore';
+      window.location.href = isAdmin ? '/admin' : '/profile';
       return;
     }
     if (!mountEl) return;
@@ -854,12 +854,13 @@ function openLoginModal() {
         closeLoginModal();
         const signedInEmail = user.primaryEmailAddress?.emailAddress || '';
         const toAdmin = ADMIN_EMAIL && signedInEmail && signedInEmail.toLowerCase() === ADMIN_EMAIL.toLowerCase();
-        window.location.href = toAdmin ? '/admin' : '/explore';
+        window.location.href = toAdmin ? '/admin' : '/profile';
       }
     });
     try {
       clerk.mountSignIn(mountEl, {
         signUpUrl: `${window.location.origin}/join.html`,
+        afterSignInUrl: `${window.location.origin}/profile`,
         appearance: {
           variables: {
             colorPrimary: '#3C5759',

@@ -162,15 +162,6 @@ const CREATORS = [
       { id: 'tc9a', startDate: '2026-06-10', endDate: '2026-06-20', country: 'USA', city: 'San Francisco', note: 'West Coast luxury tour' },
     ],
   },
-  {
-    id: 'c10', name: 'Marcus Webb', username: 'marcus.captured', tier: 'UGC Pro',
-    avatar: 'https://i.pravatar.cc/80?img=52', followers: 44800, engagement: 9.1, collab_count: 29,
-    location: 'Denver, CO', lat: 39.7392, lng: -104.9903,
-    platforms: ['Instagram', 'YouTube'], niches: ['Photography', 'Mountain', 'Outdoors'],
-    isFounder: true, isSample: true, avg_reach_30d: 15600, er_30d: 7.5, past_collab: false,
-    bio: 'Travel photographer turning stays into cinematic content. 4K video, editorial stills.',
-    portfolioUrl: null, travelCalendar: [],
-  },
 ];
 
 const TIER_COLORS = {
@@ -1066,7 +1057,7 @@ function SwipeView({ creators }) {
 }
 
 // ─── Creator card (grid view) ─────────────────────────────────────────────────
-function CreatorCard({ creator, delay, onExpand, onMessage, visitingBadge }) {
+function CreatorCard({ creator, delay, onExpand, onMessage, onHide, visitingBadge }) {
   const navigate = useNavigate();
   const [hovered, setHovered] = useState(false);
   const t = TIER_COLORS[creator.tier] || TIER_COLORS['UGC Beginner'];
@@ -1092,16 +1083,25 @@ function CreatorCard({ creator, delay, onExpand, onMessage, visitingBadge }) {
           cursor: 'pointer',
         }}
       >
-        {creator.isSample && (
-          <span style={{
-            position: 'absolute', top: 12, left: 12,
-            padding: '2px 8px', borderRadius: 9999,
-            fontSize: 9, fontWeight: 700,
-            background: 'rgba(149,157,144,0.15)', color: '#959D90',
-            letterSpacing: '0.02em', pointerEvents: 'none',
-          }}>
-            Sample Creator
-          </span>
+        {/* Trash dismiss button — top-right, sample creators only */}
+        {creator.isSample && onHide && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onHide(creator.id); }}
+            title="Hide this sample creator"
+            style={{
+              position: 'absolute', top: 10, right: 10,
+              width: 26, height: 26, borderRadius: '50%',
+              background: 'rgba(149,157,144,0.14)',
+              border: '1px solid rgba(149,157,144,0.22)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer', color: 'rgba(149,157,144,0.75)',
+              transition: 'background 150ms, color 150ms',
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(239,68,68,0.1)'; e.currentTarget.style.color = '#dc2626'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(149,157,144,0.14)'; e.currentTarget.style.color = 'rgba(149,157,144,0.75)'; }}
+          >
+            <Trash2 size={12} />
+          </button>
         )}
         {/* Top row */}
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: 14 }}>
@@ -1204,32 +1204,51 @@ function CreatorCard({ creator, delay, onExpand, onMessage, visitingBadge }) {
         )}
 
         {/* Actions */}
-        <div style={{ display: 'flex', gap: 8 }}>
-          {creator.portfolioUrl && (
+        <div style={{ position: 'relative' }}>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {creator.portfolioUrl && (
+              <button
+                onClick={(e) => { e.stopPropagation(); window.open(creator.portfolioUrl, '_blank'); }}
+                title="View portfolio"
+                style={{
+                  width: 38, height: 38, borderRadius: 9999, flexShrink: 0,
+                  border: '1.5px solid rgba(25,37,36,0.12)', background: 'transparent',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+                }}
+              >
+                <ExternalLink size={13} color="var(--slate)" />
+              </button>
+            )}
             <button
-              onClick={(e) => { e.stopPropagation(); window.open(creator.portfolioUrl, '_blank'); }}
-              title="View portfolio"
+              onClick={(e) => { e.stopPropagation(); onMessage(creator); }}
               style={{
-                width: 38, height: 38, borderRadius: 9999, flexShrink: 0,
-                border: '1.5px solid rgba(25,37,36,0.12)', background: 'transparent',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+                flex: 1, padding: '9px 0', borderRadius: 9999,
+                border: '1.5px solid var(--ink)', background: 'transparent',
+                fontFamily: 'var(--font-body)', fontSize: 12, fontWeight: 700, color: 'var(--ink)',
+                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
               }}
             >
-              <ExternalLink size={13} color="var(--slate)" />
+              <MessageSquare size={12} />
+              Message
             </button>
+          </div>
+          {/* Sample Creator badge overlays the action row */}
+          {creator.isSample && (
+            <div style={{
+              position: 'absolute', inset: 0,
+              borderRadius: 9999,
+              background: hovered ? 'rgba(248,247,245,0.93)' : 'rgba(245,244,241,0.9)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              pointerEvents: 'none',
+            }}>
+              <span style={{
+                fontSize: 9.5, fontWeight: 700, letterSpacing: '0.08em',
+                color: '#959D90', textTransform: 'uppercase',
+              }}>
+                Sample Creator
+              </span>
+            </div>
           )}
-          <button
-            onClick={(e) => { e.stopPropagation(); onMessage(creator); }}
-            style={{
-              flex: 1, padding: '9px 0', borderRadius: 9999,
-              border: '1.5px solid var(--ink)', background: 'transparent',
-              fontFamily: 'var(--font-body)', fontSize: 12, fontWeight: 700, color: 'var(--ink)',
-              cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-            }}
-          >
-            <MessageSquare size={12} />
-            Message
-          </button>
         </div>
       </div>
     </div>
@@ -1254,6 +1273,9 @@ export default function HostCreators() {
   const [dateStart,        setDateStart]        = useState('');
   const [dateEnd,          setDateEnd]          = useState('');
   const [expandedCreator,  setExpandedCreator]  = useState(null);
+  const [hiddenSampleIds,  setHiddenSampleIds]  = useState(() => {
+    try { return JSON.parse(localStorage.getItem(HIDDEN_SAMPLE_KEY) || '[]'); } catch { return []; }
+  });
 
   const gridRef = useRef(null);
 
@@ -1273,6 +1295,12 @@ export default function HostCreators() {
 
   function handleMessage(creator) {
     navigate(`/inbox?creatorName=${encodeURIComponent(creator.name)}&creatorAvatar=${encodeURIComponent(creator.avatar)}`);
+  }
+
+  function hideGridCreator(id) {
+    const next = [...hiddenSampleIds, id];
+    setHiddenSampleIds(next);
+    try { localStorage.setItem(HIDDEN_SAMPLE_KEY, JSON.stringify(next)); } catch {}
   }
 
   function handleSeeAllNearby() {
@@ -1316,10 +1344,10 @@ export default function HostCreators() {
   // Return cached result for this exact filter combo, or compute + cache it
   const filtered = (() => {
     const hit = cache.get(searchCacheKey);
-    if (hit) return hit;
+    if (hit) return hit.filter(c => !hiddenSampleIds.includes(c.id));
     const result = computeFiltered();
     cache.set(searchCacheKey, result, 5);
-    return result;
+    return result.filter(c => !hiddenSampleIds.includes(c.id));
   })();
 
   return (
@@ -1517,6 +1545,7 @@ export default function HostCreators() {
                     key={c.id} creator={c} delay={i * 45}
                     onExpand={setExpandedCreator}
                     onMessage={handleMessage}
+                    onHide={c.isSample ? hideGridCreator : undefined}
                     visitingBadge={!isNearHost(c) && dateStart && dateEnd ? getVisitingBadge(c, dateStart, dateEnd) : null}
                   />
                 ))}

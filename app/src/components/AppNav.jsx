@@ -825,7 +825,9 @@ export default function AppNav() {
                   <button
                     onClick={() => {
                       setProfileOpen(false);
-                      if (isHostVerified) {
+                      if (isHost) {
+                        navigate('/explore');
+                      } else if (isHostVerified) {
                         navigate('/host');
                       } else {
                         navigate('/profile?settings=true');
@@ -834,7 +836,7 @@ export default function AppNav() {
                     className="w-full text-left px-4 py-3 text-sm hover:bg-mint/30 transition-colors"
                     style={{ color: 'var(--slate)', fontWeight: 500 }}
                   >
-                    {isHostVerified ? 'Switch to Host View' : 'Sign up as Host'}
+                    {isHost ? 'Switch to Creator View' : (isHostVerified ? 'Switch to Host View' : 'Sign up as Host')}
                   </button>
                 )}
                 {isAdmin && (

@@ -330,7 +330,9 @@ export default function OnboardingChecklist() {
 
   const isNewUser = !profile?._creationTime || Date.now() - profile._creationTime < 14 * 24 * 60 * 60 * 1000;
   const notFullyComplete = requiredCompleted < requiredTotal;
-  const shouldShow = !isAdmin && !!profile?.email && !dismissed && (isNewUser || notFullyComplete);
+  // `visible` keeps the widget alive after the user manually checks the last item,
+  // so the "Got it — dismiss ✓" button can render before shouldShow would otherwise flip off.
+  const shouldShow = !isAdmin && !!profile?.email && !dismissed && (visible || isNewUser || notFullyComplete);
 
   useEffect(() => {
     if (!shouldShow || !userId) return;

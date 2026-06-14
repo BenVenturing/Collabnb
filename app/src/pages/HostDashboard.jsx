@@ -551,6 +551,14 @@ export default function HostDashboard() {
     hostId ? { host_id: hostId } : 'skip',
   );
   const convexPitches = useQuery(api.pitches.getByHost, hostId ? { hostId: String(hostId) } : 'skip');
+  const pitchThreadKeys = useMemo(
+    () => (convexPitches || []).filter((p) => p.thread_key).map((p) => p.thread_key),
+    [convexPitches],
+  );
+  const hostUnreadMessages = useQuery(
+    api.threadMessages.getHostUnreadCount,
+    pitchThreadKeys.length > 0 ? { threadKeys: pitchThreadKeys } : { threadKeys: [] },
+  ) ?? 0;
   const pitchCountsByListing = useMemo(() => {
     const map = {};
     (convexPitches || []).forEach((p) => {
@@ -733,6 +741,7 @@ export default function HostDashboard() {
   const filtered       = filter === 'all' ? hostListings : hostListings.filter((l) => l.meta.status === filter);
   const activeCount    = hostListings.filter((l) => l.meta.status === 'active').length;
   const applicantSum   = hostListings.reduce((a, l) => a + (l.meta?.applicants || 0), 0);
+  const upcomingStays  = (convexPitches || []).filter((p) => p.status === 'approved').length;
   const firstName      = profile?.full_name?.split(' ')[0] ?? 'there';
   const displayActivity = ACTIVITY.filter((a) => !dismissed.has(a.id));
 
@@ -799,8 +808,8 @@ export default function HostDashboard() {
             [
               { icon: MapPin,        label: 'Active Listings',  value: activeCount,  color: '#4A9B7F', action: triggerActiveGlow },
               { icon: Users,         label: 'New Applicants',   value: applicantSum, color: '#7B68C8', action: () => navigate('/host/proposals', { state: { filter: 'pending'  } }) },
-              { icon: Calendar,      label: 'Upcoming Stays',   value: 3,            color: '#D4A843', action: () => navigate('/host/proposals', { state: { filter: 'approved' } }) },
-              { icon: MessageSquare, label: 'Unread Messages',  value: 5,            color: '#C86868', action: () => navigate('/inbox') },
+              { icon: Calendar,      label: 'Upcoming Stays',   value: upcomingStays,      color: '#D4A843', action: () => navigate('/host/proposals', { state: { filter: 'approved' } }) },
+              { icon: MessageSquare, label: 'Unread Messages',  value: hostUnreadMessages, color: '#C86868', action: () => navigate('/inbox') },
             ].map(({ icon: Icon, label, value, color, action }, i, arr) => (
               <div
                 key={label}

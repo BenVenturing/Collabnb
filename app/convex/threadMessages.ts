@@ -13,6 +13,26 @@ export const getByThread = query({
   },
 });
 
+// Returns how many of the given thread_keys have a creator message as the last message
+// (i.e. threads the host hasn't replied to yet — a reasonable proxy for "unread")
+export const getHostUnreadCount = query({
+  args: { threadKeys: v.array(v.string()) },
+  handler: async (ctx, { threadKeys }) => {
+    if (threadKeys.length === 0) return 0;
+    const latestMessages = await Promise.all(
+      threadKeys.map((key) =>
+        ctx.db
+          .query("thread_messages")
+          .withIndex("by_thread", (q) => q.eq("thread_key", key))
+          .order("desc")
+          .take(1)
+          .then((msgs) => msgs[0] ?? null)
+      )
+    );
+    return latestMessages.filter((m) => m?.sender_role === "creator").length;
+  },
+});
+
 export const sendMessage = mutation({
   args: {
     threadKey: v.string(),

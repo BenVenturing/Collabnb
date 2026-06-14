@@ -250,7 +250,18 @@ function ClerkAuthInner({ hooks, children }) {
         console.warn('Convex profile save warning:', err);
       }
     }
-  }, [profile, updateProfileMutation]);
+
+    // Sync profile photo to Clerk so the Clerk dashboard + nav avatar stay consistent
+    if (updates.avatar_url && clerkUser) {
+      try {
+        const res = await fetch(updates.avatar_url);
+        const blob = await res.blob();
+        await clerkUser.setProfileImage({ file: new File([blob], 'avatar.jpg', { type: blob.type || 'image/jpeg' }) });
+      } catch (err) {
+        console.warn('Clerk avatar sync warning:', err);
+      }
+    }
+  }, [profile, updateProfileMutation, clerkUser]);
 
   const signOut = useCallback(async () => {
     await clerkSignOut();

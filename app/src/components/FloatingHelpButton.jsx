@@ -12,8 +12,8 @@ export default function FloatingHelpButton() {
         title="Help & FAQ"
         style={{
           position: 'fixed',
-          bottom: '5.5rem',
-          left: '1.5rem',
+          bottom: '10.5rem',
+          right: '1.5rem',
           zIndex: 200,
           width: 48,
           height: 48,

@@ -192,14 +192,14 @@ export default function Layout({ children }) {
       {/* ── Floating onboarding checklist (bottom-right, above AppNav) ────────── */}
       <OnboardingChecklist />
 
-      {/* ── Floating help button (bottom-left) ─────────────────────────────── */}
+      {/* ── Floating help button (bottom-right) ────────────────────────────── */}
       <FloatingHelpButton />
 
-      {/* ── Floating contract button (bottom-left) ──────────────────────────── */}
+      {/* ── Floating contract button (bottom-right) ─────────────────────────── */}
       {showContractBtn && (
         <button
           onClick={() => navigate('/contract')}
-          className="fixed bottom-6 left-6 z-40 flex items-center gap-2 px-4 py-3 rounded-2xl
+          className="fixed bottom-[5.5rem] right-6 z-40 flex items-center gap-2 px-4 py-3 rounded-2xl
                      bg-white/80 backdrop-blur-xl border border-white/70
                      shadow-lg hover:shadow-xl hover:bg-white/95
                      transition-all duration-200 text-ink text-sm font-semibold

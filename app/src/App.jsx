@@ -215,55 +215,99 @@ function AppRoutes() {
 // ── Blob loader — two orbs that liquid-merge and separate ────────────────────
 function BlobLoader({ size = 'md' }) {
   const sm = size === 'sm';
-  const r  = sm ? 3.5 : 5.5;
-  const w  = sm ? 30  : 44;
-  const h  = r * 2 + 2;
-  const cy = h / 2;
-  const x1 = r + 1;
-  const x2 = w - r - 1;
+  // sm: stays tiny for inline use; md: lava-lamp scale
+  const r   = sm ? 3.5 : 11;
+  const w   = sm ? 30  : 88;
+  const pad = sm ? 1   : 2;
+  const h   = r * 2 + pad * 2;
+  const cy  = h / 2;
+  const x1  = r + pad;
+  const x2  = w - r - pad;
   const travel = ((x2 - x1) / 2).toFixed(2);
-  const sd = sm ? 1.8 : 2.8;
+  const sd  = sm ? 1.8 : 5.5;
+  const dur = sm ? '2.2s' : '2.7s';
 
   return (
     <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`}
       style={{ overflow: 'visible', display: 'block', flexShrink: 0 }}
     >
       <defs>
-        <filter id="cnb-goo" x="-30%" y="-30%" width="160%" height="160%">
+        {/* Goo / metaball filter */}
+        <filter id="cnb-goo" x="-55%" y="-55%" width="210%" height="210%">
           <feGaussianBlur in="SourceGraphic" stdDeviation={sd} result="blur" />
           <feColorMatrix in="blur" type="matrix"
-            values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 22 -9"
+            values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 20 -8"
           />
         </filter>
+        {/* 3-D sphere gradient — off-centre highlight gives the lava-lamp depth */}
+        <radialGradient id="cnb-sphere" cx="37%" cy="30%" r="68%" fx="37%" fy="30%">
+          <stop offset="0%"   stopColor="#7DD4C8" />
+          <stop offset="38%"  stopColor="#4A9B7F" />
+          <stop offset="72%"  stopColor="#2E6B68" />
+          <stop offset="100%" stopColor="#152F2F" />
+        </radialGradient>
+        {/* Specular highlight — painted on top of the goo layer, no filter */}
+        <radialGradient id="cnb-spec" cx="33%" cy="25%" r="50%" fx="33%" fy="25%">
+          <stop offset="0%"   stopColor="rgba(255,255,255,0.62)" />
+          <stop offset="50%"  stopColor="rgba(255,255,255,0.10)" />
+          <stop offset="100%" stopColor="rgba(255,255,255,0)" />
+        </radialGradient>
+        {/* Soft ambient glow behind the orbs */}
+        <radialGradient id="cnb-glow" cx="50%" cy="60%" r="50%">
+          <stop offset="0%"   stopColor="rgba(74,155,127,0.28)" />
+          <stop offset="100%" stopColor="rgba(74,155,127,0)" />
+        </radialGradient>
       </defs>
+
       <style>{`
         @keyframes cnb-l {
-          0%,18%   { transform:translateX(0); }
-          47%,57%  { transform:translateX(${travel}px); }
-          86%,100% { transform:translateX(0); }
+          0%,16%   { transform:translateX(0); }
+          46%,57%  { transform:translateX(${travel}px); }
+          87%,100% { transform:translateX(0); }
         }
         @keyframes cnb-r {
-          0%,18%   { transform:translateX(0); }
-          47%,57%  { transform:translateX(-${travel}px); }
-          86%,100% { transform:translateX(0); }
+          0%,16%   { transform:translateX(0); }
+          46%,57%  { transform:translateX(-${travel}px); }
+          87%,100% { transform:translateX(0); }
         }
       `}</style>
+
+      {/* Ambient glow (md only) — subtle halo on the canvas */}
+      {!sm && (
+        <ellipse cx={w / 2} cy={cy + r * 0.6} rx={r * 2.4} ry={r * 0.9}
+          fill="url(#cnb-glow)"
+          style={{ animation: `cnb-l 2.7s ease-in-out infinite`, animationDelay: '-1.35s' }}
+        />
+      )}
+
+      {/* Goo merge layer — gradient-filled so colour survives the filter */}
       <g filter="url(#cnb-goo)">
-        <circle cx={x1} cy={cy} r={r} fill="#3C5759"
-          style={{ animation: 'cnb-l 2.2s ease-in-out infinite' }} />
-        <circle cx={x2} cy={cy} r={r} fill="#3C5759"
-          style={{ animation: 'cnb-r 2.2s ease-in-out infinite' }} />
+        <circle cx={x1} cy={cy} r={r} fill="url(#cnb-sphere)"
+          style={{ animation: `cnb-l ${dur} ease-in-out infinite` }} />
+        <circle cx={x2} cy={cy} r={r} fill="url(#cnb-sphere)"
+          style={{ animation: `cnb-r ${dur} ease-in-out infinite` }} />
       </g>
+
+      {/* Specular highlight layer — crisp, no filter */}
+      <circle cx={x1} cy={cy} r={r} fill="url(#cnb-spec)"
+        style={{ animation: `cnb-l ${dur} ease-in-out infinite` }} />
+      <circle cx={x2} cy={cy} r={r} fill="url(#cnb-spec)"
+        style={{ animation: `cnb-r ${dur} ease-in-out infinite` }} />
     </svg>
   );
 }
 
 function LoadingScreen() {
   return (
-    <div style={{ minHeight: '100dvh', background: '#F7F5F2', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1.25rem' }}>
+    <div style={{
+      minHeight: '100dvh',
+      background: 'radial-gradient(ellipse 80% 50% at 50% 0%, #D1EBDB 0%, #EFECE9 60%)',
+      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+      gap: '1.5rem',
+    }}>
       <BlobLoader size="md" />
-      <p style={{ fontFamily: 'var(--font-body, sans-serif)', color: '#959D90', fontSize: '0.78rem', letterSpacing: '0.04em', margin: 0 }}>
-        Loading…
+      <p style={{ fontFamily: 'var(--font-body, sans-serif)', color: '#7A8A85', fontSize: '0.8rem', letterSpacing: '0.06em', margin: 0, textTransform: 'uppercase' }}>
+        Loading
       </p>
     </div>
   );

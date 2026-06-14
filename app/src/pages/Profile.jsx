@@ -1124,27 +1124,6 @@ export default function Profile() {
         </section>
       </div>
 
-      {/* ── Floating gear button ──────────────────────────────────────────── */}
-      <button
-        onClick={() => setShowSettings(true)}
-        title="Settings"
-        style={{
-          position: 'fixed', bottom: '1.25rem', right: '1.25rem', zIndex: 40,
-          width: '44px', height: '44px', borderRadius: '50%',
-          background: 'rgba(255,255,255,0.88)',
-          backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
-          border: '1px solid rgba(255,255,255,0.7)',
-          boxShadow: '0 4px 16px rgba(25,37,36,0.14)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          cursor: 'pointer', color: 'var(--slate)',
-          transition: 'background 150ms, transform 200ms cubic-bezier(0.34,1.56,0.64,1)',
-        }}
-        onMouseEnter={(e) => { e.currentTarget.style.background = 'white'; e.currentTarget.style.transform = 'rotate(60deg) scale(1.08)'; }}
-        onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.88)'; e.currentTarget.style.transform = 'rotate(0deg) scale(1)'; }}
-      >
-        <GearIcon />
-      </button>
-
       {/* ── Edit Profile sheet ────────────────────────────────────────────── */}
       {editMode && (
         <div

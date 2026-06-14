@@ -117,6 +117,16 @@ export function reopenChecklist() {
   if (_reopenListener) _reopenListener();
 }
 
+// Shared signal so AppNav re-reads badge when items are checked
+let _progressListeners = [];
+export function onChecklistProgress(fn) {
+  _progressListeners.push(fn);
+  return () => { _progressListeners = _progressListeners.filter(l => l !== fn); };
+}
+function notifyProgress() {
+  _progressListeners.forEach(fn => fn());
+}
+
 // ─── Draggable collapsed pill ───────────────────────────────────────────────────
 function DraggablePill({ widgetStyle, cardStyle, toggleCollapse, allDone, requiredCompleted, requiredTotal }) {
   const [pos, setPos] = useState({ x: 0, y: 0 });
@@ -352,6 +362,21 @@ export default function OnboardingChecklist() {
     return () => clearTimeout(t);
   }, [shouldShow, userId]);
 
+  // Auto-dismiss when all required items are done
+  useEffect(() => {
+    if (!allDone || dismissed || !userId) return;
+    const k = userKeys(userId);
+    const t = setTimeout(() => {
+      setEntered(false);
+      setTimeout(() => {
+        localStorage.setItem(k.dismissed, '1');
+        setDismissed(true);
+        notifyProgress();
+      }, 300);
+    }, 1500);
+    return () => clearTimeout(t);
+  }, [allDone, dismissed, userId]);
+
   if (!visible || !shouldShow) return null;
 
   function handleClose() {
@@ -553,11 +578,10 @@ export default function OnboardingChecklist() {
                   onClick={(e) => {
                     e.stopPropagation();
                     const nextChecked = !step.done;
-                    setManualChecked(prev => {
-                      const updated = { ...prev, [step.id]: nextChecked };
-                      localStorage.setItem(`${KEY_PREFIX}_manual_${userId}`, JSON.stringify(updated));
-                      return updated;
-                    });
+                    const updated = { ...manualChecked, [step.id]: nextChecked };
+                    localStorage.setItem(`${KEY_PREFIX}_manual_${userId}`, JSON.stringify(updated));
+                    setManualChecked(updated);
+                    notifyProgress();
                   }}
                   title={step.done ? 'Uncheck to revisit' : 'Mark as done'}
                   style={{

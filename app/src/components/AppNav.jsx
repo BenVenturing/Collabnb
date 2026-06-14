@@ -4,7 +4,7 @@ import collabnbLogo from '../../../assets/collabnb-logo.png';
 import { useAuth } from '../contexts/AuthContext';
 import { useAppBar } from '../contexts/AppBarContext';
 import { useCollabs } from '../contexts/CollabContext';
-import { reopenChecklist, getChecklistProgress } from './OnboardingChecklist';
+import { reopenChecklist, getChecklistProgress, onChecklistProgress } from './OnboardingChecklist';
 import { SAMPLE_LISTINGS } from '../lib/mockData';
 import { WhereSearchContent, WhatSearchContent, WhenSearchContent, useAnimatedPlaceholder } from './SearchDropdowns';
 import { formatDate } from '../lib/dateUtils';
@@ -114,7 +114,9 @@ const BOTTOM_NAV_ITEMS = [
 export default function AppNav() {
   const { profile, signOut } = useAuth();
   const isPending = profile?.tier === 'waitlist' && !profile?.is_verified;
-  const checklistProgress = getChecklistProgress(profile);
+  const [checklistTick, setChecklistTick] = useState(0);
+  useEffect(() => onChecklistProgress(() => setChecklistTick(t => t + 1)), []);
+  const checklistProgress = getChecklistProgress(profile, checklistTick);
   const checklistAllDone = checklistProgress.completed >= checklistProgress.total;
   const { compactSearch } = useAppBar();
   const { savedIds } = useCollabs();
@@ -808,17 +810,17 @@ export default function AppNav() {
                 <NavLink to="/profile?settings=true" onClick={() => setProfileOpen(false)} className="block px-4 py-3 text-sm text-ink hover:bg-mint/30 transition-colors">
                   Settings
                 </NavLink>
-                {!isAdmin && (
+                {!isAdmin && !checklistAllDone && (
                   <button onClick={() => { setProfileOpen(false); reopenChecklist(); }} className="w-full text-left px-4 py-3 text-sm text-ink hover:bg-mint/30 transition-colors" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     <span style={{ flex: 1 }}>Setup Checklist</span>
                     <span style={{
                       fontSize: '0.65rem', fontWeight: 700,
-                      background: checklistAllDone ? 'rgba(209,235,219,0.8)' : '#3C5759',
-                      color: checklistAllDone ? '#192524' : '#fff',
+                      background: '#3C5759',
+                      color: '#fff',
                       borderRadius: '9999px', padding: '0.1rem 0.45rem',
                       lineHeight: 1.6,
                     }}>
-                      {checklistAllDone ? '✓' : `${checklistProgress.completed}/${checklistProgress.total}`}
+                      {checklistProgress.completed}/{checklistProgress.total}
                     </span>
                   </button>
                 )}

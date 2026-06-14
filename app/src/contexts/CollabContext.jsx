@@ -468,6 +468,14 @@ export function CollabProvider({ children }) {
     });
   }, []);
 
+  const removeCollab = useCallback((id) => {
+    setCollabs((prev) => {
+      const updated = prev.filter((c) => c.id !== id);
+      saveCollabsToStorage(updated);
+      return updated;
+    });
+  }, []);
+
   const toggleCloseCollab = useCallback((id, party) => {
     setCollabs((prev) => {
       const collab = prev.find((c) => c.id === id);
@@ -537,7 +545,7 @@ export function CollabProvider({ children }) {
   const effectiveContracts = convexContracts ?? contracts;
 
   return (
-    <CollabContext.Provider value={{ collabs, threads, contracts: effectiveContracts, ownerId, applyCount, savedIds, collections, activeCollectionId, toggleSave, isSaved, createCollection, setActiveCollection, moveToCollection, renameCollection, deleteCollection, applyToListing, hasApplied, saveContract, updateContract, markContractSent, getContracts, sendContractMessage, getCollabById, advanceStage, updateStageData, toggleCloseCollab, submitContentMetrics, createThread, archiveThread, deleteThread, updateThreadTag }}>
+    <CollabContext.Provider value={{ collabs, threads, contracts: effectiveContracts, ownerId, applyCount, savedIds, collections, activeCollectionId, toggleSave, isSaved, createCollection, setActiveCollection, moveToCollection, renameCollection, deleteCollection, applyToListing, hasApplied, saveContract, updateContract, markContractSent, getContracts, sendContractMessage, getCollabById, advanceStage, updateStageData, toggleCloseCollab, removeCollab, submitContentMetrics, createThread, archiveThread, deleteThread, updateThreadTag }}>
       {children}
     </CollabContext.Provider>
   );

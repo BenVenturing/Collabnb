@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { useCollabs } from '../contexts/CollabContext';
+import { useAuth } from '../contexts/AuthContext';
 import { SAMPLE_LISTINGS, SAMPLE_HOST, STAGES, DEMO_STAGE_CARDS } from '../lib/mockData';
 
 /* ── Brand stage colors ──────────────────────────────────────────────────── */
@@ -209,8 +210,9 @@ function StageProgressBar({ stages, currentStage, viewingStage, onStageClick, de
 
 /* ─── Stage panels ───────────────────────────────────────────────────────── */
 
-function PendingPanel({ collab, advanceStage }) {
+function PendingPanel({ collab, advanceStage, onRemove }) {
   const [prompted, setPrompted] = useState(false);
+  const [confirmWithdraw, setConfirmWithdraw] = useState(false);
   return (
     <div style={{ background: 'rgba(255,255,255,0.65)', borderRadius: '1rem', padding: '1.25rem', border: '1px solid rgba(255,255,255,0.8)' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
@@ -220,7 +222,7 @@ function PendingPanel({ collab, advanceStage }) {
       <p style={{ color: 'var(--slate)', fontSize: '0.85rem', margin: '0 0 1rem', lineHeight: 1.6 }}>
         This collaboration is waiting for the host to review and accept your application.
       </p>
-      <div style={{ display: 'flex', gap: '0.75rem' }}>
+      <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
         <button
           className="btn-primary"
           style={{ fontSize: '0.8rem', padding: '0.6rem 1.25rem' }}
@@ -238,6 +240,34 @@ function PendingPanel({ collab, advanceStage }) {
         >
           Advance to Accepted
         </button>
+        {onRemove && !confirmWithdraw && (
+          <button
+            className="btn-glass"
+            style={{ fontSize: '0.8rem', padding: '0.6rem 1.25rem', color: '#c0392b', borderColor: 'rgba(192,57,43,0.2)' }}
+            onClick={() => setConfirmWithdraw(true)}
+          >
+            Withdraw Proposal
+          </button>
+        )}
+        {onRemove && confirmWithdraw && (
+          <>
+            <span style={{ fontSize: '0.75rem', color: 'var(--slate)' }}>Are you sure?</span>
+            <button
+              className="btn-glass"
+              style={{ fontSize: '0.8rem', padding: '0.6rem 1rem', color: '#c0392b' }}
+              onClick={onRemove}
+            >
+              Yes, Remove
+            </button>
+            <button
+              className="btn-glass"
+              style={{ fontSize: '0.8rem', padding: '0.6rem 1rem' }}
+              onClick={() => setConfirmWithdraw(false)}
+            >
+              Cancel
+            </button>
+          </>
+        )}
       </div>
       {prompted && (
         <p style={{ fontSize: '0.72rem', color: 'var(--sage)', marginTop: '0.5rem' }}>
@@ -700,7 +730,8 @@ function ArchivedPanel({ collab }) {
 /* ─── Main CollabDetail component ─────────────────────────────────────────── */
 export default function CollabDetail({ collab, onClose }) {
   const navigate = useNavigate();
-  const { advanceStage, updateStageData, toggleCloseCollab, contracts } = useCollabs();
+  const { advanceStage, updateStageData, toggleCloseCollab, removeCollab, contracts } = useCollabs();
+  const { profile } = useAuth();
   const [driveUrl, setDriveUrl] = useState(collab.drive_url || '');
   const listing = SAMPLE_LISTINGS.find((l) => l.id === collab.listing_id);
   const host = SAMPLE_HOST;
@@ -768,7 +799,7 @@ export default function CollabDetail({ collab, onClose }) {
     const panel = STAGES.find((s) => s.key === stageKey);
     if (!panel) return null;
     const panels = {
-      pending:         <PendingPanel collab={collab} advanceStage={advanceStage} />,
+      pending:         <PendingPanel collab={collab} advanceStage={advanceStage} onRemove={() => { removeCollab(collab.id); onClose(); }} />,
       accepted:        <AcceptedPanel collab={collab} updateStageData={updateStageData} advanceStage={advanceStage} />,
       updated:         <AdjustmentsPanel collab={collab} updateStageData={updateStageData} advanceStage={advanceStage} />,
       uploaded_tagged: <UploadedPanel collab={collab} advanceStage={advanceStage} />,
@@ -983,11 +1014,20 @@ export default function CollabDetail({ collab, onClose }) {
 
             {/* Host info */}
             {host && (
-              <div style={{
-                display: 'flex', alignItems: 'center', gap: '0.75rem',
-                padding: '0.75rem', borderRadius: '0.875rem',
-                background: 'rgba(255,255,255,0.6)', border: '1px solid rgba(255,255,255,0.8)',
-              }}>
+              <div
+                role="button"
+                tabIndex={0}
+                onClick={() => navigate(`/profile/${host.username}`)}
+                onKeyDown={(e) => e.key === 'Enter' && navigate(`/profile/${host.username}`)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '0.75rem',
+                  padding: '0.75rem', borderRadius: '0.875rem',
+                  background: 'rgba(255,255,255,0.6)', border: '1px solid rgba(255,255,255,0.8)',
+                  cursor: 'pointer', transition: 'background 150ms',
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.85)'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.6)'}
+              >
                 <div style={{
                   width: '36px', height: '36px', borderRadius: '50%', overflow: 'hidden',
                   background: 'var(--mint)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -1032,9 +1072,13 @@ export default function CollabDetail({ collab, onClose }) {
                   width: '40px', height: '40px', borderRadius: '50%', overflow: 'hidden',
                   background: 'linear-gradient(135deg, #3C5759, #959D90)', margin: '0 auto 0.25rem',
                 }}>
-                  <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '0.75rem', fontWeight: 700 }}>
-                    BV
-                  </div>
+                  {profile?.avatar_url ? (
+                    <img src={profile.avatar_url} alt="Creator" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                  ) : (
+                    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '0.75rem', fontWeight: 700 }}>
+                      {profile?.full_name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || 'BV'}
+                    </div>
+                  )}
                 </div>
                 <p style={{ fontSize: '0.65rem', fontWeight: 600, color: 'var(--ink)', margin: 0 }}>Creator</p>
               </div>
@@ -1044,9 +1088,13 @@ export default function CollabDetail({ collab, onClose }) {
                   width: '40px', height: '40px', borderRadius: '50%', overflow: 'hidden',
                   background: 'linear-gradient(135deg, #959D90, #D0D5CE)', margin: '0 auto 0.25rem',
                 }}>
-                  <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '0.75rem', fontWeight: 700 }}>
-                    {collab.host_name?.charAt(0) || 'H'}
-                  </div>
+                  {(hostProfile?.avatar_url || host.avatar_fallback) ? (
+                    <img src={hostProfile?.avatar_url || host.avatar_fallback} alt="Host" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                  ) : (
+                    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '0.75rem', fontWeight: 700 }}>
+                      {collab.host_name?.charAt(0) || 'H'}
+                    </div>
+                  )}
                 </div>
                 <p style={{ fontSize: '0.65rem', fontWeight: 600, color: 'var(--ink)', margin: 0 }}>Host</p>
               </div>

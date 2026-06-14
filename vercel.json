@@ -3,6 +3,9 @@
   "installCommand": "npm install && cd app && npm install",
   "outputDirectory": "dist",
   "framework": null,
+  "redirects": [
+    { "source": "/profile.html", "destination": "/profile", "permanent": true }
+  ],
   "rewrites": [
     { "source": "/explore",        "destination": "/app/index.html" },
     { "source": "/profile",        "destination": "/app/index.html" },

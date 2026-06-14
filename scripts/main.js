@@ -552,7 +552,7 @@ function _showWizardDone(userName) {
 
   const firstName = (userName || '').split(' ')[0] || 'friend';
   const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-  const appUrl_ = isLocalhost ? 'http://localhost:5174/#/profile' : '/app/#/profile';
+  const appUrl_ = isLocalhost ? 'http://localhost:5174/profile' : '/profile';
 
   const COLLABNB_QUOTE = 'Where creators and boutique stays collab.';
 
@@ -837,7 +837,7 @@ function openLoginModal() {
       closeLoginModal();
       const email = clerk.user.primaryEmailAddress?.emailAddress || '';
       const isAdmin = ADMIN_EMAIL && email && email.toLowerCase() === ADMIN_EMAIL.toLowerCase();
-      window.location.href = isAdmin ? '/app/#/admin' : '/app/#/explore';
+      window.location.href = isAdmin ? '/admin' : '/explore';
       return;
     }
     if (!mountEl) return;
@@ -854,7 +854,7 @@ function openLoginModal() {
         closeLoginModal();
         const signedInEmail = user.primaryEmailAddress?.emailAddress || '';
         const toAdmin = ADMIN_EMAIL && signedInEmail && signedInEmail.toLowerCase() === ADMIN_EMAIL.toLowerCase();
-        window.location.href = toAdmin ? '/app/#/admin' : '/app/#/explore';
+        window.location.href = toAdmin ? '/admin' : '/explore';
       }
     });
     try {
@@ -1309,7 +1309,7 @@ async function initNavAuth() {
     const navCta = document.querySelector('.nav-pill .btn-primary');
     if (navCta) {
       navCta.textContent = label;
-      navCta.href = '/profile.html';
+      navCta.href = '/profile';
       navCta.removeAttribute('data-modal');
     }
 
@@ -1317,7 +1317,7 @@ async function initNavAuth() {
     const overlayCta = document.querySelector('.nav-overlay .btn-primary');
     if (overlayCta) {
       overlayCta.textContent = label;
-      overlayCta.href = '/profile.html';
+      overlayCta.href = '/profile';
       overlayCta.removeAttribute('data-modal');
     }
 
@@ -1329,7 +1329,7 @@ async function initNavAuth() {
       const clone = document.createElement('a');
       clone.className = btn.className.replace('btn-open-modal', '');
       clone.textContent = label;
-      clone.href = '/profile.html';
+      clone.href = '/profile';
 
       // Copy inline styles
       if (btn.getAttribute('style')) {

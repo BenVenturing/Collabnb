@@ -7,6 +7,7 @@ import ProfilePopupCard from '../components/ProfilePopupCard';
 import { formatDateRange } from '../lib/dateUtils';
 import { useAppBar } from '../contexts/AppBarContext';
 import { useCollabs } from '../contexts/CollabContext';
+import { useAuth } from '../contexts/AuthContext';
 import { WhereSearchContent, WhatSearchContent, WhenSearchContent, useAnimatedPlaceholder } from '../components/SearchDropdowns';
 import SkeletonCard from '../components/SkeletonCard';
 import { cache } from '../lib/cache';
@@ -56,6 +57,7 @@ function normalizeConvexListing(l) {
 
 // ─── Listing Card ─────────────────────────────────────────────────────────────
 function ListingCard({ listing, saved, onSave, delay, onNavigate, onHostClick }) {
+  const { profile } = useAuth();
   const [rippling, setRippling] = useState(false);
 
   const handleSave = (e) => {
@@ -176,7 +178,7 @@ function ListingCard({ listing, saved, onSave, delay, onNavigate, onHostClick })
             onMouseLeave={e => e.currentTarget.style.opacity = '1'}
           >
             <div style={{ width: 18, height: 18, borderRadius: '50%', overflow: 'hidden', flexShrink: 0, border: '1px solid rgba(25,37,36,0.07)', background: 'var(--mint)' }}>
-              <img src={listing.host_avatar || SAMPLE_HOST.avatar_fallback} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.currentTarget.style.display = 'none'; }} />
+              <img src={listing.host_avatar || profile?.avatar_url || SAMPLE_HOST.avatar_fallback} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.currentTarget.style.display = 'none'; }} />
             </div>
             <span style={{ fontSize: '0.67rem', color: 'var(--sage)' }}>
               by <span style={{ fontWeight: 600, color: 'var(--slate)' }}>{listing.host_name || SAMPLE_HOST.name}</span>
@@ -321,6 +323,7 @@ function Dropdown({ children, align = 'left', width }) {
 // ─── Main page ────────────────────────────────────────────────────────────────
 export default function Explore() {
   const navigate = useNavigate();
+  const { profile } = useAuth();
   const { compactSearch, setCompactSearch } = useAppBar();
   const [activeField, setActiveField] = useState(null); // 'where' | 'what' | 'when'
   const [whereVal,    setWhereVal]    = useState('');
@@ -333,10 +336,11 @@ export default function Explore() {
   const [popupHost, setPopupHost] = useState(null);
   const searchRef = useRef(null);
 
+  const hostAvatar = profile?.avatar_url || SAMPLE_HOST.avatar_fallback;
   const sampleHostPerson = {
     name:         SAMPLE_HOST.name,
     username:     SAMPLE_HOST.username,
-    avatar:       SAMPLE_HOST.avatar_url,
+    avatar:       hostAvatar,
     location:     'Asheville, NC',
     bio:          SAMPLE_HOST.bio,
     tier:         null,

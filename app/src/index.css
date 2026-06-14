@@ -178,27 +178,31 @@ button { font: inherit; cursor: pointer; border: none; background: none; }
 
 .nav-hamburger {
   display: none;
-  width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  border-radius: 50%;
+  border-radius: 0;
   transition: background 200ms;
   border: none;
   background: none;
   cursor: pointer;
   font: inherit;
 }
-.nav-hamburger:hover { background: rgba(25,37,36,0.05); }
-.nav-hamburger svg   { width: 20px; height: 20px; }
+.nav-hamburger:hover { background: rgba(25,37,36,0.06); }
+.nav-hamburger svg   { width: 18px; height: 18px; }
 .nav-hamburger .line {
   transition: transform 300ms var(--ease-out-quart), opacity 200ms;
   transform-origin: center;
 }
-.nav-hamburger.open .line-1 { transform: translateY(6px) rotate(45deg); }
+.nav-hamburger.open .line-1 { transform: translateY(5px) rotate(45deg); }
 .nav-hamburger.open .line-2 { opacity: 0; }
-.nav-hamburger.open .line-3 { transform: translateY(-6px) rotate(-45deg); }
+.nav-hamburger.open .line-3 { transform: translateY(-5px) rotate(-45deg); }
+
+/* Divider between hamburger and avatar — mirrors hamburger visibility */
+.nav-pill-divider { display: none; width: 1px; height: 18px; background: rgba(25,37,36,0.12); flex-shrink: 0; }
+.nav-pill.scrolled .nav-pill-divider { display: block; }
 
 /* Mobile overlay */
 .nav-overlay {
@@ -237,8 +241,9 @@ button { font: inherit; cursor: pointer; border: none; background: none; }
 
 /* Show hamburger on mobile */
 @media (max-width: 768px) {
-  .nav-hamburger { display: flex; }
-  .nav-links     { display: none; }
+  .nav-hamburger     { display: flex; }
+  .nav-pill-divider  { display: block; }
+  .nav-links         { display: none; }
 }
 
 /* ── BUTTONS (match website) ────────────────────────────────────────────────── */

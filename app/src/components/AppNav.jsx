@@ -720,47 +720,66 @@ export default function AppNav() {
             </div>
           )}
 
-          {/* Hamburger + Profile avatar — grouped so nav dropdown anchors near avatar */}
-          <div className="relative" ref={profileRef} style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+          {/* Combined hamburger + profile pill */}
+          <div className="relative" ref={profileRef}>
+            <div style={{
+              display: 'flex', alignItems: 'center',
+              borderRadius: '9999px',
+              border: '1px solid rgba(25,37,36,0.14)',
+              background: 'rgba(255,255,255,0.65)',
+              backdropFilter: 'blur(12px)',
+              WebkitBackdropFilter: 'blur(12px)',
+              overflow: 'hidden',
+              minHeight: '40px',
+            }}>
+              {/* Hamburger zone */}
+              {!navSearchOpen && (
+                <>
+                  <button
+                    className={`nav-hamburger ${menuOpen ? 'open' : ''}`}
+                    aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+                    aria-expanded={menuOpen}
+                    onClick={() => { setMenuOpen(!menuOpen); setProfileOpen(false); }}
+                    data-compact={compactSearch ? 'true' : undefined}
+                  >
+                    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                      <line className="line line-1" x1="3" y1="5" x2="17" y2="5"/>
+                      <line className="line line-2" x1="3" y1="10" x2="17" y2="10"/>
+                      <line className="line line-3" x1="3" y1="15" x2="17" y2="15"/>
+                    </svg>
+                  </button>
+                  <div className="nav-pill-divider" />
+                </>
+              )}
 
-            {/* Hamburger — left of avatar; visible on mobile always, and on desktop when scrolled */}
-            {!navSearchOpen && (
+              {/* Profile zone */}
               <button
-                className={`nav-hamburger ${menuOpen ? 'open' : ''}`}
-                aria-label={menuOpen ? 'Close menu' : 'Open menu'}
-                aria-expanded={menuOpen}
-                onClick={() => { setMenuOpen(!menuOpen); setProfileOpen(false); }}
-                data-compact={compactSearch ? 'true' : undefined}
+                onClick={() => { setProfileOpen(!profileOpen); setMenuOpen(false); }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '0.5rem',
+                  padding: '0.25rem 0.25rem 0.25rem 0.75rem',
+                  background: 'transparent', border: 'none', cursor: 'pointer',
+                  minHeight: '40px', transition: 'background 180ms',
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(25,37,36,0.04)'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
               >
-                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-                  <line className="line line-1" x1="3" y1="5" x2="17" y2="5"/>
-                  <line className="line line-2" x1="3" y1="10" x2="17" y2="10"/>
-                  <line className="line line-3" x1="3" y1="15" x2="17" y2="15"/>
-                </svg>
+                <span className="font-body text-sm font-medium text-ink hidden sm:block">
+                  {profile?.full_name ?? 'Profile'}
+                </span>
+                <div className="w-8 h-8 rounded-full bg-mint flex items-center justify-center overflow-hidden flex-shrink-0 relative" style={{ margin: '0 2px 0 0' }}>
+                  <span className="font-display font-bold text-slate text-sm">{initials}</span>
+                  {profile?.avatar_url && (
+                    <img
+                      src={profile.avatar_url}
+                      alt=""
+                      className="absolute inset-0 w-full h-full object-cover"
+                      onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                    />
+                  )}
+                </div>
               </button>
-            )}
-
-            {/* Profile avatar pill */}
-            <button
-              onClick={() => { setProfileOpen(!profileOpen); setMenuOpen(false); }}
-              className="flex items-center gap-2 pl-3 pr-1 py-1 rounded-full border border-stone/60 bg-white/60 hover:bg-white/90 transition-colors"
-              style={{ minHeight: '40px' }}
-            >
-              <span className="font-body text-sm font-medium text-ink hidden sm:block">
-                {profile?.full_name ?? 'Profile'}
-              </span>
-              <div className="w-8 h-8 rounded-full bg-mint flex items-center justify-center overflow-hidden flex-shrink-0 relative">
-                <span className="font-display font-bold text-slate text-sm">{initials}</span>
-                {profile?.avatar_url && (
-                  <img
-                    src={profile.avatar_url}
-                    alt=""
-                    className="absolute inset-0 w-full h-full object-cover"
-                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                  />
-                )}
-              </div>
-            </button>
+            </div>
 
             {/* Profile dropdown */}
             {profileOpen && (

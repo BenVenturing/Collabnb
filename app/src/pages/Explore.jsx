@@ -796,6 +796,7 @@ export default function Explore() {
               onToggleExpand={() => setExpandedSection(expandedSection === 'Trending Now' ? null : 'Trending Now')}
               hidden={expandedSection !== null && expandedSection !== 'Trending Now'}
               onHostClick={() => setPopupHost(sampleHostPerson)}
+              onHide={hideListing}
             />
 
             <SectionRow
@@ -809,6 +810,7 @@ export default function Explore() {
               onToggleExpand={() => setExpandedSection(expandedSection === 'Picked for You' ? null : 'Picked for You')}
               hidden={expandedSection !== null && expandedSection !== 'Picked for You'}
               onHostClick={() => setPopupHost(sampleHostPerson)}
+              onHide={hideListing}
             />
 
             <SectionRow
@@ -822,6 +824,7 @@ export default function Explore() {
               onToggleExpand={() => setExpandedSection(expandedSection === 'Near Asheville' ? null : 'Near Asheville')}
               hidden={expandedSection !== null && expandedSection !== 'Near Asheville'}
               onHostClick={() => setPopupHost(sampleHostPerson)}
+              onHide={hideListing}
             />
 
             <SectionRow
@@ -835,6 +838,7 @@ export default function Explore() {
               onToggleExpand={() => setExpandedSection(expandedSection === 'All Stays' ? null : 'All Stays')}
               hidden={expandedSection !== null && expandedSection !== 'All Stays'}
               onHostClick={() => setPopupHost(sampleHostPerson)}
+              onHide={hideListing}
             />
 
             {allFiltered.length === 0 && (

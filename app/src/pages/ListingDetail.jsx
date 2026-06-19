@@ -769,6 +769,10 @@ export default function ListingDetail() {
   const cachedListing = !sampleListing ? cache.get(listingCacheKey) : null;
   const listing = sampleListing || convexNormalized || cachedListing || undefined;
 
+  // Sample listings are demo content — messaging/applying is disabled on them.
+  const isSampleListing = !!sampleListing || convexListing?.is_sample === true || listing?.is_sample === true || listing?._isSample === true;
+  const SAMPLE_TOOLTIP = 'This is a sample listing — for reference only. Please delete.';
+
   const { applyToListing, hasApplied, threads, createThread, toggleSave, isSaved, collections, createCollection, moveToCollection } = useCollabs();
   const { profile } = useAuth();
   const { openModal } = useVerification();
@@ -1316,15 +1320,19 @@ export default function ListingDetail() {
                   <p style={{ fontSize: '0.85rem', color: 'var(--slate)', marginBottom: '0.35rem' }}><strong>Response rate:</strong> {SAMPLE_HOST.response_rate}%</p>
                   <p style={{ fontSize: '0.85rem', color: 'var(--slate)', marginBottom: '1.25rem' }}><strong>Responds</strong> {SAMPLE_HOST.response_time}</p>
                   <button
-                    onClick={handleMessageHost}
+                    onClick={isSampleListing ? undefined : handleMessageHost}
+                    disabled={isSampleListing}
+                    title={isSampleListing ? SAMPLE_TOOLTIP : undefined}
                     style={{
                       padding: '0.65rem 1.5rem',
                       background: 'var(--bone)', border: '1.5px solid rgba(25,37,36,0.15)',
                       borderRadius: '999px', fontFamily: 'var(--font-body)',
-                      fontSize: '0.875rem', fontWeight: 600, color: 'var(--ink)', cursor: 'pointer',
+                      fontSize: '0.875rem', fontWeight: 600, color: 'var(--ink)',
+                      cursor: isSampleListing ? 'not-allowed' : 'pointer',
+                      opacity: isSampleListing ? 0.5 : 1,
                     }}
-                    onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(25,37,36,0.07)'; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--bone)'; }}
+                    onMouseEnter={(e) => { if (!isSampleListing) e.currentTarget.style.background = 'rgba(25,37,36,0.07)'; }}
+                    onMouseLeave={(e) => { if (!isSampleListing) e.currentTarget.style.background = 'var(--bone)'; }}
                   >
                     Message host
                   </button>
@@ -1376,15 +1384,17 @@ export default function ListingDetail() {
                 </div>
 
                 <button
-                  onClick={applied ? undefined : (!isVerified ? openModal : !isSubscribed ? openSubModal : () => setShowApplyModal(true))}
-                  disabled={applied}
+                  onClick={(applied || isSampleListing) ? undefined : (!isVerified ? openModal : !isSubscribed ? openSubModal : () => setShowApplyModal(true))}
+                  disabled={applied || isSampleListing}
+                  title={isSampleListing ? SAMPLE_TOOLTIP : undefined}
                   style={{
                     width: '100%', padding: '1rem',
+                    opacity: isSampleListing ? 0.5 : 1,
                     background: applied ? 'rgba(25,37,36,0.1)' : 'var(--ink)',
                     color: applied ? 'var(--sage)' : 'var(--bone)',
                     borderRadius: '999px', fontFamily: 'var(--font-body)',
                     fontSize: '1rem', fontWeight: 700,
-                    cursor: applied ? 'default' : 'pointer',
+                    cursor: (applied || isSampleListing) ? 'default' : 'pointer',
                     border: 'none', marginBottom: '0.75rem',
                     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
                     transition: 'opacity 150ms',
@@ -1422,15 +1432,17 @@ export default function ListingDetail() {
             <p style={{ fontSize: '0.75rem', color: 'var(--sage)' }}>{listing.deliverable_count} deliverables</p>
           </div>
           <button
-            onClick={applied ? undefined : (!isVerified ? openModal : !isSubscribed ? openSubModal : () => setShowApplyModal(true))}
-            disabled={applied}
+            onClick={(applied || isSampleListing) ? undefined : (!isVerified ? openModal : !isSubscribed ? openSubModal : () => setShowApplyModal(true))}
+            disabled={applied || isSampleListing}
+            title={isSampleListing ? SAMPLE_TOOLTIP : undefined}
             style={{
               padding: '0.875rem 2rem',
+              opacity: isSampleListing ? 0.5 : 1,
               background: applied ? 'rgba(25,37,36,0.1)' : 'var(--ink)',
               color: applied ? 'var(--sage)' : 'var(--bone)',
               borderRadius: '999px', fontFamily: 'var(--font-body)',
               fontSize: '0.95rem', fontWeight: 700,
-              cursor: applied ? 'default' : 'pointer',
+              cursor: (applied || isSampleListing) ? 'default' : 'pointer',
               border: 'none', flexShrink: 0,
               display: 'flex', alignItems: 'center', gap: '0.4rem',
             }}
@@ -1471,7 +1483,7 @@ export default function ListingDetail() {
           host={SAMPLE_HOST}
           listing={listing}
           onClose={() => setShowHostModal(false)}
-          onMessage={() => { setShowHostModal(false); handleMessageHost(); }}
+          onMessage={() => { setShowHostModal(false); if (!isSampleListing) handleMessageHost(); }}
         />
       )}
 

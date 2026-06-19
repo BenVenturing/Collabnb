@@ -109,8 +109,18 @@ export default function CollabOversight() {
                     onMouseEnter={(e) => { e.currentTarget.style.background = BONE; }}
                     onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                   >
-                    <td style={{ padding: '0.75rem', fontWeight: 600, color: INK, maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <td style={{ padding: '0.75rem', fontWeight: 600, color: INK, maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {c.property_name || '—'}
+                      {c.is_sample && (
+                        <span style={{
+                          marginLeft: '0.4rem', fontSize: '0.6rem', fontWeight: 700,
+                          padding: '0.1rem 0.4rem', borderRadius: 99,
+                          background: 'rgba(149,157,144,0.18)', color: '#959D90',
+                          textTransform: 'uppercase', letterSpacing: '0.04em',
+                        }}>
+                          Sample
+                        </span>
+                      )}
                     </td>
                     <td style={{ padding: '0.75rem', color: SLATE }}>{c.host_name || '—'}</td>
                     <td style={{ padding: '0.75rem' }}>

@@ -257,29 +257,96 @@ function PostCard({ post, onOpen }) {
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
-export default function BlogManager() {
-  const allPosts    = useQuery(api.blog.getAll) || [];
-  const generatePost = useAction(api.blog.generatePost);
+const PROGRESS_STAGES = [
+  { to: 28, label: 'Researching topic…',  ms: 13000 },
+  { to: 68, label: 'Writing article…',    ms: 16000 },
+  { to: 88, label: 'Finding photos…',     ms: 3000  },
+  { to: 97, label: 'Saving draft…',       ms: 1500  },
+];
 
-  const [tab,        setTab]        = useState('drafts');
-  const [editing,    setEditing]    = useState(null);
-  const [generating, setGenerating] = useState(false);
-  const [genError,   setGenError]   = useState(null);
-  const [topic,      setTopic]      = useState('');
+export default function BlogManager() {
+  const allPosts       = useQuery(api.blog.getAll) || [];
+  const generatePost   = useAction(api.blog.generatePost);
+  const suggestTopics  = useAction(api.blog.suggestTopics);
+
+  const [tab,          setTab]          = useState('drafts');
+  const [editing,      setEditing]      = useState(null);
+  const [generating,   setGenerating]   = useState(false);
+  const [genError,     setGenError]     = useState(null);
+  const [topic,        setTopic]        = useState('');
+  const [genProgress,  setGenProgress]  = useState(0);
+  const [genStage,     setGenStage]     = useState('');
+  const [suggestions,  setSuggestions]  = useState([]);
+  const [suggIdx,      setSuggIdx]      = useState(0);
+  const [loadingSugg,  setLoadingSugg]  = useState(false);
+  const timerRef = useRef(null);
 
   const drafts    = allPosts.filter(p => p.status === 'draft');
   const published = allPosts.filter(p => p.status === 'published');
   const rejected  = allPosts.filter(p => p.status === 'rejected');
+  const tabPosts  = { drafts, published, rejected }[tab] || [];
 
-  const tabPosts = { drafts, published, rejected }[tab] || [];
+  function startProgress() {
+    let stageIdx = 0;
+    let current  = 0;
+    setGenProgress(0);
+    setGenStage(PROGRESS_STAGES[0].label);
+    clearInterval(timerRef.current);
+    timerRef.current = setInterval(() => {
+      const stage = PROGRESS_STAGES[stageIdx];
+      if (!stage) return;
+      const steps = stage.ms / 400;
+      const inc   = (stage.to - current) / steps;
+      current = Math.min(current + inc, stage.to);
+      setGenProgress(Math.round(current));
+      if (current >= stage.to - 0.5) {
+        stageIdx++;
+        if (PROGRESS_STAGES[stageIdx]) setGenStage(PROGRESS_STAGES[stageIdx].label);
+      }
+    }, 400);
+  }
+
+  function stopProgress(ok) {
+    clearInterval(timerRef.current);
+    if (ok) {
+      setGenProgress(100);
+      setGenStage('Saved to drafts ✓');
+    }
+    setTimeout(() => { setGenProgress(0); setGenStage(''); }, 1400);
+  }
+
+  async function handleShuffle() {
+    if (loadingSugg || generating) return;
+    if (suggestions.length > 0) {
+      const next = (suggIdx + 1) % suggestions.length;
+      setSuggIdx(next);
+      setTopic(suggestions[next]);
+      return;
+    }
+    setLoadingSugg(true);
+    try {
+      const topics = await suggestTopics({});
+      if (topics.length > 0) {
+        setSuggestions(topics);
+        setSuggIdx(0);
+        setTopic(topics[0]);
+      }
+    } finally {
+      setLoadingSugg(false);
+    }
+  }
 
   async function handleGenerate() {
     setGenerating(true);
     setGenError(null);
+    startProgress();
+    const hint = topic.trim() || (suggestions.length > 0 ? suggestions[suggIdx] : undefined);
     try {
-      await generatePost({ isStatsPost: false, topicHint: topic.trim() || undefined });
+      await generatePost({ isStatsPost: false, topicHint: hint || undefined });
+      stopProgress(true);
       setTab('drafts');
     } catch (e) {
+      stopProgress(false);
       setGenError(e.message || 'Generation failed. Check that NVIDIA_API_KEY and UNSPLASH_ACCESS_KEY are set in Convex.');
     } finally {
       setGenerating(false);
@@ -287,38 +354,95 @@ export default function BlogManager() {
   }
 
   return (
-    <div>
+    <div style={{ padding: '2rem 2rem 1.75rem' }}>
       {/* Header */}
       <div style={{ marginBottom: '1.5rem' }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.875rem' }}>
-          <div>
-            <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.25rem', color: 'var(--ink)', margin: 0 }}>Blog</h2>
-            <p style={{ fontSize: '0.78rem', color: 'var(--sage)', margin: '0.2rem 0 0' }}>
-              {drafts.length} draft{drafts.length !== 1 ? 's' : ''} · {published.length} published
-            </p>
-          </div>
-        </div>
-        <div style={{ display: 'flex', gap: '0.625rem', alignItems: 'center' }}>
+        <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.25rem', color: 'var(--ink)', margin: '0 0 0.2rem' }}>Blog</h2>
+        <p style={{ fontSize: '0.78rem', color: 'var(--sage)', margin: '0 0 1rem' }}>
+          {drafts.length} draft{drafts.length !== 1 ? 's' : ''} · {published.length} published
+        </p>
+
+        {/* Topic row */}
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+          {/* Shuffle button */}
+          <button
+            onClick={handleShuffle}
+            disabled={generating}
+            title={suggestions.length > 0 ? `${suggIdx + 1} / ${suggestions.length} — click to cycle` : 'Get topic ideas from NVIDIA'}
+            style={{
+              flexShrink: 0, width: 38, height: 38,
+              borderRadius: 9999, border: '1.5px solid rgba(25,37,36,0.14)',
+              background: loadingSugg ? 'rgba(25,37,36,0.06)' : '#fff',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: generating ? 'default' : 'pointer',
+              transition: 'border-color 120ms, background 120ms',
+              opacity: generating ? 0.45 : 1,
+            }}
+          >
+            {loadingSugg
+              ? <span style={{ width: 12, height: 12, border: '1.5px solid rgba(25,37,36,0.2)', borderTopColor: '#3C5759', borderRadius: '50%', animation: 'spin 0.7s linear infinite', display: 'inline-block' }} />
+              : <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#3C5759" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/>
+                  <polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/>
+                </svg>
+            }
+          </button>
+
           <input
             value={topic}
             onChange={e => setTopic(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter' && !generating) handleGenerate(); }}
-            placeholder="Topic (optional) — e.g. &quot;how UGC creators pick their collab stays&quot;"
-            style={{ flex: 1, padding: '0.6rem 0.875rem', border: '1.5px solid rgba(25,37,36,0.12)', borderRadius: 9999, fontFamily: 'var(--font-body)', fontSize: '0.82rem', color: 'var(--ink)', background: '#fafafa', outline: 'none', minWidth: 0 }}
+            placeholder="Topic — leave blank for a random pick, or ⇄ to get ideas"
+            style={{
+              flex: 1, padding: '0.65rem 1rem',
+              border: '1.5px solid rgba(25,37,36,0.12)', borderRadius: 9999,
+              fontFamily: 'var(--font-body)', fontSize: '0.82rem',
+              color: 'var(--ink)', background: '#fafafa', outline: 'none', minWidth: 0,
+            }}
           />
+
           <button
             onClick={handleGenerate}
             disabled={generating}
-            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 1.25rem', borderRadius: 9999, border: 'none', background: generating ? 'rgba(25,37,36,0.4)' : '#192524', fontFamily: 'var(--font-body)', fontSize: '0.82rem', fontWeight: 700, color: '#fff', cursor: generating ? 'default' : 'pointer', transition: 'background 150ms', whiteSpace: 'nowrap', flexShrink: 0 }}
+            style={{
+              flexShrink: 0,
+              display: 'flex', alignItems: 'center', gap: '0.45rem',
+              padding: '0.65rem 1.5rem',
+              borderRadius: 9999, border: 'none',
+              background: generating ? 'rgba(25,37,36,0.35)' : '#192524',
+              fontFamily: 'var(--font-body)', fontSize: '0.82rem', fontWeight: 700,
+              color: '#fff', cursor: generating ? 'default' : 'pointer',
+              transition: 'background 150ms', whiteSpace: 'nowrap',
+            }}
           >
-            {generating ? (
-              <>
-                <span style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.7s linear infinite', display: 'inline-block' }} />
-                Generating…
-              </>
-            ) : '✦ Generate'}
+            ✦ Generate
           </button>
         </div>
+
+        {/* Progress bar */}
+        {generating && (
+          <div style={{ marginTop: '0.875rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
+              <span style={{ fontSize: '0.72rem', color: 'var(--sage)', fontWeight: 500 }}>{genStage}</span>
+              <span style={{ fontSize: '0.72rem', color: 'var(--stone)', fontWeight: 600 }}>{genProgress}%</span>
+            </div>
+            <div style={{ height: 5, borderRadius: 9999, background: 'rgba(25,37,36,0.08)', overflow: 'hidden' }}>
+              <div style={{
+                height: '100%', borderRadius: 9999,
+                background: 'linear-gradient(90deg, #4A9B7F, #7B68C8)',
+                width: `${genProgress}%`,
+                transition: 'width 380ms ease-out',
+              }} />
+            </div>
+          </div>
+        )}
+        {!generating && genProgress === 100 && (
+          <div style={{ marginTop: '0.875rem' }}>
+            <div style={{ height: 5, borderRadius: 9999, background: 'rgba(74,155,127,0.2)', overflow: 'hidden' }}>
+              <div style={{ height: '100%', borderRadius: 9999, background: '#4A9B7F', width: '100%' }} />
+            </div>
+          </div>
+        )}
       </div>
 
       {genError && (
@@ -332,7 +456,7 @@ export default function BlogManager() {
         <div style={{ marginBottom: '1.25rem', padding: '0.875rem 1rem', borderRadius: '0.875rem', background: 'rgba(74,155,127,0.08)', border: '1px solid rgba(74,155,127,0.25)' }}>
           <p style={{ fontSize: '0.82rem', fontWeight: 600, color: '#2d7d5e', margin: '0 0 0.25rem' }}>Powered by NVIDIA + Unsplash</p>
           <p style={{ fontSize: '0.78rem', color: '#2d7d5e', margin: 0, opacity: 0.85 }}>
-            Enter a topic above and hit Generate — NVIDIA researches and writes, Unsplash adds the hero photo. Post lands in Drafts for your review.
+            Hit ⇄ to get NVIDIA topic ideas, or type your own and click Generate. Post lands in Drafts for your review.
           </p>
         </div>
       )}
@@ -340,9 +464,9 @@ export default function BlogManager() {
       {/* Tab bar */}
       <div style={{ display: 'flex', gap: '0.25rem', marginBottom: '1rem', background: 'rgba(25,37,36,0.05)', borderRadius: '0.875rem', padding: '0.25rem' }}>
         {[
-          { key: 'drafts',    label: `Drafts (${drafts.length})`    },
+          { key: 'drafts',    label: `Drafts (${drafts.length})`       },
           { key: 'published', label: `Published (${published.length})` },
-          { key: 'rejected',  label: `Rejected (${rejected.length})` },
+          { key: 'rejected',  label: `Rejected (${rejected.length})`   },
         ].map(({ key, label }) => (
           <button
             key={key}
@@ -361,7 +485,7 @@ export default function BlogManager() {
             No {tab} posts
           </p>
           <p style={{ fontSize: '0.8rem', color: 'var(--sage)', margin: 0 }}>
-            {tab === 'drafts' ? 'Hit "Generate Now" or wait for the 9am daily auto-run.' : `Posts you ${tab === 'published' ? 'approve' : 'reject'} will appear here.`}
+            {tab === 'drafts' ? 'Click Generate above to create your first post.' : `Posts you ${tab === 'published' ? 'approve' : 'reject'} will appear here.`}
           </p>
         </div>
       ) : (

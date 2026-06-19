@@ -200,3 +200,121 @@ export const updateStatus = mutation({
     }
   },
 });
+
+// ─── Contract negotiation (counter-offers + signatures) ──────────────────────
+
+function emptySignatures() {
+  return {
+    hostSignature: null, hostSignedAt: null, hostSignedVersion: null,
+    creatorSignature: null, creatorSignedAt: null, creatorSignedVersion: null,
+  };
+}
+
+function parseJSON<T>(s: string | undefined, fallback: T): T {
+  if (!s) return fallback;
+  try { return JSON.parse(s) as T; } catch { return fallback; }
+}
+
+// Host or creator proposes revised contract terms — appends a version and
+// flips the pending side. Resets signatures so both must re-sign the new terms.
+export const sendCounter = mutation({
+  args: {
+    id: v.id("pitches"),
+    fromParty: v.string(),         // 'host' | 'creator'
+    fields: v.any(),               // contract terms object
+    note: v.optional(v.string()),
+  },
+  handler: async (ctx, { id, fromParty, fields, note }) => {
+    const pitch = await ctx.db.get(id);
+    if (!pitch) return;
+
+    const history = parseJSON<any[]>(pitch.contract_history, []);
+    const version = history.length + 1;
+    history.push({ version, fields, modifiedBy: fromParty, timestamp: new Date().toISOString(), note: note || "" });
+
+    await ctx.db.patch(id, {
+      contract_history: JSON.stringify(history),
+      counter_pending: fromParty === "host" ? "creator" : "host",
+      signatures: JSON.stringify(emptySignatures()),
+      contract_locked: false,
+      status: "under_review",
+    });
+
+    // Keep any linked contract in a negotiating (unsigned) state.
+    if (pitch.contract_id) {
+      await ctx.db.patch(pitch.contract_id as any, {
+        status: "sent", creator_signed: false, host_signed: false,
+      });
+    }
+
+    const recipientId = fromParty === "host" ? pitch.creator_id : pitch.host_id;
+    if (recipientId) {
+      await ctx.runMutation(internal.notifications.create, {
+        userId: recipientId,
+        type: "contract_reminder",
+        title: fromParty === "host"
+          ? "The host proposed changes to your contract"
+          : "The creator sent a counter-proposal",
+        body: note || "Open proposals to review the updated terms and respond.",
+        link: fromParty === "host" ? "#/collabs" : "#/host/proposals",
+      });
+    }
+  },
+});
+
+// Host or creator signs the current contract version. When both sign the same
+// version the contract locks and the linked contract record is marked signed.
+export const signContract = mutation({
+  args: {
+    id: v.id("pitches"),
+    party: v.string(),             // 'host' | 'creator'
+    signerName: v.string(),
+  },
+  handler: async (ctx, { id, party, signerName }) => {
+    const pitch = await ctx.db.get(id);
+    if (!pitch) return;
+
+    const history = parseJSON<any[]>(pitch.contract_history, []);
+    const version = history.length;
+    const sigs = parseJSON(pitch.signatures, emptySignatures()) as any;
+    const now = new Date().toISOString();
+
+    if (party === "host") {
+      sigs.hostSignature = signerName; sigs.hostSignedAt = now; sigs.hostSignedVersion = version;
+    } else {
+      sigs.creatorSignature = signerName; sigs.creatorSignedAt = now; sigs.creatorSignedVersion = version;
+    }
+    const bothSigned = !!sigs.hostSignature && !!sigs.creatorSignature &&
+                       sigs.hostSignedVersion === sigs.creatorSignedVersion;
+
+    await ctx.db.patch(id, {
+      signatures: JSON.stringify(sigs),
+      contract_locked: bothSigned,
+      status: bothSigned ? "approved" : pitch.status,
+      counter_pending: bothSigned ? undefined : pitch.counter_pending,
+    });
+
+    if (pitch.contract_id) {
+      const cu: Record<string, unknown> = {};
+      if (party === "host") { cu.host_signed = true; cu.host_signed_at = now; }
+      else { cu.creator_signed = true; cu.creator_signed_at = now; }
+      if (bothSigned) cu.status = "signed";
+      await ctx.db.patch(pitch.contract_id as any, cu);
+    }
+
+    const recipientId = party === "host" ? pitch.creator_id : pitch.host_id;
+    if (recipientId) {
+      await ctx.runMutation(internal.notifications.create, {
+        userId: recipientId,
+        type: "contract_reminder",
+        title: bothSigned
+          ? "Contract fully signed 🎉"
+          : `${party === "host" ? "Host" : "Creator"} signed the contract`,
+        body: bothSigned
+          ? "Both parties have signed. Your collab is locked in."
+          : "Open to review and add your signature.",
+        link: party === "host" ? "#/collabs" : "#/host/proposals",
+      });
+    }
+  },
+});

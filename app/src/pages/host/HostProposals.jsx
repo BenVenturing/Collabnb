@@ -153,6 +153,11 @@ function emptySignatures() {
   return { hostSignature: null, hostSignedAt: null, hostSignedVersion: null, creatorSignature: null, creatorSignedAt: null, creatorSignedVersion: null };
 }
 
+function safeParse(s, fallback) {
+  if (!s) return fallback;
+  try { return JSON.parse(s); } catch { return fallback; }
+}
+
 // ─── Persistence ──────────────────────────────────────────────────────────────
 const APPS_KEY = '@collabnb_applications_v1';
 
@@ -823,10 +828,11 @@ function normalizePitch(p) {
       portfolio: p.creator_username || '',
       verified: false,
     },
-    contractHistory: [],
-    signatures: emptySignatures(),
-    locked: false,
-    counterPending: null,
+    contractHistory: safeParse(p.contract_history, []),
+    signatures: safeParse(p.signatures, emptySignatures()),
+    locked: p.contract_locked ?? false,
+    counterPending: p.counter_pending ?? null,
+    contractId: p.contract_id ?? null,
     hidden: false,
     isReal: true,
     convexId: p._id,
@@ -839,6 +845,8 @@ export default function HostProposals() {
   const hostId = profile?._id || profile?.id;
 
   const updateStatusCvx = useMutation(api.pitches.updateStatus);
+  const sendCounterCvx  = useMutation(api.pitches.sendCounter);
+  const signContractCvx = useMutation(api.pitches.signContract);
   const rawPitches = useQuery(
     api.pitches.getByHost,
     hostId ? { hostId: String(hostId) } : 'skip'
@@ -878,15 +886,25 @@ export default function HostProposals() {
     if (rawPitches === undefined) return []; // still loading
     const saved = loadApplications();
     return rawPitches.map((p) => {
-      const normalized = normalizePitch(p);
+      const normalized = normalizePitch(p);   // negotiation parsed from Convex
       const s = saved[String(p._id)] || {};
+      // Convex is the source of truth for negotiation. Fall back to legacy
+      // localStorage only when the pitch has no Convex negotiation data yet.
+      const hasConvexNegotiation =
+        normalized.contractHistory.length > 0 ||
+        normalized.locked ||
+        !!normalized.counterPending ||
+        !!normalized.signatures.hostSignature ||
+        !!normalized.signatures.creatorSignature;
+      if (hasConvexNegotiation) {
+        return { ...normalized, hidden: s.hidden ?? false };
+      }
       return {
         ...normalized,
-        status:          s.status          ?? normalized.status,
-        contractHistory: s.contractHistory ?? [],
-        signatures:      s.signatures      ?? emptySignatures(),
-        locked:          s.locked          ?? false,
-        counterPending:  s.counterPending  ?? null,
+        contractHistory: s.contractHistory ?? normalized.contractHistory,
+        signatures:      s.signatures      ?? normalized.signatures,
+        locked:          s.locked          ?? normalized.locked,
+        counterPending:  s.counterPending  ?? normalized.counterPending,
         hidden:          s.hidden          ?? false,
       };
     });
@@ -915,6 +933,12 @@ export default function HostProposals() {
 
   // ── Counter pitch ──
   function handleSendCounter(proposalId, fromParty, fields, note) {
+    const target = allProposals.find((p) => p.id === proposalId);
+    if (target?.isReal && target.convexId) {
+      sendCounterCvx({ id: target.convexId, fromParty, fields, note }).catch(() => {});
+      setCounterModal(null);
+      return;
+    }
     setProposals((prev) => {
       const next = prev.map((p) => {
         if (p.id !== proposalId) return p;
@@ -935,6 +959,12 @@ export default function HostProposals() {
 
   // ── Sign ──
   function handleSign(proposalId, party, signerName) {
+    const target = allProposals.find((p) => p.id === proposalId);
+    if (target?.isReal && target.convexId) {
+      signContractCvx({ id: target.convexId, party, signerName }).catch(() => {});
+      setSignModal(null);
+      return;
+    }
     setProposals((prev) => {
       const next = prev.map((p) => {
         if (p.id !== proposalId) return p;
@@ -1132,7 +1162,7 @@ export default function HostProposals() {
 
       {/* Counter pitch modal */}
       {counterModal && (() => {
-        const proposal = proposals.find((p) => p.id === counterModal.proposalId);
+        const proposal = allProposals.find((p) => p.id === counterModal.proposalId);
         return proposal ? (
           <CounterPitchModal proposal={proposal} fromParty={counterModal.fromParty}
             onSend={(fields, note) => handleSendCounter(counterModal.proposalId, counterModal.fromParty, fields, note)}
@@ -1142,7 +1172,7 @@ export default function HostProposals() {
 
       {/* Signature modal */}
       {signModal && (() => {
-        const proposal = proposals.find((p) => p.id === signModal.proposalId);
+        const proposal = allProposals.find((p) => p.id === signModal.proposalId);
         return proposal ? (
           <SignatureModal proposal={proposal} party={signModal.party}
             onSign={(name) => handleSign(signModal.proposalId, signModal.party, name)}

@@ -154,11 +154,13 @@ function AppRoutes() {
 
   if (!session) {
     const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    if (!isLocalhost) {
+    const path = window.location.pathname;
+    const isPublicRoute = path === '/blog' || path.startsWith('/blog/');
+    if (!isLocalhost && !isPublicRoute) {
       window.location.href = '/login.html';
       return null;
     }
-    // On localhost — fall through to app with mock session (dev mode)
+    // Public routes (the Journal/blog) and localhost dev fall through.
   }
 
   return (

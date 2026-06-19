@@ -62,7 +62,7 @@ export default function ContractManager() {
   const paidCount   = (contracts ?? []).filter(c => c.paid === true).length;
 
   return (
-    <div style={{ padding: '2rem 2.5rem', maxWidth: 960 }}>
+    <div style={{ padding: '2rem 2.5rem', maxWidth: 1100 }}>
       <h1 style={{ fontFamily: 'Cabinet Grotesk, sans-serif', fontSize: '1.5rem', fontWeight: 700, color: INK, letterSpacing: '-0.025em', margin: 0 }}>
         Contract Management
       </h1>
@@ -134,12 +134,12 @@ export default function ContractManager() {
 
       {/* ── Table ── */}
       {contracts !== undefined && filtered.length > 0 && (
-        <div style={{ background: '#fff', border: '1px solid rgba(25,37,36,0.07)', borderRadius: '0.875rem', overflow: 'hidden' }}>
+        <div style={{ background: '#fff', border: '1px solid rgba(25,37,36,0.07)', borderRadius: '0.875rem', overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid rgba(25,37,36,0.07)' }}>
                 {['Creator', 'Host', 'Property', 'Status', 'Dates', 'Payment', 'Signatures', 'Created', 'Nudge'].map((h) => (
-                  <th key={h} style={{ padding: '0.75rem', textAlign: 'left', fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: SAGE, whiteSpace: 'nowrap' }}>
+                  <th key={h} style={{ padding: '0.75rem', textAlign: 'left', fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: SAGE, whiteSpace: 'nowrap', minWidth: h === 'Nudge' ? 150 : undefined }}>
                     {h}
                   </th>
                 ))}
@@ -177,8 +177,8 @@ export default function ContractManager() {
                   <td style={{ padding: '0.75rem', color: SAGE, fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
                     {fmtDate(c._creationTime)}
                   </td>
-                  <td style={{ padding: '0.75rem', whiteSpace: 'nowrap' }} onClick={(e) => e.stopPropagation()}>
-                    <PromptButtons contract={c} size="sm" />
+                  <td style={{ padding: '0.75rem' }} onClick={(e) => e.stopPropagation()}>
+                    <PromptButtons contract={c} size="sm" direction="column" />
                   </td>
                 </tr>
               ))}
@@ -194,7 +194,7 @@ export default function ContractManager() {
   );
 }
 
-function PromptButtons({ contract: c, size = 'md' }) {
+function PromptButtons({ contract: c, size = 'md', direction = 'row' }) {
   const promptParty = useMutation(api.contracts.promptParty);
   const [busy, setBusy] = useState(null);   // 'host' | 'creator'
   const [done, setDone] = useState(null);   // { party, ok, reason }
@@ -235,11 +235,11 @@ function PromptButtons({ contract: c, size = 'md' }) {
   );
 
   return (
-    <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'center', flexWrap: 'wrap' }}>
+    <div style={{ display: 'flex', flexDirection: direction, gap: '0.35rem', alignItems: direction === 'column' ? 'flex-start' : 'center' }}>
       {btn('host', 'Prompt Host', !!c.host_signed)}
       {btn('creator', 'Prompt Creator', !!c.creator_signed)}
       {done && (
-        <span style={{ fontSize: '0.7rem', color: done.ok ? '#166534' : '#991B1B', fontWeight: 600 }}>
+        <span style={{ fontSize: '0.7rem', color: done.ok ? '#166534' : '#991B1B', fontWeight: 600, whiteSpace: 'nowrap' }}>
           {done.ok
             ? `Sent to ${done.party}`
             : done.reason === 'no_account' ? 'No linked account' : 'Failed'}

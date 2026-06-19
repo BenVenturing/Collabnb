@@ -25,13 +25,13 @@ export default function PricingCards({ isFoundingFull, creatorSpotsRemaining, ho
 
   return (
     <section
-      className="max-w-5xl mx-auto px-0 md:px-8 pb-4"
+      className="max-w-5xl mx-auto px-0 md:px-8 pb-10 md:pb-16"
       aria-label="Pricing options"
     >
       {/* Horizontal scroll on mobile, grid on desktop */}
       <div
-        className="flex md:grid md:grid-cols-3 gap-6 md:gap-0 items-center overflow-x-auto snap-x snap-mandatory px-4 md:px-0 pb-2 md:pb-0"
-        style={{ scrollSnapType: 'x mandatory', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        className="flex md:grid md:grid-cols-3 gap-6 md:gap-0 items-center overflow-x-auto md:overflow-visible snap-x md:snap-none snap-mandatory px-4 md:px-0 pb-2 md:pb-0"
+        style={{ WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
         <div className="relative z-0 min-w-[85vw] md:min-w-0 snap-center shrink-0 md:shrink">
           <LockedCard plan={LOCKED_PLANS[0]} isUnlocked={isUnlocked} onSubscribe={onSubscribe} />

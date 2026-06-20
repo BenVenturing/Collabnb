@@ -84,12 +84,12 @@ function FeaturedCard({ post }) {
             <CategoryPill cat={post.category} size="sm" />
           </div>
           <h2 style={{
-            fontFamily: 'var(--font-display)',
-            fontWeight: 800,
-            fontSize: 'clamp(1.5rem, 2.5vw, 2rem)',
+            fontFamily: 'var(--font-blog-display)',
+            fontWeight: 500,
+            fontSize: 'clamp(1.375rem, 2.5vw, 1.875rem)',
             color: 'var(--ink)',
             lineHeight: 1.2,
-            letterSpacing: '-0.025em',
+            letterSpacing: '-0.02em',
             margin: '0 0 0.875rem',
           }}>
             {post.title}
@@ -129,6 +129,7 @@ function FeaturedCard({ post }) {
             style={{
               width: '100%', height: '100%',
               objectFit: 'cover', display: 'block',
+              filter: 'grayscale(100%) contrast(1.05)',
               transition: 'transform 400ms ease',
               transform: hovered ? 'scale(1.03)' : 'scale(1)',
             }}
@@ -172,6 +173,7 @@ function PostCard({ post }) {
             alt={post.hero_image_alt || post.title}
             style={{
               width: '100%', height: '100%', objectFit: 'cover', display: 'block',
+              filter: 'grayscale(100%) contrast(1.05)',
               transition: 'transform 400ms ease',
               transform: hovered ? 'scale(1.04)' : 'scale(1)',
             }}
@@ -189,12 +191,12 @@ function PostCard({ post }) {
         </div>
 
         <h3 style={{
-          fontFamily: 'var(--font-display)',
-          fontWeight: 700,
+          fontFamily: 'var(--font-blog-display)',
+          fontWeight: 500,
           fontSize: '1.05rem',
           color: 'var(--ink)',
           lineHeight: 1.3,
-          letterSpacing: '-0.015em',
+          letterSpacing: '-0.01em',
           margin: 0,
           display: '-webkit-box',
           WebkitLineClamp: 2,
@@ -252,6 +254,120 @@ function SkeletonCard() {
 }
 
 // ─── Main page ────────────────────────────────────────────────────────────────
+// ─── Cinematic horizontal journal gallery ─────────────────────────────────────
+function JournalGallery({ posts }) {
+  const navigate = useNavigate();
+  const [hovered, setHovered] = useState(null);   // focused card index
+  const [exiting, setExiting] = useState(null);   // slug being opened
+
+  const open = (post) => {
+    if (exiting) return;
+    setExiting(post.slug);
+    // Let the zoom-forward + fade play, then hand off to the reading view
+    setTimeout(() => navigate(`/blog/${post.slug}`), 480);
+  };
+
+  return (
+    <section style={{ marginBottom: '3.5rem' }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '0.5rem', gap: '1rem' }}>
+        <h2 style={{ fontFamily: 'var(--font-blog-display)', fontWeight: 500, fontSize: 'clamp(1.4rem, 2.6vw, 2.1rem)', color: 'var(--ink)', margin: 0, letterSpacing: '-0.01em' }}>
+          Selected <span style={{ fontStyle: 'italic' }}>from the</span> Journal
+        </h2>
+        <span style={{ fontSize: '0.62rem', fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--sage)', whiteSpace: 'nowrap' }}>
+          Drag / hover to explore
+        </span>
+      </div>
+
+      <div
+        className="no-scrollbar"
+        onMouseLeave={() => setHovered(null)}
+        style={{
+          display: 'flex', gap: '1.75rem', alignItems: 'flex-start',
+          overflowX: 'auto', overflowY: 'visible',
+          padding: '2.25rem 0.5rem 2.75rem',
+          scrollSnapType: 'x proximity', scrollbarWidth: 'none',
+          perspective: 1600,
+        }}
+      >
+        {posts.map((post, i) => {
+          const isHovered = hovered === i;
+          const dim = hovered !== null && !isHovered;
+          const isExiting = exiting === post.slug;
+          const othersExiting = exiting && exiting !== post.slug;
+          return (
+            <article
+              key={post._id}
+              onMouseEnter={() => !exiting && setHovered(i)}
+              onClick={() => open(post)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => e.key === 'Enter' && open(post)}
+              style={{
+                position: 'relative', flex: '0 0 auto',
+                width: 'clamp(238px, 30vw, 330px)',
+                scrollSnapAlign: 'center',
+                cursor: 'pointer', outline: 'none',
+                transformOrigin: 'center bottom',
+                transform: isExiting
+                  ? 'translateY(-40px) scale(1.09)'
+                  : isHovered ? 'translateY(-16px) scale(1.05)'
+                  : dim ? 'scale(0.94)' : 'scale(1)',
+                opacity: othersExiting ? 0 : dim ? 0.5 : 1,
+                filter: dim ? 'saturate(0.65) brightness(0.97)' : 'none',
+                zIndex: isHovered || isExiting ? 5 : 1,
+                transition: 'transform 540ms var(--ease-out-expo), opacity 500ms ease, filter 400ms ease',
+                willChange: 'transform, opacity',
+              }}
+            >
+              <span style={{ position: 'absolute', top: -24, left: 2, fontFamily: 'var(--font-blog-body)', fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--sage)' }}>
+                {String(i + 1).padStart(3, '0')}
+              </span>
+
+              <div style={{
+                position: 'relative', borderRadius: '0.5rem', overflow: 'hidden',
+                aspectRatio: '3 / 4', background: 'var(--stone)',
+                boxShadow: (isHovered || isExiting)
+                  ? '0 34px 64px -22px rgba(25,37,36,0.42)'
+                  : '0 10px 26px -14px rgba(25,37,36,0.28)',
+                transition: 'box-shadow 540ms var(--ease-out-expo)',
+              }}>
+                {post.hero_image_url ? (
+                  <img
+                    src={post.hero_image_url}
+                    alt={post.hero_image_alt || post.title}
+                    loading="lazy"
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', transform: isHovered ? 'scale(1.06)' : 'scale(1)', transition: 'transform 760ms var(--ease-out-expo)' }}
+                  />
+                ) : (
+                  <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--sage)', fontSize: '0.75rem' }}>No image</div>
+                )}
+                <div style={{ position: 'absolute', top: '0.75rem', left: '0.75rem' }}>
+                  <CategoryPill cat={post.category} />
+                </div>
+              </div>
+
+              <div style={{ marginTop: '0.9rem' }}>
+                <h3 style={{ fontFamily: 'var(--font-blog-display)', fontWeight: 500, fontSize: '1.05rem', lineHeight: 1.28, color: 'var(--ink)', margin: '0 0 0.45rem' }}>
+                  {post.title}
+                </h3>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                  <ReadTime mins={post.reading_time} />
+                  {post.published_at && (
+                    <>
+                      <span style={{ width: 3, height: 3, borderRadius: '50%', background: 'var(--stone)' }} />
+                      <DateLabel ts={post.published_at} />
+                    </>
+                  )}
+                </div>
+              </div>
+            </article>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 export default function Blog() {
   const posts = useQuery(api.blog.getPublished, { limit: 50 });
   const [query, setQuery] = useState('');
@@ -274,8 +390,11 @@ export default function Blog() {
     return list;
   }, [posts, query, activeCategory]);
 
-  const featured = (!query.trim() && activeCategory === 'all') ? filtered[0] : null;
-  const gridPosts = featured ? filtered.slice(1) : filtered;
+  // Default view (no search/filter) leads with the cinematic gallery; the rest fall
+  // into the "Latest" grid. Searching/filtering shows a plain grid of all matches.
+  const isDefault    = !query.trim() && activeCategory === 'all';
+  const galleryPosts = isDefault ? filtered.slice(0, 6) : [];
+  const gridPosts    = isDefault ? filtered.slice(6) : filtered;
 
   return (
     <div style={{ maxWidth: 1120, margin: '0 auto', padding: '3rem 1.5rem 6rem' }}>
@@ -290,12 +409,12 @@ export default function Blog() {
           Collabnb
         </p>
         <h1 style={{
-          fontFamily: 'var(--font-display)',
-          fontWeight: 900,
+          fontFamily: 'var(--font-blog-display)',
+          fontWeight: 500,
           fontSize: 'clamp(2.25rem, 5vw, 3.75rem)',
           color: 'var(--ink)',
-          letterSpacing: '-0.03em',
-          lineHeight: 1.05,
+          letterSpacing: '-0.02em',
+          lineHeight: 1.1,
           margin: '0 0 1rem',
         }}>
           The Journal
@@ -416,20 +535,18 @@ export default function Blog() {
         </div>
       )}
 
-      {/* ── Featured post ────────────────────────────────────────────────────── */}
-      {featured && (
-        <div style={{ marginBottom: '3rem' }}>
-          <FeaturedCard post={featured} />
-        </div>
+      {/* ── Cinematic journal gallery (default view) ─────────────────────────── */}
+      {galleryPosts.length > 0 && (
+        <JournalGallery posts={galleryPosts} />
       )}
 
       {/* ── Post grid ────────────────────────────────────────────────────────── */}
       {gridPosts.length > 0 && (
         <>
-          {featured && (
+          {isDefault && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
               <span style={{ fontSize: '0.65rem', fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--sage)' }}>
-                Latest
+                More from the Journal
               </span>
               <div style={{ flex: 1, height: 1, background: 'var(--stone)' }} />
             </div>

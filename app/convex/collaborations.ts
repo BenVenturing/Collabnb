@@ -160,6 +160,23 @@ const SAMPLE_COLLAB_PLAN: Record<
   "Desert Dome Glamping":        { status: "closed",    stage: "archived",        creator: "Nina Okafor", dates: "Dec 1–3, 2025",   active: false },
 };
 
+// One-time cleanup: remove leftover non-sample collaborations (old test rows that
+// reference now-deleted listings). Leaves the seeded is_sample collaborations intact.
+export const deleteNonSampleCollaborations = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const all = await ctx.db.query("collaborations").collect();
+    let deleted = 0;
+    for (const c of all) {
+      if (!(c as any).is_sample) {
+        await ctx.db.delete(c._id);
+        deleted++;
+      }
+    }
+    return { deleted };
+  },
+});
+
 export const seedSampleCollaborations = mutation({
   args: {},
   handler: async (ctx) => {

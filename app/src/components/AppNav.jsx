@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
-import collabnbLogo from '../../../assets/collabnb-logo.png';
+import collabnbLogo from '../assets/collabnb-logo.png';
 import { useAuth } from '../contexts/AuthContext';
 import { useAppBar } from '../contexts/AppBarContext';
 import { useCollabs } from '../contexts/CollabContext';
@@ -397,10 +397,10 @@ export default function AppNav() {
               alignItems: 'center',
               gap: '0.125rem',
               overflow: 'hidden',
-              maxWidth: (compactSearch && menuOpen) ? '480px' : '0px',
-              opacity: (compactSearch && menuOpen) ? 1 : 0,
+              maxWidth: ((scrolled || compactSearch) && menuOpen) ? '480px' : '0px',
+              opacity: ((scrolled || compactSearch) && menuOpen) ? 1 : 0,
               transition: 'max-width 360ms cubic-bezier(0.16,1,0.3,1), opacity 240ms cubic-bezier(0.16,1,0.3,1)',
-              pointerEvents: (compactSearch && menuOpen) ? 'auto' : 'none',
+              pointerEvents: ((scrolled || compactSearch) && menuOpen) ? 'auto' : 'none',
             }}>
               {NAV_LINKS.map(({ to, label, end }) => (
                 <NavLink
@@ -871,38 +871,6 @@ export default function AppNav() {
               </div>
             )}
 
-            {/* Scrolled compact nav dropdown */}
-            {scrolled && menuOpen && !compactSearch && (
-              <div
-                style={{
-                  position: 'absolute',
-                  right: 0,
-                  top: 'calc(100% + 0.625rem)',
-                  minWidth: '190px',
-                  background: 'rgba(255,255,255,0.97)',
-                  backdropFilter: 'blur(24px) saturate(140%)',
-                  WebkitBackdropFilter: 'blur(24px) saturate(140%)',
-                  border: '1px solid rgba(255,255,255,0.7)',
-                  borderRadius: '1.25rem',
-                  boxShadow: '0 12px 40px rgba(25,37,36,0.18), inset 0 1px 0 rgba(255,255,255,0.7)',
-                  overflow: 'hidden',
-                  zIndex: 50,
-                  animation: 'fadeUp 200ms cubic-bezier(0.16,1,0.3,1) forwards',
-                }}
-              >
-                {NAV_LINKS.map(({ to, label }) => (
-                  <NavLink
-                    key={to}
-                    to={to}
-                    onClick={() => setMenuOpen(false)}
-                    className="block px-4 py-3 text-sm text-ink hover:bg-mint/30 transition-colors"
-                    style={{ fontFamily: 'var(--font-body)', fontWeight: 500 }}
-                  >
-                    {label}
-                  </NavLink>
-                ))}
-              </div>
-            )}
           </div>
         </div>
       </nav>

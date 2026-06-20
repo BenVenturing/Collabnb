@@ -179,6 +179,10 @@ function AppRoutes() {
           {/* Admin panel — full-screen, no nav chrome */}
           <Route path="/admin" element={<AdminDashboard />} />
 
+          {/* Public Journal — no nav chrome, no auth, no launch banner */}
+          <Route path="/blog"       element={<Blog />} />
+          <Route path="/blog/:slug" element={<BlogPost />} />
+
           {/* All other routes — wrapped in Layout (nav + HAZY bg) */}
           <Route path="*" element={
             <Layout>
@@ -197,9 +201,6 @@ function AppRoutes() {
                 <Route path="/inbox"             element={<Inbox />} />
                 <Route path="/profile"           element={<Profile />} />
                 <Route path="/contract"          element={<ContractBuilder />} />
-                {/* Public blog — no auth required */}
-                <Route path="/blog"              element={<Blog />} />
-                <Route path="/blog/:slug"        element={<BlogPost />} />
                 <Route path="*"                  element={<Navigate to="/explore" replace />} />
               </Routes>
             </Layout>

@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { useNavigate } from 'react-router-dom';
+import collabnbLogo from '../assets/collabnb-logo.png';
 
 const CAT = {
   creators: { label: 'Creators', color: '#7B68C8', bg: 'rgba(123,104,200,0.1)' },
@@ -253,6 +254,42 @@ function SkeletonCard() {
   );
 }
 
+// ─── Minimal Journal top bar ─────────────────────────────────────────────────
+function JournalTopBar() {
+  return (
+    <div style={{
+      position: 'fixed', top: 0, left: 0, right: 0, zIndex: 900,
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      padding: '0.75rem 1.5rem',
+      background: 'rgba(245,247,244,0.82)',
+      backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)',
+      borderBottom: '1px solid rgba(25,37,36,0.07)',
+    }}>
+      <img src={collabnbLogo} alt="Collabnb" width="28" height="28" style={{ display: 'block' }} />
+      <a
+        href="/"
+        style={{
+          display: 'flex', alignItems: 'center', gap: '0.4rem',
+          fontSize: '0.78rem', fontWeight: 600, color: 'var(--slate)',
+          textDecoration: 'none',
+          padding: '0.35rem 0.75rem',
+          borderRadius: 9999,
+          border: '1.5px solid rgba(25,37,36,0.14)',
+          background: 'rgba(255,255,255,0.7)',
+          transition: 'background 150ms, border-color 150ms',
+        }}
+        onMouseEnter={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = 'rgba(25,37,36,0.25)'; }}
+        onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.7)'; e.currentTarget.style.borderColor = 'rgba(25,37,36,0.14)'; }}
+      >
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+          <path d="M19 12H5M12 19l-7-7 7-7"/>
+        </svg>
+        Back to Collabnb
+      </a>
+    </div>
+  );
+}
+
 // ─── Main page ────────────────────────────────────────────────────────────────
 // ─── Cinematic horizontal journal gallery ─────────────────────────────────────
 function JournalGallery({ posts }) {
@@ -397,7 +434,9 @@ export default function Blog() {
   const gridPosts    = isDefault ? filtered.slice(6) : filtered;
 
   return (
-    <div style={{ maxWidth: 1120, margin: '0 auto', padding: '3rem 1.5rem 6rem' }}>
+    <>
+    <JournalTopBar />
+    <div style={{ maxWidth: 1120, margin: '0 auto', padding: '6rem 1.5rem 6rem' }}>
 
       {/* ── Header ──────────────────────────────────────────────────────────── */}
       <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
@@ -559,5 +598,6 @@ export default function Blog() {
         </>
       )}
     </div>
+    </>
   );
 }

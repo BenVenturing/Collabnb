@@ -47,7 +47,16 @@ function Root() {
   return (
     <React.StrictMode>
       {bg}
-      <ClerkProvider publishableKey={CLERK_KEY}>
+      <ClerkProvider
+        publishableKey={CLERK_KEY}
+        appearance={{
+          layout: { shimmer: false },
+          variables: { borderRadius: '16px' },
+          elements: {
+            card: 'shadow-2xl',
+          },
+        }}
+      >
         {convex ? (
           <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
             <App />

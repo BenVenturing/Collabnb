@@ -532,29 +532,77 @@ button { font: inherit; cursor: pointer; border: none; background: none; }
   100% { transform: rotate(360deg); }
 }
 
+/* ── BLOG PAGE TOKENS ─────────────────────────────────────────────────────── */
+:root {
+  --blog-bg:       #FAF8F3;
+  --blog-bg2:      #EFECE9;
+  --blog-ink:      #192524;
+  --blog-slate:    #3C5759;
+  --blog-sage:     #959D90;
+  --blog-accent:   #3C5759;
+  --blog-divider:  rgba(208,213,206,0.5);
+}
+[data-blog-theme="dark"] {
+  --blog-bg:       #0F1413;
+  --blog-bg2:      #192524;
+  --blog-ink:      #EFECE9;
+  --blog-slate:    #D0D5CE;
+  --blog-sage:     #959D90;
+  --blog-accent:   #D1EBDB;
+  --blog-divider:  rgba(60,87,89,0.3);
+}
+
+/* ── BLOG REVEAL ANIMATIONS ────────────────────────────────────────────────── */
+@keyframes blogFadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes blogFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.blog-reveal {
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity 800ms cubic-bezier(0.16, 1, 0.3, 1), transform 800ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.blog-reveal.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+@media (prefers-reduced-motion: reduce) {
+  .blog-reveal { opacity: 1; transform: none; transition: none; }
+  .blog-reveal.is-visible { opacity: 1; transform: none; }
+}
+
 /* ── BLOG CONTENT ─────────────────────────────────────────────────────────── */
+.blog-content {
+  font-family: var(--font-blog-body);
+  color: var(--blog-ink);
+  font-size: 17px;
+  line-height: 1.75;
+}
 .blog-content h2 {
-  font-family: var(--font-display);
-  font-weight: 800;
-  font-size: 1.5rem;
-  color: var(--ink);
-  margin: 2.75rem 0 0.875rem;
+  font-family: var(--font-blog-display);
+  font-weight: 500;
+  font-size: 1.625rem;
+  color: var(--blog-ink);
+  margin: 4rem 0 1rem;
   line-height: 1.2;
   letter-spacing: -0.02em;
 }
 .blog-content h3 {
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 1.1rem;
-  color: var(--ink);
-  margin: 2rem 0 0.625rem;
+  font-family: var(--font-blog-display);
+  font-weight: 500;
+  font-size: 1.2rem;
+  color: var(--blog-ink);
+  margin: 2.5rem 0 0.75rem;
   letter-spacing: -0.01em;
 }
 .blog-content p {
   margin: 0 0 1.5rem;
-  line-height: 1.85;
-  font-size: 1rem;
-  color: var(--ink);
+  line-height: 1.75;
+  color: var(--blog-ink);
 }
 .blog-content ul, .blog-content ol {
   margin: 0 0 1.5rem;
@@ -564,20 +612,47 @@ button { font: inherit; cursor: pointer; border: none; background: none; }
   margin-bottom: 0.625rem;
   line-height: 1.75;
 }
-.blog-content strong { font-weight: 700; color: var(--ink); }
-.blog-content em { font-style: italic; color: var(--slate); }
-.blog-content a { color: #7B68C8; text-underline-offset: 4px; text-decoration: underline; }
-.blog-content a:hover { opacity: 0.75; }
+.blog-content strong { font-weight: 600; color: var(--blog-ink); }
+.blog-content em { font-style: italic; color: var(--blog-slate); }
+.blog-content a { color: var(--blog-accent); text-underline-offset: 4px; text-decoration: underline; }
+.blog-content a:hover { opacity: 0.7; }
 .blog-content blockquote {
-  border-left: 3px solid var(--mint);
-  margin: 1.75rem 0;
-  padding: 0.75rem 0 0.75rem 1.5rem;
+  border-left: 3px solid var(--blog-accent);
+  margin: 2rem 0;
+  padding: 0.5rem 0 0.5rem 1.5rem;
   font-style: italic;
-  color: var(--slate);
+  color: var(--blog-slate);
+  opacity: 0.9;
 }
 
 /* ── PULSE SKELETON ───────────────────────────────────────────────────────── */
 @keyframes pulse {
   0%, 100% { opacity: 1; }
   50%       { opacity: 0.45; }
+}
+
+/* ── CLERK MODAL OVERRIDES ────────────────────────────────────────────────── */
+/* Ensure the backdrop centers the card with breathing room */
+.cl-modalBackdrop {
+  padding: 24px !important;
+  align-items: center !important;
+  overflow-y: auto !important;
+}
+
+/* Card scrolls internally if viewport is short */
+.cl-card {
+  max-height: calc(100dvh - 48px) !important;
+  overflow-y: auto !important;
+  margin: auto !important;
+}
+
+/* Slightly reduce internal card padding on short screens */
+@media (max-height: 750px) {
+  .cl-card {
+    padding-top: 16px !important;
+    padding-bottom: 16px !important;
+  }
+  .cl-header {
+    margin-bottom: 8px !important;
+  }
 }

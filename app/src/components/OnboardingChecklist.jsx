@@ -420,15 +420,15 @@ export default function OnboardingChecklist() {
 
   const widgetStyle = {
     position: 'fixed',
-    bottom: '7rem',
-    right: '1.5rem',
+    bottom: '1.5rem',
+    left: '1.5rem',
     zIndex: 200,
     width: collapsed ? 'auto' : '300px',
     maxWidth: 'calc(100vw - 3rem)',
     transform: entered ? 'translateY(0) scale(1)' : 'translateY(24px) scale(0.96)',
     opacity: entered ? 1 : 0,
     transition: 'transform 300ms cubic-bezier(0.16,1,0.3,1), opacity 300ms cubic-bezier(0.16,1,0.3,1), width 300ms cubic-bezier(0.16,1,0.3,1)',
-    transformOrigin: 'bottom right',
+    transformOrigin: 'bottom left',
   };
 
   const cardStyle = {

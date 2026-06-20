@@ -465,27 +465,30 @@ function SettingsRow({ icon, label, sublabel, isLast, onClick, danger }) {
 }
 
 // ─── Past collab card ─────────────────────────────────────────────────────────
-function PastCollabCard({ collab }) {
+function PastCollabCard({ collab, showSampleBadge = false }) {
   const statusColors = {
-    pending:  { bg: 'rgba(212,168,67,0.15)',  text: '#D4A843' },
-    uploaded: { bg: 'rgba(74,155,210,0.15)',   text: '#4A9BD2' },
-    approved: { bg: 'rgba(74,155,127,0.15)',   text: '#4A9B7F' },
+    pending:   { bg: 'rgba(212,168,67,0.15)',  text: '#D4A843' },
+    uploaded:  { bg: 'rgba(74,155,210,0.15)',   text: '#4A9BD2' },
+    approved:  { bg: 'rgba(74,155,127,0.15)',   text: '#4A9B7F' },
+    completed: { bg: 'rgba(74,155,127,0.15)',   text: '#4A9B7F' },
   };
   const s = statusColors[collab.status] || statusColors.pending;
-  const statusIcons = { pending: '🟡', uploaded: '🔵', approved: '🟢' };
+  const statusIcons = { pending: '🟡', uploaded: '🔵', approved: '🟢', completed: '🟢' };
   return (
     <div className="listing-card" style={{ width: '220px', flexShrink: 0 }}>
       <div style={{ position: 'relative', height: '140px', overflow: 'hidden', background: 'var(--stone)' }}>
         <img src={collab.image} alt={collab.property_name} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} loading="lazy" />
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(25,37,36,0.45) 0%, transparent 55%)' }} />
-        <span style={{ position: 'absolute', top: '0.625rem', left: '0.625rem', background: 'rgba(25,37,36,0.65)', color: 'var(--bone)', fontSize: '0.55rem', fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', padding: '0.2rem 0.5rem', borderRadius: '4px' }}>SAMPLE</span>
+        {showSampleBadge && (
+          <span style={{ position: 'absolute', top: '0.625rem', left: '0.625rem', background: 'rgba(25,37,36,0.65)', color: 'var(--bone)', fontSize: '0.55rem', fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', padding: '0.2rem 0.5rem', borderRadius: '4px' }}>SAMPLE</span>
+        )}
         <span style={{ position: 'absolute', bottom: '0.625rem', left: '0.625rem', color: 'rgba(239,236,233,0.9)', fontSize: '0.7rem', fontWeight: 500 }}>📍 {collab.location}</span>
       </div>
       <div style={{ padding: '0.875rem' }}>
         <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.875rem', color: 'var(--ink)', margin: '0 0 0.25rem', lineHeight: 1.2 }}>{collab.property_name}</p>
         <p style={{ fontSize: '0.7rem', color: 'var(--sage)', margin: '0 0 0.5rem' }}>{collab.dates}</p>
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', padding: '0.2rem 0.6rem', borderRadius: '9999px', background: s.bg, color: s.text, fontSize: '0.65rem', fontWeight: 600 }}>
-          {statusIcons[collab.status]} {collab.status_text}
+          {statusIcons[collab.status] || '🟡'} {collab.status_text || collab.status}
         </span>
       </div>
     </div>
@@ -531,8 +534,15 @@ export default function Profile() {
   );
   const hasListing = (hostListings?.length ?? 0) > 0;
   const isHostVerified = (profile?.is_verified === true || profile?.is_founder === true) && hasListing;
-  // Always show demo collabs — real collaborations aren't shown on the profile
-  const hasCollabs = true;
+  const convexCollabs = useQuery(
+    api.collaborations.getByCreator,
+    userId && userId !== 'mock-user-001' ? { creatorId: String(userId) } : 'skip'
+  );
+  const realCompletedCollabs = useMemo(() =>
+    (convexCollabs ?? []).filter((c) => !c.is_sample && (c.status === 'completed' || c.status === 'approved')),
+    [convexCollabs]
+  );
+  const hasCollabs = realCompletedCollabs.length > 0;
   const allProfiles = useQuery(api.profiles.getAll);
   const globeStats  = useMemo(() => countGlobeStats(allProfiles), [allProfiles]);
 
@@ -568,27 +578,6 @@ export default function Profile() {
     collabReminders: true,
     marketing:       false,
   });
-
-  // Browser notification permission banner
-  const NOTIF_KEY = '@collabnb_notif_permission_v1';
-  const [showNotifBanner, setShowNotifBanner] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    const stored = localStorage.getItem(NOTIF_KEY);
-    if (stored) return false;
-    return 'Notification' in window && Notification.permission === 'default';
-  });
-
-  function handleNotifAllow() {
-    Notification.requestPermission().then((result) => {
-      localStorage.setItem(NOTIF_KEY, result);
-      setShowNotifBanner(false);
-    });
-  }
-
-  function handleNotifDismiss() {
-    localStorage.setItem(NOTIF_KEY, 'dismissed');
-    setShowNotifBanner(false);
-  }
 
   // Bio expand
   const [bioExpanded, setBioExpanded] = useState(false);
@@ -826,45 +815,6 @@ export default function Profile() {
   return (
     <div style={{ minHeight: '100dvh', paddingBottom: '6rem' }}>
 
-      {/* ── Browser notification permission banner ────────────────────── */}
-      {showNotifBanner && (
-        <div style={{
-          position: 'sticky', top: 0, zIndex: 50,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          gap: '0.75rem', flexWrap: 'wrap',
-          padding: '0.625rem 1rem',
-          background: 'rgba(209,235,219,0.92)',
-          backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
-          borderBottom: '1px solid rgba(74,155,127,0.2)',
-        }}>
-          <span style={{ fontSize: '0.82rem', color: 'var(--slate)', fontWeight: 500, textAlign: 'center', flex: '1 1 200px', minWidth: 0 }}>
-            Enable notifications to stay updated on your collabs
-          </span>
-          <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0 }}>
-            <button
-              onClick={handleNotifAllow}
-              style={{
-                padding: '0.45rem 1rem', borderRadius: '999px', border: 'none', cursor: 'pointer',
-                background: 'var(--slate)', color: '#fff', fontSize: '0.78rem', fontWeight: 600,
-                fontFamily: 'var(--font-body)', minHeight: '44px',
-              }}
-            >
-              Allow
-            </button>
-            <button
-              onClick={handleNotifDismiss}
-              style={{
-                padding: '0.45rem 1rem', borderRadius: '999px', border: '1px solid rgba(60,87,89,0.25)',
-                cursor: 'pointer', background: 'transparent', color: 'var(--slate)',
-                fontSize: '0.78rem', fontWeight: 500, fontFamily: 'var(--font-body)', minHeight: '44px',
-              }}
-            >
-              Not now
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* ── Hero (full-bleed, starts below floating nav) ──────────────────── */}
       <div style={{ position: 'relative', paddingTop: 'calc(5rem + var(--banner-h, 0rem))' }}>
         <div style={{ height: '400px', overflow: 'hidden', background: 'linear-gradient(135deg, #1a2322 0%, #2d4a3e 100%)' }}>
@@ -1076,22 +1026,26 @@ export default function Profile() {
           {hasCollabs ? (
             <div style={{ overflow: 'hidden', paddingBottom: '0.5rem' }}>
               <div className="scroll-track">
-                {SAMPLE_COLLABORATIONS.map((c) => <PastCollabCard key={c.id} collab={c} />)}
-                {SAMPLE_COLLABORATIONS.map((c) => <PastCollabCard key={`dup-${c.id}`} collab={c} />)}
+                {realCompletedCollabs.map((c) => <PastCollabCard key={String(c._id)} collab={c} />)}
+                {realCompletedCollabs.map((c) => <PastCollabCard key={`dup-${c._id}`} collab={c} />)}
               </div>
             </div>
           ) : (
-            <div style={{ position: 'relative' }}>
-              <div style={{ display: 'flex', gap: '0.875rem', overflow: 'hidden' }}>
-                {[0, 1, 2].map((i) => <GhostCollabCard key={i} />)}
+            <div style={{ position: 'relative', overflow: 'hidden', borderRadius: '12px' }}>
+              <div style={{ display: 'flex', gap: '0.875rem', overflow: 'hidden', filter: 'blur(4px)', opacity: 0.5, pointerEvents: 'none', userSelect: 'none' }}>
+                {SAMPLE_COLLABORATIONS.map((c) => <PastCollabCard key={c.id} collab={c} showSampleBadge />)}
+                {SAMPLE_COLLABORATIONS.map((c) => <PastCollabCard key={`dup-${c.id}`} collab={c} showSampleBadge />)}
               </div>
               <div style={{
                 position: 'absolute', inset: 0,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                background: 'linear-gradient(to bottom, transparent 0%, rgba(246,244,241,0.6) 100%)',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.375rem',
+                background: 'linear-gradient(to bottom, rgba(246,244,241,0.35) 0%, rgba(246,244,241,0.75) 100%)',
               }}>
-                <p style={{ fontSize: '0.8125rem', color: 'var(--slate)', fontWeight: 500, textAlign: 'center', padding: '0 1rem', textShadow: '0 1px 4px rgba(246,244,241,0.9)' }}>
+                <p style={{ fontSize: '0.9rem', color: 'var(--ink)', fontWeight: 600, textAlign: 'center', margin: 0, textShadow: '0 1px 6px rgba(246,244,241,0.95)' }}>
                   Your completed collabs will appear here
+                </p>
+                <p style={{ fontSize: '0.75rem', color: 'var(--slate)', textAlign: 'center', margin: 0, textShadow: '0 1px 4px rgba(246,244,241,0.9)' }}>
+                  Complete your first collab to unlock this section
                 </p>
               </div>
             </div>

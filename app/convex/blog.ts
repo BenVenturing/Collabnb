@@ -20,6 +20,24 @@ function readingTime(html: string): number {
   return Math.max(1, Math.round(words / 200));
 }
 
+// Title Case for post titles — capitalize major words, keep short joining words lower
+// (unless first/last). Deterministic backstop so titles are never left uncapitalized.
+function toTitleCase(title: string): string {
+  const small = new Set([
+    "a","an","and","as","at","but","by","for","from","in","into","nor","of",
+    "on","onto","or","over","per","the","to","up","via","vs","with","yet",
+  ]);
+  const words = title.trim().split(/\s+/);
+  return words
+    .map((word, i) => {
+      const lower = word.toLowerCase();
+      const isEdge = i === 0 || i === words.length - 1;
+      if (!isEdge && small.has(lower)) return lower;
+      return word.charAt(0).toUpperCase() + word.slice(1);
+    })
+    .join(" ");
+}
+
 // ─── Queries ──────────────────────────────────────────────────────────────────
 
 export const getAll = query({
@@ -129,10 +147,21 @@ export const createGeneratedPost = mutation({
     content: v.string(),
     category: v.string(),
     tags: v.array(v.string()),
+    pull_quote: v.optional(v.string()),
+    author: v.optional(v.string()),
     hero_image_url: v.optional(v.string()),
     hero_image_alt: v.optional(v.string()),
     hero_image_credit: v.optional(v.string()),
     hero_image_credit_url: v.optional(v.string()),
+    inline_image_1_url: v.optional(v.string()),
+    inline_image_1_alt: v.optional(v.string()),
+    inline_image_1_credit: v.optional(v.string()),
+    inline_image_2_url: v.optional(v.string()),
+    inline_image_2_alt: v.optional(v.string()),
+    inline_image_2_credit: v.optional(v.string()),
+    inline_image_3_url: v.optional(v.string()),
+    inline_image_3_alt: v.optional(v.string()),
+    inline_image_3_credit: v.optional(v.string()),
     sources: v.array(v.string()),
     seo_description: v.string(),
     reading_time: v.number(),
@@ -199,70 +228,95 @@ export const generatePost = action({
     topicHint: v.optional(v.string()),
   },
   handler: async (ctx, { isStatsPost = false, topicHint }) => {
-    const nvidiaKey  = process.env.NVIDIA_API_KEY;
+    const nvidiaKey   = process.env.NVIDIA_API_KEY;
     const unsplashKey = process.env.UNSPLASH_ACCESS_KEY;
 
     if (!nvidiaKey || !unsplashKey) {
       throw new Error("Missing API keys. Set NVIDIA_API_KEY and UNSPLASH_ACCESS_KEY in Convex env.");
     }
 
-    // ── 1. Research phase via NVIDIA ──────────────────────────────────────────
+    // ── 1. Research phase ─────────────────────────────────────────────────────
     let statsContext = "";
     if (isStatsPost) {
       const stats: any = await ctx.runQuery(api.blog.getPlatformStats_internal, {});
       statsContext = `Platform stats: ${stats.creators} creators, ${stats.hosts} hosts, ${stats.approvedCollabs} completed collabs, ${stats.activeListings} active listings.`;
     }
 
-    const topic = topicHint || "UGC creator travel collabs and boutique hospitality marketing";
+    const topic = topicHint || "the economics of content-for-stay partnerships between boutique hosts and UGC creators";
     const researchPrompt = isStatsPost
-      ? `You are a content strategist for Collabnb, a marketplace connecting boutique hotel/Airbnb hosts with UGC travel creators for content-for-stay partnerships. ${statsContext}
+      ? `You are a content strategist for Collabnb, a marketplace connecting boutique hotel/Airbnb hosts with UGC travel creators. ${statsContext}
 
-Produce a detailed research brief covering: recent UGC marketing trends in hospitality (2024-2025), key statistics on creator-driven bookings, what's working for boutique properties vs large chains, and relevant industry developments. Include specific data points, percentages, and real-world examples. Be comprehensive — this brief will be used to write a blog post.`
+Produce a detailed research brief covering: UGC marketing trends in hospitality (2024-2025), creator-driven booking statistics, what's working for boutique properties vs chains. Include specific data points and real-world examples.`
       : `You are a content strategist for Collabnb, a marketplace connecting boutique hotel/Airbnb hosts with UGC travel creators for content-for-stay partnerships.
 
-Produce a detailed research brief on: ${topic}. Cover: key trends and statistics (2024-2025), successful real-world examples of creator-property collaborations, what boutique hosts and UGC creators each need from partnerships, and actionable insights. Include specific data points and percentages where possible. Be comprehensive — this brief will be used to write a blog post.`;
+Produce a detailed research brief on: ${topic}. Cover: key trends and data (2024-2025), real-world examples of creator-property collaborations, what boutique hosts and UGC creators each need from partnerships, actionable insights. Be concrete — include specific examples, data points where known, and avoid vague generalities.`;
 
     const research = await nvidiaChat(nvidiaKey, [
-      { role: "system", content: "You are an expert content strategist specializing in travel, hospitality, and creator economy trends. Produce detailed, fact-rich research briefs." },
+      { role: "system", content: "You are an expert content strategist specializing in travel, hospitality, and the creator economy. Produce detailed, concrete research briefs — name real properties, real campaigns, real data points." },
       { role: "user", content: researchPrompt },
     ], 1500);
 
-    // ── 2. Write post via NVIDIA ──────────────────────────────────────────────
+    // ── 2. Write the post ─────────────────────────────────────────────────────
     const today = new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
     const category = isStatsPost ? "stats" : (
       topic.toLowerCase().includes("host") ? "hosts" :
       topic.toLowerCase().includes("creator") ? "creators" : "industry"
     );
 
-    const writePrompt = `You are the content editor for Collabnb — a marketplace where boutique hospitality hosts offer free or discounted stays to UGC creators and travel influencers in exchange for content (Reels, TikToks, photography).
+    const writePrompt = `You are the editorial voice of The Collabnb Journal — a blog for people who run boutique stays and UGC travel creators who partner with them for content-for-stay collabs.
 
-Based on this research brief:
+Voice model: think Cereal Magazine meets Morning Brew. Curious, observational, direct. Never corporate. Never "Discover how" or "Unlock the power of." Write from a perspective grounded in real travel — notice specific things, name real places, be precise.
+
+Perspective — STRICT: Write in the third person at all times. Never use first person — no "I", "we", "me", "my", "us", "our", or "ours" anywhere. This is not a personal account and the author has not personally stayed anywhere; do not invent personal experiences or opinions framed as lived. Write it as an editorial overview, analysis, or highlight ABOUT boutique hotels and small luxury stays in general — observing the category, not narrating a personal trip. Anything that reads as a personal diary entry is wrong.
+
+Based on this research:
 ${research}
 
-Write a polished, engaging blog post (700-950 words) for The Collabnb Journal. Audience: boutique hotel owners, Airbnb superhosts, and UGC travel creators.
+Write a blog post (700–900 words). Structure:
+1. Opening paragraph — 2-3 sentences, scene-setting or observation. NO statistics here.
+2. Three body sections, each ~150 words, each starting with an <h2> in sentence case (not title case, no question marks, under 7 words).
+   — After section 1, place the marker: %%INLINE_IMAGE_1%%
+   — After section 2, place the marker: %%INLINE_IMAGE_2%%
+   — After section 3, place the marker: %%INLINE_IMAGE_3%%
+3. A synthesis section (~150 words), no image.
+4. One pull quote — pick the single most resonant sentence from the post. Make it slightly more poetic without changing its meaning.
+5. Closing paragraph (2-3 sentences) — ties back to Collabnb without being salesy.
+6. Subtle CTA: one italicized line, e.g. <em>Collabnb is open for early access — <a href="https://collabnb.com/join">collabnb.com/join</a></em>
 
-Requirements:
-- Compelling, specific headline (NOT generic clickbait)
-- Conversational but authoritative tone — no corporate fluff
-- 3-4 clearly structured sections with h2 headings
-- Concrete data point or real example in each section
-- Short CTA at the end pointing to <a href="https://collabnb.com/join">collabnb.com/join</a>
-- HTML using ONLY: h2, p, ul, li, strong, em, a tags — NO h1, NO html/body wrapper
+HTML rules: use ONLY h2, p, ul, li, strong, em, a tags. NO h1. NO html/body wrapper. NO markdown.
+
+Anti-patterns to avoid:
+- Never open with a statistic
+- Never use "Discover how" / "Unlock" / "Boost your bookings"
+- Never end with "Join Collabnb today!"
+- No generic listicles without specific examples
+- No title case in section headers (the TITLE is Title Case; h2 headers stay sentence case)
 - Today: ${today}
 
-Respond with EXACTLY this format (no markdown, no extra commentary):
-TITLE: [your title here]
-EXCERPT: [1-2 sentence teaser, 120-160 chars]
-SEO_DESC: [meta description, 150-160 chars]
-TAGS: [3-5 comma-separated lowercase tags]
-IMAGE_QUERY: [2-4 word Unsplash search term for hero photo, e.g. boutique hotel room]
+Banned words and phrases — NEVER use these or close variants. They read as low-quality AI filler, not editorial writing:
+- Summary/conclusion crutches: "in summary", "in conclusion", "to summarize", "as a final thought", "at the end of the day", "all in all", "in essence", "ultimately" (as a paragraph opener)
+- Empathy/filler verbs: "sympathize", "empathize", "resonate with", "speaks to"
+- AI tells: "delve", "dive into", "navigate the world of", "navigate the landscape", "tapestry", "realm", "elevate", "embark", "unleash", "unlock", "harness", "leverage", "seamless", "game-changer", "testament to", "in today's fast-paced world", "when it comes to", "look no further", "the world of", "it's worth noting", "needless to say"
+- Hype adjectives stacked for effect: "stunning", "breathtaking", "must-have", "ultimate guide"
+Write plainly and concretely instead. If a sentence only works with one of these words, rewrite the sentence.
+
+Respond with EXACTLY this format, no extra commentary:
+TITLE: [60 chars max, Title Case — capitalize the first word and every major word (e.g. "Why Small Luxury Stays Win on Trust"); editorial, not SEO-stuffed]
+EXCERPT: [one sentence, under 120 chars, conversational]
+SEO_DESC: [155 chars, search-optimized but human]
+TAGS: [3-5 lowercase comma-separated]
+PULL_QUOTE: [the one most resonant sentence from the post]
+IMAGE_QUERY_HERO: [black and white boutique hotel editorial subject — 5-7 words]
+IMAGE_QUERY_1: [black and white travel editorial — 5-7 words, different from hero]
+IMAGE_QUERY_2: [black and white hospitality editorial — 5-7 words, different from above]
+IMAGE_QUERY_3: [black and white creator travel editorial — 5-7 words, different from above]
 CONTENT:
-[your HTML content here]`;
+[your full HTML here, with %%INLINE_IMAGE_1%%, %%INLINE_IMAGE_2%%, %%INLINE_IMAGE_3%% markers in place]`;
 
     const raw = await nvidiaChat(nvidiaKey, [
-      { role: "system", content: "You are an expert blog writer for a travel-tech startup. Follow the output format exactly." },
+      { role: "system", content: "You are an editorial writer for a boutique travel publication. Follow the output format exactly. Place image markers exactly where specified." },
       { role: "user", content: writePrompt },
-    ], 2500);
+    ], 3000);
 
     const extract = (key: string) => {
       const match = raw.match(new RegExp(`${key}:\\s*(.+)`));
@@ -270,11 +324,15 @@ CONTENT:
     };
     const contentMatch = raw.match(/CONTENT:\s*([\s\S]+)/);
 
-    const title      = extract("TITLE");
+    const title      = toTitleCase(extract("TITLE"));
     const excerpt    = extract("EXCERPT");
     const seoDesc    = extract("SEO_DESC");
     const tagsRaw    = extract("TAGS");
-    const imageQuery = extract("IMAGE_QUERY");
+    const pullQuote  = extract("PULL_QUOTE");
+    const imgHero    = extract("IMAGE_QUERY_HERO");
+    const img1       = extract("IMAGE_QUERY_1");
+    const img2       = extract("IMAGE_QUERY_2");
+    const img3       = extract("IMAGE_QUERY_3");
     const content    = contentMatch ? contentMatch[1].trim() : raw;
     const tags       = tagsRaw.split(",").map((t: string) => t.trim()).filter(Boolean);
 
@@ -282,34 +340,36 @@ CONTENT:
       throw new Error("NVIDIA returned incomplete post data — try again");
     }
 
-    // ── 3. Fetch hero image from Unsplash ─────────────────────────────────────
-    let heroUrl: string | undefined;
-    let heroAlt: string | undefined;
-    let heroCredit: string | undefined;
-    let heroCreditUrl: string | undefined;
-
-    try {
-      const q = encodeURIComponent(imageQuery || "boutique hotel travel");
-      const unsplashRes = await fetch(
-        `https://api.unsplash.com/search/photos?query=${q}&per_page=3&orientation=landscape&content_filter=high`,
-        { headers: { "Authorization": `Client-ID ${unsplashKey}` } }
-      );
-      if (unsplashRes.ok) {
-        const unsplashData = await unsplashRes.json();
-        const photo = unsplashData.results?.[0];
-        if (photo) {
-          heroUrl       = photo.urls?.regular;
-          heroAlt       = photo.alt_description || imageQuery || "Blog hero image";
-          heroCredit    = photo.user?.name;
-          heroCreditUrl = `https://unsplash.com/@${photo.user?.username}?utm_source=collabnb&utm_medium=referral`;
-          await fetch(photo.links?.download_location, {
-            headers: { "Authorization": `Client-ID ${unsplashKey}` }
-          }).catch(() => {});
-        }
-      }
-    } catch {
-      // Image is optional
+    // ── 3. Fetch images from Unsplash (B&W filter) ────────────────────────────
+    async function fetchUnsplashImage(query: string, fallback: string) {
+      try {
+        const q = encodeURIComponent(query || fallback);
+        const res = await fetch(
+          `https://api.unsplash.com/search/photos?query=${q}&per_page=3&orientation=landscape&color=black_and_white&content_filter=high`,
+          { headers: { "Authorization": `Client-ID ${unsplashKey}` } }
+        );
+        if (!res.ok) return null;
+        const data = await res.json();
+        const photo = data.results?.[0];
+        if (!photo) return null;
+        await fetch(photo.links?.download_location, {
+          headers: { "Authorization": `Client-ID ${unsplashKey}` }
+        }).catch(() => {});
+        return {
+          url:     photo.urls?.regular as string,
+          alt:     (photo.alt_description || query) as string,
+          credit:  photo.user?.name as string,
+          creditUrl: `https://unsplash.com/@${photo.user?.username}?utm_source=collabnb&utm_medium=referral` as string,
+        };
+      } catch { return null; }
     }
+
+    const [hero, inline1, inline2, inline3] = await Promise.all([
+      fetchUnsplashImage(imgHero, "black and white boutique hotel minimal"),
+      fetchUnsplashImage(img1,    "black and white travel editorial minimal"),
+      fetchUnsplashImage(img2,    "black and white hospitality interior minimal"),
+      fetchUnsplashImage(img3,    "black and white creator photographer travel"),
+    ]);
 
     // ── 4. Store as draft ─────────────────────────────────────────────────────
     const slug = slugify(title);
@@ -320,10 +380,21 @@ CONTENT:
       content,
       category,
       tags,
-      hero_image_url: heroUrl,
-      hero_image_alt: heroAlt,
-      hero_image_credit: heroCredit,
-      hero_image_credit_url: heroCreditUrl,
+      pull_quote: pullQuote || undefined,
+      author: "Ben Venturing",
+      hero_image_url:      hero?.url,
+      hero_image_alt:      hero?.alt,
+      hero_image_credit:   hero?.credit,
+      hero_image_credit_url: hero?.creditUrl,
+      inline_image_1_url:    inline1?.url,
+      inline_image_1_alt:    inline1?.alt,
+      inline_image_1_credit: inline1?.credit,
+      inline_image_2_url:    inline2?.url,
+      inline_image_2_alt:    inline2?.alt,
+      inline_image_2_credit: inline2?.credit,
+      inline_image_3_url:    inline3?.url,
+      inline_image_3_alt:    inline3?.alt,
+      inline_image_3_credit: inline3?.credit,
       sources: [],
       seo_description: seoDesc,
       reading_time: readingTime(content),

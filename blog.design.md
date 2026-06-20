@@ -6,6 +6,35 @@
 
 ---
 
+## Writing Voice & Rules (non-negotiable)
+
+These rules govern every generated journal post. They are enforced in the generation
+prompt (`app/convex/blog.ts` → `generatePost`) and must stay in sync with this file.
+
+1. **Never first person.** No "I", "we", "me", "my", "us", "our", "ours" — anywhere.
+   The author has not personally stayed anywhere; never invent personal experience.
+2. **Third-person overview, not a diary.** Every post is written as an editorial
+   overview, analysis, or highlight *about* boutique hotels and small luxury stays in
+   general — observing the category, never narrating a personal trip. Writing it as a
+   personal blog is dishonest and wrong.
+3. **Title is Title Case.** Capitalize the first word and every major word
+   (e.g. "Why Small Luxury Stays Win on Trust"). Section `h2` headers stay sentence case.
+   A deterministic `toTitleCase()` backstop also runs on the title before saving.
+4. **Banned words & phrases** — never use these or close variants; they read as
+   low-quality AI filler:
+   - Summary crutches: *in summary, in conclusion, to summarize, as a final thought,
+     at the end of the day, all in all, in essence, ultimately* (as a paragraph opener)
+   - Empathy filler: *sympathize, empathize, resonate with, speaks to*
+   - AI tells: *delve, dive into, navigate the world/landscape of, tapestry, realm,
+     elevate, embark, unleash, unlock, harness, leverage, seamless, game-changer,
+     testament to, in today's fast-paced world, when it comes to, look no further,
+     it's worth noting, needless to say*
+   - Stacked hype: *stunning, breathtaking, must-have, ultimate guide*
+
+   Write plainly and concretely. If a sentence only works with a banned word, rewrite it.
+
+---
+
 ## Design Principles
 
 1. **Content first** — typography does the work; ornament only where it earns its keep

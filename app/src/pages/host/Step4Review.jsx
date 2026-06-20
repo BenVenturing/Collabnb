@@ -110,6 +110,7 @@ export default function Step4Review() {
     creator_tier: draft.creator_tier,
     deliverable_load: draft.deliverable_load,
     gallery_images: draft.images,
+    amenities: draft.amenities?.length ? draft.amenities : undefined,
     perks: draft.perks,
     vibe_tags: draft.vibe_tags,
     affiliate_code: draft.affiliate_code,

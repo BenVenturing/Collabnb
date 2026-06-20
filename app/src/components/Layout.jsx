@@ -69,8 +69,11 @@ export default function Layout({ children }) {
     ? Math.ceil((LAUNCH_DATE - new Date()) / (1000 * 60 * 60 * 24))
     : 0;
 
-  // Hide on contract page and all host pages
-  const showContractBtn = location.pathname !== '/contract' && !location.pathname.startsWith('/host');
+  // Hide on contract page and inbox; show on /host/proposals but not other host pages
+  const showContractBtn =
+    location.pathname !== '/contract' &&
+    location.pathname !== '/inbox' &&
+    (!location.pathname.startsWith('/host') || location.pathname === '/host/proposals');
 
   // ── Welcome toast (shown once after Clerk/Google signup redirect) ──────────
   const [welcomeToast, setWelcomeToast] = useState(null);
@@ -192,8 +195,7 @@ export default function Layout({ children }) {
       {/* ── Floating onboarding checklist (bottom-right, above AppNav) ────────── */}
       <OnboardingChecklist />
 
-      {/* ── Floating help button (bottom-right) ────────────────────────────── */}
-      <FloatingHelpButton />
+      {/* FloatingHelpButton removed */}
 
       {/* ── Floating contract button (bottom-right) ─────────────────────────── */}
       {showContractBtn && (

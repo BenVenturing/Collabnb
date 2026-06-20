@@ -35,6 +35,7 @@ const EMPTY_DRAFT = {
   creator_tier: "",
   deliverable_load: "",
   images: [],
+  amenities: [],
   perks: [],
   vibe_tags: [],
   affiliate_code: "",

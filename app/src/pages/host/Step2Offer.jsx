@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Plus, X, Sparkles } from "lucide-react";
 import WizardShell from "../../components/host/WizardShell";
 import { useListingDraft } from "../../contexts/ListingDraftContext";
+import { AMENITY_ICONS } from "../../lib/amenityIcons";
 
 function SectionLabel({ children }) {
   return <div style={{ fontFamily: "Satoshi, sans-serif", fontWeight: 700, fontSize: 14, color: "var(--ink)", marginBottom: 4 }}>{children}</div>;
@@ -69,6 +70,16 @@ export default function Step2Offer() {
   function addTag(tag) { updateDraft({ vibe_tags: [...draft.vibe_tags, tag] }); }
   function removeTag(i) { updateDraft({ vibe_tags: draft.vibe_tags.filter((_, idx) => idx !== i) }); }
 
+  const amenities = draft.amenities || [];
+  function toggleAmenity(key, label) {
+    const already = amenities.some((a) => a.key === key);
+    updateDraft({
+      amenities: already
+        ? amenities.filter((a) => a.key !== key)
+        : [...amenities, { key, label }],
+    });
+  }
+
   return (
     <WizardShell
       step={2}
@@ -82,6 +93,35 @@ export default function Step2Offer() {
       </p>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 32 }}>
+        {/* Amenities */}
+        <div>
+          <SectionLabel>Property amenities</SectionLabel>
+          <SectionDesc>Select what your property offers. These appear on your listing page.</SectionDesc>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
+            {AMENITY_ICONS.map(({ key, label, Icon }) => {
+              const selected = amenities.some((a) => a.key === key);
+              return (
+                <button
+                  key={key}
+                  onClick={() => toggleAmenity(key, label)}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 8,
+                    padding: "10px 12px", borderRadius: "0.875rem",
+                    border: selected ? "1.5px solid rgba(45,106,79,0.3)" : "1.5px solid rgba(25,37,36,0.1)",
+                    background: selected ? "rgba(209,235,219,0.6)" : "rgba(255,255,255,0.7)",
+                    cursor: "pointer", transition: "all 120ms",
+                    fontFamily: "Satoshi, sans-serif", fontSize: 12, fontWeight: 600,
+                    color: selected ? "#2d6a4f" : "var(--slate)", textAlign: "left",
+                  }}
+                >
+                  <Icon size={15} strokeWidth={1.75} color={selected ? "#2d6a4f" : "var(--slate)"} />
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         {/* Add-ons */}
         <div>
           <SectionLabel>Add-ons</SectionLabel>

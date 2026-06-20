@@ -15,6 +15,7 @@ import {
   Home, DollarSign, Gift,
   Image, Film, Smartphone, PlayCircle, Camera, FileText, Package,
 } from 'lucide-react';
+import { AmenityIcon } from '../lib/amenityIcons';
 
 function normalizeConvexListingDetail(l) {
   const images = l.gallery_images?.length ? l.gallery_images : (l.image ? [l.image] : []);
@@ -650,8 +651,43 @@ function SaveCollectionModal({ listing, collections, onMoveToCollection, onRemov
   );
 }
 
+// ─── Sample listing hover tooltip ────────────────────────────────────────────
+function SampleTooltip({ active, children }) {
+  const [visible, setVisible] = useState(false);
+  if (!active) return children;
+  return (
+    <div
+      style={{ position: 'relative' }}
+      onMouseEnter={() => setVisible(true)}
+      onMouseLeave={() => setVisible(false)}
+    >
+      {children}
+      {visible && (
+        <div style={{
+          position: 'absolute', bottom: 'calc(100% + 10px)', left: '50%',
+          transform: 'translateX(-50%)',
+          background: 'rgba(25,37,36,0.92)', backdropFilter: 'blur(8px)',
+          color: '#EFECE9', padding: '0.45rem 0.9rem',
+          borderRadius: '0.625rem', fontSize: '0.75rem', fontWeight: 600,
+          whiteSpace: 'nowrap', pointerEvents: 'none', zIndex: 30,
+          fontFamily: 'var(--font-body)', letterSpacing: '0.01em',
+          boxShadow: '0 4px 16px rgba(25,37,36,0.2)',
+        }}>
+          Sample listing · interactions disabled
+          <div style={{
+            position: 'absolute', top: '100%', left: '50%',
+            transform: 'translateX(-50%)',
+            borderLeft: '5px solid transparent', borderRight: '5px solid transparent',
+            borderTop: '5px solid rgba(25,37,36,0.92)',
+          }} />
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Host Profile Modal ───────────────────────────────────────────────────────
-function HostProfileModal({ host, listing, onClose, onMessage }) {
+function HostProfileModal({ host, listing, onClose, onMessage, isSample }) {
   const [imgError, setImgError] = useState(false);
   const avatar = imgError ? host.avatar_fallback : host.avatar_url;
   return (
@@ -729,22 +765,25 @@ function HostProfileModal({ host, listing, onClose, onMessage }) {
           <strong style={{ color: 'var(--slate)' }}>Hosting in</strong> {listing.location}
         </p>
 
-        <button
-          onClick={onMessage}
-          style={{
-            width: '100%', padding: '0.875rem',
-            background: 'var(--ink)', color: 'var(--bone)',
-            borderRadius: '999px', fontFamily: 'var(--font-body)',
-            fontSize: '0.9rem', fontWeight: 700,
-            border: 'none', cursor: 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem',
-            transition: 'opacity 150ms',
-          }}
-          onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.88'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; }}
-        >
-          Message {host.name.split(' ')[0]} <ArrowRight />
-        </button>
+        <SampleTooltip active={isSample}>
+          <button
+            onClick={isSample ? undefined : onMessage}
+            disabled={isSample}
+            style={{
+              width: '100%', padding: '0.875rem',
+              background: 'var(--ink)', color: 'var(--bone)',
+              borderRadius: '999px', fontFamily: 'var(--font-body)',
+              fontSize: '0.9rem', fontWeight: 700,
+              border: 'none', cursor: isSample ? 'not-allowed' : 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem',
+              transition: 'opacity 150ms', opacity: isSample ? 0.5 : 1,
+            }}
+            onMouseEnter={(e) => { if (!isSample) e.currentTarget.style.opacity = '0.88'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.opacity = isSample ? '0.5' : '1'; }}
+          >
+            Message {host.name.split(' ')[0]} <ArrowRight />
+          </button>
+        </SampleTooltip>
       </div>
     </div>
   );
@@ -1177,7 +1216,9 @@ export default function ListingDetail() {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.875rem' }}>
                 {listing.amenities.map(({ icon, label }) => (
                   <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                    <span style={{ fontSize: '1.1rem', width: 26, textAlign: 'center', flexShrink: 0 }}>{icon}</span>
+                    <span style={{ width: 26, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <AmenityIcon icon={icon} size={18} />
+                    </span>
                     <span style={{ fontSize: '0.9rem', color: 'var(--slate)' }}>{label}</span>
                   </div>
                 ))}
@@ -1319,23 +1360,24 @@ export default function ListingDetail() {
                   <p style={{ fontSize: '0.9rem', color: 'var(--slate)', lineHeight: 1.7, marginBottom: '1.25rem' }}>{SAMPLE_HOST.bio}</p>
                   <p style={{ fontSize: '0.85rem', color: 'var(--slate)', marginBottom: '0.35rem' }}><strong>Response rate:</strong> {SAMPLE_HOST.response_rate}%</p>
                   <p style={{ fontSize: '0.85rem', color: 'var(--slate)', marginBottom: '1.25rem' }}><strong>Responds</strong> {SAMPLE_HOST.response_time}</p>
-                  <button
-                    onClick={isSampleListing ? undefined : handleMessageHost}
-                    disabled={isSampleListing}
-                    title={isSampleListing ? SAMPLE_TOOLTIP : undefined}
-                    style={{
-                      padding: '0.65rem 1.5rem',
-                      background: 'var(--bone)', border: '1.5px solid rgba(25,37,36,0.15)',
-                      borderRadius: '999px', fontFamily: 'var(--font-body)',
-                      fontSize: '0.875rem', fontWeight: 600, color: 'var(--ink)',
-                      cursor: isSampleListing ? 'not-allowed' : 'pointer',
-                      opacity: isSampleListing ? 0.5 : 1,
-                    }}
-                    onMouseEnter={(e) => { if (!isSampleListing) e.currentTarget.style.background = 'rgba(25,37,36,0.07)'; }}
-                    onMouseLeave={(e) => { if (!isSampleListing) e.currentTarget.style.background = 'var(--bone)'; }}
-                  >
-                    Message host
-                  </button>
+                  <SampleTooltip active={isSampleListing}>
+                    <button
+                      onClick={isSampleListing ? undefined : handleMessageHost}
+                      disabled={isSampleListing}
+                      style={{
+                        padding: '0.65rem 1.5rem',
+                        background: 'var(--bone)', border: '1.5px solid rgba(25,37,36,0.15)',
+                        borderRadius: '999px', fontFamily: 'var(--font-body)',
+                        fontSize: '0.875rem', fontWeight: 600, color: 'var(--ink)',
+                        cursor: isSampleListing ? 'not-allowed' : 'pointer',
+                        opacity: isSampleListing ? 0.5 : 1,
+                      }}
+                      onMouseEnter={(e) => { if (!isSampleListing) e.currentTarget.style.background = 'rgba(25,37,36,0.07)'; }}
+                      onMouseLeave={(e) => { if (!isSampleListing) e.currentTarget.style.background = 'var(--bone)'; }}
+                    >
+                      Message host
+                    </button>
+                  </SampleTooltip>
                 </div>
               </div>
             </div>
@@ -1383,27 +1425,28 @@ export default function ListingDetail() {
                   ))}
                 </div>
 
-                <button
-                  onClick={(applied || isSampleListing) ? undefined : (!isVerified ? openModal : !isSubscribed ? openSubModal : () => setShowApplyModal(true))}
-                  disabled={applied || isSampleListing}
-                  title={isSampleListing ? SAMPLE_TOOLTIP : undefined}
-                  style={{
-                    width: '100%', padding: '1rem',
-                    opacity: isSampleListing ? 0.5 : 1,
-                    background: applied ? 'rgba(25,37,36,0.1)' : 'var(--ink)',
-                    color: applied ? 'var(--sage)' : 'var(--bone)',
-                    borderRadius: '999px', fontFamily: 'var(--font-body)',
-                    fontSize: '1rem', fontWeight: 700,
-                    cursor: (applied || isSampleListing) ? 'default' : 'pointer',
-                    border: 'none', marginBottom: '0.75rem',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
-                    transition: 'opacity 150ms',
-                  }}
-                  onMouseEnter={(e) => { if (!applied) e.currentTarget.style.opacity = '0.88'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; }}
-                >
-                  {applied ? '✓ Applied' : (!isVerified || !isSubscribed) ? <><LockIcon /><span>Apply Now</span></> : <><span>Apply Now</span><ArrowRight /></>}
-                </button>
+                <SampleTooltip active={isSampleListing}>
+                  <button
+                    onClick={(applied || isSampleListing) ? undefined : (!isVerified ? openModal : !isSubscribed ? openSubModal : () => setShowApplyModal(true))}
+                    disabled={applied || isSampleListing}
+                    style={{
+                      width: '100%', padding: '1rem',
+                      opacity: isSampleListing ? 0.5 : 1,
+                      background: applied ? 'rgba(25,37,36,0.1)' : 'var(--ink)',
+                      color: applied ? 'var(--sage)' : 'var(--bone)',
+                      borderRadius: '999px', fontFamily: 'var(--font-body)',
+                      fontSize: '1rem', fontWeight: 700,
+                      cursor: (applied || isSampleListing) ? 'default' : 'pointer',
+                      border: 'none', marginBottom: '0.75rem',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
+                      transition: 'opacity 150ms',
+                    }}
+                    onMouseEnter={(e) => { if (!applied && !isSampleListing) e.currentTarget.style.opacity = '0.88'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.opacity = isSampleListing ? '0.5' : '1'; }}
+                  >
+                    {applied ? '✓ Applied' : (!isVerified || !isSubscribed) ? <><LockIcon /><span>Apply Now</span></> : <><span>Apply Now</span><ArrowRight /></>}
+                  </button>
+                </SampleTooltip>
 
                 <p style={{ fontSize: '0.75rem', color: 'var(--sage)', textAlign: 'center' }}>
                   Collabnb is free for creators.
@@ -1431,24 +1474,25 @@ export default function ListingDetail() {
             </p>
             <p style={{ fontSize: '0.75rem', color: 'var(--sage)' }}>{listing.deliverable_count} deliverables</p>
           </div>
-          <button
-            onClick={(applied || isSampleListing) ? undefined : (!isVerified ? openModal : !isSubscribed ? openSubModal : () => setShowApplyModal(true))}
-            disabled={applied || isSampleListing}
-            title={isSampleListing ? SAMPLE_TOOLTIP : undefined}
-            style={{
-              padding: '0.875rem 2rem',
-              opacity: isSampleListing ? 0.5 : 1,
-              background: applied ? 'rgba(25,37,36,0.1)' : 'var(--ink)',
-              color: applied ? 'var(--sage)' : 'var(--bone)',
-              borderRadius: '999px', fontFamily: 'var(--font-body)',
-              fontSize: '0.95rem', fontWeight: 700,
-              cursor: (applied || isSampleListing) ? 'default' : 'pointer',
-              border: 'none', flexShrink: 0,
-              display: 'flex', alignItems: 'center', gap: '0.4rem',
-            }}
-          >
-            {applied ? '✓ Applied' : (!isVerified || !isSubscribed) ? <><LockIcon /><span>Apply Now</span></> : <><span>Apply Now</span><ArrowRight /></>}
-          </button>
+          <SampleTooltip active={isSampleListing}>
+            <button
+              onClick={(applied || isSampleListing) ? undefined : (!isVerified ? openModal : !isSubscribed ? openSubModal : () => setShowApplyModal(true))}
+              disabled={applied || isSampleListing}
+              style={{
+                padding: '0.875rem 2rem',
+                opacity: isSampleListing ? 0.5 : 1,
+                background: applied ? 'rgba(25,37,36,0.1)' : 'var(--ink)',
+                color: applied ? 'var(--sage)' : 'var(--bone)',
+                borderRadius: '999px', fontFamily: 'var(--font-body)',
+                fontSize: '0.95rem', fontWeight: 700,
+                cursor: (applied || isSampleListing) ? 'default' : 'pointer',
+                border: 'none', flexShrink: 0,
+                display: 'flex', alignItems: 'center', gap: '0.4rem',
+              }}
+            >
+              {applied ? '✓ Applied' : (!isVerified || !isSubscribed) ? <><LockIcon /><span>Apply Now</span></> : <><span>Apply Now</span><ArrowRight /></>}
+            </button>
+          </SampleTooltip>
         </div>
       )}
 
@@ -1483,7 +1527,8 @@ export default function ListingDetail() {
           host={SAMPLE_HOST}
           listing={listing}
           onClose={() => setShowHostModal(false)}
-          onMessage={() => { setShowHostModal(false); if (!isSampleListing) handleMessageHost(); }}
+          onMessage={() => { setShowHostModal(false); handleMessageHost(); }}
+          isSample={isSampleListing}
         />
       )}
 

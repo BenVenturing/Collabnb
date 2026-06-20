@@ -10,6 +10,7 @@ import { WhereSearchContent, WhatSearchContent, WhenSearchContent, useAnimatedPl
 import { formatDate } from '../lib/dateUtils';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../convex/_generated/api';
+import FAQModal from './FAQModal';
 
 function fmtNavWhen(val) {
   if (!val) return 'Any time';
@@ -144,6 +145,8 @@ export default function AppNav() {
   const [scrolled,    setScrolled]   = useState(false);
   const [menuOpen,    setMenuOpen]   = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [faqOpen,     setFaqOpen]     = useState(false);
+  const [faqBubble,   setFaqBubble]   = useState(false);
 
   // In-nav search state
   const [navSearchOpen, setNavSearchOpen] = useState(false);
@@ -865,6 +868,18 @@ export default function AppNav() {
                   </>
                 )}
                 <div className="border-t border-stone/30" />
+                <button
+                  onClick={() => { setProfileOpen(false); setFaqOpen(true); setFaqBubble(true); }}
+                  className="w-full text-left px-4 py-3 text-sm text-ink hover:bg-mint/30 transition-colors flex items-center gap-2"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5 text-sage flex-shrink-0">
+                    <circle cx="12" cy="12" r="10"/>
+                    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+                    <line x1="12" y1="17" x2="12.01" y2="17"/>
+                  </svg>
+                  FAQ &amp; Help
+                </button>
+                <div className="border-t border-stone/30" />
                 <button onClick={signOut} className="w-full text-left px-4 py-3 text-sm text-red-500 hover:bg-red-50/50 transition-colors">
                   Log Out
                 </button>
@@ -874,6 +889,90 @@ export default function AppNav() {
           </div>
         </div>
       </nav>
+
+      {/* ── FAQ modal ─────────────────────────────────────────────────────────── */}
+      <FAQModal isOpen={faqOpen} onClose={() => setFaqOpen(false)} />
+
+      {/* ── FAQ persistent bubble (bottom-right, shown after first FAQ trigger) ── */}
+      {faqBubble && (
+        <div
+          className="group"
+          style={{
+            position: 'fixed',
+            bottom: '10.5rem',
+            right: '1.5rem',
+            zIndex: 200,
+          }}
+        >
+          {/* Main bubble */}
+          <button
+            onClick={() => setFaqOpen(true)}
+            aria-label="Help & FAQ"
+            title="Help & FAQ"
+            style={{
+              width: 48,
+              height: 48,
+              borderRadius: '50%',
+              border: '1px solid rgba(255,255,255,0.75)',
+              background: 'rgba(255,255,255,0.72)',
+              backdropFilter: 'blur(24px) saturate(140%)',
+              WebkitBackdropFilter: 'blur(24px) saturate(140%)',
+              boxShadow:
+                'inset 0 1px 0 rgba(255,255,255,0.7), inset 0 -1px 0 rgba(25,37,36,0.04), 0 4px 20px rgba(25,37,36,0.12)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              transition: 'transform 200ms cubic-bezier(0.16,1,0.3,1), box-shadow 200ms',
+              fontFamily: 'var(--font-display)',
+              fontSize: '1.1rem',
+              fontWeight: 800,
+              color: 'var(--ink)',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'scale(1.05)';
+              e.currentTarget.style.boxShadow =
+                'inset 0 1px 0 rgba(255,255,255,0.7), inset 0 -1px 0 rgba(25,37,36,0.04), 0 6px 28px rgba(25,37,36,0.18), 0 0 0 6px rgba(209,235,219,0.35)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'scale(1)';
+              e.currentTarget.style.boxShadow =
+                'inset 0 1px 0 rgba(255,255,255,0.7), inset 0 -1px 0 rgba(25,37,36,0.04), 0 4px 20px rgba(25,37,36,0.12)';
+            }}
+          >
+            ?
+          </button>
+          {/* Dismiss × — visible on group hover */}
+          <button
+            onClick={(e) => { e.stopPropagation(); setFaqBubble(false); }}
+            aria-label="Dismiss FAQ button"
+            style={{
+              position: 'absolute',
+              top: -4,
+              right: -4,
+              width: 16,
+              height: 16,
+              borderRadius: '50%',
+              background: 'rgba(25,37,36,0.72)',
+              border: '1.5px solid rgba(255,255,255,0.8)',
+              color: '#fff',
+              fontSize: '0.6rem',
+              fontWeight: 700,
+              lineHeight: 1,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              opacity: 0,
+              transition: 'opacity 150ms',
+              padding: 0,
+            }}
+            className="group-hover:!opacity-100"
+          >
+            ×
+          </button>
+        </div>
+      )}
     </>
   );
 }

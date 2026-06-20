@@ -77,14 +77,14 @@ export const SAMPLE_LISTINGS = [
     about: 'A stunning old-growth forest cabin perched above Lake Tahoe with sweeping mountain and lake views. Floor-to-ceiling windows, a stone fireplace, and a private hot tub make this the perfect backdrop for authentic travel content. Surrounded by towering pines with ski slopes just 10 minutes away.',
 
     amenities: [
-      { icon: '♨️', label: 'Private hot tub' },
-      { icon: '🔥', label: 'Stone fireplace' },
-      { icon: '⛷️', label: 'Ski storage' },
-      { icon: '🏔️', label: 'Mountain views' },
-      { icon: '🍳', label: 'Full kitchen' },
-      { icon: '🐕', label: 'Pet friendly' },
-      { icon: '📶', label: 'High-speed WiFi' },
-      { icon: '🅿️', label: 'Free parking' },
+      { icon: 'hot_tub',  label: 'Private hot tub' },
+      { icon: 'fire',     label: 'Stone fireplace' },
+      { icon: 'ski',      label: 'Ski storage' },
+      { icon: 'mountain', label: 'Mountain views' },
+      { icon: 'kitchen',  label: 'Full kitchen' },
+      { icon: 'pet',      label: 'Pet friendly' },
+      { icon: 'wifi',     label: 'High-speed WiFi' },
+      { icon: 'parking',  label: 'Free parking' },
     ],
 
     what_you_get: [
@@ -142,14 +142,14 @@ export const SAMPLE_LISTINGS = [
     about: 'A stunning Patagonian lakefront villa perched on the shores of Nahuel Huapi Lake with sweeping views of the Andes. The infinity pool seems to merge with the crystal-clear mountain water. Features a chef\'s kitchen, wraparound deck with lake access, and private dock. Golden hour over the Cerro Catedral peaks is pure magic.',
 
     amenities: [
-      { icon: '🏊', label: 'Infinity pool' },
-      { icon: '🏔️', label: 'Andean lake views' },
-      { icon: '👨‍🍳', label: "Chef's kitchen" },
-      { icon: '🛶', label: 'Private dock & kayaks' },
-      { icon: '🔥', label: 'Lakeside fire pit' },
-      { icon: '🍽️', label: 'Outdoor parrilla grill' },
-      { icon: '📶', label: 'High-speed WiFi' },
-      { icon: '🚗', label: 'Gated parking' },
+      { icon: 'pool',     label: 'Infinity pool' },
+      { icon: 'mountain', label: 'Andean lake views' },
+      { icon: 'kitchen',  label: "Chef's kitchen" },
+      { icon: 'dock',     label: 'Private dock & kayaks' },
+      { icon: 'fire',     label: 'Lakeside fire pit' },
+      { icon: 'grill',    label: 'Outdoor parrilla grill' },
+      { icon: 'wifi',     label: 'High-speed WiFi' },
+      { icon: 'parking',  label: 'Gated parking' },
     ],
 
     what_you_get: [
@@ -207,14 +207,14 @@ export const SAMPLE_LISTINGS = [
     about: 'A breathtaking jungle mountain lodge in the hills above Chiang Mai with panoramic views of Doi Suthep and mist-covered rice terraces. Open-air design with soaring teak ceilings, a natural stone infinity pool, and a private outdoor sala for yoga and meditation. Includes a personal chef for Northern Thai cooking and guided jungle treks. The golden light over the mountains at sunset is unforgettable.',
 
     amenities: [
-      { icon: '🏊', label: 'Infinity pool' },
-      { icon: '🌿', label: 'Jungle mountain views' },
-      { icon: '🧘', label: 'Yoga sala' },
-      { icon: '🔥', label: 'Outdoor fire pit' },
-      { icon: '👨‍🍳', label: 'Private chef' },
-      { icon: '🥾', label: 'Guided jungle treks' },
-      { icon: '🍜', label: 'Thai cooking class' },
-      { icon: '📶', label: 'High-speed Starlink WiFi' },
+      { icon: 'pool',    label: 'Infinity pool' },
+      { icon: 'garden',  label: 'Jungle mountain views' },
+      { icon: 'yoga',    label: 'Yoga sala' },
+      { icon: 'fire',    label: 'Outdoor fire pit' },
+      { icon: 'chef',    label: 'Private chef' },
+      { icon: 'hiking',  label: 'Guided jungle treks' },
+      { icon: 'kitchen', label: 'Thai cooking class' },
+      { icon: 'wifi',    label: 'High-speed Starlink WiFi' },
     ],
 
     what_you_get: [
@@ -272,14 +272,14 @@ export const SAMPLE_LISTINGS = [
     about: 'An opulent Cape Dutch-style private villa set within a working Stellenbosch wine estate with dramatic views of the Jonkershoek Valley and Table Mountain in the distance. Wake up to rows of Cabernet Sauvignon and Chenin Blanc vines stretching toward the mountains. Includes exclusive barrel room access, private wine tastings with a master sommelier, and guided vineyard tours. The warm golden hour light over the Cape Winelands is among the most cinematic in the world.',
 
     amenities: [
-      { icon: '🍷', label: 'Private wine tasting' },
-      { icon: '🌿', label: 'Vineyard access' },
-      { icon: '🏊', label: 'Heated estate pool' },
-      { icon: '👨‍🍳', label: "Chef's kitchen" },
-      { icon: '🧀', label: 'Master sommelier' },
-      { icon: '🛋️', label: 'Wine cellar suite' },
-      { icon: '🏔️', label: 'Table Mountain views' },
-      { icon: '📶', label: 'High-speed WiFi' },
+      { icon: 'wine',     label: 'Private wine tasting' },
+      { icon: 'garden',   label: 'Vineyard access' },
+      { icon: 'pool',     label: 'Heated estate pool' },
+      { icon: 'kitchen',  label: "Chef's kitchen" },
+      { icon: 'wine',     label: 'Master sommelier' },
+      { icon: 'wine',     label: 'Wine cellar suite' },
+      { icon: 'mountain', label: 'Table Mountain views' },
+      { icon: 'wifi',     label: 'High-speed WiFi' },
     ],
 
     what_you_get: [
@@ -337,14 +337,14 @@ export const SAMPLE_LISTINGS = [
     about: 'A one-of-a-kind treehouse elevated 30 feet above a glassy private lake in the Blue Ridge Mountains. Accessed by a rope bridge, with glass floors and a wraparound deck. Kayaks and paddleboards are included. The mist rolling across the lake at dawn creates some of the most ethereal photography conditions anywhere in the Southeast.',
 
     amenities: [
-      { icon: '🚣', label: 'Kayaks included' },
-      { icon: '🌲', label: 'Private lake access' },
-      { icon: '🌄', label: 'Blue Ridge views' },
-      { icon: '🔥', label: 'Lakeside fire pit' },
-      { icon: '🚿', label: 'Outdoor shower' },
-      { icon: '🛤️', label: 'Forest hiking trails' },
-      { icon: '⚡', label: 'Off-grid solar power' },
-      { icon: '📵', label: 'Digital detox ready' },
+      { icon: 'dock',    label: 'Kayaks included' },
+      { icon: 'garden',  label: 'Private lake access' },
+      { icon: 'views',   label: 'Blue Ridge views' },
+      { icon: 'fire',    label: 'Lakeside fire pit' },
+      { icon: 'shower',  label: 'Outdoor shower' },
+      { icon: 'hiking',  label: 'Forest hiking trails' },
+      { icon: 'solar',   label: 'Off-grid solar power' },
+      { icon: 'landmark',label: 'Digital detox ready' },
     ],
 
     what_you_get: [
@@ -402,14 +402,14 @@ export const SAMPLE_LISTINGS = [
     about: 'A stunning geodesic glass dome perched on a hillside above the Paphos coastline with sweeping views of the Mediterranean Sea. The transparent roof turns stargazing into a nightly spectacle under some of the clearest skies in Europe. Features an outdoor rain-style shower, a stone-built meditation terrace, and a private fire pit surrounded by olive trees and ancient cypress groves. Minutes from the tomb-lined ruins of Kato Paphos.',
 
     amenities: [
-      { icon: '🌌', label: 'Mediterranean stargazing' },
-      { icon: '🔥', label: 'Private fire pit' },
-      { icon: '🧘', label: 'Stone meditation terrace' },
-      { icon: '🚿', label: 'Outdoor rain shower' },
-      { icon: '🌊', label: 'Sea views' },
-      { icon: '☀️', label: 'Solar-powered dome' },
-      { icon: '🫒', label: 'Olive grove trails' },
-      { icon: '🏛️', label: 'Ancient ruins nearby' },
+      { icon: 'stargazing', label: 'Mediterranean stargazing' },
+      { icon: 'fire',       label: 'Private fire pit' },
+      { icon: 'yoga',       label: 'Stone meditation terrace' },
+      { icon: 'shower',     label: 'Outdoor rain shower' },
+      { icon: 'views',      label: 'Sea views' },
+      { icon: 'solar',      label: 'Solar-powered dome' },
+      { icon: 'garden',     label: 'Olive grove trails' },
+      { icon: 'landmark',   label: 'Ancient ruins nearby' },
     ],
 
     what_you_get: [

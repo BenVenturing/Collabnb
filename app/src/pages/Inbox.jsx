@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { useSearchParams, useLocation } from 'react-router-dom';
+import { useSearchParams, useLocation, useNavigate } from 'react-router-dom';
 import { useCollabs } from '../contexts/CollabContext';
 import { SAMPLE_LISTINGS, THREAD_MESSAGES } from '../lib/mockData';
 import CollabDetail from '../components/CollabDetail';

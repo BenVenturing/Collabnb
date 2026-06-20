@@ -5,10 +5,10 @@
 ## Quick reference
 
 - **Stack:** React + Vite + Clerk + Convex + Vercel
-- **Admin:** `benventuring@gmail.com` → `/app/#/admin`
+- **Admin:** `benventuring@gmail.com` → `/admin`
 - **Database:** Convex (NOT Supabase)
 - **Convex deploy:** `cd app && npx convex deploy` (does NOT happen on git push)
-- **Routing:** HashRouter — all app routes are `/#/...`
+- **Routing:** BrowserRouter — all app routes are `/path` (e.g. `/blog`, `/explore`, `/admin`)
 - **Hosting:** Vercel at `collabnb.com`; two Vite builds (root `dist/`, app `dist/app/`)
 
 ## Collaboration rules
@@ -17,4 +17,4 @@
 - Short, concise responses. No trailing summaries.
 - No unsolicited refactors, abstractions, or feature additions.
 - No comments in code unless the WHY is non-obvious.
-- Never switch the database to Supabase or the router to BrowserRouter.
+- Never switch the database to Supabase.

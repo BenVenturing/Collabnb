@@ -94,9 +94,21 @@ export const updatePost = mutation({
     content: v.optional(v.string()),
     tags: v.optional(v.array(v.string())),
     instagram_embed_url: v.optional(v.string()),
+    seo_description: v.optional(v.string()),
+    // Image fields (hero + 3 inline) — swappable from the editor
     hero_image_url: v.optional(v.string()),
     hero_image_alt: v.optional(v.string()),
-    seo_description: v.optional(v.string()),
+    hero_image_credit: v.optional(v.string()),
+    hero_image_credit_url: v.optional(v.string()),
+    inline_image_1_url: v.optional(v.string()),
+    inline_image_1_alt: v.optional(v.string()),
+    inline_image_1_credit: v.optional(v.string()),
+    inline_image_2_url: v.optional(v.string()),
+    inline_image_2_alt: v.optional(v.string()),
+    inline_image_2_credit: v.optional(v.string()),
+    inline_image_3_url: v.optional(v.string()),
+    inline_image_3_alt: v.optional(v.string()),
+    inline_image_3_credit: v.optional(v.string()),
   },
   handler: async (ctx, { id, ...fields }) => {
     const updates: Record<string, unknown> = {};
@@ -111,9 +123,17 @@ export const updatePost = mutation({
     if (fields.excerpt !== undefined) updates.excerpt = fields.excerpt;
     if (fields.tags !== undefined) updates.tags = fields.tags;
     if (fields.instagram_embed_url !== undefined) updates.instagram_embed_url = fields.instagram_embed_url;
-    if (fields.hero_image_url !== undefined) updates.hero_image_url = fields.hero_image_url;
-    if (fields.hero_image_alt !== undefined) updates.hero_image_alt = fields.hero_image_alt;
     if (fields.seo_description !== undefined) updates.seo_description = fields.seo_description;
+    // Patch any image field that was provided
+    const imageKeys = [
+      "hero_image_url", "hero_image_alt", "hero_image_credit", "hero_image_credit_url",
+      "inline_image_1_url", "inline_image_1_alt", "inline_image_1_credit",
+      "inline_image_2_url", "inline_image_2_alt", "inline_image_2_credit",
+      "inline_image_3_url", "inline_image_3_alt", "inline_image_3_credit",
+    ] as const;
+    for (const k of imageKeys) {
+      if ((fields as any)[k] !== undefined) updates[k] = (fields as any)[k];
+    }
     await ctx.db.patch(id, updates);
   },
 });
@@ -221,6 +241,33 @@ async function nvidiaChat(apiKey: string, messages: {role: string; content: stri
   const data = await res.json();
   return data.choices?.[0]?.message?.content || "";
 }
+
+// ─── Action: search Unsplash for editor photo swaps ───────────────────────────
+export const searchUnsplash = action({
+  args: { query: v.string(), bw: v.optional(v.boolean()) },
+  handler: async (_ctx, { query, bw = true }) => {
+    const unsplashKey = process.env.UNSPLASH_ACCESS_KEY;
+    if (!unsplashKey) throw new Error("Missing UNSPLASH_ACCESS_KEY in Convex env.");
+    const q = encodeURIComponent(query.trim() || "boutique hotel editorial");
+    const color = bw ? "&color=black_and_white" : "";
+    const res = await fetch(
+      `https://api.unsplash.com/search/photos?query=${q}&per_page=12&orientation=landscape${color}&content_filter=high`,
+      { headers: { Authorization: `Client-ID ${unsplashKey}` } }
+    );
+    if (!res.ok) {
+      throw new Error(res.status === 403 ? "Unsplash rate limit reached — try again shortly." : "Unsplash search failed.");
+    }
+    const data = await res.json();
+    return (data.results || []).map((p: any) => ({
+      thumb: p.urls?.small as string,
+      url: p.urls?.regular as string,
+      alt: (p.alt_description || query) as string,
+      credit: p.user?.name as string,
+      creditUrl: `https://unsplash.com/@${p.user?.username}?utm_source=collabnb&utm_medium=referral` as string,
+      downloadLocation: p.links?.download_location as string,
+    }));
+  },
+});
 
 export const generatePost = action({
   args: {

@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { useQuery, useMutation, useAction } from 'convex/react';
+import { useQuery, useMutation, useAction, useConvex } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 
 const STATUS_CFG = {
@@ -24,6 +24,118 @@ function Badge({ status }) {
   );
 }
 
+// ─── Swappable image field (Unsplash search · upload · paste URL) ─────────────
+function ImageSwapField({ label, value, onChange }) {
+  const searchUnsplash    = useAction(api.blog.searchUnsplash);
+  const generateUploadUrl = useMutation(api.uploads.generateUploadUrl);
+  const fetchImageUrl     = useQueryImageUrl();
+
+  const [open,    setOpen]    = useState(false);
+  const [mode,    setMode]    = useState('unsplash'); // 'unsplash' | 'upload' | 'url'
+  const [query,   setQuery]   = useState('');
+  const [results, setResults] = useState([]);
+  const [busy,    setBusy]    = useState(false);
+  const [err,     setErr]     = useState('');
+  const [urlInput, setUrlInput] = useState('');
+  const fileRef = useRef(null);
+
+  async function runSearch() {
+    setBusy(true); setErr('');
+    try { setResults(await searchUnsplash({ query })); }
+    catch (e) { setErr(e.message || 'Search failed'); }
+    finally { setBusy(false); }
+  }
+
+  async function handleUpload(file) {
+    if (!file) return;
+    setBusy(true); setErr('');
+    try {
+      const uploadUrl = await generateUploadUrl();
+      const res = await fetch(uploadUrl, { method: 'POST', headers: { 'Content-Type': file.type }, body: file });
+      const { storageId } = await res.json();
+      const url = await fetchImageUrl(storageId);
+      if (!url) throw new Error('Upload failed');
+      onChange({ url, alt: file.name.replace(/\.[^.]+$/, ''), credit: '' });
+      setOpen(false);
+    } catch (e) { setErr(e.message || 'Upload failed'); }
+    finally { setBusy(false); }
+  }
+
+  const labelStyle = { fontSize: '0.72rem', fontWeight: 700, color: 'var(--sage)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: '0.35rem' };
+  const modeBtn = (m, txt) => (
+    <button onClick={() => setMode(m)} style={{ padding: '0.35rem 0.7rem', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: '0.75rem', fontWeight: mode === m ? 700 : 500, background: mode === m ? 'var(--ink)' : 'rgba(25,37,36,0.06)', color: mode === m ? '#fff' : 'var(--slate)' }}>{txt}</button>
+  );
+
+  return (
+    <div>
+      <label style={labelStyle}>{label}</label>
+      <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+        <div style={{ width: 96, height: 64, borderRadius: '0.5rem', overflow: 'hidden', background: 'rgba(25,37,36,0.06)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          {value.url
+            ? <img src={value.url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            : <span style={{ fontSize: '0.65rem', color: 'var(--sage)' }}>No image</span>}
+        </div>
+        <button onClick={() => { setOpen(o => !o); setMode('unsplash'); }} style={{ padding: '0.45rem 0.9rem', borderRadius: 8, border: '1.5px solid rgba(25,37,36,0.2)', background: 'transparent', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 600, color: 'var(--ink)' }}>
+          {open ? 'Close' : (value.url ? 'Replace' : 'Add image')}
+        </button>
+        {value.url && (
+          <button onClick={() => onChange({ url: '', alt: '', credit: '' })} style={{ padding: '0.45rem 0.7rem', borderRadius: 8, border: 'none', background: 'transparent', cursor: 'pointer', fontSize: '0.75rem', color: '#9b2d2d' }}>Remove</button>
+        )}
+      </div>
+
+      {open && (
+        <div style={{ marginTop: '0.6rem', padding: '0.75rem', border: '1px solid rgba(25,37,36,0.1)', borderRadius: '0.6rem', background: '#fafafa' }}>
+          <div style={{ display: 'flex', gap: '0.4rem', marginBottom: '0.6rem' }}>
+            {modeBtn('unsplash', 'Search Unsplash')}
+            {modeBtn('upload', 'Upload')}
+            {modeBtn('url', 'Paste URL')}
+          </div>
+
+          {mode === 'unsplash' && (
+            <div>
+              <div style={{ display: 'flex', gap: '0.4rem', marginBottom: '0.6rem' }}>
+                <input value={query} onChange={e => setQuery(e.target.value)} onKeyDown={e => e.key === 'Enter' && runSearch()} placeholder="e.g. boutique hotel pool" style={{ flex: 1, padding: '0.5rem 0.7rem', border: '1.5px solid rgba(25,37,36,0.12)', borderRadius: 8, fontSize: '0.8rem', outline: 'none' }} />
+                <button onClick={runSearch} disabled={busy} style={{ padding: '0.5rem 1rem', borderRadius: 8, border: 'none', background: 'var(--ink)', color: '#fff', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 600 }}>{busy ? '…' : 'Search'}</button>
+              </div>
+              {results.length > 0 && (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.4rem', maxHeight: 220, overflowY: 'auto' }}>
+                  {results.map((r, i) => (
+                    <button key={i} onClick={() => { onChange({ url: r.url, alt: r.alt, credit: r.credit }); setOpen(false); }} style={{ padding: 0, border: 'none', borderRadius: 6, overflow: 'hidden', cursor: 'pointer', aspectRatio: '4/3', background: '#eee' }} title={`Photo: ${r.credit}`}>
+                      <img src={r.thumb} alt={r.alt} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {mode === 'upload' && (
+            <div>
+              <input ref={fileRef} type="file" accept="image/*" onChange={e => handleUpload(e.target.files?.[0])} style={{ fontSize: '0.8rem' }} />
+              {busy && <p style={{ fontSize: '0.75rem', color: 'var(--sage)', margin: '0.5rem 0 0' }}>Uploading…</p>}
+            </div>
+          )}
+
+          {mode === 'url' && (
+            <div style={{ display: 'flex', gap: '0.4rem' }}>
+              <input value={urlInput} onChange={e => setUrlInput(e.target.value)} placeholder="https://images.unsplash.com/..." style={{ flex: 1, padding: '0.5rem 0.7rem', border: '1.5px solid rgba(25,37,36,0.12)', borderRadius: 8, fontSize: '0.8rem', outline: 'none' }} />
+              <button onClick={() => { if (urlInput.trim()) { onChange({ url: urlInput.trim(), alt: '', credit: '' }); setUrlInput(''); setOpen(false); } }} style={{ padding: '0.5rem 1rem', borderRadius: 8, border: 'none', background: 'var(--ink)', color: '#fff', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 600 }}>Use</button>
+            </div>
+          )}
+
+          {err && <p style={{ fontSize: '0.75rem', color: '#9b2d2d', margin: '0.5rem 0 0' }}>{err}</p>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Resolve a Convex storage id → public URL (uploads.getImageUrl is a query; wrap for imperative use)
+function useQueryImageUrl() {
+  const convex = useConvex();
+  return (storageId) => convex.query(api.uploads.getImageUrl, { storageId });
+}
+
 // ─── Post editor / preview modal ──────────────────────────────────────────────
 function PostEditor({ post, onClose }) {
   const updatePost   = useMutation(api.blog.updatePost);
@@ -39,6 +151,15 @@ function PostEditor({ post, onClose }) {
   const [saving,   setSaving]   = useState(false);
   const [confirm,  setConfirm]  = useState(null); // 'approve' | 'reject' | 'delete'
 
+  // Swappable images (hero + 3 inline). Each holds { url, alt, credit }.
+  const [images, setImages] = useState({
+    hero:    { url: post.hero_image_url || '',     alt: post.hero_image_alt || '',     credit: post.hero_image_credit || '' },
+    inline1: { url: post.inline_image_1_url || '', alt: post.inline_image_1_alt || '', credit: post.inline_image_1_credit || '' },
+    inline2: { url: post.inline_image_2_url || '', alt: post.inline_image_2_alt || '', credit: post.inline_image_2_credit || '' },
+    inline3: { url: post.inline_image_3_url || '', alt: post.inline_image_3_alt || '', credit: post.inline_image_3_credit || '' },
+  });
+  const setImage = (key, next) => setImages(prev => ({ ...prev, [key]: next }));
+
   async function handleSave() {
     setSaving(true);
     try {
@@ -49,6 +170,19 @@ function PostEditor({ post, onClose }) {
         content,
         tags: tags.split(',').map(t => t.trim()).filter(Boolean),
         instagram_embed_url: igEmbed || undefined,
+        hero_image_url:        images.hero.url,
+        hero_image_alt:        images.hero.alt,
+        hero_image_credit:     images.hero.credit,
+        hero_image_credit_url: images.hero.credit ? (post.hero_image_credit_url || '') : '',
+        inline_image_1_url:    images.inline1.url,
+        inline_image_1_alt:    images.inline1.alt,
+        inline_image_1_credit: images.inline1.credit,
+        inline_image_2_url:    images.inline2.url,
+        inline_image_2_alt:    images.inline2.alt,
+        inline_image_2_credit: images.inline2.credit,
+        inline_image_3_url:    images.inline3.url,
+        inline_image_3_alt:    images.inline3.alt,
+        inline_image_3_credit: images.inline3.credit,
       });
     } finally {
       setSaving(false);
@@ -155,6 +289,15 @@ function PostEditor({ post, onClose }) {
               <div>
                 <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--sage)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: '0.35rem' }}>Title</label>
                 <input value={title} onChange={e => setTitle(e.target.value)} style={inputStyle} />
+              </div>
+
+              {/* Photos — swap hero + inline images */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', padding: '1rem', border: '1px solid rgba(25,37,36,0.08)', borderRadius: '0.75rem', background: 'rgba(25,37,36,0.015)' }}>
+                <p style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--sage)', textTransform: 'uppercase', letterSpacing: '0.06em', margin: 0 }}>Photos</p>
+                <ImageSwapField label="Hero image"   value={images.hero}    onChange={v => setImage('hero', v)} />
+                <ImageSwapField label="Inline 1"     value={images.inline1} onChange={v => setImage('inline1', v)} />
+                <ImageSwapField label="Inline 2"     value={images.inline2} onChange={v => setImage('inline2', v)} />
+                <ImageSwapField label="Inline 3"     value={images.inline3} onChange={v => setImage('inline3', v)} />
               </div>
               <div>
                 <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--sage)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: '0.35rem' }}>Excerpt</label>

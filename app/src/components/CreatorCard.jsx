@@ -73,7 +73,7 @@ const EASE = 'cubic-bezier(0.25,1,0.5,1)';
 const DUR  = '360ms';
 
 // ─── Expanded modal overlay ───────────────────────────────────────────────────
-function CreatorModal({ creator, onClose, onMessage }) {
+function CreatorModal({ creator, onClose, onMessage, saved, onSave }) {
   useEffect(() => {
     document.body.style.overflow = 'hidden';
     return () => { document.body.style.overflow = ''; };
@@ -119,22 +119,27 @@ function CreatorModal({ creator, onClose, onMessage }) {
           boxShadow: '0 28px 80px rgba(25,37,36,0.24), inset 0 1px 0 rgba(255,255,255,0.9)',
         }}
       >
-        {/* Close */}
+        {/* Save heart */}
         <button
-          onClick={onClose}
+          onClick={(e) => { e.stopPropagation(); onSave(); }}
+          title={saved ? 'Saved' : 'Save creator'}
           style={{
             position: 'absolute', top: 14, right: 14, zIndex: 10,
-            width: 32, height: 32, borderRadius: '50%',
-            background: 'rgba(255,255,255,0.88)', backdropFilter: 'blur(8px)',
-            border: '1px solid rgba(25,37,36,0.1)',
+            width: 36, height: 36, borderRadius: '50%',
+            background: saved ? 'rgba(74,155,127,0.12)' : 'rgba(255,255,255,0.88)',
+            backdropFilter: 'blur(8px)',
+            border: `1.5px solid ${saved ? 'rgba(74,155,127,0.35)' : 'rgba(25,37,36,0.1)'}`,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             cursor: 'pointer', boxShadow: '0 2px 8px rgba(25,37,36,0.1)',
+            transition: 'all 200ms',
           }}
-          onMouseEnter={e => e.currentTarget.style.background = '#fff'}
-          onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.88)'}
         >
-          <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-            <path d="M1 1L9 9M9 1L1 9" stroke="#3C5759" strokeWidth="1.8" strokeLinecap="round"/>
+          <svg width="17" height="17" viewBox="0 0 24 24"
+            fill={saved ? '#4A9B7F' : 'none'}
+            stroke={saved ? '#4A9B7F' : '#3C5759'}
+            strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+          >
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
           </svg>
         </button>
 
@@ -208,7 +213,14 @@ function CreatorModal({ creator, onClose, onMessage }) {
               </span>
             </div>
 
-            <div style={{ height: 1, background: 'rgba(25,37,36,0.07)', margin: '14px 0' }} />
+            {/* Bio — shown first so it's the first thing read */}
+            {creator.bio && (
+              <p style={{ fontSize: 13.5, color: 'var(--slate)', lineHeight: 1.7, margin: '6px 0 14px' }}>
+                {creator.bio}
+              </p>
+            )}
+
+            <div style={{ height: 1, background: 'rgba(25,37,36,0.07)', margin: '0 0 14px' }} />
 
             {/* Stats */}
             <div style={{
@@ -234,13 +246,6 @@ function CreatorModal({ creator, onClose, onMessage }) {
                 </div>
               ))}
             </div>
-
-            {/* Bio */}
-            {creator.bio && (
-              <p style={{ fontSize: 13, color: 'var(--slate)', lineHeight: 1.65, margin: '14px 0 0' }}>
-                {creator.bio}
-              </p>
-            )}
 
             {/* Platforms + Niches */}
             {(creator.platforms?.length > 0 || creator.niches?.length > 0) && (
@@ -409,6 +414,7 @@ function ChipCard({ creator, onMessage, onHide }) {
 // ─── Collapsed card ───────────────────────────────────────────────────────────
 function FullCard({ creator, narrow = false, onMessage, onHide, visitingBadge, delay = 0 }) {
   const [open, setOpen]       = useState(false);
+  const [saved, setSaved]     = useState(false);
   const [hovered, setHovered] = useState(false);
   const t    = TIER_COLORS[creator.tier] || TIER_COLORS['UGC Beginner'];
   const city = creator.location?.split(',')[0] ?? creator.location ?? '';
@@ -420,6 +426,8 @@ function FullCard({ creator, narrow = false, onMessage, onHide, visitingBadge, d
           creator={creator}
           onClose={() => setOpen(false)}
           onMessage={onMessage}
+          saved={saved}
+          onSave={() => setSaved(s => !s)}
         />
       )}
       <div

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Search, MessageSquare, Check, X,
@@ -9,6 +9,10 @@ import SkeletonCard from '../../components/SkeletonCard';
 import { cache, cacheKey } from '../../lib/cache';
 import CreatorAvatar from '../../components/CreatorAvatar';
 import CreatorCard from '../../components/CreatorCard';
+import { useAppBar } from '../../contexts/AppBarContext';
+import { useAuth } from '../../contexts/AuthContext';
+import { useMutation } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const LOCATION_CONSENT_KEY = '@collabnb_location_consent_v1';
@@ -75,8 +79,13 @@ const CREATORS = [
     location: 'San Francisco, CA', lat: 37.7749, lng: -122.4194,
     platforms: ['Instagram', 'TikTok'], niches: ['Travel', 'Cabins', 'Mountain'],
     isFounder: true, isSample: true, avg_reach_30d: 24600, er_30d: 7.8, past_collab: false,
-    bio: 'Mountain stays and city escapes — documenting authentic travel moments that inspire.',
-    portfolioUrl: 'https://priya.wanders.co', travelCalendar: [],
+    bio: 'Mountain stays and city escapes — I document the kind of travel moments that actually make people stop scrolling. My content is cinematic, texture-forward, and deeply place-specific. Past collabs include boutique cabins in Big Sur, a treehouse retreat in the Catskills, and a converted barn stay in Sonoma. I shoot and edit everything myself and typically deliver within 5 days of checkout.',
+    portfolioUrl: 'https://priya.wanders.co',
+    travelCalendar: [
+      { id: 'tc1a', startDate: '2026-07-08', endDate: '2026-07-15', country: 'USA', city: 'Austin', note: 'Texas content trip' },
+      { id: 'tc1b', startDate: '2026-08-03', endDate: '2026-08-10', country: 'USA', city: 'San Francisco', note: 'Bay Area summer run' },
+      { id: 'tc1c', startDate: '2026-09-14', endDate: '2026-09-20', country: 'USA', city: 'Asheville', note: 'Fall mountain content' },
+    ],
   },
   {
     id: 'c2', name: 'Maya Chen', username: 'mayachen.travel', tier: 'Influencer',
@@ -84,11 +93,12 @@ const CREATORS = [
     location: 'Los Angeles, CA', lat: 34.0522, lng: -118.2437,
     platforms: ['Instagram', 'YouTube'], niches: ['Luxury', 'Coastal', 'Villa'],
     isFounder: true, isSample: true, avg_reach_30d: 58200, er_30d: 5.4, past_collab: true,
-    bio: 'Luxury hospitality creator. Editorial-quality content for boutique properties.',
+    bio: 'Luxury hospitality creator based in LA with 218K followers across Instagram and YouTube. I specialize in editorial-quality content for boutique properties — think long-form travel vlogs, moody cinematic Reels, and photography that makes a property look like a feature spread. My audience skews 28–42, high-income, heavy travel intent. I have 47 completed collabs with a zero-complaint track record and brand partnerships with Amex Travel and Soho House.',
     portfolioUrl: 'https://mayachen.travel',
     travelCalendar: [
-      { id: 'tc2a', startDate: '2026-05-15', endDate: '2026-05-22', country: 'USA', city: 'San Francisco', note: 'Bay Area content tour' },
-      { id: 'tc2b', startDate: '2026-06-01', endDate: '2026-06-10', country: 'Italy', city: 'Amalfi' },
+      { id: 'tc2a', startDate: '2026-07-20', endDate: '2026-07-28', country: 'USA', city: 'San Francisco', note: 'Bay Area luxury content tour' },
+      { id: 'tc2b', startDate: '2026-08-15', endDate: '2026-08-22', country: 'USA', city: 'Malibu', note: 'Coastal property shoot' },
+      { id: 'tc2c', startDate: '2026-09-05', endDate: '2026-09-12', country: 'Italy', city: 'Amalfi', note: 'European luxury series' },
     ],
   },
   {
@@ -97,10 +107,12 @@ const CREATORS = [
     location: 'Miami, FL', lat: 25.7617, lng: -80.1918,
     platforms: ['Instagram', 'TikTok'], niches: ['Coastal', 'Ocean', 'Lifestyle'],
     isFounder: true, isSample: true, avg_reach_30d: 18900, er_30d: 7.2, past_collab: true,
-    bio: 'Coastal and ocean lifestyle content. My last villa collab drove 140k in direct bookings.',
+    bio: 'Coastal and ocean lifestyle creator out of Miami. I produce professional-grade UGC content for water-facing properties — villas, floating homes, sailboats, surf retreats. My last villa collab generated 140K in tracked direct bookings over 60 days. I deliver fast, communicate clearly, and have never missed a deadline. My TikToks routinely hit 3–5x my follower count in organic views.',
     portfolioUrl: null,
     travelCalendar: [
-      { id: 'tc3a', startDate: '2026-05-20', endDate: '2026-05-30', country: 'USA', city: 'San Francisco', note: 'West coast trip' },
+      { id: 'tc3a', startDate: '2026-07-12', endDate: '2026-07-19', country: 'USA', city: 'San Francisco', note: 'West coast content run' },
+      { id: 'tc3b', startDate: '2026-08-25', endDate: '2026-09-01', country: 'USA', city: 'Malibu', note: 'Coastal property features' },
+      { id: 'tc3c', startDate: '2026-09-22', endDate: '2026-09-28', country: 'USA', city: 'Maui', note: 'Hawaii travel series' },
     ],
   },
   {
@@ -109,11 +121,9 @@ const CREATORS = [
     location: 'Portland, OR', lat: 45.5051, lng: -122.6750,
     platforms: ['TikTok', 'Instagram'], niches: ['Adventure', 'Cabin', 'Nature'],
     isFounder: false, isSample: true, avg_reach_30d: 14200, er_30d: 10.8, past_collab: false,
-    bio: 'Off-the-beaten-path travel and adventure stays. Fast turnaround, high engagement.',
+    bio: 'Adventure and nature-stay creator based in Portland. I specialize in off-the-beaten-path properties — remote cabins, forest retreats, glamping spots, and wilderness lodges. My 12.1% engagement rate speaks for itself: my audience is small but deeply activated. I shoot on Sony mirrorless, turn around final content in 4 days, and always deliver more than agreed.',
     portfolioUrl: 'https://lena.explores.io',
-    travelCalendar: [
-      { id: 'tc4a', startDate: '2026-05-18', endDate: '2026-05-25', country: 'USA', city: 'San Francisco', note: 'Heading down the coast' },
-    ],
+    travelCalendar: [],
   },
   {
     id: 'c5', name: 'Nina Okafor', username: 'ninaokafor', tier: 'Micro Influencer',
@@ -121,16 +131,16 @@ const CREATORS = [
     location: 'Chicago, IL', lat: 41.8781, lng: -87.6298,
     platforms: ['Instagram', 'TikTok'], niches: ['Design', 'Boutique', 'Urban'],
     isFounder: true, isSample: true, avg_reach_30d: 22400, er_30d: 8.9, past_collab: false,
-    bio: 'Boutique properties and design-forward spaces. Strong storytelling focus.',
+    bio: 'Design-focused travel creator with a eye for boutique properties that have a story. I blend interior photography with travel storytelling — properties I feature see measurable spikes in direct inquiry traffic. My audience is predominantly design-literate women aged 25–38 in major metros. I work best with hosts who have a distinct aesthetic point of view and properties that photograph like a mood board.',
     portfolioUrl: null, travelCalendar: [],
   },
   {
     id: 'c6', name: 'Jordan Ellis', username: 'jordanellis.co', tier: 'UGC Beginner',
     avatar: null, followers: 12400, engagement: 14.2, collab_count: 4,
     location: 'Oakland, CA', lat: 37.8044, lng: -122.2711,
-    platforms: ['TikTok'], niches: ['Eco', 'Sustainable', 'Design'],
+    platforms: ['Instagram', 'TikTok'], niches: ['Eco', 'Sustainable', 'Design'],
     isFounder: false, isSample: true, avg_reach_30d: 8800, er_30d: 12.6, past_collab: false,
-    bio: 'Sustainable travel and eco-design creator. Rapidly growing audience, very high ER.',
+    bio: 'Sustainable travel and eco-design creator based in Oakland. I\'m early in my creator journey but my engagement rate (14.2%) consistently outperforms accounts 10x my size. I focus on eco-conscious properties, natural materials, and low-impact stays. If your property leans solar, reclaimed wood, or off-grid, I\'m your person. Looking to build my collab portfolio with hosts who actually care about sustainability.',
     portfolioUrl: 'https://jordanellis.co', travelCalendar: [],
   },
   {
@@ -139,16 +149,16 @@ const CREATORS = [
     location: 'Berkeley, CA', lat: 37.8716, lng: -122.2727,
     platforms: ['Instagram'], niches: ['Water', 'Boats', 'Coastal'],
     isFounder: false, isSample: true, avg_reach_30d: 13700, er_30d: 5.8, past_collab: false,
-    bio: 'Water-based travel content. Floating homes, boats, and coastal adventures.',
+    bio: 'Water-based travel creator specializing in floating homes, houseboats, and coastal retreats. Based in the Bay Area, I have a dedicated audience of people who dream of life on the water. My content style is unhurried and atmospheric — long golden-hour shots, morning fog on the bay, the sound of water lapping. Perfect for hosts whose property has a waterfront story to tell.',
     portfolioUrl: null, travelCalendar: [],
   },
   {
     id: 'c8', name: 'Kai Yamamoto', username: 'kai.wilderness', tier: 'UGC Beginner',
     avatar: null, followers: 9200, engagement: 18.7, collab_count: 2,
     location: 'Asheville, NC', lat: 35.5951, lng: -82.5515,
-    platforms: ['TikTok'], niches: ['Nature', 'Treehouse', 'Wellness'],
+    platforms: ['Instagram', 'TikTok'], niches: ['Nature', 'Treehouse', 'Wellness'],
     isFounder: false, isSample: true, avg_reach_30d: 6100, er_30d: 16.4, past_collab: false,
-    bio: 'Off-grid nature experiences and wellness retreats. Tiny audience, extraordinary ER.',
+    bio: 'Off-grid nature and wellness creator in Asheville, NC. My account is small but my engagement rate (18.7%) is in the top 1% for my tier — my followers don\'t just like, they share and save. I specialize in treehouse stays, wellness retreats, and nature-immersion experiences. I\'m looking for my first few major collab properties to build a portfolio around. The right stay gets my full creative attention.',
     portfolioUrl: null, travelCalendar: [],
   },
   {
@@ -157,10 +167,10 @@ const CREATORS = [
     location: 'New York, NY', lat: 40.7128, lng: -74.0060,
     platforms: ['Instagram', 'YouTube', 'TikTok'], niches: ['Luxury', 'Fashion', 'City'],
     isFounder: true, isSample: true, avg_reach_30d: 87300, er_30d: 4.1, past_collab: false,
-    bio: 'Luxury travel and fashion crossover. High-end hospitality and editorial content.',
+    bio: 'Luxury travel and fashion creator with 342K followers across Instagram, YouTube, and TikTok. I sit at the intersection of hospitality and style — my audience expects beautiful properties and I deliver. I\'ve partnered with Condé Nast Traveler, Bulgari Hotels, and 62 boutique properties. I travel 8+ months a year and my content consistently generates measurable booking lift. For hosts ready to invest in premium, high-reach exposure.',
     portfolioUrl: 'https://isabelle.unpack.co',
     travelCalendar: [
-      { id: 'tc9a', startDate: '2026-06-10', endDate: '2026-06-20', country: 'USA', city: 'San Francisco', note: 'West Coast luxury tour' },
+      { id: 'tc9a', startDate: '2026-07-25', endDate: '2026-08-02', country: 'USA', city: 'San Francisco', note: 'West Coast luxury tour' },
     ],
   },
 ];
@@ -603,43 +613,84 @@ function ViewToggle({ mode, onChange }) {
   );
 }
 
-// ─── Swipe view ───────────────────────────────────────────────────────────────
-function SwipeView({ creators }) {
+// ─── Swipe view (immersive full-screen) ──────────────────────────────────────
+function SwipeView({ creators, onBack, profileId, initialSavedIds }) {
   const navigate = useNavigate();
+  const { setHideNav } = useAppBar();
+  const toggleSavedMutation = useMutation(api.profiles.toggleSavedCreator);
 
-  const [savedIds,     setSavedIds]     = useState(() => lsGet(SAVED_KEY));
+  const [savedIds,     setSavedIds]     = useState(() => initialSavedIds?.length ? [...initialSavedIds] : lsGet(SAVED_KEY));
   const [deprioIds,    setDeprioIds]    = useState(() => lsGet(DEPRIO_KEY));
   const [swipeHistory, setSwipeHistory] = useState(() => lsGet(HIST_KEY));
+  const [deckIdx,      setDeckIdx]      = useState(0);
+  const [exitDir,      setExitDir]      = useState(null);
+  const [isAnimating,  setIsAnimating]  = useState(false);
+  const [swipeQuery,   setSwipeQuery]   = useState('');
+  const [swipeTier,    setSwipeTier]    = useState('All');
+  const [filtersOpen,  setFiltersOpen]  = useState(false);
+  const filterRef   = useRef(null);
+  const savedIdsRef = useRef(savedIds);
+  useEffect(() => { savedIdsRef.current = savedIds; }, [savedIds]);
 
-  const [deck] = useState(() => {
-    const prevDeprio = new Set(lsGet(DEPRIO_KEY));
+  // Hide nav while in swipe mode, restore on exit
+  useEffect(() => {
+    setHideNav(true);
+    return () => setHideNav(false);
+  }, [setHideNav]);
+
+  // Close filters on outside click
+  useEffect(() => {
+    if (!filtersOpen) return;
+    const h = (e) => { if (filterRef.current && !filterRef.current.contains(e.target)) setFiltersOpen(false); };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, [filtersOpen]);
+
+  // Reset deck position when filters change
+  useEffect(() => { setDeckIdx(0); }, [swipeTier, swipeQuery]);
+
+  const deck = useMemo(() => {
+    const deprioSet = new Set(deprioIds);
+    let base = creators;
+    if (swipeTier !== 'All') base = base.filter(c => c.tier === swipeTier);
+    if (swipeQuery.trim()) {
+      const q = swipeQuery.toLowerCase();
+      base = base.filter(c =>
+        c.name.toLowerCase().includes(q) ||
+        c.username.toLowerCase().includes(q) ||
+        c.location.toLowerCase().includes(q)
+      );
+    }
     return [
-      ...creators.filter(c => !prevDeprio.has(c.id)),
-      ...creators.filter(c => prevDeprio.has(c.id)),
+      ...base.filter(c => !deprioSet.has(c.id)),
+      ...base.filter(c =>  deprioSet.has(c.id)),
     ];
-  });
+  }, [creators, deprioIds, swipeTier, swipeQuery]);
 
-  const [deckIdx,     setDeckIdx]     = useState(0);
-  const [exitDir,     setExitDir]     = useState(null);
-  const [isAnimating, setIsAnimating] = useState(false);
-
-  const currentCreator = deck[deckIdx] || null;
+  const currentCreator = deck[deckIdx] ?? null;
   const canUndo = swipeHistory.length > 0 && deckIdx > 0;
 
   function goToInbox(creator) {
-    navigate(`/inbox?creatorName=${encodeURIComponent(creator.name)}&creatorAvatar=${encodeURIComponent(creator.avatar)}`);
+    setHideNav(false);
+    navigate(`/inbox?creatorName=${encodeURIComponent(creator.name)}&creatorAvatar=${encodeURIComponent(creator.avatar ?? '')}`);
+  }
+
+  function mutateSaved(creatorId, add) {
+    const cur = savedIdsRef.current;
+    const next = add ? [...cur, creatorId] : cur.filter(id => id !== creatorId);
+    setSavedIds(next);
+    lsSet(SAVED_KEY, next);
+    if (profileId) toggleSavedMutation({ profileId, creatorId }).catch(() => {});
   }
 
   const handleSwipe = useCallback((dir) => {
     if (isAnimating || !currentCreator) return;
     setIsAnimating(true);
     setExitDir(dir);
-    setShowModal(false);
 
     setTimeout(() => {
       if (dir === 'right') {
-        const next = [...savedIds, currentCreator.id];
-        setSavedIds(next); lsSet(SAVED_KEY, next);
+        mutateSaved(currentCreator.id, true);
       } else if (dir === 'left') {
         const next = [...deprioIds, currentCreator.id];
         setDeprioIds(next); lsSet(DEPRIO_KEY, next);
@@ -654,7 +705,7 @@ function SwipeView({ creators }) {
       setIsAnimating(false);
     }, 340);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAnimating, currentCreator, savedIds, deprioIds, swipeHistory]);
+  }, [isAnimating, currentCreator, deprioIds, swipeHistory]);
 
   const handleUndo = useCallback(() => {
     if (!canUndo) return;
@@ -662,14 +713,14 @@ function SwipeView({ creators }) {
     const nextHist = swipeHistory.slice(0, -1);
     setSwipeHistory(nextHist); lsSet(HIST_KEY, nextHist);
     if (last.action === 'right') {
-      const next = savedIds.filter(id => id !== last.id);
-      setSavedIds(next); lsSet(SAVED_KEY, next);
+      mutateSaved(last.id, false);
     } else if (last.action === 'left') {
       const next = deprioIds.filter(id => id !== last.id);
       setDeprioIds(next); lsSet(DEPRIO_KEY, next);
     }
     setDeckIdx(i => i - 1);
-  }, [canUndo, swipeHistory, savedIds, deprioIds]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canUndo, swipeHistory, deprioIds]);
 
   const swipeRef = useRef(handleSwipe);
   const undoRef  = useRef(handleUndo);
@@ -691,67 +742,167 @@ function SwipeView({ creators }) {
   const savedCreators = creators.filter(c => savedIds.includes(c.id));
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: '0.25rem' }}>
-      <p style={{ fontSize: 12, color: 'var(--sage)', marginBottom: 14, fontWeight: 500 }}>
-        {currentCreator ? `${deckIdx + 1} of ${deck.length} creators` : `All ${deck.length} creators reviewed`}
-      </p>
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 100,
+      background: 'rgba(8,13,12,0.9)',
+      display: 'flex', flexDirection: 'column',
+      overflow: 'hidden',
+    }}>
+      {/* ── Top bar ── */}
+      <div style={{
+        flexShrink: 0,
+        display: 'flex', alignItems: 'center', gap: 10,
+        padding: '1rem 1.25rem 0.75rem',
+      }}>
+        {/* Back to grid */}
+        <button
+          onClick={onBack}
+          style={{
+            flexShrink: 0, width: 36, height: 36, borderRadius: '50%',
+            background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer', backdropFilter: 'blur(8px)',
+            transition: 'background 150ms',
+          }}
+          onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.18)'}
+          onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
+          title="Back to grid"
+        >
+          <ChevronLeft size={18} color="#fff" />
+        </button>
 
-      <div style={{ width: '100%', maxWidth: 420, overflow: 'hidden' }}>
-        {currentCreator ? (
-          <SwipeCardWrapper
-            key={deckIdx}
-            creator={currentCreator}
-            exitDir={exitDir}
-            onMessage={goToInbox}
+        {/* Search */}
+        <div style={{
+          flex: 1, display: 'flex', alignItems: 'center', gap: 8,
+          background: 'rgba(255,255,255,0.09)', border: '1px solid rgba(255,255,255,0.13)',
+          borderRadius: 9999, padding: '0.4rem 1rem',
+          backdropFilter: 'blur(12px)',
+        }}>
+          <Search size={13} color="rgba(255,255,255,0.4)" style={{ flexShrink: 0 }} />
+          <input
+            type="text" value={swipeQuery} onChange={e => setSwipeQuery(e.target.value)}
+            placeholder="Search creators…"
+            style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: '0.82rem', color: '#fff', width: '100%', fontFamily: 'var(--font-body)' }}
           />
-        ) : (
-          <div style={{
-            borderRadius: '1.375rem',
-            background: 'rgba(255,255,255,0.82)',
-            backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)',
-            border: '1.5px solid rgba(255,255,255,0.85)',
-            padding: '3rem 2rem',
-            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10,
-          }}>
-            <div style={{ fontSize: 44 }}>✓</div>
-            <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 18, color: 'var(--ink)' }}>All caught up!</div>
-            <p style={{ fontSize: 13, color: 'var(--sage)', textAlign: 'center', maxWidth: 220, margin: 0, lineHeight: 1.5 }}>
-              You've reviewed all {deck.length} creators. Undo to revisit any.
-            </p>
+          {swipeQuery && (
+            <button onClick={() => setSwipeQuery('')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', color: 'rgba(255,255,255,0.35)' }}>
+              <X size={12} />
+            </button>
+          )}
+        </div>
+
+        {/* Filters */}
+        <div ref={filterRef} style={{ position: 'relative', flexShrink: 0 }}>
+          <button
+            onClick={() => setFiltersOpen(v => !v)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              padding: '0.4rem 0.875rem', borderRadius: 9999,
+              fontSize: '0.78rem', fontWeight: 700,
+              background: filtersOpen || swipeTier !== 'All' ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.09)',
+              color: '#fff', border: '1px solid rgba(255,255,255,0.15)',
+              backdropFilter: 'blur(12px)', cursor: 'pointer', fontFamily: 'var(--font-body)',
+            }}
+          >
+            <SlidersHorizontal size={12} />
+            Filters
+            {swipeTier !== 'All' && (
+              <span style={{ width: 16, height: 16, borderRadius: '50%', background: 'rgba(255,255,255,0.25)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 800 }}>1</span>
+            )}
+          </button>
+          {filtersOpen && (
+            <div style={{
+              position: 'absolute', top: 'calc(100% + 8px)', left: 0, zIndex: 10,
+              width: 240,
+              background: 'rgba(18,26,25,0.97)', backdropFilter: 'blur(24px)',
+              border: '1px solid rgba(255,255,255,0.1)',
+              borderRadius: '1rem', padding: '1rem',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+            }}>
+              <p style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.35)', margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Creator Type</p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                {TIERS.map(t => (
+                  <button key={t} onClick={() => { setSwipeTier(t); setFiltersOpen(false); }} style={{
+                    padding: '4px 10px', borderRadius: 9999,
+                    fontSize: '0.72rem', fontWeight: 600,
+                    background: swipeTier === t ? 'rgba(255,255,255,0.88)' : 'rgba(255,255,255,0.08)',
+                    color: swipeTier === t ? 'var(--ink)' : 'rgba(255,255,255,0.65)',
+                    border: 'none', cursor: 'pointer', fontFamily: 'var(--font-body)',
+                  }}>
+                    {t}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Progress counter */}
+        <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', flexShrink: 0, fontFamily: 'var(--font-body)', whiteSpace: 'nowrap' }}>
+          {currentCreator ? `${deckIdx + 1} / ${deck.length}` : `${deck.length} done`}
+        </span>
+      </div>
+
+      {/* ── Scrollable content ── */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '0.5rem 1.25rem 2rem' }}>
+
+        {/* Card */}
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: savedCreators.length > 0 ? '2rem' : 0 }}>
+          <div style={{ width: '100%', maxWidth: 420 }}>
+            {currentCreator ? (
+              <SwipeCardWrapper
+                key={`${deckIdx}-${swipeTier}-${swipeQuery}`}
+                creator={currentCreator}
+                exitDir={exitDir}
+                onMessage={goToInbox}
+              />
+            ) : (
+              <div style={{
+                borderRadius: '1.375rem',
+                background: 'rgba(255,255,255,0.07)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                padding: '3rem 2rem',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, textAlign: 'center',
+              }}>
+                <div style={{ fontSize: 44 }}>✓</div>
+                <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 18, color: '#fff' }}>All caught up!</div>
+                <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)', maxWidth: 220, margin: 0, lineHeight: 1.5 }}>
+                  You've reviewed all {deck.length} creators. Undo to revisit any.
+                </p>
+              </div>
+            )}
+
+            {/* Keyboard hints */}
+            {currentCreator && (
+              <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', justifyContent: 'center', marginTop: 12 }}>
+                {[{ key: '←', label: 'Skip' }, { key: '→', label: 'Save' }, { key: '↑', label: 'Message' }].map(({ key, label }) => (
+                  <span key={key} style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', display: 'flex', alignItems: 'center', gap: 5 }}>
+                    <kbd style={{ padding: '2px 6px', borderRadius: 4, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', fontSize: 10, fontFamily: 'monospace', color: 'rgba(255,255,255,0.45)' }}>{key}</kbd>
+                    {label}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Saved section */}
+        {savedCreators.length > 0 && (
+          <div style={{ maxWidth: 420, margin: '0 auto' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+              <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 13, color: 'rgba(255,255,255,0.75)', margin: 0, letterSpacing: '0.02em' }}>Saved</h3>
+              <span style={{ padding: '2px 8px', borderRadius: 9999, fontSize: 10, fontWeight: 700, background: 'rgba(126,207,196,0.2)', color: '#7ecfc4' }}>
+                {savedCreators.length}
+              </span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {savedCreators.map(c => (
+                <SavedContactRow key={c.id} creator={c} onMessage={goToInbox} />
+              ))}
+            </div>
           </div>
         )}
       </div>
-
-      <div style={{ marginTop: 16, display: 'flex', gap: 14, flexWrap: 'wrap', justifyContent: 'center' }}>
-        {[
-          { key: '←', label: 'De-prioritize' },
-          { key: '→', label: 'Save' },
-          { key: '↑', label: 'Message' },
-        ].map(({ key, label }) => (
-          <span key={key} style={{ fontSize: 11, color: 'var(--sage)', display: 'flex', alignItems: 'center', gap: 5 }}>
-            <kbd style={{ padding: '2px 6px', borderRadius: 4, background: 'rgba(255,255,255,0.72)', border: '1px solid rgba(25,37,36,0.12)', fontSize: 10, fontFamily: 'monospace' }}>{key}</kbd>
-            {label}
-          </span>
-        ))}
-      </div>
-
-      {savedCreators.length > 0 && (
-        <div style={{ width: '100%', maxWidth: 500, marginTop: 44 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-            <span style={{ fontSize: 16 }}>❤️</span>
-            <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 15, color: 'var(--ink)', margin: 0 }}>Saved Contacts</h3>
-            <span style={{ padding: '2px 8px', borderRadius: 9999, fontSize: 11, fontWeight: 700, background: 'rgba(236,72,153,0.1)', color: '#be185d' }}>
-              {savedCreators.length}
-            </span>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {savedCreators.map(c => (
-              <SavedContactRow key={c.id} creator={c} onMessage={(creator) => goToInbox(creator)} />
-            ))}
-          </div>
-        </div>
-      )}
-
     </div>
   );
 }
@@ -759,6 +910,7 @@ function SwipeView({ creators }) {
 // ─── Main page ────────────────────────────────────────────────────────────────
 export default function HostCreators() {
   const navigate = useNavigate();
+  const { profile } = useAuth();
 
   const [locationConsent,  setLocationConsent]  = useState(() => {
     try { return localStorage.getItem(LOCATION_CONSENT_KEY); } catch { return null; }
@@ -771,6 +923,7 @@ export default function HostCreators() {
   const [sortBy,           setSortBy]           = useState('followers');
   const [showPast,         setShowPast]         = useState(false);
   const [nearbyOnly,       setNearbyOnly]       = useState(false);
+  const [savedOnly,        setSavedOnly]        = useState(false);
   const [dateStart,        setDateStart]        = useState('');
   const [dateEnd,          setDateEnd]          = useState('');
   const [hiddenSampleIds,  setHiddenSampleIds]  = useState(() => {
@@ -827,6 +980,7 @@ export default function HostCreators() {
     setSortBy('followers');
     setShowPast(false);
     setNearbyOnly(false);
+    setSavedOnly(false);
     setDateStart('');
     setDateEnd('');
     setTmpDateStart('');
@@ -839,14 +993,17 @@ export default function HostCreators() {
     sortBy !== 'followers',
     showPast,
     nearbyOnly,
+    savedOnly,
     !!(dateStart && dateEnd),
   ].filter(Boolean).length;
 
   const nearbyCreators = CREATORS.filter(c => isNearHost(c));
 
   // Cache key derived from all active filter params
-  const filterParams = { query, tierFilter, platformFilter, sortBy, showPast, nearbyOnly, dateStart, dateEnd };
+  const filterParams = { query, tierFilter, platformFilter, sortBy, showPast, nearbyOnly, savedOnly, dateStart, dateEnd };
   const searchCacheKey = cacheKey('creator_search', filterParams);
+
+  const profileSavedIds = profile?.saved_creator_ids ?? [];
 
   const computeFiltered = () => {
     let base = CREATORS.filter((c) => {
@@ -854,6 +1011,7 @@ export default function HostCreators() {
       if (tierFilter !== 'All' && c.tier !== tierFilter) return false;
       if (platformFilter.length > 0 && !platformFilter.every(p => c.platforms.includes(p))) return false;
       if (nearbyOnly && !isNearHost(c)) return false;
+      if (savedOnly && !profileSavedIds.includes(c.id)) return false;
       if (query) {
         const q = query.toLowerCase();
         return (
@@ -1023,6 +1181,29 @@ export default function HostCreators() {
                       </button>
                     ))}
                   </div>
+                </div>
+
+                {/* Saved Only */}
+                <div style={{ marginBottom: 16 }}>
+                  <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--sage)', margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    Saved
+                  </p>
+                  <button onClick={() => setSavedOnly(v => !v)} style={{
+                    padding: '5px 12px', borderRadius: 9999,
+                    fontSize: '0.75rem', fontWeight: 600,
+                    background: savedOnly ? 'var(--ink)' : 'rgba(255,255,255,0.5)',
+                    color: savedOnly ? 'var(--bone)' : 'var(--slate)',
+                    border: `1px solid ${savedOnly ? 'var(--ink)' : 'rgba(255,255,255,0.7)'}`,
+                    cursor: 'pointer', transition: 'all 150ms', fontFamily: 'var(--font-body)',
+                    display: 'flex', alignItems: 'center', gap: 5,
+                  }}>
+                    {savedOnly ? '❤️' : '♡'} Saved Only
+                    {profileSavedIds.length > 0 && (
+                      <span style={{ fontSize: 10, fontWeight: 700, color: savedOnly ? 'rgba(255,255,255,0.7)' : 'var(--sage)' }}>
+                        ({profileSavedIds.length})
+                      </span>
+                    )}
+                  </button>
                 </div>
 
                 {/* Platforms */}
@@ -1207,7 +1388,12 @@ export default function HostCreators() {
             )}
           </>
         ) : (
-          <SwipeView creators={CREATORS} />
+          <SwipeView
+            creators={CREATORS}
+            onBack={() => setViewMode('grid')}
+            profileId={profile?._id}
+            initialSavedIds={profile?.saved_creator_ids}
+          />
         )}
       </div>
 

@@ -229,18 +229,6 @@ function FullCard({ creator, narrow = false, onMessage, onHide, visitingBadge, d
               }}>
                 <CreatorAvatar src={creator.avatar} name={creator.name} size={avatarSize} style={{ border: 'none', width: '100%', height: '100%' }} />
               </div>
-              {creator.past_collab && (
-                <div title="Past collab" style={{
-                  position: 'absolute', bottom: open ? 4 : 2, right: open ? 3 : -2,
-                  width: open ? 26 : 19, height: open ? 26 : 19,
-                  borderRadius: '50%', background: '#4A9B7F', border: '2.5px solid #fff',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  boxShadow: '0 2px 8px rgba(74,155,127,0.38)',
-                  transition: `width ${DUR} ${EASE}, height ${DUR} ${EASE}, bottom 200ms, right 200ms`,
-                }}>
-                  <IconCheck />
-                </div>
-              )}
               {creator.isFounder && (
                 <div title="Founder — one of the first 100 on Collabnb" style={{
                   position: 'absolute', top: open ? 3 : 2, right: open ? -7 : -5,

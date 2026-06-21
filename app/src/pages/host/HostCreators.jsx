@@ -71,7 +71,7 @@ function getVisitingBadge(creator, startIso, endIso) {
 const CREATORS = [
   {
     id: 'c1', name: 'Priya Nair', username: 'priya.wanders', tier: 'Micro Influencer',
-    avatar: 'https://i.pravatar.cc/80?img=47', followers: 84200, engagement: 9.4, collab_count: 18,
+    avatar: null, followers: 84200, engagement: 9.4, collab_count: 18,
     location: 'San Francisco, CA', lat: 37.7749, lng: -122.4194,
     platforms: ['Instagram', 'TikTok'], niches: ['Travel', 'Cabins', 'Mountain'],
     isFounder: true, isSample: true, avg_reach_30d: 24600, er_30d: 7.8, past_collab: false,
@@ -80,7 +80,7 @@ const CREATORS = [
   },
   {
     id: 'c2', name: 'Maya Chen', username: 'mayachen.travel', tier: 'Influencer',
-    avatar: 'https://i.pravatar.cc/80?img=5', followers: 218000, engagement: 6.8, collab_count: 47,
+    avatar: null, followers: 218000, engagement: 6.8, collab_count: 47,
     location: 'Los Angeles, CA', lat: 34.0522, lng: -118.2437,
     platforms: ['Instagram', 'YouTube'], niches: ['Luxury', 'Coastal', 'Villa'],
     isFounder: true, isSample: true, avg_reach_30d: 58200, er_30d: 5.4, past_collab: true,
@@ -93,7 +93,7 @@ const CREATORS = [
   },
   {
     id: 'c3', name: 'Sam Kowalski', username: 'sam.kowalski', tier: 'UGC Pro',
-    avatar: 'https://i.pravatar.cc/80?img=59', followers: 58300, engagement: 8.9, collab_count: 23,
+    avatar: null, followers: 58300, engagement: 8.9, collab_count: 23,
     location: 'Miami, FL', lat: 25.7617, lng: -80.1918,
     platforms: ['Instagram', 'TikTok'], niches: ['Coastal', 'Ocean', 'Lifestyle'],
     isFounder: true, isSample: true, avg_reach_30d: 18900, er_30d: 7.2, past_collab: true,
@@ -105,7 +105,7 @@ const CREATORS = [
   },
   {
     id: 'c4', name: 'Lena Park', username: 'lena.explores', tier: 'UGC Pro',
-    avatar: 'https://i.pravatar.cc/80?img=32', followers: 31500, engagement: 12.1, collab_count: 31,
+    avatar: null, followers: 31500, engagement: 12.1, collab_count: 31,
     location: 'Portland, OR', lat: 45.5051, lng: -122.6750,
     platforms: ['TikTok', 'Instagram'], niches: ['Adventure', 'Cabin', 'Nature'],
     isFounder: false, isSample: true, avg_reach_30d: 14200, er_30d: 10.8, past_collab: false,
@@ -117,7 +117,7 @@ const CREATORS = [
   },
   {
     id: 'c5', name: 'Nina Okafor', username: 'ninaokafor', tier: 'Micro Influencer',
-    avatar: 'https://i.pravatar.cc/80?img=44', followers: 67100, engagement: 10.5, collab_count: 14,
+    avatar: null, followers: 67100, engagement: 10.5, collab_count: 14,
     location: 'Chicago, IL', lat: 41.8781, lng: -87.6298,
     platforms: ['Instagram', 'TikTok'], niches: ['Design', 'Boutique', 'Urban'],
     isFounder: true, isSample: true, avg_reach_30d: 22400, er_30d: 8.9, past_collab: false,
@@ -126,7 +126,7 @@ const CREATORS = [
   },
   {
     id: 'c6', name: 'Jordan Ellis', username: 'jordanellis.co', tier: 'UGC Beginner',
-    avatar: 'https://i.pravatar.cc/80?img=11', followers: 12400, engagement: 14.2, collab_count: 4,
+    avatar: null, followers: 12400, engagement: 14.2, collab_count: 4,
     location: 'Oakland, CA', lat: 37.8044, lng: -122.2711,
     platforms: ['TikTok'], niches: ['Eco', 'Sustainable', 'Design'],
     isFounder: false, isSample: true, avg_reach_30d: 8800, er_30d: 12.6, past_collab: false,
@@ -135,7 +135,7 @@ const CREATORS = [
   },
   {
     id: 'c7', name: 'Ava Torres', username: 'ava.offshore', tier: 'Micro Influencer',
-    avatar: 'https://i.pravatar.cc/80?img=21', followers: 43900, engagement: 7.3, collab_count: 9,
+    avatar: null, followers: 43900, engagement: 7.3, collab_count: 9,
     location: 'Berkeley, CA', lat: 37.8716, lng: -122.2727,
     platforms: ['Instagram'], niches: ['Water', 'Boats', 'Coastal'],
     isFounder: false, isSample: true, avg_reach_30d: 13700, er_30d: 5.8, past_collab: false,
@@ -144,7 +144,7 @@ const CREATORS = [
   },
   {
     id: 'c8', name: 'Kai Yamamoto', username: 'kai.wilderness', tier: 'UGC Beginner',
-    avatar: 'https://i.pravatar.cc/80?img=68', followers: 9200, engagement: 18.7, collab_count: 2,
+    avatar: null, followers: 9200, engagement: 18.7, collab_count: 2,
     location: 'Asheville, NC', lat: 35.5951, lng: -82.5515,
     platforms: ['TikTok'], niches: ['Nature', 'Treehouse', 'Wellness'],
     isFounder: false, isSample: true, avg_reach_30d: 6100, er_30d: 16.4, past_collab: false,
@@ -153,7 +153,7 @@ const CREATORS = [
   },
   {
     id: 'c9', name: 'Isabelle Laurent', username: 'isabelle.unpack', tier: 'Influencer',
-    avatar: 'https://i.pravatar.cc/80?img=16', followers: 342000, engagement: 5.2, collab_count: 62,
+    avatar: null, followers: 342000, engagement: 5.2, collab_count: 62,
     location: 'New York, NY', lat: 40.7128, lng: -74.0060,
     platforms: ['Instagram', 'YouTube', 'TikTok'], niches: ['Luxury', 'Fashion', 'City'],
     isFounder: true, isSample: true, avg_reach_30d: 87300, er_30d: 4.1, past_collab: false,

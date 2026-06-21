@@ -35,6 +35,12 @@ function creatorSteps(profile, isFirstVisit, hasShared, hasExplored) {
       action: { label: 'Edit profile', path: '/profile?edit=true' },
     },
     {
+      id: 'niches',
+      label: 'Add your content niches',
+      done: !isFirstVisit && Array.isArray(profile?.niches) && profile.niches.length > 0,
+      action: { label: 'Add niches', path: '/profile?edit=true' },
+    },
+    {
       id: 'social',
       label: 'Connect a social account',
       done: !isFirstVisit && !!(profile?.instagram_handle || profile?.tiktok_handle || profile?.youtube_handle),

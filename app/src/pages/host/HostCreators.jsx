@@ -3,11 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import {
   Search, MessageSquare, Check, X,
   Sparkles, ExternalLink, MapPin, Calendar, ChevronRight, ChevronLeft, Trash2,
+  SlidersHorizontal,
 } from 'lucide-react';
 import SkeletonCard from '../../components/SkeletonCard';
 import { cache, cacheKey } from '../../lib/cache';
 import ProfilePopupCard from '../../components/ProfilePopupCard';
 import CreatorAvatar from '../../components/CreatorAvatar';
+import CreatorCard from '../../components/CreatorCard';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const LOCATION_CONSENT_KEY = '@collabnb_location_consent_v1';
@@ -246,144 +248,8 @@ function LocationConsentModal({ onAllow, onDisable }) {
   );
 }
 
-// ─── Nearby creator card (compact, for horizontal scroll row) ─────────────────
-function NearbyCreatorCard({ creator, onExpand, onHide, onMessage }) {
-  const [hovered, setHovered] = useState(false);
-  const t = TIER_COLORS[creator.tier] || TIER_COLORS['UGC Beginner'];
-  const city = creator.location?.split(',')[0] ?? '';
-
-  return (
-    <div
-      onClick={() => onExpand(creator)}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        position: 'relative',
-        flexShrink: 0,
-        width: 188,
-        scrollSnapAlign: 'start',
-        background: hovered ? 'rgba(255,255,255,0.97)' : 'rgba(255,255,255,0.84)',
-        backdropFilter: 'blur(24px) saturate(140%)',
-        WebkitBackdropFilter: 'blur(24px) saturate(140%)',
-        border: '1px solid rgba(255,255,255,0.85)',
-        borderRadius: '1.375rem',
-        padding: '16px 14px 14px',
-        cursor: 'pointer',
-        transform: hovered ? 'translateY(-3px)' : 'none',
-        boxShadow: hovered
-          ? '0 14px 36px rgba(25,37,36,0.14), inset 0 1px 0 rgba(255,255,255,0.7)'
-          : '0 4px 18px rgba(25,37,36,0.07), inset 0 1px 0 rgba(255,255,255,0.6)',
-        transition: 'all 200ms var(--ease-out-quart)',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        gap: 0,
-      }}
-    >
-      {/* Sample badge */}
-      {creator.isSample && (
-        <span style={{
-          position: 'absolute', top: 10, left: 10,
-          padding: '2px 7px', borderRadius: 9999,
-          fontSize: 8, fontWeight: 700, letterSpacing: '0.06em',
-          background: 'rgba(149,157,144,0.15)', color: '#959D90',
-          pointerEvents: 'none', lineHeight: 1.8,
-        }}>
-          SAMPLE
-        </span>
-      )}
-
-      {/* Trash button */}
-      {creator.isSample && onHide && (
-        <button
-          onClick={(e) => { e.stopPropagation(); onHide(creator.id); }}
-          title="Hide this creator"
-          style={{
-            position: 'absolute', top: 8, right: 8,
-            background: 'transparent', border: 'none', cursor: 'pointer',
-            padding: 4, display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: 'rgba(149,157,144,0.55)',
-            transition: 'color 150ms',
-          }}
-        >
-          <Trash2 size={12} />
-        </button>
-      )}
-
-      {/* Avatar */}
-      <div style={{ marginBottom: 10, marginTop: creator.isSample ? 14 : 2 }}>
-        <CreatorAvatar
-          src={creator.avatar}
-          name={creator.name}
-          size={72}
-          style={{
-            border: '2.5px solid rgba(255,255,255,0.95)',
-            boxShadow: '0 3px 14px rgba(25,37,36,0.13)',
-          }}
-        />
-      </div>
-
-      {/* Name */}
-      <div style={{
-        fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 13.5,
-        color: 'var(--ink)', marginBottom: 2, lineHeight: 1.25, textAlign: 'center',
-      }}>
-        {creator.name}
-      </div>
-
-      {/* Handle */}
-      <div style={{
-        fontSize: 10.5, color: 'var(--sage)', marginBottom: 9,
-        fontFamily: 'var(--font-body)',
-      }}>
-        @{creator.username}
-      </div>
-
-      {/* Location pill */}
-      <div style={{
-        display: 'inline-flex', alignItems: 'center', gap: 4,
-        padding: '3px 9px', borderRadius: 9999, marginBottom: 8,
-        background: 'rgba(25,37,36,0.05)',
-        border: '1px solid rgba(25,37,36,0.08)',
-      }}>
-        <MapPin size={9} color="var(--sage)" />
-        <span style={{ fontSize: 10, color: 'var(--slate)', fontFamily: 'var(--font-body)' }}>
-          {city}
-        </span>
-      </div>
-
-      {/* Tier badge */}
-      <span style={{
-        display: 'inline-block', padding: '3px 10px', borderRadius: 9999,
-        fontSize: 9.5, fontWeight: 700, background: t.bg, color: t.color,
-        marginBottom: 14,
-      }}>
-        {creator.tier}
-      </span>
-
-      {/* Message button */}
-      <button
-        onClick={(e) => { e.stopPropagation(); onMessage(creator); }}
-        style={{
-          width: '100%',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
-          padding: '8px 0', borderRadius: '0.875rem',
-          background: 'var(--ink)', color: 'var(--bone)',
-          border: 'none', cursor: 'pointer',
-          fontSize: 11.5, fontWeight: 600, fontFamily: 'var(--font-body)',
-          transition: 'background 160ms',
-          flexShrink: 0,
-        }}
-      >
-        <MessageSquare size={12} />
-        Message
-      </button>
-    </div>
-  );
-}
-
 // ─── Nearby creators section ──────────────────────────────────────────────────
-function NearbyCreatorsSection({ creators, onExpand, onSeeAll, onMessage }) {
+function NearbyCreatorsSection({ creators, onSeeAll, onMessage }) {
   const [hiddenIds, setHiddenIds] = useState(() => {
     try { return JSON.parse(localStorage.getItem(HIDDEN_SAMPLE_KEY) || '[]'); } catch { return []; }
   });
@@ -495,7 +361,7 @@ function NearbyCreatorsSection({ creators, onExpand, onSeeAll, onMessage }) {
         <div
           ref={scrollRef}
           style={{
-            display: 'flex', gap: 12,
+            display: 'flex', gap: 12, alignItems: 'flex-start',
             overflowX: 'auto', paddingBottom: 8, paddingTop: 4,
             scrollbarWidth: 'none', msOverflowStyle: 'none',
             WebkitOverflowScrolling: 'touch',
@@ -503,10 +369,10 @@ function NearbyCreatorsSection({ creators, onExpand, onSeeAll, onMessage }) {
           }}
         >
           {shown.map(c => (
-            <NearbyCreatorCard
+            <CreatorCard
               key={c.id}
               creator={c}
-              onExpand={onExpand}
+              narrow
               onHide={hideCreator}
               onMessage={onMessage}
             />
@@ -1056,205 +922,6 @@ function SwipeView({ creators }) {
   );
 }
 
-// ─── Creator card (grid view) ─────────────────────────────────────────────────
-function CreatorCard({ creator, delay, onExpand, onMessage, onHide, visitingBadge }) {
-  const navigate = useNavigate();
-  const [hovered, setHovered] = useState(false);
-  const t = TIER_COLORS[creator.tier] || TIER_COLORS['UGC Beginner'];
-
-  return (
-    <div
-      className="reveal-up"
-      style={{ animationDelay: `${delay}ms`, opacity: 0 }}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-    >
-      <div
-        onClick={() => onExpand(creator)}
-        style={{
-          position: 'relative',
-          background: hovered ? 'rgba(255,255,255,0.96)' : 'rgba(255,255,255,0.82)',
-          backdropFilter: 'blur(20px) saturate(135%)', WebkitBackdropFilter: 'blur(20px) saturate(135%)',
-          border: '1.5px solid rgba(255,255,255,0.85)',
-          borderRadius: '1.25rem', padding: '20px',
-          transform: hovered ? 'translateY(-3px)' : 'none',
-          boxShadow: hovered ? '0 12px 40px rgba(25,37,36,0.13)' : '0 3px 14px rgba(25,37,36,0.06)',
-          transition: 'all 240ms var(--ease-out-quart)',
-          cursor: 'pointer',
-        }}
-      >
-        {/* Trash dismiss button — top-right, sample creators only */}
-        {creator.isSample && onHide && (
-          <button
-            onClick={(e) => { e.stopPropagation(); onHide(creator.id); }}
-            title="Hide this sample creator"
-            style={{
-              position: 'absolute', top: 10, right: 10,
-              width: 26, height: 26, borderRadius: '50%',
-              background: 'rgba(149,157,144,0.14)',
-              border: '1px solid rgba(149,157,144,0.22)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              cursor: 'pointer', color: 'rgba(149,157,144,0.75)',
-              transition: 'background 150ms, color 150ms',
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(239,68,68,0.1)'; e.currentTarget.style.color = '#dc2626'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(149,157,144,0.14)'; e.currentTarget.style.color = 'rgba(149,157,144,0.75)'; }}
-          >
-            <Trash2 size={12} />
-          </button>
-        )}
-        {/* Top row */}
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: 14 }}>
-          <div style={{ position: 'relative', flexShrink: 0 }}>
-            <CreatorAvatar
-              src={creator.avatar} name={creator.name} size={52}
-              onClick={(e) => { e.stopPropagation(); navigate('/profile'); }}
-              title="View profile"
-              style={{ border: '2px solid rgba(25,37,36,0.07)', cursor: 'pointer' }}
-            />
-            {creator.past_collab && (
-              <>
-                <div
-                  title="You've collab'd with this creator before"
-                  style={{
-                    position: 'absolute', bottom: -2, right: -2,
-                    width: 18, height: 18, borderRadius: '50%',
-                    background: '#4A9B7F', border: '2px solid #fff',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}
-                >
-                  <Check size={9} color="#fff" />
-                </div>
-                {hovered && (
-                  <div style={{
-                    position: 'absolute', bottom: 24, right: -6,
-                    background: 'rgba(25,37,36,0.9)', color: '#EFECE9',
-                    fontSize: 10, fontWeight: 600,
-                    padding: '4px 8px', borderRadius: 6,
-                    whiteSpace: 'nowrap', pointerEvents: 'none',
-                    boxShadow: '0 2px 8px rgba(25,37,36,0.22)', zIndex: 5,
-                  }}>
-                    You've collab'd with this creator before
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-              <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 14, color: 'var(--ink)' }}>{creator.name}</span>
-              {creator.isFounder && (
-                <span title="One of the first 100 creators on Collabnb" style={{ display: 'flex', alignItems: 'center', gap: 3, padding: '1px 6px', borderRadius: 9999, background: 'rgba(25,37,36,0.07)', border: '1px solid rgba(25,37,36,0.1)', fontSize: 9, fontWeight: 700, color: 'var(--ink)' }}>
-                  <Sparkles size={8} />Founder
-                </span>
-              )}
-            </div>
-            <div style={{ fontSize: 11, color: 'var(--sage)', marginTop: 2 }}>@{creator.username}</div>
-            <div style={{ marginTop: 6 }}>
-              <span style={{ padding: '3px 9px', borderRadius: 9999, fontSize: 10, fontWeight: 700, background: t.bg, color: t.color }}>{creator.tier}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Bio */}
-        <p style={{ fontSize: 12, color: 'var(--slate)', lineHeight: 1.55, margin: '0 0 14px' }}>{creator.bio}</p>
-
-        {/* Stats */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 1, background: 'rgba(25,37,36,0.06)', borderRadius: '0.625rem', overflow: 'hidden', marginBottom: 14 }}>
-          {[
-            { label: 'Avg. Reach', value: fmtFollowers(creator.avg_reach_30d) },
-            { label: 'ER @ 30d',  value: `${creator.er_30d}%`              },
-            { label: 'Collabs',   value: creator.collab_count               },
-          ].map(({ label, value }) => (
-            <div key={label} style={{ padding: '9px 0', background: 'rgba(255,255,255,0.75)', textAlign: 'center' }}>
-              <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 14, color: 'var(--ink)', lineHeight: 1 }}>{value}</div>
-              <div style={{ fontSize: 10, color: 'var(--sage)', marginTop: 2 }}>{label}</div>
-            </div>
-          ))}
-        </div>
-
-        {/* Niches */}
-        <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginBottom: 14 }}>
-          {creator.niches.map(n => (
-            <span key={n} style={{ padding: '3px 9px', borderRadius: 9999, fontSize: 10, fontWeight: 600, background: 'var(--bone)', color: 'var(--slate)' }}>{n}</span>
-          ))}
-        </div>
-
-        {/* Platforms + location */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: visitingBadge ? 10 : 14 }}>
-          <div style={{ display: 'flex', gap: 5 }}>
-            {creator.platforms.map(p => (
-              <span key={p} style={{ padding: '3px 9px', borderRadius: 9999, fontSize: 10, fontWeight: 600, background: 'rgba(60,87,89,0.08)', color: 'var(--ink)' }}>{p}</span>
-            ))}
-          </div>
-          <span style={{ fontSize: 11, color: 'var(--sage)' }}>{creator.location}</span>
-        </div>
-
-        {/* Visiting badge */}
-        {visitingBadge && (
-          <div style={{
-            display: 'inline-flex', alignItems: 'center', gap: 4,
-            padding: '3px 10px', borderRadius: 9999,
-            background: 'rgba(60,87,89,0.08)', color: 'var(--slate)',
-            fontSize: 10, fontWeight: 600, marginBottom: 10,
-          }}>
-            <MapPin size={9} color="var(--slate)" />
-            {visitingBadge}
-          </div>
-        )}
-
-        {/* Actions */}
-        <div style={{ position: 'relative' }}>
-          <div style={{ display: 'flex', gap: 8 }}>
-            {creator.portfolioUrl && (
-              <button
-                onClick={(e) => { e.stopPropagation(); window.open(creator.portfolioUrl, '_blank'); }}
-                title="View portfolio"
-                style={{
-                  width: 38, height: 38, borderRadius: 9999, flexShrink: 0,
-                  border: '1.5px solid rgba(25,37,36,0.12)', background: 'transparent',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
-                }}
-              >
-                <ExternalLink size={13} color="var(--slate)" />
-              </button>
-            )}
-            <button
-              onClick={(e) => { e.stopPropagation(); onMessage(creator); }}
-              style={{
-                flex: 1, padding: '9px 0', borderRadius: 9999,
-                border: '1.5px solid var(--ink)', background: 'transparent',
-                fontFamily: 'var(--font-body)', fontSize: 12, fontWeight: 700, color: 'var(--ink)',
-                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-              }}
-            >
-              <MessageSquare size={12} />
-              Message
-            </button>
-          </div>
-          {/* Sample Creator badge overlays the action row */}
-          {creator.isSample && (
-            <div style={{
-              position: 'absolute', inset: 0,
-              borderRadius: 9999,
-              background: hovered ? 'rgba(248,247,245,0.93)' : 'rgba(245,244,241,0.9)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              pointerEvents: 'none',
-            }}>
-              <span style={{
-                fontSize: 9.5, fontWeight: 700, letterSpacing: '0.08em',
-                color: '#959D90', textTransform: 'uppercase',
-              }}>
-                Sample Creator
-              </span>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ─── Main page ────────────────────────────────────────────────────────────────
 export default function HostCreators() {
   const navigate = useNavigate();
@@ -1272,12 +939,24 @@ export default function HostCreators() {
   const [nearbyOnly,       setNearbyOnly]       = useState(false);
   const [dateStart,        setDateStart]        = useState('');
   const [dateEnd,          setDateEnd]          = useState('');
-  const [expandedCreator,  setExpandedCreator]  = useState(null);
   const [hiddenSampleIds,  setHiddenSampleIds]  = useState(() => {
     try { return JSON.parse(localStorage.getItem(HIDDEN_SAMPLE_KEY) || '[]'); } catch { return []; }
   });
+  const [filtersOpen,      setFiltersOpen]      = useState(false);
+  const [tmpDateStart,     setTmpDateStart]     = useState('');
+  const [tmpDateEnd,       setTmpDateEnd]       = useState('');
 
-  const gridRef = useRef(null);
+  const gridRef   = useRef(null);
+  const filterRef = useRef(null);
+
+  useEffect(() => {
+    if (!filtersOpen) return;
+    const handler = e => {
+      if (filterRef.current && !filterRef.current.contains(e.target)) setFiltersOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [filtersOpen]);
 
   useEffect(() => {
     const t = setTimeout(() => setCreatorsLoading(false), 350);
@@ -1307,6 +986,27 @@ export default function HostCreators() {
     setNearbyOnly(true);
     setTimeout(() => gridRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
   }
+
+  function clearAllFilters() {
+    setTierFilter('All');
+    setPlatformFilter([]);
+    setSortBy('followers');
+    setShowPast(false);
+    setNearbyOnly(false);
+    setDateStart('');
+    setDateEnd('');
+    setTmpDateStart('');
+    setTmpDateEnd('');
+  }
+
+  const activeFilterCount = [
+    tierFilter !== 'All',
+    platformFilter.length > 0,
+    sortBy !== 'followers',
+    showPast,
+    nearbyOnly,
+    !!(dateStart && dateEnd),
+  ].filter(Boolean).length;
 
   const nearbyCreators = CREATORS.filter(c => isNearHost(c));
 
@@ -1370,9 +1070,254 @@ export default function HostCreators() {
           </p>
         </div>
 
-        {/* ── View toggle ── */}
-        <div style={{ marginBottom: '1.5rem' }}>
-          <ViewToggle mode={viewMode} onChange={setViewMode} />
+        {/* ── Toolbar: search · filters dropdown · view toggle ── */}
+        <div ref={gridRef} style={{ display: 'flex', gap: 10, marginBottom: '1.5rem', alignItems: 'center' }}>
+
+          {/* Search */}
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 10,
+            flex: '1 1 160px', maxWidth: 320,
+            background: 'rgba(255,255,255,0.78)',
+            backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
+            border: '1px solid rgba(255,255,255,0.85)',
+            borderRadius: 9999, padding: '0.5rem 1rem',
+            boxShadow: '0 2px 10px rgba(25,37,36,0.06)',
+          }}>
+            <Search size={14} color="var(--sage)" style={{ flexShrink: 0 }} />
+            <input
+              type="text" value={query} onChange={e => setQuery(e.target.value)}
+              placeholder="Search by name, niche, platform…"
+              style={{ border: 'none', outline: 'none', background: 'transparent', fontFamily: 'var(--font-body)', fontSize: '0.82rem', color: 'var(--ink)', width: '100%' }}
+            />
+          </div>
+
+          {/* Filters dropdown */}
+          <div style={{ position: 'relative' }} ref={filterRef}>
+            <button
+              onClick={() => setFiltersOpen(v => !v)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 7,
+                padding: '0.5rem 1.1rem', borderRadius: 9999,
+                fontSize: '0.82rem', fontWeight: 700,
+                background: filtersOpen || activeFilterCount > 0 ? 'var(--ink)' : 'rgba(255,255,255,0.78)',
+                color: filtersOpen || activeFilterCount > 0 ? 'var(--bone)' : 'var(--slate)',
+                border: '1px solid',
+                borderColor: filtersOpen || activeFilterCount > 0 ? 'var(--ink)' : 'rgba(25,37,36,0.12)',
+                backdropFilter: 'blur(16px)', cursor: 'pointer',
+                boxShadow: '0 2px 10px rgba(25,37,36,0.06)',
+                transition: 'all 180ms var(--ease-out-quart)',
+                fontFamily: 'var(--font-body)', whiteSpace: 'nowrap',
+              }}
+            >
+              <SlidersHorizontal size={13} />
+              Filters
+              {activeFilterCount > 0 && (
+                <span style={{
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  width: 18, height: 18, borderRadius: '50%',
+                  background: 'rgba(255,255,255,0.22)', color: 'var(--bone)',
+                  fontSize: 10, fontWeight: 800, lineHeight: 1, flexShrink: 0,
+                }}>
+                  {activeFilterCount}
+                </span>
+              )}
+            </button>
+
+            {filtersOpen && (
+              <div style={{
+                position: 'absolute', top: 'calc(100% + 8px)', left: 0,
+                zIndex: 200, width: 320,
+                background: 'rgba(255,255,255,0.97)',
+                backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)',
+                border: '1.5px solid rgba(255,255,255,0.9)',
+                borderRadius: '1.25rem',
+                boxShadow: '0 16px 60px rgba(25,37,36,0.18)',
+                padding: '1.25rem',
+              }}>
+
+                {/* Creators Near You — accent green */}
+                <div style={{ marginBottom: 18 }}>
+                  <button
+                    onClick={() => setNearbyOnly(v => !v)}
+                    style={{
+                      width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      padding: '11px 14px', borderRadius: '0.875rem',
+                      background: nearbyOnly ? 'rgba(60,140,106,0.15)' : 'rgba(60,140,106,0.07)',
+                      border: `1.5px solid ${nearbyOnly ? 'rgba(60,140,106,0.4)' : 'rgba(60,140,106,0.2)'}`,
+                      cursor: 'pointer', transition: 'all 180ms',
+                      fontFamily: 'var(--font-body)',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <MapPin size={14} color="#3C8C6A" />
+                      <div>
+                        <span style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#3C8C6A' }}>Creators Near You</span>
+                        <span style={{ display: 'block', fontSize: 10, color: 'rgba(60,140,106,0.7)', marginTop: 1 }}>Within {MAX_NEARBY_MILES} miles</span>
+                      </div>
+                    </div>
+                    <div style={{
+                      width: 36, height: 20, borderRadius: 9999,
+                      background: nearbyOnly ? '#3C8C6A' : 'rgba(60,140,106,0.2)',
+                      position: 'relative', transition: 'background 200ms', flexShrink: 0,
+                    }}>
+                      <div style={{
+                        position: 'absolute', top: 2, left: nearbyOnly ? 18 : 2,
+                        width: 16, height: 16, borderRadius: '50%',
+                        background: '#fff', boxShadow: '0 1px 4px rgba(0,0,0,0.18)',
+                        transition: 'left 200ms',
+                      }} />
+                    </div>
+                  </button>
+                </div>
+
+                {/* Creator Type */}
+                <div style={{ marginBottom: 16 }}>
+                  <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--sage)', margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    Creator Type
+                  </p>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                    {TIERS.map(t => (
+                      <button key={t} onClick={() => setTierFilter(t)} style={{
+                        padding: '5px 12px', borderRadius: 9999,
+                        fontSize: '0.75rem', fontWeight: 600,
+                        background: tierFilter === t ? 'var(--ink)' : 'rgba(25,37,36,0.06)',
+                        color: tierFilter === t ? 'var(--bone)' : 'var(--slate)',
+                        border: `1px solid ${tierFilter === t ? 'var(--ink)' : 'rgba(25,37,36,0.1)'}`,
+                        cursor: 'pointer', transition: 'all 150ms', fontFamily: 'var(--font-body)',
+                      }}>
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Platforms */}
+                <div style={{ marginBottom: 16 }}>
+                  <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--sage)', margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    Platforms
+                  </p>
+                  <div style={{ display: 'flex', gap: 5 }}>
+                    {[{ p: 'Instagram', icon: '📸' }, { p: 'TikTok', icon: '🎵' }, { p: 'YouTube', icon: '▶️' }].map(({ p, icon }) => {
+                      const active = platformFilter.includes(p);
+                      return (
+                        <button key={p} onClick={() => setPlatformFilter(prev =>
+                          prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p]
+                        )} style={{
+                          display: 'flex', alignItems: 'center', gap: 5,
+                          padding: '5px 12px', borderRadius: 9999,
+                          fontSize: '0.75rem', fontWeight: 600,
+                          background: active ? 'rgba(25,37,36,0.12)' : 'rgba(25,37,36,0.06)',
+                          color: active ? 'var(--ink)' : 'var(--slate)',
+                          border: `1px solid ${active ? 'rgba(25,37,36,0.25)' : 'rgba(25,37,36,0.1)'}`,
+                          cursor: 'pointer', transition: 'all 150ms', fontFamily: 'var(--font-body)',
+                        }}>
+                          <span style={{ fontSize: 10 }}>{icon}</span>{p}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Sort By */}
+                <div style={{ marginBottom: 16 }}>
+                  <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--sage)', margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    Sort By
+                  </p>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                    {[
+                      { v: 'followers', l: 'Most Followers' },
+                      { v: 'engagement', l: 'Highest Engagement' },
+                      { v: 'collabs', l: 'Most Collabs' },
+                    ].map(({ v, l }) => (
+                      <button key={v} onClick={() => setSortBy(v)} style={{
+                        padding: '5px 12px', borderRadius: 9999,
+                        fontSize: '0.75rem', fontWeight: 600,
+                        background: sortBy === v ? 'var(--ink)' : 'rgba(25,37,36,0.06)',
+                        color: sortBy === v ? 'var(--bone)' : 'var(--slate)',
+                        border: `1px solid ${sortBy === v ? 'var(--ink)' : 'rgba(25,37,36,0.1)'}`,
+                        cursor: 'pointer', transition: 'all 150ms', fontFamily: 'var(--font-body)',
+                      }}>
+                        {l}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Other */}
+                <div style={{ marginBottom: 16 }}>
+                  <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--sage)', margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    Other
+                  </p>
+                  <button onClick={() => setShowPast(v => !v)} style={{
+                    display: 'flex', alignItems: 'center', gap: 7,
+                    padding: '7px 14px', borderRadius: '0.75rem',
+                    fontSize: '0.78rem', fontWeight: 600,
+                    background: showPast ? 'rgba(74,155,127,0.12)' : 'rgba(25,37,36,0.05)',
+                    color: showPast ? '#2d7d5e' : 'var(--slate)',
+                    border: `1px solid ${showPast ? 'rgba(74,155,127,0.3)' : 'rgba(25,37,36,0.1)'}`,
+                    cursor: 'pointer', transition: 'all 150ms', fontFamily: 'var(--font-body)',
+                  }}>
+                    <Check size={12} />Past Collabs Only
+                  </button>
+                </div>
+
+                {/* Traveling During */}
+                <div style={{ marginBottom: 20 }}>
+                  <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--sage)', margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <Calendar size={9} />Traveling During
+                  </p>
+                  <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                    <div style={{ flex: 1 }}>
+                      <label style={{ display: 'block', fontSize: 10, fontWeight: 600, color: 'var(--sage)', marginBottom: 4 }}>From</label>
+                      <input type="date" value={tmpDateStart} onChange={e => setTmpDateStart(e.target.value)} style={{ width: '100%', padding: '7px 10px', borderRadius: '0.625rem', border: '1.5px solid rgba(25,37,36,0.12)', background: 'var(--bone)', fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--ink)', outline: 'none', boxSizing: 'border-box' }} />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <label style={{ display: 'block', fontSize: 10, fontWeight: 600, color: 'var(--sage)', marginBottom: 4 }}>To</label>
+                      <input type="date" value={tmpDateEnd} min={tmpDateStart} onChange={e => setTmpDateEnd(e.target.value)} style={{ width: '100%', padding: '7px 10px', borderRadius: '0.625rem', border: '1.5px solid rgba(25,37,36,0.12)', background: 'var(--bone)', fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--ink)', outline: 'none', boxSizing: 'border-box' }} />
+                    </div>
+                  </div>
+                  {tmpDateStart && tmpDateEnd && (
+                    <button
+                      onClick={() => { setDateStart(tmpDateStart); setDateEnd(tmpDateEnd); setFiltersOpen(false); }}
+                      style={{
+                        width: '100%', padding: '8px 0', borderRadius: 9999, border: 'none',
+                        background: 'var(--ink)', fontSize: 11, fontWeight: 700, color: 'var(--bone)',
+                        cursor: 'pointer', fontFamily: 'var(--font-body)',
+                      }}
+                    >
+                      Show creators traveling to {HOST_LOCATION.city}
+                    </button>
+                  )}
+                  {dateStart && dateEnd && (
+                    <p style={{ fontSize: 10, color: 'var(--sage)', margin: '6px 0 0', textAlign: 'center' }}>
+                      Trips {fmtDate(dateStart)}–{fmtDate(dateEnd)}
+                      <button onClick={() => { setDateStart(''); setDateEnd(''); setTmpDateStart(''); setTmpDateEnd(''); }} style={{ marginLeft: 6, fontSize: 10, color: 'var(--sage)', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', fontFamily: 'var(--font-body)', padding: 0 }}>clear</button>
+                    </p>
+                  )}
+                </div>
+
+                {/* Clear All */}
+                {activeFilterCount > 0 && (
+                  <button
+                    onClick={clearAllFilters}
+                    style={{
+                      width: '100%', padding: '9px 0', borderRadius: 9999,
+                      border: '1.5px solid rgba(25,37,36,0.15)', background: 'transparent',
+                      fontSize: 12, fontWeight: 700, color: 'var(--slate)', cursor: 'pointer',
+                      fontFamily: 'var(--font-body)', transition: 'all 150ms',
+                    }}
+                  >
+                    Clear All Filters
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* View toggle */}
+          <div style={{ marginLeft: 'auto' }}>
+            <ViewToggle mode={viewMode} onChange={setViewMode} />
+          </div>
         </div>
 
         {viewMode === 'grid' ? (
@@ -1381,133 +1326,10 @@ export default function HostCreators() {
             {locationConsent === 'allowed' && (
               <NearbyCreatorsSection
                 creators={nearbyCreators}
-                onExpand={setExpandedCreator}
                 onSeeAll={handleSeeAllNearby}
                 onMessage={handleMessage}
               />
             )}
-
-            {/* ── Search + tier filters ── */}
-            <div ref={gridRef} style={{ display: 'flex', gap: 12, marginBottom: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
-              <div style={{
-                display: 'flex', alignItems: 'center', gap: 10,
-                flex: '1 1 240px', minWidth: 200, maxWidth: 340,
-                background: 'rgba(255,255,255,0.78)',
-                backdropFilter: 'blur(16px)',
-                border: '1px solid rgba(255,255,255,0.85)',
-                borderRadius: 9999, padding: '0.5rem 1rem',
-                boxShadow: '0 2px 10px rgba(25,37,36,0.06)',
-              }}>
-                <Search size={14} color="var(--sage)" style={{ flexShrink: 0 }} />
-                <input
-                  type="text" value={query} onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Search by name, niche, platform…"
-                  style={{ border: 'none', outline: 'none', background: 'transparent', fontFamily: 'var(--font-body)', fontSize: '0.82rem', color: 'var(--ink)', width: '100%' }}
-                />
-              </div>
-
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                {TIERS.map(t => (
-                  <button key={t} onClick={() => setTierFilter(t)} style={{
-                    padding: '0.4rem 0.875rem', borderRadius: 9999,
-                    fontSize: '0.78rem', fontWeight: 600,
-                    background: tierFilter === t ? 'var(--ink)' : 'rgba(255,255,255,0.65)',
-                    color: tierFilter === t ? 'var(--bone)' : 'var(--slate)',
-                    border: '1px solid', borderColor: tierFilter === t ? 'var(--ink)' : 'rgba(25,37,36,0.12)',
-                    backdropFilter: 'blur(12px)', cursor: 'pointer',
-                    transition: 'all 180ms var(--ease-out-quart)',
-                    fontFamily: 'var(--font-body)',
-                  }}>
-                    {t}
-                  </button>
-                ))}
-              </div>
-
-              {/* Platform filter */}
-              {['Instagram', 'TikTok', 'YouTube'].map(p => {
-                const active = platformFilter.includes(p);
-                const icons = { Instagram: '📸', TikTok: '🎵', YouTube: '▶️' };
-                return (
-                  <button key={p} onClick={() => setPlatformFilter(prev =>
-                    prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p]
-                  )} style={{
-                    display: 'flex', alignItems: 'center', gap: 5,
-                    padding: '0.4rem 0.875rem', borderRadius: 9999,
-                    fontSize: '0.78rem', fontWeight: 600,
-                    background: active ? 'rgba(25,37,36,0.1)' : 'rgba(255,255,255,0.65)',
-                    color: active ? 'var(--ink)' : 'var(--slate)',
-                    border: `1px solid ${active ? 'rgba(25,37,36,0.25)' : 'rgba(25,37,36,0.12)'}`,
-                    backdropFilter: 'blur(12px)', cursor: 'pointer',
-                    transition: 'all 180ms var(--ease-out-quart)',
-                    fontFamily: 'var(--font-body)',
-                  }}>
-                    <span style={{ fontSize: 10 }}>{icons[p]}</span>{p}
-                  </button>
-                );
-              })}
-
-              {/* Sort */}
-              <select
-                value={sortBy}
-                onChange={e => setSortBy(e.target.value)}
-                style={{
-                  padding: '0.4rem 0.875rem', borderRadius: 9999,
-                  fontSize: '0.78rem', fontWeight: 600,
-                  background: 'rgba(255,255,255,0.65)', color: 'var(--slate)',
-                  border: '1px solid rgba(25,37,36,0.12)',
-                  backdropFilter: 'blur(12px)', cursor: 'pointer',
-                  fontFamily: 'var(--font-body)', outline: 'none',
-                  appearance: 'none', WebkitAppearance: 'none',
-                  paddingRight: '1.5rem',
-                }}
-              >
-                <option value="followers">Most Followers</option>
-                <option value="engagement">Highest Engagement</option>
-                <option value="collabs">Most Collabs</option>
-              </select>
-
-              <button onClick={() => setShowPast(!showPast)} style={{
-                display: 'flex', alignItems: 'center', gap: 6,
-                padding: '0.4rem 0.875rem', borderRadius: 9999,
-                fontSize: '0.78rem', fontWeight: 600,
-                background: showPast ? 'rgba(74,155,127,0.12)' : 'rgba(255,255,255,0.65)',
-                color: showPast ? '#2d7d5e' : 'var(--slate)',
-                border: `1px solid ${showPast ? 'rgba(74,155,127,0.3)' : 'rgba(25,37,36,0.12)'}`,
-                backdropFilter: 'blur(12px)', cursor: 'pointer',
-                transition: 'all 180ms var(--ease-out-quart)',
-                fontFamily: 'var(--font-body)',
-              }}>
-                <Check size={11} />Past Collabs
-              </button>
-
-              {nearbyOnly && (
-                <button onClick={() => setNearbyOnly(false)} style={{
-                  display: 'flex', alignItems: 'center', gap: 5,
-                  padding: '0.4rem 0.875rem', borderRadius: 9999,
-                  fontSize: '0.78rem', fontWeight: 600,
-                  background: 'rgba(209,235,219,0.7)', color: 'var(--ink)',
-                  border: '1px solid rgba(209,235,219,0.9)',
-                  backdropFilter: 'blur(12px)', cursor: 'pointer',
-                  fontFamily: 'var(--font-body)',
-                }}>
-                  <MapPin size={11} />Nearby only <X size={9} />
-                </button>
-              )}
-            </div>
-
-            {/* ── Date range search ── */}
-            <div style={{ marginBottom: '1.25rem' }}>
-              <DateRangePicker
-                dateStart={dateStart} dateEnd={dateEnd}
-                onApply={(s, e) => { setDateStart(s); setDateEnd(e); }}
-                onClear={() => { setDateStart(''); setDateEnd(''); }}
-              />
-              {dateStart && dateEnd && (
-                <p style={{ fontSize: '0.75rem', color: 'var(--sage)', marginTop: 6, marginLeft: 2 }}>
-                  Showing creators visiting or based in {HOST_LOCATION.city} between {fmtDate(dateStart)}–{fmtDate(dateEnd)}
-                </p>
-              )}
-            </div>
 
             {/* ── Results count ── */}
             {!creatorsLoading && (
@@ -1543,7 +1365,6 @@ export default function HostCreators() {
                 {filtered.map((c, i) => (
                   <CreatorCard
                     key={c.id} creator={c} delay={i * 45}
-                    onExpand={setExpandedCreator}
                     onMessage={handleMessage}
                     onHide={c.isSample ? hideGridCreator : undefined}
                     visitingBadge={!isNearHost(c) && dateStart && dateEnd ? getVisitingBadge(c, dateStart, dateEnd) : null}
@@ -1557,15 +1378,6 @@ export default function HostCreators() {
         )}
       </div>
 
-      {/* ── Expanded creator modal (grid) ── */}
-      {expandedCreator && (
-        <ProfilePopupCard
-          person={expandedCreator}
-          onClose={() => setExpandedCreator(null)}
-          onMessage={() => { setExpandedCreator(null); handleMessage(expandedCreator); }}
-          onViewPastCollabs={expandedCreator.past_collab ? () => { setExpandedCreator(null); navigate('/collabs'); } : undefined}
-        />
-      )}
     </div>
   );
 }

@@ -213,6 +213,7 @@ function ConversationPanel({ thread, onViewCollab, onArchive, onUpdateTag }) {
   const bottomRef = useRef(null);
   const fileInputRef = useRef(null);
   const tagStyle = TAG_STYLES[thread.tag] || TAG_STYLES.Application;
+  const navigate = useNavigate();
   const { profile } = useAuth();
   const { openModal } = useVerification();
   const { isSubscribed, openModal: openSubModal } = useSubscription();
@@ -423,6 +424,20 @@ function ConversationPanel({ thread, onViewCollab, onArchive, onUpdateTag }) {
             style={{ display: 'none' }}
             multiple
           />
+          {/* Contract builder shortcut */}
+          <button
+            onClick={() => navigate('/contract')}
+            className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-colors hover:bg-stone/30"
+            title="Open Contract Builder"
+            style={{ background: 'rgba(60,87,89,0.12)' }}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="var(--slate)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <line x1="16" y1="13" x2="8" y2="13"/>
+              <line x1="16" y1="17" x2="8" y2="17"/>
+            </svg>
+          </button>
           <button
             onClick={!isVerified ? openModal : !isSubscribed ? openSubModal : sendMessage}
             disabled={isVerified && isSubscribed && (!draft.trim() || sending)}

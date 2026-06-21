@@ -12,7 +12,7 @@ const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL;
  * storage, and return the public URL. Falls back to a base64 data URL when
  * Convex storage is unavailable (mock/dev mode).
  */
-async function uploadResizedImage(file, maxW, maxH, uploadFn, quality = 0.85) {
+async function uploadResizedImage(file, maxW, maxH, uploadFn, quality = 0.85, getUrlFn) {
   const img = await new Promise((resolve, reject) => {
     const i = new Image();
     i.onload = () => { URL.revokeObjectURL(i.src); resolve(i); };
@@ -30,9 +30,11 @@ async function uploadResizedImage(file, maxW, maxH, uploadFn, quality = 0.85) {
     const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', quality));
     const res = await fetch(uploadUrl, { method: 'POST', headers: { 'Content-Type': 'image/jpeg' }, body: blob });
     const { storageId } = await res.json();
+    if (getUrlFn && storageId) {
+      try { const url = await getUrlFn({ storageId }); if (url) return url; } catch {}
+    }
     return `${CONVEX_URL}/api/storage/${storageId}`;
   }
-  // Fallback: base64 data URL (mock / local dev without Convex storage)
   return canvas.toDataURL('image/jpeg', quality);
 }
 import { useAuth } from '../contexts/AuthContext';
@@ -45,6 +47,29 @@ import { SAMPLE_COLLABORATIONS, SAMPLE_LISTINGS } from '../lib/mockData';
 import { getPitchCount } from '../lib/pitchCount';
 import { cache } from '../lib/cache';
 import { reopenChecklist } from '../components/OnboardingChecklist';
+
+// ─── Creator tier + niche options ────────────────────────────────────────────
+const CREATOR_TIERS = [
+  { value: 'UGC Beginner',     label: 'UGC Beginner',     range: '< 5K followers',     desc: 'New creators building their portfolio' },
+  { value: 'UGC Pro',          label: 'UGC Pro',           range: '5K–20K followers',   desc: 'Content creators, not influencer reach' },
+  { value: 'Micro Influencer', label: 'Micro Influencer',  range: '5K–50K followers',   desc: 'Influencer-style, engaged audience' },
+  { value: 'Influencer',       label: 'Influencer',        range: '50K+ followers',     desc: 'Broad reach, established audience' },
+];
+
+function suggestTier(followerCount) {
+  const n = parseInt(followerCount, 10);
+  if (!n || isNaN(n)) return null;
+  if (n >= 50000) return 'Influencer';
+  if (n >= 5000)  return 'Micro Influencer';
+  if (n >= 1000)  return 'UGC Pro';
+  return 'UGC Beginner';
+}
+
+const NICHE_OPTIONS = [
+  'Travel', 'Cabins & Stays', 'Mountain', 'Beach', 'Coastal', 'Outdoors',
+  'Adventure', 'Lifestyle', 'Food & Dining', 'Fashion', 'Fitness', 'Wellness',
+  'Photography', 'Tech', 'City Life', 'Eco & Sustainable', 'Luxury', 'Design',
+];
 
 // ─── Formatters ───────────────────────────────────────────────────────────────
 function fmtFollowers(n) {
@@ -523,6 +548,7 @@ export default function Profile() {
   const verifyLifetimeSession      = useAction(api.stripe.verifyLifetimeSession);
   const createBillingPortalSession = useAction(api.stripe.createBillingPortalSession);
   const generateUploadUrl          = useMutation(api.uploads.generateUploadUrl);
+  const getStorageUrl              = useMutation(api.uploads.getStorageUrl);
   const updateMetricsMutation      = useMutation(api.profiles.updateMetrics);
   const { openModal: openSubModal } = useSubscription();
   const userId = profile?._id || profile?.id || 'mock-user-001';
@@ -714,8 +740,11 @@ export default function Profile() {
     : null;
 
   function hasUnsavedChanges() {
-    const fields = ['full_name','bio','city','region','country','avatar_url','banner_url','instagram_handle','tiktok_handle','youtube_handle','portfolio'];
-    return fields.some(f => editDraft[f] !== (dp[f] ?? ''));
+    const fields = ['full_name','bio','city','region','country','avatar_url','banner_url','instagram_handle','tiktok_handle','youtube_handle','portfolio','tier'];
+    if (fields.some(f => editDraft[f] !== (dp[f] ?? ''))) return true;
+    const draftNiches = JSON.stringify(editDraft.niches ?? []);
+    const dpNiches    = JSON.stringify(dp.niches ?? []);
+    return draftNiches !== dpNiches;
   }
 
   function openEditProfile() {
@@ -731,6 +760,8 @@ export default function Profile() {
       tiktok_handle:    dp.tiktok_handle    ?? '',
       youtube_handle:   dp.youtube_handle   ?? '',
       portfolio:        dp.portfolio        ?? '',
+      tier:             dp.tier             ?? '',
+      niches:           dp.niches           ?? [],
     });
   }
 
@@ -815,8 +846,8 @@ export default function Profile() {
   return (
     <div style={{ minHeight: '100dvh', paddingBottom: '6rem' }}>
 
-      {/* ── Hero (full-bleed, starts below floating nav) ──────────────────── */}
-      <div style={{ position: 'relative', paddingTop: 'calc(5rem + var(--banner-h, 0rem))' }}>
+      {/* ── Hero (full-bleed, goes to top — nav floats over it) ─────────── */}
+      <div style={{ position: 'relative' }}>
         <div style={{ height: '400px', overflow: 'hidden', background: 'linear-gradient(135deg, #1a2322 0%, #2d4a3e 100%)' }}>
           {dp.banner_url && (
             <img
@@ -841,7 +872,7 @@ export default function Profile() {
               fileInput.onchange = async (e) => {
                 const f = e.target.files?.[0];
                 if (f) {
-                  const url = await uploadResizedImage(f, 300, 300, generateUploadUrl);
+                  const url = await uploadResizedImage(f, 300, 300, generateUploadUrl, 0.85, getStorageUrl);
                   const updated = { ...editDraft, avatar_url: url };
                   setEditDraft(updated);
                 }
@@ -952,44 +983,6 @@ export default function Profile() {
           </p>
         </div>
 
-        {/* ── Payout card (creator only) ─────────────────────────────────── */}
-        {dp.role === 'creator' && (() => {
-          const unlocked = profile?.first_collab_completed === true;
-          const totalPayout = SAMPLE_COLLABORATIONS
-            .filter((c) => c.payment)
-            .reduce((sum, c) => {
-              const amt = parseFloat(c.payment.replace(/[^0-9.]/g, ''));
-              return sum + (isNaN(amt) ? 0 : amt);
-            }, 0);
-          return (
-            <div className="glass section-reveal" ref={(el) => sectionsRef.current[0.5] = el} style={{ padding: '1.25rem 1.5rem', marginBottom: '1.5rem', position: 'relative', overflow: 'hidden' }}>
-              {/* Card content — blurred until first collab completed */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', filter: unlocked ? 'none' : 'blur(6px)', userSelect: unlocked ? 'auto' : 'none', pointerEvents: unlocked ? 'auto' : 'none' }}>
-                <div style={{
-                  width: '44px', height: '44px', borderRadius: '0.875rem',
-                  background: 'linear-gradient(135deg, rgba(74,155,127,0.2), rgba(209,235,221,0.3))',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                  fontSize: '1.25rem',
-                }}>
-                  💰
-                </div>
-                <div style={{ flex: 1 }}>
-                  <p style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--sage)', margin: 0, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Total Payout Received</p>
-                  <p style={{ fontFamily: 'var(--font-display)', fontSize: '1.75rem', fontWeight: 800, color: 'var(--ink)', margin: '0.1rem 0 0' }}>${totalPayout.toLocaleString()}</p>
-                  <p style={{ fontSize: '0.68rem', color: 'var(--stone)', margin: '0.1rem 0 0' }}>Across {SAMPLE_COLLABORATIONS.filter((c) => c.payment).length} completed collaborations</p>
-                </div>
-              </div>
-              {/* Lock overlay */}
-              {!unlocked && (
-                <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
-                  <span style={{ fontSize: '0.875rem' }}>🔒</span>
-                  <p style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--slate)', margin: 0 }}>Unlocks after your first completed collab</p>
-                </div>
-              )}
-            </div>
-          );
-        })()}
-
         {/* ── Bio ──────────────────────────────────────────────────────────── */}
         {dp.bio && (
           <div className="section-reveal" ref={(el) => sectionsRef.current[1] = el} style={{ marginBottom: '1.25rem' }}>
@@ -1052,6 +1045,35 @@ export default function Profile() {
           )}
         </section>
 
+        {/* ── Payout card (creator only) ─────────────────────────────────── */}
+        {dp.role === 'creator' && (() => {
+          const unlocked = profile?.first_collab_completed === true;
+          const totalPayout = SAMPLE_COLLABORATIONS
+            .filter((c) => c.payment)
+            .reduce((sum, c) => {
+              const amt = parseFloat(c.payment.replace(/[^0-9.]/g, ''));
+              return sum + (isNaN(amt) ? 0 : amt);
+            }, 0);
+          return (
+            <div className="glass section-reveal" ref={(el) => sectionsRef.current[0.5] = el} style={{ padding: '1.25rem 1.5rem', marginBottom: '1.75rem', position: 'relative', overflow: 'hidden' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', filter: unlocked ? 'none' : 'blur(6px)', userSelect: unlocked ? 'auto' : 'none', pointerEvents: unlocked ? 'auto' : 'none' }}>
+                <div style={{ width: '44px', height: '44px', borderRadius: '0.875rem', background: 'linear-gradient(135deg, rgba(74,155,127,0.2), rgba(209,235,221,0.3))', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: '1.25rem' }}>💰</div>
+                <div style={{ flex: 1 }}>
+                  <p style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--sage)', margin: 0, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Total Payout Received</p>
+                  <p style={{ fontFamily: 'var(--font-display)', fontSize: '1.75rem', fontWeight: 800, color: 'var(--ink)', margin: '0.1rem 0 0' }}>${totalPayout.toLocaleString()}</p>
+                  <p style={{ fontSize: '0.68rem', color: 'var(--stone)', margin: '0.1rem 0 0' }}>Across {SAMPLE_COLLABORATIONS.filter((c) => c.payment).length} completed collaborations</p>
+                </div>
+              </div>
+              {!unlocked && (
+                <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+                  <span style={{ fontSize: '0.875rem' }}>🔒</span>
+                  <p style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--slate)', margin: 0 }}>Unlocks after your first completed collab</p>
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
         {/* ── Travel Calendar ──────────────────────────────────────────────── */}
         <section className="glass section-reveal" ref={(el) => sectionsRef.current[3.5] = el} style={{ padding: '1.5rem', marginBottom: '1.75rem' }}>
           <TravelCalendar viewerRole="self" />
@@ -1087,57 +1109,58 @@ export default function Profile() {
         >
           <div
             className="glass"
-            style={{ width: '100%', maxWidth: '600px', borderRadius: '1.5rem 1.5rem 0 0', padding: '1.75rem 1.75rem 2.5rem', maxHeight: '88dvh', overflowY: 'auto' }}
+            style={{ width: '100%', maxWidth: '600px', borderRadius: '1.5rem 1.5rem 0 0', padding: '0 1.75rem 2.5rem', maxHeight: '88dvh', overflowY: 'auto' }}
             onClick={(e) => e.stopPropagation()}
           >
+            {/* ── Banner + Avatar — full-bleed top ── */}
+            <div style={{ position: 'relative', marginLeft: '-1.75rem', marginRight: '-1.75rem', marginBottom: '3rem' }}>
+              <label style={{ display: 'block', cursor: 'pointer' }}>
+                <div style={{ height: '120px', borderRadius: '1.5rem 1.5rem 0 0', overflow: 'hidden', background: 'linear-gradient(135deg, #1a2322 0%, #2d4a3e 100%)', position: 'relative' }}>
+                  {editDraft.banner_url && (
+                    <img src={editDraft.banner_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center', display: 'block' }} onError={() => setEditDraft(d => ({ ...d, banner_url: '' }))} />
+                  )}
+                  <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.28)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                    <span style={{ color: 'white', fontSize: '0.75rem', fontWeight: 600 }}>Change banner</span>
+                  </div>
+                </div>
+                <input type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => { const f = e.target.files?.[0]; if (f) setCropEditorFile(f); }} />
+              </label>
+
+              {/* Close button — top right of banner */}
+              <button onClick={() => { if (hasUnsavedChanges()) setExitConfirmDraft(editDraft); else setEditDraft(null); }} style={{ position: 'absolute', top: '0.75rem', right: '0.75rem', width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(0,0,0,0.35)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '1rem' }}>✕</button>
+
+              {/* Avatar — overlapping banner bottom-left */}
+              <div style={{ position: 'absolute', bottom: '-2.5rem', left: '1.75rem' }}>
+                <label style={{ display: 'block', position: 'relative', cursor: 'pointer' }}>
+                  <div style={{ width: 68, height: 68, borderRadius: '50%', overflow: 'hidden', border: '3px solid white', boxShadow: '0 2px 10px rgba(25,37,36,0.18)', background: 'var(--mint)' }}>
+                    {editDraft.avatar_url
+                      ? <img src={editDraft.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                      : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.5rem', color: 'var(--slate)' }}>{(editDraft.full_name || '?')[0]}</div>
+                    }
+                  </div>
+                  <div style={{ position: 'absolute', bottom: 1, right: 1, width: 22, height: 22, borderRadius: '50%', background: 'var(--ink)', border: '2px solid white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                  </div>
+                  <input type="file" accept="image/*" style={{ display: 'none' }} onChange={async (e) => {
+                    const f = e.target.files?.[0];
+                    if (f) {
+                      const url = await uploadResizedImage(f, 300, 300, generateUploadUrl, 0.85, getStorageUrl);
+                      setEditDraft(d => ({ ...d, avatar_url: url }));
+                    }
+                  }} />
+                </label>
+              </div>
+            </div>
+
             {/* Header */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
               <h4 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.25rem', color: 'var(--ink)', margin: 0 }}>Edit Profile</h4>
-              <button onClick={() => { if (hasUnsavedChanges()) setExitConfirmDraft(editDraft); else setEditDraft(null); }} style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(25,37,36,0.07)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--slate)', fontSize: '1rem' }}>✕</button>
             </div>
 
             {/* Fields */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.125rem' }}>
               <EditField label="Name" value={editDraft.full_name} onChange={(v) => setEditDraft({ ...editDraft, full_name: v })} />
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-                <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.4rem', padding: '0.75rem', borderRadius: '0.875rem', background: 'rgba(255,255,255,0.7)', border: '1.5px dashed rgba(60,87,89,0.25)', cursor: 'pointer', transition: 'border-color 150ms, background 150ms' }}
-                  onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(60,87,89,0.5)'; e.currentTarget.style.background = 'rgba(255,255,255,0.9)'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(60,87,89,0.25)'; e.currentTarget.style.background = 'rgba(255,255,255,0.7)'; }}
-                >
-                  <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--sage)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Profile Photo</span>
-                  <div style={{ width: 52, height: 52, borderRadius: '50%', overflow: 'hidden', background: 'var(--stone)', flexShrink: 0, border: '2px solid white', boxShadow: '0 2px 8px rgba(25,37,36,0.12)' }}>
-                    {editDraft.avatar_url ? (
-                      <img src={editDraft.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-                    ) : (
-                      <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--sage)', fontSize: '0.7rem' }}>+</div>
-                    )}
-                  </div>
-                  <span style={{ fontSize: '0.58rem', color: 'var(--sage)', opacity: 0.7 }}>300 × 300 px</span>
-                  <input type="file" accept="image/*" style={{ display: 'none' }} onChange={async (e) => {
-                    const f = e.target.files?.[0];
-                    if (f) {
-                      const url = await uploadResizedImage(f, 300, 300, generateUploadUrl);
-                      setEditDraft(d => ({ ...d, avatar_url: url }));
-                    }
-                  }} />
-                </label>
-                <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.4rem', padding: '0.75rem', borderRadius: '0.875rem', background: 'rgba(255,255,255,0.7)', border: '1.5px dashed rgba(60,87,89,0.25)', cursor: 'pointer', transition: 'border-color 150ms, background 150ms' }}
-                  onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(60,87,89,0.5)'; e.currentTarget.style.background = 'rgba(255,255,255,0.9)'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(60,87,89,0.25)'; e.currentTarget.style.background = 'rgba(255,255,255,0.7)'; }}
-                >
-                  <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--sage)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{dp.role === 'host' ? 'Property Photo' : 'Banner Image'}</span>
-                  <div style={{ width: '100%', height: 52, borderRadius: '0.5rem', overflow: 'hidden', background: 'var(--stone)', flexShrink: 0, border: '2px solid white', boxShadow: '0 2px 8px rgba(25,37,36,0.12)' }}>
-                    {editDraft.banner_url ? (
-                      <img src={editDraft.banner_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-                        onError={() => setEditDraft(d => ({ ...d, banner_url: '' }))} />
-                    ) : (
-                      <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--sage)', fontSize: '0.7rem' }}>+</div>
-                    )}
-                  </div>
-                  <span style={{ fontSize: '0.58rem', color: 'var(--sage)', opacity: 0.7 }}>{dp.role === 'host' ? '3:1 ratio · e.g. 1200 × 400 px' : '3:1 ratio · e.g. 1200 × 400 px'}</span>
-                  <input type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => { const f = e.target.files?.[0]; if (f) setCropEditorFile(f); }} />
-                </label>
-              </div>
               <EditField label="Bio" value={editDraft.bio} onChange={(v) => setEditDraft({ ...editDraft, bio: v })} multiline />
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                 <EditField label="City" value={editDraft.city} onChange={(v) => setEditDraft({ ...editDraft, city: v })} />
@@ -1154,6 +1177,105 @@ export default function Profile() {
                 </div>
               </div>
             </div>
+
+            {/* ── Creator Type + Niches (creator role only) ── */}
+            {dp.role === 'creator' && (
+              <div style={{ marginTop: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+
+                {/* Creator Type */}
+                <div style={{ background: 'rgba(255,255,255,0.6)', borderRadius: '1rem', border: '1px solid rgba(255,255,255,0.85)', padding: '1rem' }}>
+                  <p style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--sage)', margin: '0 0 10px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    Creator Type
+                  </p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {CREATOR_TIERS.map(({ value, label, range, desc }) => {
+                      const active = editDraft.tier === value;
+                      const suggested = suggestTier(
+                        dp.metrics_instagram_followers || dp.metrics_tiktok_followers || dp.metrics_youtube_subscribers
+                      ) === value;
+                      return (
+                        <button
+                          key={value}
+                          onClick={() => setEditDraft({ ...editDraft, tier: value })}
+                          style={{
+                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                            padding: '9px 12px', borderRadius: '0.75rem', textAlign: 'left',
+                            background: active ? 'var(--ink)' : 'rgba(25,37,36,0.04)',
+                            border: `1.5px solid ${active ? 'var(--ink)' : 'rgba(25,37,36,0.1)'}`,
+                            cursor: 'pointer', transition: 'all 150ms',
+                            fontFamily: 'var(--font-body)',
+                          }}
+                        >
+                          <div>
+                            <span style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: active ? 'var(--bone)' : 'var(--ink)' }}>
+                              {label}
+                              {suggested && !active && (
+                                <span style={{ marginLeft: 6, fontSize: 9, fontWeight: 700, color: '#3C8C6A', background: 'rgba(60,140,106,0.12)', padding: '2px 6px', borderRadius: 9999, verticalAlign: 'middle' }}>
+                                  Suggested
+                                </span>
+                              )}
+                            </span>
+                            <span style={{ display: 'block', fontSize: 10, color: active ? 'rgba(255,255,255,0.65)' : 'var(--sage)', marginTop: 2 }}>
+                              {range} · {desc}
+                            </span>
+                          </div>
+                          {active && (
+                            <div style={{ width: 18, height: 18, borderRadius: '50%', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                              <span style={{ color: 'var(--bone)', fontSize: 10 }}>✓</span>
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Content Niches */}
+                <div style={{ background: 'rgba(255,255,255,0.6)', borderRadius: '1rem', border: '1px solid rgba(255,255,255,0.85)', padding: '1rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 10 }}>
+                    <p style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--sage)', margin: 0, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      Content Niches
+                    </p>
+                    <span style={{ fontSize: 10, color: (editDraft.niches?.length ?? 0) >= 5 ? '#ef4444' : 'var(--sage)' }}>
+                      {editDraft.niches?.length ?? 0} / 5
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                    {NICHE_OPTIONS.map(niche => {
+                      const selected = editDraft.niches?.includes(niche);
+                      const maxed    = (editDraft.niches?.length ?? 0) >= 5 && !selected;
+                      return (
+                        <button
+                          key={niche}
+                          disabled={maxed}
+                          onClick={() => {
+                            if (selected) {
+                              setEditDraft({ ...editDraft, niches: editDraft.niches.filter(n => n !== niche) });
+                            } else if (!maxed) {
+                              setEditDraft({ ...editDraft, niches: [...(editDraft.niches ?? []), niche] });
+                            }
+                          }}
+                          style={{
+                            padding: '5px 12px', borderRadius: 9999,
+                            fontSize: '0.72rem', fontWeight: 600,
+                            background: selected ? 'var(--ink)' : maxed ? 'rgba(25,37,36,0.03)' : 'rgba(25,37,36,0.06)',
+                            color: selected ? 'var(--bone)' : maxed ? 'rgba(25,37,36,0.25)' : 'var(--slate)',
+                            border: `1px solid ${selected ? 'var(--ink)' : 'rgba(25,37,36,0.1)'}`,
+                            cursor: maxed ? 'not-allowed' : 'pointer',
+                            transition: 'all 150ms', fontFamily: 'var(--font-body)',
+                          }}
+                        >
+                          {niche}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p style={{ fontSize: 10, color: 'var(--sage)', margin: '8px 0 0' }}>
+                    Hosts filter by these when searching for creators.
+                  </p>
+                </div>
+              </div>
+            )}
 
             {/* Actions */}
             <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.5rem' }}>
@@ -1177,10 +1299,11 @@ export default function Profile() {
                 const uploadUrl = await generateUploadUrl();
                 const upRes = await fetch(uploadUrl, { method: 'POST', headers: { 'Content-Type': 'image/jpeg' }, body: blob });
                 const { storageId } = await upRes.json();
-                if (storageId) finalUrl = `${CONVEX_URL}/api/storage/${storageId}`;
-              } catch {
-                // Upload failed — keep dataUrl as fallback so the preview still shows
-              }
+                if (storageId) {
+                  try { const url = await getStorageUrl({ storageId }); if (url) finalUrl = url; } catch {}
+                  if (finalUrl === dataUrl) finalUrl = `${CONVEX_URL}/api/storage/${storageId}`;
+                }
+              } catch {}
             }
             setEditDraft(d => ({ ...d, banner_url: finalUrl }));
             setCropEditorFile(null);

@@ -265,24 +265,24 @@ function SectionRow({ title, subtitle, listings, saved, onSave, onNavigate, expa
   if (!listings.length || hidden) return null;
   return (
     <div style={{ marginBottom: expanded ? '3rem' : '2.5rem' }}>
-      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', padding: '0 1.5rem', marginBottom: '1rem' }}>
-        <div>
-          <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.2rem', color: 'var(--ink)', marginBottom: '0.1rem' }}>
+      <div style={{ padding: '0 1.5rem', marginBottom: '1rem' }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.45rem' }}>
+          <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.2rem', color: 'var(--ink)', margin: 0 }}>
             {title}
           </h2>
-          {subtitle && <p style={{ fontSize: '0.75rem', color: 'var(--sage)' }}>{subtitle}</p>}
+          <button
+            onClick={onToggleExpand}
+            style={{
+              fontSize: '0.68rem', fontWeight: 500, color: 'var(--sage)',
+              background: 'none', border: 'none', cursor: 'pointer',
+              textDecoration: 'underline', textDecorationColor: 'rgba(60,87,89,0.25)',
+              fontFamily: 'var(--font-body)', whiteSpace: 'nowrap', padding: 0,
+            }}
+          >
+            {expanded ? 'show less' : 'see all'}
+          </button>
         </div>
-        <button
-          onClick={onToggleExpand}
-          style={{
-            fontSize: '0.78rem', fontWeight: 500, color: 'var(--slate)',
-            background: 'none', border: 'none', cursor: 'pointer',
-            textDecoration: 'underline', textDecorationColor: 'rgba(60,87,89,0.3)',
-            fontFamily: 'var(--font-body)', whiteSpace: 'nowrap',
-          }}
-        >
-          {expanded ? 'Show less' : 'See all'}
-        </button>
+        {subtitle && <p style={{ fontSize: '0.75rem', color: 'var(--sage)', margin: '0.1rem 0 0' }}>{subtitle}</p>}
       </div>
       {expanded ? (
         <div style={{
@@ -339,6 +339,9 @@ function Dropdown({ children, align = 'left', width }) {
         zIndex: 30,
         padding: '1rem',
         animation: 'fadeUp 180ms var(--ease-out-expo) forwards',
+        background: 'rgba(248,246,243,0.97)',
+        backdropFilter: 'blur(32px) saturate(1.5)',
+        WebkitBackdropFilter: 'blur(32px) saturate(1.5)',
       }}
     >
       {children}
@@ -538,6 +541,8 @@ export default function Explore() {
     propFilter === 'All' ? arr : arr.filter((l) => l.property_type === propFilter);
 
   const searchFiltered = isLoading ? [] : applySearch(allListings);
+
+  const nearLocationLabel = (whereVal || debouncedWhere || profile?.city || '').split(',')[0].trim() || 'You';
 
   const trending    = byPropType(searchFiltered.filter((l) => l.is_featured));
   const forYou      = byPropType(searchFiltered.filter((l) => ['Photography', 'UGC Video', 'Instagram Reels'].includes(l.collab_type)));
@@ -814,15 +819,15 @@ export default function Explore() {
             />
 
             <SectionRow
-              title="Near Asheville"
+              title={`Near ${nearLocationLabel}`}
               subtitle="Collabs within driving distance of you"
               listings={nearMe}
               saved={savedIds}
               onSave={toggleSave}
               onNavigate={goToListing}
-              expanded={expandedSection === 'Near Asheville'}
-              onToggleExpand={() => setExpandedSection(expandedSection === 'Near Asheville' ? null : 'Near Asheville')}
-              hidden={expandedSection !== null && expandedSection !== 'Near Asheville'}
+              expanded={expandedSection === 'Near'}
+              onToggleExpand={() => setExpandedSection(expandedSection === 'Near' ? null : 'Near')}
+              hidden={expandedSection !== null && expandedSection !== 'Near'}
               onHostClick={() => setPopupHost(sampleHostPerson)}
               onHide={hideListing}
             />

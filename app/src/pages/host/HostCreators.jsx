@@ -412,109 +412,204 @@ function NearbyCreatorsSection({ creators, onSeeAll, onMessage }) {
   );
 }
 
-// ─── Date range picker ────────────────────────────────────────────────────────
-function DateRangePicker({ dateStart, dateEnd, onApply, onClear }) {
-  const [open,     setOpen]     = useState(false);
-  const [tmpStart, setTmpStart] = useState(dateStart || '');
-  const [tmpEnd,   setTmpEnd]   = useState(dateEnd   || '');
-  const containerRef = useRef(null);
+// ─── Dual-month calendar for host travel date filter ─────────────────────────
+const HOST_MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const HOST_WEEKDAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+function MiniCalendar({ year, month, startDate, endDate, onDayClick }) {
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const today = new Date();
+  const cells = [];
+  for (let i = 0; i < firstDay; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    const isStart = startDate === dateStr;
+    const isEnd = endDate === dateStr;
+    const inRange = startDate && endDate && dateStr > startDate && dateStr < endDate;
+    const isPast = new Date(year, month, d) < new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    cells.push({ day: d, dateStr, isStart, isEnd, inRange, isPast });
+  }
+  return (
+    <div style={{ flex: 1, minWidth: 0 }}>
+      <p style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--ink)', textAlign: 'center', marginBottom: 8 }}>
+        {HOST_MONTHS[month]} {year}
+      </p>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '2px', marginBottom: 4 }}>
+        {HOST_WEEKDAYS.map(wd => (
+          <div key={wd} style={{ fontSize: '0.6rem', fontWeight: 700, color: 'var(--sage)', textAlign: 'center', padding: '2px 0', textTransform: 'uppercase' }}>{wd}</div>
+        ))}
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '2px' }}>
+        {cells.map((cell, i) => {
+          if (!cell) return <div key={`e${i}`} />;
+          let bg = 'transparent';
+          let color = cell.isPast ? 'rgba(149,157,144,0.5)' : 'var(--ink)';
+          let radius = '8px';
+          if (cell.isStart || cell.isEnd) {
+            bg = '#4A9B7F'; color = 'white';
+            radius = cell.isStart && cell.isEnd ? '50%' : cell.isStart ? '50% 0 0 50%' : '0 50% 50% 0';
+          } else if (cell.inRange) {
+            bg = 'rgba(74,155,127,0.18)'; radius = '0';
+          }
+          return (
+            <button key={cell.day} onClick={() => !cell.isPast && onDayClick(cell.dateStr)} disabled={cell.isPast}
+              style={{ width: '100%', aspectRatio: '1', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: bg, color, fontSize: '0.8rem', fontWeight: cell.isStart || cell.isEnd ? 700 : 500,
+                border: 'none', borderRadius: radius, cursor: cell.isPast ? 'default' : 'pointer',
+                fontFamily: 'var(--font-body)', transition: 'background 100ms' }}
+              onMouseEnter={e => { if (!cell.isPast && !cell.isStart && !cell.isEnd) e.currentTarget.style.background = 'rgba(74,155,127,0.12)'; }}
+              onMouseLeave={e => { if (!cell.isPast && !cell.isStart && !cell.isEnd) e.currentTarget.style.background = cell.inRange ? 'rgba(74,155,127,0.18)' : 'transparent'; }}
+            >
+              {cell.day}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function HostTravelDatePicker({ dateStart, dateEnd, onApply, onClear }) {
+  const [open, setOpen] = useState(false);
+  const [localStart, setLocalStart] = useState('');
+  const [localEnd, setLocalEnd] = useState('');
+  const [baseMonth, setBaseMonth] = useState(() => new Date().getMonth());
+  const [baseYear, setBaseYear] = useState(() => new Date().getFullYear());
+  const ref = useRef(null);
   const isActive = !!(dateStart && dateEnd);
 
   useEffect(() => {
     if (!open) return;
-    const handler = (e) => {
-      if (containerRef.current && !containerRef.current.contains(e.target)) setOpen(false);
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
+    const h = e => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
   }, [open]);
 
-  const dateInputStyle = {
-    width: '100%', padding: '7px 10px', borderRadius: '0.625rem',
-    border: '1.5px solid rgba(25,37,36,0.12)', background: 'var(--bone)',
-    fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--ink)',
-    outline: 'none', boxSizing: 'border-box',
-  };
+  useEffect(() => { setLocalStart(dateStart || ''); }, [dateStart]);
+  useEffect(() => { setLocalEnd(dateEnd || ''); }, [dateEnd]);
+
+  const today = new Date();
+  const isAtCurrent = baseMonth === today.getMonth() && baseYear === today.getFullYear();
+  const secondMonth = (baseMonth + 1) % 12;
+  const secondYear = baseMonth === 11 ? baseYear + 1 : baseYear;
+
+  function prevMonth() {
+    if (isAtCurrent) return;
+    if (baseMonth === 0) { setBaseMonth(11); setBaseYear(y => y - 1); }
+    else setBaseMonth(m => m - 1);
+  }
+  function nextMonth() {
+    if (baseMonth === 11) { setBaseMonth(0); setBaseYear(y => y + 1); }
+    else setBaseMonth(m => m + 1);
+  }
+
+  function handleDayClick(dateStr) {
+    if (!localStart || (localStart && localEnd)) { setLocalStart(dateStr); setLocalEnd(''); }
+    else if (dateStr < localStart) { setLocalStart(dateStr); setLocalEnd(''); }
+    else setLocalEnd(dateStr);
+  }
 
   return (
-    <div ref={containerRef} style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+    <div ref={ref} style={{ position: 'relative', flexShrink: 0 }}>
       <button
-        onClick={() => setOpen(!open)}
+        onClick={() => setOpen(v => !v)}
         style={{
-          display: 'flex', alignItems: 'center', gap: 6,
-          padding: '0.4rem 0.875rem', borderRadius: 9999,
-          fontSize: '0.78rem', fontWeight: 600,
-          background: isActive ? 'rgba(60,87,89,0.12)' : 'rgba(255,255,255,0.65)',
-          color: isActive ? '#3C5759' : 'var(--slate)',
-          border: `1px solid ${isActive ? 'rgba(60,87,89,0.3)' : 'rgba(25,37,36,0.12)'}`,
-          backdropFilter: 'blur(12px)', cursor: 'pointer',
+          display: 'flex', alignItems: 'center', gap: 7,
+          padding: '0.5rem 1.1rem', borderRadius: 9999,
+          fontSize: '0.82rem', fontWeight: 700,
+          background: isActive || open ? (isActive ? 'rgba(60,87,89,0.12)' : 'var(--ink)') : 'rgba(255,255,255,0.78)',
+          color: isActive ? '#3C5759' : open ? 'var(--bone)' : 'var(--slate)',
+          border: `1px solid ${isActive ? 'rgba(60,87,89,0.3)' : open ? 'var(--ink)' : 'rgba(25,37,36,0.12)'}`,
+          backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
+          cursor: 'pointer', boxShadow: '0 2px 10px rgba(25,37,36,0.06)',
+          fontFamily: 'var(--font-body)', whiteSpace: 'nowrap',
           transition: 'all 180ms var(--ease-out-quart)',
-          fontFamily: 'var(--font-body)',
         }}
       >
-        <Calendar size={11} />
-        {isActive ? `${fmtDate(dateStart)} – ${fmtDate(dateEnd)}` : 'Find creators traveling during…'}
+        <Calendar size={13} />
+        {isActive ? `${fmtDate(dateStart)} – ${fmtDate(dateEnd)}` : 'Travel dates'}
+        {isActive && (
+          <span
+            onClick={e => { e.stopPropagation(); onClear(); }}
+            style={{ marginLeft: 2, opacity: 0.55, lineHeight: 1, fontSize: 15, fontWeight: 400, cursor: 'pointer' }}
+          >×</span>
+        )}
       </button>
-      {isActive && (
-        <button
-          onClick={() => { onClear(); setTmpStart(''); setTmpEnd(''); }}
-          style={{
-            width: 20, height: 20, borderRadius: '50%',
-            background: 'rgba(25,37,36,0.08)', border: 'none',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            cursor: 'pointer', flexShrink: 0,
-          }}
-        >
-          <X size={9} color="var(--slate)" />
-        </button>
-      )}
+
       {open && (
         <div style={{
-          position: 'absolute', top: 'calc(100% + 8px)', left: 0,
-          zIndex: 50, width: 280,
-          background: 'rgba(255,255,255,0.97)',
-          backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
-          border: '1.5px solid rgba(255,255,255,0.85)',
-          borderRadius: '1rem',
-          boxShadow: '0 8px 32px rgba(25,37,36,0.14)',
-          padding: '1rem',
+          position: 'absolute', top: 'calc(100% + 8px)', left: 0, zIndex: 200,
+          width: 480,
+          background: 'rgba(248,246,243,0.97)',
+          backdropFilter: 'blur(32px) saturate(1.5)', WebkitBackdropFilter: 'blur(32px) saturate(1.5)',
+          border: '1.5px solid rgba(255,255,255,0.9)',
+          borderRadius: '1.5rem',
+          boxShadow: '0 12px 48px rgba(25,37,36,0.18)',
+          padding: '1.25rem 1.5rem 1rem',
         }}>
-          <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--ink)', margin: '0 0 10px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-            Travel dates to {HOST_LOCATION.city}
+          <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--sage)', margin: '0 0 12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            Find creators visiting {HOST_LOCATION.city} during…
           </p>
-          <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-            <div style={{ flex: 1 }}>
-              <label style={{ display: 'block', fontSize: 10, fontWeight: 600, color: 'var(--sage)', marginBottom: 4 }}>From</label>
-              <input type="date" value={tmpStart} onChange={e => setTmpStart(e.target.value)} style={dateInputStyle} />
+
+          {/* Month navigation */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
+            <button onClick={prevMonth} disabled={isAtCurrent} style={{
+              width: '1.75rem', height: '1.75rem', borderRadius: '50%',
+              border: '1px solid rgba(25,37,36,0.1)', background: 'rgba(255,255,255,0.6)',
+              cursor: isAtCurrent ? 'default' : 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              opacity: isAtCurrent ? 0.3 : 1, transition: 'background 130ms', flexShrink: 0,
+            }}>
+              <svg viewBox="0 0 16 16" fill="none" stroke="#3C5759" strokeWidth="2" strokeLinecap="round" width="12" height="12">
+                <polyline points="10 4 6 8 10 12"/>
+              </svg>
+            </button>
+            <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+              <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--ink)' }}>{HOST_MONTHS[baseMonth]} {baseYear}</span>
+              <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--sage)' }}>{HOST_MONTHS[secondMonth]} {secondYear}</span>
             </div>
-            <div style={{ flex: 1 }}>
-              <label style={{ display: 'block', fontSize: 10, fontWeight: 600, color: 'var(--sage)', marginBottom: 4 }}>To</label>
-              <input type="date" value={tmpEnd} min={tmpStart} onChange={e => setTmpEnd(e.target.value)} style={dateInputStyle} />
-            </div>
+            <button onClick={nextMonth} style={{
+              width: '1.75rem', height: '1.75rem', borderRadius: '50%',
+              border: '1px solid rgba(25,37,36,0.1)', background: 'rgba(255,255,255,0.6)',
+              cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              transition: 'background 130ms', flexShrink: 0,
+            }}>
+              <svg viewBox="0 0 16 16" fill="none" stroke="#3C5759" strokeWidth="2" strokeLinecap="round" width="12" height="12">
+                <polyline points="6 4 10 8 6 12"/>
+              </svg>
+            </button>
           </div>
-          <div style={{ display: 'flex', gap: 6 }}>
+
+          {/* Dual calendar */}
+          <div style={{ display: 'flex', gap: '1.5rem', marginBottom: 12 }}>
+            <MiniCalendar year={baseYear} month={baseMonth} startDate={localStart} endDate={localEnd} onDayClick={handleDayClick} />
+            <MiniCalendar year={secondYear} month={secondMonth} startDate={localStart} endDate={localEnd} onDayClick={handleDayClick} />
+          </div>
+
+          {/* Selected range display */}
+          {(localStart || localEnd) && (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.5rem 0.75rem', borderRadius: '0.75rem', background: 'rgba(74,155,127,0.1)', marginBottom: 10 }}>
+              <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--ink)' }}>
+                {localStart ? fmtDate(localStart) : '?'}
+                {localEnd ? ` → ${fmtDate(localEnd)}` : ''}
+              </span>
+              <button onClick={() => { setLocalStart(''); setLocalEnd(''); }} style={{ fontSize: '0.72rem', color: 'var(--sage)', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', fontFamily: 'var(--font-body)', padding: 0 }}>Clear</button>
+            </div>
+          )}
+
+          {/* Actions */}
+          <div style={{ display: 'flex', gap: 8 }}>
             <button
-              onClick={() => { onClear(); setTmpStart(''); setTmpEnd(''); setOpen(false); }}
-              style={{
-                flex: 1, padding: '8px 0', borderRadius: 9999,
-                border: '1.5px solid rgba(25,37,36,0.12)', background: 'transparent',
-                fontSize: 11, fontWeight: 700, color: 'var(--slate)', cursor: 'pointer',
-                fontFamily: 'var(--font-body)',
-              }}
+              onClick={() => { onClear(); setLocalStart(''); setLocalEnd(''); setOpen(false); }}
+              style={{ flex: 1, padding: '8px 0', borderRadius: 9999, border: '1.5px solid rgba(25,37,36,0.12)', background: 'transparent', fontSize: 12, fontWeight: 700, color: 'var(--slate)', cursor: 'pointer', fontFamily: 'var(--font-body)' }}
             >
               Clear
             </button>
             <button
-              onClick={() => { if (tmpStart && tmpEnd) { onApply(tmpStart, tmpEnd); setOpen(false); } }}
-              disabled={!tmpStart || !tmpEnd}
-              style={{
-                flex: 2, padding: '8px 0', borderRadius: 9999, border: 'none',
-                background: tmpStart && tmpEnd ? 'var(--ink)' : 'rgba(25,37,36,0.1)',
-                fontSize: 11, fontWeight: 700,
-                color: tmpStart && tmpEnd ? 'var(--bone)' : 'var(--sage)',
-                cursor: tmpStart && tmpEnd ? 'pointer' : 'not-allowed',
-                fontFamily: 'var(--font-body)',
-              }}
+              onClick={() => { if (localStart && localEnd) { onApply(localStart, localEnd); setOpen(false); } }}
+              disabled={!localStart || !localEnd}
+              style={{ flex: 2, padding: '8px 0', borderRadius: 9999, border: 'none', background: localStart && localEnd ? 'var(--ink)' : 'rgba(25,37,36,0.1)', fontSize: 12, fontWeight: 700, color: localStart && localEnd ? 'var(--bone)' : 'var(--sage)', cursor: localStart && localEnd ? 'pointer' : 'not-allowed', fontFamily: 'var(--font-body)' }}
             >
               Show creators
             </button>
@@ -930,8 +1025,6 @@ export default function HostCreators() {
     try { return JSON.parse(localStorage.getItem(HIDDEN_SAMPLE_KEY) || '[]'); } catch { return []; }
   });
   const [filtersOpen,      setFiltersOpen]      = useState(false);
-  const [tmpDateStart,     setTmpDateStart]     = useState('');
-  const [tmpDateEnd,       setTmpDateEnd]       = useState('');
 
   const gridRef   = useRef(null);
   const filterRef = useRef(null);
@@ -983,14 +1076,11 @@ export default function HostCreators() {
     setSavedOnly(false);
     setDateStart('');
     setDateEnd('');
-    setTmpDateStart('');
-    setTmpDateEnd('');
   }
 
   const activeFilterCount = [
     tierFilter !== 'All',
     platformFilter.length > 0,
-    sortBy !== 'followers',
     showPast,
     nearbyOnly,
     savedOnly,
@@ -1232,31 +1322,6 @@ export default function HostCreators() {
                   </div>
                 </div>
 
-                {/* Sort By */}
-                <div style={{ marginBottom: 16 }}>
-                  <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--sage)', margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    Sort By
-                  </p>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-                    {[
-                      { v: 'followers', l: 'Most Followers' },
-                      { v: 'engagement', l: 'Highest Engagement' },
-                      { v: 'collabs', l: 'Most Collabs' },
-                    ].map(({ v, l }) => (
-                      <button key={v} onClick={() => setSortBy(v)} style={{
-                        padding: '5px 12px', borderRadius: 9999,
-                        fontSize: '0.75rem', fontWeight: 600,
-                        background: sortBy === v ? 'var(--ink)' : 'rgba(255,255,255,0.5)',
-                        color: sortBy === v ? 'var(--bone)' : 'var(--slate)',
-                        border: `1px solid ${sortBy === v ? 'var(--ink)' : 'rgba(255,255,255,0.7)'}`,
-                        cursor: 'pointer', transition: 'all 150ms', fontFamily: 'var(--font-body)',
-                      }}>
-                        {l}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
                 {/* Other */}
                 <div style={{ marginBottom: 16 }}>
                   <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--sage)', margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
@@ -1273,41 +1338,6 @@ export default function HostCreators() {
                   }}>
                     <Check size={12} />Past Collabs Only
                   </button>
-                </div>
-
-                {/* Traveling During */}
-                <div style={{ marginBottom: 20 }}>
-                  <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--sage)', margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <Calendar size={9} />Traveling During
-                  </p>
-                  <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-                    <div style={{ flex: 1 }}>
-                      <label style={{ display: 'block', fontSize: 10, fontWeight: 600, color: 'var(--sage)', marginBottom: 4 }}>From</label>
-                      <input type="date" value={tmpDateStart} onChange={e => setTmpDateStart(e.target.value)} style={{ width: '100%', padding: '7px 10px', borderRadius: '0.625rem', border: '1px solid rgba(255,255,255,0.75)', background: 'rgba(255,255,255,0.55)', fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--ink)', outline: 'none', boxSizing: 'border-box' }} />
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <label style={{ display: 'block', fontSize: 10, fontWeight: 600, color: 'var(--sage)', marginBottom: 4 }}>To</label>
-                      <input type="date" value={tmpDateEnd} min={tmpDateStart} onChange={e => setTmpDateEnd(e.target.value)} style={{ width: '100%', padding: '7px 10px', borderRadius: '0.625rem', border: '1px solid rgba(255,255,255,0.75)', background: 'rgba(255,255,255,0.55)', fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--ink)', outline: 'none', boxSizing: 'border-box' }} />
-                    </div>
-                  </div>
-                  {tmpDateStart && tmpDateEnd && (
-                    <button
-                      onClick={() => { setDateStart(tmpDateStart); setDateEnd(tmpDateEnd); setFiltersOpen(false); }}
-                      style={{
-                        width: '100%', padding: '8px 0', borderRadius: 9999, border: 'none',
-                        background: 'var(--ink)', fontSize: 11, fontWeight: 700, color: 'var(--bone)',
-                        cursor: 'pointer', fontFamily: 'var(--font-body)',
-                      }}
-                    >
-                      Show creators traveling to {HOST_LOCATION.city}
-                    </button>
-                  )}
-                  {dateStart && dateEnd && (
-                    <p style={{ fontSize: 10, color: 'var(--sage)', margin: '6px 0 0', textAlign: 'center' }}>
-                      Trips {fmtDate(dateStart)}–{fmtDate(dateEnd)}
-                      <button onClick={() => { setDateStart(''); setDateEnd(''); setTmpDateStart(''); setTmpDateEnd(''); }} style={{ marginLeft: 6, fontSize: 10, color: 'var(--sage)', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', fontFamily: 'var(--font-body)', padding: 0 }}>clear</button>
-                    </p>
-                  )}
                 </div>
 
                 {/* Clear All */}
@@ -1328,6 +1358,14 @@ export default function HostCreators() {
             )}
           </div>
 
+          {/* Travel date filter */}
+          <HostTravelDatePicker
+            dateStart={dateStart}
+            dateEnd={dateEnd}
+            onApply={(s, e) => { setDateStart(s); setDateEnd(e); }}
+            onClear={() => { setDateStart(''); setDateEnd(''); }}
+          />
+
           {/* View toggle */}
           <div style={{ marginLeft: 'auto' }}>
             <ViewToggle mode={viewMode} onChange={setViewMode} />
@@ -1336,15 +1374,6 @@ export default function HostCreators() {
 
         {viewMode === 'grid' ? (
           <>
-            {/* ── Nearby section (only when nearbyOnly toggle is on) ── */}
-            {locationConsent === 'allowed' && nearbyOnly && (
-              <NearbyCreatorsSection
-                creators={nearbyCreators}
-                onSeeAll={handleSeeAllNearby}
-                onMessage={handleMessage}
-              />
-            )}
-
             {/* ── Results count ── */}
             {!creatorsLoading && (
               <p style={{ fontSize: '0.78rem', color: 'var(--sage)', marginBottom: '1.25rem' }}>

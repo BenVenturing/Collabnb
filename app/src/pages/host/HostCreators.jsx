@@ -2,12 +2,11 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Search, MessageSquare, Check, X,
-  Sparkles, ExternalLink, MapPin, Calendar, ChevronRight, ChevronLeft, Trash2,
+  MapPin, Calendar, ChevronRight, ChevronLeft,
   SlidersHorizontal,
 } from 'lucide-react';
 import SkeletonCard from '../../components/SkeletonCard';
 import { cache, cacheKey } from '../../lib/cache';
-import ProfilePopupCard from '../../components/ProfilePopupCard';
 import CreatorAvatar from '../../components/CreatorAvatar';
 import CreatorCard from '../../components/CreatorCard';
 
@@ -516,184 +515,25 @@ function DateRangePicker({ dateStart, dateEnd, onApply, onClear }) {
   );
 }
 
-// ─── SwipeCardLarge — minimal, travel-focused ─────────────────────────────────
-function SwipeCardLarge({ creator, exitDir, onClick }) {
+// ─── Swipe animation wrapper around CreatorCard ───────────────────────────────
+function SwipeCardWrapper({ creator, exitDir, onMessage, onHide }) {
   const [entered, setEntered] = useState(false);
-  const t = TIER_COLORS[creator.tier] || TIER_COLORS['UGC Beginner'];
 
   useEffect(() => {
     const id = requestAnimationFrame(() => setEntered(true));
     return () => cancelAnimationFrame(id);
   }, []);
 
-  const dynamicStyle = !entered
-    ? { opacity: 0, transform: 'translateY(36px) scale(0.97)' }
-    : exitDir === 'left'  ? { opacity: 0, transform: 'translateX(-140%) rotate(-15deg)' }
-    : exitDir === 'right' ? { opacity: 0, transform: 'translateX(140%) rotate(15deg)' }
-    : exitDir === 'up'    ? { opacity: 0, transform: 'translateY(-120%) scale(0.88)' }
-    : { opacity: 1, transform: 'translateY(0) scale(1)' };
-
-  const upcomingTrips = (creator.travelCalendar || [])
-    .filter(trip => new Date(trip.endDate) >= new Date())
-    .sort((a, b) => new Date(a.startDate) - new Date(b.startDate))
-    .slice(0, 3);
+  const dynStyle = !entered
+    ? { opacity: 0, transform: 'translateY(28px) scale(0.97)' }
+    : exitDir === 'left'  ? { opacity: 0, transform: 'translateX(-140%) rotate(-12deg)', pointerEvents: 'none' }
+    : exitDir === 'right' ? { opacity: 0, transform: 'translateX(140%) rotate(12deg)',   pointerEvents: 'none' }
+    : exitDir === 'up'    ? { opacity: 0, transform: 'translateY(-110%) scale(0.9)',      pointerEvents: 'none' }
+    : { opacity: 1, transform: 'none' };
 
   return (
-    <div
-      onClick={onClick}
-      style={{
-        position: 'absolute', inset: 0, borderRadius: '1.5rem',
-        background: 'rgba(255,255,255,0.94)',
-        backdropFilter: 'blur(24px) saturate(140%)', WebkitBackdropFilter: 'blur(24px) saturate(140%)',
-        border: '1.5px solid rgba(255,255,255,0.85)',
-        boxShadow: '0 20px 60px rgba(25,37,36,0.16)',
-        overflow: 'hidden',
-        cursor: 'pointer',
-        transition: 'transform 340ms cubic-bezier(0.25,1,0.5,1), opacity 300ms ease',
-        userSelect: 'none',
-        display: 'flex', flexDirection: 'column',
-        ...dynamicStyle,
-      }}
-    >
-      {/* Gradient header band */}
-      <div style={{
-        height: 84, flexShrink: 0,
-        background: 'linear-gradient(150deg, #D1EBDB 0%, #E6EFE7 45%, #EFECE9 100%)',
-        position: 'relative', overflow: 'hidden',
-      }}>
-        <div style={{
-          position: 'absolute', inset: 0,
-          backgroundImage: 'radial-gradient(circle, rgba(25,37,36,0.07) 1px, transparent 1px)',
-          backgroundSize: '14px 14px', backgroundPosition: '7px 7px',
-          pointerEvents: 'none',
-        }} />
-        {/* Sample Creator badge top-left */}
-        {creator.isSample && (
-          <div style={{ position: 'absolute', top: 14, left: 16 }}>
-            <span style={{ padding: '3px 9px', borderRadius: 9999, fontSize: 9, fontWeight: 700, background: 'rgba(149,157,144,0.22)', color: '#959D90', letterSpacing: '0.02em' }}>
-              Sample Creator
-            </span>
-          </div>
-        )}
-        {/* Tier badge top-right */}
-        <div style={{ position: 'absolute', top: 14, right: 16 }}>
-          <span style={{ padding: '4px 12px', borderRadius: 9999, fontSize: 10, fontWeight: 700, background: t.bg, color: t.color, boxShadow: '0 1px 6px rgba(25,37,36,0.08)' }}>
-            {creator.tier}
-          </span>
-        </div>
-        {/* Avatar anchored bottom-left */}
-        <div style={{ position: 'absolute', bottom: -26, left: 22 }}>
-          <div style={{
-            width: 54, height: 54, borderRadius: '50%',
-            border: '3px solid rgba(255,255,255,0.97)',
-            overflow: 'hidden', background: 'var(--mint)',
-            boxShadow: '0 3px 14px rgba(25,37,36,0.12)',
-          }}>
-            <CreatorAvatar src={creator.avatar} name={creator.name} size={54} style={{ border: 'none' }} />
-          </div>
-          {creator.past_collab && (
-            <div title="Past collab" style={{
-              position: 'absolute', bottom: 1, right: -2, width: 18, height: 18,
-              borderRadius: '50%', background: '#4A9B7F', border: '2px solid #fff',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}>
-              <Check size={9} color="#fff" />
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Body */}
-      <div style={{ flex: 1, padding: '34px 22px 14px', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
-        {/* Name + location */}
-        <div style={{ marginBottom: 14 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-            <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 20, color: 'var(--ink)' }}>{creator.name}</span>
-            {creator.isFounder && (
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '2px 7px', borderRadius: 9999, background: 'rgba(25,37,36,0.07)', border: '1px solid rgba(25,37,36,0.1)', fontSize: 9, fontWeight: 700, color: 'var(--ink)' }}>
-                <Sparkles size={8} />Founder
-              </span>
-            )}
-          </div>
-          <div style={{ fontSize: 12, color: 'var(--sage)', marginTop: 3 }}>
-            @{creator.username} · 📍 {creator.location}
-          </div>
-        </div>
-
-        {/* Destinations / collab section */}
-        <div style={{
-          padding: '12px 14px', borderRadius: '0.875rem', marginBottom: 14,
-          background: upcomingTrips.length > 0 ? 'rgba(209,235,219,0.22)' : 'var(--bone)',
-          border: `1px solid ${upcomingTrips.length > 0 ? 'rgba(209,235,219,0.6)' : 'rgba(25,37,36,0.07)'}`,
-        }}>
-          {upcomingTrips.length > 0 ? (
-            <>
-              <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--slate)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>
-                ✈  Heading to
-              </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                {upcomingTrips.map(trip => (
-                  <div key={trip.id} style={{
-                    padding: '8px 13px', borderRadius: '0.625rem',
-                    background: 'rgba(255,255,255,0.82)', border: '1px solid rgba(255,255,255,0.9)',
-                    boxShadow: '0 1px 6px rgba(25,37,36,0.06)',
-                  }}>
-                    <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 13, color: 'var(--ink)' }}>{trip.city}</div>
-                    <div style={{ fontSize: 10, color: 'var(--sage)', marginTop: 2 }}>{fmtDate(trip.startDate)}–{fmtDate(trip.endDate)}</div>
-                  </div>
-                ))}
-              </div>
-            </>
-          ) : (
-            <>
-              <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--slate)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>
-                Open to collabs in
-              </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-                {creator.niches.slice(0, 4).map(n => (
-                  <span key={n} style={{ padding: '5px 12px', borderRadius: 9999, fontSize: 11, fontWeight: 600, background: 'rgba(255,255,255,0.82)', color: 'var(--slate)', border: '1px solid rgba(25,37,36,0.08)' }}>{n}</span>
-                ))}
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* Stats — 2-col */}
-        <div style={{
-          display: 'grid', gridTemplateColumns: '1fr 1fr',
-          gap: 1, background: 'rgba(25,37,36,0.06)', borderRadius: '0.75rem', overflow: 'hidden', marginBottom: 12,
-        }}>
-          {[
-            { label: 'Followers', value: fmtFollowers(creator.followers) },
-            { label: 'Eng. Rate', value: `${creator.engagement}%`        },
-          ].map(({ label, value }) => (
-            <div key={label} style={{ padding: '11px 0', background: 'rgba(255,255,255,0.78)', textAlign: 'center' }}>
-              <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 16, color: 'var(--ink)', lineHeight: 1 }}>{value}</div>
-              <div style={{ fontSize: 10, color: 'var(--sage)', marginTop: 2 }}>{label}</div>
-            </div>
-          ))}
-        </div>
-
-        {/* Platforms */}
-        <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
-          {creator.platforms.map(p => (
-            <span key={p} style={{ padding: '4px 11px', borderRadius: 9999, fontSize: 11, fontWeight: 600, background: 'rgba(60,87,89,0.09)', color: 'var(--ink)' }}>{p}</span>
-          ))}
-        </div>
-      </div>
-
-      {/* Footer hint */}
-      <div style={{
-        padding: '10px 22px', borderTop: '1px solid rgba(25,37,36,0.06)',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        background: 'rgba(255,255,255,0.55)', flexShrink: 0,
-      }}>
-        <span style={{ fontSize: 10, color: 'var(--sage)', fontWeight: 500 }}>← skip · save → · ↑ message</span>
-        <span style={{ fontSize: 10, color: 'var(--sage)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 3 }}>
-          Full profile
-          <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-        </span>
-      </div>
+    <div style={{ transition: 'transform 340ms cubic-bezier(0.25,1,0.5,1), opacity 300ms ease', ...dynStyle }}>
+      <CreatorCard creator={creator} onMessage={onMessage} onHide={onHide} />
     </div>
   );
 }
@@ -781,7 +621,6 @@ function SwipeView({ creators }) {
 
   const [deckIdx,     setDeckIdx]     = useState(0);
   const [exitDir,     setExitDir]     = useState(null);
-  const [showModal,   setShowModal]   = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
 
   const currentCreator = deck[deckIdx] || null;
@@ -806,6 +645,7 @@ function SwipeView({ creators }) {
         setDeprioIds(next); lsSet(DEPRIO_KEY, next);
       } else if (dir === 'up') {
         goToInbox(currentCreator);
+        return;
       }
       const nextHist = [...swipeHistory, { id: currentCreator.id, action: dir }];
       setSwipeHistory(nextHist); lsSet(HIST_KEY, nextHist);
@@ -833,7 +673,6 @@ function SwipeView({ creators }) {
 
   const swipeRef = useRef(handleSwipe);
   const undoRef  = useRef(handleUndo);
-  const modalRef = useRef(setShowModal);
   useEffect(() => { swipeRef.current = handleSwipe; }, [handleSwipe]);
   useEffect(() => { undoRef.current  = handleUndo;  }, [handleUndo]);
 
@@ -843,7 +682,6 @@ function SwipeView({ creators }) {
       if (e.key === 'ArrowLeft')  { e.preventDefault(); swipeRef.current('left');  }
       if (e.key === 'ArrowRight') { e.preventDefault(); swipeRef.current('right'); }
       if (e.key === 'ArrowUp')    { e.preventDefault(); swipeRef.current('up');    }
-      if (e.key === ' ')          { e.preventDefault(); modalRef.current(m => !m); }
       if (e.key === 'z' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); undoRef.current(); }
     }
     window.addEventListener('keydown', onKey);
@@ -858,16 +696,21 @@ function SwipeView({ creators }) {
         {currentCreator ? `${deckIdx + 1} of ${deck.length} creators` : `All ${deck.length} creators reviewed`}
       </p>
 
-      <div style={{ position: 'relative', width: '100%', maxWidth: 400, height: 520 }}>
+      <div style={{ width: '100%', maxWidth: 420, overflow: 'hidden' }}>
         {currentCreator ? (
-          <SwipeCardLarge key={deckIdx} creator={currentCreator} exitDir={exitDir}
-            onClick={() => !isAnimating && setShowModal(true)} />
+          <SwipeCardWrapper
+            key={deckIdx}
+            creator={currentCreator}
+            exitDir={exitDir}
+            onMessage={goToInbox}
+          />
         ) : (
           <div style={{
-            position: 'absolute', inset: 0, borderRadius: '1.5rem',
+            borderRadius: '1.375rem',
             background: 'rgba(255,255,255,0.82)',
             backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)',
             border: '1.5px solid rgba(255,255,255,0.85)',
+            padding: '3rem 2rem',
             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10,
           }}>
             <div style={{ fontSize: 44 }}>✓</div>
@@ -884,7 +727,6 @@ function SwipeView({ creators }) {
           { key: '←', label: 'De-prioritize' },
           { key: '→', label: 'Save' },
           { key: '↑', label: 'Message' },
-          { key: 'Space', label: 'Expand' },
         ].map(({ key, label }) => (
           <span key={key} style={{ fontSize: 11, color: 'var(--sage)', display: 'flex', alignItems: 'center', gap: 5 }}>
             <kbd style={{ padding: '2px 6px', borderRadius: 4, background: 'rgba(255,255,255,0.72)', border: '1px solid rgba(25,37,36,0.12)', fontSize: 10, fontFamily: 'monospace' }}>{key}</kbd>
@@ -910,14 +752,6 @@ function SwipeView({ creators }) {
         </div>
       )}
 
-      {showModal && currentCreator && (
-        <ProfilePopupCard
-          person={currentCreator}
-          onClose={() => setShowModal(false)}
-          onMessage={() => { setShowModal(false); goToInbox(currentCreator); }}
-          onViewPastCollabs={currentCreator.past_collab ? () => { setShowModal(false); navigate('/collabs'); } : undefined}
-        />
-      )}
     </div>
   );
 }
@@ -1321,8 +1155,8 @@ export default function HostCreators() {
 
         {viewMode === 'grid' ? (
           <>
-            {/* ── Nearby section (only if consent given) ── */}
-            {locationConsent === 'allowed' && (
+            {/* ── Nearby section (only when nearbyOnly toggle is on) ── */}
+            {locationConsent === 'allowed' && nearbyOnly && (
               <NearbyCreatorsSection
                 creators={nearbyCreators}
                 onSeeAll={handleSeeAllNearby}

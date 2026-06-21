@@ -71,7 +71,6 @@ export const SAMPLE_LISTINGS = [
       'https://images.unsplash.com/photo-1449158743715-0a90ebb6d2d8?w=800&q=80',
       'https://images.unsplash.com/photo-1519681393784-d120267933ba?w=800&q=80',
       'https://images.unsplash.com/photo-1480497490787-505ec076689f?w=800&q=80',
-      'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&q=80',
     ],
 
     about: 'A stunning old-growth forest cabin perched above Lake Tahoe with sweeping mountain and lake views. Floor-to-ceiling windows, a stone fireplace, and a private hot tub make this the perfect backdrop for authentic travel content. Surrounded by towering pines with ski slopes just 10 minutes away.',
@@ -94,14 +93,16 @@ export const SAMPLE_LISTINGS = [
       'Welcome provisions basket',
       'Late checkout (2pm)',
     ],
-    what_you_deliver: '9 total deliverables across 3 formats (Moderate load)',
+    what_you_deliver: '3 vertical Reels (check-in reveal, hot tub moment, ski day), 5 edited lifestyle photos (exterior, interior, fireplace, lake view, deck), 1 blog post ~800 words with 3 embedded photos',
 
     requirements: [
       'Minimum 10,000 followers on primary platform',
-      'UGC Pro or higher creator tier',
-      'Content must tag @collabnb and property handle',
-      'All posts submitted within 14 days of checkout',
-      'Horizontal + vertical format for each reel',
+      'UGC Pro or higher tier required',
+      'Reels must be 30–60 seconds, vertical 9:16 format',
+      'All music must be licensed or royalty-free',
+      'Photos minimum 4K resolution, no heavy filters',
+      'Blog post must include a property link and @collabnb mention',
+      'All content submitted within 14 days of checkout',
     ],
 
     location_full: 'Lake Tahoe, El Dorado County, California',
@@ -134,8 +135,7 @@ export const SAMPLE_LISTINGS = [
     gallery_images: [
       'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=1200&q=85',
       'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=800&q=80',
-      'https://images.unsplash.com/photo-1433086966358-54859d0ed716?w=800&q=80',
-      'https://images.unsplash.com/photo-1501785888041-af3ef285b470?w=800&q=80',
+      'https://images.unsplash.com/photo-1501854140801-50d01698950b?w=800&q=80',
       'https://images.unsplash.com/photo-1486870591958-9b9d0d1dda99?w=800&q=80',
     ],
 
@@ -159,14 +159,15 @@ export const SAMPLE_LISTINGS = [
       'Welcome Argentine wine & provisions',
       'Personal concierge for shoot scheduling',
     ],
-    what_you_deliver: '10 total deliverables across 2 formats (Moderate load)',
+    what_you_deliver: '2 vertical Reels (infinity pool reveal, golden hour at the dock), 8 edited photos covering exterior, pool with Andes, interior living room, lake kayaking, fire pit sunset, wine at the dock, bedroom, and overhead pool shot',
 
     requirements: [
-      'Minimum 5,000 followers on Instagram',
-      'Micro Influencer or higher creator tier',
-      'At least 2 reels must feature the lake or mountain view',
-      'All posts must go live within 10 days of checkout',
-      'Include location tag and @collabnb in all posts',
+      'Minimum 5,000 Instagram followers',
+      'Micro Influencer or higher tier required',
+      'At least 2 photos must show the lake or mountain backdrop',
+      'Both reels must feature the infinity pool or lake views',
+      'Tag property handle and @collabnb on all posts',
+      'Posts must go live within 10 days of checkout',
     ],
 
     location_full: 'Bariloche, Río Negro Province, Argentina',
@@ -198,9 +199,8 @@ export const SAMPLE_LISTINGS = [
     image: 'https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=800&q=80',
     gallery_images: [
       'https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=1200&q=85',
-      'https://images.unsplash.com/photo-1528181304800-259b08848526?w=800&q=80',
-      'https://images.unsplash.com/photo-1504214208698-ea1916a2195a?w=800&q=80',
-      'https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=800&q=80',
+      'https://images.unsplash.com/photo-1559327291-72ee739d0d9a?w=800&q=80',
+      'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&q=80',
       'https://images.unsplash.com/photo-1506665531195-3566af2b4dfa?w=800&q=80',
     ],
 
@@ -224,14 +224,16 @@ export const SAMPLE_LISTINGS = [
       'Guided Doi Suthep sunrise trek',
       'Professional behind-the-scenes stills',
     ],
-    what_you_deliver: '18 total deliverables across 3 formats (Heavy load)',
+    what_you_deliver: '5 Reels (arrival/explore, sunrise pool, jungle trek, cooking class, panorama sunset), 12 edited photos (lodge exterior, bedroom, pool, jungle, kitchen, local dishes, sunrise, portrait + 4 detail shots), 1 YouTube vlog minimum 10 minutes with lodge B-roll, cooking class segment, and trek footage',
 
     requirements: [
       'Minimum 25,000 followers across platforms',
-      'UGC Pro or higher creator tier',
-      'YouTube vlog must be minimum 8 minutes',
+      'Active YouTube channel required (minimum 1,000 subscribers)',
+      'YouTube vlog must be minimum 10 minutes, fully edited',
+      'Reels must be 30–90 seconds, no talking head only — show the property',
+      'Photos minimum 4K, delivered as RAW + edited JPEG',
+      'Must feature both interior lodge shots and jungle/mountain exterior',
       'All content submitted within 21 days of checkout',
-      'Must feature both interior and jungle mountain exterior shots',
     ],
 
     location_full: 'Chiang Mai, Thailand',
@@ -263,10 +265,9 @@ export const SAMPLE_LISTINGS = [
     image: 'https://images.unsplash.com/photo-1506377247377-2a5b3b417ebb?w=800&q=80',
     gallery_images: [
       'https://images.unsplash.com/photo-1506377247377-2a5b3b417ebb?w=1200&q=85',
-      'https://images.unsplash.com/photo-1568702846914-96b305d2aaeb?w=800&q=80',
-      'https://images.unsplash.com/photo-1516594915697-87eb3b1c14ea?w=800&q=80',
+      'https://images.unsplash.com/photo-1464454709131-ffd692591ee5?w=800&q=80',
       'https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=800&q=80',
-      'https://images.unsplash.com/photo-1601821765780-754fa98637c1?w=800&q=80',
+      'https://images.unsplash.com/photo-1559339352-11d035aa65de?w=800&q=80',
     ],
 
     about: 'An opulent Cape Dutch-style private villa set within a working Stellenbosch wine estate with dramatic views of the Jonkershoek Valley and Table Mountain in the distance. Wake up to rows of Cabernet Sauvignon and Chenin Blanc vines stretching toward the mountains. Includes exclusive barrel room access, private wine tastings with a master sommelier, and guided vineyard tours. The warm golden hour light over the Cape Winelands is among the most cinematic in the world.',
@@ -289,14 +290,16 @@ export const SAMPLE_LISTINGS = [
       'Hosted wine tasting (up to 4 guests)',
       'Exclusive golden-hour access to vine rows',
     ],
-    what_you_deliver: '12 total deliverables across 3 formats (Moderate load)',
+    what_you_deliver: '3 Reels (estate reveal + vine rows, barrel room tasting, golden hour in the vines), 8 aspirational photos (Cape Dutch exterior, vine rows close-up, barrel cellar, pool + mountain backdrop, plated wine pairing, sunset estate view, estate bedroom, sommelier tasting), 1 YouTube video minimum 12 minutes — winemaking behind-the-scenes, estate history, tasting notes, Jonkershoek Valley B-roll',
 
     requirements: [
       'Minimum 100,000 followers on primary platform',
-      'Macro creator tier required',
-      'All content must be aspirational and brand-aligned',
-      'YouTube video minimum 10 minutes with vineyard B-roll',
-      'Content submitted within 14 days of checkout',
+      'Macro creator tier required — lifestyle or luxury travel niche preferred',
+      'YouTube video must be minimum 12 minutes, cinematic-grade edit',
+      'Feed aesthetic must align with luxury hospitality — no low-effort content',
+      'All content must be aspirational, brand-safe, and location-tagged',
+      'Raw footage of vine rows and barrel room must be delivered alongside final cuts',
+      'All content submitted within 14 days of checkout',
     ],
 
     location_full: 'Stellenbosch, Western Cape, South Africa',
@@ -330,8 +333,7 @@ export const SAMPLE_LISTINGS = [
       'https://images.unsplash.com/photo-1542718610-a1d656d1884c?w=1200&q=85',
       'https://images.unsplash.com/photo-1448375240586-882707db888b?w=800&q=80',
       'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=800&q=80',
-      'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=800&q=80',
-      'https://images.unsplash.com/photo-1511497584788-876760111969?w=800&q=80',
+      'https://images.unsplash.com/photo-1519974719765-e6559eac2575?w=800&q=80',
     ],
 
     about: 'A one-of-a-kind treehouse elevated 30 feet above a glassy private lake in the Blue Ridge Mountains. Accessed by a rope bridge, with glass floors and a wraparound deck. Kayaks and paddleboards are included. The mist rolling across the lake at dawn creates some of the most ethereal photography conditions anywhere in the Southeast.',
@@ -354,14 +356,16 @@ export const SAMPLE_LISTINGS = [
       'Lakeside bonfire kit',
       'Sunrise golden-hour photography access',
     ],
-    what_you_deliver: '10 total deliverables across 3 formats (Light load)',
+    what_you_deliver: '2 Reels (rope bridge arrival reveal, misty dawn kayak on the lake), 6 high-res lifestyle photos (treehouse exterior at golden hour, elevated lake view, glass floor detail, kayaking, fire pit at dusk, deck sunrise moment), 2 Stories (real-time arrival + morning coffee with lake view)',
 
     requirements: [
       'Minimum 10,000 followers on primary platform',
-      'Strong photography portfolio required',
-      'Content must capture dawn/dusk lighting conditions',
-      'All posts submitted within 7 days of checkout',
-      'High-resolution files (minimum 4K) for all photos',
+      'Strong photography portfolio required — share 3 examples at application',
+      'Photos must be minimum 4K resolution, delivered as edited JPEG + RAW',
+      'At least 2 photos must capture dawn or dusk lighting conditions',
+      'Reels must include aerial or elevated perspective of the treehouse',
+      'Stories must be posted in real-time during the stay',
+      'All deliverables submitted within 7 days of checkout',
     ],
 
     location_full: 'Asheville, Buncombe County, North Carolina',
@@ -384,8 +388,8 @@ export const SAMPLE_LISTINGS = [
 
     collab_type: 'Instagram Reels',
     creator_tier: 'Micro Influencer',
-    deliverables: '1 Reel, 4 Photos',
-    deliverable_count: 5,
+    deliverables: '2 Reels, 4 Photos',
+    deliverable_count: 6,
     deliverable_load: 'Light',
     dates_available: 'Year-round',
     due_days: 7,
@@ -395,7 +399,6 @@ export const SAMPLE_LISTINGS = [
       'https://images.unsplash.com/photo-1533104816931-20fa691ff6ca?w=1200&q=85',
       'https://images.unsplash.com/photo-1525130413817-d45c1d127c42?w=800&q=80',
       'https://images.unsplash.com/photo-1595867818082-083862f3d630?w=800&q=80',
-      'https://images.unsplash.com/photo-1585970480901-90d6bb2a48b5?w=800&q=80',
       'https://images.unsplash.com/photo-1532339142463-fd0a8979791a?w=800&q=80',
     ],
 
@@ -419,14 +422,15 @@ export const SAMPLE_LISTINGS = [
       'Mediterranean provisions & fire kit',
       'Sunrise vantage point access',
     ],
-    what_you_deliver: '5 total deliverables across 2 formats (Light load)',
+    what_you_deliver: '2 Reels (transparent dome with star-trail moment, morning Mediterranean coastal reveal), 4 edited photos (dome exterior at dusk, sea-view terrace, interior with luxury bedding, olive grove fire pit)',
 
     requirements: [
-      'Minimum 5,000 followers on Instagram',
-      'Micro Influencer or higher creator tier',
-      'At least 1 reel must feature coastal or night sky footage',
-      'All posts submitted within 7 days of checkout',
-      'Tag @collabnb and property in all posts',
+      'Minimum 5,000 Instagram followers',
+      'Micro Influencer or higher tier required',
+      'At least 1 reel must feature the transparent dome under night sky',
+      'Night photography experience preferred (astrophotography a plus)',
+      'Posts must include coastal and dome location tags + @collabnb',
+      'All content submitted within 7 days of checkout',
     ],
 
     location_full: 'Paphos, Cyprus',

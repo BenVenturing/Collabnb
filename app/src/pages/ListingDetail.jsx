@@ -1478,7 +1478,7 @@ export default function ListingDetail() {
           {isDesktop && (
             <div style={{ width: 360, flexShrink: 0 }}>
               <div style={{
-                position: 'sticky', top: '6rem',
+                position: 'sticky', top: '7.5rem',
                 background: 'rgba(255,255,255,0.72)',
                 backdropFilter: 'blur(24px) saturate(140%)',
                 WebkitBackdropFilter: 'blur(24px) saturate(140%)',

@@ -339,7 +339,7 @@ function Dropdown({ children, align = 'left', width }) {
         zIndex: 30,
         padding: '1rem',
         animation: 'fadeUp 180ms var(--ease-out-expo) forwards',
-        background: 'rgba(248,246,243,0.97)',
+        background: 'rgb(248,246,243)',
         backdropFilter: 'blur(32px) saturate(1.5)',
         WebkitBackdropFilter: 'blur(32px) saturate(1.5)',
       }}
@@ -557,10 +557,7 @@ export default function Explore() {
         display: compactSearch ? 'none' : undefined,
         position: 'relative',
         zIndex: 100,
-        background: 'rgba(239,236,233,0.6)',
-        backdropFilter: 'blur(12px)',
-        WebkitBackdropFilter: 'blur(12px)',
-        borderBottom: '1px solid rgba(25,37,36,0.07)',
+        background: 'transparent',
         padding: '1rem 1.5rem 0',
       }}>
 

@@ -1295,7 +1295,9 @@ export default function ListingDetail() {
             {/* About */}
             <div style={{ marginBottom: '2rem' }}>
               <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.2rem', color: 'var(--ink)', marginBottom: '0.875rem' }}>About this stay</h2>
-              <p style={{ fontSize: '0.95rem', color: 'var(--slate)', lineHeight: 1.75 }}>{listing.about}</p>
+              {listing.about.split('\n\n').map((para, i) => (
+                <p key={i} style={{ fontSize: '0.95rem', color: 'var(--slate)', lineHeight: 1.75, marginBottom: '1rem' }}>{para}</p>
+              ))}
             </div>
 
             <Divider />
@@ -1478,7 +1480,7 @@ export default function ListingDetail() {
           {isDesktop && (
             <div style={{ width: 360, flexShrink: 0, alignSelf: 'stretch' }}>
               <div style={{
-                position: 'sticky', top: '5.5rem',
+                position: 'sticky', top: '7.5rem',
                 background: 'rgba(255,255,255,0.72)',
                 backdropFilter: 'blur(24px) saturate(140%)',
                 WebkitBackdropFilter: 'blur(24px) saturate(140%)',

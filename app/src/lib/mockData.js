@@ -73,7 +73,7 @@ export const SAMPLE_LISTINGS = [
       'https://images.unsplash.com/photo-1480497490787-505ec076689f?w=800&q=80',
     ],
 
-    about: 'A stunning old-growth forest cabin perched above Lake Tahoe with sweeping mountain and lake views. Floor-to-ceiling windows, a stone fireplace, and a private hot tub make this the perfect backdrop for authentic travel content. Surrounded by towering pines with ski slopes just 10 minutes away.',
+    about: 'A fully renovated 1960s log cabin set among old-growth pines above the Lake Tahoe basin, with floor-to-ceiling windows framing the water and the peaks of the Sierra Nevada. The interior is anchored by a hand-laid stone fireplace, exposed timber beam ceilings, hand-hewn hardwood floors, and a fully stocked chef\'s kitchen with a farmhouse sink. Three bedrooms sleep six comfortably, and the private cedar hot tub sits on a deck where the lake appears through the tree line at eye level.\n\nFor creators, the golden hour here is operationally perfect — the sun drops behind Heavenly at around 5:40pm in winter and catches the steam rising off the hot tub for a 20-minute window that reliably performs on travel Reels. The snow-dusted pine canopy overhead and the silence of the forest make this one of the most atmospherically complete cabin stays in California.\n\nHeavenly Ski Resort is 10 minutes by car. The Fallen Leaf Lake trailhead is a 5-minute walk. Emerald Bay State Park — among the most photographed locations on the West Coast — is 20 minutes south. South Lake Tahoe village has groceries, gear rental, and après options within a short drive.',
 
     amenities: [
       { icon: 'hot_tub',  label: 'Private hot tub' },
@@ -88,10 +88,11 @@ export const SAMPLE_LISTINGS = [
 
     what_you_get: [
       '3 nights complimentary stay',
-      'Private hot tub access',
-      'Ski equipment storage',
-      'Welcome provisions basket',
-      'Late checkout (2pm)',
+      'Private cedar hot tub with lake view access',
+      'Ski equipment storage + boot dryer',
+      'Welcome provisions basket (local honey, wine, firewood)',
+      'Late checkout at 2pm',
+      'Lake access pass for Fallen Leaf Lake trailhead',
     ],
     what_you_deliver: '3 vertical Reels (check-in reveal, hot tub moment, ski day), 5 edited lifestyle photos (exterior, interior, fireplace, lake view, deck), 1 blog post ~800 words with 3 embedded photos',
 
@@ -139,7 +140,7 @@ export const SAMPLE_LISTINGS = [
       'https://images.unsplash.com/photo-1486870591958-9b9d0d1dda99?w=800&q=80',
     ],
 
-    about: 'A stunning Patagonian lakefront villa perched on the shores of Nahuel Huapi Lake with sweeping views of the Andes. The infinity pool seems to merge with the crystal-clear mountain water. Features a chef\'s kitchen, wraparound deck with lake access, and private dock. Golden hour over the Cerro Catedral peaks is pure magic.',
+    about: 'A 4,200 sq ft Patagonian villa built from local stone and reclaimed timber, cantilevered over the shores of Nahuel Huapi Lake with unobstructed views of the Andes across the water. Four bedrooms, a baronial dining room that seats twelve, a library with a wood-burning stove, and a wraparound deck that extends over the lake\'s edge. The infinity pool is positioned so the water line aligns perfectly with the Cerro López ridgeline — from March through May, the surface holds a near-mirror reflection of the mountains.\n\nFor creators, the light off Nahuel Huapi at sunrise is extraordinary and largely undocumented on social — most travel content from Patagonia is shot in Torres del Paine or El Chaltén, leaving this stretch of the Argentine lake district genuinely underexposed. The private dock gives you golden-hour water-level access, and the kayaks are there whenever you want them.\n\nBariloche\'s city center is 15 minutes north. The Circuito Chico scenic loop starts at the property\'s front gate. El Bolsón\'s craft market and chocolate houses are an hour south. The property concierge can arrange a private boat on the lake for overhead and water-level shots on request.',
 
     amenities: [
       { icon: 'pool',     label: 'Infinity pool' },
@@ -154,10 +155,11 @@ export const SAMPLE_LISTINGS = [
 
     what_you_get: [
       '2 nights complimentary stay',
-      'Infinity pool exclusive access',
-      'Private dock & kayak access',
-      'Welcome Argentine wine & provisions',
+      'Infinity pool exclusive access (heated year-round)',
+      'Private dock with 2 kayaks included',
+      'Welcome Argentine Malbec & Patagonian provisions',
       'Personal concierge for shoot scheduling',
+      'Private boat access on Nahuel Huapi (on request)',
     ],
     what_you_deliver: '2 vertical Reels (infinity pool reveal, golden hour at the dock), 8 edited photos covering exterior, pool with Andes, interior living room, lake kayaking, fire pit sunset, wine at the dock, bedroom, and overhead pool shot',
 
@@ -204,7 +206,7 @@ export const SAMPLE_LISTINGS = [
       'https://images.unsplash.com/photo-1506665531195-3566af2b4dfa?w=800&q=80',
     ],
 
-    about: 'A breathtaking jungle mountain lodge in the hills above Chiang Mai with panoramic views of Doi Suthep and mist-covered rice terraces. Open-air design with soaring teak ceilings, a natural stone infinity pool, and a private outdoor sala for yoga and meditation. Includes a personal chef for Northern Thai cooking and guided jungle treks. The golden light over the mountains at sunset is unforgettable.',
+    about: 'A traditional Lanna-style teak lodge elevated at 1,050 meters on a hillside above Chiang Mai, with five open-air suites each fitted with outdoor rain showers, hand-woven textiles, and private terraces overlooking the jungle canopy. The main sala — an open pavilion with carved teak columns — catches the mountain light through the afternoon. The natural stone infinity pool overflows over the hillside with Doi Suthep\'s summit rising directly behind.\n\nFor creators, the lodge is operationally designed around golden hour. The sunrise over the northern mountains happens at 6:20am in the cool season — staff will have northern Thai coffee ready at 6am. The cooking class runs at 4pm and catches the afternoon light through the open-air kitchen in a way that reads exceptionally well on camera. The zero light pollution at this elevation means night-sky content is a genuine secondary asset here.\n\nThe Chiang Mai Old City is 45 minutes down the mountain by car. Doi Inthanon National Park — Thailand\'s highest peak and one of its most visually diverse landscapes — is a 90-minute drive. The lodge can arrange a half-day at a responsible elephant sanctuary 30 minutes away, and the night markets at Warorot and the Sunday Walking Street are both easy evening trips.',
 
     amenities: [
       { icon: 'pool',    label: 'Infinity pool' },
@@ -219,10 +221,11 @@ export const SAMPLE_LISTINGS = [
 
     what_you_get: [
       '$500 cash payment upon content approval',
-      'Complimentary 3-night stay included',
-      'Daily private chef meals',
-      'Guided Doi Suthep sunrise trek',
-      'Professional behind-the-scenes stills',
+      'Complimentary 3-night stay in open-air teak suite',
+      'Daily private chef meals (Northern Thai cuisine)',
+      'Guided Doi Suthep sunrise trek with photography timing',
+      'Northern Thai cooking class (afternoon light, great for Reels)',
+      'Behind-the-scenes stills shot by lodge photographer',
     ],
     what_you_deliver: '5 Reels (arrival/explore, sunrise pool, jungle trek, cooking class, panorama sunset), 12 edited photos (lodge exterior, bedroom, pool, jungle, kitchen, local dishes, sunrise, portrait + 4 detail shots), 1 YouTube vlog minimum 10 minutes with lodge B-roll, cooking class segment, and trek footage',
 
@@ -270,7 +273,7 @@ export const SAMPLE_LISTINGS = [
       'https://images.unsplash.com/photo-1559339352-11d035aa65de?w=800&q=80',
     ],
 
-    about: 'An opulent Cape Dutch-style private villa set within a working Stellenbosch wine estate with dramatic views of the Jonkershoek Valley and Table Mountain in the distance. Wake up to rows of Cabernet Sauvignon and Chenin Blanc vines stretching toward the mountains. Includes exclusive barrel room access, private wine tastings with a master sommelier, and guided vineyard tours. The warm golden hour light over the Cape Winelands is among the most cinematic in the world.',
+    about: 'A Cape Dutch manor built in 1823, set at the foot of the Jonkershoek Mountains on a 120-acre working wine estate in the heart of Stellenbosch. The private guest wing spans six bedrooms with wide-plank Oregon pine floors, pressed tin ceilings, and a wraparound stoep (veranda) that looks out over the vine rows toward Table Mountain. Directly adjacent to the main house is exclusive access to the barrel hall — a vaulted stone cellar with 400 oak barrels that is available for private use during the stay, including after-hours shoots with controlled lighting available on request.\n\nThe vine rows run east-west and catch the Jonkershoek Valley haze from 7am to 9am every morning — a combination of mountain mist and dew on the leaves that creates a soft, directional light that luxury travel photographers specifically seek out in South Africa. The estate produces Cabernet Sauvignon, Chenin Blanc, and a single-vineyard Syrah, and a hosted tasting with the master sommelier is arranged on day two of the stay.\n\nStellenbosch town — with its oak-lined streets, galleries, and restaurants — is 20 minutes. Cape Town city center and the V&A Waterfront are 45 minutes. The Franschhoek Wine Tram is 30 minutes east. Table Mountain\'s aerial cableway is 50 minutes away and makes for a one-day content excursion that pairs naturally with this estate stay.',
 
     amenities: [
       { icon: 'wine',     label: 'Private wine tasting' },
@@ -285,10 +288,11 @@ export const SAMPLE_LISTINGS = [
 
     what_you_get: [
       '$800 cash payment upon content approval',
-      'Complimentary 2-night estate stay',
-      'Private vineyard & barrel room tour',
-      'Hosted wine tasting (up to 4 guests)',
-      'Exclusive golden-hour access to vine rows',
+      'Complimentary 2-night stay in private Cape Dutch guest wing',
+      'Exclusive barrel room access including after-hours shoot access',
+      'Hosted tasting with master sommelier (up to 4 guests)',
+      'Golden-hour vine row access — 7am–9am both mornings',
+      'Curated wine selection from the estate cellar on arrival',
     ],
     what_you_deliver: '3 Reels (estate reveal + vine rows, barrel room tasting, golden hour in the vines), 8 aspirational photos (Cape Dutch exterior, vine rows close-up, barrel cellar, pool + mountain backdrop, plated wine pairing, sunset estate view, estate bedroom, sommelier tasting), 1 YouTube video minimum 12 minutes — winemaking behind-the-scenes, estate history, tasting notes, Jonkershoek Valley B-roll',
 
@@ -336,7 +340,7 @@ export const SAMPLE_LISTINGS = [
       'https://images.unsplash.com/photo-1519974719765-e6559eac2575?w=800&q=80',
     ],
 
-    about: 'A one-of-a-kind treehouse elevated 30 feet above a glassy private lake in the Blue Ridge Mountains. Accessed by a rope bridge, with glass floors and a wraparound deck. Kayaks and paddleboards are included. The mist rolling across the lake at dawn creates some of the most ethereal photography conditions anywhere in the Southeast.',
+    about: 'A custom-built 600 sq ft treehouse suspended 30 feet up in a 200-year-old white oak grove at the edge of a private 3-acre lake in the Blue Ridge Mountains outside Asheville. Accessed by a 40-foot rope bridge, the interior features Douglas fir tongue-and-groove walls, a king bed with a 180° forest canopy view, and a glass-floor observatory panel that looks straight down through the oaks to the ground below. Outside, a wraparound deck with string lights and a spring-fed wood-fired hot tub sits above the water line.\n\nThe lake catches morning mist from October through May between 6:30am and 8am — a low, still layer that sits just above the surface and makes for some of the most distinct natural-light photography conditions in the American Southeast. The rope bridge arrival is a near-universal creator hook: multiple creators who\'ve shot here have hit 400K–700K views on the walk-across reel alone, with zero paid promotion.\n\nAsheville\'s River Arts District is 20 minutes. The Blue Ridge Parkway begins 10 minutes from the property. Chimney Rock State Park is 45 minutes east. The Biltmore Estate — an extraordinary architectural content location on its own — is 25 minutes away. Local farmstead breakfast spots within 5 minutes of the property.',
 
     amenities: [
       { icon: 'dock',    label: 'Kayaks included' },
@@ -352,9 +356,10 @@ export const SAMPLE_LISTINGS = [
     what_you_get: [
       '$1,000 cash payment upon content approval',
       'Complimentary 2-night treehouse stay',
-      'Kayaks & paddleboards included',
-      'Lakeside bonfire kit',
-      'Sunrise golden-hour photography access',
+      'Kayaks & paddleboards included (no additional cost)',
+      'Lakeside bonfire kit + s\'mores provisions',
+      'Spring-fed wood-fired hot tub access',
+      'Sunrise golden-hour photography access — mist guaranteed Oct–May',
     ],
     what_you_deliver: '2 Reels (rope bridge arrival reveal, misty dawn kayak on the lake), 6 high-res lifestyle photos (treehouse exterior at golden hour, elevated lake view, glass floor detail, kayaking, fire pit at dusk, deck sunrise moment), 2 Stories (real-time arrival + morning coffee with lake view)',
 
@@ -402,7 +407,7 @@ export const SAMPLE_LISTINGS = [
       'https://images.unsplash.com/photo-1532339142463-fd0a8979791a?w=800&q=80',
     ],
 
-    about: 'A stunning geodesic glass dome perched on a hillside above the Paphos coastline with sweeping views of the Mediterranean Sea. The transparent roof turns stargazing into a nightly spectacle under some of the clearest skies in Europe. Features an outdoor rain-style shower, a stone-built meditation terrace, and a private fire pit surrounded by olive trees and ancient cypress groves. Minutes from the tomb-lined ruins of Kato Paphos.',
+    about: 'A 475 sq ft geodesic dome with 40% transparent polycarbonate panels, perched on a limestone hillside 80 meters above the Mediterranean at the edge of the Paphos coastline. The interior centers on a king bed raised on a platform aimed directly at the night sky, surrounded by hand-thrown ceramic fixtures, a Moroccan-tiled wet room, and a handmade walnut writing desk. An outdoor fire pit is encircled by 200-year-old olive trees and wild lavender. The architecture is genuinely unlike anything common to European glamping — this is a property that reads as editorial-quality on first look.\n\nPaphos sits at the edge of one of Europe\'s darkest sky corridors. The Milky Way is visible to the naked eye from late March through October, and the transparent dome panels create a 3×4m live star ceiling above the bed — a Reel asset that no amount of editing can replicate at a standard glamping site. The sunrise over the Mediterranean appears at the horizon line directly through the dome\'s east-facing panel and catches the water in a way that is unusually cinematic for a coastal stay.\n\nKato Paphos Archaeological Park — a UNESCO World Heritage Site with mosaics from the 2nd century AD — is 5 minutes by car and entirely free to visit at dawn before the crowds. Coral Bay beach is 15 minutes north. The Akamas Peninsula nature reserve, with sea turtle nesting beaches and cliff-side trails, begins 30 minutes away.',
 
     amenities: [
       { icon: 'stargazing', label: 'Mediterranean stargazing' },
@@ -417,10 +422,11 @@ export const SAMPLE_LISTINGS = [
 
     what_you_get: [
       '$500 cash payment upon content approval',
-      'Complimentary 1-night dome stay',
-      'Guided stargazing session',
-      'Mediterranean provisions & fire kit',
-      'Sunrise vantage point access',
+      'Complimentary 1-night geodesic dome stay',
+      'Private guided stargazing session with telescope',
+      'Mediterranean provisions & olive wood fire kit',
+      'Sunrise vantage access — Mediterranean horizon directly through east panel',
+      'Concierge access to Kato Paphos ruins at dawn (before public hours)',
     ],
     what_you_deliver: '2 Reels (transparent dome with star-trail moment, morning Mediterranean coastal reveal), 4 edited photos (dome exterior at dusk, sea-view terrace, interior with luxury bedding, olive grove fire pit)',
 

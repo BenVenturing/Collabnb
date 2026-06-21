@@ -10,6 +10,7 @@ export default defineSchema({
     tier: v.optional(v.string()),
     bio: v.optional(v.string()),
     avatar_url: v.optional(v.string()),
+    banner_url: v.optional(v.string()),
     follower_count: v.optional(v.number()),
     engagement_rate: v.optional(v.number()),
     collab_count: v.optional(v.number()),

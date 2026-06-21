@@ -57,7 +57,7 @@ export const seed = mutation({
           "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&q=80",
         ],
         about:
-          "A stunning old-growth forest cabin perched above Lake Tahoe with sweeping mountain and lake views.",
+          "Glacier Prime is a hand-crafted old-growth forest cabin built into a granite ridge above the western shore of Lake Tahoe. The structure is made almost entirely from reclaimed Douglas fir and stone sourced on-site, with floor-to-ceiling windows that frame unobstructed views of the lake and the Sierra Nevada range beyond.\n\nInside, the cabin blends raw wilderness with considered comfort — a cast-iron wood stove anchors the main living space, while the lofted sleeping area opens to a private deck where you can watch alpenglow turn the mountains pink at dusk. The private hot tub sits cantilevered over the tree line, giving you the sensation of floating above the forest.\n\nThe surrounding 12 acres of old-growth pine and cedar are entirely private. Deer pass through most mornings. The trailhead to Eagle Falls and Desolation Wilderness is a 10-minute drive, and the nearest ski resort is under 20 minutes. This is a property that rewards a slow pace — one that's designed to be felt as much as photographed.",
         amenities: [
           { icon: "♨️", label: "Private hot tub" },
           { icon: "🔥", label: "Stone fireplace" },
@@ -106,7 +106,7 @@ export const seed = mutation({
           "https://images.unsplash.com/photo-1486870591958-9b9d0d1dda99?w=800&q=80",
         ],
         about:
-          "A stunning Patagonian lakefront villa perched on the shores of Nahuel Huapi Lake with sweeping views of the Andes.",
+          "Set directly on the shore of Nahuel Huapi Lake in Argentine Patagonia, this lakefront villa is surrounded by old-growth lenga beech forest on three sides and open water on the fourth. The Andes rise dramatically behind the property — snow-capped peaks reflected in a lake so clear it reads almost teal in afternoon light.\n\nThe villa was designed by a Buenos Aires architect who grew up in Bariloche, and it shows. The interiors lean into the landscape rather than competing with it — raw concrete, local slate floors, and Douglas fir ceilings frame views that shift from alpine blue to deep orange depending on the hour. The infinity pool is positioned to create a seamless visual merge with the lake beyond, a shot that photographs unlike almost anything else in South America.\n\nFrom the private dock you can kayak into sheltered coves, or simply sit on the jetty at golden hour while the lake goes still. Bariloche's chocolate shops, craft beer scene, and hiking trails are 20 minutes away — but this property makes it easy to never leave.",
         amenities: [
           { icon: "🏊", label: "Infinity pool" },
           { icon: "🏔️", label: "Andean lake views" },
@@ -156,7 +156,7 @@ export const seed = mutation({
           "https://images.unsplash.com/photo-1506665531195-3566af2b4dfa?w=800&q=80",
         ],
         about:
-          "A breathtaking jungle mountain lodge in the hills above Chiang Mai with panoramic views of Doi Suthep and mist-covered rice terraces.",
+          "Perched 900 meters above Chiang Mai in the Doi Suthep-Pui National Park buffer zone, this jungle mountain lodge is carved into a ridge overlooking layered rice terraces, teak forest, and the valley city below. On clear mornings, you can see all the way to the Burmese border — on misty ones, the property floats above a sea of white cloud.\n\nThe lodge was built using a traditional Northern Thai construction method called 'sala' architecture — open-air pavilions connected by elevated walkways through the canopy. The main living pavilion has no fourth wall, just a view that opens directly onto the jungle and the valley beyond. The infinity pool hangs at the edge of the ridge and at certain angles appears to pour directly into the cityscape below.\n\nThis is a heavy-content stay by design. The property has a dedicated yoga sala that catches the sunrise, an outdoor fire pit that draws in fireflies after dark, and an on-site guide who can arrange a private pre-dawn trek to Doi Suthep temple before the tourists arrive. The host provides daily chef-prepared meals using ingredients from the on-site garden. It's a place built for creators who want depth, not just aesthetics.",
         amenities: [
           { icon: "🏊", label: "Infinity pool" },
           { icon: "🌿", label: "Jungle mountain views" },
@@ -206,7 +206,7 @@ export const seed = mutation({
           "https://images.unsplash.com/photo-1531058020387-3be344556be6?w=800&q=80",
         ],
         about:
-          "An opulent Cape Dutch-style private villa set within a working Stellenbosch wine estate with dramatic views of the Jonkershoek Valley.",
+          "This Cape Dutch-style villa sits on a working wine estate in the Jonkershoek Valley, one of the most photographed wine corridors in South Africa. The property dates to 1743 — the thick whitewashed walls, carved gable, and original yellowwood floors have been immaculately preserved — but the interior has been updated with the kind of quiet luxury that makes for effortless content: linen drapes, raw plaster walls, and antique wine presses repurposed as sculpture.\n\nThe estate produces its own Chenin Blanc, Syrah, and red blend from 28 hectares of vines that frame the property on every side. Your stay includes a private tour of the barrel room with the winemaker, and a hosted tasting for up to four guests — not the standard tourist circuit, but a genuine behind-the-scenes access that most visitors never see. The heated estate pool is positioned between the vine rows, looking out to the Stellenbosch Mountain range.\n\nStellenbosch itself is a 10-minute drive — one of South Africa's most walkable university towns, with world-class restaurants, a vibrant street food scene, and the Franschhoek wine corridor within easy reach. For macro creators looking for a property that photographs like editorial and performs like travel content, this is one of the strongest collab opportunities on the platform.",
         amenities: [
           { icon: "🍷", label: "Private wine tasting" },
           { icon: "🌿", label: "Vineyard access" },
@@ -253,7 +253,7 @@ export const seed = mutation({
           "https://images.unsplash.com/photo-1448375240586-882707db888b?w=800&q=80",
         ],
         about:
-          "A one-of-a-kind treehouse elevated 30 feet above a glassy private lake in the Blue Ridge Mountains.",
+          "The Lakeside Forest Treehouse sits 30 feet up in a cluster of old-growth white oaks at the edge of a private 4-acre lake in the Blue Ridge Mountains outside Asheville. The structure is suspended on living trees — no concrete footings, no earthworks — and the platform sways slightly in the wind the way a boat does at anchor. At night, the lake reflects the stars directly below your feet through the glass floor panels.\n\nThe interior is compact and intentional: a queen sleeping platform, a clawfoot soaking tub positioned at the window, and a reading nook built into the bow of the tree. The wrap-around deck is the real living space — hammock, fire table, and a direct staircase down to the dock where two kayaks are always ready. The lake is entirely private, no other structures visible from the water.\n\nThis is a light-deliverable collab designed for photographers and visual creators who produce exceptional single images rather than high-volume content. The property offers golden-hour lake light in both morning and evening, which is rare. The host is a landscape photographer himself and can share optimal shot locations on the property that aren't visible from the standard guest areas.",
         amenities: [
           { icon: "🛣️", label: "Kayaks included" },
           { icon: "🌲", label: "Private lake access" },
@@ -299,7 +299,7 @@ export const seed = mutation({
           "https://images.unsplash.com/photo-1532339142463-fd0a8979791a?w=800&q=80",
         ],
         about:
-          "A stunning geodesic glass dome perched on a hillside above the Paphos coastline with sweeping views of the Mediterranean Sea.",
+          "Perched on a hillside above the Paphos coastline on the southwest tip of Cyprus, this geodesic glass dome is designed to disappear into the landscape during the day and become a lantern at night. The structure is 7 meters in diameter with a 270-degree glass panel roof — at night, you fall asleep looking directly at the Milky Way, with the Mediterranean glittering below the hill line.\n\nThe dome sits on a private terraced plot with a stone meditation terrace facing west, a traditional ceramic fire bowl for evening fires, and an outdoor rain shower fed by a cistern of collected rainwater. The nearest neighboring structure is 400 meters away. The light on this hillside is extraordinary — harsh and sculptural at noon, warm and directional in the final hour before sunset when the limestone cliffs glow amber.\n\nPaphos itself is a UNESCO World Heritage city with 4,000-year-old mosaics, a working harbor, and a craft food scene that has developed significantly over the past decade. The property is 12 minutes from the old harbor and 8 minutes from the Akamas Peninsula National Park. For creators with a more minimal, meditative aesthetic, this is one of the most visually distinctive stays on the platform.",
         amenities: [
           { icon: "🌌", label: "Mediterranean stargazing" },
           { icon: "🔥", label: "Private fire pit" },
@@ -455,5 +455,36 @@ export const seed = mutation({
     });
 
     return { seeded: true, profileId: profileId.toString() };
+  },
+});
+
+export const patchAbouts = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const abouts: Record<string, string> = {
+      "Glacier Prime Cabin":
+        "Glacier Prime is a hand-crafted old-growth forest cabin built into a granite ridge above the western shore of Lake Tahoe. The structure is made almost entirely from reclaimed Douglas fir and stone sourced on-site, with floor-to-ceiling windows that frame unobstructed views of the lake and the Sierra Nevada range beyond.\n\nInside, the cabin blends raw wilderness with considered comfort — a cast-iron wood stove anchors the main living space, while the lofted sleeping area opens to a private deck where you can watch alpenglow turn the mountains pink at dusk. The private hot tub sits cantilevered over the tree line, giving you the sensation of floating above the forest.\n\nThe surrounding 12 acres of old-growth pine and cedar are entirely private. Deer pass through most mornings. The trailhead to Eagle Falls and Desolation Wilderness is a 10-minute drive, and the nearest ski resort is under 20 minutes. This is a property that rewards a slow pace — one that's designed to be felt as much as photographed.",
+      "Tranquil Waterfront Retreat":
+        "Set directly on the shore of Nahuel Huapi Lake in Argentine Patagonia, this lakefront villa is surrounded by old-growth lenga beech forest on three sides and open water on the fourth. The Andes rise dramatically behind the property — snow-capped peaks reflected in a lake so clear it reads almost teal in afternoon light.\n\nThe villa was designed by a Buenos Aires architect who grew up in Bariloche, and it shows. The interiors lean into the landscape rather than competing with it — raw concrete, local slate floors, and Douglas fir ceilings frame views that shift from alpine blue to deep orange depending on the hour. The infinity pool is positioned to create a seamless visual merge with the lake beyond, a shot that photographs unlike almost anything else in South America.\n\nFrom the private dock you can kayak into sheltered coves, or simply sit on the jetty at golden hour while the lake goes still. Bariloche's chocolate shops, craft beer scene, and hiking trails are 20 minutes away — but this property makes it easy to never leave.",
+      "Mountain Lodge Escape":
+        "Perched 900 meters above Chiang Mai in the Doi Suthep-Pui National Park buffer zone, this jungle mountain lodge is carved into a ridge overlooking layered rice terraces, teak forest, and the valley city below. On clear mornings, you can see all the way to the Burmese border — on misty ones, the property floats above a sea of white cloud.\n\nThe lodge was built using a traditional Northern Thai construction method called 'sala' architecture — open-air pavilions connected by elevated walkways through the canopy. The main living pavilion has no fourth wall, just a view that opens directly onto the jungle and the valley beyond. The infinity pool hangs at the edge of the ridge and at certain angles appears to pour directly into the cityscape below.\n\nThis is a heavy-content stay by design. The property has a dedicated yoga sala that catches the sunrise, an outdoor fire pit that draws in fireflies after dark, and an on-site guide who can arrange a private pre-dawn trek to Doi Suthep temple before the tourists arrive. The host provides daily chef-prepared meals using ingredients from the on-site garden. It's a place built for creators who want depth, not just aesthetics.",
+      "Vineyard Wine Estate":
+        "This Cape Dutch-style villa sits on a working wine estate in the Jonkershoek Valley, one of the most photographed wine corridors in South Africa. The property dates to 1743 — the thick whitewashed walls, carved gable, and original yellowwood floors have been immaculately preserved — but the interior has been updated with the kind of quiet luxury that makes for effortless content: linen drapes, raw plaster walls, and antique wine presses repurposed as sculpture.\n\nThe estate produces its own Chenin Blanc, Syrah, and red blend from 28 hectares of vines that frame the property on every side. Your stay includes a private tour of the barrel room with the winemaker, and a hosted tasting for up to four guests — not the standard tourist circuit, but a genuine behind-the-scenes access that most visitors never see. The heated estate pool is positioned between the vine rows, looking out to the Stellenbosch Mountain range.\n\nStellenbosch itself is a 10-minute drive — one of South Africa's most walkable university towns, with world-class restaurants, a vibrant street food scene, and the Franschhoek wine corridor within easy reach. For macro creators looking for a property that photographs like editorial and performs like travel content, this is one of the strongest collab opportunities on the platform.",
+      "Lakeside Forest Treehouse":
+        "The Lakeside Forest Treehouse sits 30 feet up in a cluster of old-growth white oaks at the edge of a private 4-acre lake in the Blue Ridge Mountains outside Asheville. The structure is suspended on living trees — no concrete footings, no earthworks — and the platform sways slightly in the wind the way a boat does at anchor. At night, the lake reflects the stars directly below your feet through the glass floor panels.\n\nThe interior is compact and intentional: a queen sleeping platform, a clawfoot soaking tub positioned at the window, and a reading nook built into the bow of the tree. The wrap-around deck is the real living space — hammock, fire table, and a direct staircase down to the dock where two kayaks are always ready. The lake is entirely private, no other structures visible from the water.\n\nThis is a light-deliverable collab designed for photographers and visual creators who produce exceptional single images rather than high-volume content. The property offers golden-hour lake light in both morning and evening, which is rare. The host is a landscape photographer himself and can share optimal shot locations on the property that aren't visible from the standard guest areas.",
+      "Desert Dome Glamping":
+        "Perched on a hillside above the Paphos coastline on the southwest tip of Cyprus, this geodesic glass dome is designed to disappear into the landscape during the day and become a lantern at night. The structure is 7 meters in diameter with a 270-degree glass panel roof — at night, you fall asleep looking directly at the Milky Way, with the Mediterranean glittering below the hill line.\n\nThe dome sits on a private terraced plot with a stone meditation terrace facing west, a traditional ceramic fire bowl for evening fires, and an outdoor rain shower fed by a cistern of collected rainwater. The nearest neighboring structure is 400 meters away. The light on this hillside is extraordinary — harsh and sculptural at noon, warm and directional in the final hour before sunset when the limestone cliffs glow amber.\n\nPaphos itself is a UNESCO World Heritage city with 4,000-year-old mosaics, a working harbor, and a craft food scene that has developed significantly over the past decade. The property is 12 minutes from the old harbor and 8 minutes from the Akamas Peninsula National Park. For creators with a more minimal, meditative aesthetic, this is one of the most visually distinctive stays on the platform.",
+    };
+
+    const listings = await ctx.db.query("listings").collect();
+    let updated = 0;
+    for (const listing of listings) {
+      const newAbout = abouts[listing.title];
+      if (newAbout && listing.about !== newAbout) {
+        await ctx.db.patch(listing._id, { about: newAbout });
+        updated++;
+      }
+    }
+    return { updated };
   },
 });

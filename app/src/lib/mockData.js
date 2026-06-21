@@ -1,3 +1,9 @@
+import vineyard1 from '../assets/vineyard-1.jpg';
+import vineyard2 from '../assets/vineyard-2.jpg';
+import vineyard3 from '../assets/vineyard-3.jpg';
+import vineyard4 from '../assets/vineyard-4.jpg';
+import vineyard5 from '../assets/vineyard-5.jpg';
+
 // Fallback for broken/missing listing images — warm gray placeholder
 export const IMG_FALLBACK = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='600'%3E%3Crect fill='%23EFECE9' width='800' height='600'/%3E%3C/svg%3E";
 
@@ -265,12 +271,13 @@ export const SAMPLE_LISTINGS = [
     dates_available: 'Mar–Nov 2026',
     due_days: 14,
 
-    image: 'https://images.unsplash.com/photo-1506377247377-2a5b3b417ebb?w=800&q=80',
+    image: vineyard1,
     gallery_images: [
-      'https://images.unsplash.com/photo-1506377247377-2a5b3b417ebb?w=1200&q=85',
-      'https://images.unsplash.com/photo-1464454709131-ffd692591ee5?w=800&q=80',
-      'https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=800&q=80',
-      'https://images.unsplash.com/photo-1559339352-11d035aa65de?w=800&q=80',
+      vineyard1,
+      vineyard2,
+      vineyard3,
+      vineyard4,
+      vineyard5,
     ],
 
     about: 'A Cape Dutch manor built in 1823, set at the foot of the Jonkershoek Mountains on a 120-acre working wine estate in the heart of Stellenbosch. The private guest wing spans six bedrooms with wide-plank Oregon pine floors, pressed tin ceilings, and a wraparound stoep (veranda) that looks out over the vine rows toward Table Mountain. Directly adjacent to the main house is exclusive access to the barrel hall — a vaulted stone cellar with 400 oak barrels that is available for private use during the stay, including after-hours shoots with controlled lighting available on request.\n\nThe vine rows run east-west and catch the Jonkershoek Valley haze from 7am to 9am every morning — a combination of mountain mist and dew on the leaves that creates a soft, directional light that luxury travel photographers specifically seek out in South Africa. The estate produces Cabernet Sauvignon, Chenin Blanc, and a single-vineyard Syrah, and a hosted tasting with the master sommelier is arranged on day two of the stay.\n\nStellenbosch town — with its oak-lined streets, galleries, and restaurants — is 20 minutes. Cape Town city center and the V&A Waterfront are 45 minutes. The Franschhoek Wine Tram is 30 minutes east. Table Mountain\'s aerial cableway is 50 minutes away and makes for a one-day content excursion that pairs naturally with this estate stay.',
@@ -405,6 +412,7 @@ export const SAMPLE_LISTINGS = [
       'https://images.unsplash.com/photo-1525130413817-d45c1d127c42?w=800&q=80',
       'https://images.unsplash.com/photo-1595867818082-083862f3d630?w=800&q=80',
       'https://images.unsplash.com/photo-1532339142463-fd0a8979791a?w=800&q=80',
+      'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&q=80',
     ],
 
     about: 'A 475 sq ft geodesic dome with 40% transparent polycarbonate panels, perched on a limestone hillside 80 meters above the Mediterranean at the edge of the Paphos coastline. The interior centers on a king bed raised on a platform aimed directly at the night sky, surrounded by hand-thrown ceramic fixtures, a Moroccan-tiled wet room, and a handmade walnut writing desk. An outdoor fire pit is encircled by 200-year-old olive trees and wild lavender. The architecture is genuinely unlike anything common to European glamping — this is a property that reads as editorial-quality on first look.\n\nPaphos sits at the edge of one of Europe\'s darkest sky corridors. The Milky Way is visible to the naked eye from late March through October, and the transparent dome panels create a 3×4m live star ceiling above the bed — a Reel asset that no amount of editing can replicate at a standard glamping site. The sunrise over the Mediterranean appears at the horizon line directly through the dome\'s east-facing panel and catches the water in a way that is unusually cinematic for a coastal stay.\n\nKato Paphos Archaeological Park — a UNESCO World Heritage Site with mosaics from the 2nd century AD — is 5 minutes by car and entirely free to visit at dawn before the crowds. Coral Bay beach is 15 minutes north. The Akamas Peninsula nature reserve, with sea turtle nesting beaches and cliff-side trails, begins 30 minutes away.',

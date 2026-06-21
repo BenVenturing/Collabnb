@@ -688,14 +688,22 @@ function SampleTooltip({ active, children }) {
 
 // ─── Host Profile Modal ───────────────────────────────────────────────────────
 function HostProfileModal({ host, listing, onClose, onMessage, isSample }) {
-  const [imgError, setImgError] = useState(false);
+  const [imgError, setImgError]   = useState(false);
+  const [flipped, setFlipped]     = useState(false);
   const avatar = imgError ? host.avatar_fallback : host.avatar_url;
+
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = ''; };
+  }, []);
+
   return (
     <div
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
       style={{
         position: 'fixed', inset: 0, zIndex: 200,
-        background: 'rgba(25,37,36,0.5)', backdropFilter: 'blur(8px)',
+        background: 'rgba(25,37,36,0.5)',
+        backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         padding: '1.5rem', animation: 'detailFadeIn 200ms ease forwards',
       }}
@@ -703,87 +711,169 @@ function HostProfileModal({ host, listing, onClose, onMessage, isSample }) {
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
-          width: '100%', maxWidth: '380px',
-          background: 'rgba(255,255,255,0.97)',
-          backdropFilter: 'blur(24px)',
-          borderRadius: '1.75rem', padding: '2rem',
-          boxShadow: '0 32px 64px -16px rgba(25,37,36,0.25)',
-          animation: 'detailSlideUp 300ms cubic-bezier(0.32,0.72,0,1) forwards',
           position: 'relative',
+          width: '100%', maxWidth: 680, maxHeight: '88vh', overflowY: 'auto',
+          background: 'rgba(255,255,255,0.90)',
+          backdropFilter: 'blur(28px) saturate(1.5)', WebkitBackdropFilter: 'blur(28px) saturate(1.5)',
+          borderRadius: '1.5rem',
+          border: '1px solid rgba(255,255,255,0.88)',
+          boxShadow: '0 28px 80px rgba(25,37,36,0.24), inset 0 1px 0 rgba(255,255,255,0.9)',
+          animation: 'detailSlideUp 300ms cubic-bezier(0.32,0.72,0,1) forwards',
         }}
       >
+        {/* Close */}
         <button
           onClick={onClose}
           style={{
-            position: 'absolute', top: '1.25rem', right: '1.25rem',
+            position: 'absolute', top: 14, right: 14, zIndex: 10,
             width: 32, height: 32, borderRadius: '50%',
-            background: 'rgba(25,37,36,0.07)', border: 'none',
+            background: 'rgba(255,255,255,0.88)', backdropFilter: 'blur(8px)',
+            border: '1px solid rgba(25,37,36,0.1)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            cursor: 'pointer', fontSize: '1rem', color: 'var(--slate)',
+            cursor: 'pointer', boxShadow: '0 2px 8px rgba(25,37,36,0.1)',
           }}
-        >✕</button>
+          onMouseEnter={e => e.currentTarget.style.background = '#fff'}
+          onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.88)'}
+        >
+          <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+            <path d="M1 1L9 9M9 1L1 9" stroke="#3C5759" strokeWidth="1.8" strokeLinecap="round"/>
+          </svg>
+        </button>
 
-        <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
-          <div style={{ position: 'relative', display: 'inline-block', marginBottom: '0.875rem' }}>
-            <img
-              src={avatar} alt={host.name}
-              onError={() => setImgError(true)}
-              style={{ width: 88, height: 88, borderRadius: '50%', objectFit: 'cover', display: 'block', border: '3px solid rgba(255,255,255,0.9)', boxShadow: '0 4px 16px rgba(25,37,36,0.12)' }}
-            />
-            {host.verified && (
-              <div style={{ position: 'absolute', bottom: 2, right: 2, width: 26, height: 26, borderRadius: '50%', background: '#192524', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2.5px solid white' }}>
-                <svg viewBox="0 0 12 12" fill="none" style={{ width: 11, height: 11 }}>
-                  <path d="M2 6l2.5 2.5L10 3" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
+        {/* Horizontal layout */}
+        <div style={{ display: 'flex' }}>
+
+          {/* LEFT — flip card */}
+          <div style={{
+            width: 200, flexShrink: 0,
+            padding: '32px 20px 32px 28px',
+            borderRight: '1px solid rgba(25,37,36,0.07)',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12,
+          }}>
+            {/* 3D flip container */}
+            <div
+              onMouseEnter={() => setFlipped(true)}
+              onMouseLeave={() => setFlipped(false)}
+              style={{ width: 160, height: 160, perspective: 800, cursor: 'pointer' }}
+            >
+              <div style={{
+                width: '100%', height: '100%',
+                position: 'relative',
+                transformStyle: 'preserve-3d',
+                transform: flipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
+                transition: 'transform 500ms ease',
+              }}>
+                {/* Front: host avatar on sage gradient */}
+                <div style={{
+                  position: 'absolute', inset: 0,
+                  borderRadius: '1.25rem', overflow: 'hidden',
+                  backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden',
+                  background: 'linear-gradient(150deg, #D1EBDB 0%, #E6EFE7 45%, #EFECE9 100%)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  boxShadow: '0 6px 28px rgba(25,37,36,0.14)',
+                }}>
+                  <div style={{ position: 'relative' }}>
+                    <img
+                      src={avatar} alt={host.name}
+                      onError={() => setImgError(true)}
+                      style={{ width: 100, height: 100, borderRadius: '50%', objectFit: 'cover', display: 'block', border: '4px solid rgba(255,255,255,0.97)', boxShadow: '0 4px 18px rgba(25,37,36,0.18)' }}
+                    />
+                    {host.verified && (
+                      <div style={{ position: 'absolute', bottom: 2, right: 0, width: 24, height: 24, borderRadius: '50%', background: '#192524', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2.5px solid white' }}>
+                        <svg viewBox="0 0 12 12" fill="none" style={{ width: 10, height: 10 }}>
+                          <path d="M2 6l2.5 2.5L10 3" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                {/* Back: listing image */}
+                <div style={{
+                  position: 'absolute', inset: 0,
+                  borderRadius: '1.25rem', overflow: 'hidden',
+                  backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden',
+                  transform: 'rotateY(180deg)',
+                  boxShadow: '0 6px 28px rgba(25,37,36,0.14)',
+                }}>
+                  {listing.image ? (
+                    <img src={listing.image} alt={listing.title} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                  ) : (
+                    <div style={{ width: '100%', height: '100%', background: 'linear-gradient(150deg, #D1EBDB 0%, #EFECE9 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(25,37,36,0.25)" strokeWidth="1.5">
+                        <rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
+                      </svg>
+                    </div>
+                  )}
+                  <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(25,37,36,0.4) 0%, transparent 60%)' }} />
+                  <div style={{ position: 'absolute', bottom: 10, left: 10, right: 10 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: '#fff', lineHeight: 1.3 }}>{listing.title}</div>
+                  </div>
+                </div>
               </div>
-            )}
-          </div>
-          <p style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.2rem', color: 'var(--ink)', marginBottom: '0.2rem' }}>{host.name}</p>
-          <p style={{ fontSize: '0.8rem', color: 'var(--sage)' }}>
-            {host.role}
-          </p>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem', marginBottom: '1.25rem' }}>
-          {[
-            { val: `${host.rating}★`, label: 'Rating' },
-            { val: `${host.years_hosting}`, label: 'Yrs hosting' },
-            { val: `${host.response_rate}%`, label: 'Response' },
-          ].map(({ val, label }) => (
-            <div key={label} style={{ background: 'rgba(25,37,36,0.04)', borderRadius: '0.875rem', padding: '0.75rem 0.5rem', textAlign: 'center' }}>
-              <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1rem', color: 'var(--ink)', marginBottom: '0.15rem' }}>{val}</p>
-              <p style={{ fontSize: '0.68rem', color: 'var(--sage)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>{label}</p>
             </div>
-          ))}
+            <div style={{ fontSize: 10, color: 'var(--sage)', textAlign: 'center', lineHeight: 1.4 }}>
+              Hover to see the listing
+            </div>
+          </div>
+
+          {/* RIGHT — host details */}
+          <div style={{ flex: 1, padding: '28px 28px 24px 24px', minWidth: 0 }}>
+            <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 22, color: 'var(--ink)', lineHeight: 1.1 }}>
+              {host.name}
+            </div>
+            {host.role && (
+              <div style={{ fontSize: 12.5, color: 'var(--sage)', marginTop: 4 }}>{host.role}</div>
+            )}
+            <div style={{ fontSize: 12, color: 'var(--sage)', marginTop: 4 }}>
+              Hosting in {listing.location}
+            </div>
+
+            <div style={{ height: 1, background: 'rgba(25,37,36,0.07)', margin: '14px 0' }} />
+
+            {/* Stats */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1, background: 'rgba(25,37,36,0.06)', borderRadius: '0.875rem', overflow: 'hidden', marginBottom: 16 }}>
+              {[
+                { val: `${host.rating}★`, label: 'Rating' },
+                { val: `${host.years_hosting}`, label: 'Yrs Hosting' },
+                { val: `${host.response_rate}%`, label: 'Response' },
+              ].map(({ val, label }) => (
+                <div key={label} style={{ padding: '12px 0', background: 'rgba(255,255,255,0.78)', textAlign: 'center' }}>
+                  <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 16, color: 'var(--ink)', lineHeight: 1 }}>{val}</div>
+                  <div style={{ fontSize: 10, color: 'var(--sage)', marginTop: 3 }}>{label}</div>
+                </div>
+              ))}
+            </div>
+
+            {host.bio && (
+              <p style={{ fontSize: 13, color: 'var(--slate)', lineHeight: 1.7, marginBottom: 12 }}>{host.bio}</p>
+            )}
+            {host.response_time && (
+              <p style={{ fontSize: 12, color: 'var(--sage)', marginBottom: 16 }}>
+                <strong style={{ color: 'var(--slate)' }}>Responds</strong> {host.response_time}
+              </p>
+            )}
+
+            <SampleTooltip active={isSample}>
+              <button
+                onClick={isSample ? undefined : onMessage}
+                disabled={isSample}
+                style={{
+                  width: '100%', padding: '13px 0',
+                  background: 'var(--ink)', color: 'var(--bone)',
+                  borderRadius: '999px', fontFamily: 'var(--font-body)',
+                  fontSize: '0.9rem', fontWeight: 700,
+                  border: 'none', cursor: isSample ? 'not-allowed' : 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem',
+                  transition: 'opacity 150ms', opacity: isSample ? 0.5 : 1,
+                }}
+                onMouseEnter={(e) => { if (!isSample) e.currentTarget.style.opacity = '0.88'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.opacity = isSample ? '0.5' : '1'; }}
+              >
+                Message {host.name.split(' ')[0]} <ArrowRight />
+              </button>
+            </SampleTooltip>
+          </div>
         </div>
-
-        <p style={{ fontSize: '0.9rem', color: 'var(--slate)', lineHeight: 1.7, marginBottom: '0.875rem' }}>{host.bio}</p>
-        <p style={{ fontSize: '0.82rem', color: 'var(--sage)', marginBottom: '0.3rem' }}>
-          <strong style={{ color: 'var(--slate)' }}>Responds</strong> {host.response_time}
-        </p>
-        <p style={{ fontSize: '0.82rem', color: 'var(--sage)', marginBottom: '1.5rem' }}>
-          <strong style={{ color: 'var(--slate)' }}>Hosting in</strong> {listing.location}
-        </p>
-
-        <SampleTooltip active={isSample}>
-          <button
-            onClick={isSample ? undefined : onMessage}
-            disabled={isSample}
-            style={{
-              width: '100%', padding: '0.875rem',
-              background: 'var(--ink)', color: 'var(--bone)',
-              borderRadius: '999px', fontFamily: 'var(--font-body)',
-              fontSize: '0.9rem', fontWeight: 700,
-              border: 'none', cursor: isSample ? 'not-allowed' : 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem',
-              transition: 'opacity 150ms', opacity: isSample ? 0.5 : 1,
-            }}
-            onMouseEnter={(e) => { if (!isSample) e.currentTarget.style.opacity = '0.88'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.opacity = isSample ? '0.5' : '1'; }}
-          >
-            Message {host.name.split(' ')[0]} <ArrowRight />
-          </button>
-        </SampleTooltip>
       </div>
     </div>
   );

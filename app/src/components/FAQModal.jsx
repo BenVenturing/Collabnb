@@ -126,6 +126,10 @@ const FAQ_SECTIONS = [
         q: 'What is the swipe view?',
         a: 'The swipe view is an alternative way to browse listings — similar to a card-swipe interface. You can quickly swipe right to save a listing or left to skip it, making discovery faster on mobile.',
       },
+      {
+        q: 'What is Engagement Rate (Eng. Rate)?',
+        a: "Engagement Rate is the percentage of a creator's followers who actively liked, commented, or shared their posts in the last 30 days. A high rate signals a loyal, responsive audience — often more valuable to hosts than raw follower count.\n\nFor example, a creator with 10K followers and a 12% engagement rate (1,200 engaged people per post) typically drives more real visibility than a creator with 100K followers and a 1% rate. We show the 30-day rolling average so you see current momentum, not a historical snapshot.",
+      },
     ],
   },
 ];

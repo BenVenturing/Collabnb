@@ -444,6 +444,9 @@ export const updateMetrics = mutation({
   handler: async (ctx, { profileId, instagram, tiktok, youtube, avg_views, avg_likes, avg_comments }) => {
     const profile = await ctx.db.get(profileId as any);
     if (!profile) return;
+    if (profile.metrics_updated_at && Date.now() - profile.metrics_updated_at < 30 * 24 * 60 * 60 * 1000) {
+      throw new Error("Metrics can only be updated once every 30 days.");
+    }
     const totalFollowers = (instagram ?? 0) + (tiktok ?? 0) + (youtube ?? 0);
     const er =
       avg_views && avg_views > 0
@@ -486,5 +489,19 @@ export const checkMetricsReminders = internalMutation({
         created_at: now,
       });
     }
+  },
+});
+
+export const toggleSavedCreator = mutation({
+  args: { profileId: v.id("profiles"), creatorId: v.string() },
+  handler: async (ctx, { profileId, creatorId }) => {
+    const profile = await ctx.db.get(profileId);
+    if (!profile) return [];
+    const current = profile.saved_creator_ids ?? [];
+    const next = current.includes(creatorId)
+      ? current.filter((id) => id !== creatorId)
+      : [...current, creatorId];
+    await ctx.db.patch(profileId, { saved_creator_ids: next });
+    return next;
   },
 });

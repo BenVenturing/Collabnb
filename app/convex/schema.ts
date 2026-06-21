@@ -38,6 +38,7 @@ export default defineSchema({
     is_admin: v.optional(v.boolean()),
     is_lifetime: v.optional(v.boolean()),
     lifetime_tier: v.optional(v.string()),
+    saved_creator_ids: v.optional(v.array(v.string())),
     metrics_instagram_followers: v.optional(v.number()),
     metrics_tiktok_followers: v.optional(v.number()),
     metrics_youtube_subscribers: v.optional(v.number()),

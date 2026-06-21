@@ -229,16 +229,16 @@ function CreatorModal({ creator, onClose, onMessage, saved, onSave }) {
               borderRadius: '0.875rem', overflow: 'hidden',
             }}>
               {[
-                { label: 'Avg. Reach', value: fmtNum(creator.avg_reach_30d ?? creator.followers) },
-                { label: 'Eng. Rate',  value: `${creator.er_30d ?? creator.engagement}%`, tooltip: 'Engagement Rate — the % of followers who liked, commented, or shared posts in the last 30 days. A higher rate means a more active, loyal audience.' },
-                { label: 'Collabs',    value: creator.collab_count ?? '—' },
+                { label: 'Avg. Reach',       value: fmtNum(creator.avg_reach_30d ?? creator.followers), tooltip: 'Average number of people who saw this creator\'s posts in the last 30 days.' },
+                { label: '30-Day Eng. Rate', value: `${creator.er_30d ?? creator.engagement}%`,         tooltip: 'Percentage of followers who liked, commented, or shared posts in the last 30 days. Higher = more active, loyal audience.' },
+                { label: 'Collabs',          value: creator.collab_count ?? '—',                        tooltip: 'Number of completed collaborations with properties on Collabnb.' },
               ].map(({ label, value, tooltip }) => (
                 <div
                   key={label}
                   title={tooltip}
                   style={{
                     padding: '12px 0', background: 'rgba(255,255,255,0.78)',
-                    textAlign: 'center', cursor: tooltip ? 'help' : 'default',
+                    textAlign: 'center', cursor: 'help',
                   }}
                 >
                   <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 17, color: 'var(--ink)', lineHeight: 1 }}>{value}</div>
@@ -525,11 +525,11 @@ function FullCard({ creator, narrow = false, onMessage, onHide, visitingBadge, d
           <div style={{ padding: narrow ? '10px 13px 0' : '12px 16px 0' }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1, background: 'rgba(25,37,36,0.06)', borderRadius: '0.625rem', overflow: 'hidden' }}>
               {[
-                { label: 'Avg. Reach', value: fmtNum(creator.avg_reach_30d ?? creator.followers) },
-                { label: 'Eng. Rate',  value: `${creator.er_30d ?? creator.engagement}%`, tooltip: 'Engagement Rate — % of followers who liked, commented, or shared in the last 30 days.' },
-                { label: 'Collabs',    value: creator.collab_count ?? '—' },
+                { label: 'Avg. Reach',       value: fmtNum(creator.avg_reach_30d ?? creator.followers), tooltip: 'Average number of people who saw this creator\'s posts in the last 30 days.' },
+                { label: '30-Day Eng. Rate', value: `${creator.er_30d ?? creator.engagement}%`,         tooltip: 'Percentage of followers who liked, commented, or shared posts in the last 30 days. Higher = more active, loyal audience.' },
+                { label: 'Collabs',          value: creator.collab_count ?? '—',                        tooltip: 'Number of completed collaborations with properties on Collabnb.' },
               ].map(({ label, value, tooltip }) => (
-                <div key={label} title={tooltip} style={{ padding: '9px 0', background: 'rgba(255,255,255,0.78)', textAlign: 'center', cursor: tooltip ? 'help' : 'default' }}>
+                <div key={label} title={tooltip} style={{ padding: '9px 0', background: 'rgba(255,255,255,0.78)', textAlign: 'center', cursor: 'help' }}>
                   <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: narrow ? 12 : 13, color: 'var(--ink)', lineHeight: 1 }}>{value}</div>
                   <div style={{ fontSize: 9.5, color: 'var(--sage)', marginTop: 2 }}>{label}</div>
                 </div>

@@ -127,8 +127,25 @@ const FAQ_SECTIONS = [
         a: 'The swipe view is an alternative way to browse listings — similar to a card-swipe interface. You can quickly swipe right to save a listing or left to skip it, making discovery faster on mobile.',
       },
       {
-        q: 'What is Engagement Rate (Eng. Rate)?',
-        a: "Engagement Rate is the percentage of a creator's followers who actively liked, commented, or shared their posts in the last 30 days. A high rate signals a loyal, responsive audience — often more valuable to hosts than raw follower count.\n\nFor example, a creator with 10K followers and a 12% engagement rate (1,200 engaged people per post) typically drives more real visibility than a creator with 100K followers and a 1% rate. We show the 30-day rolling average so you see current momentum, not a historical snapshot.",
+        q: 'What is 30-Day Engagement Rate?',
+        a: "30-Day Engagement Rate is the percentage of a creator's followers who actively liked, commented, or shared their posts in the last 30 days. A high rate signals a loyal, responsive audience — often more valuable to hosts than raw follower count.\n\nFor example, a creator with 10K followers and a 12% engagement rate (1,200 engaged people per post) typically drives more real visibility than a creator with 100K followers and a 1% rate. We show the 30-day rolling average so you see current momentum, not a historical snapshot.",
+      },
+    ],
+  },
+  {
+    title: 'Creator Metrics',
+    items: [
+      {
+        q: 'How do I find my average reach / views?',
+        a: "Instagram: Go to your profile → tap a post → View Insights → Reach. Average this across your last 10–15 posts for a representative number.\n\nTikTok: Go to Profile → Analytics → Content tab → tap each video to see views. Average your last 10–15 videos.\n\nYouTube: Go to YouTube Studio → Analytics → Reach tab → Impressions and Views over the last 28 days. Divide total views by number of videos published.",
+      },
+      {
+        q: 'How is Engagement Rate calculated?',
+        a: "Collabnb calculates it automatically — you don't need to enter it yourself. Just fill in your average views, likes, and comments and we compute:\n\nEngagement Rate = (Avg Likes + Avg Comments) ÷ Avg Views × 100\n\nThis gives a content-level engagement rate, which reflects how compelling your actual content is — independent of follower count.",
+      },
+      {
+        q: 'How often should I update my metrics?',
+        a: "Update your metrics once a month. You'll receive a reminder notification when it's time.\n\nKeeping your numbers current ensures hosts see accurate reach and engagement when reviewing your profile — outdated stats can hurt your chances of being matched. You can only update once every 30 days to keep numbers meaningful.\n\nTo update: go to your Profile → My Metrics → enter your latest numbers → Save.",
       },
     ],
   },

@@ -593,8 +593,9 @@ export default function Profile() {
 
   // Metrics form state
   const [metricsDraft, setMetricsDraft] = useState({ instagram: '', tiktok: '', youtube: '', avg_views: '', avg_likes: '', avg_comments: '' });
-  const [metricsSaving, setMetricsSaving] = useState(false);
-  const [metricsSaved,  setMetricsSaved]  = useState(false);
+  const [metricsSaving,   setMetricsSaving]   = useState(false);
+  const [metricsSaved,    setMetricsSaved]    = useState(false);
+  const [showMetricsHelp, setShowMetricsHelp] = useState(false);
 
   // Notification toggles
   const [notifSettings, setNotifSettings] = useState({
@@ -1345,9 +1346,13 @@ export default function Profile() {
             })()}
             {/* My Metrics — creator only */}
             {dp.role === 'creator' && (() => {
-              const updatedAt   = dp.metrics_updated_at;
-              const daysSince   = updatedAt ? Math.floor((Date.now() - updatedAt) / (1000 * 60 * 60 * 24)) : null;
-              const isStale     = daysSince !== null && daysSince > 60;
+              const updatedAt      = dp.metrics_updated_at;
+              const daysSince      = updatedAt ? Math.floor((Date.now() - updatedAt) / (1000 * 60 * 60 * 24)) : null;
+              const isStale        = daysSince !== null && daysSince > 60;
+              const canUpdate      = !updatedAt || (Date.now() - updatedAt) >= 30 * 24 * 60 * 60 * 1000;
+              const nextUpdateDate = updatedAt && !canUpdate
+                ? new Date(updatedAt + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                : null;
               const avgViews    = parseFloat(metricsDraft.avg_views)    || 0;
               const avgLikes    = parseFloat(metricsDraft.avg_likes)    || 0;
               const avgComments = parseFloat(metricsDraft.avg_comments) || 0;
@@ -1357,12 +1362,38 @@ export default function Profile() {
               return (
                 <div style={{ padding: '0.875rem 1.5rem', borderBottom: '1px solid rgba(60,87,89,0.08)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.625rem' }}>
-                    <p style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--slate)', margin: 0, textTransform: 'uppercase', letterSpacing: '0.06em' }}>My Metrics</p>
-                    {daysSince !== null && (
-                      <p style={{ fontSize: '0.68rem', color: isStale ? '#ef4444' : 'var(--sage)', margin: 0 }}>
-                        {daysSince === 0 ? 'Updated today' : `Updated ${daysSince}d ago`}{isStale ? ' — stale' : ''}
-                      </p>
-                    )}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', position: 'relative' }}>
+                      <p style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--slate)', margin: 0, textTransform: 'uppercase', letterSpacing: '0.06em' }}>My Metrics</p>
+                      <button
+                        onClick={() => setShowMetricsHelp(h => !h)}
+                        style={{ width: 16, height: 16, borderRadius: '50%', border: '1.5px solid var(--sage)', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, flexShrink: 0 }}
+                        title="How to find your metrics"
+                      >
+                        <span style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--sage)', lineHeight: 1 }}>?</span>
+                      </button>
+                      {showMetricsHelp && (
+                        <div style={{ position: 'absolute', top: '120%', left: 0, zIndex: 50, background: '#fff', border: '1px solid rgba(60,87,89,0.15)', borderRadius: '0.625rem', boxShadow: '0 4px 16px rgba(0,0,0,0.10)', padding: '0.75rem 0.875rem', width: 260 }}>
+                          <p style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--slate)', margin: '0 0 0.4rem' }}>How to find your numbers</p>
+                          <p style={{ fontSize: '0.68rem', color: 'var(--sage)', margin: '0 0 0.3rem', lineHeight: 1.5 }}><strong>Avg Views:</strong> Instagram → Insights → last 10–15 posts → average reach. TikTok → Analytics → Content tab.</p>
+                          <p style={{ fontSize: '0.68rem', color: 'var(--sage)', margin: '0 0 0.3rem', lineHeight: 1.5 }}><strong>Avg Likes / Comments:</strong> Same dashboards — average across your recent posts.</p>
+                          <p style={{ fontSize: '0.68rem', color: 'var(--sage)', margin: '0 0 0.3rem', lineHeight: 1.5 }}><strong>Engagement Rate</strong> is calculated automatically from your views, likes, and comments — you don't need to enter it.</p>
+                          <p style={{ fontSize: '0.67rem', color: 'var(--sage)', margin: 0, lineHeight: 1.5 }}>Update once a month for accurate matching. You'll get a reminder notification.</p>
+                          <button onClick={() => setShowMetricsHelp(false)} style={{ marginTop: '0.5rem', fontSize: '0.65rem', color: 'var(--sage)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>Close</button>
+                        </div>
+                      )}
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+                      {daysSince !== null && (
+                        <p style={{ fontSize: '0.68rem', color: isStale ? '#ef4444' : 'var(--sage)', margin: 0 }}>
+                          {daysSince === 0 ? 'Updated today' : `Updated ${daysSince}d ago`}{isStale ? ' — stale' : ''}
+                        </p>
+                      )}
+                      {!canUpdate && (
+                        <span style={{ fontSize: '0.65rem', color: 'var(--sage)', background: 'rgba(60,87,89,0.08)', borderRadius: 999, padding: '2px 7px', whiteSpace: 'nowrap' }}>
+                          🔒 Next update {nextUpdateDate}
+                        </span>
+                      )}
+                    </div>
                   </div>
                   {isStale && (
                     <div style={{ background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '0.5rem', padding: '0.5rem 0.625rem', marginBottom: '0.75rem' }}>
@@ -1381,7 +1412,8 @@ export default function Profile() {
                           value={metricsDraft[key]}
                           onChange={e => setMetricsDraft(d => ({ ...d, [key]: e.target.value }))}
                           placeholder="0"
-                          style={inputStyle}
+                          disabled={!canUpdate}
+                          style={{ ...inputStyle, opacity: canUpdate ? 1 : 0.5 }}
                         />
                       </div>
                     ))}
@@ -1398,7 +1430,8 @@ export default function Profile() {
                           value={metricsDraft[key]}
                           onChange={e => setMetricsDraft(d => ({ ...d, [key]: e.target.value }))}
                           placeholder="0"
-                          style={inputStyle}
+                          disabled={!canUpdate}
+                          style={{ ...inputStyle, opacity: canUpdate ? 1 : 0.5 }}
                         />
                       </div>
                     ))}
@@ -1411,10 +1444,10 @@ export default function Profile() {
                   </div>
                   <button
                     onClick={saveMetrics}
-                    disabled={metricsSaving}
-                    style={{ width: '100%', padding: '0.6rem', borderRadius: '999px', border: 'none', cursor: metricsSaving ? 'default' : 'pointer', background: metricsSaved ? '#4A9B7F' : 'var(--slate)', color: '#fff', fontSize: '0.82rem', fontWeight: 600, fontFamily: 'var(--font-body)', transition: 'background 300ms' }}
+                    disabled={metricsSaving || !canUpdate}
+                    style={{ width: '100%', padding: '0.6rem', borderRadius: '999px', border: 'none', cursor: (metricsSaving || !canUpdate) ? 'default' : 'pointer', background: !canUpdate ? 'rgba(60,87,89,0.18)' : metricsSaved ? '#4A9B7F' : 'var(--slate)', color: !canUpdate ? 'var(--sage)' : '#fff', fontSize: '0.82rem', fontWeight: 600, fontFamily: 'var(--font-body)', transition: 'background 300ms' }}
                   >
-                    {metricsSaving ? 'Saving…' : metricsSaved ? 'Saved' : 'Save Metrics'}
+                    {metricsSaving ? 'Saving…' : metricsSaved ? 'Saved' : !canUpdate ? `Locked until ${nextUpdateDate}` : 'Save Metrics'}
                   </button>
                 </div>
               );

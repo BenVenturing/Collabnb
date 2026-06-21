@@ -34,7 +34,6 @@ const HOST_NAV = [
   { to: '/host/proposals', label: 'Proposals' },
   { to: '/inbox',          label: 'Inbox'     },
   { to: '/host/creators',  label: 'Creators'  },
-  { to: '/profile',        label: 'Profile'   },
 ];
 
 // ─── Dropdown panel (appears below nav pill) ──────────────────────────────────
@@ -119,7 +118,8 @@ export default function AppNav() {
   useEffect(() => onChecklistProgress(() => setChecklistTick(t => t + 1)), []);
   const checklistProgress = getChecklistProgress(profile, checklistTick);
   const checklistAllDone = checklistProgress.completed >= checklistProgress.total;
-  const { compactSearch } = useAppBar();
+  const { compactSearch, hideNav } = useAppBar();
+  if (hideNav) return null;
   const { savedIds } = useCollabs();
   const navigate = useNavigate();
   const savedCount = savedIds.size;
@@ -807,12 +807,14 @@ export default function AppNav() {
                   animation: 'fadeUp 180ms cubic-bezier(0.16,1,0.3,1) forwards',
                 }}
               >
-                <div className="px-4 py-3 border-b border-stone/30">
+                <NavLink
+                  to="/profile"
+                  onClick={() => setProfileOpen(false)}
+                  className="block px-4 py-3 border-b border-stone/30 hover:bg-mint/30 transition-colors"
+                  style={{ textDecoration: 'none' }}
+                >
                   <p className="font-display font-bold text-ink text-sm">{profile?.full_name}</p>
                   <p className="text-sage text-xs mt-0.5">@{profile?.username}</p>
-                </div>
-                <NavLink to="/profile" onClick={() => setProfileOpen(false)} className="block px-4 py-3 text-sm text-ink hover:bg-mint/30 transition-colors">
-                  View Profile
                 </NavLink>
                 <NavLink to="/profile?settings=true" onClick={() => setProfileOpen(false)} className="block px-4 py-3 text-sm text-ink hover:bg-mint/30 transition-colors">
                   Settings

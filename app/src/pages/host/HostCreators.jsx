@@ -1127,11 +1127,11 @@ export default function HostCreators() {
               <div style={{
                 position: 'absolute', top: 'calc(100% + 8px)', left: 0,
                 zIndex: 200, width: 320,
-                background: 'rgba(255,255,255,0.97)',
-                backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)',
-                border: '1.5px solid rgba(255,255,255,0.9)',
-                borderRadius: '1.25rem',
-                boxShadow: '0 16px 60px rgba(25,37,36,0.18)',
+                background: 'rgba(255,255,255,0.62)',
+                backdropFilter: 'blur(32px) saturate(1.6)', WebkitBackdropFilter: 'blur(32px) saturate(1.6)',
+                border: '1px solid rgba(255,255,255,0.82)',
+                borderRadius: '1.375rem',
+                boxShadow: '0 8px 40px rgba(25,37,36,0.12), inset 0 1px 0 rgba(255,255,255,0.9)',
                 padding: '1.25rem',
               }}>
 
@@ -1180,9 +1180,9 @@ export default function HostCreators() {
                       <button key={t} onClick={() => setTierFilter(t)} style={{
                         padding: '5px 12px', borderRadius: 9999,
                         fontSize: '0.75rem', fontWeight: 600,
-                        background: tierFilter === t ? 'var(--ink)' : 'rgba(25,37,36,0.06)',
+                        background: tierFilter === t ? 'var(--ink)' : 'rgba(255,255,255,0.5)',
                         color: tierFilter === t ? 'var(--bone)' : 'var(--slate)',
-                        border: `1px solid ${tierFilter === t ? 'var(--ink)' : 'rgba(25,37,36,0.1)'}`,
+                        border: `1px solid ${tierFilter === t ? 'var(--ink)' : 'rgba(255,255,255,0.7)'}`,
                         cursor: 'pointer', transition: 'all 150ms', fontFamily: 'var(--font-body)',
                       }}>
                         {t}
@@ -1197,21 +1197,20 @@ export default function HostCreators() {
                     Platforms
                   </p>
                   <div style={{ display: 'flex', gap: 5 }}>
-                    {[{ p: 'Instagram', icon: '📸' }, { p: 'TikTok', icon: '🎵' }, { p: 'YouTube', icon: '▶️' }].map(({ p, icon }) => {
+                    {['Instagram', 'TikTok', 'YouTube'].map(p => {
                       const active = platformFilter.includes(p);
                       return (
                         <button key={p} onClick={() => setPlatformFilter(prev =>
                           prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p]
                         )} style={{
-                          display: 'flex', alignItems: 'center', gap: 5,
                           padding: '5px 12px', borderRadius: 9999,
                           fontSize: '0.75rem', fontWeight: 600,
-                          background: active ? 'rgba(25,37,36,0.12)' : 'rgba(25,37,36,0.06)',
+                          background: active ? 'rgba(25,37,36,0.12)' : 'rgba(255,255,255,0.5)',
                           color: active ? 'var(--ink)' : 'var(--slate)',
-                          border: `1px solid ${active ? 'rgba(25,37,36,0.25)' : 'rgba(25,37,36,0.1)'}`,
+                          border: `1px solid ${active ? 'rgba(25,37,36,0.25)' : 'rgba(255,255,255,0.7)'}`,
                           cursor: 'pointer', transition: 'all 150ms', fontFamily: 'var(--font-body)',
                         }}>
-                          <span style={{ fontSize: 10 }}>{icon}</span>{p}
+                          {p}
                         </button>
                       );
                     })}
@@ -1232,9 +1231,9 @@ export default function HostCreators() {
                       <button key={v} onClick={() => setSortBy(v)} style={{
                         padding: '5px 12px', borderRadius: 9999,
                         fontSize: '0.75rem', fontWeight: 600,
-                        background: sortBy === v ? 'var(--ink)' : 'rgba(25,37,36,0.06)',
+                        background: sortBy === v ? 'var(--ink)' : 'rgba(255,255,255,0.5)',
                         color: sortBy === v ? 'var(--bone)' : 'var(--slate)',
-                        border: `1px solid ${sortBy === v ? 'var(--ink)' : 'rgba(25,37,36,0.1)'}`,
+                        border: `1px solid ${sortBy === v ? 'var(--ink)' : 'rgba(255,255,255,0.7)'}`,
                         cursor: 'pointer', transition: 'all 150ms', fontFamily: 'var(--font-body)',
                       }}>
                         {l}
@@ -1252,9 +1251,9 @@ export default function HostCreators() {
                     display: 'flex', alignItems: 'center', gap: 7,
                     padding: '7px 14px', borderRadius: '0.75rem',
                     fontSize: '0.78rem', fontWeight: 600,
-                    background: showPast ? 'rgba(74,155,127,0.12)' : 'rgba(25,37,36,0.05)',
+                    background: showPast ? 'rgba(74,155,127,0.15)' : 'rgba(255,255,255,0.5)',
                     color: showPast ? '#2d7d5e' : 'var(--slate)',
-                    border: `1px solid ${showPast ? 'rgba(74,155,127,0.3)' : 'rgba(25,37,36,0.1)'}`,
+                    border: `1px solid ${showPast ? 'rgba(74,155,127,0.35)' : 'rgba(255,255,255,0.7)'}`,
                     cursor: 'pointer', transition: 'all 150ms', fontFamily: 'var(--font-body)',
                   }}>
                     <Check size={12} />Past Collabs Only
@@ -1269,11 +1268,11 @@ export default function HostCreators() {
                   <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
                     <div style={{ flex: 1 }}>
                       <label style={{ display: 'block', fontSize: 10, fontWeight: 600, color: 'var(--sage)', marginBottom: 4 }}>From</label>
-                      <input type="date" value={tmpDateStart} onChange={e => setTmpDateStart(e.target.value)} style={{ width: '100%', padding: '7px 10px', borderRadius: '0.625rem', border: '1.5px solid rgba(25,37,36,0.12)', background: 'var(--bone)', fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--ink)', outline: 'none', boxSizing: 'border-box' }} />
+                      <input type="date" value={tmpDateStart} onChange={e => setTmpDateStart(e.target.value)} style={{ width: '100%', padding: '7px 10px', borderRadius: '0.625rem', border: '1px solid rgba(255,255,255,0.75)', background: 'rgba(255,255,255,0.55)', fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--ink)', outline: 'none', boxSizing: 'border-box' }} />
                     </div>
                     <div style={{ flex: 1 }}>
                       <label style={{ display: 'block', fontSize: 10, fontWeight: 600, color: 'var(--sage)', marginBottom: 4 }}>To</label>
-                      <input type="date" value={tmpDateEnd} min={tmpDateStart} onChange={e => setTmpDateEnd(e.target.value)} style={{ width: '100%', padding: '7px 10px', borderRadius: '0.625rem', border: '1.5px solid rgba(25,37,36,0.12)', background: 'var(--bone)', fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--ink)', outline: 'none', boxSizing: 'border-box' }} />
+                      <input type="date" value={tmpDateEnd} min={tmpDateStart} onChange={e => setTmpDateEnd(e.target.value)} style={{ width: '100%', padding: '7px 10px', borderRadius: '0.625rem', border: '1px solid rgba(255,255,255,0.75)', background: 'rgba(255,255,255,0.55)', fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--ink)', outline: 'none', boxSizing: 'border-box' }} />
                     </div>
                   </div>
                   {tmpDateStart && tmpDateEnd && (
@@ -1302,7 +1301,7 @@ export default function HostCreators() {
                     onClick={clearAllFilters}
                     style={{
                       width: '100%', padding: '9px 0', borderRadius: 9999,
-                      border: '1.5px solid rgba(25,37,36,0.15)', background: 'transparent',
+                      border: '1px solid rgba(255,255,255,0.75)', background: 'rgba(255,255,255,0.45)',
                       fontSize: 12, fontWeight: 700, color: 'var(--slate)', cursor: 'pointer',
                       fontFamily: 'var(--font-body)', transition: 'all 150ms',
                     }}

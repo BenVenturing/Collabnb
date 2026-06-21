@@ -550,6 +550,7 @@ export default function Profile() {
   const generateUploadUrl          = useMutation(api.uploads.generateUploadUrl);
   const getStorageUrl              = useMutation(api.uploads.getStorageUrl);
   const updateMetricsMutation      = useMutation(api.profiles.updateMetrics);
+  const requestTierChangeMutation  = useMutation(api.profiles.requestTierChange);
   const { openModal: openSubModal } = useSubscription();
   const userId = profile?._id || profile?.id || 'mock-user-001';
   const serverPitchCount = useQuery(api.pitches.getCount, { userId });
@@ -596,6 +597,11 @@ export default function Profile() {
   const [metricsSaving,   setMetricsSaving]   = useState(false);
   const [metricsSaved,    setMetricsSaved]    = useState(false);
   const [showMetricsHelp, setShowMetricsHelp] = useState(false);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const [bannerUploading, setBannerUploading] = useState(false);
+  const [requestedTier,   setRequestedTier]   = useState(null);
+  const [tierRequesting,  setTierRequesting]  = useState(false);
+  const [tierRequested,   setTierRequested]   = useState(false);
 
   // Notification toggles
   const [notifSettings, setNotifSettings] = useState({
@@ -667,21 +673,18 @@ export default function Profile() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ── Auto-open edit sheet when ?edit=true (e.g. from onboarding checklist) ──
-  const autoEditDone = useRef(false);
+  // ── Auto-open edit sheet when ?edit=true or settings sheet when ?settings=true ──
   useEffect(() => {
-    if (autoEditDone.current || loading || !profile) return;
+    if (loading || !profile) return;
     const params = new URLSearchParams(location.search);
     if (params.get('edit') === 'true') {
-      autoEditDone.current = true;
       setEditDraft({ ...profile });
       navigate('/profile', { replace: true });
     } else if (params.get('settings') === 'true') {
-      autoEditDone.current = true;
       setShowSettings(true);
       navigate('/profile', { replace: true });
     }
-  }, [loading, profile, location.search, navigate]);
+  }, [location.search]);
 
   // ── Scroll reveal observer ──────────────────────────────────────────────
   const sectionsRef = useRef([]);
@@ -741,7 +744,7 @@ export default function Profile() {
     : null;
 
   function hasUnsavedChanges() {
-    const fields = ['full_name','bio','city','region','country','avatar_url','banner_url','instagram_handle','tiktok_handle','youtube_handle','portfolio','tier'];
+    const fields = ['full_name','bio','city','region','country','avatar_url','banner_url','instagram_handle','tiktok_handle','youtube_handle','portfolio'];
     if (fields.some(f => editDraft[f] !== (dp[f] ?? ''))) return true;
     const draftNiches = JSON.stringify(editDraft.niches ?? []);
     const dpNiches    = JSON.stringify(dp.niches ?? []);
@@ -1117,12 +1120,14 @@ export default function Profile() {
             <div style={{ position: 'relative', marginLeft: '-1.75rem', marginRight: '-1.75rem', marginBottom: '3rem' }}>
               <label style={{ display: 'block', cursor: 'pointer' }}>
                 <div style={{ height: '120px', borderRadius: '1.5rem 1.5rem 0 0', overflow: 'hidden', background: 'linear-gradient(135deg, #1a2322 0%, #2d4a3e 100%)', position: 'relative' }}>
-                  {editDraft.banner_url && (
+                  {editDraft.banner_url && !bannerUploading && (
                     <img src={editDraft.banner_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center', display: 'block' }} onError={() => setEditDraft(d => ({ ...d, banner_url: '' }))} />
                   )}
-                  <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.28)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-                    <span style={{ color: 'white', fontSize: '0.75rem', fontWeight: 600 }}>Change banner</span>
+                  <div style={{ position: 'absolute', inset: 0, background: bannerUploading ? 'rgba(0,0,0,0.55)' : 'rgba(0,0,0,0.28)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}>
+                    {bannerUploading
+                      ? <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg><span style={{ color: 'white', fontSize: '0.75rem', fontWeight: 600 }}>Uploading…</span></>
+                      : <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg><span style={{ color: 'white', fontSize: '0.75rem', fontWeight: 600 }}>{editDraft.banner_url ? 'Change banner' : 'Add banner'}</span></>
+                    }
                   </div>
                 </div>
                 <input type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => { const f = e.target.files?.[0]; if (f) setCropEditorFile(f); }} />
@@ -1134,10 +1139,12 @@ export default function Profile() {
               {/* Avatar — overlapping banner bottom-left */}
               <div style={{ position: 'absolute', bottom: '-2.5rem', left: '1.75rem' }}>
                 <label style={{ display: 'block', position: 'relative', cursor: 'pointer' }}>
-                  <div style={{ width: 68, height: 68, borderRadius: '50%', overflow: 'hidden', border: '3px solid white', boxShadow: '0 2px 10px rgba(25,37,36,0.18)', background: 'var(--mint)' }}>
-                    {editDraft.avatar_url
-                      ? <img src={editDraft.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-                      : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.5rem', color: 'var(--slate)' }}>{(editDraft.full_name || '?')[0]}</div>
+                  <div style={{ width: 68, height: 68, borderRadius: '50%', overflow: 'hidden', border: '3px solid white', boxShadow: '0 2px 10px rgba(25,37,36,0.18)', background: 'var(--mint)', position: 'relative' }}>
+                    {avatarUploading
+                      ? <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(25,37,36,0.18)' }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg></div>
+                      : editDraft.avatar_url
+                        ? <img src={editDraft.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                        : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.5rem', color: 'var(--slate)' }}>{(editDraft.full_name || '?')[0]}</div>
                     }
                   </div>
                   <div style={{ position: 'absolute', bottom: 1, right: 1, width: 22, height: 22, borderRadius: '50%', background: 'var(--ink)', border: '2px solid white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -1145,10 +1152,13 @@ export default function Profile() {
                   </div>
                   <input type="file" accept="image/*" style={{ display: 'none' }} onChange={async (e) => {
                     const f = e.target.files?.[0];
-                    if (f) {
+                    if (!f) return;
+                    setAvatarUploading(true);
+                    try {
                       const url = await uploadResizedImage(f, 300, 300, generateUploadUrl, 0.85, getStorageUrl);
                       setEditDraft(d => ({ ...d, avatar_url: url }));
-                    }
+                    } catch { setToastMsg('Photo upload failed — try again'); }
+                    finally { setAvatarUploading(false); }
                   }} />
                 </label>
               </div>
@@ -1183,49 +1193,82 @@ export default function Profile() {
             {dp.role === 'creator' && (
               <div style={{ marginTop: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
 
-                {/* Creator Type */}
+                {/* Creator Type — changes require admin review */}
                 <div style={{ background: 'rgba(255,255,255,0.6)', borderRadius: '1rem', border: '1px solid rgba(255,255,255,0.85)', padding: '1rem' }}>
-                  <p style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--sage)', margin: '0 0 10px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    Creator Type
-                  </p>
+                  <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 10 }}>
+                    <p style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--sage)', margin: 0, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Creator Type</p>
+                    <span style={{ fontSize: '0.65rem', color: 'var(--sage)' }}>Changes require admin review</span>
+                  </div>
+                  {dp.pending_tier && !tierRequested && (
+                    <div style={{ background: 'rgba(234,179,8,0.08)', border: '1px solid rgba(234,179,8,0.25)', borderRadius: '0.5rem', padding: '0.5rem 0.625rem', marginBottom: '0.625rem' }}>
+                      <p style={{ fontSize: '0.7rem', color: '#92400e', margin: 0 }}>Tier change to <strong>{dp.pending_tier}</strong> is pending admin approval.</p>
+                    </div>
+                  )}
+                  {tierRequested && (
+                    <div style={{ background: 'rgba(74,155,127,0.08)', border: '1px solid rgba(74,155,127,0.25)', borderRadius: '0.5rem', padding: '0.5rem 0.625rem', marginBottom: '0.625rem' }}>
+                      <p style={{ fontSize: '0.7rem', color: '#166534', margin: 0 }}>Request submitted — you'll be notified once approved.</p>
+                    </div>
+                  )}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                     {CREATOR_TIERS.map(({ value, label, range, desc }) => {
-                      const active = editDraft.tier === value;
-                      const suggested = suggestTier(
-                        dp.metrics_instagram_followers || dp.metrics_tiktok_followers || dp.metrics_youtube_subscribers
-                      ) === value;
+                      const isCurrent = value === dp.tier;
+                      const isPending = value === (dp.pending_tier || (tierRequested ? requestedTier : null));
+                      const isExpanded = value === requestedTier && !tierRequested;
+                      const suggested = suggestTier(dp.metrics_instagram_followers || dp.metrics_tiktok_followers || dp.metrics_youtube_subscribers) === value;
                       return (
-                        <button
-                          key={value}
-                          onClick={() => setEditDraft({ ...editDraft, tier: value })}
-                          style={{
-                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                            padding: '9px 12px', borderRadius: '0.75rem', textAlign: 'left',
-                            background: active ? 'var(--ink)' : 'rgba(25,37,36,0.04)',
-                            border: `1.5px solid ${active ? 'var(--ink)' : 'rgba(25,37,36,0.1)'}`,
-                            cursor: 'pointer', transition: 'all 150ms',
-                            fontFamily: 'var(--font-body)',
-                          }}
-                        >
-                          <div>
-                            <span style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: active ? 'var(--bone)' : 'var(--ink)' }}>
-                              {label}
-                              {suggested && !active && (
-                                <span style={{ marginLeft: 6, fontSize: 9, fontWeight: 700, color: '#3C8C6A', background: 'rgba(60,140,106,0.12)', padding: '2px 6px', borderRadius: 9999, verticalAlign: 'middle' }}>
-                                  Suggested
-                                </span>
-                              )}
-                            </span>
-                            <span style={{ display: 'block', fontSize: 10, color: active ? 'rgba(255,255,255,0.65)' : 'var(--sage)', marginTop: 2 }}>
-                              {range} · {desc}
-                            </span>
-                          </div>
-                          {active && (
-                            <div style={{ width: 18, height: 18, borderRadius: '50%', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                              <span style={{ color: 'var(--bone)', fontSize: 10 }}>✓</span>
+                        <div key={value}>
+                          <button
+                            onClick={() => {
+                              if (isCurrent) return;
+                              setRequestedTier(requestedTier === value ? null : value);
+                              setTierRequested(false);
+                            }}
+                            style={{
+                              width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                              padding: '9px 12px', borderRadius: isExpanded ? '0.75rem 0.75rem 0 0' : '0.75rem', textAlign: 'left',
+                              background: isCurrent ? 'var(--ink)' : isPending ? 'rgba(234,179,8,0.08)' : isExpanded ? 'rgba(60,87,89,0.06)' : 'rgba(25,37,36,0.04)',
+                              border: `1.5px solid ${isCurrent ? 'var(--ink)' : isPending ? 'rgba(234,179,8,0.35)' : isExpanded ? 'var(--slate)' : 'rgba(25,37,36,0.1)'}`,
+                              borderBottom: isExpanded ? 'none' : undefined,
+                              cursor: isCurrent ? 'default' : 'pointer', transition: 'all 150ms', fontFamily: 'var(--font-body)',
+                            }}
+                          >
+                            <div>
+                              <span style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: isCurrent ? 'var(--bone)' : 'var(--ink)' }}>
+                                {label}
+                                {isCurrent && <span style={{ marginLeft: 6, fontSize: 9, fontWeight: 700, color: 'rgba(255,255,255,0.7)', background: 'rgba(255,255,255,0.15)', padding: '2px 6px', borderRadius: 9999, verticalAlign: 'middle' }}>Current</span>}
+                                {isPending && !isCurrent && <span style={{ marginLeft: 6, fontSize: 9, fontWeight: 700, color: '#92400e', background: 'rgba(234,179,8,0.15)', padding: '2px 6px', borderRadius: 9999, verticalAlign: 'middle' }}>Pending</span>}
+                                {suggested && !isCurrent && !isPending && <span style={{ marginLeft: 6, fontSize: 9, fontWeight: 700, color: '#3C8C6A', background: 'rgba(60,140,106,0.12)', padding: '2px 6px', borderRadius: 9999, verticalAlign: 'middle' }}>Suggested</span>}
+                              </span>
+                              <span style={{ display: 'block', fontSize: 10, color: isCurrent ? 'rgba(255,255,255,0.65)' : 'var(--sage)', marginTop: 2 }}>{range} · {desc}</span>
+                            </div>
+                            {isCurrent && <div style={{ width: 18, height: 18, borderRadius: '50%', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><span style={{ color: 'var(--bone)', fontSize: 10 }}>✓</span></div>}
+                          </button>
+                          {isExpanded && (
+                            <div style={{ padding: '8px 10px', background: 'rgba(60,87,89,0.04)', borderRadius: '0 0 0.75rem 0.75rem', border: '1px solid var(--slate)', borderTop: 'none' }}>
+                              <p style={{ fontSize: '0.68rem', color: 'var(--slate)', margin: '0 0 6px' }}>Request a change to <strong>{label}</strong>? Admin will review before it takes effect.</p>
+                              <div style={{ display: 'flex', gap: 6 }}>
+                                <button
+                                  disabled={tierRequesting}
+                                  onClick={async () => {
+                                    if (userId === 'mock-user-001') return;
+                                    setTierRequesting(true);
+                                    try {
+                                      await requestTierChangeMutation({ profileId: userId, requestedTier: value });
+                                      setTierRequested(true);
+                                    } catch { setToastMsg('Request failed — try again'); }
+                                    finally { setTierRequesting(false); }
+                                  }}
+                                  style={{ padding: '4px 12px', borderRadius: 999, border: 'none', background: 'var(--ink)', color: 'white', fontSize: '0.7rem', fontWeight: 600, cursor: tierRequesting ? 'default' : 'pointer', fontFamily: 'var(--font-body)' }}
+                                >
+                                  {tierRequesting ? 'Sending…' : 'Send Request'}
+                                </button>
+                                <button onClick={() => setRequestedTier(null)} style={{ padding: '4px 10px', borderRadius: 999, border: '1px solid rgba(60,87,89,0.2)', background: 'none', color: 'var(--sage)', fontSize: '0.7rem', cursor: 'pointer', fontFamily: 'var(--font-body)' }}>
+                                  Cancel
+                                </button>
+                              </div>
                             </div>
                           )}
-                        </button>
+                        </div>
                       );
                     })}
                   </div>
@@ -1292,6 +1335,8 @@ export default function Profile() {
         <BannerCropEditor
           file={cropEditorFile}
           onApply={async (dataUrl) => {
+            setBannerUploading(true);
+            setCropEditorFile(null);
             let finalUrl = dataUrl;
             if (generateUploadUrl && CONVEX_URL) {
               try {
@@ -1304,10 +1349,10 @@ export default function Profile() {
                   try { const url = await getStorageUrl({ storageId }); if (url) finalUrl = url; } catch {}
                   if (finalUrl === dataUrl) finalUrl = `${CONVEX_URL}/api/storage/${storageId}`;
                 }
-              } catch {}
+              } catch { setToastMsg('Banner upload failed — try again'); }
             }
             setEditDraft(d => ({ ...d, banner_url: finalUrl }));
-            setCropEditorFile(null);
+            setBannerUploading(false);
           }}
           onCancel={() => setCropEditorFile(null)}
         />

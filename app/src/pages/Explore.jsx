@@ -94,9 +94,9 @@ function ListingCard({ listing, saved, onSave, delay, onNavigate, onHostClick, o
                 position: 'absolute', top: `${top}%`, left: '50%',
                 transform: 'translateX(-50%) rotate(-35deg)',
                 fontFamily: 'var(--font-display)', fontWeight: 900,
-                fontSize: '0.8rem', color: 'rgba(255,255,255,0.72)',
+                fontSize: '0.8rem', color: 'rgba(255,255,255,0.15)',
                 letterSpacing: '0.3em', whiteSpace: 'nowrap', userSelect: 'none',
-                textShadow: '0 1px 4px rgba(0,0,0,0.45)',
+                textShadow: 'none',
               }}>
                 SAMPLE LISTING
               </div>

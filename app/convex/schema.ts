@@ -46,6 +46,8 @@ export default defineSchema({
     metrics_avg_likes: v.optional(v.number()),
     metrics_avg_comments: v.optional(v.number()),
     metrics_updated_at: v.optional(v.number()),
+    pending_tier: v.optional(v.string()),
+    tier_change_requested_at: v.optional(v.number()),
   }).index("by_email", ["email"]).index("by_stripe_customer", ["stripe_customer_id"]),
 
   listings: defineTable({

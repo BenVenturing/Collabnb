@@ -190,6 +190,49 @@ export const rejectProfile = mutation({
   },
 });
 
+export const requestTierChange = mutation({
+  args: { profileId: v.string(), requestedTier: v.string() },
+  handler: async (ctx, args) => {
+    const profile = await ctx.db.get(args.profileId as any);
+    if (!profile) return;
+    await ctx.db.patch(args.profileId as any, {
+      pending_tier: args.requestedTier,
+      tier_change_requested_at: Date.now(),
+    });
+  },
+});
+
+export const approveTierChange = mutation({
+  args: { profileId: v.string() },
+  handler: async (ctx, args) => {
+    const profile = await ctx.db.get(args.profileId as any);
+    if (!profile?.pending_tier) return;
+    await ctx.db.patch(args.profileId as any, {
+      tier: profile.pending_tier,
+      pending_tier: undefined,
+      tier_change_requested_at: undefined,
+    });
+  },
+});
+
+export const declineTierChange = mutation({
+  args: { profileId: v.string() },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.profileId as any, {
+      pending_tier: undefined,
+      tier_change_requested_at: undefined,
+    });
+  },
+});
+
+export const getTierChangeRequests = query({
+  args: {},
+  handler: async (ctx) => {
+    const all = await ctx.db.query("profiles").collect();
+    return all.filter(p => p.pending_tier != null);
+  },
+});
+
 export const getDetailedProfile = query({
   args: { profileId: v.id("profiles") },
   handler: async (ctx, args) => {

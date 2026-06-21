@@ -234,11 +234,59 @@ function CountBadge({ n, variant = 'green' }) {
   const colors = {
     green: { background: '#D1EBDB', color: '#166534' },
     red:   { background: '#FEE2E2', color: '#991B1B' },
+    amber: { background: '#FEF3C7', color: '#92400E' },
   };
   return (
-    <span style={{ ...colors[variant], borderRadius: '99px', padding: '0 0.4rem', fontSize: '0.7rem', fontWeight: 700, lineHeight: 1.6 }}>
+    <span style={{ ...(colors[variant] ?? colors.green), borderRadius: '99px', padding: '0 0.4rem', fontSize: '0.7rem', fontWeight: 700, lineHeight: 1.6 }}>
       {n}
     </span>
+  );
+}
+
+function TierChangeCard({ profile, onApprove, onDecline }) {
+  const [busy, setBusy] = useState(false);
+  const requestedAt = profile.tier_change_requested_at ? new Date(profile.tier_change_requested_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
+
+  async function handle(action) {
+    setBusy(true);
+    try { await action(profile); } finally { setBusy(false); }
+  }
+
+  return (
+    <div style={{ background: '#fff', border: '1px solid rgba(25,37,36,0.08)', borderRadius: '0.875rem', padding: '1rem 1.25rem', marginBottom: '0.75rem', boxShadow: '0 1px 3px rgba(25,37,36,0.05)' }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.875rem' }}>
+        <Avatar url={profile.avatar_url} name={profile.full_name} size={42} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+            <span style={{ fontFamily: 'Cabinet Grotesk, sans-serif', fontWeight: 700, fontSize: '0.95rem', color: '#192524' }}>{profile.full_name}</span>
+            <span style={{ fontSize: '0.72rem', background: '#FEF3C7', color: '#92400E', padding: '2px 8px', borderRadius: 999, fontWeight: 600 }}>Account Status Change</span>
+          </div>
+          <p style={{ fontSize: '0.8rem', color: '#3C5759', margin: '0 0 0.5rem' }}>
+            <span style={{ fontWeight: 600 }}>{profile.tier || 'None'}</span>
+            <span style={{ margin: '0 0.375rem', color: '#D0D5CE' }}>→</span>
+            <span style={{ fontWeight: 700, color: '#192524' }}>{profile.pending_tier}</span>
+          </p>
+          <p style={{ fontSize: '0.72rem', color: '#959D90', margin: '0 0 0.75rem' }}>Requested {requestedAt} · {profile.email}</p>
+          <SocialLinks profile={profile} />
+        </div>
+      </div>
+      <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.875rem', borderTop: '1px solid rgba(25,37,36,0.06)', paddingTop: '0.875rem' }}>
+        <button
+          disabled={busy}
+          onClick={() => handle(onApprove)}
+          style={{ flex: 1, padding: '0.45rem', borderRadius: '0.5rem', border: 'none', background: '#192524', color: '#fff', fontSize: '0.8rem', fontWeight: 600, cursor: busy ? 'default' : 'pointer', fontFamily: 'inherit' }}
+        >
+          Approve Change
+        </button>
+        <button
+          disabled={busy}
+          onClick={() => handle(onDecline)}
+          style={{ flex: 1, padding: '0.45rem', borderRadius: '0.5rem', border: '1px solid rgba(25,37,36,0.15)', background: 'transparent', color: '#3C5759', fontSize: '0.8rem', fontWeight: 500, cursor: busy ? 'default' : 'pointer', fontFamily: 'inherit' }}
+        >
+          Decline
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -247,12 +295,15 @@ export default function VerificationQueue() {
   const [tab, setTab] = useState('creators');
   const [selectedProfileId, setSelectedProfileId] = useState(null);
 
-  const unverified    = useQuery(api.profiles.getUnverified);
-  const rejected      = useQuery(api.profiles.getRejected);
-  const founderCounts = useQuery(api.admin.getFounderCounts);
-  const approve       = useMutation(api.profiles.approveProfile);
-  const reject        = useMutation(api.profiles.rejectProfile);
-  const addAudit      = useMutation(api.admin.addAuditEntry);
+  const unverified       = useQuery(api.profiles.getUnverified);
+  const rejected         = useQuery(api.profiles.getRejected);
+  const tierChangeReqs   = useQuery(api.profiles.getTierChangeRequests);
+  const founderCounts    = useQuery(api.admin.getFounderCounts);
+  const approve          = useMutation(api.profiles.approveProfile);
+  const reject           = useMutation(api.profiles.rejectProfile);
+  const approveTier      = useMutation(api.profiles.approveTierChange);
+  const declineTier      = useMutation(api.profiles.declineTierChange);
+  const addAudit         = useMutation(api.admin.addAuditEntry);
 
   const counts = founderCounts ?? { creator: 0, host: 0 };
 
@@ -260,6 +311,7 @@ export default function VerificationQueue() {
   const pendingCreators  = pending.filter(p => p.role === 'creator');
   const pendingHosts     = pending.filter(p => p.role === 'host');
   const rejectedAll      = rejected  || [];
+  const tierRequests     = tierChangeReqs || [];
 
   async function handleApprove(profile) {
     await approve({ profileId: profile._id });
@@ -271,12 +323,23 @@ export default function VerificationQueue() {
     try { await addAudit({ action: 'rejected', targetType: 'profile', targetId: String(profile._id), details: `${profile.full_name} — ${reason || 'No reason'}` }); } catch {}
   }
 
+  async function handleApproveTier(profile) {
+    await approveTier({ profileId: String(profile._id) });
+    try { await addAudit({ action: 'approved', targetType: 'profile', targetId: String(profile._id), details: `Tier change: ${profile.tier} → ${profile.pending_tier} for ${profile.full_name}` }); } catch {}
+  }
+
+  async function handleDeclineTier(profile) {
+    await declineTier({ profileId: String(profile._id) });
+    try { await addAudit({ action: 'rejected', targetType: 'profile', targetId: String(profile._id), details: `Tier change declined: ${profile.pending_tier} for ${profile.full_name}` }); } catch {}
+  }
+
   const displayCards =
     tab === 'creators' ? pendingCreators :
     tab === 'hosts'    ? pendingHosts    :
+    tab === 'tiers'    ? tierRequests    :
     rejectedAll;
 
-  const isLoading = unverified === undefined || rejected === undefined;
+  const isLoading = unverified === undefined || rejected === undefined || tierChangeReqs === undefined;
 
   return (
     <div style={{ padding: '2rem 2.5rem', maxWidth: 760 }}>
@@ -317,6 +380,10 @@ export default function VerificationQueue() {
           Hosts
           <CountBadge n={pendingHosts.length} />
         </TabBtn>
+        <TabBtn active={tab === 'tiers'} onClick={() => setTab('tiers')}>
+          Account Status
+          <CountBadge n={tierRequests.length} variant={tierRequests.length > 0 ? 'amber' : undefined} />
+        </TabBtn>
         <TabBtn active={tab === 'rejected'} onClick={() => setTab('rejected')}>
           Rejected
           <CountBadge n={rejectedAll.length} variant="red" />
@@ -333,12 +400,22 @@ export default function VerificationQueue() {
       {/* ── Empty state ── */}
       {!isLoading && displayCards.length === 0 && (
         <div style={{ color: '#959D90', fontSize: '0.85rem', padding: '3.5rem 0', textAlign: 'center' }}>
-          {tab === 'rejected' ? 'No rejected users.' : 'Queue is empty — all caught up.'}
+          {tab === 'rejected' ? 'No rejected users.' : tab === 'tiers' ? 'No pending account status changes.' : 'Queue is empty — all caught up.'}
         </div>
       )}
 
-      {/* ── Cards ── */}
-      {!isLoading && displayCards.map(profile => (
+      {/* ── Tier change cards ── */}
+      {!isLoading && tab === 'tiers' && displayCards.map(profile => (
+        <TierChangeCard
+          key={profile._id}
+          profile={profile}
+          onApprove={handleApproveTier}
+          onDecline={handleDeclineTier}
+        />
+      ))}
+
+      {/* ── Standard verification cards ── */}
+      {!isLoading && tab !== 'tiers' && displayCards.map(profile => (
         <ProfileCard
           key={profile._id}
           profile={profile}

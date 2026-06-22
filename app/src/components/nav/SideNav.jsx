@@ -1,4 +1,5 @@
 import { NavLink } from 'react-router-dom';
+import collabnbLogo from '../../assets/collabnb-logo.png';
 
 const NAV_ITEMS = [
   {
@@ -67,7 +68,7 @@ export default function SideNav() {
       <div className="px-6 pt-8 pb-6">
         <a href="../index.html" className="flex items-center gap-2.5 group">
           <img
-            src="/assets/collabnb-logo.webp"
+            src={collabnbLogo}
             alt="Collabnb"
             className="h-7"
             onError={(e) => { e.target.style.display = 'none'; }}

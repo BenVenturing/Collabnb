@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { useMutation, useConvex } from 'convex/react';
+import { useUser, useAuth as useClerkAuth } from '@clerk/clerk-react';
 import { api } from '../../convex/_generated/api';
 import { MOCK_CREATOR } from '../lib/mockData';
 
@@ -52,48 +53,11 @@ export function MockAuthProvider({ children }) {
 
 // ─── Clerk provider (Clerk configured — uses Clerk auth + Convex data) ────
 export function ClerkAuthProvider({ children }) {
-  // Dynamic imports to avoid calling Clerk hooks outside ClerkProvider
-  const [hooks, setHooks] = useState(null);
-  const [hooksFailed, setHooksFailed] = useState(false);
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      if (!hooks) setHooksFailed(true);
-    }, 8000); // 8s timeout — fall back so page isn't stuck forever
-    import('@clerk/clerk-react').then((mod) => {
-      clearTimeout(timeout);
-      setHooks(mod);
-    }).catch((err) => {
-      clearTimeout(timeout);
-      console.warn('Clerk import failed:', err);
-      setHooksFailed(true);
-    });
-    return () => clearTimeout(timeout);
-  }, []);
-
-  if (hooksFailed) {
-    // Clerk failed to load — fall back to unauthenticated state
-    return (
-      <AuthContext.Provider value={{ session: null, profile: null, loading: false, signOut: null, updateProfile: null }}>
-        {children}
-      </AuthContext.Provider>
-    );
-  }
-
-  if (!hooks) {
-    // Loading Clerk module — show loading
-    return (
-      <AuthContext.Provider value={{ session: null, profile: null, loading: true, signOut: null, updateProfile: null }}>
-        {children}
-      </AuthContext.Provider>
-    );
-  }
-
-  return <ClerkAuthInner hooks={hooks}>{children}</ClerkAuthInner>;
+  return <ClerkAuthInner>{children}</ClerkAuthInner>;
 }
 
-function ClerkAuthInner({ hooks, children }) {
-  const { useUser: useClerkUser, useAuth: useClerkAuth } = hooks;
-  const { user: clerkUser, isLoaded: clerkLoaded } = useClerkUser();
+function ClerkAuthInner({ children }) {
+  const { user: clerkUser, isLoaded: clerkLoaded } = useUser();
   const { signOut: clerkSignOut } = useClerkAuth();
   const convex = useConvex();
   const updateProfileMutation = useMutation(api.profiles.updateProfile);

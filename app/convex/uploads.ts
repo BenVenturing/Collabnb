@@ -27,7 +27,7 @@ export const getImageUrls = query({
   },
 });
 
-export const getStorageUrl = mutation({
+export const getStorageUrl = query({
   args: { storageId: v.string() },
   handler: async (ctx, args) => {
     return await ctx.storage.getUrl(args.storageId);

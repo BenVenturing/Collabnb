@@ -1,5 +1,6 @@
 import { Component, useRef, useState, useEffect, useCallback } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import collabnbLogo from './assets/collabnb-logo.png';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { AppBarProvider } from './contexts/AppBarContext';
 import { CollabProvider } from './contexts/CollabContext';
@@ -116,7 +117,7 @@ function NewSignupCelebration({ onDone }) {
     <div style={{ position: 'fixed', inset: 0, zIndex: 10000, background: '#F7F5F2', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1.75rem', padding: '2rem' }}>
       <canvas ref={canvasRef} style={{ position: 'fixed', top: 0, left: 0, pointerEvents: 'none', zIndex: 10001 }} />
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', position: 'relative' }}>
-        <img src="/assets/collabnb-logo.png" width="32" height="32" alt="" />
+        <img src={collabnbLogo} width="32" height="32" alt="" />
         <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.05rem', color: 'var(--ink)' }}>Collabnb</span>
       </div>
       <p style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(1.5rem,4vw,2.25rem)', fontWeight: 700, color: 'var(--ink)', textAlign: 'center', maxWidth: 520, lineHeight: 1.3, margin: 0, minHeight: '2em', position: 'relative' }}>

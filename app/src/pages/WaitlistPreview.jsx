@@ -1,5 +1,6 @@
 import { useEffect, useRef, useMemo } from 'react';
 import { useQuery } from 'convex/react';
+import collabnbLogo from '../assets/collabnb-logo.png';
 import { api } from '../../convex/_generated/api';
 import { useAuth } from '../contexts/AuthContext';
 import { SAMPLE_LISTINGS, IMG_FALLBACK } from '../lib/mockData';
@@ -184,7 +185,7 @@ export default function WaitlistPreview() {
         padding: '1rem 2rem',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <img src="/assets/collabnb-logo.png" alt="Collabnb" width="28" height="28" />
+          <img src={collabnbLogo} alt="Collabnb" width="28" height="28" />
           <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.05rem', color: 'var(--ink)' }}>
             Collabnb
           </span>

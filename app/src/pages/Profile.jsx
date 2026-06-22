@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useQuery, useAction, useMutation } from 'convex/react';
+import { useQuery, useAction, useMutation, useConvex } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 
 // Convex storage URL prefix; used to construct public URLs from storage IDs
@@ -548,7 +548,8 @@ export default function Profile() {
   const verifyLifetimeSession      = useAction(api.stripe.verifyLifetimeSession);
   const createBillingPortalSession = useAction(api.stripe.createBillingPortalSession);
   const generateUploadUrl          = useMutation(api.uploads.generateUploadUrl);
-  const getStorageUrl              = useMutation(api.uploads.getStorageUrl);
+  const convex                     = useConvex();
+  const getStorageUrl              = (args) => convex.query(api.uploads.getStorageUrl, args);
   const updateMetricsMutation      = useMutation(api.profiles.updateMetrics);
   const requestTierChangeMutation  = useMutation(api.profiles.requestTierChange);
   const { openModal: openSubModal } = useSubscription();
@@ -1157,7 +1158,7 @@ export default function Profile() {
                     try {
                       const url = await uploadResizedImage(f, 300, 300, generateUploadUrl, 0.85, getStorageUrl);
                       setEditDraft(d => ({ ...d, avatar_url: url }));
-                    } catch { setToastMsg('Photo upload failed — try again'); }
+                    } catch (err) { console.error('Avatar upload failed:', err); setToastMsg('Photo upload failed — try again'); }
                     finally { setAvatarUploading(false); }
                   }} />
                 </label>
@@ -1349,7 +1350,7 @@ export default function Profile() {
                   try { const url = await getStorageUrl({ storageId }); if (url) finalUrl = url; } catch {}
                   if (finalUrl === dataUrl) finalUrl = `${CONVEX_URL}/api/storage/${storageId}`;
                 }
-              } catch { setToastMsg('Banner upload failed — try again'); }
+              } catch (err) { console.error('Banner upload failed:', err); setToastMsg('Banner upload failed — try again'); }
             }
             setEditDraft(d => ({ ...d, banner_url: finalUrl }));
             setBannerUploading(false);

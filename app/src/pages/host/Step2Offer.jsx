@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, X, Sparkles } from "lucide-react";
+import { Plus, X, Sparkles, Search, Wand2 } from "lucide-react";
 import WizardShell from "../../components/host/WizardShell";
 import { useListingDraft } from "../../contexts/ListingDraftContext";
-import { AMENITY_ICONS } from "../../lib/amenityIcons";
+import { AMENITY_ICONS, ICON_PALETTE } from "../../lib/amenityIcons";
+
+const COMMON_AMENITY_KEYS = ["wifi", "pool", "hot_tub", "kitchen", "parking", "views"];
 
 function SectionLabel({ children }) {
   return <div style={{ fontFamily: "Satoshi, sans-serif", fontWeight: 700, fontSize: 14, color: "var(--ink)", marginBottom: 4 }}>{children}</div>;
@@ -65,6 +67,12 @@ export default function Step2Offer() {
   const navigate = useNavigate();
   const { draft, updateDraft } = useListingDraft();
 
+  const [amenitySearch, setAmenitySearch] = useState("");
+  const [showAllAmenities, setShowAllAmenities] = useState(false);
+  const [creatingAmenity, setCreatingAmenity] = useState(false);
+  const [customLabel, setCustomLabel] = useState("");
+  const [customIcon, setCustomIcon] = useState("");
+
   function addPerk(perk) { updateDraft({ perks: [...draft.perks, perk] }); }
   function removePerk(i) { updateDraft({ perks: draft.perks.filter((_, idx) => idx !== i) }); }
   function addTag(tag) { updateDraft({ vibe_tags: [...draft.vibe_tags, tag] }); }
@@ -72,13 +80,30 @@ export default function Step2Offer() {
 
   const amenities = draft.amenities || [];
   function toggleAmenity(key, label) {
-    const already = amenities.some((a) => a.key === key);
+    const already = amenities.some((a) => a.icon === key);
     updateDraft({
       amenities: already
-        ? amenities.filter((a) => a.key !== key)
-        : [...amenities, { key, label }],
+        ? amenities.filter((a) => a.icon !== key)
+        : [...amenities, { icon: key, label }],
     });
   }
+
+  function removeAmenityAt(i) {
+    updateDraft({ amenities: amenities.filter((_, idx) => idx !== i) });
+  }
+  function addCustomAmenity() {
+    const label = customLabel.trim();
+    if (!label || !customIcon) return;
+    updateDraft({ amenities: [...amenities, { icon: customIcon, label }] });
+    setCustomLabel(""); setCustomIcon(""); setCreatingAmenity(false);
+  }
+
+  const amenityQuery = amenitySearch.trim().toLowerCase();
+  const visibleAmenities = amenityQuery
+    ? AMENITY_ICONS.filter((a) => a.label.toLowerCase().includes(amenityQuery))
+    : showAllAmenities
+      ? AMENITY_ICONS
+      : AMENITY_ICONS.filter((a) => COMMON_AMENITY_KEYS.includes(a.key) || amenities.some((sel) => sel.icon === a.key));
 
   return (
     <WizardShell
@@ -96,10 +121,28 @@ export default function Step2Offer() {
         {/* Amenities */}
         <div>
           <SectionLabel>Property amenities</SectionLabel>
-          <SectionDesc>Select what your property offers. These appear on your listing page.</SectionDesc>
+          <SectionDesc>Search and select what your property offers. These appear on your listing page.</SectionDesc>
+
+          {/* Search */}
+          <div style={{ position: "relative", marginBottom: 12 }}>
+            <Search size={16} color="var(--sage)" style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
+            <input
+              value={amenitySearch}
+              onChange={(e) => setAmenitySearch(e.target.value)}
+              placeholder="Search amenities (e.g., WiFi, pool, hot tub)"
+              style={{ width: "100%", padding: "11px 14px 11px 40px", border: "1.5px solid rgba(25,37,36,0.15)", borderRadius: "0.875rem", fontFamily: "Satoshi, sans-serif", fontSize: 14, color: "var(--ink)", background: "#fff", outline: "none", boxSizing: "border-box" }}
+            />
+          </div>
+
+          {!amenityQuery && (
+            <div style={{ fontFamily: "Satoshi, sans-serif", fontSize: 12, color: "var(--sage)", marginBottom: 8 }}>
+              {showAllAmenities ? "All amenities" : "Most common"}
+            </div>
+          )}
+
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
-            {AMENITY_ICONS.map(({ key, label, Icon }) => {
-              const selected = amenities.some((a) => a.key === key);
+            {visibleAmenities.map(({ key, label, Icon }) => {
+              const selected = amenities.some((a) => a.icon === key);
               return (
                 <button
                   key={key}
@@ -119,6 +162,93 @@ export default function Step2Offer() {
                 </button>
               );
             })}
+          </div>
+
+          {amenityQuery && visibleAmenities.length === 0 && (
+            <div style={{ fontFamily: "Satoshi, sans-serif", fontSize: 13, color: "var(--sage)", padding: "8px 2px" }}>No amenities match "{amenitySearch}".</div>
+          )}
+
+          {!amenityQuery && (
+            <button
+              onClick={() => setShowAllAmenities((v) => !v)}
+              style={{ marginTop: 10, background: "none", border: "none", cursor: "pointer", fontFamily: "Satoshi, sans-serif", fontSize: 13, fontWeight: 600, color: "var(--slate)", textDecoration: "underline", padding: 0 }}
+            >
+              {showAllAmenities ? "Show common only" : "Show all amenities"}
+            </button>
+          )}
+
+          {/* Selected amenities (standard + custom) */}
+          {amenities.length > 0 && (
+            <div style={{ marginTop: 18 }}>
+              <div style={{ fontFamily: "Satoshi, sans-serif", fontSize: 12, fontWeight: 700, color: "var(--ink)", marginBottom: 8 }}>Selected ({amenities.length})</div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                {amenities.map((a, i) => {
+                  const IconC = ICON_PALETTE.find((p) => p.key === a.icon)?.Icon;
+                  return (
+                    <div key={i} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 10px", borderRadius: 9999, background: "rgba(209,235,219,0.6)", border: "1.5px solid rgba(45,106,79,0.3)", fontFamily: "Satoshi, sans-serif", fontSize: 12.5, fontWeight: 600, color: "#2d6a4f" }}>
+                      {IconC && <IconC size={14} strokeWidth={1.75} color="#2d6a4f" />}
+                      {a.label}
+                      <button onClick={() => removeAmenityAt(i)} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", color: "#2d6a4f", padding: 0 }}>
+                        <X size={13} />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Create your own amenity */}
+          <div style={{ marginTop: 16 }}>
+            {!creatingAmenity ? (
+              <button
+                onClick={() => setCreatingAmenity(true)}
+                style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "9px 14px", borderRadius: 9999, border: "1.5px dashed rgba(25,37,36,0.25)", background: "transparent", cursor: "pointer", fontFamily: "Satoshi, sans-serif", fontSize: 13, fontWeight: 600, color: "var(--ink)" }}
+              >
+                <Wand2 size={15} /> Create your own amenity
+              </button>
+            ) : (
+              <div style={{ background: "rgba(255,255,255,0.7)", border: "1.5px solid rgba(25,37,36,0.12)", borderRadius: "0.875rem", padding: 16 }}>
+                <div style={{ fontFamily: "Satoshi, sans-serif", fontSize: 13, fontWeight: 700, color: "var(--ink)", marginBottom: 8 }}>Create a custom amenity</div>
+                <input
+                  value={customLabel}
+                  onChange={(e) => setCustomLabel(e.target.value)}
+                  placeholder="Name your amenity (e.g., Rooftop Hammock)"
+                  style={{ width: "100%", padding: "11px 14px", border: "1.5px solid rgba(25,37,36,0.15)", borderRadius: "0.75rem", fontFamily: "Satoshi, sans-serif", fontSize: 14, color: "var(--ink)", background: "#fff", outline: "none", boxSizing: "border-box", marginBottom: 12 }}
+                />
+                <div style={{ fontFamily: "Satoshi, sans-serif", fontSize: 12, fontWeight: 600, color: "var(--slate)", marginBottom: 8 }}>Choose a graphic</div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 8, maxHeight: 168, overflowY: "auto", paddingRight: 2 }}>
+                  {ICON_PALETTE.map(({ key, label, Icon }) => {
+                    const sel = customIcon === key;
+                    return (
+                      <button
+                        key={key}
+                        onClick={() => setCustomIcon(key)}
+                        title={label}
+                        style={{ aspectRatio: "1", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "0.625rem", cursor: "pointer", border: sel ? "1.5px solid #2d6a4f" : "1.5px solid rgba(25,37,36,0.12)", background: sel ? "rgba(209,235,219,0.7)" : "#fff" }}
+                      >
+                        <Icon size={18} strokeWidth={1.75} color={sel ? "#2d6a4f" : "var(--slate)"} />
+                      </button>
+                    );
+                  })}
+                </div>
+                <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
+                  <button
+                    onClick={() => { setCreatingAmenity(false); setCustomLabel(""); setCustomIcon(""); }}
+                    style={{ flex: 1, padding: "10px 0", borderRadius: 9999, border: "1.5px solid rgba(25,37,36,0.15)", background: "transparent", cursor: "pointer", fontFamily: "Satoshi, sans-serif", fontSize: 13, fontWeight: 700, color: "var(--ink)" }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={addCustomAmenity}
+                    disabled={!customLabel.trim() || !customIcon}
+                    style={{ flex: 2, padding: "10px 0", borderRadius: 9999, border: "none", background: (customLabel.trim() && customIcon) ? "var(--ink)" : "rgba(25,37,36,0.14)", cursor: (customLabel.trim() && customIcon) ? "pointer" : "not-allowed", fontFamily: "Satoshi, sans-serif", fontSize: 13, fontWeight: 700, color: (customLabel.trim() && customIcon) ? "#fff" : "var(--slate)" }}
+                  >
+                    Add amenity
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -198,15 +328,51 @@ export default function Step2Offer() {
         {/* Max offers */}
         <div>
           <SectionLabel>How many times do you want to offer this collab?</SectionLabel>
-          <SectionDesc>Set a max number of confirmed collabs for this listing. Once reached, the listing auto-pauses. Leave blank for unlimited.</SectionDesc>
-          <input
-            type="number"
-            min="1"
-            value={draft.maxOffers}
-            onChange={(e) => updateDraft({ maxOffers: e.target.value === '' ? '' : parseInt(e.target.value, 10) || '' })}
-            placeholder="e.g., 3 (leave blank = unlimited)"
-            style={{ width: '100%', padding: "12px 16px", border: "1.5px solid rgba(25,37,36,0.15)", borderRadius: "0.875rem", fontFamily: "Satoshi, sans-serif", fontSize: 14, color: "var(--ink)", background: "#fff", outline: "none" }}
-          />
+          <SectionDesc>Set a max number of confirmed collabs for this listing. Once reached, the listing auto-pauses.</SectionDesc>
+
+          {/* Limited / Unlimited toggle */}
+          <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+            {[{ k: "limited", label: "Set a limit" }, { k: "unlimited", label: "Unlimited" }].map((opt) => {
+              const isUnlimited = draft.maxOffers === "" || draft.maxOffers == null;
+              const active = opt.k === "unlimited" ? isUnlimited : !isUnlimited;
+              return (
+                <button
+                  key={opt.k}
+                  onClick={() => updateDraft({ maxOffers: opt.k === "unlimited" ? "" : (draft.maxOffers || 3) })}
+                  style={{
+                    flex: 1, padding: "10px", borderRadius: "0.75rem", cursor: "pointer",
+                    border: `1.5px solid ${active ? "var(--ink)" : "rgba(25,37,36,0.12)"}`,
+                    background: active ? "var(--ink)" : "rgba(255,255,255,0.7)",
+                    color: active ? "#fff" : "var(--slate)",
+                    fontFamily: "Satoshi, sans-serif", fontSize: 13, fontWeight: 600,
+                  }}
+                >
+                  {opt.label}
+                </button>
+              );
+            })}
+          </div>
+
+          {!(draft.maxOffers === "" || draft.maxOffers == null) && (
+            <div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                <span style={{ fontFamily: "Satoshi, sans-serif", fontSize: 13, fontWeight: 600, color: "var(--slate)" }}>Number of collabs</span>
+                <span style={{ fontFamily: "Satoshi, sans-serif", fontSize: 18, fontWeight: 700, color: "var(--ink)" }}>{draft.maxOffers}</span>
+              </div>
+              <input
+                type="range"
+                min="1"
+                max="10"
+                value={draft.maxOffers || 1}
+                onChange={(e) => updateDraft({ maxOffers: parseInt(e.target.value, 10) })}
+                style={{ width: "100%", accentColor: "var(--ink)", height: 4, cursor: "pointer" }}
+              />
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span style={{ fontFamily: "Satoshi, sans-serif", fontSize: 11, color: "var(--sage)" }}>1</span>
+                <span style={{ fontFamily: "Satoshi, sans-serif", fontSize: 11, color: "var(--sage)" }}>10</span>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </WizardShell>

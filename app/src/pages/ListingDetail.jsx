@@ -880,14 +880,18 @@ function HostProfileModal({ host, listing, onClose, onMessage, isSample }) {
 }
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
-export default function ListingDetail() {
-  const { id } = useParams();
+export default function ListingDetail({ previewListing = null, preview = false }) {
+  const { id: routeId } = useParams();
   const navigate = useNavigate();
 
-  const sampleListing = SAMPLE_LISTINGS.find((l) => l.id === id);
-  // Only query Convex if this id didn't match a sample listing
-  const convexListing = useQuery(api.listings.getById, sampleListing ? 'skip' : { id });
+  const isPreview = preview || !!previewListing;
+  const id = previewListing ? String(previewListing.id || previewListing._id || 'preview') : routeId;
+
+  const sampleListing = previewListing ? null : SAMPLE_LISTINGS.find((l) => l.id === id);
+  // Only query Convex if this is a live route that didn't match a sample listing
+  const convexListing = useQuery(api.listings.getById, (sampleListing || isPreview) ? 'skip' : { id });
   const convexNormalized = convexListing ? normalizeConvexListingDetail(convexListing) : undefined;
+  const previewNormalized = previewListing ? normalizeConvexListingDetail(previewListing) : undefined;
 
   // Cache Convex listing details per id (5 min TTL) to avoid re-fetch on back-navigation
   const listingCacheKey = `listing_detail_${id}`;
@@ -895,8 +899,8 @@ export default function ListingDetail() {
     if (convexNormalized) cache.set(listingCacheKey, convexNormalized, 5);
   }, [convexListing]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const cachedListing = !sampleListing ? cache.get(listingCacheKey) : null;
-  const listing = sampleListing || convexNormalized || cachedListing || undefined;
+  const cachedListing = (!sampleListing && !isPreview) ? cache.get(listingCacheKey) : null;
+  const listing = previewNormalized || sampleListing || convexNormalized || cachedListing || undefined;
 
   // Sample listings are demo content — messaging/applying is disabled on them.
   const isSampleListing = !!sampleListing || convexListing?.is_sample === true || listing?.is_sample === true || listing?._isSample === true;
@@ -947,12 +951,13 @@ export default function ListingDetail() {
   }, []);
 
   const handleMessageHost = useCallback(() => {
+    if (isPreview) return;
     if (!isVerified) { openModal(); setShowHostModal(false); return; }
     if (!isSubscribed) { openSubModal(); setShowHostModal(false); return; }
     const existing = threads.find((t) => !t.archived && t.host_name === SAMPLE_HOST.name);
     const threadId = existing ? existing.id : createThread(listing.title, SAMPLE_HOST.name, 'Application');
     navigate('/inbox', { state: { selectedThreadId: threadId } });
-  }, [isVerified, openModal, threads, createThread, listing, navigate]);
+  }, [isPreview, isVerified, openModal, threads, createThread, listing, navigate]);
 
   const showToast = useCallback((msg) => {
     setToast(msg);
@@ -1595,7 +1600,7 @@ export default function ListingDetail() {
           userId={profile?._id || profile?.id}
           creatorProfile={profile}
           onClose={() => setShowApplyModal(false)}
-          onApply={applyToListing}
+          onApply={isPreview ? (() => {}) : applyToListing}
           navigate={navigate}
           isVerified={isVerified}
           onVerificationRequired={() => { setShowApplyModal(false); openModal(); }}

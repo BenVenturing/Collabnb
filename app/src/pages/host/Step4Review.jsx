@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronDown, ChevronUp, DollarSign } from "lucide-react";
-import { useMutation } from "convex/react";
+import { ChevronDown, ChevronUp, DollarSign, ArrowLeft, ArrowRight, Star, Eye, X } from "lucide-react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import WizardShell from "../../components/host/WizardShell";
 import { useListingDraft } from "../../contexts/ListingDraftContext";
 import { useAuth } from "../../contexts/AuthContext";
 import { formatDateRange } from "../../lib/dateUtils";
+import ListingDetail from "../ListingDetail";
 
 const TIER_LABELS = { ugc_beginner: "UGC Beginner", ugc_pro: "UGC Pro", micro: "Micro Influencer", mid: "Influencer" };
 const COMP_LABELS = { free_stay: "Free Stay", paid: "Paid", hybrid: "Hybrid" };
@@ -82,7 +83,7 @@ function Confetti({ show }) {
 
 export default function Step4Review() {
   const navigate = useNavigate();
-  const { draft, clearDraft, fee, totalDeliverables, formatCount } = useListingDraft();
+  const { draft, updateDraft, clearDraft, fee, totalDeliverables, formatCount } = useListingDraft();
   const { profile } = useAuth();
   const createListing = useMutation(api.listings.create);
   const updateListing = useMutation(api.listings.update);
@@ -90,6 +91,18 @@ export default function Step4Review() {
   const [feesOpen, setFeesOpen] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [confetti, setConfetti] = useState(false);
+  const [creatorView, setCreatorView] = useState(false);
+
+  // Resolve uploaded photos (storageIds → URLs) for reordering + creator preview
+  const imageUrls = useQuery(api.uploads.getImageUrls, draft.images.length ? { storageIds: draft.images } : "skip") || [];
+
+  function moveImage(from, to) {
+    if (to < 0 || to >= draft.images.length) return;
+    const next = [...draft.images];
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved);
+    updateDraft({ images: next });
+  }
 
   const compLabel = COMP_LABELS[draft.compensation_type] || "";
   const tierLabel = TIER_LABELS[draft.creator_tier] || "";
@@ -106,6 +119,8 @@ export default function Step4Review() {
     collaboration_brief: draft.collaboration_brief,
     compensation_type: draft.compensation_type,
     cash_amount: draft.cash_amount || undefined,
+    currency: draft.currency || undefined,
+    max_offers: draft.maxOffers === "" || draft.maxOffers == null ? undefined : Number(draft.maxOffers),
     nights: draft.nights,
     creator_tier: draft.creator_tier,
     deliverable_load: draft.deliverable_load,
@@ -121,6 +136,17 @@ export default function Step4Review() {
     deliverable_count: totalDeliverables,
     revision_policy: draft.revision_policy,
     usage_rights: draft.usage_rights,
+  };
+
+  const resolvedImages = imageUrls.filter(Boolean);
+  const previewListing = {
+    ...listingFields,
+    _id: "preview",
+    id: "preview",
+    status: "published",
+    gallery_images: resolvedImages,
+    image: resolvedImages[0],
+    collaboration_brief: draft.collaboration_brief,
   };
 
   async function handlePublish(status) {
@@ -157,9 +183,17 @@ export default function Step4Review() {
         <h2 style={{ fontFamily: "Cabinet Grotesk, serif", fontWeight: 800, fontSize: 28, color: "var(--ink)", margin: "0 0 6px", display: "flex", alignItems: "center", gap: 10 }}>
           {editingId ? "Edit & publish" : "Review & publish"}
         </h2>
-        <p style={{ fontFamily: "Satoshi, sans-serif", fontSize: 14, color: "var(--slate)", margin: "0 0 32px" }}>
+        <p style={{ fontFamily: "Satoshi, sans-serif", fontSize: 14, color: "var(--slate)", margin: "0 0 16px" }}>
           {editingId ? "Review your changes before saving." : "Here's how your listing will appear to creators. Review everything before publishing."}
         </p>
+
+        {/* View as creator toggle */}
+        <button
+          onClick={() => setCreatorView(true)}
+          style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "10px 16px", marginBottom: 28, borderRadius: 9999, border: "1.5px solid var(--ink)", background: "transparent", cursor: "pointer", fontFamily: "Satoshi, sans-serif", fontSize: 14, fontWeight: 700, color: "var(--ink)" }}
+        >
+          <Eye size={16} /> View as a creator
+        </button>
 
         {/* Header card */}
         <div style={{ background: "rgba(255,255,255,0.82)", backdropFilter: "blur(14px) saturate(130%)", WebkitBackdropFilter: "blur(14px) saturate(130%)", borderRadius: "1rem", border: "1px solid rgba(255,255,255,0.85)", padding: "18px 20px", marginBottom: 16, boxShadow: "0 2px 12px rgba(25,37,36,0.05)" }}>
@@ -171,6 +205,46 @@ export default function Step4Review() {
             {loadLabel && <span style={{ padding: "5px 12px", borderRadius: 9999, border: "1.5px solid rgba(25,37,36,0.15)", fontFamily: "Satoshi, sans-serif", fontSize: 12, fontWeight: 600, color: "var(--ink)" }}>{loadLabel}</span>}
           </div>
         </div>
+
+        {/* Photos — order + hero */}
+        {draft.images.length > 0 && (
+          <div style={{ marginBottom: 24 }}>
+            <div style={{ fontFamily: "Satoshi, sans-serif", fontWeight: 700, fontSize: 16, color: "var(--ink)", marginBottom: 4 }}>Photos</div>
+            <div style={{ fontFamily: "Satoshi, sans-serif", fontSize: 12, color: "var(--sage)", marginBottom: 12 }}>The first photo is your hero — it leads the listing. Reorder or set a new hero below.</div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
+              {draft.images.map((id, i) => (
+                <div key={id || i} style={{ width: 104 }}>
+                  <div style={{ position: "relative", width: 104, height: 104, borderRadius: "0.75rem", overflow: "hidden", border: i === 0 ? "2px solid var(--ink)" : "1.5px solid rgba(25,37,36,0.12)", background: "var(--bone)" }}>
+                    {imageUrls[i] ? (
+                      <img src={imageUrls[i]} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                    ) : (
+                      <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <div style={{ width: 18, height: 18, borderRadius: "50%", border: "2px solid rgba(25,37,36,0.15)", borderTopColor: "var(--slate)", animation: "spin 0.7s linear infinite" }} />
+                      </div>
+                    )}
+                    {i === 0 && (
+                      <span style={{ position: "absolute", top: 6, left: 6, display: "inline-flex", alignItems: "center", gap: 3, padding: "3px 7px", borderRadius: 9999, background: "var(--ink)", color: "#fff", fontFamily: "Satoshi, sans-serif", fontSize: 10, fontWeight: 700 }}>
+                        <Star size={10} fill="#fff" /> Hero
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4, marginTop: 6 }}>
+                    <button onClick={() => moveImage(i, i - 1)} disabled={i === 0} title="Move left" style={{ width: 26, height: 26, borderRadius: "50%", border: "1.5px solid rgba(25,37,36,0.15)", background: "#fff", cursor: i === 0 ? "default" : "pointer", opacity: i === 0 ? 0.35 : 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <ArrowLeft size={13} color="var(--ink)" />
+                    </button>
+                    {i !== 0 && (
+                      <button onClick={() => moveImage(i, 0)} title="Set as hero" style={{ background: "none", border: "none", cursor: "pointer", fontFamily: "Satoshi, sans-serif", fontSize: 11, fontWeight: 600, color: "var(--slate)", padding: "0 2px" }}>Hero</button>
+                    )}
+                    <button onClick={() => moveImage(i, i + 1)} disabled={i === draft.images.length - 1} title="Move right" style={{ width: 26, height: 26, borderRadius: "50%", border: "1.5px solid rgba(25,37,36,0.15)", background: "#fff", cursor: i === draft.images.length - 1 ? "default" : "pointer", opacity: i === draft.images.length - 1 ? 0.35 : 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <ArrowRight size={13} color="var(--ink)" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+          </div>
+        )}
 
         <Section title="The Offer">
           {draft.perks.length > 0 && <Row label="Add-ons" value={"• " + draft.perks.join("\n• ")} />}
@@ -201,10 +275,10 @@ export default function Step4Review() {
         </Section>
 
         {/* Host-only fees */}
-        <div style={{ border: "1.5px solid #3C5759", borderRadius: "1rem", overflow: "hidden", marginBottom: 24 }}>
+        <div style={{ border: "1.5px solid rgba(25,37,36,0.12)", borderRadius: "1rem", overflow: "hidden", marginBottom: 24 }}>
           <button
             onClick={() => setFeesOpen(!feesOpen)}
-            style={{ width: "100%", padding: "16px 20px", background: "rgba(60,87,89,0.06)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between" }}
+            style={{ width: "100%", padding: "16px 20px", background: "rgba(239,236,233,0.7)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between" }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 8, fontFamily: "Satoshi, sans-serif", fontWeight: 700, fontSize: 15, color: "var(--ink)" }}>
               <DollarSign size={16} color="var(--slate)" />
@@ -213,11 +287,11 @@ export default function Step4Review() {
             {feesOpen ? <ChevronUp size={16} color="var(--slate)" /> : <ChevronDown size={16} color="var(--slate)" />}
           </button>
           {feesOpen && (
-            <div style={{ padding: "16px 20px", background: "rgba(255,251,230,0.6)", borderTop: "1px solid rgba(60,87,89,0.15)" }}>
+            <div style={{ padding: "16px 20px", background: "rgba(255,251,240,0.7)", borderTop: "1px solid rgba(25,37,36,0.08)" }}>
               <div style={{ fontFamily: "Satoshi, sans-serif", fontSize: 13, color: "var(--slate)", marginBottom: 4 }}>Platform fee</div>
               <div style={{ fontFamily: "Satoshi, sans-serif", fontWeight: 800, fontSize: 22, color: "var(--ink)", marginBottom: 2 }}>${fee.toFixed(0)}</div>
-              <div style={{ fontFamily: "Satoshi, sans-serif", fontSize: 12, color: "var(--sage)", marginBottom: 12 }}>
-                {draft.compensation_type === "paid" || draft.compensation_type === "hybrid" ? "5% of cash payout (min $20, max $100)" : "Flat fee for free/exchange listing"}
+              <div style={{ fontFamily: "Satoshi, sans-serif", fontSize: 12, color: "var(--slate)", marginBottom: 8, lineHeight: 1.5 }}>
+                {draft.compensation_type === "paid" || draft.compensation_type === "hybrid" ? "5% of cash payout (min $25)" : "Flat $25 platform fee"} — <strong>charged only once a collaboration is completed</strong>. You never pay anything upfront to publish a listing.
               </div>
               <div style={{ fontFamily: "Satoshi, sans-serif", fontSize: 12, color: "#b45309", fontWeight: 600 }}>⚠ Creators don't see these fees</div>
             </div>
@@ -233,6 +307,23 @@ export default function Step4Review() {
           Save draft
         </button>
       </WizardShell>
+
+      {/* Creator-view full preview overlay */}
+      {creatorView && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 200, background: "var(--bone)", display: "flex", flexDirection: "column" }}>
+          <div style={{ flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 20px", background: "rgba(239,236,233,0.92)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)", borderBottom: "1px solid rgba(255,255,255,0.6)" }}>
+            <span style={{ fontFamily: "Satoshi, sans-serif", fontSize: 14, fontWeight: 700, color: "var(--ink)", display: "inline-flex", alignItems: "center", gap: 8 }}>
+              <Eye size={16} /> Creator preview — this is how creators see your listing
+            </span>
+            <button onClick={() => setCreatorView(false)} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 9999, border: "1.5px solid var(--ink)", background: "transparent", cursor: "pointer", fontFamily: "Satoshi, sans-serif", fontSize: 13, fontWeight: 700, color: "var(--ink)" }}>
+              <X size={15} /> Close
+            </button>
+          </div>
+          <div style={{ flex: 1, overflowY: "auto" }}>
+            <ListingDetail previewListing={previewListing} preview />
+          </div>
+        </div>
+      )}
     </>
   );
 }

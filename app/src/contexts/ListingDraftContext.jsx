@@ -2,24 +2,27 @@ import { createContext, useContext, useState, useEffect } from "react";
 
 const STORAGE_KEY = "collabnb_listing_draft_v1";
 
+const DEFAULT_USAGE_RIGHTS = "Host receives perpetual, worldwide license for marketing use. Creator retains ownership and portfolio rights.";
+
 const DELIVERABLE_PRESETS = {
+  // ~6 total
   light: [
-    { type: "Reels", quantity: 2, description: "Highlight property and experience" },
-    { type: "Stories", quantity: 3, description: "Behind-the-scenes moments" },
-    { type: "Photos", quantity: 5, description: "High-quality property shots" },
+    { type: "Instagram Reels", quantity: 2, description: "Highlight property and experience", usage_rights: DEFAULT_USAGE_RIGHTS },
+    { type: "Stories", quantity: 2, description: "Behind-the-scenes moments", usage_rights: DEFAULT_USAGE_RIGHTS },
+    { type: "Photos", quantity: 2, description: "High-quality property shots", usage_rights: DEFAULT_USAGE_RIGHTS },
   ],
+  // ~12 total
   moderate: [
-    { type: "TikTok Videos", quantity: 2, description: "Day in the life, property tour" },
-    { type: "Instagram Reels", quantity: 3, description: "Highlight property and experience" },
-    { type: "Stories", quantity: 5, description: "Behind-the-scenes moments" },
-    { type: "Photos", quantity: 10, description: "High-quality property shots" },
+    { type: "Instagram Reels", quantity: 3, description: "Highlight property and experience", usage_rights: DEFAULT_USAGE_RIGHTS },
+    { type: "Stories", quantity: 4, description: "Behind-the-scenes moments", usage_rights: DEFAULT_USAGE_RIGHTS },
+    { type: "Photos", quantity: 5, description: "High-quality property shots", usage_rights: DEFAULT_USAGE_RIGHTS },
   ],
+  // ~20 total
   heavy: [
-    { type: "TikTok Videos", quantity: 4, description: "Full property tour and day in the life" },
-    { type: "Instagram Reels", quantity: 5, description: "Highlight property and experience" },
-    { type: "Stories", quantity: 8, description: "Behind-the-scenes moments" },
-    { type: "YouTube Shorts", quantity: 2, description: "Short-form property showcase" },
-    { type: "Photos", quantity: 15, description: "High-quality property shots" },
+    { type: "TikTok Videos", quantity: 3, description: "Full property tour and day in the life", usage_rights: DEFAULT_USAGE_RIGHTS },
+    { type: "Instagram Reels", quantity: 5, description: "Highlight property and experience", usage_rights: DEFAULT_USAGE_RIGHTS },
+    { type: "Stories", quantity: 6, description: "Behind-the-scenes moments", usage_rights: DEFAULT_USAGE_RIGHTS },
+    { type: "Photos", quantity: 6, description: "High-quality property shots", usage_rights: DEFAULT_USAGE_RIGHTS },
   ],
 };
 
@@ -32,6 +35,7 @@ const EMPTY_DRAFT = {
   compensation_type: "free_stay",
   nights: 2,
   cash_amount: 0,
+  currency: "USD",
   creator_tier: "",
   deliverable_load: "",
   images: [],
@@ -45,15 +49,15 @@ const EMPTY_DRAFT = {
   turnaround_days: 14,
   deliverables_list: [],
   revision_policy: "1 round of minor revisions included. Major changes require mutual agreement.",
-  usage_rights: "Host receives perpetual, worldwide license for marketing use. Creator retains ownership and portfolio rights.",
+  usage_rights: DEFAULT_USAGE_RIGHTS,
   maxOffers: "",
 };
 
 function calculateFee(draft) {
   if (draft.compensation_type === "paid" || draft.compensation_type === "hybrid") {
-    return Math.max(draft.cash_amount * 0.05, 20);
+    return Math.max(draft.cash_amount * 0.05, 25);
   }
-  return 20;
+  return 25;
 }
 
 const ListingDraftContext = createContext(null);
@@ -97,7 +101,7 @@ export function ListingDraftProvider({ children }) {
   const formatCount = draft.deliverables_list.length;
 
   return (
-    <ListingDraftContext.Provider value={{ draft, updateDraft, clearDraft, fee, totalDeliverables, formatCount, DELIVERABLE_PRESETS }}>
+    <ListingDraftContext.Provider value={{ draft, updateDraft, clearDraft, fee, totalDeliverables, formatCount, DELIVERABLE_PRESETS, DEFAULT_USAGE_RIGHTS }}>
       {children}
     </ListingDraftContext.Provider>
   );

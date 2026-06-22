@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Minus, Pencil, X } from "lucide-react";
+import { Plus, Minus, Pencil, X, Copy } from "lucide-react";
 import WizardShell from "../../components/host/WizardShell";
 import { useListingDraft } from "../../contexts/ListingDraftContext";
+import ThemedDateRangePicker from "../../components/host/ThemedDateRangePicker";
 
 function Label({ children, required }) {
   return <div style={{ fontFamily: "Satoshi, sans-serif", fontWeight: 700, fontSize: 14, color: "var(--ink)", marginBottom: 6 }}>{children}{required && <span style={{ color: "#e04" }}> *</span>}</div>;
@@ -15,18 +16,19 @@ const LOAD_LABELS = { light: "light", moderate: "moderate", heavy: "heavy" };
 
 export default function Step3Deliverables() {
   const navigate = useNavigate();
-  const { draft, updateDraft, totalDeliverables, formatCount } = useListingDraft();
+  const { draft, updateDraft, totalDeliverables, formatCount, DEFAULT_USAGE_RIGHTS } = useListingDraft();
 
   const [customQty, setCustomQty] = useState(1);
   const [customType, setCustomType] = useState("");
   const [customDesc, setCustomDesc] = useState("");
+  const [customUsage, setCustomUsage] = useState(draft.usage_rights || DEFAULT_USAGE_RIGHTS);
   const [editIdx, setEditIdx] = useState(null);
 
   const canProceed = draft.collab_start && draft.collab_end && draft.deliverables_list.length > 0;
 
   function addDeliverable() {
     if (!customType.trim()) return;
-    const item = { type: customType.trim(), quantity: customQty, description: customDesc.trim() };
+    const item = { type: customType.trim(), quantity: customQty, description: customDesc.trim(), usage_rights: customUsage.trim() };
     if (editIdx !== null) {
       const updated = [...draft.deliverables_list];
       updated[editIdx] = item;
@@ -35,7 +37,7 @@ export default function Step3Deliverables() {
     } else {
       updateDraft({ deliverables_list: [...draft.deliverables_list, item] });
     }
-    setCustomQty(1); setCustomType(""); setCustomDesc("");
+    setCustomQty(1); setCustomType(""); setCustomDesc(""); setCustomUsage(draft.usage_rights || DEFAULT_USAGE_RIGHTS);
   }
 
   function removeDeliverable(i) {
@@ -44,7 +46,17 @@ export default function Step3Deliverables() {
 
   function startEdit(i) {
     const d = draft.deliverables_list[i];
-    setEditIdx(i); setCustomQty(d.quantity); setCustomType(d.type); setCustomDesc(d.description);
+    setEditIdx(i); setCustomQty(d.quantity); setCustomType(d.type); setCustomDesc(d.description); setCustomUsage(d.usage_rights || draft.usage_rights || DEFAULT_USAGE_RIGHTS);
+  }
+
+  // Copies the form's usage rights onto every deliverable, and stores it as the
+  // listing-level default so the detail page "Things to know" stays populated.
+  function copyUsageToAll() {
+    const value = (customUsage || "").trim();
+    updateDraft({
+      deliverables_list: draft.deliverables_list.map((d) => ({ ...d, usage_rights: value })),
+      usage_rights: value,
+    });
   }
 
   return (
@@ -64,16 +76,12 @@ export default function Step3Deliverables() {
         {/* Collaboration window */}
         <div>
           <Label required>Collaboration window</Label>
-          <div style={{ display: "flex", gap: 12 }}>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontFamily: "Satoshi, sans-serif", fontSize: 12, color: "var(--sage)", marginBottom: 4 }}>Start date</div>
-              <Input type="date" value={draft.collab_start} onChange={(v) => updateDraft({ collab_start: v })} placeholder="YYYY-MM-DD" />
-            </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontFamily: "Satoshi, sans-serif", fontSize: 12, color: "var(--sage)", marginBottom: 4 }}>End date</div>
-              <Input type="date" value={draft.collab_end} onChange={(v) => updateDraft({ collab_end: v })} placeholder="YYYY-MM-DD" />
-            </div>
-          </div>
+          <div style={{ fontFamily: "Satoshi, sans-serif", fontSize: 12, color: "var(--sage)", marginBottom: 8 }}>Pick the start and end of the window creators can book within.</div>
+          <ThemedDateRangePicker
+            start={draft.collab_start}
+            end={draft.collab_end}
+            onChange={(start, end) => updateDraft({ collab_start: start, collab_end: end })}
+          />
         </div>
 
         {/* Turnaround */}
@@ -111,6 +119,12 @@ export default function Step3Deliverables() {
                   </div>
                 </div>
                 <div style={{ fontFamily: "Satoshi, sans-serif", fontSize: 12, color: "var(--slate)" }}>{d.description}</div>
+                {d.usage_rights && (
+                  <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px solid rgba(25,37,36,0.08)" }}>
+                    <div style={{ fontFamily: "Satoshi, sans-serif", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--sage)", marginBottom: 2 }}>Usage rights</div>
+                    <div style={{ fontFamily: "Satoshi, sans-serif", fontSize: 11, color: "var(--slate)", lineHeight: 1.4 }}>{d.usage_rights}</div>
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -131,10 +145,31 @@ export default function Step3Deliverables() {
             <input value={customType} onChange={(e) => setCustomType(e.target.value)} placeholder="Platform/Type (e.g., Instagram Reels)" style={{ flex: 1, padding: "10px 14px", border: "1.5px solid rgba(25,37,36,0.15)", borderRadius: "0.625rem", fontFamily: "Satoshi, sans-serif", fontSize: 13, color: "var(--ink)", background: "var(--bone)", outline: "none" }} />
           </div>
           <input value={customDesc} onChange={(e) => setCustomDesc(e.target.value)} placeholder="Description" style={{ width: "100%", padding: "10px 14px", border: "1.5px solid rgba(25,37,36,0.15)", borderRadius: "0.625rem", fontFamily: "Satoshi, sans-serif", fontSize: 13, color: "var(--ink)", background: "var(--bone)", outline: "none", boxSizing: "border-box", marginBottom: 12 }} />
+
+          {/* Usage rights for this deliverable */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+            <div style={{ fontFamily: "Satoshi, sans-serif", fontWeight: 700, fontSize: 12, color: "var(--ink)" }}>Usage rights for this deliverable</div>
+            <button
+              onClick={copyUsageToAll}
+              disabled={draft.deliverables_list.length === 0}
+              title="Apply these usage rights to every deliverable"
+              style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "none", border: "none", cursor: draft.deliverables_list.length === 0 ? "not-allowed" : "pointer", fontFamily: "Satoshi, sans-serif", fontSize: 12, fontWeight: 600, color: draft.deliverables_list.length === 0 ? "var(--sage)" : "var(--slate)", padding: 0 }}
+            >
+              <Copy size={13} /> Copy to all
+            </button>
+          </div>
+          <textarea
+            value={customUsage}
+            onChange={(e) => setCustomUsage(e.target.value)}
+            placeholder="e.g., Host receives a perpetual license for marketing. Creator retains ownership."
+            rows={2}
+            style={{ width: "100%", padding: "10px 14px", border: "1.5px solid rgba(25,37,36,0.15)", borderRadius: "0.625rem", fontFamily: "Satoshi, sans-serif", fontSize: 13, color: "var(--ink)", background: "var(--bone)", outline: "none", resize: "vertical", boxSizing: "border-box", marginBottom: 12 }}
+          />
+
           <button
             onClick={addDeliverable}
             disabled={!customType.trim()}
-            style={{ width: "100%", padding: "12px 0", borderRadius: 9999, border: "none", background: customType.trim() ? "var(--ink)" : "var(--sage)", fontFamily: "Satoshi, sans-serif", fontSize: 14, fontWeight: 700, color: "#fff", cursor: customType.trim() ? "pointer" : "not-allowed" }}
+            style={{ width: "100%", padding: "12px 0", borderRadius: 9999, border: "none", background: customType.trim() ? "var(--ink)" : "rgba(25,37,36,0.14)", fontFamily: "Satoshi, sans-serif", fontSize: 14, fontWeight: 700, color: customType.trim() ? "#fff" : "var(--slate)", cursor: customType.trim() ? "pointer" : "not-allowed", transition: "background 150ms" }}
           >
             + {editIdx !== null ? "Save changes" : "Add deliverable"}
           </button>
@@ -149,16 +184,9 @@ export default function Step3Deliverables() {
             rows={3}
             style={{ width: "100%", padding: "13px 16px", border: "1.5px solid rgba(25,37,36,0.15)", borderRadius: "0.875rem", fontFamily: "Satoshi, sans-serif", fontSize: 14, color: "var(--ink)", background: "#fff", outline: "none", resize: "vertical", boxSizing: "border-box" }}
           />
-        </div>
-
-        <div>
-          <Label>Usage rights</Label>
-          <textarea
-            value={draft.usage_rights}
-            onChange={(e) => updateDraft({ usage_rights: e.target.value })}
-            rows={3}
-            style={{ width: "100%", padding: "13px 16px", border: "1.5px solid rgba(25,37,36,0.15)", borderRadius: "0.875rem", fontFamily: "Satoshi, sans-serif", fontSize: 14, color: "var(--ink)", background: "#fff", outline: "none", resize: "vertical", boxSizing: "border-box" }}
-          />
+          <div style={{ fontFamily: "Satoshi, sans-serif", fontSize: 12, color: "var(--sage)", marginTop: 6 }}>
+            Usage rights are now set per-deliverable above. Use "Copy to all" to apply one policy across every deliverable.
+          </div>
         </div>
       </div>
     </WizardShell>

@@ -15,6 +15,18 @@ export const getImageUrl = query({
   },
 });
 
+export const getImageUrls = query({
+  args: { storageIds: v.array(v.string()) },
+  handler: async (ctx, args) => {
+    return await Promise.all(
+      args.storageIds.map(async (id) => {
+        if (id.startsWith("http")) return id;
+        try { return await ctx.storage.getUrl(id); } catch { return null; }
+      })
+    );
+  },
+});
+
 export const getStorageUrl = mutation({
   args: { storageId: v.string() },
   handler: async (ctx, args) => {

@@ -412,9 +412,8 @@ function ChipCard({ creator, onMessage, onHide }) {
 }
 
 // ─── Collapsed card ───────────────────────────────────────────────────────────
-function FullCard({ creator, narrow = false, onMessage, onHide, visitingBadge, delay = 0 }) {
+function FullCard({ creator, narrow = false, onMessage, onHide, visitingBadge, delay = 0, saved = false, onToggleSave }) {
   const [open, setOpen]       = useState(false);
-  const [saved, setSaved]     = useState(false);
   const [hovered, setHovered] = useState(false);
   const t    = TIER_COLORS[creator.tier] || TIER_COLORS['UGC Beginner'];
   const city = creator.location?.split(',')[0] ?? creator.location ?? '';
@@ -427,7 +426,7 @@ function FullCard({ creator, narrow = false, onMessage, onHide, visitingBadge, d
           onClose={() => setOpen(false)}
           onMessage={onMessage}
           saved={saved}
-          onSave={() => setSaved(s => !s)}
+          onSave={() => onToggleSave?.(creator.id)}
         />
       )}
       <div
@@ -468,6 +467,31 @@ function FullCard({ creator, narrow = false, onMessage, onHide, visitingBadge, d
               onMouseLeave={e => e.currentTarget.style.color = 'rgba(149,157,144,0.55)'}
             >
               <IconTrash />
+            </button>
+          )}
+
+          {/* Save heart */}
+          {onToggleSave && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onToggleSave(creator.id); }}
+              title={saved ? 'Saved' : 'Save creator'}
+              style={{
+                position: 'absolute', top: 8, right: creator.isSample && onHide ? 38 : 8,
+                background: saved ? 'rgba(74,155,127,0.12)' : 'rgba(255,255,255,0.85)',
+                border: `1.5px solid ${saved ? 'rgba(74,155,127,0.35)' : 'rgba(25,37,36,0.1)'}`,
+                borderRadius: '50%', width: 30, height: 30,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer', padding: 0, backdropFilter: 'blur(8px)',
+                transition: 'all 200ms',
+              }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24"
+                fill={saved ? '#4A9B7F' : 'none'}
+                stroke={saved ? '#4A9B7F' : '#3C5759'}
+                strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+              >
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+              </svg>
             </button>
           )}
 
@@ -574,7 +598,7 @@ function FullCard({ creator, narrow = false, onMessage, onHide, visitingBadge, d
 }
 
 // ─── Default export ───────────────────────────────────────────────────────────
-export default function CreatorCard({ creator, variant = 'card', narrow = false, onMessage, onHide, visitingBadge, delay = 0 }) {
+export default function CreatorCard({ creator, variant = 'card', narrow = false, onMessage, onHide, visitingBadge, delay = 0, saved = false, onToggleSave }) {
   if (variant === 'chip') {
     return <ChipCard creator={creator} onMessage={onMessage} onHide={onHide} />;
   }
@@ -586,6 +610,8 @@ export default function CreatorCard({ creator, variant = 'card', narrow = false,
       onHide={onHide}
       visitingBadge={visitingBadge}
       delay={delay}
+      saved={saved}
+      onToggleSave={onToggleSave}
     />
   );
 }

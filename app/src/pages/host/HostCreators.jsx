@@ -11,8 +11,6 @@ import CreatorAvatar from '../../components/CreatorAvatar';
 import CreatorCard from '../../components/CreatorCard';
 import { useAppBar } from '../../contexts/AppBarContext';
 import { useAuth } from '../../contexts/AuthContext';
-import { useMutation } from 'convex/react';
-import { api } from '../../../convex/_generated/api';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const LOCATION_CONSENT_KEY = '@collabnb_location_consent_v1';
@@ -198,7 +196,6 @@ function fmtFollowers(n) {
 }
 
 // ─── localStorage helpers ─────────────────────────────────────────────────────
-const SAVED_KEY        = '@collabnb_swipe_saved_v1';
 const DEPRIO_KEY       = '@collabnb_swipe_deprioritized_v1';
 const HIST_KEY         = '@collabnb_swipe_history_v1';
 const HIDDEN_SAMPLE_KEY = '@collabnb_hidden_sample_creators_v1';
@@ -709,12 +706,10 @@ function ViewToggle({ mode, onChange }) {
 }
 
 // ─── Swipe view (immersive full-screen) ──────────────────────────────────────
-function SwipeView({ creators, onBack, profileId, initialSavedIds }) {
+function SwipeView({ creators, onBack, savedIds, onToggleSaved }) {
   const navigate = useNavigate();
   const { setHideNav } = useAppBar();
-  const toggleSavedMutation = useMutation(api.profiles.toggleSavedCreator);
 
-  const [savedIds,     setSavedIds]     = useState(() => initialSavedIds?.length ? [...initialSavedIds] : lsGet(SAVED_KEY));
   const [deprioIds,    setDeprioIds]    = useState(() => lsGet(DEPRIO_KEY));
   const [swipeHistory, setSwipeHistory] = useState(() => lsGet(HIST_KEY));
   const [deckIdx,      setDeckIdx]      = useState(0);
@@ -772,10 +767,8 @@ function SwipeView({ creators, onBack, profileId, initialSavedIds }) {
 
   function mutateSaved(creatorId, add) {
     const cur = savedIdsRef.current;
-    const next = add ? [...cur, creatorId] : cur.filter(id => id !== creatorId);
-    setSavedIds(next);
-    lsSet(SAVED_KEY, next);
-    if (profileId) toggleSavedMutation({ profileId, creatorId }).catch(() => {});
+    if (add === cur.includes(creatorId)) return; // already in desired state
+    onToggleSaved?.(creatorId);
   }
 
   const handleSwipe = useCallback((dir) => {
@@ -1005,7 +998,8 @@ function SwipeView({ creators, onBack, profileId, initialSavedIds }) {
 // ─── Main page ────────────────────────────────────────────────────────────────
 export default function HostCreators() {
   const navigate = useNavigate();
-  const { profile } = useAuth();
+  const { profile, toggleSavedCreator: toggleSaved } = useAuth();
+  const savedCreatorIds = profile?.saved_creator_ids ?? [];
 
   const [locationConsent,  setLocationConsent]  = useState(() => {
     try { return localStorage.getItem(LOCATION_CONSENT_KEY); } catch { return null; }
@@ -1089,11 +1083,11 @@ export default function HostCreators() {
 
   const nearbyCreators = CREATORS.filter(c => isNearHost(c));
 
-  // Cache key derived from all active filter params
-  const filterParams = { query, tierFilter, platformFilter, sortBy, showPast, nearbyOnly, savedOnly, dateStart, dateEnd };
-  const searchCacheKey = cacheKey('creator_search', filterParams);
-
   const profileSavedIds = profile?.saved_creator_ids ?? [];
+
+  // Cache key derived from all active filter params (incl. saved ids, since savedOnly depends on them)
+  const filterParams = { query, tierFilter, platformFilter, sortBy, showPast, nearbyOnly, savedOnly, dateStart, dateEnd, savedIds: profileSavedIds };
+  const searchCacheKey = cacheKey('creator_search', filterParams);
 
   const computeFiltered = () => {
     let base = CREATORS.filter((c) => {
@@ -1411,6 +1405,8 @@ export default function HostCreators() {
                     onMessage={handleMessage}
                     onHide={c.isSample ? hideGridCreator : undefined}
                     visitingBadge={!isNearHost(c) && dateStart && dateEnd ? getVisitingBadge(c, dateStart, dateEnd) : null}
+                    saved={savedCreatorIds.includes(c.id)}
+                    onToggleSave={toggleSaved}
                   />
                 ))}
               </div>
@@ -1420,8 +1416,8 @@ export default function HostCreators() {
           <SwipeView
             creators={CREATORS}
             onBack={() => setViewMode('grid')}
-            profileId={profile?._id}
-            initialSavedIds={profile?.saved_creator_ids}
+            savedIds={savedCreatorIds}
+            onToggleSaved={toggleSaved}
           />
         )}
       </div>

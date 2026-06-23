@@ -40,12 +40,28 @@ export function MockAuthProvider({ children }) {
     localStorage.setItem('collabnb_profile', JSON.stringify(merged));
   }, [profile]);
 
+  const setSavedCreatorIds = useCallback((ids) => {
+    setProfile((prev) => {
+      const merged = { ...prev, saved_creator_ids: ids };
+      try { localStorage.setItem('collabnb_profile', JSON.stringify(merged)); } catch {}
+      return merged;
+    });
+  }, []);
+
+  const toggleSavedCreator = useCallback((_creatorId) => {
+    // Mock provider has no Convex profile; mirror saved ids locally only
+    const cur = profile.saved_creator_ids ?? [];
+    const next = cur.includes(_creatorId) ? cur.filter((id) => id !== _creatorId) : [...cur, _creatorId];
+    setSavedCreatorIds(next);
+    return next;
+  }, [profile, setSavedCreatorIds]);
+
   const signOut = useCallback(() => {
     window.location.href = window.location.origin + '/';
   }, []);
 
   return (
-    <AuthContext.Provider value={{ session: MOCK_SESSION, profile, loading: false, signOut, updateProfile }}>
+    <AuthContext.Provider value={{ session: MOCK_SESSION, profile, loading: false, signOut, updateProfile, toggleSavedCreator }}>
       {children}
     </AuthContext.Provider>
   );
@@ -63,6 +79,7 @@ function ClerkAuthInner({ children }) {
   const updateProfileMutation = useMutation(api.profiles.updateProfile);
   const getOrCreateMutation = useMutation(api.profiles.getOrCreate);
   const applyReferralCodeMutation = useMutation(api.referrals.applyReferralCode);
+  const toggleSavedCreatorMutation = useMutation(api.profiles.toggleSavedCreator);
 
   const [session, setSession] = useState(null);
   const [profile, setProfile] = useState(null);
@@ -235,8 +252,27 @@ function ClerkAuthInner({ children }) {
     window.location.href = homeUrl;
   }, [clerkSignOut]);
 
+  const toggleSavedCreator = useCallback(async (creatorId) => {
+    const profileId = profile?._id;
+    if (!profileId) return profile?.saved_creator_ids ?? [];
+    // Optimistic update
+    const cur = profile.saved_creator_ids ?? [];
+    const optimistic = cur.includes(creatorId) ? cur.filter((id) => id !== creatorId) : [...cur, creatorId];
+    setProfile((prev) => prev ? { ...prev, saved_creator_ids: optimistic } : prev);
+    try {
+      const next = await toggleSavedCreatorMutation({ profileId, creatorId });
+      setProfile((prev) => prev ? { ...prev, saved_creator_ids: next } : prev);
+      return next;
+    } catch (err) {
+      // Roll back on failure
+      setProfile((prev) => prev ? { ...prev, saved_creator_ids: cur } : prev);
+      console.warn('toggleSavedCreator failed:', err);
+      return cur;
+    }
+  }, [profile, toggleSavedCreatorMutation]);
+
   return (
-    <AuthContext.Provider value={{ session, profile, loading, signOut, updateProfile }}>
+    <AuthContext.Provider value={{ session, profile, loading, signOut, updateProfile, toggleSavedCreator }}>
       {children}
     </AuthContext.Provider>
   );

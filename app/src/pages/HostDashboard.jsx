@@ -4,6 +4,7 @@ import { Plus, MapPin, Users, Calendar, MessageSquare, MoreVertical, X, UserPlus
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { useAuth } from '../contexts/AuthContext';
+import { useListingDraft } from '../contexts/ListingDraftContext';
 import { SAMPLE_LISTINGS, IMG_FALLBACK } from '../lib/mockData';
 import SkeletonCard from '../components/SkeletonCard';
 import { cache } from '../lib/cache';
@@ -341,6 +342,7 @@ function ExpandedChartModal({ cardKey, onClose, stats, chartData }) {
 // ─── Host Listing Card ────────────────────────────────────────────────────────
 function HostListingCard({ listing, meta, delay, glowState, onToggleStatus, onDuplicate, onRemoveSample }) {
   const navigate = useNavigate();
+  const { loadDraft } = useListingDraft();
   const [hovered, setHovered] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const status = STATUS_CFG[meta.status] || STATUS_CFG.draft;
@@ -504,8 +506,13 @@ function HostListingCard({ listing, meta, delay, glowState, onToggleStatus, onDu
                   maxOffers: listing.maxOffers || '',
                 };
                 localStorage.setItem('collabnb_listing_draft_v1', JSON.stringify(draft));
+                loadDraft(draft);
                 const listingId = listing._id || listing.id;
-                if (listingId) localStorage.setItem('collabnb_editing_listing_id_v1', String(listingId));
+                if (listing.is_sample || !listingId) {
+                  localStorage.removeItem('collabnb_editing_listing_id_v1');
+                } else {
+                  localStorage.setItem('collabnb_editing_listing_id_v1', String(listingId));
+                }
                 navigate('/host/listings/create');
                 setMenuOpen(false);
               } },

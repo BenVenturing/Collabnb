@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { SAMPLE_LISTINGS } from '../../lib/mockData';
+import { useListingDraft } from '../../contexts/ListingDraftContext';
 import { ArrowLeft, MapPin, Copy, Check, ChevronDown, ChevronUp, MessageSquare, ExternalLink, X, AlertTriangle } from 'lucide-react';
 
 // ─── Glass card token ─────────────────────────────────────────────────────────
@@ -441,6 +442,7 @@ function SectionHead({ title, sub }) {
 export default function HostListingDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { loadDraft } = useListingDraft();
 
   const isSampleId = SAMPLE_LISTINGS.some((l) => l.id === id);
   const convexRaw = useQuery(api.listings.getById, !isSampleId ? { id } : 'skip');
@@ -543,8 +545,13 @@ export default function HostListingDetail() {
       revision_policy: listing.revision_policy || '',
       usage_rights: listing.usage_rights || '',
     };
+    loadDraft(draftData);
     localStorage.setItem('collabnb_listing_draft_v1', JSON.stringify(draftData));
-    if (!isSampleId) localStorage.setItem('collabnb_editing_listing_id_v1', id);
+    if (isSampleId) {
+      localStorage.removeItem('collabnb_editing_listing_id_v1');
+    } else {
+      localStorage.setItem('collabnb_editing_listing_id_v1', id);
+    }
     navigate('/host/listings/create');
   }
 

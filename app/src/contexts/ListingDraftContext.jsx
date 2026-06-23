@@ -90,9 +90,23 @@ export function ListingDraftProvider({ children }) {
     });
   }
 
+  function loadDraft(fields) {
+    setDraft({ ...EMPTY_DRAFT, ...fields });
+  }
+
+  function hydrateFromStorage() {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      setDraft(saved ? { ...EMPTY_DRAFT, ...JSON.parse(saved) } : { ...EMPTY_DRAFT });
+    } catch {
+      setDraft({ ...EMPTY_DRAFT });
+    }
+  }
+
   function clearDraft() {
     setDraft({ ...EMPTY_DRAFT });
     try { localStorage.removeItem(STORAGE_KEY); } catch {}
+    try { localStorage.removeItem('collabnb_editing_listing_id_v1'); } catch {}
   }
 
   const fee = calculateFee(draft);
@@ -101,7 +115,7 @@ export function ListingDraftProvider({ children }) {
   const formatCount = draft.deliverables_list.length;
 
   return (
-    <ListingDraftContext.Provider value={{ draft, updateDraft, clearDraft, fee, totalDeliverables, formatCount, DELIVERABLE_PRESETS, DEFAULT_USAGE_RIGHTS }}>
+    <ListingDraftContext.Provider value={{ draft, updateDraft, loadDraft, hydrateFromStorage, clearDraft, fee, totalDeliverables, formatCount, DELIVERABLE_PRESETS, DEFAULT_USAGE_RIGHTS }}>
       {children}
     </ListingDraftContext.Provider>
   );

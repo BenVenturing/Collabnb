@@ -95,7 +95,7 @@ export const create = mutation({
       thread_key: args.threadKey,
     });
 
-    // Notify host of new application
+    // Notify host of new application (in-app + email)
     if (args.hostId && args.hostId !== args.creatorId) {
       await ctx.runMutation(internal.notifications.create, {
         userId: args.hostId,
@@ -104,6 +104,17 @@ export const create = mutation({
         body: args.message.length > 80 ? args.message.slice(0, 80) + "…" : args.message,
         link: "#/host/proposals",
       });
+
+      const host = await ctx.db.get(args.hostId as any);
+      if ((host as any)?.email) {
+        await ctx.scheduler.runAfter(0, internal.emails.sendApplicationReceivedEmail, {
+          hostEmail: (host as any).email,
+          hostName: (host as any).full_name || "there",
+          creatorName: args.creatorName,
+          listingTitle: args.listingTitle || "your listing",
+          applicationId: String(id),
+        });
+      }
     }
 
     return id;
@@ -197,6 +208,21 @@ export const updateStatus = mutation({
         body,
         link: "#/collabs",
       });
+
+      const creator = await ctx.db.get(pitch.creator_id as any);
+      if ((creator as any)?.email) {
+        const host = pitch.host_id ? await ctx.db.get(pitch.host_id as any) : null;
+        const hostName = (host as any)?.full_name || "your host";
+        const listingTitle = pitch.listing_title || "the listing";
+        const creatorName = pitch.creator_name || (creator as any).full_name || "there";
+        await ctx.scheduler.runAfter(
+          0,
+          status === "approved"
+            ? internal.emails.sendApplicationAcceptedEmail
+            : internal.emails.sendApplicationDeclinedEmail,
+          { creatorEmail: (creator as any).email, creatorName, hostName, listingTitle }
+        );
+      }
     }
   },
 });
@@ -213,6 +239,22 @@ function emptySignatures() {
 function parseJSON<T>(s: string | undefined, fallback: T): T {
   if (!s) return fallback;
   try { return JSON.parse(s) as T; } catch { return fallback; }
+}
+
+// Look up a recipient profile and schedule a contract email (best-effort; no-op
+// without an email address or RESEND_API_KEY).
+async function scheduleProposalEmail(
+  ctx: any,
+  recipientId: string,
+  content: { subject: string; heading: string; message: string; calloutLabel?: string; calloutText?: string }
+) {
+  const profile = await ctx.db.get(recipientId as any);
+  if (!(profile as any)?.email) return;
+  await ctx.scheduler.runAfter(0, internal.emails.sendContractEmail, {
+    to: (profile as any).email,
+    recipientName: (profile as any).full_name || "there",
+    ...content,
+  });
 }
 
 // Host or creator proposes revised contract terms — appends a version and
@@ -257,6 +299,20 @@ export const sendCounter = mutation({
           : "The creator sent a counter-proposal",
         body: note || "Open proposals to review the updated terms and respond.",
         link: fromParty === "host" ? "#/collabs" : "#/host/proposals",
+      });
+
+      const listingPart = pitch.listing_title ? ` for <strong>${pitch.listing_title}</strong>` : "";
+      await scheduleProposalEmail(ctx, recipientId, {
+        subject: fromParty === "host" ? "The host proposed contract changes" : "You received a counter-proposal",
+        heading: "Hey {name} 👋",
+        message:
+          (fromParty === "host"
+            ? `The host proposed changes to your contract${listingPart}.`
+            : `The creator sent a counter-proposal${listingPart}.`) +
+          (note ? ` “${note}”` : "") +
+          " Review the updated terms and respond.",
+        calloutLabel: "Action needed",
+        calloutText: "Open Collabnb to review the proposal and respond.",
       });
     }
   },
@@ -315,6 +371,28 @@ export const signContract = mutation({
           : "Open to review and add your signature.",
         link: party === "host" ? "#/collabs" : "#/host/proposals",
       });
+
+      const listingPart = pitch.listing_title ? ` for <strong>${pitch.listing_title}</strong>` : "";
+      const signer = party === "host" ? "The host" : "The creator";
+      await scheduleProposalEmail(
+        ctx,
+        recipientId,
+        bothSigned
+          ? {
+              subject: "Your contract is fully signed 🎉",
+              heading: "Nice work, {name} 🎉",
+              message: `Both parties have signed the contract${listingPart}. Your collab is locked in.`,
+              calloutLabel: "What's next",
+              calloutText: "Review the signed agreement in Collabnb.",
+            }
+          : {
+              subject: `${signer} signed your contract`,
+              heading: "Hey {name} 👋",
+              message: `${signer} signed the contract${listingPart}. Add your signature to finalize it.`,
+              calloutLabel: "Action needed",
+              calloutText: "Open Collabnb to review and sign.",
+            }
+      );
     }
   },
 });

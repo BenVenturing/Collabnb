@@ -104,6 +104,23 @@ export const getAll = query({
   },
 });
 
+// Host profiles a creator can send a contract to (lightweight shape).
+export const getHosts = query({
+  args: {},
+  handler: async (ctx) => {
+    const all = await ctx.db.query("profiles").collect();
+    return all
+      .filter((p) => p.role === "host")
+      .map((p) => ({
+        _id: p._id,
+        full_name: p.full_name,
+        avatar_url: p.avatar_url,
+        city: p.city,
+        region: p.region,
+      }));
+  },
+});
+
 export const getByUsername = query({
   args: { username: v.string() },
   handler: async (ctx, args) => {

@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useQuery, useAction } from 'convex/react';
+import { api } from '../../convex/_generated/api';
 import { useCollabs } from '../contexts/CollabContext';
 import { useAuth } from '../contexts/AuthContext';
 import { SAMPLE_HOST } from '../lib/mockData';
@@ -44,6 +46,17 @@ export default function ContractBuilder() {
   const previewRef = useRef(null);
   const { saveContract, updateContract, markContractSent, contracts, sendContractMessage } = useCollabs();
   const { profile } = useAuth();
+
+  // Real host profiles to send to; fall back to demo hosts when none exist yet.
+  const hostProfiles = useQuery(api.profiles.getHosts);
+  const liveHosts = (hostProfiles || []).map((h) => ({
+    id: String(h._id),
+    name: h.full_name,
+    avatar: h.avatar_url,
+    subtitle: [h.city, h.region].filter(Boolean).join(', ') || 'Host',
+    isReal: true,
+  }));
+  const sendHosts = liveHosts.length ? liveHosts : KNOWN_HOSTS;
 
   const [editingId, setEditingId] = useState(null);
   const [contractList, setContractList] = useState([]);
@@ -119,7 +132,9 @@ export default function ContractBuilder() {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [contractPaid, setContractPaid] = useState(false);
   const [paymentCancelled, setPaymentCancelled] = useState(false);
+  const [cardSaved, setCardSaved] = useState(false);
   const [founderToast, setFounderToast] = useState(false);
+  const verifyFeeSetupSession = useAction(api.stripe.verifyFeeSetupSession);
 
   // ── Auto-generated summary paragraph ──
   const [summaryNote, setSummaryNote] = useState('');
@@ -331,7 +346,19 @@ export default function ContractBuilder() {
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const paymentStatus = params.get('payment');
-    if (paymentStatus === 'success') {
+    const setupStatus = params.get('setup');
+    const sessionId = params.get('session_id');
+    if (setupStatus === 'success') {
+      // Card saved at signing — persist it to the contract; the fee is charged
+      // automatically when the collaboration completes.
+      setCardSaved(true);
+      setShowPaymentModal(false);
+      if (sessionId) verifyFeeSetupSession({ sessionId }).catch(() => {});
+      navigate('/contract', { replace: true });
+    } else if (setupStatus === 'cancelled') {
+      setPaymentCancelled(true);
+      navigate('/contract', { replace: true });
+    } else if (paymentStatus === 'success') {
       setContractPaid(true);
       setShowPaymentModal(false);
       navigate('/contract', { replace: true });
@@ -345,7 +372,7 @@ export default function ContractBuilder() {
   // Show payment modal when both parties have signed and contract is unpaid.
   // Founding member hosts skip the payment entirely.
   useEffect(() => {
-    if (creatorSig && hostSig && !contractPaid) {
+    if (creatorSig && hostSig && !contractPaid && !cardSaved) {
       if (profile?.is_founder) {
         setContractPaid(true);
         setFounderToast(true);
@@ -354,7 +381,7 @@ export default function ContractBuilder() {
         setShowPaymentModal(true);
       }
     }
-  }, [creatorSig, hostSig, contractPaid, profile?.is_founder]);
+  }, [creatorSig, hostSig, contractPaid, cardSaved, profile?.is_founder]);
 
   const downloadPDF = async () => {
     if (!previewRef.current) return;
@@ -392,9 +419,14 @@ export default function ContractBuilder() {
       updateContract(id, buildContractData());
     }
 
-    // Update status to pending
+    // Update status to pending, stamping the real host id when we have one so the
+    // server can resolve the recipient directly (instead of by name match).
     setStatus('pending');
-    updateContract(id, { ...buildContractData(), status: 'pending' });
+    updateContract(id, {
+      ...buildContractData(),
+      status: 'pending',
+      ...(host.isReal ? { host_id: host.id } : {}),
+    });
 
     // Create a message thread
     sendContractMessage({
@@ -853,10 +885,10 @@ export default function ContractBuilder() {
                     Download PDF
                   </button>
 
-                  {/* Pay platform fee if signed but unpaid */}
-                  {status === 'in_progress' && !contractPaid && (
+                  {/* Save a card at signing; the platform fee is charged on completion */}
+                  {status === 'in_progress' && !contractPaid && !cardSaved && (
                     <button onClick={() => setShowPaymentModal(true)} className="btn-primary">
-                      Pay Platform Fee
+                      Save Card for Fee
                     </button>
                   )}
                 </div>
@@ -890,9 +922,17 @@ export default function ContractBuilder() {
                       Payment confirmed
                     </span>
                   )}
-                  {paymentCancelled && !contractPaid && (
+                  {cardSaved && !contractPaid && (
+                    <span className="text-xs text-green-700 ml-2 flex items-center gap-1 font-semibold">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="20 6 9 17 4 12"/>
+                      </svg>
+                      Card saved — fee charged on completion
+                    </span>
+                  )}
+                  {paymentCancelled && !contractPaid && !cardSaved && (
                     <span className="text-xs text-amber-600 ml-2">
-                      Payment cancelled — click "Pay Platform Fee" to retry
+                      Cancelled — click "Save Card for Fee" to retry
                     </span>
                   )}
                 </div>
@@ -1007,7 +1047,7 @@ export default function ContractBuilder() {
                       </svg>
                     </button>
                   ) : (
-                    KNOWN_HOSTS.map((host) => (
+                    sendHosts.map((host) => (
                       <button
                         key={host.id}
                         onClick={() => handleSendToHost(host)}
@@ -1024,7 +1064,7 @@ export default function ContractBuilder() {
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <p style={{ fontWeight: 600, fontSize: '0.875rem', color: 'var(--ink)', margin: 0 }}>{host.name}</p>
-                          <p style={{ fontSize: '0.72rem', color: 'var(--sage)', margin: '0.1rem 0 0' }}>{host.properties.join(', ')}</p>
+                          <p style={{ fontSize: '0.72rem', color: 'var(--sage)', margin: '0.1rem 0 0' }}>{host.subtitle || (host.properties || []).join(', ')}</p>
                         </div>
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--sage)', flexShrink: 0 }}>
                           <line x1="22" y1="2" x2="11" y2="13"/>

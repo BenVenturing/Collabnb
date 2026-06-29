@@ -68,11 +68,13 @@ export function CollabProvider({ children }) {
   // Owner ID for Convex contract ownership
   const { profile } = useAuth();
   const ownerId = profile?._id ? String(profile._id) : null;
+  const isHost = profile?.role === 'host';
 
-  // Query Convex for this user's contracts (real-time source of truth when authenticated)
+  // Query Convex for every contract this user is a party to — owner, host, or
+  // creator — so a recipient sees contracts sent to them, not just ones they built.
   const convexContractsRaw = useQuery(
-    api.contracts.getByOwner,
-    ownerId ? { ownerId } : 'skip'
+    api.contracts.getForParty,
+    ownerId ? { userId: ownerId } : 'skip'
   );
   const convexContracts = useMemo(() => {
     if (!convexContractsRaw?.length) return null;
@@ -102,6 +104,7 @@ export function CollabProvider({ children }) {
   const updateContractCvx = useMutation(api.contracts.update);
   const markSentCvx = useMutation(api.contracts.markSent);
   const createCollabCvx = useMutation(api.collaborations.create);
+  const markCollabCompletedCvx = useMutation(api.collaborations.markCompleted);
   const createThreadCvx = useMutation(api.threads.create);
   const createPitchCvx = useMutation(api.pitches.create);
   const createCollectionCvx = useMutation(api.collections.create);
@@ -239,9 +242,12 @@ export function CollabProvider({ children }) {
       return updated;
     });
 
-    // Sync to Convex (fire-and-forget)
+    // Sync to Convex (fire-and-forget). Stamp the builder onto the correct party
+    // field so the server can resolve the counterparty for notifications.
     saveContractCvx({
       ownerId: ownerId || undefined,
+      hostId: isHost ? ownerId || undefined : undefined,
+      creatorId: isHost ? undefined : ownerId || undefined,
       creatorName: contractData.creator_name || '',
       hostName: contractData.host_name || '',
       propertyName: contractData.property_name,
@@ -258,7 +264,7 @@ export function CollabProvider({ children }) {
     }).catch(() => {});
 
     return newContract;
-  }, [saveContractCvx]);
+  }, [saveContractCvx, ownerId, isHost]);
 
   const updateContract = useCallback((id, updates) => {
     setContracts((prev) => {
@@ -270,6 +276,8 @@ export function CollabProvider({ children }) {
     updateContractCvx({
       id,
       updates: {
+        host_id: updates.host_id,
+        creator_id: updates.creator_id,
         creator_name: updates.creator_name,
         host_name: updates.host_name,
         property_name: updates.property_name,
@@ -294,8 +302,9 @@ export function CollabProvider({ children }) {
       saveContractsToStorage(updated);
       return updated;
     });
-    markSentCvx({ id }).catch(() => {});
-  }, [markSentCvx]);
+    // A host builder sends to the creator; a creator builder sends to the host.
+    markSentCvx({ id, recipientParty: isHost ? 'creator' : 'host' }).catch(() => {});
+  }, [markSentCvx, isHost]);
 
   const getContracts = useCallback(() => contracts, [contracts]);
 
@@ -496,11 +505,19 @@ export function CollabProvider({ children }) {
 
       if (bothClosed) {
         setThreads((tPrev) => tPrev.map((t) => t.collab_id === id ? { ...t, tag: 'Archived' } : t));
+        // Persist completion to Convex: sets first_collab_completed, awards the
+        // referral month to creator + referrer, and auto-charges the host fee.
+        if (ownerId) {
+          markCollabCompletedCvx({
+            creatorId: ownerId,
+            contractId: collab.contract_id ? String(collab.contract_id) : undefined,
+          }).catch(() => {});
+        }
       }
 
       return updated;
     });
-  }, []);
+  }, [ownerId, markCollabCompletedCvx]);
 
   // TODO: Replace manual entry with Instagram Graph API / TikTok Research API when approved. Target: post-launch v2.
   const submitContentMetrics = useCallback((id, { post_url, views, likes, comments, saves }) => {

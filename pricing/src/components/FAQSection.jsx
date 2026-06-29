@@ -26,6 +26,14 @@ const FAQS = [
     q: 'Can I still use the platform without paying?',
     a: 'Yes. You can always browse collab listings without any payment. After your first successful collaboration, you\'ll need an active plan to send new messages and apply to additional stays. Think of it as a "see it work first, then decide" model — we earn your subscription, not the other way around.',
   },
+  {
+    q: 'When does the host pay Collabnb’s fee?',
+    a: 'Never up front. The host’s platform fee — a $20 flat fee on free-stay collabs, or 5% on paid collabs — is charged automatically only after the collaboration is marked complete. Once the contract finishes, the fee is released to Collabnb with no manual step. Creators are never charged this fee and keep 100% of their collaboration value.',
+  },
+  {
+    q: 'How do referral codes and free months work?',
+    a: 'Every member has a personal referral code. When a friend signs up with your code, you both get 1 free month immediately. After that friend completes their first collaboration, you both get a second free month — so each successful referral earns you and your friend 2 free months each. A free month is a month of full access at no charge, applied automatically before you’re billed.',
+  },
 ];
 
 export default function FAQSection() {

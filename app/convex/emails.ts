@@ -215,6 +215,34 @@ export const sendApplicationDeclinedEmail = internalAction({
   },
 });
 
+// ─── Contract lifecycle (sent / signed / fully signed / paid) ────────────────
+
+export const sendContractEmail = internalAction({
+  args: {
+    to: v.string(),
+    recipientName: v.string(),
+    subject: v.string(),
+    heading: v.string(),
+    message: v.string(),
+    calloutLabel: v.optional(v.string()),
+    calloutText: v.optional(v.string()),
+  },
+  handler: async (_ctx, { to, recipientName, subject, heading, message, calloutLabel, calloutText }) => {
+    const apiKey = process.env.RESEND_API_KEY;
+    if (!apiKey) return;
+
+    const firstName = (recipientName || "there").split(" ")[0];
+
+    const body = `
+      <p style="margin:0 0 8px;font-size:22px;font-weight:700;color:#192524;">${heading.replace("{name}", firstName)}</p>
+      <p style="margin:0 0 24px;font-size:15px;color:#3C5759;line-height:1.65;">${message}</p>
+      ${calloutLabel ? callout("#2dd4bf", calloutLabel, calloutText || "") : ""}
+      ${button(`${BASE_URL}/contract`, "View contract")}`;
+
+    await send(apiKey, to, subject, layout(body));
+  },
+});
+
 // ─── New message notification ─────────────────────────────────────────────────
 
 export const sendNewMessageEmail = internalAction({

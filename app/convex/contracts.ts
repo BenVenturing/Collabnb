@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { query, mutation, internalMutation } from "./_generated/server";
+import { query, mutation, internalMutation, internalQuery } from "./_generated/server";
 import { internal } from "./_generated/api";
 
 export const getAll = query({
@@ -16,6 +16,21 @@ export const getByOwner = query({
       .query("contracts")
       .withIndex("by_owner", (q) => q.eq("owner_id", args.ownerId))
       .collect();
+  },
+});
+
+// Contracts where the user is the owner, the host, or the creator (de-duped).
+export const getForParty = query({
+  args: { userId: v.string() },
+  handler: async (ctx, { userId }) => {
+    const [owned, asHost, asCreator] = await Promise.all([
+      ctx.db.query("contracts").withIndex("by_owner", (q) => q.eq("owner_id", userId)).collect(),
+      ctx.db.query("contracts").withIndex("by_host", (q) => q.eq("host_id", userId)).collect(),
+      ctx.db.query("contracts").withIndex("by_creator", (q) => q.eq("creator_id", userId)).collect(),
+    ]);
+    const byId = new Map<string, any>();
+    for (const c of [...owned, ...asHost, ...asCreator]) byId.set(String(c._id), c);
+    return Array.from(byId.values());
   },
 });
 
@@ -84,10 +99,77 @@ export const update = mutation({
     }),
   },
   handler: async (ctx, args) => {
-    const cleanUpdates = Object.fromEntries(
+    const before = await ctx.db.get(args.id as any);
+    const cleanUpdates: Record<string, any> = Object.fromEntries(
       Object.entries(args.updates).filter(([, val]) => val !== undefined)
     );
+
+    // Stamp signature timestamps on the transition false → true.
+    const nowIso = new Date().toISOString();
+    if (before) {
+      if (cleanUpdates.creator_signed && !(before as any).creator_signed && !cleanUpdates.creator_signed_at) {
+        cleanUpdates.creator_signed_at = nowIso;
+      }
+      if (cleanUpdates.host_signed && !(before as any).host_signed && !cleanUpdates.host_signed_at) {
+        cleanUpdates.host_signed_at = nowIso;
+      }
+    }
+
     await ctx.db.patch(args.id as any, cleanUpdates);
+
+    if (!before) return;
+    const after = { ...(before as any), ...cleanUpdates };
+    const propertyLabel = after.property_name || after.location || "your collab";
+
+    const creatorJustSigned = !(before as any).creator_signed && after.creator_signed;
+    const hostJustSigned = !(before as any).host_signed && after.host_signed;
+    const wasFullySigned = (before as any).creator_signed && (before as any).host_signed;
+    const isFullySigned = after.creator_signed && after.host_signed;
+
+    if (creatorJustSigned || hostJustSigned) await linkContractToCollab(ctx, after);
+
+    if (isFullySigned && !wasFullySigned) {
+      for (const party of ["host", "creator"] as const) {
+        await notifyParty(ctx, after, party, {
+          type: "contract_signed",
+          title: "Contract fully signed 🎉",
+          body: `Your contract for ${propertyLabel} is now signed by both parties.`,
+          email: {
+            subject: "Your contract is fully signed 🎉",
+            heading: "Nice work, {name} 🎉",
+            message: `Both parties have signed the contract for <strong>${propertyLabel}</strong>. You're all set to move ahead with the collab.`,
+            calloutLabel: "What's next",
+            calloutText: "Review the signed agreement and coordinate the details in Collabnb.",
+          },
+        });
+      }
+    } else if (creatorJustSigned) {
+      await notifyParty(ctx, after, "host", {
+        type: "contract_signed",
+        title: "The creator signed — your turn",
+        body: `${after.creator_name || "The creator"} signed the contract for ${propertyLabel}. Sign to finalize it.`,
+        email: {
+          subject: "The creator signed your contract",
+          heading: "Hey {name} 👋",
+          message: `${after.creator_name || "The creator"} just signed the contract for <strong>${propertyLabel}</strong>. Add your signature to finalize it.`,
+          calloutLabel: "Action needed",
+          calloutText: "Open Collabnb to review and sign.",
+        },
+      });
+    } else if (hostJustSigned) {
+      await notifyParty(ctx, after, "creator", {
+        type: "contract_signed",
+        title: "The host signed — your turn",
+        body: `${after.host_name || "The host"} signed the contract for ${propertyLabel}. Sign to finalize it.`,
+        email: {
+          subject: "The host signed your contract",
+          heading: "Hey {name} 👋",
+          message: `${after.host_name || "The host"} just signed the contract for <strong>${propertyLabel}</strong>. Add your signature to finalize it.`,
+          calloutLabel: "Action needed",
+          calloutText: "Open Collabnb to review and sign.",
+        },
+      });
+    }
   },
 });
 
@@ -99,18 +181,69 @@ export const recordPayment = mutation({
     stripeSessionId: v.string(),
   },
   handler: async (ctx, args) => {
+    const before = await ctx.db.get(args.id as any);
     await ctx.db.patch(args.id as any, {
       paid: args.paid,
       payment_amount: args.paymentAmount,
       stripe_session_id: args.stripeSessionId,
     });
+
+    if (!args.paid || (before as any)?.paid) return; // only fire on the unpaid → paid transition
+    const contract = await ctx.db.get(args.id as any);
+    if (!contract) return;
+    const propertyLabel = (contract as any).property_name || (contract as any).location || "your collab";
+
+    for (const party of ["host", "creator"] as const) {
+      await notifyParty(ctx, contract, party, {
+        type: "contract_paid",
+        title: "Payment confirmed 💸",
+        body: `Payment for the ${propertyLabel} contract is confirmed. The collab is good to go.`,
+        email: {
+          subject: "Payment confirmed for your Collabnb contract",
+          heading: "You're all set, {name} 💸",
+          message: `Payment for the <strong>${propertyLabel}</strong> contract has been confirmed. Everything's in place to move forward with the collab.`,
+          calloutLabel: "What's next",
+          calloutText: "Coordinate the remaining details with your collaborator in Collabnb.",
+        },
+      });
+    }
   },
 });
 
 export const markSent = mutation({
-  args: { id: v.string() },
-  handler: async (ctx, args) => {
-    await ctx.db.patch(args.id as any, { sent_at: Date.now() });
+  args: { id: v.string(), recipientParty: v.optional(v.string()) },
+  handler: async (ctx, { id, recipientParty }) => {
+    await ctx.db.patch(id as any, { sent_at: Date.now() });
+
+    const contract = await ctx.db.get(id as any);
+    if (!contract) return;
+
+    await linkContractToCollab(ctx, contract);
+
+    // The recipient is the party the contract was sent to. When the caller
+    // doesn't say, infer from ownership: if the owner is the host, it went to
+    // the creator; otherwise it went to the host.
+    const party =
+      recipientParty ||
+      ((contract as any).owner_id && (contract as any).owner_id === (contract as any).host_id
+        ? "creator"
+        : "host");
+
+    const propertyLabel = (contract as any).property_name || (contract as any).location || "your collab";
+    const senderName = party === "creator" ? (contract as any).host_name : (contract as any).creator_name;
+
+    await notifyParty(ctx, contract, party, {
+      type: "contract_sent",
+      title: "A contract is waiting for your signature",
+      body: `${senderName || "A collaborator"} sent you a contract for ${propertyLabel}. Review and sign it.`,
+      email: {
+        subject: "You've got a contract to sign",
+        heading: "Hey {name} 👋",
+        message: `${senderName || "A collaborator"} sent you a contract for <strong>${propertyLabel}</strong>. Review the terms and add your signature to move things forward.`,
+        calloutLabel: "Action needed",
+        calloutText: "Open Collabnb to review and sign your contract.",
+      },
+    });
   },
 });
 
@@ -121,7 +254,8 @@ export const markSent = mutation({
 async function resolvePartyId(ctx: any, contract: any, party: string): Promise<string | null> {
   if (party === "creator") {
     if (contract.creator_id) return contract.creator_id;
-    if (contract.owner_id) return contract.owner_id;
+    // owner_id is only a valid creator fallback when the owner isn't the host
+    if (contract.owner_id && contract.owner_id !== contract.host_id) return contract.owner_id;
   } else if (contract.host_id) {
     return contract.host_id;
   }
@@ -135,6 +269,34 @@ async function resolvePartyId(ctx: any, contract: any, party: string): Promise<s
   const id = String(match._id);
   await ctx.db.patch(contract._id, party === "creator" ? { creator_id: id } : { host_id: id });
   return id;
+}
+
+// Best-effort: associate a contract with the creator's matching collaboration so
+// inbox thread messages have a thread to post into. No-op if already linked or no
+// confident match (same creator + same property/location).
+async function linkContractToCollab(ctx: any, contract: any) {
+  const collabs = await ctx.db.query("collaborations").collect();
+  if (collabs.some((cl: any) => String(cl.contract_id) === String(contract._id))) return;
+
+  const creatorId =
+    contract.creator_id ||
+    (contract.owner_id && contract.owner_id !== contract.host_id ? contract.owner_id : null);
+  const creatorName = (contract.creator_name || "").toLowerCase().trim();
+  const prop = (contract.property_name || "").toLowerCase().trim();
+  const loc = (contract.location || "").toLowerCase().trim();
+
+  const match = collabs.find((cl: any) => {
+    if (cl.contract_id) return false;
+    const creatorMatch =
+      (creatorId && String(cl.creator_id) === String(creatorId)) ||
+      (!!creatorName && (cl.creator_name || "").toLowerCase().trim() === creatorName);
+    if (!creatorMatch) return false;
+    const propMatch = !!prop && (cl.property_name || "").toLowerCase().trim() === prop;
+    const locMatch = !!loc && (cl.location || "").toLowerCase().trim() === loc;
+    return propMatch || locMatch;
+  });
+
+  if (match) await ctx.db.patch(match._id, { contract_id: String(contract._id) });
 }
 
 // Best-effort: drop a message into the contract's inbox thread (via the linked collab).
@@ -155,6 +317,52 @@ async function postContractThreadMessage(ctx: any, contract: any, party: string,
     text,
     created_at: Date.now(),
   });
+}
+
+// Notify one party: in-app notification + (best-effort) inbox thread message + email.
+// Returns false when no linked profile could be resolved (degrades silently).
+async function notifyParty(
+  ctx: any,
+  contract: any,
+  party: string,
+  opts: {
+    type: string;
+    title: string;
+    body: string;
+    email?: { subject: string; heading: string; message: string; calloutLabel?: string; calloutText?: string };
+  }
+): Promise<boolean> {
+  const recipientId = await resolvePartyId(ctx, contract, party);
+  if (!recipientId) return false;
+
+  await ctx.runMutation(internal.notifications.create, {
+    userId: recipientId,
+    type: opts.type,
+    title: opts.title,
+    body: opts.body,
+    link: "/contract",
+  });
+
+  await postContractThreadMessage(ctx, contract, party, opts.body);
+
+  if (opts.email) {
+    const profile = await ctx.db.get(recipientId as any);
+    if (profile?.email) {
+      await ctx.scheduler.runAfter(0, internal.emails.sendContractEmail, {
+        to: profile.email,
+        recipientName:
+          profile.full_name ||
+          (party === "creator" ? contract.creator_name : contract.host_name) ||
+          "there",
+        subject: opts.email.subject,
+        heading: opts.email.heading,
+        message: opts.email.message,
+        calloutLabel: opts.email.calloutLabel,
+        calloutText: opts.email.calloutText,
+      });
+    }
+  }
+  return true;
 }
 
 function reminderCopy(party: string, propertyLabel: string) {
@@ -234,6 +442,67 @@ export const checkContractReminders = internalMutation({
 
       if (sentAny) await ctx.db.patch(c._id, { last_reminder_at: now });
     }
+  },
+});
+
+// ─── Deferred platform-fee charging (save card at signing, charge on completion) ──
+
+// Stores the host's saved Stripe card + the fee to charge later.
+export const setHostPayment = mutation({
+  args: {
+    contractId: v.string(),
+    customerId: v.string(),
+    paymentMethodId: v.string(),
+    feeAmount: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const exists = await ctx.db.get(args.contractId as any);
+    if (!exists) return;
+    await ctx.db.patch(args.contractId as any, {
+      host_stripe_customer_id: args.customerId,
+      host_payment_method_id: args.paymentMethodId,
+      fee_amount: args.feeAmount,
+    });
+  },
+});
+
+// Read a contract from an action context (the off-session fee charge).
+export const getByIdInternal = internalQuery({
+  args: { id: v.string() },
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.id as any);
+  },
+});
+
+// Records a successful off-session fee charge (and webhook backstop). Idempotent.
+export const recordPaymentInternal = internalMutation({
+  args: {
+    id: v.string(),
+    paymentAmount: v.number(),
+    paymentIntentId: v.optional(v.string()),
+    stripeSessionId: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const before = await ctx.db.get(args.id as any);
+    if (!before || (before as any).paid) return; // already paid → no-op
+    const patch: Record<string, any> = {
+      paid: true,
+      payment_amount: args.paymentAmount,
+      fee_charge_failed: false,
+    };
+    if (args.paymentIntentId !== undefined) patch.payment_intent_id = args.paymentIntentId;
+    if (args.stripeSessionId !== undefined) patch.stripe_session_id = args.stripeSessionId;
+    await ctx.db.patch(args.id as any, patch);
+  },
+});
+
+// Flags a contract whose auto-charge failed, so the host can pay manually.
+export const markFeeChargeFailed = internalMutation({
+  args: { id: v.string() },
+  handler: async (ctx, args) => {
+    const exists = await ctx.db.get(args.id as any);
+    if (!exists || (exists as any).paid) return;
+    await ctx.db.patch(args.id as any, { fee_charge_failed: true });
   },
 });
 

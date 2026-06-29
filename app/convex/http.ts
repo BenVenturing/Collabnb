@@ -1,7 +1,7 @@
 import { httpRouter } from "convex/server";
 import { httpAction } from "./_generated/server";
 import Stripe from "stripe";
-import { internal } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 
 const http = httpRouter();
 
@@ -112,6 +112,17 @@ http.route({
     // Lifetime purchase completed
     if (event.type === "checkout.session.completed") {
       const session = event.data.object as Stripe.Checkout.Session;
+
+      // Contract payment completed — persist it (this also notifies both parties).
+      if (session.metadata?.contractId && session.payment_status === "paid") {
+        await ctx.runMutation(api.contracts.recordPayment, {
+          id: session.metadata.contractId,
+          paid: true,
+          paymentAmount: (session.amount_total ?? 0) / 100,
+          stripeSessionId: session.id,
+        });
+      }
+
       if (session.metadata?.type === "lifetime" && session.payment_status === "paid") {
         const profileId = session.metadata.profileId;
         const lifetimeTier = session.metadata.lifetimeTier ?? "Lifetime";
@@ -125,6 +136,49 @@ http.route({
             stripeCustomerId,
           });
         }
+      }
+
+      // Host saved a card at signing (SetupIntent) — persist it for the deferred,
+      // off-session fee charge that runs when the collaboration completes.
+      if (session.metadata?.type === "fee_setup" && session.metadata?.contractId) {
+        const secretKey = process.env.STRIPE_SECRET_KEY;
+        const customerId = typeof session.customer === "string"
+          ? session.customer
+          : (session.customer as any)?.id ?? undefined;
+        let paymentMethodId: string | undefined;
+        const setupIntentField = (session as any).setup_intent;
+        if (secretKey && setupIntentField) {
+          try {
+            const stripeClient = new Stripe(secretKey);
+            const setupIntentId = typeof setupIntentField === "string" ? setupIntentField : setupIntentField.id;
+            const si = await stripeClient.setupIntents.retrieve(setupIntentId);
+            paymentMethodId = typeof si.payment_method === "string"
+              ? si.payment_method
+              : (si.payment_method as any)?.id;
+          } catch {
+            // Ignore — the frontend verify path also persists the saved card.
+          }
+        }
+        if (customerId && paymentMethodId) {
+          await ctx.runMutation(api.contracts.setHostPayment, {
+            contractId: session.metadata.contractId,
+            customerId,
+            paymentMethodId,
+            feeAmount: Number(session.metadata.feeAmount ?? 0),
+          });
+        }
+      }
+    }
+
+    // Off-session platform-fee charge succeeded — backstop for chargeContractFee.
+    if (event.type === "payment_intent.succeeded") {
+      const intent = event.data.object as Stripe.PaymentIntent;
+      if (intent.metadata?.type === "platform_fee" && intent.metadata?.contractId) {
+        await ctx.runMutation(internal.contracts.recordPaymentInternal, {
+          id: intent.metadata.contractId,
+          paymentAmount: (intent.amount_received ?? intent.amount ?? 0) / 100,
+          paymentIntentId: intent.id,
+        });
       }
     }
 

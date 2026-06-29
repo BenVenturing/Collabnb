@@ -5,7 +5,7 @@ import { api } from '../../convex/_generated/api';
 export default function PaymentModal({ isOpen, onClose, fee, isFreeStay, cashAmount, contractId }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const createCheckoutSession = useAction(api.stripe.createCheckoutSession);
+  const createFeeSetupSession = useAction(api.stripe.createFeeSetupSession);
 
   if (!isOpen) return null;
 
@@ -15,17 +15,20 @@ export default function PaymentModal({ isOpen, onClose, fee, isFreeStay, cashAmo
     : `5% of $${(cashAmount || 0).toFixed(0)} collaboration value (min. $20)`;
 
   const handlePay = async () => {
+    if (!contractId || contractId === 'draft' || contractId === 'unknown') {
+      setError('Please save the contract before adding a card.');
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
       const base = `${window.location.origin}/contract`;
-      const successUrl = `${base}?payment=success&contract_id=${encodeURIComponent(contractId || '')}&session_id={CHECKOUT_SESSION_ID}`;
-      const cancelUrl = `${base}?payment=cancelled`;
+      const successUrl = `${base}?setup=success&contract_id=${encodeURIComponent(contractId)}&session_id={CHECKOUT_SESSION_ID}`;
+      const cancelUrl = `${base}?setup=cancelled`;
 
-      const result = await createCheckoutSession({
-        contractId: contractId || 'unknown',
-        isFreeStay,
-        cashAmount: cashAmount || 0,
+      const result = await createFeeSetupSession({
+        contractId,
+        feeAmount: fee,
         successUrl,
         cancelUrl,
       });
@@ -34,7 +37,7 @@ export default function PaymentModal({ isOpen, onClose, fee, isFreeStay, cashAmo
         window.location.href = result.url;
       }
     } catch (err) {
-      console.error('Stripe checkout error:', err);
+      console.error('Stripe setup error:', err);
       setError(
         err?.message?.includes('STRIPE_SECRET_KEY')
           ? 'Stripe not configured. Run: npx convex env set STRIPE_SECRET_KEY sk_test_...'
@@ -87,14 +90,14 @@ export default function PaymentModal({ isOpen, onClose, fee, isFreeStay, cashAmo
           fontSize: '1.25rem', color: 'var(--ink)',
           textAlign: 'center', margin: '0 0 0.5rem',
         }}>
-          Complete your collaboration
+          Add a card to finish
         </h3>
         <p style={{
           color: 'var(--sage)', fontSize: '0.875rem',
           textAlign: 'center', lineHeight: 1.5,
           margin: '0 0 1.5rem',
         }}>
-          Both parties have signed. One last step: confirm your collaboration with payment.
+          Both parties have signed. Save a card now — you won't be charged yet. The platform fee is charged automatically only once the collaboration is completed.
         </p>
 
         {/* Fee breakdown */}
@@ -111,7 +114,7 @@ export default function PaymentModal({ isOpen, onClose, fee, isFreeStay, cashAmo
         }}>
           <div>
             <p style={{ fontWeight: 600, color: 'var(--ink)', fontSize: '0.9rem', margin: 0 }}>
-              Collabnb Platform Fee
+              Collabnb Platform Fee · charged at completion
             </p>
             <p style={{ color: 'var(--sage)', fontSize: '0.75rem', margin: '0.2rem 0 0', lineHeight: 1.4 }}>
               {feeExplain}
@@ -179,7 +182,7 @@ export default function PaymentModal({ isOpen, onClose, fee, isFreeStay, cashAmo
                 <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/>
                 <line x1="1" y1="10" x2="23" y2="10"/>
               </svg>
-              Pay {feeDisplay} with Stripe
+              Save card · {feeDisplay} at completion
             </>
           )}
         </button>

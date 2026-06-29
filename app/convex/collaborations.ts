@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
+import { internal } from "./_generated/api";
 
 export const getByCreator = query({
   args: { creatorId: v.string() },
@@ -72,15 +73,28 @@ export const create = mutation({
 
 export const markCompleted = mutation({
   args: {
-    id: v.string(),
+    // Optional: the local collab layer (CollabContext) doesn't always hold the
+    // Convex collab _id, so completion can be recorded by creatorId alone.
+    id: v.optional(v.string()),
     creatorId: v.optional(v.string()),
+    // Optional linked contract — schedules the host platform-fee charge on completion.
+    contractId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    await ctx.db.patch(args.id as any, {
-      status: 'completed',
-      status_text: 'Completed',
-      is_active: false,
-    });
+    if (args.id) {
+      await ctx.db.patch(args.id as any, {
+        status: 'completed',
+        status_text: 'Completed',
+        is_active: false,
+      });
+    }
+
+    // Auto-charge the host's saved card for the platform fee, off-session.
+    if (args.contractId) {
+      await ctx.scheduler.runAfter(0, internal.stripe.chargeContractFee, {
+        contractId: args.contractId,
+      });
+    }
 
     if (!args.creatorId) return;
 

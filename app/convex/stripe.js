@@ -1,4 +1,4 @@
-import { action } from './_generated/server';
+import { action, internalAction } from './_generated/server';
 import { api, internal } from './_generated/api';
 import { v } from 'convex/values';
 import Stripe from 'stripe';
@@ -234,5 +234,148 @@ export const verifyLifetimeSession = action({
     });
 
     return { success: true, lifetimeTier };
+  },
+});
+
+// ─── Deferred platform fee: save card at signing, charge on completion ────────
+// The host saves a card via a Stripe Checkout SetupIntent when the contract is
+// signed. No money moves yet. When the collab is marked complete, the saved card
+// is charged off-session for the platform fee (5% of cash / min $20, or flat $20
+// for free stays) — released to the platform account.
+
+// 1) Save the host's card at signing (no charge). Returns a hosted Checkout URL.
+export const createFeeSetupSession = action({
+  args: {
+    contractId: v.string(),
+    feeAmount: v.number(),
+    successUrl: v.string(),
+    cancelUrl: v.string(),
+  },
+  handler: async (_ctx, args) => {
+    const secretKey = process.env.STRIPE_SECRET_KEY;
+    if (!secretKey) throw new Error('STRIPE_SECRET_KEY is not set in Convex environment variables');
+
+    const stripe = new Stripe(secretKey);
+    const customer = await stripe.customers.create({ metadata: { contractId: args.contractId } });
+
+    const session = await stripe.checkout.sessions.create({
+      mode: 'setup',
+      payment_method_types: ['card'],
+      customer: customer.id,
+      success_url: args.successUrl,
+      cancel_url: args.cancelUrl,
+      metadata: { contractId: args.contractId, feeAmount: String(args.feeAmount), type: 'fee_setup' },
+      custom_text: {
+        submit: { message: "You won't be charged now — the platform fee is only charged once the collaboration is completed." },
+      },
+    });
+
+    return { url: session.url, sessionId: session.id };
+  },
+});
+
+// 2) After the SetupIntent redirect, store the saved card + fee on the contract.
+export const verifyFeeSetupSession = action({
+  args: { sessionId: v.string() },
+  handler: async (ctx, args) => {
+    const secretKey = process.env.STRIPE_SECRET_KEY;
+    if (!secretKey) throw new Error('STRIPE_SECRET_KEY is not set in Convex environment variables');
+
+    const stripe = new Stripe(secretKey);
+    const session = await stripe.checkout.sessions.retrieve(args.sessionId, { expand: ['setup_intent'] });
+
+    if (session.status !== 'complete') throw new Error('Setup session is not complete');
+    const contractId = session.metadata?.contractId;
+    if (!contractId) throw new Error('No contractId in setup session metadata');
+
+    const feeAmount = Number(session.metadata?.feeAmount ?? 0);
+    const customerId = typeof session.customer === 'string' ? session.customer : session.customer?.id;
+    const setupIntent = session.setup_intent;
+    const paymentMethodId =
+      setupIntent && typeof setupIntent === 'object'
+        ? (typeof setupIntent.payment_method === 'string'
+            ? setupIntent.payment_method
+            : setupIntent.payment_method?.id ?? null)
+        : null;
+
+    if (!customerId || !paymentMethodId) throw new Error('Card was not saved');
+
+    // Set as the default payment method so the off-session charge uses it.
+    await stripe.customers.update(customerId, {
+      invoice_settings: { default_payment_method: paymentMethodId },
+    });
+
+    await ctx.runMutation(api.contracts.setHostPayment, {
+      contractId,
+      customerId,
+      paymentMethodId,
+      feeAmount,
+    });
+
+    return { success: true };
+  },
+});
+
+// 3) Charge the saved card off-session when the collab completes. Called by the
+// scheduler from collaborations.markCompleted, and backstopped by the webhook.
+export const chargeContractFee = internalAction({
+  args: { contractId: v.string() },
+  handler: async (ctx, args) => {
+    const secretKey = process.env.STRIPE_SECRET_KEY;
+    if (!secretKey) return { skipped: 'no_stripe_key' };
+
+    const contract = await ctx.runQuery(internal.contracts.getByIdInternal, { id: args.contractId });
+    if (!contract) return { skipped: 'no_contract' };
+    if (contract.paid) return { skipped: 'already_paid' };
+
+    // Founding / lifetime hosts pay no platform fee.
+    if (contract.host_id) {
+      const host = await ctx.runQuery(api.profiles.getById, { id: String(contract.host_id) });
+      if (host?.is_founder || host?.is_lifetime) return { skipped: 'host_free' };
+    }
+
+    const customerId = contract.host_stripe_customer_id;
+    const paymentMethodId = contract.host_payment_method_id;
+    // No saved card → can't auto-charge; the manual "Pay Platform Fee" remains.
+    if (!customerId || !paymentMethodId) return { skipped: 'no_saved_card' };
+
+    // Prefer the fee captured at signing; otherwise recompute from the contract.
+    let fee = contract.fee_amount;
+    if (!fee || fee <= 0) {
+      const isFreeStay = contract.payment === 'Free Stay' || contract.currency === 'free_stay';
+      const cash = parseFloat(String(contract.payment ?? '').replace(/[^0-9.]/g, '')) || 0;
+      fee = isFreeStay ? 20 : Math.max(cash * 0.05, 20);
+    }
+    const amountInCents = Math.round(fee * 100);
+
+    const stripe = new Stripe(secretKey);
+    try {
+      const intent = await stripe.paymentIntents.create({
+        amount: amountInCents,
+        currency: 'usd',
+        customer: customerId,
+        payment_method: paymentMethodId,
+        off_session: true,
+        confirm: true,
+        description: 'Collabnb platform fee — completed collaboration',
+        metadata: { contractId: args.contractId, type: 'platform_fee' },
+      });
+
+      if (intent.status === 'succeeded') {
+        await ctx.runMutation(internal.contracts.recordPaymentInternal, {
+          id: args.contractId,
+          paymentAmount: fee,
+          paymentIntentId: intent.id,
+        });
+        return { success: true };
+      }
+
+      // requires_action / processing — flag for manual completion.
+      await ctx.runMutation(internal.contracts.markFeeChargeFailed, { id: args.contractId });
+      return { needsAction: true, status: intent.status };
+    } catch (err) {
+      await ctx.runMutation(internal.contracts.markFeeChargeFailed, { id: args.contractId });
+      return { error: String(err?.message || err) };
+    }
   },
 });

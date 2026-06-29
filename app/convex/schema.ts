@@ -163,9 +163,18 @@ export default defineSchema({
     paid: v.optional(v.boolean()),
     payment_amount: v.optional(v.number()),
     stripe_session_id: v.optional(v.string()),
+    // Saved-card + deferred-fee fields: card is saved at signing, fee charged on completion.
+    host_stripe_customer_id: v.optional(v.string()),
+    host_payment_method_id: v.optional(v.string()),
+    fee_amount: v.optional(v.number()),
+    payment_intent_id: v.optional(v.string()),
+    fee_charge_failed: v.optional(v.boolean()),
     sent_at: v.optional(v.number()),
     last_reminder_at: v.optional(v.number()),
-  }).index("by_owner", ["owner_id"]),
+  })
+    .index("by_owner", ["owner_id"])
+    .index("by_host", ["host_id"])
+    .index("by_creator", ["creator_id"]),
 
   collections: defineTable({
     name: v.string(),

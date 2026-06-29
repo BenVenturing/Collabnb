@@ -81,7 +81,7 @@ const FAQ_SECTIONS = [
       },
       {
         q: 'How do contracts work?',
-        a: 'Once a host accepts your application or pitch, a contract is generated with all agreed terms. Both parties must sign digitally. Once both have signed, the contract is locked in and — for paid collabs — payment is triggered to the host.',
+        a: "Once a host accepts your application or pitch, a contract is generated with all agreed terms. Both parties must sign digitally. Once both have signed, the contract is locked in. The Collabnb platform fee isn't charged at signing — it's charged automatically only after the collaboration is marked complete, so the host pays once the work is actually done.",
       },
     ],
   },
@@ -99,6 +99,14 @@ const FAQ_SECTIONS = [
       {
         q: 'What is a Founding Member?',
         a: 'Founding Members are the first 100 verified hosts and the first 100 verified creators on Collabnb. They receive free platform access forever as a thank-you for being early supporters of the community.',
+      },
+      {
+        q: 'When is the host platform fee charged?',
+        a: "The platform fee is never charged up front. It's charged automatically to the host once the collaboration is marked complete — the moment both sides close out the collab. There's nothing to do manually: when the contract finishes, the fee is released straight to Collabnb. If a card was saved at signing, it happens automatically; otherwise the host completes a quick one-tap payment when the collab wraps.",
+      },
+      {
+        q: 'How does the referral / discount code work, and how do I get free months?',
+        a: "Every member gets a personal referral code to share. When someone signs up using your code, you BOTH get 1 free month right away. Then, once that new member completes their first collaboration, you BOTH get another free month on top — so a successful referral is worth 2 free months to each of you. Free months are months of full platform access at no charge; one is automatically applied each billing month before you're ever charged.",
       },
     ],
   },

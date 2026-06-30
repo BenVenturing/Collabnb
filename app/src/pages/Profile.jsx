@@ -534,9 +534,24 @@ function GhostCollabCard() {
   );
 }
 
+// ─── Responsive helper ────────────────────────────────────────────────────────
+function useIsMobile(query = '(max-width: 480px)') {
+  const [matches, setMatches] = useState(() =>
+    typeof window !== 'undefined' && window.matchMedia(query).matches);
+  useEffect(() => {
+    const mq = window.matchMedia(query);
+    const onChange = () => setMatches(mq.matches);
+    onChange();
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, [query]);
+  return matches;
+}
+
 // ─── Main Profile page ────────────────────────────────────────────────────────
 export default function Profile() {
   const { profile, loading, signOut, updateProfile } = useAuth();
+  const isMobile = useIsMobile();
   const { contracts, collabs } = useCollabs();
   const navigate = useNavigate();
   const profileEmail = (profile?.email || '').toLowerCase();
@@ -961,16 +976,20 @@ export default function Profile() {
               { value: fmtFollowers(dp.follower_count),                          label: 'Followers',  tooltip: null },
               { value: dp.engagement_rate ? `${dp.engagement_rate}%` : '—',     label: 'Engagement', tooltip: null },
             ];
+            const cols = isMobile && stats.length === 4 ? 2 : stats.length;
             return (
-              <div style={{ display: 'grid', gridTemplateColumns: `repeat(${stats.length}, 1fr)` }}>
-                {stats.map((stat, i) => (
-                  <div key={stat.label} title={stat.tooltip || undefined} style={{ textAlign: 'center', padding: '0.5rem 0.5rem', borderRight: i < stats.length - 1 ? '1px solid rgba(25,37,36,0.06)' : 'none', cursor: stat.tooltip ? 'help' : 'default' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, rowGap: cols < stats.length ? '0.875rem' : 0 }}>
+                {stats.map((stat, i) => {
+                  const lastInRow = (i % cols) === cols - 1;
+                  return (
+                  <div key={stat.label} title={stat.tooltip || undefined} style={{ textAlign: 'center', padding: '0.5rem 0.5rem', borderRight: lastInRow ? 'none' : '1px solid rgba(25,37,36,0.06)', cursor: stat.tooltip ? 'help' : 'default' }}>
                     <p style={{ fontFamily: 'var(--font-display)', fontSize: isCreator ? '1.25rem' : '1.5rem', fontWeight: 800, color: 'var(--ink)', margin: '0 0 0.2rem' }}>{stat.value}</p>
                     <p style={{ fontSize: '0.72rem', color: 'var(--sage)', margin: 0 }}>
                       {stat.label}{stat.tooltip && <span style={{ marginLeft: '0.2rem', opacity: 0.55, fontSize: '0.65rem' }}>ⓘ</span>}
                     </p>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             );
           })()}
@@ -1174,8 +1193,8 @@ export default function Profile() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.125rem' }}>
               <EditField label="Name" value={editDraft.full_name} onChange={(v) => setEditDraft({ ...editDraft, full_name: v })} />
               <EditField label="Bio" value={editDraft.bio} onChange={(v) => setEditDraft({ ...editDraft, bio: v })} multiline />
+              <EditField label="City" value={editDraft.city} onChange={(v) => setEditDraft({ ...editDraft, city: v })} />
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-                <EditField label="City" value={editDraft.city} onChange={(v) => setEditDraft({ ...editDraft, city: v })} />
                 <EditField label="State / Region" value={editDraft.region} onChange={(v) => setEditDraft({ ...editDraft, region: v })} />
                 <EditField label="Country" value={editDraft.country || ''} onChange={(v) => setEditDraft({ ...editDraft, country: v })} />
               </div>
@@ -1371,7 +1390,7 @@ export default function Profile() {
           >
             <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid rgba(60,87,89,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
               <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1rem', color: 'var(--slate)', margin: 0, letterSpacing: '-0.01em' }}>Settings</p>
-              <button onClick={() => setShowSettings(false)} style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'rgba(209,235,219,0.5)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--slate)' }}>✕</button>
+              <button onClick={() => setShowSettings(false)} style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'rgba(209,235,219,0.5)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--slate)' }}>✕</button>
             </div>
             {/* Scrollable body */}
             <div style={{ flex: 1, overflowY: 'auto' }}>
@@ -1851,7 +1870,7 @@ export default function Profile() {
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
               <h4 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.15rem', color: 'var(--slate)', margin: 0 }}>All Collaborations</h4>
-              <button onClick={() => setShowAllCollabs(false)} style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'rgba(209,235,219,0.5)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--slate)' }}>✕</button>
+              <button onClick={() => setShowAllCollabs(false)} style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'rgba(209,235,219,0.5)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--slate)' }}>✕</button>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               {[...SAMPLE_COLLABORATIONS]
@@ -1978,7 +1997,7 @@ export default function Profile() {
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
               <h4 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.15rem', color: 'var(--slate)', margin: 0 }}>Privacy Policy</h4>
-              <button onClick={() => setShowPrivacy(false)} style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'rgba(209,235,219,0.5)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--slate)' }}>✕</button>
+              <button onClick={() => setShowPrivacy(false)} style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'rgba(209,235,219,0.5)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--slate)' }}>✕</button>
             </div>
             <div style={{ fontSize: '0.85rem', color: 'var(--slate)', lineHeight: 1.7 }}>
               <p><strong>Effective Date:</strong> July 1, 2026</p>
@@ -2044,7 +2063,7 @@ export default function Profile() {
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
               <h4 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.15rem', color: 'var(--slate)', margin: 0 }}>Location Settings</h4>
-              <button onClick={() => setShowLocation(false)} style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'rgba(209,235,219,0.5)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--slate)' }}>✕</button>
+              <button onClick={() => setShowLocation(false)} style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'rgba(209,235,219,0.5)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--slate)' }}>✕</button>
             </div>
 
             <p style={{ fontSize: '0.8rem', color: 'var(--sage)', margin: '0 0 1.25rem', lineHeight: 1.5 }}>

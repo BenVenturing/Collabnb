@@ -28,7 +28,6 @@ export default function PaymentModal({ isOpen, onClose, fee, isFreeStay, cashAmo
 
       const result = await createFeeSetupSession({
         contractId,
-        feeAmount: fee,
         successUrl,
         cancelUrl,
       });

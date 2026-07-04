@@ -93,6 +93,8 @@ export const updatePost = mutation({
     excerpt: v.optional(v.string()),
     content: v.optional(v.string()),
     tags: v.optional(v.array(v.string())),
+    category: v.optional(v.string()),
+    pull_quote: v.optional(v.string()),
     instagram_embed_url: v.optional(v.string()),
     seo_description: v.optional(v.string()),
     // Image fields (hero + 3 inline) — swappable from the editor
@@ -122,6 +124,8 @@ export const updatePost = mutation({
     }
     if (fields.excerpt !== undefined) updates.excerpt = fields.excerpt;
     if (fields.tags !== undefined) updates.tags = fields.tags;
+    if (fields.category !== undefined) updates.category = fields.category;
+    if (fields.pull_quote !== undefined) updates.pull_quote = fields.pull_quote;
     if (fields.instagram_embed_url !== undefined) updates.instagram_embed_url = fields.instagram_embed_url;
     if (fields.seo_description !== undefined) updates.seo_description = fields.seo_description;
     // Patch any image field that was provided
@@ -211,35 +215,137 @@ export const getPlatformStats = query({
   },
 });
 
-// ─── Action: generate a blog post via NVIDIA NIM + Unsplash ──────────────────
+// ─── Action: generate a blog post via LLM + web research + Unsplash ──────────
 //
-// Required Convex environment variables:
-//   NVIDIA_API_KEY       — from build.nvidia.com
-//   UNSPLASH_ACCESS_KEY  — from unsplash.com/developers
-//
+// Convex environment variables:
+//   NVIDIA_API_KEY       — primary writer (build.nvidia.com)          [required*]
+//   DEEPSEEK_API_KEY     — fallback writer (platform.deepseek.com)    [optional]
+//   OPENROUTER_API_KEY   — fallback writer (openrouter.ai)            [optional]
+//   SGAI_API_KEY         — ScrapeGraphAI web research                 [optional]
+//   FIRECRAWL_API_KEY    — Firecrawl web research (used if no SGAI)   [optional]
+//   UNSPLASH_ACCESS_KEY  — photos (unsplash.com/developers)           [required]
+// *At least one writer key must be set; NVIDIA is preferred.
 // ─────────────────────────────────────────────────────────────────────────────
 
-async function nvidiaChat(apiKey: string, messages: {role: string; content: string}[], maxTokens = 2048): Promise<string> {
-  const res = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
+type ChatMessage = { role: string; content: string };
+
+// OpenAI-compatible chat call. Providers are tried in order: NVIDIA (primary),
+// DeepSeek, OpenRouter — the first one with a configured key wins; if it
+// errors, the next configured provider is tried.
+async function llmChat(messages: ChatMessage[], maxTokens = 2048): Promise<string> {
+  const providers = [
+    {
+      name: "NVIDIA",
+      key: process.env.NVIDIA_API_KEY,
+      url: "https://integrate.api.nvidia.com/v1/chat/completions",
       model: "meta/llama-3.3-70b-instruct",
-      messages,
-      max_tokens: maxTokens,
-      temperature: 0.7,
-      stream: false,
-    }),
-  });
-  if (!res.ok) {
-    const err = await res.text().catch(() => res.status.toString());
-    throw new Error(`NVIDIA API error ${res.status}: ${err}`);
+    },
+    {
+      name: "DeepSeek",
+      key: process.env.DEEPSEEK_API_KEY,
+      url: "https://api.deepseek.com/chat/completions",
+      model: "deepseek-chat",
+    },
+    {
+      name: "OpenRouter",
+      key: process.env.OPENROUTER_API_KEY,
+      url: "https://openrouter.ai/api/v1/chat/completions",
+      model: "meta-llama/llama-3.3-70b-instruct",
+    },
+  ].filter((p) => !!p.key);
+
+  if (providers.length === 0) {
+    throw new Error(
+      "No writer API key set. Set NVIDIA_API_KEY (preferred), DEEPSEEK_API_KEY, or OPENROUTER_API_KEY in the Convex environment."
+    );
   }
-  const data = await res.json();
-  return data.choices?.[0]?.message?.content || "";
+
+  let lastError: Error | null = null;
+  for (const provider of providers) {
+    try {
+      const res = await fetch(provider.url, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${provider.key}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: provider.model,
+          messages,
+          max_tokens: maxTokens,
+          temperature: 0.7,
+          stream: false,
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.text().catch(() => res.status.toString());
+        throw new Error(`${provider.name} API error ${res.status}: ${err.slice(0, 200)}`);
+      }
+      const data = await res.json();
+      const content = data.choices?.[0]?.message?.content || "";
+      if (!content) throw new Error(`${provider.name} returned an empty response`);
+      return content;
+    } catch (err: any) {
+      lastError = err;
+    }
+  }
+  throw lastError || new Error("All LLM providers failed");
+}
+
+// Real web research via ScrapeGraphAI (preferred) or Firecrawl. Returns source
+// URLs plus condensed page content to ground the post in real, current data.
+// Degrades to empty (pure-LLM research) when neither key is configured.
+async function webResearch(topic: string): Promise<{ context: string; sources: string[] }> {
+  const sgaiKey = process.env.SGAI_API_KEY;
+  const firecrawlKey = process.env.FIRECRAWL_API_KEY;
+
+  if (sgaiKey) {
+    try {
+      const res = await fetch("https://api.scrapegraphai.com/v1/searchscraper", {
+        method: "POST",
+        headers: { "SGAI-APIKEY": sgaiKey, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          user_prompt: `Find current data, statistics, and real examples about: ${topic}. Focus on hospitality, UGC creators, and content-for-stay partnerships.`,
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const sources: string[] = Array.isArray(data.reference_urls) ? data.reference_urls.slice(0, 6) : [];
+        const context = typeof data.result === "string" ? data.result : JSON.stringify(data.result ?? "");
+        if (context) return { context: context.slice(0, 4000), sources };
+      }
+    } catch {
+      // fall through to Firecrawl / pure-LLM
+    }
+  }
+
+  if (firecrawlKey) {
+    try {
+      const res = await fetch("https://api.firecrawl.dev/v1/search", {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${firecrawlKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          query: topic,
+          limit: 5,
+          scrapeOptions: { formats: ["markdown"] },
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const results: any[] = data.data || [];
+        const sources = results.map((r) => r.url).filter(Boolean).slice(0, 6);
+        const context = results
+          .map((r) => `SOURCE: ${r.url}\n${String(r.markdown || r.description || "").slice(0, 800)}`)
+          .join("\n\n")
+          .slice(0, 4000);
+        if (context) return { context, sources };
+      }
+    } catch {
+      // fall through to pure-LLM
+    }
+  }
+
+  return { context: "", sources: [] };
 }
 
 // ─── Action: search Unsplash for editor photo swaps ───────────────────────────
@@ -275,11 +381,9 @@ export const generatePost = action({
     topicHint: v.optional(v.string()),
   },
   handler: async (ctx, { isStatsPost = false, topicHint }) => {
-    const nvidiaKey   = process.env.NVIDIA_API_KEY;
     const unsplashKey = process.env.UNSPLASH_ACCESS_KEY;
-
-    if (!nvidiaKey || !unsplashKey) {
-      throw new Error("Missing API keys. Set NVIDIA_API_KEY and UNSPLASH_ACCESS_KEY in Convex env.");
+    if (!unsplashKey) {
+      throw new Error("Missing UNSPLASH_ACCESS_KEY in Convex env.");
     }
 
     // ── 1. Research phase ─────────────────────────────────────────────────────
@@ -290,15 +394,23 @@ export const generatePost = action({
     }
 
     const topic = topicHint || "the economics of content-for-stay partnerships between boutique hosts and UGC creators";
+
+    // Real web research when ScrapeGraphAI / Firecrawl keys are configured;
+    // otherwise the LLM research brief runs on its own knowledge.
+    const web = await webResearch(topic);
+    const webContext = web.context
+      ? `\n\nLive web research (cite these facts where relevant, do not invent beyond them):\n${web.context}`
+      : "";
+
     const researchPrompt = isStatsPost
       ? `You are a content strategist for Collabnb, a marketplace connecting boutique hotel/Airbnb hosts with UGC travel creators. ${statsContext}
 
-Produce a detailed research brief covering: UGC marketing trends in hospitality (2024-2025), creator-driven booking statistics, what's working for boutique properties vs chains. Include specific data points and real-world examples.`
+Produce a detailed research brief covering: UGC marketing trends in hospitality (2024-2025), creator-driven booking statistics, what's working for boutique properties vs chains. Include specific data points and real-world examples.${webContext}`
       : `You are a content strategist for Collabnb, a marketplace connecting boutique hotel/Airbnb hosts with UGC travel creators for content-for-stay partnerships.
 
-Produce a detailed research brief on: ${topic}. Cover: key trends and data (2024-2025), real-world examples of creator-property collaborations, what boutique hosts and UGC creators each need from partnerships, actionable insights. Be concrete — include specific examples, data points where known, and avoid vague generalities.`;
+Produce a detailed research brief on: ${topic}. Cover: key trends and data (2024-2025), real-world examples of creator-property collaborations, what boutique hosts and UGC creators each need from partnerships, actionable insights. Be concrete — include specific examples, data points where known, and avoid vague generalities.${webContext}`;
 
-    const research = await nvidiaChat(nvidiaKey, [
+    const research = await llmChat([
       { role: "system", content: "You are an expert content strategist specializing in travel, hospitality, and the creator economy. Produce detailed, concrete research briefs — name real properties, real campaigns, real data points." },
       { role: "user", content: researchPrompt },
     ], 1500);
@@ -360,7 +472,7 @@ IMAGE_QUERY_3: [black and white creator travel editorial — 5-7 words, differen
 CONTENT:
 [your full HTML here, with %%INLINE_IMAGE_1%%, %%INLINE_IMAGE_2%%, %%INLINE_IMAGE_3%% markers in place]`;
 
-    const raw = await nvidiaChat(nvidiaKey, [
+    const raw = await llmChat([
       { role: "system", content: "You are an editorial writer for a boutique travel publication. Follow the output format exactly. Place image markers exactly where specified." },
       { role: "user", content: writePrompt },
     ], 3000);
@@ -384,7 +496,7 @@ CONTENT:
     const tags       = tagsRaw.split(",").map((t: string) => t.trim()).filter(Boolean);
 
     if (!title || !content) {
-      throw new Error("NVIDIA returned incomplete post data — try again");
+      throw new Error("The writer model returned incomplete post data — try again");
     }
 
     // ── 3. Fetch images from Unsplash (B&W filter) ────────────────────────────
@@ -442,7 +554,7 @@ CONTENT:
       inline_image_3_url:    inline3?.url,
       inline_image_3_alt:    inline3?.alt,
       inline_image_3_credit: inline3?.credit,
-      sources: [],
+      sources: web.sources,
       seo_description: seoDesc,
       reading_time: readingTime(content),
       is_stats_post: isStatsPost,
@@ -457,12 +569,15 @@ CONTENT:
 export const suggestTopics = action({
   args: {},
   handler: async (): Promise<string[]> => {
-    const apiKey = process.env.NVIDIA_API_KEY;
-    if (!apiKey) return [];
-    const content = await nvidiaChat(apiKey, [
-      { role: "system", content: "You are a content strategist for Collabnb — a marketplace connecting boutique hotel/Airbnb hosts with UGC travel creators for content-for-stay partnerships. Be creative and specific." },
-      { role: "user", content: 'Give me exactly 8 fresh, specific blog post topic ideas for The Collabnb Journal. Mix topics for boutique hosts and UGC creators. Return ONLY a valid JSON array of 8 strings, nothing else. Example: ["topic one", "topic two"]' },
-    ], 400);
+    let content = "";
+    try {
+      content = await llmChat([
+        { role: "system", content: "You are a content strategist for Collabnb — a marketplace connecting boutique hotel/Airbnb hosts with UGC travel creators for content-for-stay partnerships. Be creative and specific." },
+        { role: "user", content: 'Give me exactly 8 fresh, specific blog post topic ideas for The Collabnb Journal. Mix topics for boutique hosts and UGC creators. Return ONLY a valid JSON array of 8 strings, nothing else. Example: ["topic one", "topic two"]' },
+      ], 400);
+    } catch {
+      return [];
+    }
     const match = content.match(/\[[\s\S]*?\]/);
     if (!match) return [];
     try {

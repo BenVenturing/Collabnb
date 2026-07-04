@@ -1,6 +1,28 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useAction, useConvex } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
+
+// Replace %%INLINE_IMAGE_n%% markers with real <figure> blocks so the preview
+// matches what the public blog renders.
+function renderContentWithImages(content, images) {
+  let html = content || '';
+  [1, 2, 3].forEach(n => {
+    const img = images[`inline${n}`];
+    const marker = new RegExp(`(<p>\\s*)?%%INLINE_IMAGE_${n}%%(\\s*</p>)?`, 'g');
+    const figure = img?.url
+      ? `<figure style="margin:1.5rem 0"><img src="${img.url}" alt="${(img.alt || '').replace(/"/g, '&quot;')}" style="width:100%;border-radius:0.75rem;display:block" />${img.credit ? `<figcaption style="font-size:0.7rem;color:#959D90;margin-top:0.3rem">Photo: ${img.credit} / Unsplash</figcaption>` : ''}</figure>`
+      : '';
+    html = html.replace(marker, figure);
+  });
+  return html;
+}
+
+// A post is "legacy format" if it predates the structured template (no hero
+// image or no inline image markers in the content).
+function isLegacyFormat(post) {
+  const hasMarkers = /%%INLINE_IMAGE_\d%%/.test(post.content || '') || post.inline_image_1_url;
+  return !post.hero_image_url || !hasMarkers || !post.pull_quote;
+}
 
 const STATUS_CFG = {
   draft:     { label: 'Draft',     bg: 'rgba(212,168,67,0.15)',  color: '#b45309' },
@@ -147,8 +169,12 @@ function PostEditor({ post, onClose }) {
   const [excerpt,  setExcerpt]  = useState(post.excerpt);
   const [content,  setContent]  = useState(post.content);
   const [tags,     setTags]     = useState((post.tags || []).join(', '));
+  const [category, setCategory] = useState(post.category || 'industry');
+  const [seoDesc,  setSeoDesc]  = useState(post.seo_description || '');
+  const [pullQuote, setPullQuote] = useState(post.pull_quote || '');
   const [igEmbed,  setIgEmbed]  = useState(post.instagram_embed_url || '');
   const [saving,   setSaving]   = useState(false);
+  const [saved,    setSaved]    = useState(false);
   const [confirm,  setConfirm]  = useState(null); // 'approve' | 'reject' | 'delete'
 
   // Swappable images (hero + 3 inline). Each holds { url, alt, credit }.
@@ -169,6 +195,9 @@ function PostEditor({ post, onClose }) {
         excerpt,
         content,
         tags: tags.split(',').map(t => t.trim()).filter(Boolean),
+        category,
+        pull_quote: pullQuote,
+        seo_description: seoDesc,
         instagram_embed_url: igEmbed || undefined,
         hero_image_url:        images.hero.url,
         hero_image_alt:        images.hero.alt,
@@ -186,6 +215,8 @@ function PostEditor({ post, onClose }) {
       });
     } finally {
       setSaving(false);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 1800);
     }
   }
 
@@ -230,8 +261,13 @@ function PostEditor({ post, onClose }) {
             </p>
           </div>
           <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+            {post.status === 'published' && (
+              <a href={`/blog/${post.slug}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--slate)', textDecoration: 'none', padding: '0.3rem 0.7rem', borderRadius: 9999, border: '1px solid rgba(25,37,36,0.15)' }}>
+                View live
+              </a>
+            )}
             <Badge status={post.status} />
-            <button onClick={onClose} style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(25,37,36,0.07)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--slate)', fontSize: '0.875rem' }}>✕</button>
+            <button onClick={onClose} aria-label="Close editor" style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(25,37,36,0.07)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--slate)', fontSize: '0.875rem' }}>✕</button>
           </div>
         </div>
 
@@ -268,7 +304,12 @@ function PostEditor({ post, onClose }) {
               </div>
               <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.5rem', color: 'var(--ink)', margin: '0 0 0.5rem', lineHeight: 1.25 }}>{title}</h1>
               <p style={{ fontSize: '0.9rem', color: 'var(--sage)', margin: '0 0 1.5rem', lineHeight: 1.6 }}>{excerpt}</p>
-              <div style={{ fontSize: '0.9rem', lineHeight: 1.75, color: 'var(--ink)' }} dangerouslySetInnerHTML={{ __html: content }} />
+              <div style={{ fontSize: '0.9rem', lineHeight: 1.75, color: 'var(--ink)' }} dangerouslySetInnerHTML={{ __html: renderContentWithImages(content, images) }} />
+              {pullQuote && (
+                <blockquote style={{ margin: '1.5rem 0', padding: '1rem 1.25rem', borderLeft: '3px solid var(--mint, #D1EBDB)', background: 'rgba(209,235,219,0.15)', borderRadius: '0 0.75rem 0.75rem 0', fontFamily: 'var(--font-display)', fontSize: '1.05rem', color: 'var(--ink)', fontStyle: 'italic' }}>
+                  {pullQuote}
+                </blockquote>
+              )}
               {igEmbed && (
                 <div style={{ margin: '1.5rem 0', padding: '1rem', background: 'rgba(25,37,36,0.04)', borderRadius: '0.75rem', fontSize: '0.8rem', color: 'var(--slate)' }}>
                   Instagram embed: <a href={igEmbed} target="_blank" rel="noopener noreferrer" style={{ color: '#7B68C8' }}>{igEmbed}</a>
@@ -299,9 +340,28 @@ function PostEditor({ post, onClose }) {
                 <ImageSwapField label="Inline 2"     value={images.inline2} onChange={v => setImage('inline2', v)} />
                 <ImageSwapField label="Inline 3"     value={images.inline3} onChange={v => setImage('inline3', v)} />
               </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div>
+                  <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--sage)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: '0.35rem' }}>Category</label>
+                  <select value={category} onChange={e => setCategory(e.target.value)} style={inputStyle}>
+                    <option value="creators">Creators</option>
+                    <option value="hosts">Hosts</option>
+                    <option value="industry">Industry</option>
+                    <option value="stats">Stats</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--sage)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: '0.35rem' }}>SEO description ({seoDesc.length}/155)</label>
+                  <input value={seoDesc} onChange={e => setSeoDesc(e.target.value)} maxLength={155} style={inputStyle} placeholder="Search result snippet" />
+                </div>
+              </div>
               <div>
                 <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--sage)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: '0.35rem' }}>Excerpt</label>
                 <textarea value={excerpt} onChange={e => setExcerpt(e.target.value)} rows={2} style={{ ...inputStyle, resize: 'vertical' }} />
+              </div>
+              <div>
+                <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--sage)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: '0.35rem' }}>Pull quote</label>
+                <textarea value={pullQuote} onChange={e => setPullQuote(e.target.value)} rows={2} style={{ ...inputStyle, resize: 'vertical' }} placeholder="The single most resonant sentence from the post" />
               </div>
               <div>
                 <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--sage)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: '0.35rem' }}>Content (HTML)</label>
@@ -315,8 +375,8 @@ function PostEditor({ post, onClose }) {
                 <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--sage)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: '0.35rem' }}>Instagram Embed URL (optional)</label>
                 <input value={igEmbed} onChange={e => setIgEmbed(e.target.value)} style={inputStyle} placeholder="https://www.instagram.com/p/..." />
               </div>
-              <button onClick={handleSave} disabled={saving} style={{ alignSelf: 'flex-start', padding: '0.6rem 1.25rem', borderRadius: 9999, border: '1.5px solid rgba(25,37,36,0.2)', background: 'transparent', fontFamily: 'var(--font-body)', fontSize: '0.82rem', fontWeight: 600, color: 'var(--ink)', cursor: saving ? 'default' : 'pointer', opacity: saving ? 0.5 : 1 }}>
-                {saving ? 'Saving…' : 'Save changes'}
+              <button onClick={handleSave} disabled={saving} aria-live="polite" style={{ alignSelf: 'flex-start', padding: '0.6rem 1.25rem', borderRadius: 9999, border: '1.5px solid rgba(25,37,36,0.2)', background: saved ? 'rgba(209,235,219,0.5)' : 'transparent', fontFamily: 'var(--font-body)', fontSize: '0.82rem', fontWeight: 600, color: saved ? '#166534' : 'var(--ink)', cursor: saving ? 'default' : 'pointer', opacity: saving ? 0.5 : 1, transition: 'background 200ms' }}>
+                {saving ? 'Saving' : saved ? 'Saved' : 'Save changes'}
               </button>
             </div>
           )}
@@ -387,6 +447,7 @@ function PostCard({ post, onOpen }) {
         <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '0.3rem' }}>
           <Badge status={post.status} />
           {post.is_stats_post && <span style={{ fontSize: '0.62rem', padding: '0.15rem 0.4rem', borderRadius: 9999, background: 'rgba(212,168,67,0.12)', color: '#b45309', fontWeight: 600 }}>Stats</span>}
+          {isLegacyFormat(post) && <span title="Missing hero image, inline images, or pull quote. Open to update, or regenerate." style={{ fontSize: '0.62rem', padding: '0.15rem 0.4rem', borderRadius: 9999, background: 'rgba(200,104,104,0.1)', color: '#9b2d2d', fontWeight: 600 }}>Legacy format</span>}
           <span style={{ fontSize: '0.65rem', color: 'var(--stone)' }}>{new Date(post.generated_at).toLocaleDateString()}</span>
         </div>
         <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.875rem', color: 'var(--ink)', margin: '0 0 0.2rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{post.title}</p>
@@ -411,6 +472,15 @@ export default function BlogManager() {
   const allPosts       = useQuery(api.blog.getAll) || [];
   const generatePost   = useAction(api.blog.generatePost);
   const suggestTopics  = useAction(api.blog.suggestTopics);
+  const getIntegrationStatus = useAction(api.social.getIntegrationStatus);
+  const [integrations, setIntegrations] = useState(null);
+
+  useEffect(() => {
+    getIntegrationStatus({}).then(setIntegrations).catch(() => {});
+  }, [getIntegrationStatus]);
+
+  const writer = integrations?.nvidia ? 'NVIDIA' : integrations?.deepseek ? 'DeepSeek' : integrations?.openrouter ? 'OpenRouter' : null;
+  const research = integrations?.scrapegraph ? 'ScrapeGraphAI' : integrations?.firecrawl ? 'Firecrawl' : null;
 
   const [tab,          setTab]          = useState('drafts');
   const [editing,      setEditing]      = useState(null);
@@ -594,13 +664,22 @@ export default function BlogManager() {
         </div>
       )}
 
-      {/* API key setup notice */}
-      {allPosts.length === 0 && !generating && (
-        <div style={{ marginBottom: '1.25rem', padding: '0.875rem 1rem', borderRadius: '0.875rem', background: 'rgba(74,155,127,0.08)', border: '1px solid rgba(74,155,127,0.25)' }}>
-          <p style={{ fontSize: '0.82rem', fontWeight: 600, color: '#2d7d5e', margin: '0 0 0.25rem' }}>Powered by NVIDIA + Unsplash</p>
-          <p style={{ fontSize: '0.78rem', color: '#2d7d5e', margin: 0, opacity: 0.85 }}>
-            Hit ⇄ to get NVIDIA topic ideas, or type your own and click Generate. Post lands in Drafts for your review.
-          </p>
+      {/* Pipeline status */}
+      {integrations && (
+        <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', marginBottom: '1.25rem' }}>
+          {[
+            { label: writer ? `Writer: ${writer}` : 'Writer: none', ok: !!writer, hint: !writer && 'Set NVIDIA_API_KEY in Convex env' },
+            { label: research ? `Research: ${research}` : 'Research: model only', ok: !!research, hint: !research && 'Add SGAI_API_KEY or FIRECRAWL_API_KEY for live web research' },
+            { label: integrations.unsplash ? 'Photos: Unsplash' : 'Photos: missing key', ok: !!integrations.unsplash, hint: !integrations.unsplash && 'Set UNSPLASH_ACCESS_KEY in Convex env' },
+          ].map((chip, i) => (
+            <span key={i} title={chip.hint || ''} style={{
+              fontSize: '0.7rem', fontWeight: 600, padding: '0.3rem 0.7rem', borderRadius: 9999,
+              background: chip.ok ? 'rgba(209,235,219,0.5)' : 'rgba(212,168,67,0.15)',
+              color: chip.ok ? '#166534' : '#b45309',
+            }}>
+              {chip.label}
+            </span>
+          ))}
         </div>
       )}
 

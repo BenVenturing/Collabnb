@@ -14,26 +14,42 @@ function getLifetimeTier(count) {
   return null; // sold out — use monthly/annual
 }
 
+// Single source of truth for the platform fee. Always derived from the stored
+// contract — client-supplied amounts are never trusted.
+function computeContractFee(contract) {
+  const isFreeStay = contract.payment === 'Free Stay' || contract.currency === 'free_stay';
+  const cash = parseFloat(String(contract.payment ?? '').replace(/[^0-9.]/g, '')) || 0;
+  return {
+    isFreeStay,
+    cash,
+    fee: isFreeStay ? 20 : Math.max(cash * 0.05, 20),
+  };
+}
+
 // One-time Checkout for host platform fee.
 // Requires: npx convex env set STRIPE_SECRET_KEY sk_test_...
 export const createCheckoutSession = action({
   args: {
     contractId: v.string(),
-    isFreeStay: v.boolean(),
+    isFreeStay: v.optional(v.boolean()),
     cashAmount: v.optional(v.number()),
     successUrl: v.string(),
     cancelUrl: v.string(),
   },
-  handler: async (_ctx, args) => {
+  handler: async (ctx, args) => {
     const secretKey = process.env.STRIPE_SECRET_KEY;
     if (!secretKey) throw new Error('STRIPE_SECRET_KEY is not set in Convex environment variables');
 
+    const contract = await ctx.runQuery(internal.contracts.getByIdInternal, { id: args.contractId });
+    if (!contract) throw new Error('Contract not found');
+    if (contract.paid) throw new Error('This contract fee has already been paid');
+
     const stripe = new Stripe(secretKey);
-    const fee = args.isFreeStay ? 20 : Math.max((args.cashAmount ?? 0) * 0.05, 20);
+    const { isFreeStay, cash, fee } = computeContractFee(contract);
     const amountInCents = Math.round(fee * 100);
-    const description = args.isFreeStay
+    const description = isFreeStay
       ? 'Flat platform fee for free-stay collaboration'
-      : `5% of $${(args.cashAmount ?? 0).toFixed(0)} collaboration value (min. $20)`;
+      : `5% of $${cash.toFixed(0)} collaboration value (min. $20)`;
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
@@ -247,13 +263,17 @@ export const verifyLifetimeSession = action({
 export const createFeeSetupSession = action({
   args: {
     contractId: v.string(),
-    feeAmount: v.number(),
+    feeAmount: v.optional(v.number()), // ignored — fee is always computed server-side
     successUrl: v.string(),
     cancelUrl: v.string(),
   },
-  handler: async (_ctx, args) => {
+  handler: async (ctx, args) => {
     const secretKey = process.env.STRIPE_SECRET_KEY;
     if (!secretKey) throw new Error('STRIPE_SECRET_KEY is not set in Convex environment variables');
+
+    const contract = await ctx.runQuery(internal.contracts.getByIdInternal, { id: args.contractId });
+    if (!contract) throw new Error('Contract not found');
+    const { fee } = computeContractFee(contract);
 
     const stripe = new Stripe(secretKey);
     const customer = await stripe.customers.create({ metadata: { contractId: args.contractId } });
@@ -264,7 +284,7 @@ export const createFeeSetupSession = action({
       customer: customer.id,
       success_url: args.successUrl,
       cancel_url: args.cancelUrl,
-      metadata: { contractId: args.contractId, feeAmount: String(args.feeAmount), type: 'fee_setup' },
+      metadata: { contractId: args.contractId, feeAmount: String(fee), type: 'fee_setup' },
       custom_text: {
         submit: { message: "You won't be charged now — the platform fee is only charged once the collaboration is completed." },
       },
@@ -305,7 +325,7 @@ export const verifyFeeSetupSession = action({
       invoice_settings: { default_payment_method: paymentMethodId },
     });
 
-    await ctx.runMutation(api.contracts.setHostPayment, {
+    await ctx.runMutation(internal.contracts.setHostPayment, {
       contractId,
       customerId,
       paymentMethodId,

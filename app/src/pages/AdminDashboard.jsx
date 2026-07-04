@@ -16,6 +16,9 @@ import CollabOversight from './admin/CollabOversight';
 import ContractManager from './admin/ContractManager';
 import AuditLog from './admin/AuditLog';
 import BlogManager from './admin/BlogManager';
+import AdminOverview from './admin/AdminOverview';
+import Discovery from './admin/Discovery';
+import SocialHub from './admin/SocialHub';
 
 const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL;
 
@@ -46,6 +49,8 @@ const IC = (d) => (
   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{d}</svg>
 );
 const ICONS = {
+  overview:     IC(<><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></>),
+  discovery:    IC(<><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></>),
   verification: IC(<><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></>),
   listings:     IC(<><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></>),
   collabs:      IC(<><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></>),
@@ -65,6 +70,8 @@ const ICONS = {
 
 // ─── Sidebar nav items ────────────────────────────────────────────────────────
 const SECTIONS = [
+  { id: 'overview',     label: 'Overview'               },
+  { id: 'discovery',    label: 'Discovery'              },
   { id: 'verification', label: 'Verification Queue'     },
   { id: 'listings',     label: 'Listing Management'     },
   { id: 'collabs',      label: 'Collab Oversight'       },
@@ -97,16 +104,13 @@ function WaitlistPanel()     { return <WaitlistManager />;      }
 function BroadcastPanel()    { return <Broadcast />;            }
 function AuditPanel()        { return <AuditLog />;             }
 function BlogPanel()         { return <BlogManager />;          }
-function SocialPanel() {
-  return (
-    <div style={{ padding: '2rem', textAlign: 'center' }}>
-      <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.1rem', color: 'var(--ink)', margin: '0 0 0.5rem' }}>Social Media</p>
-      <p style={{ fontSize: '0.85rem', color: 'var(--sage)' }}>Coming soon — connect Instagram, TikTok & LinkedIn scheduling here.</p>
-    </div>
-  );
-}
+function SocialPanel()       { return <SocialHub />;            }
+function OverviewPanel()     { return <AdminOverview />;        }
+function DiscoveryPanel()    { return <Discovery />;            }
 
 const PANEL_MAP = {
+  overview:     OverviewPanel,
+  discovery:    DiscoveryPanel,
   verification: VerificationPanel,
   listings:     ListingsPanel,
   collabs:      CollabPanel,
@@ -126,7 +130,7 @@ const PANEL_MAP = {
 // ─── AdminDashboard ───────────────────────────────────────────────────────────
 export default function AdminDashboard() {
   const { authorized, loading, profile } = useAdminGuard();
-  const [activeSection, setActiveSection] = useState('verification');
+  const [activeSection, setActiveSection] = useState('overview');
   const [marketingOpen, setMarketingOpen] = useState(false);
   const unreadCount = useQuery(api.messages.getUnreadCount);
 
@@ -147,7 +151,7 @@ export default function AdminDashboard() {
     </div>
   );
 
-  const ActivePanel = PANEL_MAP[activeSection] || PANEL_MAP['verification'];
+  const ActivePanel = PANEL_MAP[activeSection] || PANEL_MAP['overview'];
   const badges = { messages: unreadCount || 0 };
   const activeLabel = isMarketingTab
     ? `Marketing › ${MARKETING_TABS.find(t => t.id === activeSection)?.label}`

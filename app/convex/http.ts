@@ -1,9 +1,40 @@
 import { httpRouter } from "convex/server";
 import { httpAction } from "./_generated/server";
 import Stripe from "stripe";
-import { api, internal } from "./_generated/api";
+import { internal } from "./_generated/api";
 
 const http = httpRouter();
+
+// Verifies a Svix (Clerk) webhook signature: HMAC-SHA256 over "id.timestamp.body"
+// keyed with the base64 payload of the whsec_ secret.
+async function verifySvixSignature(
+  secret: string,
+  id: string,
+  timestamp: string,
+  signatureHeader: string,
+  body: string
+): Promise<boolean> {
+  try {
+    const secretB64 = secret.startsWith("whsec_") ? secret.slice(6) : secret;
+    const secretBytes = Uint8Array.from(atob(secretB64), (c) => c.charCodeAt(0));
+    const key = await crypto.subtle.importKey(
+      "raw",
+      secretBytes,
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["sign"]
+    );
+    const data = new TextEncoder().encode(`${id}.${timestamp}.${body}`);
+    const sigBytes = new Uint8Array(await crypto.subtle.sign("HMAC", key, data));
+    let expected = "";
+    for (const b of sigBytes) expected += String.fromCharCode(b);
+    expected = btoa(expected);
+    // Header format: "v1,<base64sig> v1,<base64sig> ..."
+    return signatureHeader.split(" ").some((part) => part.split(",")[1] === expected);
+  } catch {
+    return false;
+  }
+}
 
 // Clerk webhook — called when a user is created/updated in Clerk
 // Links existing waitlist profile by email, or creates a new Convex profile
@@ -11,20 +42,27 @@ http.route({
   path: "/clerk-webhook",
   method: "POST",
   handler: httpAction(async (ctx, request) => {
-    // Verify the webhook secret
     const secret = process.env.CLERK_WEBHOOK_SECRET;
     const svixId = request.headers.get("svix-id");
     const svixTimestamp = request.headers.get("svix-timestamp");
     const svixSignature = request.headers.get("svix-signature");
 
-    // If secret is configured, verify signature
-    if (secret && (!svixId || !svixTimestamp || !svixSignature)) {
-      return new Response("Missing webhook headers", { status: 401 });
+    const rawBody = await request.text();
+
+    // If secret is configured, require a valid signature.
+    if (secret) {
+      if (!svixId || !svixTimestamp || !svixSignature) {
+        return new Response("Missing webhook headers", { status: 401 });
+      }
+      const valid = await verifySvixSignature(secret, svixId, svixTimestamp, svixSignature, rawBody);
+      if (!valid) {
+        return new Response("Invalid webhook signature", { status: 401 });
+      }
     }
 
     let payload;
     try {
-      payload = await request.json();
+      payload = JSON.parse(rawBody);
     } catch {
       return new Response("Invalid JSON", { status: 400 });
     }
@@ -46,36 +84,14 @@ http.route({
       return new Response("No email address", { status: 400 });
     }
 
-    // Check if a waitlist profile exists with this email
-    const existing = await ctx.db
-      .query("profiles")
-      .withIndex("by_email", (q) => q.eq("email", email))
-      .unique();
-
-    if (existing) {
-      // Update existing profile with Clerk ID
-      await ctx.db.patch(existing._id, {
-        full_name: fullName,
-        is_founder: existing.is_founder || undefined,
-      });
-      return new Response(JSON.stringify({ linked: true, profileId: existing._id }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
-
-    // Create a new profile for this Clerk user
-    const profileId = await ctx.db.insert("profiles", {
-      full_name: fullName,
+    // httpActions have no ctx.db — link/create must go through a mutation.
+    const result = await ctx.runMutation(internal.profiles.linkOrCreateFromClerk, {
+      email,
+      fullName: fullName || email.split("@")[0],
       username: data.username || email.split("@")[0],
-      email: email,
-      role: "creator",
-      tier: "active",
-      bio: "",
-      is_founder: false,
     });
 
-    return new Response(JSON.stringify({ created: true, profileId }), {
+    return new Response(JSON.stringify(result), {
       status: 200,
       headers: { "Content-Type": "application/json" },
     });
@@ -93,20 +109,22 @@ http.route({
     const body = await request.text();
     const sig = request.headers.get("stripe-signature");
 
+    // Never process unverified events — a forged payload could mark contracts
+    // paid or grant lifetime access. Requires:
+    //   npx convex env set STRIPE_WEBHOOK_SECRET whsec_...
+    if (!webhookSecret) {
+      return new Response("Stripe webhook secret not configured", { status: 503 });
+    }
+    if (!sig) {
+      return new Response("Missing stripe-signature header", { status: 400 });
+    }
+
     let event: Stripe.Event;
-    if (webhookSecret && sig) {
-      try {
-        const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
-        event = stripe.webhooks.constructEvent(body, sig, webhookSecret);
-      } catch {
-        return new Response("Webhook signature verification failed", { status: 400 });
-      }
-    } else {
-      try {
-        event = JSON.parse(body) as Stripe.Event;
-      } catch {
-        return new Response("Invalid JSON", { status: 400 });
-      }
+    try {
+      const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+      event = await stripe.webhooks.constructEventAsync(body, sig, webhookSecret);
+    } catch {
+      return new Response("Webhook signature verification failed", { status: 400 });
     }
 
     // Lifetime purchase completed
@@ -115,9 +133,8 @@ http.route({
 
       // Contract payment completed — persist it (this also notifies both parties).
       if (session.metadata?.contractId && session.payment_status === "paid") {
-        await ctx.runMutation(api.contracts.recordPayment, {
+        await ctx.runMutation(internal.contracts.recordPaymentInternal, {
           id: session.metadata.contractId,
-          paid: true,
           paymentAmount: (session.amount_total ?? 0) / 100,
           stripeSessionId: session.id,
         });
@@ -160,7 +177,7 @@ http.route({
           }
         }
         if (customerId && paymentMethodId) {
-          await ctx.runMutation(api.contracts.setHostPayment, {
+          await ctx.runMutation(internal.contracts.setHostPayment, {
             contractId: session.metadata.contractId,
             customerId,
             paymentMethodId,

@@ -300,6 +300,71 @@ export default defineSchema({
     created_at: v.number(),
   }).index("by_user", ["user_id"]),
 
+  // Outreach prospects for the Discovery tab — pre-scraped/imported Instagram
+  // accounts split into creators (left panel) and hosts (right panel).
+  prospects: defineTable({
+    kind: v.string(),                    // 'creator' | 'host'
+    instagram_handle: v.string(),
+    display_name: v.optional(v.string()),
+    avatar_url: v.optional(v.string()),
+    follower_count: v.optional(v.number()),
+    engagement_rate: v.optional(v.number()),
+    tier: v.optional(v.string()),        // 'nano' | 'micro' | 'mid' | 'macro'
+    location: v.optional(v.string()),
+    country: v.optional(v.string()),
+    niche: v.optional(v.string()),       // travel, lifestyle, boutique hotel, etc.
+    email: v.optional(v.string()),       // from bio, for ToS-safe email outreach
+    bio: v.optional(v.string()),
+    website: v.optional(v.string()),
+    source: v.string(),                  // 'manual' | 'apify' | 'csv' | 'referral'
+    status: v.string(),                  // 'new' | 'queued' | 'contacted' | 'replied' | 'signed' | 'declined'
+    dm_draft: v.optional(v.string()),
+    notes: v.optional(v.string()),
+    score: v.optional(v.number()),       // 0-100 fit score
+    queued_for: v.optional(v.string()),  // 'YYYY-MM-DD' daily outreach date
+    contacted_at: v.optional(v.number()),
+    replied_at: v.optional(v.number()),
+    created_at: v.number(),
+  })
+    .index("by_kind_status", ["kind", "status"])
+    .index("by_handle", ["instagram_handle"])
+    .index("by_queued", ["queued_for"]),
+
+  // Connected social accounts (Collabnb's own IG / TikTok) for the Social tab.
+  social_accounts: defineTable({
+    platform: v.string(),                // 'instagram' | 'tiktok'
+    handle: v.string(),
+    account_id: v.optional(v.string()),  // IG Business account id / TikTok open_id
+    connected: v.boolean(),
+    follower_count: v.optional(v.number()),
+    following_count: v.optional(v.number()),
+    media_count: v.optional(v.number()),
+    profile_pic_url: v.optional(v.string()),
+    last_synced_at: v.optional(v.number()),
+    sync_error: v.optional(v.string()),
+  }).index("by_platform", ["platform"]),
+
+  // Synced posts + metrics powering the Social analytics dashboard.
+  social_posts: defineTable({
+    platform: v.string(),                // 'instagram' | 'tiktok'
+    external_id: v.string(),
+    caption: v.optional(v.string()),
+    media_type: v.optional(v.string()),  // IMAGE | VIDEO | CAROUSEL | REEL
+    media_url: v.optional(v.string()),
+    thumbnail_url: v.optional(v.string()),
+    permalink: v.optional(v.string()),
+    posted_at: v.optional(v.number()),
+    likes: v.optional(v.number()),
+    comments: v.optional(v.number()),
+    shares: v.optional(v.number()),
+    saves: v.optional(v.number()),
+    views: v.optional(v.number()),
+    reach: v.optional(v.number()),
+    synced_at: v.number(),
+  })
+    .index("by_platform", ["platform"])
+    .index("by_external", ["external_id"]),
+
   blog_posts: defineTable({
     title: v.string(),
     slug: v.string(),

@@ -173,43 +173,6 @@ export const update = mutation({
   },
 });
 
-export const recordPayment = mutation({
-  args: {
-    id: v.string(),
-    paid: v.boolean(),
-    paymentAmount: v.number(),
-    stripeSessionId: v.string(),
-  },
-  handler: async (ctx, args) => {
-    const before = await ctx.db.get(args.id as any);
-    await ctx.db.patch(args.id as any, {
-      paid: args.paid,
-      payment_amount: args.paymentAmount,
-      stripe_session_id: args.stripeSessionId,
-    });
-
-    if (!args.paid || (before as any)?.paid) return; // only fire on the unpaid → paid transition
-    const contract = await ctx.db.get(args.id as any);
-    if (!contract) return;
-    const propertyLabel = (contract as any).property_name || (contract as any).location || "your collab";
-
-    for (const party of ["host", "creator"] as const) {
-      await notifyParty(ctx, contract, party, {
-        type: "contract_paid",
-        title: "Payment confirmed 💸",
-        body: `Payment for the ${propertyLabel} contract is confirmed. The collab is good to go.`,
-        email: {
-          subject: "Payment confirmed for your Collabnb contract",
-          heading: "You're all set, {name} 💸",
-          message: `Payment for the <strong>${propertyLabel}</strong> contract has been confirmed. Everything's in place to move forward with the collab.`,
-          calloutLabel: "What's next",
-          calloutText: "Coordinate the remaining details with your collaborator in Collabnb.",
-        },
-      });
-    }
-  },
-});
-
 export const markSent = mutation({
   args: { id: v.string(), recipientParty: v.optional(v.string()) },
   handler: async (ctx, { id, recipientParty }) => {
@@ -448,7 +411,9 @@ export const checkContractReminders = internalMutation({
 // ─── Deferred platform-fee charging (save card at signing, charge on completion) ──
 
 // Stores the host's saved Stripe card + the fee to charge later.
-export const setHostPayment = mutation({
+// Internal-only: reachable solely from the Stripe verify action and webhook,
+// so a client can never overwrite the card or fee on someone's contract.
+export const setHostPayment = internalMutation({
   args: {
     contractId: v.string(),
     customerId: v.string(),
@@ -474,7 +439,9 @@ export const getByIdInternal = internalQuery({
   },
 });
 
-// Records a successful off-session fee charge (and webhook backstop). Idempotent.
+// Records a successful fee charge (off-session, checkout, or webhook backstop).
+// Idempotent, and the only way a contract can be marked paid — always behind a
+// verified Stripe event or a server-side Stripe API check.
 export const recordPaymentInternal = internalMutation({
   args: {
     id: v.string(),
@@ -493,6 +460,25 @@ export const recordPaymentInternal = internalMutation({
     if (args.paymentIntentId !== undefined) patch.payment_intent_id = args.paymentIntentId;
     if (args.stripeSessionId !== undefined) patch.stripe_session_id = args.stripeSessionId;
     await ctx.db.patch(args.id as any, patch);
+
+    const contract = await ctx.db.get(args.id as any);
+    if (!contract) return;
+    const propertyLabel = (contract as any).property_name || (contract as any).location || "your collab";
+
+    for (const party of ["host", "creator"] as const) {
+      await notifyParty(ctx, contract, party, {
+        type: "contract_paid",
+        title: "Payment confirmed 💸",
+        body: `Payment for the ${propertyLabel} contract is confirmed. The collab is good to go.`,
+        email: {
+          subject: "Payment confirmed for your Collabnb contract",
+          heading: "You're all set, {name} 💸",
+          message: `Payment for the <strong>${propertyLabel}</strong> contract has been confirmed. Everything's in place to move forward with the collab.`,
+          calloutLabel: "What's next",
+          calloutText: "Coordinate the remaining details with your collaborator in Collabnb.",
+        },
+      });
+    }
   },
 });
 

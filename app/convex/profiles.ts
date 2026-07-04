@@ -324,6 +324,42 @@ export const updateSubscription = mutation({
   },
 });
 
+// Called by the Clerk webhook (httpActions have no ctx.db). Links an existing
+// waitlist profile by email or creates a fresh profile for the new Clerk user.
+export const linkOrCreateFromClerk = internalMutation({
+  args: {
+    email: v.string(),
+    fullName: v.string(),
+    username: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query("profiles")
+      .withIndex("by_email", (q) => q.eq("email", args.email))
+      .unique();
+
+    if (existing) {
+      await ctx.db.patch(existing._id, {
+        full_name: args.fullName,
+        clerk_registered: true,
+      });
+      return { linked: true, profileId: existing._id };
+    }
+
+    const profileId = await ctx.db.insert("profiles", {
+      full_name: args.fullName,
+      username: args.username,
+      email: args.email,
+      role: "creator",
+      tier: "active",
+      bio: "",
+      is_founder: false,
+      clerk_registered: true,
+    });
+    return { created: true, profileId };
+  },
+});
+
 // Used by the Stripe webhook to update subscription state via customer ID
 export const updateSubscriptionByCustomerId = internalMutation({
   args: {

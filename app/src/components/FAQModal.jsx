@@ -26,7 +26,7 @@ const FAQ_SECTIONS = [
       },
       {
         q: 'When does the app launch?',
-        a: 'July 1, 2026. The waitlist closes or fills before then. Verified waitlist members receive early access before the public launch. Beta testers (opt-in on the join form) get access even earlier to help shape the product.',
+        a: 'July 15, 2026. The waitlist closes or fills before then. Verified waitlist members receive early access before the public launch. Beta testers (opt-in on the join form) get access even earlier to help shape the product.',
       },
     ],
   },

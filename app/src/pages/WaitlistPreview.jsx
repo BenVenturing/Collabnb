@@ -296,7 +296,7 @@ export default function WaitlistPreview() {
             </span>
           </div>
           <p style={{ fontSize: '0.88rem', color: 'var(--slate)', lineHeight: 1.65, margin: 0 }}>
-            Once approved, you'll unlock full access to browse, apply to collabs, and message hosts. Full listings go live <strong>July 1st</strong>.
+            Once approved, you'll unlock full access to browse, apply to collabs, and message hosts. Full listings go live <strong>July 15th</strong>.
           </p>
         </div>
 

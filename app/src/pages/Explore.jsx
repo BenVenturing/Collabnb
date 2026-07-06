@@ -780,7 +780,7 @@ export default function Explore() {
                   Listings coming soon
                 </p>
                 <p style={{ fontSize: '0.82rem', color: 'var(--sage)', lineHeight: 1.5, margin: 0 }}>
-                  We're curating the best stays for launch on July 1st. Save your favorites and you'll be notified first.
+                  We're curating the best stays for launch on July 15th. Save your favorites and you'll be notified first.
                 </p>
               </div>
             </div>

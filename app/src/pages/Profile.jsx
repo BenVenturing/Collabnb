@@ -2000,7 +2000,7 @@ export default function Profile() {
               <button onClick={() => setShowPrivacy(false)} style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'rgba(209,235,219,0.5)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--slate)' }}>✕</button>
             </div>
             <div style={{ fontSize: '0.85rem', color: 'var(--slate)', lineHeight: 1.7 }}>
-              <p><strong>Effective Date:</strong> July 1, 2026</p>
+              <p><strong>Effective Date:</strong> July 15, 2026</p>
               <p>Collabnb ("we," "our," "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our platform.</p>
               <h5 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.95rem', color: 'var(--ink)', margin: '1.25rem 0 0.5rem' }}>Information We Collect</h5>
               <p>We collect personal information you provide directly, such as your name, email address, profile details, and social media handles. We also automatically collect usage data, cookies, and device information when you interact with our platform.</p>

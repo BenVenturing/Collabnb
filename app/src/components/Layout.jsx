@@ -9,7 +9,7 @@ import { api } from '../../convex/_generated/api';
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 
-const LAUNCH_DATE = new Date('2026-07-01');
+const LAUNCH_DATE = new Date('2026-07-15');
 const LAUNCH_BANNER_KEY = 'collabnb_launch_banner_dismissed';
 const BANNER_H = '2rem';
 
@@ -109,7 +109,7 @@ export default function Layout({ children }) {
         }}>
           <span style={{ color: '#7ecfc4', fontWeight: 700, whiteSpace: 'nowrap' }}>🚀 {daysLeft} days to launch</span>
           <span style={{ color: 'rgba(255,255,255,0.7)' }}>·</span>
-          <span style={{ whiteSpace: 'nowrap' }}>Live <strong>July 1st</strong></span>
+          <span style={{ whiteSpace: 'nowrap' }}>Live <strong>July 15th</strong></span>
           {userCount !== null && (
             <>
               <span style={{ color: 'rgba(255,255,255,0.7)' }}>·</span>

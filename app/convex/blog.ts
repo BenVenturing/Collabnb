@@ -375,6 +375,43 @@ export const searchUnsplash = action({
   },
 });
 
+// Fallback rotation for the daily cron when the LLM topic pick fails.
+const TOPIC_POOL = [
+  "how boutique hosts should brief UGC creators before a content-for-stay collab",
+  "what a creator's media kit should include when pitching boutique stays",
+  "pricing a content-for-stay deal: nights, deliverables, and usage rights",
+  "why boutique hotels win on Instagram while chains win on search",
+  "how creators can turn one stay into a month of content",
+  "usage rights explained for hosts licensing creator content",
+  "the shoulder-season playbook: filling quiet weeks with creator collabs",
+  "red flags hosts should watch for when vetting creator pitches",
+  "how micro-creators out-convert big influencers for boutique bookings",
+  "building a repeatable UGC pipeline for a small property",
+  "what makes hotel content actually convert: hooks, pacing, and proof",
+  "from DMs to contracts: professionalizing creator outreach",
+  "how boutique hosts should measure the ROI of a creator collab",
+  "the difference between UGC, influencer posts, and brand content for stays",
+  "how creators should scout properties that fit their audience",
+  "negotiating deliverables: what a host can reasonably ask for one night",
+];
+
+async function pickFreshTopic(ctx: any): Promise<string> {
+  const recent: any[] = await ctx.runQuery(api.blog.getAll, {});
+  const recentTitles = recent.slice(0, 12).map((p: any) => p.title).filter(Boolean).join("; ");
+  try {
+    const raw = await llmChat([
+      { role: "system", content: "You are a content strategist for Collabnb — a marketplace connecting boutique hotel/Airbnb hosts with UGC travel creators for content-for-stay partnerships. Be specific, never generic." },
+      { role: "user", content: `Recent Collabnb Journal posts: ${recentTitles || "none yet"}.\n\nSuggest ONE fresh, specific blog post topic that does NOT overlap with any of those. Return only the topic itself as a single lowercase phrase, no quotes, no commentary.` },
+    ], 100);
+    const topic = raw.trim().split("\n")[0].replace(/^["'\-\s]+|["'\s]+$/g, "");
+    if (topic.length >= 20 && topic.length <= 200) return topic;
+  } catch {
+    // fall through to the rotation pool
+  }
+  const day = Math.floor(Date.now() / 86_400_000);
+  return TOPIC_POOL[day % TOPIC_POOL.length];
+}
+
 export const generatePost = action({
   args: {
     isStatsPost: v.optional(v.boolean()),
@@ -393,7 +430,7 @@ export const generatePost = action({
       statsContext = `Platform stats: ${stats.creators} creators, ${stats.hosts} hosts, ${stats.approvedCollabs} completed collabs, ${stats.activeListings} active listings.`;
     }
 
-    const topic = topicHint || "the economics of content-for-stay partnerships between boutique hosts and UGC creators";
+    const topic = topicHint || (await pickFreshTopic(ctx));
 
     // Real web research when ScrapeGraphAI / Firecrawl keys are configured;
     // otherwise the LLM research brief runs on its own knowledge.

@@ -234,11 +234,15 @@ type ChatMessage = { role: string; content: string };
 // errors, the next configured provider is tried.
 async function llmChat(messages: ChatMessage[], maxTokens = 2048): Promise<string> {
   const providers = [
+    // meta/llama-3.3-70b-instruct requests hang server-side on NVIDIA since
+    // 2026-07-03 (accepted, never answered). Nemotron is a reasoning model, so
+    // /no_think is required or the tokens all land in reasoning_content.
     {
       name: "NVIDIA",
       key: process.env.NVIDIA_API_KEY,
       url: "https://integrate.api.nvidia.com/v1/chat/completions",
-      model: "meta/llama-3.3-70b-instruct",
+      model: "nvidia/llama-3.3-nemotron-super-49b-v1.5",
+      noThink: true,
     },
     {
       name: "DeepSeek",
@@ -262,6 +266,13 @@ async function llmChat(messages: ChatMessage[], maxTokens = 2048): Promise<strin
 
   let lastError: Error | null = null;
   for (const provider of providers) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 90_000);
+    const sent = (provider as any).noThink
+      ? messages[0]?.role === "system"
+        ? [{ ...messages[0], content: `/no_think\n${messages[0].content}` }, ...messages.slice(1)]
+        : [{ role: "system", content: "/no_think" }, ...messages]
+      : messages;
     try {
       const res = await fetch(provider.url, {
         method: "POST",
@@ -271,11 +282,12 @@ async function llmChat(messages: ChatMessage[], maxTokens = 2048): Promise<strin
         },
         body: JSON.stringify({
           model: provider.model,
-          messages,
+          messages: sent,
           max_tokens: maxTokens,
           temperature: 0.7,
           stream: false,
         }),
+        signal: controller.signal,
       });
       if (!res.ok) {
         const err = await res.text().catch(() => res.status.toString());
@@ -287,6 +299,8 @@ async function llmChat(messages: ChatMessage[], maxTokens = 2048): Promise<strin
       return content;
     } catch (err: any) {
       lastError = err;
+    } finally {
+      clearTimeout(timer);
     }
   }
   throw lastError || new Error("All LLM providers failed");
@@ -411,6 +425,14 @@ async function pickFreshTopic(ctx: any): Promise<string> {
   const day = Math.floor(Date.now() / 86_400_000);
   return TOPIC_POOL[day % TOPIC_POOL.length];
 }
+
+export const llmPing = action({
+  args: {},
+  handler: async () => {
+    const out = await llmChat([{ role: "user", content: "Reply with the single word: ok" }], 20);
+    return out.slice(0, 100);
+  },
+});
 
 export const generatePost = action({
   args: {

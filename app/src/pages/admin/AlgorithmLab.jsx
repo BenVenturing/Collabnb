@@ -12,6 +12,19 @@ const SLATE = '#3C5759';
 const SAGE  = '#959D90';
 const MINT  = '#D1EBDB';
 
+function AvatarBubble({ profile }) {
+  const [failed, setFailed] = useState(false);
+  const url = profile.avatar_url;
+  const usable = !failed && url && (url.startsWith('http') || url.startsWith('data:'));
+  return (
+    <span style={{ width: 26, height: 26, borderRadius: '50%', overflow: 'hidden', flexShrink: 0, background: MINT, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 700, color: SLATE }}>
+      {usable
+        ? <img src={url} alt="" onError={() => setFailed(true)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        : (profile.full_name || profile.username || '?')[0].toUpperCase()}
+    </span>
+  );
+}
+
 function Chip({ bg = 'rgba(25,37,36,0.06)', color = SLATE, children, title }) {
   return (
     <span title={title} style={{ fontSize: '0.66rem', fontWeight: 700, padding: '0.15rem 0.5rem', borderRadius: 99, background: bg, color, display: 'inline-block', lineHeight: 1.6, whiteSpace: 'nowrap' }}>
@@ -149,11 +162,7 @@ function Simulator() {
                 onMouseEnter={(e) => { if (!active) e.currentTarget.style.background = 'rgba(25,37,36,0.04)'; }}
                 onMouseLeave={(e) => { if (!active) e.currentTarget.style.background = 'transparent'; }}
               >
-                <span style={{ width: 26, height: 26, borderRadius: '50%', overflow: 'hidden', flexShrink: 0, background: 'rgba(25,37,36,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 700, color: SLATE }}>
-                  {p.avatar_url?.startsWith('http')
-                    ? <img src={p.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    : (p.full_name || '?')[0]}
-                </span>
+                <AvatarBubble profile={p} />
                 <span style={{ flex: 1, minWidth: 0 }}>
                   <span style={{ fontSize: '0.82rem', fontWeight: 600, color: INK }}>{p.full_name || p.username}</span>
                   <span style={{ fontSize: '0.7rem', color: SAGE, marginLeft: 8 }}>

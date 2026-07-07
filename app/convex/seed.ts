@@ -293,7 +293,7 @@ export const seed = mutation({
         image: "https://images.unsplash.com/photo-1533104816931-20fa691ff6ca?w=800&q=80",
         gallery_images: [
           "https://images.unsplash.com/photo-1533104816931-20fa691ff6ca?w=1200&q=85",
-          "https://images.unsplash.com/photo-1572510097885-0c1d5d6b39ee?w=800&q=80",
+          "https://outgoing-anaconda-357.convex.cloud/api/storage/d6974384-e2cf-43ee-a2aa-3af4a4b30c86",
           "https://images.unsplash.com/photo-1595867818082-083862f3d630?w=800&q=80",
           "https://images.unsplash.com/photo-1585970480901-90d6bb2a48b5?w=800&q=80",
           "https://images.unsplash.com/photo-1532339142463-fd0a8979791a?w=800&q=80",

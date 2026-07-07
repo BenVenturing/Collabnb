@@ -12,6 +12,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { WhereSearchContent, WhatSearchContent, WhenSearchContent, useAnimatedPlaceholder } from '../components/SearchDropdowns';
 import SkeletonCard from '../components/SkeletonCard';
 import { cache } from '../lib/cache';
+import { buildCreatorContext, scoreListings, MATCH_BADGE_THRESHOLD, FOR_YOU_MIN_SCORE, NEAR_ME_MIN_LOCATION } from '../lib/matchScore';
 
 const EXPLORE_CACHE_KEY = 'explore_listings_all';
 const HIDDEN_SAMPLE_LISTINGS_KEY = '@collabnb_hidden_sample_listings_v1';
@@ -111,6 +112,23 @@ function ListingCard({ listing, saved, onSave, delay, onNavigate, onHostClick, o
             fontSize: '0.58rem', padding: '0.25rem 0.55rem',
           }}>
             Featured
+          </span>
+        )}
+
+        {/* Match badge — strong matches only */}
+        {typeof listing._match === 'number' && listing._match >= MATCH_BADGE_THRESHOLD && (
+          <span
+            title={listing._matchReasons?.join(' · ') || 'Matched to your profile'}
+            style={{
+              position: 'absolute', bottom: '0.6rem', left: '0.75rem',
+              padding: '0.25rem 0.55rem', borderRadius: '9999px',
+              fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.02em',
+              color: 'var(--ink)', background: 'rgba(209,235,219,0.92)',
+              backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
+              boxShadow: '0 2px 8px rgba(25,37,36,0.12)',
+            }}
+          >
+            {listing._match}% match
           </span>
         )}
 
@@ -444,6 +462,10 @@ export default function Explore() {
   // ── Data source: real Convex listings + global sample listings ───────────────
   const convexRaw  = useQuery(api.listings.getAll) ?? null;       // real (excludes is_sample)
   const samplesRaw = useQuery(api.listings.getSamples) ?? null;   // global sample listings
+  const myCollabs  = useQuery(
+    api.collaborations.getByCreator,
+    profile?._id ? { creatorId: String(profile._id) } : 'skip'
+  ) ?? [];
 
   // Per-device hidden sample listing ids
   const [hiddenSampleIds, setHiddenSampleIds] = useState(() => {
@@ -544,10 +566,38 @@ export default function Explore() {
 
   const nearLocationLabel = (whereVal || debouncedWhere || profile?.city || '').split(',')[0].trim() || 'You';
 
-  const trending    = byPropType(searchFiltered.filter((l) => l.is_featured));
-  const forYou      = byPropType(searchFiltered.filter((l) => ['Photography', 'UGC Video', 'Instagram Reels'].includes(l.collab_type)));
-  const nearMe      = byPropType(searchFiltered.filter((l) => ['NC', 'TN', 'SC', 'VA', 'GA'].some((s) => l.location?.includes(s))));
-  const allFiltered = byPropType(searchFiltered);
+  // Human-friendly WHEN display ("Aug 11–20" instead of "2026-08-11 → 2026-08-20")
+  const whenDisplay = whenVal
+    ? whenVal.startsWith('Flexible:')
+      ? whenVal.replace('Flexible: ', '')
+      : formatDateRange(...whenVal.split(' → '))
+    : '';
+
+  // ── Personalized ranking — see /explore-algorithm.md ─────────────────────────
+  const creatorCtx = buildCreatorContext({
+    profile,
+    collaborations: myCollabs,
+    savedListings: allListings.filter((l) => savedIds.has(l.id)),
+    allListings,
+  });
+  const scored = scoreListings(searchFiltered, creatorCtx);
+
+  const trending    = byPropType(scored.filter((l) => l.is_featured));
+  const forYou      = byPropType(
+    scored
+      .filter((l) => l._match >= FOR_YOU_MIN_SCORE)
+      .sort((a, b) => b._match - a._match || (b.rating ?? 0) - (a.rating ?? 0))
+  );
+  const nearMe      = byPropType(
+    scored
+      .filter((l) => l._matchParts.location >= NEAR_ME_MIN_LOCATION)
+      .sort((a, b) => b._matchParts.location - a._matchParts.location || b._match - a._match)
+  );
+  const allFiltered = byPropType(scored);
+
+  const forYouSubtitle = profile?.niches?.length
+    ? `Matched to your ${profile.niches.slice(0, 2).join(' & ')} niches`
+    : 'Matched to your profile and collab history';
 
   return (
     <div>
@@ -561,8 +611,19 @@ export default function Explore() {
         padding: '1rem 1.5rem 0',
       }}>
 
+        {/* Page glaze while a search dropdown is open */}
+        {activeField && (
+          <div style={{
+            position: 'fixed', inset: 0, zIndex: 1,
+            background: 'rgba(25,37,36,0.10)',
+            backdropFilter: 'blur(2px)',
+            WebkitBackdropFilter: 'blur(2px)',
+            animation: 'fadeIn 200ms ease forwards',
+          }} />
+        )}
+
         {/* Search bar */}
-        <div ref={searchRef} style={{ maxWidth: '680px', margin: '0 auto', position: 'relative' }}>
+        <div ref={searchRef} style={{ maxWidth: '680px', margin: '0 auto', position: 'relative', zIndex: 2 }}>
           <div className="search-bar" style={{ position: 'relative' }}>
 
             {/* Sliding mint-green pill overlay */}
@@ -640,8 +701,8 @@ export default function Explore() {
               onClick={() => setActiveField(activeField === 'when' ? null : 'when')}
             >
               <label>When</label>
-              <span className="search-value" style={{ color: whenVal ? 'var(--ink)' : undefined }}>
-                {whenVal || 'Any time'}
+              <span className="search-value" style={{ color: whenVal ? 'var(--ink)' : undefined, fontWeight: whenVal ? 600 : undefined }}>
+                {whenDisplay || 'Any time'}
               </span>
             </div>
 
@@ -721,29 +782,6 @@ export default function Explore() {
       {/* ── Listing rows ─────────────────────────────────────────────────────── */}
       <div style={{ paddingTop: '2.25rem', paddingBottom: '4rem' }}>
 
-        {/* Active search result summary */}
-        {(whereVal || whatVal || whenVal || propFilter !== 'All') && (
-          <div style={{ padding: '0 1.5rem 1.5rem', maxWidth: '680px', margin: '0 auto' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-              <span style={{ fontSize: '0.78rem', color: 'var(--sage)' }}>Showing results for</span>
-              {whereVal && <span className="eyebrow-tag">{whereVal}</span>}
-              {whatVal  && <span className="eyebrow-tag">{whatVal}</span>}
-              {whenVal  && <span className="eyebrow-tag">{whenVal}</span>}
-              {propFilter !== 'All' && <span className="eyebrow-tag">{propFilter}</span>}
-              <button
-                onClick={() => { setWhereVal(''); setWhatVal(''); setWhatQuery(''); setWhenVal(''); setPropFilter('All'); }}
-                style={{
-                  fontSize: '0.72rem', color: 'var(--slate)', background: 'none',
-                  border: 'none', cursor: 'pointer', textDecoration: 'underline',
-                  textDecorationColor: 'rgba(60,87,89,0.4)', fontFamily: 'var(--font-body)',
-                }}
-              >
-                Clear
-              </button>
-            </div>
-          </div>
-        )}
-
         {isLoading ? (
           <div style={{ marginBottom: '2.5rem' }}>
             <div style={{ padding: '0 1.5rem', marginBottom: '1rem' }}>
@@ -803,7 +841,7 @@ export default function Explore() {
 
             <SectionRow
               title="Picked for You"
-              subtitle="Matched to your UGC & Photography niche"
+              subtitle={forYouSubtitle}
               listings={forYou}
               saved={savedIds}
               onSave={toggleSave}
@@ -817,7 +855,7 @@ export default function Explore() {
 
             <SectionRow
               title={`Near ${nearLocationLabel}`}
-              subtitle="Collabs within driving distance of you"
+              subtitle="Based on your profile location and past collabs"
               listings={nearMe}
               saved={savedIds}
               onSave={toggleSave}

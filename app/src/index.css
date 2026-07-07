@@ -406,8 +406,6 @@ button { font: inherit; cursor: pointer; border: none; background: none; }
   transition: background 150ms;
   min-width: 0;
 }
-.search-field:hover,
-.search-field:focus-within { background: rgba(255,255,255,0.6); }
 .search-field label {
   font-size: 0.65rem;
   font-weight: 700;

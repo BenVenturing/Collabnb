@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { DESTINATIONS, COLLAB_TYPES } from '../lib/searchData';
-import { formatDate } from '../lib/dateUtils';
+import { formatDate, formatDateRange } from '../lib/dateUtils';
 
 // ─── Animated placeholder hook (typewriter + thinking dots) ────────────────
 const WHAT_PLACEHOLDERS = [
@@ -135,19 +135,51 @@ const REGIONS = [
   { name: 'Mountain & Desert', flag: 'mountain', labels: ['Aspen, CO', 'Sedona, AZ'] },
 ];
 
+// "Near You" from device location — nearest destinations by great-circle distance.
+// Falls back to the default REGIONS labels if geolocation is unavailable/denied.
+let geoNearLabels = null;
+function useNearYouLabels() {
+  const [labels, setLabels] = useState(geoNearLabels);
+  useEffect(() => {
+    if (geoNearLabels || !navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      ({ coords: { latitude, longitude } }) => {
+        const dist = ([lat, lng]) => {
+          const dLat = lat - latitude;
+          const dLng = (lng - longitude) * Math.cos((latitude * Math.PI) / 180);
+          return dLat * dLat + dLng * dLng;
+        };
+        geoNearLabels = DESTINATIONS
+          .filter((d) => d.coords)
+          .sort((a, b) => dist(a.coords) - dist(b.coords))
+          .slice(0, 3)
+          .map((d) => d.label);
+        setLabels(geoNearLabels);
+      },
+      () => {},
+      { maximumAge: 3600000, timeout: 5000 }
+    );
+  }, []);
+  return labels;
+}
+
 // ─── Where search content (scrollable, grouped by region + nearby stays) ──────
 export function WhereSearchContent({ whereVal, setWhereVal, onClose, listings = [] }) {
   const q = whereVal.toLowerCase().trim();
+  const nearLabels = useNearYouLabels();
+  const REGIONS_RESOLVED = nearLabels
+    ? REGIONS.map((r) => (r.name === 'Near You' ? { ...r, labels: nearLabels } : r))
+    : REGIONS;
 
   // Filter regions & destinations by query
   const filteredRegions = q
-    ? REGIONS.map((r) => ({
+    ? REGIONS_RESOLVED.map((r) => ({
         ...r,
         dests: DESTINATIONS.filter(
           (d) => r.labels.includes(d.label) && (d.label.toLowerCase().includes(q) || d.desc.toLowerCase().includes(q))
         ),
       })).filter((r) => r.dests.length > 0)
-    : REGIONS.map((r) => ({
+    : REGIONS_RESOLVED.map((r) => ({
         ...r,
         dests: DESTINATIONS.filter((d) => r.labels.includes(d.label)),
       }));
@@ -161,28 +193,9 @@ export function WhereSearchContent({ whereVal, setWhereVal, onClose, listings = 
 
   return (
     <div style={{ maxHeight: '440px', overflowY: 'auto' }}>
-      {/* Nearby Locations */}
+      {/* Region groups */}
       {filteredRegions.length > 0 && (
         <>
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: '0.5rem',
-            marginBottom: '0.625rem', position: 'sticky', top: 0,
-            background: 'rgba(255,255,255,0.95)', zIndex: 1, paddingTop: '0.15rem', paddingBottom: '0.15rem',
-          }}>
-            <svg viewBox="0 0 24 24" width="11" height="11" fill="none" style={{ color: 'var(--sage)', flexShrink: 0 }}>
-              <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.6"/>
-              <path d="M12 3C10 6 9 9 9 12C9 15 10 18 12 21" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
-              <path d="M12 3C14 6 15 9 15 12C15 15 14 18 12 21" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
-              <line x1="3.5" y1="9" x2="20.5" y2="9" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
-              <line x1="3.5" y1="15" x2="20.5" y2="15" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
-            </svg>
-            <p style={{
-              fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase',
-              letterSpacing: '0.14em', color: 'var(--sage)', margin: 0,
-            }}>
-              {q ? 'Matching Locations' : 'Nearby Locations'} — United States
-            </p>
-          </div>
           {filteredRegions.map((region) => (
             <div key={region.name} style={{ marginBottom: '0.625rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', marginBottom: '0.25rem', paddingLeft: '0.25rem' }}>
@@ -874,26 +887,28 @@ export function WhenSearchContent({ whenVal, setWhenVal, onClose }) {
             </div>
           )}
 
-          {/* Selected range display */}
-          {(startDate || endDate) && (
-            <div style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              padding: '0.5rem 0.75rem', borderRadius: '0.75rem',
-              background: 'rgba(74,155,127,0.1)',
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--ink)' }}>
-                  {startDate ? formatDisplay(startDate) : '?'}
-                </span>
-                {endDate && (
-                  <>
-                    <span style={{ color: 'var(--sage)', fontSize: '0.75rem' }}>→</span>
-                    <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--ink)' }}>
-                      {formatDisplay(endDate)}
-                    </span>
-                  </>
-                )}
-              </div>
+          {/* Centered apply button — click to set the dates and close */}
+          {startDate && (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.4rem' }}>
+              <button
+                onClick={() => { if (endDate) onClose?.(); }}
+                disabled={!endDate}
+                style={{
+                  padding: '0.55rem 1.5rem', borderRadius: '9999px',
+                  border: 'none',
+                  cursor: endDate ? 'pointer' : 'default',
+                  background: endDate ? '#4A9B7F' : 'rgba(74,155,127,0.12)',
+                  color: endDate ? 'white' : 'var(--slate)',
+                  fontSize: '0.85rem', fontWeight: 700,
+                  fontFamily: 'var(--font-body)',
+                  transition: 'all 160ms',
+                  boxShadow: endDate ? '0 4px 14px rgba(74,155,127,0.35)' : 'none',
+                }}
+                onMouseEnter={(e) => { if (endDate) e.currentTarget.style.background = '#3E8A6F'; }}
+                onMouseLeave={(e) => { if (endDate) e.currentTarget.style.background = '#4A9B7F'; }}
+              >
+                {endDate ? formatDateRange(startDate, endDate) : `${formatDisplay(startDate)} — select end date`}
+              </button>
               <button
                 onClick={clearDates}
                 style={{

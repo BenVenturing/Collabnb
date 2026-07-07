@@ -197,13 +197,17 @@ function draw() {
     ctx.fill();
   }
 
-  // Region anchor labels
-  ctx.font = `600 ${Math.max(11, cssW / 90)}px Satoshi, sans-serif`;
+  // Region anchor labels — bone halo behind the text so it stays readable over dots
+  ctx.font = `700 ${Math.max(12, cssW / 85)}px Satoshi, sans-serif`;
   ctx.textAlign = 'center';
+  ctx.lineJoin = 'round';
   for (const [slug, geo] of Object.entries(REGION_GEO)) {
     const reg = regionBySlug(slug);
     if (!reg) continue;
     const { x, y } = project(geo.anchor.lat, geo.anchor.lng, cssW, cssH);
+    ctx.strokeStyle = 'rgba(239,236,233,0.92)';
+    ctx.lineWidth = 5;
+    ctx.strokeText(reg.name, x, y - 10);
     ctx.fillStyle = hovered === slug ? '#192524' : '#3C5759';
     ctx.fillText(reg.name, x, y - 10);
   }

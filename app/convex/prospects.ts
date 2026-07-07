@@ -236,11 +236,17 @@ export const generateDmDraft = action({
       : "Invite them to list their boutique stay on Collabnb — vetted UGC creators trade content for nights, giving them a stream of marketing content without an agency.";
 
     const raw = await llmChat([
-      { role: "system", content: "You write short Instagram DMs for Ben, the founder of Collabnb (collabnb.com) — a marketplace connecting boutique stays with UGC travel creators for content-for-stay collabs. Sound like a real person typing on their phone: warm, specific, zero marketing-speak. Never use 'elevate', 'unlock', 'leverage', 'seamless', 'game-changer', or exclamation marks back to back." },
-      { role: "user", content: `Write ONE Instagram DM (max 450 characters, 2-3 short paragraphs, no hashtags, at most one emoji). Personalize it with a specific detail from their profile. ${pitch} End with a soft ask and the link collabnb.com/join. Return only the DM text.\n\n${who}` },
+      { role: "system", content: "You write short Instagram DMs for Ben, the founder of Collabnb (collabnb.com) — a marketplace connecting boutique stays with UGC travel creators for content-for-stay collabs. Sound like a real person typing on their phone: warm, specific, zero marketing-speak. Never use 'elevate', 'unlock', 'leverage', 'seamless', 'game-changer', or exclamation marks back to back. Output ONLY the DM text itself — no introduction line, no quotes around it, no commentary." },
+      { role: "user", content: `Write ONE Instagram DM (max 450 characters, 2-3 short paragraphs, no hashtags, at most one emoji). Personalize ONLY with the profile facts below — never invent posts, photos, or details they haven't shared; if the facts are thin, keep the opener general (their niche, location, or vibe). ${pitch} End with a soft ask and the link collabnb.com/join.\n\n${who}` },
     ], 250);
 
-    const dmDraft = raw.trim().replace(/^["']|["']$/g, "").slice(0, 900);
+    // Strip a leaked "Here is..." preamble line and wrapping quotes.
+    let dmDraft = raw.trim();
+    const lines = dmDraft.split("\n");
+    if (lines.length > 1 && /^(here('s| is)|sure|below is)/i.test(lines[0]) && lines[0].length < 90) {
+      dmDraft = lines.slice(1).join("\n").trim();
+    }
+    dmDraft = dmDraft.replace(/^["'“”]+|["'“”]+$/g, "").slice(0, 900);
     await ctx.runMutation(api.prospects.update, { id, dmDraft });
     return dmDraft;
   },

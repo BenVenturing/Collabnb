@@ -123,6 +123,13 @@ All knobs are constants at the top of `app/src/lib/matchScore.js`:
 - Everything is per-device-load; if listing volume grows past a few hundred, move scoring into a Convex `forYou` query instead of shipping all listings to the client.
 - International regions outside the US only match on exact region-name strings.
 
+## Admin tools
+
+`/admin` → **Algorithm** dropdown in the sidebar (`app/src/pages/admin/AlgorithmLab.jsx`):
+
+- **Simulator** — search any creator and see their Explore feed exactly as the engine ranks it: every listing's score, the location/tags/fit breakdown bars, which rows it lands in (badge / Picked for You / Near You / Trending), and the signals the engine sees for that creator (home, niches, past collab areas, saved count, active keywords). Runs the same `matchScore.js` code as the app.
+- **How It Works** — in-dashboard reference that reads weights, thresholds, and the niche-keyword map live from the code, so it can't drift.
+
 ## Related user-facing copy
 
 - FAQ: "How does Collabnb decide which listings I see?" in `faq.html` (`faq-11`) — keep it in sync with this doc if weights or behavior change.

@@ -8,7 +8,7 @@ export const NEAR_ME_MIN_LOCATION = 0.55; // location part needed to enter "Near
 
 // Listing vibe_tags are free-form, profile niches are a fixed list — this table
 // bridges the two vocabularies. Tuning matches = editing these keywords.
-const NICHE_KEYWORDS = {
+export const NICHE_KEYWORDS = {
   'travel': ['travel', 'wanderlust', 'getaway', 'explore'],
   'cabins & stays': ['cabin', 'cozy', 'lodge', 'chalet', 'a-frame'],
   'mountain': ['mountain', 'alpine', 'peak', 'hiking', 'ski'],

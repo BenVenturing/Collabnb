@@ -243,6 +243,69 @@ h3 { font-weight: 700; }
   font-weight: 600;
 }
 
+/* Nav dropdown (Programs ▾) */
+.nav-dropdown { position: relative; }
+.nav-dropdown-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: var(--fs-sm);
+  font-family: var(--font-body);
+  color: var(--ink);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  white-space: nowrap;
+  transition: transform 200ms var(--ease-out-quart);
+}
+.nav-dropdown-toggle:hover { transform: scale(1.05); }
+.nav-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 0.9rem);
+  left: 50%;
+  transform: translateX(-50%) translateY(-4px);
+  min-width: 190px;
+  padding: 0.5rem;
+  border-radius: 16px;
+  box-shadow: var(--shadow-md), var(--glass-inner);
+  list-style: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 160ms ease, transform 160ms ease, visibility 160ms;
+  z-index: 60;
+}
+.nav-dropdown:hover .nav-dropdown-menu,
+.nav-dropdown:focus-within .nav-dropdown-menu {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
+}
+.nav-dropdown-menu li a {
+  display: block;
+  padding: 0.55rem 0.75rem;
+  border-radius: 10px;
+  font-size: var(--fs-sm);
+  color: var(--ink);
+}
+.nav-dropdown-menu li a:hover {
+  background: var(--surface-tint);
+  transform: none;
+}
+.beta-pill {
+  display: inline-block;
+  margin-left: 0.45rem;
+  padding: 0.1rem 0.45rem;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--slate);
+  background: var(--mint);
+  border-radius: 999px;
+  vertical-align: middle;
+}
+
 /* Hamburger */
 .nav-hamburger {
   display: none;

@@ -232,7 +232,7 @@ type ChatMessage = { role: string; content: string };
 // OpenAI-compatible chat call. Providers are tried in order: NVIDIA (primary),
 // DeepSeek, OpenRouter — the first one with a configured key wins; if it
 // errors, the next configured provider is tried.
-async function llmChat(messages: ChatMessage[], maxTokens = 2048): Promise<string> {
+export async function llmChat(messages: ChatMessage[], maxTokens = 2048): Promise<string> {
   const providers = [
     // meta/llama-3.3-70b-instruct requests hang server-side on NVIDIA since
     // 2026-07-03 (accepted, never answered). Nemotron is a reasoning model, so
@@ -265,7 +265,9 @@ async function llmChat(messages: ChatMessage[], maxTokens = 2048): Promise<strin
   }
 
   let lastError: Error | null = null;
-  for (const provider of providers) {
+  // Two passes: NVIDIA serverless intermittently drops requests (503 worker
+  // limits / connection resets), so each provider gets one retry.
+  for (const provider of [...providers, ...providers]) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 90_000);
     const sent = (provider as any).noThink
@@ -298,6 +300,7 @@ async function llmChat(messages: ChatMessage[], maxTokens = 2048): Promise<strin
       if (!content) throw new Error(`${provider.name} returned an empty response`);
       return content;
     } catch (err: any) {
+      console.log(`llmChat ${provider.name}/${provider.model} failed: ${err?.name}: ${err?.message}`);
       lastError = err;
     } finally {
       clearTimeout(timer);
@@ -426,14 +429,6 @@ async function pickFreshTopic(ctx: any): Promise<string> {
   return TOPIC_POOL[day % TOPIC_POOL.length];
 }
 
-export const llmPing = action({
-  args: {},
-  handler: async () => {
-    const out = await llmChat([{ role: "user", content: "Reply with the single word: ok" }], 20);
-    return out.slice(0, 100);
-  },
-});
-
 export const generatePost = action({
   args: {
     isStatsPost: v.optional(v.boolean()),
@@ -453,10 +448,12 @@ export const generatePost = action({
     }
 
     const topic = topicHint || (await pickFreshTopic(ctx));
+    console.log(`generatePost step 1 ok — topic: ${topic.slice(0, 80)}`);
 
     // Real web research when ScrapeGraphAI / Firecrawl keys are configured;
     // otherwise the LLM research brief runs on its own knowledge.
     const web = await webResearch(topic);
+    console.log(`generatePost webResearch ok — ${web.sources.length} sources`);
     const webContext = web.context
       ? `\n\nLive web research (cite these facts where relevant, do not invent beyond them):\n${web.context}`
       : "";
@@ -473,6 +470,7 @@ Produce a detailed research brief on: ${topic}. Cover: key trends and data (2024
       { role: "system", content: "You are an expert content strategist specializing in travel, hospitality, and the creator economy. Produce detailed, concrete research briefs — name real properties, real campaigns, real data points." },
       { role: "user", content: researchPrompt },
     ], 1500);
+    console.log(`generatePost research ok — ${research.length} chars`);
 
     // ── 2. Write the post ─────────────────────────────────────────────────────
     const today = new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
@@ -535,12 +533,15 @@ CONTENT:
       { role: "system", content: "You are an editorial writer for a boutique travel publication. Follow the output format exactly. Place image markers exactly where specified." },
       { role: "user", content: writePrompt },
     ], 3000);
+    console.log(`generatePost write ok — ${raw.length} chars`);
 
+    // Models sometimes bold the format labels (**TITLE:** ...) — strip the
+    // markdown asterisks and bracket wrappers from label lines and values.
     const extract = (key: string) => {
-      const match = raw.match(new RegExp(`${key}:\\s*(.+)`));
-      return match ? match[1].trim() : "";
+      const match = raw.match(new RegExp(`${key}\\**:\\**\\s*(.+)`));
+      return match ? match[1].trim().replace(/^[*\[\s]+|[*\]\s]+$/g, "") : "";
     };
-    const contentMatch = raw.match(/CONTENT:\s*([\s\S]+)/);
+    const contentMatch = raw.match(/CONTENT\**:\**\s*([\s\S]+)/);
 
     const title      = toTitleCase(extract("TITLE"));
     const excerpt    = extract("EXCERPT");
@@ -551,7 +552,7 @@ CONTENT:
     const img1       = extract("IMAGE_QUERY_1");
     const img2       = extract("IMAGE_QUERY_2");
     const img3       = extract("IMAGE_QUERY_3");
-    const content    = contentMatch ? contentMatch[1].trim() : raw;
+    const content    = contentMatch ? contentMatch[1].trim().replace(/^\*+\s*/, "") : raw;
     const tags       = tagsRaw.split(",").map((t: string) => t.trim()).filter(Boolean);
 
     if (!title || !content) {
@@ -561,14 +562,19 @@ CONTENT:
     // ── 3. Fetch images from Unsplash (B&W filter) ────────────────────────────
     async function fetchUnsplashImage(query: string, fallback: string) {
       try {
-        const q = encodeURIComponent(query || fallback);
-        const res = await fetch(
-          `https://api.unsplash.com/search/photos?query=${q}&per_page=3&orientation=landscape&color=black_and_white&content_filter=high`,
-          { headers: { "Authorization": `Client-ID ${unsplashKey}` } }
-        );
-        if (!res.ok) return null;
-        const data = await res.json();
-        const photo = data.results?.[0];
+        let photo: any = null;
+        // Model-written queries can be too specific for the B&W filter — retry
+        // with the generic fallback before giving up.
+        for (const attempt of [query || fallback, fallback]) {
+          const res = await fetch(
+            `https://api.unsplash.com/search/photos?query=${encodeURIComponent(attempt)}&per_page=3&orientation=landscape&color=black_and_white&content_filter=high`,
+            { headers: { "Authorization": `Client-ID ${unsplashKey}` } }
+          );
+          if (!res.ok) continue;
+          const data = await res.json();
+          photo = data.results?.[0];
+          if (photo) break;
+        }
         if (!photo) return null;
         await fetch(photo.links?.download_location, {
           headers: { "Authorization": `Client-ID ${unsplashKey}` }

@@ -1,6 +1,7 @@
 import { v } from "convex/values";
-import { query, mutation, action, internalMutation } from "./_generated/server";
-import { internal } from "./_generated/api";
+import { query, mutation, action, internalMutation, internalQuery } from "./_generated/server";
+import { internal, api } from "./_generated/api";
+import { llmChat } from "./blog";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -205,6 +206,43 @@ export const buildTodayQueue = mutation({
       }
     }
     return { promoted };
+  },
+});
+
+export const getById = internalQuery({
+  args: { id: v.id("prospects") },
+  handler: async (ctx, { id }) => ctx.db.get(id),
+});
+
+// Draft a personalized outreach DM with the writer LLM (NVIDIA chain) and save
+// it on the prospect. The DM itself is still sent manually — ToS safety.
+export const generateDmDraft = action({
+  args: { id: v.id("prospects") },
+  handler: async (ctx, { id }): Promise<string> => {
+    const p: any = await ctx.runQuery(internal.prospects.getById, { id });
+    if (!p) throw new Error("Prospect not found");
+
+    const who = [
+      `Instagram handle: @${p.instagram_handle}`,
+      p.display_name && `Name: ${p.display_name}`,
+      p.follower_count && `Followers: ${p.follower_count}`,
+      p.niche && `Niche: ${p.niche}`,
+      p.location && `Location: ${p.location}`,
+      p.bio && `Bio: ${p.bio}`,
+    ].filter(Boolean).join("\n");
+
+    const pitch = p.kind === "creator"
+      ? "Invite them to join Collabnb as a travel creator — they pitch boutique stays and trade content for nights, with contracts and payments handled on the platform."
+      : "Invite them to list their boutique stay on Collabnb — vetted UGC creators trade content for nights, giving them a stream of marketing content without an agency.";
+
+    const raw = await llmChat([
+      { role: "system", content: "You write short Instagram DMs for Ben, the founder of Collabnb (collabnb.com) — a marketplace connecting boutique stays with UGC travel creators for content-for-stay collabs. Sound like a real person typing on their phone: warm, specific, zero marketing-speak. Never use 'elevate', 'unlock', 'leverage', 'seamless', 'game-changer', or exclamation marks back to back." },
+      { role: "user", content: `Write ONE Instagram DM (max 450 characters, 2-3 short paragraphs, no hashtags, at most one emoji). Personalize it with a specific detail from their profile. ${pitch} End with a soft ask and the link collabnb.com/join. Return only the DM text.\n\n${who}` },
+    ], 250);
+
+    const dmDraft = raw.trim().replace(/^["']|["']$/g, "").slice(0, 900);
+    await ctx.runMutation(api.prospects.update, { id, dmDraft });
+    return dmDraft;
   },
 });
 

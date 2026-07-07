@@ -68,6 +68,20 @@ export async function updateWaitlistProfile(profileId, updates) {
   }
 }
 
+// Ambassador program (beta)
+export async function listAmbassadorRegions() {
+  try {
+    return await client.query('ambassadors:listRegions');
+  } catch (err) {
+    console.warn('listAmbassadorRegions failed:', err.message);
+    return null;
+  }
+}
+
+export async function applyAmbassador(data) {
+  return await client.mutation('ambassadors:apply', data);
+}
+
 // Fetch a single profile by email
 export async function getProfileByEmail(email) {
   try {

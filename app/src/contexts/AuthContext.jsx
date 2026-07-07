@@ -225,6 +225,7 @@ function ClerkAuthInner({ children }) {
             region: updates.region,
             country: updates.country,
             role: updates.role,
+            niches: updates.niches,
           },
         });
       } catch (err) {

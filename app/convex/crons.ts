@@ -11,6 +11,15 @@ crons.monthly(
   {}
 );
 
+// Daily at 8am UTC — auto-fill the outreach queue (20 creators + 20 hosts)
+// so it's ready before the day starts; the button in Discovery still works.
+crons.daily(
+  "build daily prospect queue",
+  { hourUTC: 8, minuteUTC: 0 },
+  api.prospects.buildTodayQueue,
+  { perKind: 20 }
+);
+
 // Daily at 9am UTC — generate a new blog post draft for admin review.
 crons.daily(
   "generate daily blog post",

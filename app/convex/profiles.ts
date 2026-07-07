@@ -451,6 +451,7 @@ export const updateProfile = mutation({
       region: v.optional(v.string()),
       country: v.optional(v.string()),
       role: v.optional(v.string()),
+      niches: v.optional(v.array(v.string())),
     }),
   },
   handler: async (ctx, args) => {

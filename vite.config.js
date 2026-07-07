@@ -14,6 +14,7 @@ export default defineConfig({
         how: resolve(__dirname, 'how-it-works.html'),
         faq: resolve(__dirname, 'faq.html'),
         join: resolve(__dirname, 'join.html'),
+        ambassadors: resolve(__dirname, 'ambassadors.html'),
         login: resolve(__dirname, 'login.html'),
         'sso-callback': resolve(__dirname, 'sso-callback.html'),
         pricing: resolve(__dirname, 'pricing/index.html'),

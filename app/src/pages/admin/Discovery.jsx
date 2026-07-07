@@ -41,10 +41,24 @@ function ProspectCard({ prospect }) {
   const updateStatus = useMutation(api.prospects.updateStatus);
   const update = useMutation(api.prospects.update);
   const remove = useMutation(api.prospects.remove);
+  const generateDm = useAction(api.prospects.generateDmDraft);
   const [open, setOpen] = useState(false);
   const [dmDraft, setDmDraft] = useState(prospect.dm_draft || '');
   const [notes, setNotes] = useState(prospect.notes || '');
   const [copied, setCopied] = useState(false);
+  const [genBusy, setGenBusy] = useState(false);
+  const [genErr, setGenErr] = useState('');
+
+  async function genDm() {
+    setGenBusy(true); setGenErr('');
+    try {
+      setDmDraft(await generateDm({ id: prospect._id }));
+    } catch (e) {
+      setGenErr(e.message?.replace(/^.*Error:\s*/, '') || 'Could not generate a draft');
+    } finally {
+      setGenBusy(false);
+    }
+  }
 
   const nextStatus = STATUS_FLOW[STATUS_FLOW.indexOf(prospect.status) + 1];
 
@@ -112,11 +126,16 @@ function ProspectCard({ prospect }) {
               onBlur={() => dmDraft !== (prospect.dm_draft || '') && update({ id: prospect._id, dmDraft })}
               rows={3} placeholder="Write the outreach message here, then copy it into Instagram."
               style={{ ...input, width: '100%', resize: 'vertical' }} />
-            <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.35rem' }}>
+            <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.35rem', flexWrap: 'wrap' }}>
+              <button onClick={genDm} disabled={genBusy}
+                style={{ padding: '0.3rem 0.8rem', borderRadius: 9999, border: 'none', background: '#192524', color: '#fff', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer', opacity: genBusy ? 0.5 : 1 }}>
+                {genBusy ? 'Writing…' : dmDraft ? 'Rewrite DM' : 'Generate DM'}
+              </button>
               <button onClick={copyDm} disabled={!dmDraft}
                 style={{ padding: '0.3rem 0.8rem', borderRadius: 9999, border: '1px solid rgba(25,37,36,0.15)', background: copied ? 'rgba(209,235,219,0.6)' : 'transparent', color: copied ? '#166534' : '#3C5759', fontSize: '0.7rem', fontWeight: 600, cursor: 'pointer' }}>
                 {copied ? 'Copied' : 'Copy DM'}
               </button>
+              {genErr && <span style={{ fontSize: '0.68rem', color: '#9b2d2d', alignSelf: 'center' }}>{genErr}</span>}
             </div>
           </div>
           <div>

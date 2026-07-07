@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { query, mutation, internalMutation, internalQuery } from "./_generated/server";
 import { internal } from "./_generated/api";
+import { recordEarningForContract } from "./ambassadors";
 
 export const getAll = query({
   args: {},
@@ -463,6 +464,14 @@ export const recordPaymentInternal = internalMutation({
 
     const contract = await ctx.db.get(args.id as any);
     if (!contract) return;
+
+    // Ambassador program: credit the regional ambassador their share of this fee.
+    try {
+      await recordEarningForContract(ctx, contract, args.paymentAmount);
+    } catch (err) {
+      console.error("ambassador earning failed (payment still recorded):", err);
+    }
+
     const propertyLabel = (contract as any).property_name || (contract as any).location || "your collab";
 
     for (const party of ["host", "creator"] as const) {

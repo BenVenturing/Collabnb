@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Ambassadors — Collabnb</title>
+<meta name="description" content="Become a Collabnb Ambassador. Run creator–hotel collabs in your region and earn a share of every platform fee your region produces. Beta program — three regions open." />
+<link rel="icon" href="assets/collabnb-logo.png" type="image/svg+xml" />
+<link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&f[]=cabinet-grotesk@400,500,700,800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles/main.css" />
+<style>
+  /* ── Ambassadors page ── */
+  .amb-map-wrap {
+    position:relative; border-radius:24px; padding:1.25rem;
+    box-shadow:var(--shadow-md), var(--glass-inner);
+  }
+  #amb-map { display:block; width:100%; height:auto; cursor:pointer; border-radius:16px; }
+  #amb-tooltip {
+    position:absolute; pointer-events:none; opacity:0; transform:translate(-50%,-115%);
+    background:var(--ink); color:var(--bone); padding:.55rem .8rem; border-radius:12px;
+    font-size:var(--fs-sm); line-height:1.35; white-space:nowrap; z-index:5;
+    transition:opacity 120ms ease; box-shadow:var(--shadow-lg);
+  }
+  #amb-tooltip .tt-status { display:block; font-size:var(--fs-xs); opacity:.75; }
+  .amb-legend { display:flex; gap:1.25rem; flex-wrap:wrap; justify-content:center; margin-top:1rem; font-size:var(--fs-sm); color:var(--slate); }
+  .amb-legend span { display:inline-flex; align-items:center; gap:.4rem; }
+  .amb-legend i { width:10px; height:10px; border-radius:50%; display:inline-block; }
+
+  .region-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:1.25rem; margin-top:2rem; }
+  .region-card { border-radius:20px; padding:1.5rem; display:flex; flex-direction:column; gap:.75rem; }
+  .region-card h3 { margin:0; font-size:1.2rem; }
+  .region-card .countries { color:var(--slate); font-size:var(--fs-sm); line-height:1.5; flex:1; }
+  .status-chip { align-self:flex-start; padding:.2rem .65rem; border-radius:999px; font-size:var(--fs-xs); font-weight:700; letter-spacing:.04em; text-transform:uppercase; }
+  .status-open        { background:var(--mint);  color:var(--slate); }
+  .status-taken       { background:var(--stone); color:var(--ink);   }
+  .status-coming_soon { background:var(--bone);  color:var(--sage); border:1px solid var(--hairline-strong); }
+
+  .tier-strip { display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:1.25rem; margin-top:2.5rem; }
+  .tier-card { border-radius:20px; padding:1.75rem 1.5rem; text-align:center; }
+  .tier-card .big { font-family:var(--font-display); font-weight:800; font-size:2.4rem; color:var(--ink); line-height:1; }
+  .tier-card .lbl { margin-top:.5rem; color:var(--slate); font-size:var(--fs-sm); }
+
+  .amb-form { max-width:720px; margin:0 auto; border-radius:24px; padding:2.25rem; }
+  .amb-form .form-row { display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
+  @media (max-width:640px){ .amb-form .form-row { grid-template-columns:1fr; } .amb-form { padding:1.5rem; } }
+  .amb-form textarea.form-input { min-height:110px; resize:vertical; font-family:var(--font-body); }
+  .amb-form select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%233C5759' stroke-width='2.5' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right .9rem center; }
+  .form-msg { margin-top:1rem; padding:.85rem 1rem; border-radius:14px; font-size:var(--fs-sm); display:none; }
+  .form-msg.ok    { display:block; background:var(--mint); color:var(--slate); }
+  .form-msg.err   { display:block; background:#F3DEDA; color:#7A3B2E; }
+  .terms-check { display:flex; gap:.65rem; align-items:flex-start; font-size:var(--fs-sm); color:var(--slate); margin-top:.25rem; }
+  .terms-check input { margin-top:.2rem; accent-color:var(--slate); }
+
+  .amb-terms { border-radius:24px; padding:2.25rem; }
+  .amb-terms h3 { font-size:1.05rem; margin:1.75rem 0 .5rem; }
+  .amb-terms h3:first-of-type { margin-top:0; }
+  .amb-terms p, .amb-terms li { color:var(--slate); font-size:var(--fs-sm); line-height:1.65; }
+  .amb-terms ul { padding-left:1.1rem; margin:.5rem 0; }
+  .amb-terms .terms-meta { font-size:var(--fs-xs); color:var(--sage); margin-bottom:1.5rem; }
+</style>
+</head>
+<body>
+
+<a href="#main" class="skip-link">Skip to main content</a>
+
+<div aria-hidden="true" class="bg-layers bg-base"></div>
+<div aria-hidden="true" class="bg-layers bg-gradient"></div>
+<div aria-hidden="true" class="bg-layers bg-clouds"></div>
+<div aria-hidden="true" class="bg-grain"></div>
+
+<div class="nav-overlay glass" role="dialog" aria-modal="true" aria-label="Mobile navigation">
+  <a href="index.html">Home</a>
+  <a href="about.html">About</a>
+  <a href="how-it-works.html">How it works</a>
+  <a href="faq.html">FAQ</a>
+  <a href="/blog">Journal</a>
+  <a href="pricing/index.html">Pricing</a>
+  <a href="ambassadors.html">Ambassadors <span class="beta-pill">Beta</span></a>
+  <a href="join.html" class="btn-primary">Join the Waitlist</a>
+</div>
+
+<nav class="nav-pill glass" aria-label="Main navigation">
+  <a href="index.html" class="nav-logo" aria-label="Collabnb home">
+    <img src="assets/collabnb-logo.webp" alt="" role="presentation" width="28" height="28" />
+    <span>Collabnb</span>
+  </a>
+  <ul class="nav-links" role="list">
+    <li><a href="index.html">Home</a></li>
+    <li><a href="about.html">About</a></li>
+    <li><a href="how-it-works.html">How it works</a></li>
+    <li><a href="faq.html">FAQ</a></li>
+    <li><a href="/blog">Journal</a></li>
+    <li><a href="pricing/index.html">Pricing</a></li>
+    <li class="nav-dropdown">
+      <button class="nav-dropdown-toggle" aria-expanded="false" aria-haspopup="true">Programs
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+      <ul class="nav-dropdown-menu glass" role="list">
+        <li><a href="ambassadors.html">Ambassadors <span class="beta-pill">Beta</span></a></li>
+      </ul>
+    </li>
+  </ul>
+  <div class="nav-actions" style="display:flex; align-items:center; gap:0.5rem;">
+    <button class="nav-hamburger" aria-label="Open menu" aria-expanded="false">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+        <line class="line line-1" x1="3" y1="5" x2="17" y2="5"/>
+        <line class="line line-2" x1="3" y1="10" x2="17" y2="10"/>
+        <line class="line line-3" x1="3" y1="15" x2="17" y2="15"/>
+      </svg>
+    </button>
+    <button class="btn-login" data-login-trigger>Login</button>
+    <a href="join.html" class="btn-primary">Join the Waitlist</a>
+  </div>
+</nav>
+
+<main id="main">
+
+  <!-- ── HERO ── -->
+  <section class="section-lg" aria-labelledby="amb-h1">
+    <div class="container" style="text-align:center; padding-top:5rem;">
+      <span class="eyebrow-tag reveal">Ambassador Program · Beta</span>
+      <h1 id="amb-h1" class="display reveal" style="font-size:var(--fs-h2); margin-top:1.25rem; transition-delay:60ms;">Your region. Your network.<br>Your cut of every collab.</h1>
+      <p class="hero-sub reveal" style="margin:1.5rem auto 0; max-width:620px; transition-delay:120ms;">Collabnb Ambassadors champion creator–hotel collabs in their corner of the world — and earn a share of the platform fee on every collab completed in their region.</p>
+      <div class="hero-ctas justify-center reveal" style="margin-top:2rem; transition-delay:180ms;">
+        <a href="#apply" class="btn-primary">Apply for a region</a>
+        <a href="#how-it-pays" class="btn-glass">See how it pays</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── REGION MAP ── -->
+  <section class="section" aria-labelledby="map-heading">
+    <div class="container">
+      <p class="eyebrow-tag reveal text-center" style="display:table;margin:0 auto;">The beta map</p>
+      <h2 id="map-heading" class="display reveal text-center" style="font-size:var(--fs-h2); margin:1rem 0 2.5rem; transition-delay:60ms;">Three regions are open.</h2>
+      <div class="amb-map-wrap glass reveal">
+        <canvas id="amb-map" width="1200" height="620" aria-label="World map highlighting open ambassador regions. Use the region cards below to apply."></canvas>
+        <div id="amb-tooltip" role="status"></div>
+      </div>
+      <div class="amb-legend reveal">
+        <span><i style="background:#3C5759;"></i>Open — accepting applications</span>
+        <span><i style="background:#959D90;"></i>Represented</span>
+        <span><i style="background:#D0D5CE;"></i>Coming soon</span>
+      </div>
+      <div class="region-grid stagger" id="region-cards"><!-- populated by scripts/ambassadors.js --></div>
+    </div>
+  </section>
+
+  <!-- ── HOW IT PAYS ── -->
+  <section class="section" id="how-it-pays" aria-labelledby="pays-heading">
+    <div class="container">
+      <p class="eyebrow-tag reveal">How it pays</p>
+      <h2 id="pays-heading" class="display reveal" style="font-size:var(--fs-h2); margin:1rem 0 1.5rem; transition-delay:60ms;">Earn on every completed collab in your region.</h2>
+      <p class="hero-sub reveal" style="max-width:680px; transition-delay:120ms;">When a collab completes anywhere in your region, Collabnb collects its platform fee from the host — and you automatically earn a percentage of that fee. No selling, no invoicing. If it happened in your territory, you're in on it.</p>
+      <div class="tier-strip stagger">
+        <div class="tier-card glass reveal">
+          <div class="big">25%</div>
+          <div class="lbl">of the platform fee on every completed collab in your region</div>
+        </div>
+        <div class="tier-card glass reveal">
+          <div class="big">50%</div>
+          <div class="lbl">once your region passes 5 completed collabs in a calendar month</div>
+        </div>
+        <div class="tier-card glass reveal">
+          <div class="big">$50</div>
+          <div class="lbl">minimum balance for monthly payouts — via Stripe, Wise, or PayPal</div>
+        </div>
+        <div class="tier-card glass reveal">
+          <div class="big">30d</div>
+          <div class="lbl">earnings unlock 30 days after completion (refund protection window)</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── WHAT AMBASSADORS DO ── -->
+  <section class="section" aria-labelledby="do-heading">
+    <div class="container">
+      <p class="eyebrow-tag reveal">The role</p>
+      <h2 id="do-heading" class="display reveal" style="font-size:var(--fs-h2); margin:1rem 0 2.5rem; transition-delay:60ms;">What an Ambassador actually does.</h2>
+      <div class="audience-grid stagger">
+        <div class="audience-card glass reveal">
+          <h3 style="margin-top:0;">Grow the supply</h3>
+          <ul>
+            <li>Bring boutique hotels, villas, and unique stays in your region onto Collabnb</li>
+            <li>Recruit local creators who fit the platform</li>
+            <li>Be the trusted local face — you know the market, the language, the vibe</li>
+          </ul>
+        </div>
+        <div class="audience-card glass reveal">
+          <h3 style="margin-top:0;">Push the content</h3>
+          <ul>
+            <li>Promote Collabnb collabs happening in your region on your channels</li>
+            <li>Share launches, wins, and creator stories from your territory</li>
+            <li>Always with clear #ad / partnership disclosure — it's in the terms</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── APPLICATION ── -->
+  <section class="section" id="apply" aria-labelledby="apply-heading">
+    <div class="container">
+      <p class="eyebrow-tag reveal text-center" style="display:table;margin:0 auto;">Apply</p>
+      <h2 id="apply-heading" class="display reveal text-center" style="font-size:var(--fs-h2); margin:1rem 0 2.5rem; transition-delay:60ms;">Claim your region.</h2>
+      <form class="amb-form glass reveal" id="amb-form" novalidate>
+        <div class="form-group">
+          <label class="form-label" for="f-region">Region</label>
+          <select class="form-input" id="f-region" required>
+            <option value="southeast-asia">Southeast Asia</option>
+            <option value="southern-europe">Southern Europe</option>
+            <option value="western-europe">Western Europe</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="f-name">Full name</label>
+            <input class="form-input" id="f-name" type="text" autocomplete="name" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="f-email">Email</label>
+            <input class="form-input" id="f-email" type="email" autocomplete="email" required />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="f-based">Where are you based? (city, country)</label>
+            <input class="form-input" id="f-based" type="text" placeholder="e.g. Canggu, Indonesia" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="f-audience">Combined audience size</label>
+            <select class="form-input" id="f-audience">
+              <option value="">Select…</option>
+              <option>Under 5K</option>
+              <option>5K – 25K</option>
+              <option>25K – 100K</option>
+              <option>100K – 500K</option>
+              <option>500K+</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="f-ig">Instagram</label>
+            <input class="form-input" id="f-ig" type="text" placeholder="@handle" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="f-tt">TikTok</label>
+            <input class="form-input" id="f-tt" type="text" placeholder="@handle" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="f-yt">YouTube (optional)</label>
+          <input class="form-input" id="f-yt" type="text" placeholder="channel URL or handle" />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="f-plan">How would you push Collabnb in this region?</label>
+          <textarea class="form-input" id="f-plan" placeholder="Content formats, channels, cadence, local communities you'd tap into…" required></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="f-connections">What connections do you have in this region?</label>
+          <textarea class="form-input" id="f-connections" placeholder="Hotels, villa owners, creator communities, tourism boards, agencies…" required></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="f-extra">Anything else we should know? (optional)</label>
+          <textarea class="form-input" id="f-extra" style="min-height:70px;"></textarea>
+        </div>
+        <label class="terms-check">
+          <input type="checkbox" id="f-terms" required />
+          <span>I've read and agree to the <a href="#terms">Collabnb Ambassador Terms</a>, including the independent-contractor and disclosure requirements.</span>
+        </label>
+        <div class="hero-ctas" style="margin-top:1.5rem;">
+          <button type="submit" class="btn-primary" id="f-submit" style="width:100%;">Submit application</button>
+        </div>
+        <div class="form-msg" id="f-msg" role="status"></div>
+      </form>
+    </div>
+  </section>
+
+  <!-- ── TERMS ── -->
+  <section class="section" id="terms" aria-labelledby="terms-heading">
+    <div class="container" style="max-width:860px;">
+      <p class="eyebrow-tag reveal">The fine print</p>
+      <h2 id="terms-heading" class="display reveal" style="font-size:var(--fs-h2); margin:1rem 0 2rem; transition-delay:60ms;">Ambassador Terms.</h2>
+      <div class="amb-terms glass reveal">
+        <p class="terms-meta">Collabnb Ambassador Program Terms &amp; Conditions · Beta · Last updated July 7, 2026</p>
+
+        <h3>1. The Program</h3>
+        <p>The Collabnb Ambassador Program (the "Program") appoints individuals ("Ambassadors") to promote Collabnb and grow its community of hosts and creators within a defined geographic region (a "Region"). The Program is currently in <strong>beta</strong>: its structure, commission rates, Regions, and these terms may change as described in Section 12.</p>
+
+        <h3>2. Eligibility</h3>
+        <ul>
+          <li>You must be at least 18 years old and legally able to enter into contracts.</li>
+          <li>You must be able to receive payouts via Stripe, Wise, or PayPal in your country of residence.</li>
+          <li>Acceptance into the Program is at Collabnb's sole discretion. Submitting an application does not create any obligation on Collabnb to accept it.</li>
+        </ul>
+
+        <h3>3. Appointment &amp; Territory</h3>
+        <ul>
+          <li>During the beta, each Region has at most one active Ambassador.</li>
+          <li>Your appointment is <strong>non-exclusive</strong>: Collabnb may itself market, operate, and sign hosts or creators in your Region at any time.</li>
+          <li>Collabnb may redraw Region boundaries, split, merge, or retire Regions on 30 days' notice. Earnings already accrued are unaffected.</li>
+        </ul>
+
+        <h3>4. Independent Contractor</h3>
+        <p>You are an independent contractor, not an employee, agent, joint venturer, or legal representative of Collabnb. You have no authority to bind Collabnb, sign agreements on its behalf, negotiate fees, or make commitments to hosts or creators. You are responsible for your own taxes, insurance, equipment, and expenses.</p>
+
+        <h3>5. Commission</h3>
+        <ul>
+          <li>When a collaboration is <strong>completed</strong> on Collabnb at a property located in your Region and Collabnb successfully collects its platform fee for that collaboration, you earn a commission calculated on the platform fee actually collected (not on the collaboration's total value).</li>
+          <li><strong>Tier 1:</strong> 25% of the platform fee, per completed collaboration.</li>
+          <li><strong>Tier 2:</strong> 50% of the platform fee for each completed collaboration beyond the fifth in your Region within a single calendar month. The counter resets monthly.</li>
+          <li>Commissions accrue only on fees actually received by Collabnb. If a fee is refunded, reversed, disputed, or charged back, the related commission is cancelled or deducted from your balance.</li>
+          <li>All amounts are calculated and paid in USD.</li>
+        </ul>
+
+        <h3>6. Payouts</h3>
+        <ul>
+          <li>Each commission becomes payable 30 days after the collaboration completes (the "clearance window").</li>
+          <li>Cleared balances of $50 or more are paid monthly via Stripe, Wise, or PayPal, at your election where available.</li>
+          <li>Balances under $50 roll over to the following month.</li>
+          <li>You are solely responsible for any taxes on your earnings. Collabnb may require a completed W-9, W-8BEN, or equivalent tax form before releasing payouts, and may withhold where required by law.</li>
+        </ul>
+
+        <h3>7. Your Responsibilities</h3>
+        <ul>
+          <li>Actively promote Collabnb in your Region in a professional manner consistent with the brand.</li>
+          <li><strong>Disclosure:</strong> clearly disclose your material connection to Collabnb in all promotional content (e.g. #ad, #partner) as required by the FTC and any equivalent local advertising rules in your Region.</li>
+          <li>No spam, unsolicited bulk messaging, misleading claims, income guarantees, cookie-stuffing, bidding on Collabnb trademarks in paid search, or self-dealing (e.g. fabricating collabs to generate fees).</li>
+          <li>Comply with all laws applicable to your activities, including data-protection and consumer-protection laws in your Region.</li>
+        </ul>
+
+        <h3>8. Brand Use</h3>
+        <p>Collabnb grants you a limited, revocable, non-transferable license to use its name, logo, and approved marketing materials solely to perform under the Program. You may not register domains, social handles, or business names containing "Collabnb," or present yourself as Collabnb staff, without prior written approval.</p>
+
+        <h3>9. Confidentiality</h3>
+        <p>Non-public information you receive through the Program — including host pipelines, fee structures, product plans, and performance data — is confidential. Don't share it, and don't use it outside the Program. This obligation survives termination for two years.</p>
+
+        <h3>10. Data</h3>
+        <p>Any personal data of hosts, creators, or leads you handle in connection with the Program must be handled in line with Collabnb's Privacy Policy and applicable law, and used only for the Program.</p>
+
+        <h3>11. Term &amp; Termination</h3>
+        <ul>
+          <li>Either party may end participation with 30 days' written notice (email suffices).</li>
+          <li>Collabnb may terminate immediately for breach of these terms, fraud, brand damage, or unlawful conduct.</li>
+          <li>On termination, commissions already cleared and payable are paid out on the normal schedule. Commissions still inside the clearance window are paid once they clear — unless termination was for cause, in which case unvested commissions are forfeited.</li>
+        </ul>
+
+        <h3>12. Changes to the Program</h3>
+        <p>This is a beta. Collabnb may modify commission rates, tiers, thresholds, Regions, or these terms with 30 days' notice by email. Changes apply prospectively — they never reduce commissions already accrued. Continued participation after the notice period constitutes acceptance.</p>
+
+        <h3>13. Liability</h3>
+        <p>The Program is provided "as is." To the maximum extent permitted by law, Collabnb's total liability under the Program is capped at the commissions paid to you in the six months preceding the claim. Collabnb is not liable for indirect, incidental, or consequential damages, or lost profits.</p>
+
+        <h3>14. Governing Law</h3>
+        <p>These terms are governed by the laws of the jurisdiction in which Collabnb is incorporated, without regard to conflict-of-law rules. Disputes will first be attempted to be resolved informally; failing that, in the courts of that jurisdiction.</p>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer aria-label="Site footer">
+  <div class="container">
+    <div class="site-footer glass">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <a href="index.html" class="nav-logo" style="display:inline-flex;" aria-label="Collabnb home">
+            <img src="assets/collabnb-logo.webp" alt="" role="presentation" width="28" height="28" />
+            <span style="font-family:var(--font-display);font-weight:700;font-size:1.1rem;letter-spacing:-0.02em;margin-left:.5rem;">Collabnb</span>
+          </a>
+          <p>Manage collabs effortlessly. Built for creators and boutique stays.</p>
+          <div class="footer-social">
+            <a href="https://www.instagram.com/collabnb/" target="_blank" rel="noopener noreferrer" aria-label="Instagram"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="5"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg></a>
+            <a href="https://www.tiktok.com/@collabnbofficial" target="_blank" rel="noopener noreferrer" aria-label="TikTok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M9 12a4 4 0 104 4V4a5 5 0 005 5"/></svg></a>
+          </div>
+        </div>
+        <div class="footer-col"><h4>Use</h4><ul><li><a href="index.html">Home</a></li><li><a href="about.html">About</a></li><li><a href="how-it-works.html">How it works</a></li><li><a href="faq.html">FAQ</a></li>
+    <li><a href="/blog">Journal</a></li><li><a href="pricing/index.html">Pricing</a></li></ul></div>
+        <div class="footer-col"><h4>Programs</h4><ul><li><a href="ambassadors.html">Ambassadors</a></li><li><a href="#terms">Ambassador Terms</a></li></ul></div>
+        <div class="footer-col"><h4>Join</h4><ul><li><a href="join.html">Creator waitlist</a></li><li><a href="join.html">Host waitlist</a></li></ul></div>
+      </div>
+      <div class="footer-bottom">
+        <span>Collabnb Ambassadors — local champions of the collab economy.</span>
+        <span>© 2026 Collabnb. All rights reserved.</span>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<!-- ── LOGIN MODAL ── -->
+<div id="login-modal-overlay" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="login-modal-title" aria-hidden="true">
+  <div class="modal-card login-modal-card" style="max-width:520px;">
+    <button id="login-modal-close" class="modal-close" aria-label="Close login form">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+    </button>
+    <div style="text-align:center;">
+      <div class="login-icon" style="margin:0 auto 1.25rem;">🔑</div>
+      <h2 id="login-modal-title" class="login-title">Welcome back</h2>
+      <p class="login-desc">Sign in to your account to view your profile and manage collabs.</p>
+    </div>
+    <div id="clerk-login-mount"></div>
+    <div class="login-footer" style="text-align:center;margin-top:1.5rem;">
+      Don't have an account? <a href="join.html">Join the waitlist</a>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="/scripts/main.js"></script>
+<script type="module" src="/scripts/ambassadors.js"></script>
+
+</body>
+</html>

@@ -49,6 +49,7 @@ export default defineSchema({
     metrics_updated_at: v.optional(v.number()),
     pending_tier: v.optional(v.string()),
     tier_change_requested_at: v.optional(v.number()),
+    niches: v.optional(v.array(v.string())),
   }).index("by_email", ["email"]).index("by_stripe_customer", ["stripe_customer_id"]),
 
   listings: defineTable({
@@ -364,6 +365,65 @@ export default defineSchema({
   })
     .index("by_platform", ["platform"])
     .index("by_external", ["external_id"]),
+
+  // Ambassador program (beta) — regional partners earning a share of the
+  // platform fee on collabs completed in their region.
+  ambassador_regions: defineTable({
+    slug: v.string(),
+    name: v.string(),
+    countries: v.array(v.string()),
+    status: v.string(),                       // 'open' | 'taken' | 'coming_soon'
+    ambassador_name: v.optional(v.string()),
+    ambassador_email: v.optional(v.string()),
+    application_id: v.optional(v.string()),
+    tier1_pct: v.optional(v.number()),        // % of platform fee, default 25
+    tier2_pct: v.optional(v.number()),        // % after monthly threshold, default 50
+    tier2_threshold: v.optional(v.number()),  // completed collabs/month to unlock tier 2, default 5
+  }).index("by_slug", ["slug"]),
+
+  ambassador_applications: defineTable({
+    region_slug: v.string(),
+    region_name: v.string(),
+    full_name: v.string(),
+    email: v.string(),
+    based_in: v.optional(v.string()),
+    instagram_handle: v.optional(v.string()),
+    tiktok_handle: v.optional(v.string()),
+    youtube_handle: v.optional(v.string()),
+    audience_size: v.optional(v.string()),
+    content_plan: v.string(),
+    connections: v.string(),
+    extra: v.optional(v.string()),
+    agreed_terms: v.boolean(),
+    status: v.string(),                       // 'pending' | 'approved' | 'declined'
+    admin_note: v.optional(v.string()),
+    created_at: v.number(),
+    reviewed_at: v.optional(v.number()),
+  })
+    .index("by_status", ["status"])
+    .index("by_region", ["region_slug"])
+    .index("by_email", ["email"]),
+
+  ambassador_earnings: defineTable({
+    region_slug: v.string(),
+    region_name: v.string(),
+    ambassador_name: v.optional(v.string()),
+    ambassador_email: v.optional(v.string()),
+    contract_id: v.string(),
+    property_name: v.optional(v.string()),
+    fee_amount: v.number(),
+    share_pct: v.number(),
+    amount: v.number(),
+    status: v.string(),                       // 'pending' | 'paid' | 'reversed'
+    clawback_until: v.number(),
+    month_key: v.string(),                    // 'YYYY-MM', used for tier counting
+    created_at: v.number(),
+    paid_at: v.optional(v.number()),
+    payout_note: v.optional(v.string()),
+  })
+    .index("by_region_month", ["region_slug", "month_key"])
+    .index("by_status", ["status"])
+    .index("by_contract", ["contract_id"]),
 
   blog_posts: defineTable({
     title: v.string(),

@@ -9,7 +9,7 @@ import { api } from '../../convex/_generated/api';
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 
-const LAUNCH_DATE = new Date('2026-07-15');
+const LAUNCH_DATE = new Date('2026-07-15T00:00:00+07:00');
 const LAUNCH_BANNER_KEY = 'collabnb_launch_banner_dismissed';
 const BANNER_H = '2rem';
 

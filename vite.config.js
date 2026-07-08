@@ -24,5 +24,9 @@ export default defineConfig({
   server: {
     port: 5173,
     host: true,
+    watch: {
+      // The app has its own dev server; build outputs shouldn't trigger reloads here.
+      ignored: ['**/app/**', '**/dist/**'],
+    },
   },
 });

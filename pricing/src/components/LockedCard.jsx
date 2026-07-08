@@ -64,7 +64,7 @@ export default function LockedCard({ plan, isUnlocked, onSubscribe }) {
           <rect x="3" y="11" width="18" height="11" rx="2"/>
           <path d="M7 11V7a5 5 0 0110 0v4"/>
         </svg>
-        Launches July 1, 2026
+        Launches July 15, 2026
       </div>
     </div>
   );

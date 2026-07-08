@@ -11,9 +11,9 @@ import TermsNote       from './TermsNote';
 
 const CREATOR_CAP  = 100;
 const HOST_CAP     = 100;
-const LAUNCH_DATE  = new Date('2026-07-01T00:00:00Z');
+const LAUNCH_DATE  = new Date('2026-07-15T00:00:00+07:00');
 const CONVEX_URL   = import.meta.env.VITE_CONVEX_URL;
-// After July 1, clicking a paid plan redirects to the app's subscription flow.
+// After launch (July 15, Jakarta time), clicking a paid plan redirects to the app's subscription flow.
 // The app detects ?subscribe=monthly|yearly and auto-opens the payment modal.
 const APP_URL = import.meta.env.VITE_APP_URL || '/';
 

@@ -21,6 +21,7 @@ import Discovery from './admin/Discovery';
 import SocialHub from './admin/SocialHub';
 import AmbassadorManager from './admin/AmbassadorManager';
 import AlgorithmLab from './admin/AlgorithmLab';
+import ModerationQueue from './admin/ModerationQueue';
 
 const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL;
 
@@ -87,6 +88,7 @@ const SECTIONS = [
   { id: 'waitlist',     label: 'Waitlist Manager'       },
   { id: 'messages',     label: 'User Messages'          },
   { id: 'suggestions',  label: 'Suggestions'            },
+  { id: 'moderation',   label: 'Moderation'              },
   { id: 'audit',        label: 'Audit Log'              },
   { id: 'analytics',    label: 'Platform Analytics'     },
   { id: 'settings',     label: 'Settings'               },
@@ -110,6 +112,7 @@ function ContractPanel()     { return <ContractManager />;      }
 function FoundersPanel()     { return <FounderTracker />;       }
 function MessagesPanel()     { return <UserMessages />;         }
 function SuggestionsPanel()  { return <SuggestionsModeration />; }
+function ModerationPanel()   { return <ModerationQueue />;      }
 function AnalyticsPanel()    { return <PlatformAnalytics />;    }
 function SettingsPanel()     { return <AdminSettings />;        }
 function WaitlistPanel()     { return <WaitlistManager />;      }
@@ -136,6 +139,7 @@ const PANEL_MAP = {
   broadcast:    BroadcastPanel,
   messages:     MessagesPanel,
   suggestions:  SuggestionsPanel,
+  moderation:   ModerationPanel,
   audit:        AuditPanel,
   analytics:    AnalyticsPanel,
   settings:     SettingsPanel,

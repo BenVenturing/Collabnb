@@ -65,11 +65,69 @@ async function withImages(ctx: any, listing: any) {
 }
 
 export const getAll = query({
-  args: {},
-  handler: async (ctx) => {
+  args: { viewerId: v.optional(v.string()) },
+  handler: async (ctx, { viewerId }) => {
     const listings = await ctx.db.query("listings").collect();
     const filtered = listings.filter((l: any) => !l.is_sample && !l.needs_compensation_review);
-    return Promise.all(filtered.map((l: any) => withImages(ctx, l)));
+
+    // Check viewer's access level
+    let canViewFull = true;
+    if (viewerId) {
+      const viewer = await ctx.db.get(viewerId as any);
+      if (viewer && viewer.role === "creator" && !viewer.is_admin) {
+        const state = viewer.access_state ?? "active";
+        const isFounder = viewer.is_founder === true;
+        const isVerified = viewer.is_verified === true;
+        canViewFull = isFounder || state === "trial" || state === "active" || !isVerified;
+        // Unverified creators see blurbs only
+        if (!isVerified) canViewFull = false;
+      }
+    }
+
+    if (canViewFull) {
+      return Promise.all(filtered.map((l: any) => withImages(ctx, l)));
+    }
+
+    // Redact sensitive fields for unapproved / limited creators
+    return filtered.map((l: any) => ({
+      ...l,
+      title: l.title,
+      subtitle: undefined,
+      about: undefined,
+      collaboration_brief: undefined,
+      location_full: undefined,
+      host_name: undefined,
+      host_id: undefined,
+      amenities: undefined,
+      what_you_get: undefined,
+      what_you_deliver: undefined,
+      requirements: undefined,
+      property_url: undefined,
+      gallery_images: [],
+      image: l.image ? l.image : undefined, // blur in UI via CSS
+      location: l.location?.split(",")[0] || l.location, // city only
+      // Always visible:
+      compensation: l.compensation,
+      compensation_type: l.compensation_type,
+      cash_amount: l.cash_amount,
+      collab_type: l.collab_type,
+      creator_tier: l.creator_tier,
+      creator_track: l.creator_track,
+      deliverable_count: l.deliverable_count,
+      deliverable_load: l.deliverable_load,
+      deliverables: l.deliverables,
+      deliverables_list: l.deliverables_list,
+      location_city: l.location_city,
+      location_country: l.location_country,
+      is_featured: l.is_featured ?? false,
+      date_ranges: l.date_ranges,
+      dates_available: l.dates_available,
+      nights: l.nights,
+      property_type: l.property_type,
+      _redacted: true,
+      _id: l._id,
+      _creationTime: l._creationTime,
+    }));
   },
 });
 
@@ -83,14 +141,62 @@ export const getSamples = query({
 });
 
 export const getById = query({
-  args: { id: v.string() },
+  args: { id: v.string(), viewerId: v.optional(v.string()) },
   handler: async (ctx, args) => {
     const listing = await ctx.db
       .query("listings")
       .filter((q) => q.eq(q.field("_id"), args.id))
       .first();
     if (!listing) return null;
-    return withImages(ctx, listing);
+
+    // Check viewer access
+    let canViewFull = true;
+    if (args.viewerId) {
+      const viewer = await ctx.db.get(args.viewerId as any);
+      if (viewer && viewer.role === "creator" && !viewer.is_admin) {
+        const isVerified = viewer.is_verified === true;
+        const state = viewer.access_state ?? "active";
+        const isFounder = viewer.is_founder === true;
+        canViewFull = isFounder || state === "trial" || state === "active" || !isVerified;
+        if (!isVerified) canViewFull = false;
+      }
+    }
+
+    const full = await withImages(ctx, listing);
+    if (canViewFull) return full;
+
+    return {
+      ...full,
+      subtitle: undefined,
+      about: undefined,
+      collaboration_brief: undefined,
+      location_full: undefined,
+      host_name: undefined,
+      host_id: undefined,
+      amenities: undefined,
+      what_you_get: undefined,
+      what_you_deliver: undefined,
+      requirements: undefined,
+      property_url: undefined,
+      gallery_images: [],
+      location: listing.location?.split(",")[0] || listing.location,
+      compensation: listing.compensation,
+      compensation_type: listing.compensation_type,
+      cash_amount: listing.cash_amount,
+      collab_type: listing.collab_type,
+      creator_tier: listing.creator_tier,
+      creator_track: listing.creator_track,
+      deliverable_count: listing.deliverable_count,
+      deliverables: listing.deliverables,
+      deliverables_list: listing.deliverables_list,
+      location_city: listing.location_city,
+      location_country: listing.location_country,
+      is_featured: listing.is_featured ?? false,
+      date_ranges: listing.date_ranges,
+      dates_available: listing.dates_available,
+      property_type: listing.property_type,
+      _redacted: true,
+    };
   },
 });
 

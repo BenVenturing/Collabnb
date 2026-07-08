@@ -50,6 +50,12 @@ export default defineSchema({
     pending_tier: v.optional(v.string()),
     tier_change_requested_at: v.optional(v.number()),
     niches: v.optional(v.array(v.string())),
+    creator_track: v.optional(v.union(v.literal("ugc"), v.literal("influencer"))),
+    access_state: v.optional(v.union(v.literal("pending"), v.literal("trial"), v.literal("active"), v.literal("limited"))),
+    trial_starts_at: v.optional(v.number()),
+    trial_ends_at: v.optional(v.number()),
+    interview_requested: v.optional(v.boolean()),
+    admin_verification_note: v.optional(v.string()),
   }).index("by_email", ["email"]).index("by_stripe_customer", ["stripe_customer_id"]),
 
   listings: defineTable({
@@ -69,6 +75,7 @@ export default defineSchema({
     max_offers: v.optional(v.number()),
     collab_type: v.optional(v.string()),
     creator_tier: v.optional(v.string()),
+    creator_track: v.optional(v.union(v.literal("ugc"), v.literal("influencer"), v.literal("both"))),
     // legacy display string, or the new points-based array
     deliverables: v.optional(v.union(
       v.string(),
@@ -480,4 +487,20 @@ export default defineSchema({
     .index("by_status", ["status"])
     .index("by_slug", ["slug"])
     .index("by_generated", ["generated_at"]),
+
+  reports: defineTable({
+    reported_user_id: v.string(),
+    reporter_id: v.string(),
+    reason: v.union(
+      v.literal("inaccurate_information"),
+      v.literal("poor_communication"),
+      v.literal("failed_collaboration"),
+      v.literal("unprofessional_behavior"),
+      v.literal("other")
+    ),
+    details: v.optional(v.string()),
+    status: v.union(v.literal("pending"), v.literal("dismissed"), v.literal("actioned")),
+    admin_note: v.optional(v.string()),
+    created_at: v.number(),
+  }).index("by_reported", ["reported_user_id"]),
 });

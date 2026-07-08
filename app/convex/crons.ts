@@ -52,4 +52,12 @@ crons.daily(
   {}
 );
 
+// Daily at midnight UTC — expire creator trials and flip to limited access.
+crons.daily(
+  "expire creator trials",
+  { hourUTC: 0, minuteUTC: 5 },
+  internal.gates.expireTrials,
+  {}
+);
+
 export default crons;

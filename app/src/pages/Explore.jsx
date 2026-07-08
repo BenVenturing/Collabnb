@@ -85,8 +85,24 @@ function ListingCard({ listing, saved, onSave, delay, onNavigate, onHostClick, o
           alt={listing.title}
           loading="lazy"
           onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = IMG_FALLBACK; }}
-          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', filter: listing._redacted ? 'blur(20px) brightness(0.7)' : 'none' }}
         />
+
+        {/* Redacted overlay — unapproved / limited creators */}
+        {listing._redacted && (
+          <div style={{
+            position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: 'rgba(37,36,32,0.20)', backdropFilter: 'blur(2px)', pointerEvents: 'none',
+          }}>
+            <div style={{ textAlign: 'center', color: '#fff', padding: '0 1rem' }}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 24, height: 24, margin: '0 auto 0.375rem', opacity: 0.7 }}>
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+              </svg>
+              <p style={{ fontSize: '0.65rem', fontWeight: 600, opacity: 0.7, margin: 0, lineHeight: 1.3 }}>Apply to view</p>
+            </div>
+          </div>
+        )}
 
         {/* SAMPLE LISTING watermark — demo listings only */}
         {isSample && (
@@ -191,11 +207,11 @@ function ListingCard({ listing, saved, onSave, delay, onNavigate, onHostClick, o
       {/* Info */}
       <div style={{ padding: '0.875rem 1rem 1rem' }}>
         <div style={{ marginBottom: '0.2rem' }}>
-          <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.875rem', color: 'var(--ink)', lineHeight: 1.25 }}>
+          <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.875rem', color: 'var(--ink)', lineHeight: 1.25, filter: listing._redacted ? 'blur(6px)' : 'none', userSelect: listing._redacted ? 'none' : 'auto' }}>
             {listing.title}
           </p>
         </div>
-        <p style={{ fontSize: '0.72rem', color: 'var(--sage)', marginBottom: '0.6rem' }}>{listing.location}</p>
+        <p style={{ fontSize: '0.72rem', color: 'var(--sage)', marginBottom: '0.6rem', filter: listing._redacted ? 'blur(5px)' : 'none', userSelect: listing._redacted ? 'none' : 'auto' }}>{listing.location}</p>
         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '0.5rem' }}>
           <div>
             <p style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--ink)', lineHeight: 1.2 }}>{listing.compensation}</p>
@@ -464,7 +480,7 @@ export default function Explore() {
   }, [setCompactSearch]);
 
   // ── Data source: real Convex listings + global sample listings ───────────────
-  const convexRaw  = useQuery(api.listings.getAll) ?? null;       // real (excludes is_sample)
+  const convexRaw  = useQuery(api.listings.getAll, profile?._id ? { viewerId: String(profile._id) } : {}) ?? null;       // real (excludes is_sample)
   const samplesRaw = useQuery(api.listings.getSamples) ?? null;   // global sample listings
   const myCollabs  = useQuery(
     api.collaborations.getByCreator,

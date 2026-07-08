@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import UserDetailPanel from '../../components/admin/UserDetailPanel';
@@ -48,18 +48,48 @@ function SocialLinks({ profile }) {
 }
 
 // ─── Profile card ─────────────────────────────────────────────────────────────
+const CREATOR_TRACKS = [
+  { value: 'ugc', label: 'UGC Track', desc: 'Portfolio-driven, delivers on host\'s channels' },
+  { value: 'influencer', label: 'Influencer Track', desc: 'Reach-driven, content on own channels' },
+];
+const TIERS_BY_TRACK = {
+  ugc: ['UGC Beginner', 'UGC Pro'],
+  influencer: ['Micro Influencer', 'Influencer'],
+};
+
 function ProfileCard({ profile, onApprove, onReject, isRejected, onViewDetails }) {
   const [rejecting, setRejecting] = useState(false);
   const [reason, setReason]       = useState('');
   const [busy, setBusy]           = useState(false);
+  const [approving, setApproving] = useState(false);
+  const [creatorTrack, setCreatorTrack] = useState('ugc');
+  const [creatorTier, setCreatorTier]   = useState('UGC Beginner');
 
   const location    = [profile.city, profile.region].filter(Boolean).join(', ') || null;
   const tierOrRole  = profile.tier || (profile.role === 'host' ? 'Host' : 'Creator');
+  const isCreator   = profile.role === 'creator';
+
+  const totalFollowers = (profile.metrics_instagram_followers ?? 0) + (profile.metrics_tiktok_followers ?? 0) + (profile.metrics_youtube_subscribers ?? 0);
+
+  // Auto-select tier based on followers
+  React.useEffect(() => {
+    if (creatorTrack === 'influencer') {
+      if (totalFollowers >= 25000) setCreatorTier('Influencer');
+      else setCreatorTier('Micro Influencer');
+    } else {
+      setCreatorTier('UGC Beginner');
+    }
+  }, [creatorTrack, totalFollowers]);
 
   async function handleApprove() {
     setBusy(true);
-    await onApprove(profile);
+    if (isCreator) {
+      await onApprove(profile, creatorTrack, creatorTier);
+    } else {
+      await onApprove(profile);
+    }
     setBusy(false);
+    setApproving(false);
   }
 
   async function handleReject() {
@@ -154,14 +184,14 @@ function ProfileCard({ profile, onApprove, onReject, isRejected, onViewDetails }
       {/* ── Actions ── */}
       {!isRejected && (
         <div style={{ marginTop: '1rem', borderTop: '1px solid rgba(25,37,36,0.06)', paddingTop: '0.875rem' }}>
-          {!rejecting ? (
+          {!rejecting && !approving ? (
             <div style={{ display: 'flex', gap: '0.5rem' }}>
               <button
-                onClick={handleApprove}
+                onClick={() => isCreator ? setApproving(true) : handleApprove()}
                 disabled={busy}
                 style={{ padding: '0.45rem 1rem', borderRadius: '0.5rem', background: '#D1EBDB', color: '#166534', fontSize: '0.82rem', fontWeight: 600, border: '1px solid rgba(22,101,52,0.2)', cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.6 : 1, fontFamily: 'inherit' }}
               >
-                ✓ Approve
+                ✓ {isCreator ? 'Select Track' : 'Approve'}
               </button>
               <button
                 onClick={() => setRejecting(true)}
@@ -170,6 +200,64 @@ function ProfileCard({ profile, onApprove, onReject, isRejected, onViewDetails }
               >
                 ✕ Reject
               </button>
+            </div>
+          ) : approving && isCreator ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+              <label style={{ fontSize: '0.78rem', color: '#3C5759', fontWeight: 600 }}>Creator Track</label>
+              <div style={{ display: 'flex', gap: '0.375rem', flexWrap: 'wrap' }}>
+                {CREATOR_TRACKS.map(t => (
+                  <button key={t.value}
+                    onClick={() => { setCreatorTrack(t.value); }}
+                    style={{
+                      padding: '0.45rem 0.875rem', borderRadius: '0.5rem', fontSize: '0.78rem', fontWeight: 600,
+                      background: creatorTrack === t.value ? '#192524' : '#F7F5F2',
+                      color: creatorTrack === t.value ? '#fff' : '#3C5759',
+                      border: creatorTrack === t.value ? '1px solid #192524' : '1px solid rgba(25,37,36,0.1)',
+                      cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
+                    }}
+                  >
+                    <div>{t.label}</div>
+                    <div style={{ fontSize: '0.68rem', fontWeight: 400, opacity: 0.7 }}>{t.desc}</div>
+                  </button>
+                ))}
+              </div>
+              {creatorTrack && (
+                <>
+                  <label style={{ fontSize: '0.78rem', color: '#3C5759', fontWeight: 600 }}>Tier</label>
+                  <div style={{ display: 'flex', gap: '0.375rem' }}>
+                    {TIERS_BY_TRACK[creatorTrack]?.map(t => (
+                      <button key={t}
+                        onClick={() => setCreatorTier(t)}
+                        style={{
+                          padding: '0.4rem 0.75rem', borderRadius: '0.4rem', fontSize: '0.78rem', fontWeight: 600,
+                          background: creatorTier === t ? '#D1EBDB' : '#F7F5F2',
+                          color: creatorTier === t ? '#166534' : '#3C5759',
+                          border: creatorTier === t ? '1px solid rgba(22,101,52,0.2)' : '1px solid rgba(25,37,36,0.1)',
+                          cursor: 'pointer', fontFamily: 'inherit',
+                        }}
+                      >{t}</button>
+                    ))}
+                  </div>
+                  {creatorTrack === 'influencer' && (
+                    <p style={{ fontSize: '0.72rem', color: '#959D90', margin: 0 }}>Total followers: {totalFollowers.toLocaleString()}</p>
+                  )}
+                </>
+              )}
+              <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem' }}>
+                <button
+                  onClick={handleApprove}
+                  disabled={busy || !creatorTrack}
+                  style={{ padding: '0.4rem 0.875rem', borderRadius: '0.5rem', background: '#192524', color: '#fff', fontSize: '0.82rem', fontWeight: 600, border: 'none', cursor: busy || !creatorTrack ? 'not-allowed' : 'pointer', opacity: busy || !creatorTrack ? 0.5 : 1, fontFamily: 'inherit' }}
+                >
+                  {busy ? 'Approving…' : '✓ Confirm Approval'}
+                </button>
+                <button
+                  onClick={() => setApproving(false)}
+                  style={{ padding: '0.4rem 0.875rem', borderRadius: '0.5rem', background: 'transparent', color: '#959D90', fontSize: '0.82rem', border: '1px solid rgba(25,37,36,0.1)', cursor: 'pointer', fontFamily: 'inherit' }}
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -299,8 +387,9 @@ export default function VerificationQueue() {
   const rejected         = useQuery(api.profiles.getRejected);
   const tierChangeReqs   = useQuery(api.profiles.getTierChangeRequests);
   const founderCounts    = useQuery(api.admin.getFounderCounts);
-  const approve          = useMutation(api.profiles.approveProfile);
-  const reject           = useMutation(api.profiles.rejectProfile);
+  const approveCreator   = useMutation(api.gates.approveCreator);
+  const approveHost      = useMutation(api.gates.approveHost);
+  const reject           = useMutation(api.gates.rejectProfile);
   const approveTier      = useMutation(api.profiles.approveTierChange);
   const declineTier      = useMutation(api.profiles.declineTierChange);
   const addAudit         = useMutation(api.admin.addAuditEntry);
@@ -313,9 +402,13 @@ export default function VerificationQueue() {
   const rejectedAll      = rejected  || [];
   const tierRequests     = tierChangeReqs || [];
 
-  async function handleApprove(profile) {
-    await approve({ profileId: profile._id });
-    try { await addAudit({ action: 'approved', targetType: 'profile', targetId: String(profile._id), details: profile.full_name }); } catch {}
+  async function handleApprove(profile, track, tier) {
+    if (profile.role === 'creator' && track) {
+      await approveCreator({ profileId: profile._id, track, tier: tier || undefined });
+    } else {
+      await approveHost({ profileId: profile._id });
+    }
+    try { await addAudit({ action: 'approved', targetType: 'profile', targetId: String(profile._id), details: `${profile.full_name}${track ? ` (${track}, ${tier})` : ''}` }); } catch {}
   }
 
   async function handleReject(profile, reason) {

@@ -250,15 +250,15 @@ function FoundingMemberBadge() {
         style={{
           display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
           padding: '0.22rem 0.7rem 0.22rem 0.5rem',
-          background: 'linear-gradient(135deg, rgba(212,168,67,0.13) 0%, rgba(212,168,67,0.06) 100%)',
-          border: '1px solid rgba(212,168,67,0.35)',
+          background: 'rgba(209,235,219,0.25)',
+          border: '1px solid rgba(209,235,219,0.5)',
           borderRadius: '999px', cursor: 'default',
         }}
       >
-        <svg viewBox="0 0 16 16" width="11" height="11" fill="#D4A843">
+        <svg viewBox="0 0 16 16" width="11" height="11" fill="#3C5759">
           <path d="M8 1.5l1.67 3.38 3.73.54-2.7 2.63.64 3.72L8 9.77l-3.34 1.76.64-3.72L2.6 5.42l3.73-.54z"/>
         </svg>
-        <span style={{ fontSize: '0.67rem', fontWeight: 700, color: '#A87820', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+        <span style={{ fontSize: '0.67rem', fontWeight: 700, color: '#3C5759', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
           Founding Member
         </span>
       </span>

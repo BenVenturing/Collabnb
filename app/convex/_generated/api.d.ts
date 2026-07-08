@@ -17,6 +17,7 @@ import type * as contracts from "../contracts.js";
 import type * as crons from "../crons.js";
 import type * as email from "../email.js";
 import type * as emails from "../emails.js";
+import type * as fees from "../fees.js";
 import type * as gates from "../gates.js";
 import type * as http from "../http.js";
 import type * as listings from "../listings.js";
@@ -52,6 +53,7 @@ declare const fullApi: ApiFromModules<{
   crons: typeof crons;
   email: typeof email;
   emails: typeof emails;
+  fees: typeof fees;
   gates: typeof gates;
   http: typeof http;
   listings: typeof listings;

@@ -89,11 +89,37 @@ export const markCompleted = mutation({
       });
     }
 
-    // Auto-charge the host's saved card for the platform fee, off-session.
+    // ── Fee record creation at completion ──────────────────────────────────
+    // If a contract is linked, compute the fee and create a fee_record.
+    // Founding hosts get a $0 waived entry; non-founding hosts get charged.
+    let contract = null;
     if (args.contractId) {
-      await ctx.scheduler.runAfter(0, internal.stripe.chargeContractFee, {
+      contract = await ctx.db.query("contracts").filter((q) => q.eq(q.field("_id"), args.contractId!)).first();
+    }
+
+    if (args.contractId && contract) {
+      const cashValue = parseFloat(String(contract.payment ?? '').replace(/[^0-9.]/g, '')) || 0;
+
+      // Check if host is a founding member
+      let isFoundingHost = false;
+      if (contract.host_id) {
+        const host = await ctx.db.get(contract.host_id as any);
+        isFoundingHost = host?.is_founder === true || host?.is_lifetime === true;
+      }
+
+      await ctx.runMutation(internal.fees.recordCompletionFee, {
+        collaborationId: args.id as any,  // already checked above
         contractId: args.contractId,
+        cashValue,
+        isFoundingHost,
       });
+
+      // Legacy path: queue the off-session charge for non-founding hosts with saved cards
+      if (!isFoundingHost) {
+        await ctx.scheduler.runAfter(0, internal.stripe.chargeContractFee, {
+          contractId: args.contractId,
+        });
+      }
     }
 
     if (!args.creatorId) return;

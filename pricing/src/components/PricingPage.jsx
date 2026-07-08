@@ -13,18 +13,17 @@ const CREATOR_CAP  = 100;
 const HOST_CAP     = 100;
 const LAUNCH_DATE  = new Date('2026-07-15T00:00:00+07:00');
 const CONVEX_URL   = import.meta.env.VITE_CONVEX_URL;
-// After launch (July 15, Jakarta time), clicking a paid plan redirects to the app's subscription flow.
-// The app detects ?subscribe=monthly|yearly and auto-opens the payment modal.
 const APP_URL = import.meta.env.VITE_APP_URL || '/';
 
 export default function PricingPage() {
-  const [creatorCount,  setCreatorCount]  = useState(0);
-  const [hostCount,     setHostCount]     = useState(0);
-  const [lifetimeCount, setLifetimeCount] = useState(0);
+  const [founderCreatorCount, setFounderCreatorCount] = useState(0);
+  const [founderHostCount,    setFounderHostCount]    = useState(0);
+  const [lifetimeCount,       setLifetimeCount]       = useState(0);
+  const [creatorCount,        setCreatorCount]        = useState(0);
+  const [hostCount,           setHostCount]           = useState(0);
 
   const isUnlocked = new Date() >= LAUNCH_DATE;
 
-  // Fetch live counts from Convex
   useEffect(() => {
     if (!CONVEX_URL) return;
     const client = new ConvexClient(CONVEX_URL);
@@ -37,6 +36,9 @@ export default function PricingPage() {
         setCreatorCount(profiles.filter(p => p.role === 'creator').length);
         setHostCount(profiles.filter(p => p.role === 'host').length);
         setLifetimeCount(profiles.filter(p => p.is_lifetime === true).length);
+        // Founding members are those with is_founder=true
+        setFounderCreatorCount(profiles.filter(p => p.is_founder === true && p.role === 'creator').length);
+        setFounderHostCount(profiles.filter(p => p.is_founder === true && p.role === 'host').length);
       } catch (err) {
         console.warn('Pricing count fetch failed:', err);
       }
@@ -44,32 +46,17 @@ export default function PricingPage() {
 
     fetchCounts();
     const interval = setInterval(fetchCounts, 30000);
-
-    return () => {
-      cancelled = true;
-      clearInterval(interval);
-      client.close();
-    };
+    return () => { cancelled = true; clearInterval(interval); client.close(); };
   }, []);
 
-  const creatorSpotsRemaining = Math.max(0, CREATOR_CAP - creatorCount);
-  const hostSpotsRemaining    = Math.max(0, HOST_CAP - hostCount);
-  // Founding is full when EITHER cap is reached
+  const creatorSpotsRemaining = Math.max(0, CREATOR_CAP - founderCreatorCount);
+  const hostSpotsRemaining    = Math.max(0, HOST_CAP - founderHostCount);
   const isFoundingFull = creatorSpotsRemaining <= 0 || hostSpotsRemaining <= 0;
   const spotsRemaining = Math.min(creatorSpotsRemaining, hostSpotsRemaining);
 
-  function handleClaim() {
-    window.location.href = '../join.html';
-  }
-
-  function handleSubscribe(tier) {
-    window.location.href = `${APP_URL}profile?subscribe=${tier}`;
-  }
-
-  function handleClaimLifetime() {
-    // Redirect to the app; login if needed, then LifetimeAccessModal opens automatically.
-    window.location.href = `${APP_URL}profile?lifetime=claim`;
-  }
+  function handleClaim() { window.location.href = '../join.html'; }
+  function handleSubscribe(tier) { window.location.href = `${APP_URL}profile?subscribe=${tier}`; }
+  function handleClaimLifetime() { window.location.href = `${APP_URL}profile?lifetime=claim`; }
 
 
 
@@ -100,7 +87,7 @@ export default function PricingPage() {
         </ul>
         <div className="flex items-center gap-3">
           <span className="text-[0.65rem] uppercase tracking-widest text-sage font-medium bg-black/[0.04] px-2.5 py-1.5 rounded-full whitespace-nowrap">
-            {creatorCount}/100 · {hostCount}/100
+            {founderCreatorCount}/100 · {founderHostCount}/100
           </span>
           <a href="../join.html" className="btn-ink text-xs py-2 px-4 whitespace-nowrap">
             Join
@@ -109,7 +96,7 @@ export default function PricingPage() {
       </nav>
 
       <main style={{ paddingTop: '5rem' }}>
-        <HeroSection spotsRemaining={spotsRemaining} isFoundingFull={isFoundingFull} />
+        <HeroSection spotsRemaining={spotsRemaining} isFoundingFull={isFoundingFull} founderCreatorCount={founderCreatorCount} founderHostCount={founderHostCount} />
         <PricingCards
           isFoundingFull={isFoundingFull}
           creatorSpotsRemaining={creatorSpotsRemaining}

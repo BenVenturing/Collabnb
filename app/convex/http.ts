@@ -191,10 +191,17 @@ http.route({
     if (event.type === "payment_intent.succeeded") {
       const intent = event.data.object as Stripe.PaymentIntent;
       if (intent.metadata?.type === "platform_fee" && intent.metadata?.contractId) {
+        const collabId = intent.metadata.contractId; // contractId doubles as collab lookup
         await ctx.runMutation(internal.contracts.recordPaymentInternal, {
-          id: intent.metadata.contractId,
+          id: collabId,
           paymentAmount: (intent.amount_received ?? intent.amount ?? 0) / 100,
           paymentIntentId: intent.id,
+        });
+        // Backstop: also mark the fee_records as paid
+        await ctx.runMutation(internal.fees.markFeePaid, {
+          collaborationId: collabId,
+          paymentIntentId: intent.id,
+          amountPaid: (intent.amount_received ?? intent.amount ?? 0) / 100,
         });
       }
     }
@@ -203,7 +210,14 @@ http.route({
       const sub = event.data.object as Stripe.Subscription;
       const customerId = typeof sub.customer === "string" ? sub.customer : sub.customer.id;
       const expiresAt = sub.current_period_end * 1000;
-      const status = sub.status === "active" || sub.status === "trialing" ? "active" : "cancelled";
+      let status: string;
+      if (sub.status === "active" || sub.status === "trialing") {
+        status = "active";
+      } else if (sub.status === "past_due") {
+        status = "past_due";
+      } else {
+        status = "cancelled";
+      }
       await ctx.runMutation(internal.profiles.updateSubscriptionByCustomerId, {
         stripeCustomerId: customerId,
         subscriptionStatus: status,
@@ -214,13 +228,42 @@ http.route({
     if (event.type === "customer.subscription.deleted") {
       const sub = event.data.object as Stripe.Subscription;
       const customerId = typeof sub.customer === "string" ? sub.customer : sub.customer.id;
-      // Keep status "active" but pin expiresAt to the end of the last paid period,
-      // so the user keeps access until that date rather than being cut off immediately.
-      await ctx.runMutation(internal.profiles.updateSubscriptionByCustomerId, {
-        stripeCustomerId: customerId,
-        subscriptionStatus: "active",
-        subscriptionExpiresAt: sub.current_period_end * 1000,
-      });
+      const endOfPaidPeriod = sub.current_period_end * 1000;
+      if (sub.status === "past_due" || sub.status === "incomplete_expired") {
+        const profile = await ctx.db
+          .query("profiles")
+          .withIndex("by_stripe_customer", (q) => q.eq("stripe_customer_id", customerId))
+          .unique();
+        if (profile) {
+          await ctx.db.patch(profile._id, {
+            subscription_status: "cancelled",
+            subscription_expires_at: endOfPaidPeriod,
+            access_state: "limited",
+          });
+        }
+      } else {
+        await ctx.runMutation(internal.profiles.updateSubscriptionByCustomerId, {
+          stripeCustomerId: customerId,
+          subscriptionStatus: "cancelled",
+          subscriptionExpiresAt: endOfPaidPeriod,
+        });
+      }
+    }
+
+    if (event.type === "invoice.payment_failed") {
+      const invoice = event.data.object as Stripe.Invoice;
+      if (invoice.billing_reason === "subscription_cycle") {
+        const customerId = typeof invoice.customer === "string"
+          ? invoice.customer
+          : (invoice.customer as Stripe.Customer)?.id;
+        if (customerId) {
+          await ctx.runMutation(internal.profiles.updateSubscriptionByCustomerId, {
+            stripeCustomerId: customerId,
+            subscriptionStatus: "past_due",
+            subscriptionExpiresAt: undefined,
+          });
+        }
+      }
     }
 
     return new Response("OK", { status: 200 });

@@ -503,4 +503,18 @@ export default defineSchema({
     admin_note: v.optional(v.string()),
     created_at: v.number(),
   }).index("by_reported", ["reported_user_id"]),
+
+  fee_records: defineTable({
+    collaboration_id: v.string(),
+    contract_id: v.optional(v.string()),
+    amount: v.number(),
+    basis: v.number(),
+    method: v.string(),
+    contract_value: v.number(),
+    status: v.string(),
+    payment_intent_id: v.optional(v.string()),
+    amount_paid: v.optional(v.number()),
+    paid_at: v.optional(v.number()),
+    created_at: v.number(),
+  }).index("by_collaboration", ["collaboration_id"]),
 });

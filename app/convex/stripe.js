@@ -15,15 +15,13 @@ function getLifetimeTier(count) {
 }
 
 // Single source of truth for the platform fee. Always derived from the stored
-// contract — client-supplied amounts are never trusted.
+// contract — client-supplied amounts are never trusted. Mirrors the computeFee
+// pure function in fees.ts so all fee logic changes in one place.
 function computeContractFee(contract) {
-  const isFreeStay = contract.payment === 'Free Stay' || contract.currency === 'free_stay';
   const cash = parseFloat(String(contract.payment ?? '').replace(/[^0-9.]/g, '')) || 0;
-  return {
-    isFreeStay,
-    cash,
-    fee: isFreeStay ? 20 : Math.max(cash * 0.05, 20),
-  };
+  const safeCash = Math.max(0, Math.round(cash * 100) / 100);
+  const fee = safeCash < 500 ? 20 : Math.round(safeCash * 0.05 * 100) / 100;
+  return { cash: safeCash, fee, isFreeStay: false };
 }
 
 // One-time Checkout for host platform fee.
@@ -392,9 +390,11 @@ export const chargeContractFee = internalAction({
 
       // requires_action / processing — flag for manual completion.
       await ctx.runMutation(internal.contracts.markFeeChargeFailed, { id: args.contractId });
+	    await ctx.runMutation(internal.fees.markFeeFailed, { collaborationId: args.contractId });
       return { needsAction: true, status: intent.status };
     } catch (err) {
       await ctx.runMutation(internal.contracts.markFeeChargeFailed, { id: args.contractId });
+	    await ctx.runMutation(internal.fees.markFeeFailed, { collaborationId: args.contractId });
       return { error: String(err?.message || err) };
     }
   },

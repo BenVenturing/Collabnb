@@ -4,7 +4,7 @@
 
 Hosts offer free or discounted stays. Creators deliver content — UGC video, Reels, TikToks, photography. No agencies, no bloated fees.
 
-> Launching July 1, 2026 at [collabnb.com](https://collabnb.com)
+> Launching July 15, 2026 at [collabnb.com](https://collabnb.com)
 
 ---
 

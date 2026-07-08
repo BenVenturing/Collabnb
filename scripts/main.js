@@ -262,7 +262,7 @@ function initCountdown() {
   const els = document.querySelectorAll('[data-countdown]');
   if (!els.length) return;
 
-  const target = new Date('2026-07-01T00:00:00+07:00');
+  const target = new Date('2026-07-15T00:00:00+07:00');
 
   function update() {
     const now = new Date();
@@ -1486,5 +1486,48 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Escape closes legal modals (added to existing Escape handler logic)
   // This check runs alongside the existing Escape handler
+
+  /* ─── WhatsApp link: copy number on click + toast ─── */
+  // Inject toast keyframes once
+  (function injectWaToastKeyframes() {
+    if (document.getElementById('wa-toast-style')) return;
+    const style = document.createElement('style');
+    style.id = 'wa-toast-style';
+    style.textContent =
+      '@keyframes wa-toast-in{from{opacity:0;transform:translateX(-50%) translateY(12px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}';
+    document.head.appendChild(style);
+  })();
+
+  document.addEventListener('click', (e) => {
+    const wa = e.target.closest('.wa-link');
+    if (!wa) return;
+
+    const phone = wa.dataset.phone || '+1 623 2212170';
+
+    // Copy number to clipboard
+    navigator.clipboard.writeText(phone).catch(() => {});
+
+    // Remove any existing toast
+    const old = document.getElementById('wa-toast');
+    if (old) old.remove();
+
+    // Create toast
+    const toast = document.createElement('div');
+    toast.id = 'wa-toast';
+    toast.textContent = '✓ Copied ' + phone;
+    toast.style.cssText = [
+      'position:fixed', 'bottom:5rem', 'left:50%', 'transform:translateX(-50%)',
+      'z-index:9999', 'background:#192524', 'color:#fff',
+      'padding:0.625rem 1.25rem', 'border-radius:9999px',
+      'font-family:system-ui,sans-serif', 'font-size:0.875rem',
+      'font-weight:600', 'white-space:nowrap',
+      'box-shadow:0 4px 20px rgba(0,0,0,0.25)',
+      'animation:wa-toast-in 0.3s cubic-bezier(0.16,1,0.3,1) both',
+    ].join(';');
+    document.body.appendChild(toast);
+
+    // Remove toast after 2.5s
+    setTimeout(() => toast.remove(), 2500);
+  });
 });
 

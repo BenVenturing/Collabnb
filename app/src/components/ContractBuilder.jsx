@@ -160,7 +160,7 @@ export default function ContractBuilder() {
     text += `. `;
 
     if (form.deliverables) text += `The Creator agrees to deliver ${form.deliverables}`;
-    if (payment) text += ` in exchange for ${payment}`;
+    if (payment) text += ` — compensation: ${payment}`;
     if (usage) text += `. Content usage is limited to ${usage}`;
     text += '. Both parties agree to the terms outlined above.';
 

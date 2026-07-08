@@ -1183,7 +1183,7 @@ export default function CollabDetail({ collab, onClose }) {
               marginBottom: '0.75rem',
             }}>
               <p style={{ fontSize: '0.7rem', color: 'var(--slate)', lineHeight: 1.6, margin: 0 }}>
-                This collaboration agreement is between <strong>{collab.host_name || 'the Host'}</strong> and <strong>Ben Venturing</strong> regarding <strong>{collab.property_name}</strong> located in <strong>{collab.location}</strong> from <strong>{collab.dates}</strong>. The creator agrees to deliver <strong>{collab.deliverables}</strong> in exchange for <strong>{collab.payment || 'a complimentary stay'}</strong>.
+                This collaboration agreement is between <strong>{collab.host_name || 'the Host'}</strong> and <strong>Ben Venturing</strong> regarding <strong>{collab.property_name}</strong> located in <strong>{collab.location}</strong> from <strong>{collab.dates}</strong>. The creator agrees to deliver <strong>{collab.deliverables}</strong> as compensation for <strong>{collab.payment || 'a hosted stay experience'}</strong>.
               </p>
             </div>
 

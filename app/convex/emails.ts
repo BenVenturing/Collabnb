@@ -27,7 +27,7 @@ function layout(body: string) {
         <tr>
           <td style="background:linear-gradient(135deg,#192524,#2d4a3e);padding:36px 40px;text-align:center;">
             <div style="font-size:26px;font-weight:800;color:#ffffff;letter-spacing:-0.5px;">Collabnb</div>
-            <div style="font-size:11px;color:#7ecfc4;margin-top:5px;letter-spacing:2px;text-transform:uppercase;">Creator × Host Marketplace</div>
+            <div style="font-size:11px;color:#7ecfc4;margin-top:5px;letter-spacing:2px;text-transform:uppercase;">Creator-First Hospitality Marketing</div>
           </td>
         </tr>
         <!-- Body -->
@@ -72,7 +72,7 @@ export const sendWelcomeEmail = internalAction({
       <p style="margin:0 0 24px;font-size:15px;color:#3C5759;line-height:1.65;">
         ${isHost
           ? "We're hand-picking a founding group of hosts to list their properties and connect with creators. You're in the queue."
-          : "We're hand-picking a founding group of creators to collaborate with top Airbnb hosts. You're in the queue."}
+          : "We're hand-picking a founding group of creators to partner with boutique hospitality brands. You're in the queue."}
       </p>
       ${callout("#2dd4bf", "What happens next", "We'll reach out personally as we approach launch with early access details. Founding members get priority placement, locked-in rates, and a direct line to the team.")}
       <p style="margin:0;font-size:14px;color:#959D90;line-height:1.65;">In the meantime, spread the word — every signup helps us build something worth waiting for.</p>`;
@@ -102,8 +102,8 @@ export const sendAccessGrantedEmail = internalAction({
       <p style="margin:0 0 24px;font-size:15px;color:#3C5759;line-height:1.65;">
         Your Collabnb ${isHost ? "host" : "creator"} account has been approved. Create your login below to access the platform.
       </p>
-      ${callout("#2dd4bf", "You're a founding member", `As one of our first ${isHost ? "hosts" : "creators"}, you're locked in at founding rates and get priority visibility as we grow.`)}
-      ${callout("#f59e0b", "Full launch is July 1st", isHost ? "In the meantime, log in and start building your listing so you're ready to go live on day one." : "In the meantime, log in and complete your creator profile so hosts can find you on launch day.")}
+      ${callout("#2dd4bf", "You're a founding member", `As one of our first ${isHost ? "hosts" : "creators"}, you're a Founding Member — lifetime free access as part of the inaugural cohort.`)}
+      ${callout("#f59e0b", "Full launch is July 15", isHost ? "In the meantime, log in and start building your listing so you're ready to go live on day one." : "In the meantime, log in and complete your creator profile so hosts can find you on launch day.")}
       ${button(`${BASE_URL}/login.html`, "Create your account")}
       <p style="margin:12px 0 0;font-size:12px;color:#959D90;">Sign up with email or continue with Google — takes 30 seconds.</p>`;
 

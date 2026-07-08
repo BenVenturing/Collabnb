@@ -93,7 +93,7 @@ export const SAMPLE_LISTINGS = [
     ],
 
     what_you_get: [
-      '3 nights complimentary stay',
+      '3 nights hosted stay experience',
       'Private cedar hot tub with lake view access',
       'Ski equipment storage + boot dryer',
       'Welcome provisions basket (local honey, wine, firewood)',
@@ -160,7 +160,7 @@ export const SAMPLE_LISTINGS = [
     ],
 
     what_you_get: [
-      '2 nights complimentary stay',
+      '2 nights hosted stay experience',
       'Infinity pool exclusive access (heated year-round)',
       'Private dock with 2 kayaks included',
       'Welcome Argentine Malbec & Patagonian provisions',

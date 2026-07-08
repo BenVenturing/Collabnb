@@ -79,7 +79,7 @@ export const sendWelcomeEmail = internalAction({
         </div>
         <div class="step">
           <div class="step-num">3</div>
-          <p>Full listings go live <strong>July 1st</strong> — early members get first pick.</p>
+          <p>Full listings go live <strong>July 15</strong> — early members get first pick.</p>
         </div>
       </div>
 

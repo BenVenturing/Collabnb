@@ -255,7 +255,7 @@ export const verifyLifetimeSession = action({
 // The host saves a card via a Stripe Checkout SetupIntent when the contract is
 // signed. No money moves yet. When the collab is marked complete, the saved card
 // is charged off-session for the platform fee (5% of cash / min $20, or flat $20
-// for free stays) — released to the platform account.
+// for hosted stays) — released to the platform account.
 
 // 1) Save the host's card at signing (no charge). Returns a hosted Checkout URL.
 export const createFeeSetupSession = action({

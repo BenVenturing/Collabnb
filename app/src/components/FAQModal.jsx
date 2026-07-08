@@ -10,14 +10,14 @@ const FAQ_SECTIONS = [
     items: [
       {
         q: 'How is Collabnb different from Airbnb or influencer platforms?',
-        a: "Airbnb is for paying guests. Collabnb is for collab arrangements where the stay is exchanged for content — there's no money changing hands for the room itself, just an agreement on deliverables.\n\nUnlike influencer platforms, we're not an agency taking a cut, we don't offer gifting campaigns for mass brands, and we don't cater to large hotel chains. We focus exclusively on the boutique end of hospitality and the creator-first end of travel content.",
+        a: "Airbnb connects paying guests with accommodation. Collabnb is different: boutique hospitality brands hire creators as professional marketing partners to produce authentic content campaigns\n\nUnlike influencer platforms, we are not an agency taking a cut, we do not run gifting campaigns for mass brands, and we do not cater to large hotel chains. We focus exclusively on boutique hospitality and creators who treat content creation as a profession. Every collaboration is structured around clear deliverables, agreed compensation, and a signed contract — never a vague arrangement.",
       },
       {
         q: 'Can I sign up as both a creator and a host?',
         a: "Yes. If you're a creator who also owns or manages a boutique property, you can join both waitlists. Submit two separate applications — one as a creator (with your handles and tier) and one as a host (with your property details). Each is reviewed independently, and each counts against its own 100-spot founding pool.",
       },
       {
-        q: "Can I apply for collabs if I'm a small creator?",
+        q: "Can I apply if I'm a small creator?",
         a: "Yes. Collabnb was explicitly built with beginner tiers: UGC Beginner (under 5K followers, building a portfolio) and UGC Pro (5K–20K followers, paid UGC output). Follower count isn't the only metric.\n\nA focused UGC creator producing high-quality vertical video for boutique properties is exactly what many hosts want — even with 2,000 followers. Quality of output and fit matter more than size.",
       },
       {
@@ -35,7 +35,7 @@ const FAQ_SECTIONS = [
     items: [
       {
         q: 'What is Collabnb?',
-        a: 'Collabnb is a two-sided marketplace connecting boutique hospitality hosts with UGC creators and travel influencers. Hosts offer free or discounted stays in exchange for content — Reels, TikToks, photography, and more.',
+        a: 'Collabnb is a creator-first hospitality marketing platform connecting boutique properties with vetted creators. Hosts hire creators as professional marketing partners for campaigns with clear deliverables and fair compensation — Reels, TikToks, photography, and more.',
       },
       {
         q: 'How do I sign up as a host or creator?',
@@ -43,7 +43,7 @@ const FAQ_SECTIONS = [
       },
       {
         q: 'How does verification work?',
-        a: 'Our team manually reviews each host and creator profile to ensure quality and authenticity. We check your social media presence, content quality, and property details before approving your account.',
+        a: 'Our team manually reviews each profile to maintain a trusted, curated network of professional creators and quality properties. For creators: we verify social accounts, follower counts, portfolio quality, and professionalism. For hosts: we verify property details, online presence, and business credentials.',
       },
       {
         q: 'How long does verification take?',
@@ -56,11 +56,11 @@ const FAQ_SECTIONS = [
     items: [
       {
         q: 'What are the creator tiers?',
-        a: 'Collabnb has four tiers. UGC tiers are content-output tracks; Influencer tiers are audience-reach tracks:\n• UGC Beginner — under 5K followers, building a portfolio\n• UGC Pro — paid UGC producer, typically 5K–20K followers\n• Micro Influencer — 5K to 50K followers, audience-reach focus\n• Influencer — 50K+ followers\n\nTier affects which listings you can apply to. Hosts set minimum tier requirements per listing.',
+        a: 'Collabnb has four professional tiers across two tracks. UGC tiers are portfolio-driven, where content runs on the host's channels. Influencer tiers are audience-reach driven, where content runs on the creator's channels.:\n• UGC Beginner — building a portfolio, admitted on quality\n• UGC Pro — paid UGC producer with proven output\n• Micro Influencer — 5,000 to 25,000 followers\n• Influencer — 25,000+ followers\n\nYour track and tier are assigned during verification based on your portfolio, follower counts, and professional experience. They determine which listings and deliverable types you can be booked for.',
       },
       {
         q: 'How do I know which tier I qualify for?',
-        a: "Your tier is determined by your total follower count across your connected social platforms. It's calculated automatically when you complete your profile. You can view your current tier on your Profile page.",
+        a: "Your track and tier are assigned by the Collabnb team during verification. For the UGC track, tier is based on portfolio quality. For the Influencer track, tier is based on verified follower counts. You can view your current track and tier on your Profile page.",
       },
     ],
   },
@@ -72,8 +72,12 @@ const FAQ_SECTIONS = [
         a: 'Pausing a listing removes it from the Explore feed so no new creators can discover or apply. However, all existing applications and active collaborations continue unaffected — nothing is cancelled.',
       },
       {
+        q: 'How do deliverables work?',
+        a: "Each campaign specifies the deliverables required — photo sets, story frames, carousels, Reels, or YouTube videos. The points system assigns each deliverable a weight based on production effort (a photo is 1 point, a Reel is 3 points, a YouTube video is 5 points). The total determines the load shown on the card: Light (2 pts or fewer), Moderate (3-4 pts), or Heavy (5+ pts). This lets you compare effort at a glance, regardless of deliverable mix.",
+      },
+      {
         q: 'What is the difference between an Application and a Pitch?',
-        a: "An Application means you're accepting the listing exactly as-is — dates, deliverables, and compensation unchanged. A Pitch is a modified proposal where you can suggest different terms (dates, deliverables, or compensation). Pitches count toward your monthly pitch limit.",
+        a: "An Application means you are accepting the campaign exactly as listed — dates, deliverables, and compensation unchanged. A Pitch is a modified proposal where you can suggest different terms (dates, deliverables, or compensation). Pitches count toward your monthly pitch limit.",
       },
       {
         q: 'How many pitches can I submit per month?',
@@ -81,7 +85,7 @@ const FAQ_SECTIONS = [
       },
       {
         q: 'How do contracts work?',
-        a: "Once a host accepts your application or pitch, a contract is generated with all agreed terms. Both parties must sign digitally. Once both have signed, the contract is locked in. The Collabnb platform fee isn't charged at signing — it's charged automatically only after the collaboration is marked complete, so the host pays once the work is actually done.",
+        a: "Once a host accepts your application or pitch, a contract is generated with all agreed terms. Both parties sign digitally to lock in the arrangement. The platform fee is never charged at signing — it is charged automatically only after the collaboration is marked complete, so the host pays once the work is actually delivered.",
       },
     ],
   },
@@ -90,23 +94,23 @@ const FAQ_SECTIONS = [
     items: [
       {
         q: 'How much does Collabnb cost for hosts?',
-        a: 'For free collabs (no cash compensation), Collabnb charges a flat $20 platform fee per completed collaboration. For paid collabs, we charge 5% of the cash amount with a minimum fee of $20. Founding Members receive free access forever.',
+        a: 'Hosts never pay to browse, search, message, or post listings. Fees are charged only after a collaboration is completed. For completed collaborations under $500 cash value: $20 flat fee. For collaborations $500 and above: 5% of the cash value. Hybrid collaborations: cash-only basis — the stay value is excluded. Founding Members pay nothing, ever.',
       },
       {
         q: 'How much does Collabnb cost for creators?',
-        a: "Collabnb is free until your first completed collaboration. After that, it's $10/month or $60/year. Founding Members (the first 100 verified creators) receive free access forever.",
+        a: "Collabnb is free for all approved creators during your 30-day trial. After the trial, Creator Plus is $10/month or $60/year. Founding Members — the first 100 verified creators — keep full access forever at no cost. There is no charge to browse, apply, or communicate. The subscription only starts after your trial ends.",
       },
       {
         q: 'What is a Founding Member?',
-        a: 'Founding Members are the first 100 verified hosts and the first 100 verified creators on Collabnb. They receive free platform access forever as a thank-you for being early supporters of the community.',
+        a: 'Founding Members are the first 100 verified creators and first 100 verified hosts on Collabnb. They receive permanent free access — no platform fees for hosts, no Creator Plus subscription for creators — as a thank-you for being early partners in building the community. Founding status is assigned at verification in approval order. Once all 100 spots per role are filled, founding is closed permanently.',
       },
       {
         q: 'When is the host platform fee charged?',
-        a: "The platform fee is never charged up front. It's charged automatically to the host once the collaboration is marked complete — the moment both sides close out the collab. There's nothing to do manually: when the contract finishes, the fee is released straight to Collabnb. If a card was saved at signing, it happens automatically; otherwise the host completes a quick one-tap payment when the collab wraps.",
+        a: "The platform fee is never charged up front. It is charged automatically only after the collaboration is marked complete — when both sides confirm the campaign wrapped successfully. If the host saved a payment method at contract signing, it happens automatically. Otherwise, the host completes a one-tap payment when the collab closes. Either way: you do not pay until you get value.",
       },
       {
-        q: 'How does the referral / discount code work, and how do I get free months?',
-        a: "Every member gets a personal referral code to share. When someone signs up using your code, you BOTH get 1 free month right away. Then, once that new member completes their first collaboration, you BOTH get another free month on top — so a successful referral is worth 2 free months to each of you. Free months are months of full platform access at no charge; one is automatically applied each billing month before you're ever charged.",
+        q: 'How does the referral code work, and how do I get free months?',
+        a: "Every member gets a personal referral code to share. When someone signs up using your code, you BOTH get 1 free month right away. Then, once that new member completes their first collaboration, you BOTH get another free month on top — so a successful referral is worth 2 free months to each of you. Free months are applied automatically at billing time before any charge. They stack: refer multiple friends and you can build up several months of credit.",
       },
     ],
   },

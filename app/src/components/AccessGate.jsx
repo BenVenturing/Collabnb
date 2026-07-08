@@ -131,7 +131,7 @@ export function LimitedAccessScreen() {
           Marketplace access has ended
         </h1>
         <p style={{ color: '#3C5759', fontSize: '0.875rem', lineHeight: 1.6, margin: '0 0 1.25rem' }}>
-          Your trial period has expired. Subscribe to Creator Plus to unlock full marketplace features — browse listings, apply to collabs, and connect with hosts.
+          Your trial period has expired. Upgrade to Creator Plus to continue exploring listings, applying to campaigns, and pitching hosts.
         </p>
 
         <div style={{

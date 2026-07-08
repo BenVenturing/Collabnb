@@ -66,7 +66,7 @@ export const seed = mutation({
           { icon: "🏔️", label: "Mountain views" },
         ],
         what_you_get: [
-          "3 nights complimentary stay",
+          "3 nights hosted stay experience",
           "Private hot tub access",
           "Ski equipment storage",
           "Welcome provisions basket",
@@ -116,7 +116,7 @@ export const seed = mutation({
           { icon: "🛶", label: "Private dock & kayaks" },
         ],
         what_you_get: [
-          "2 nights complimentary stay",
+          "2 nights hosted stay experience",
           "Infinity pool exclusive access",
           "Private dock & kayak access",
           "Welcome Argentine wine & provisions",

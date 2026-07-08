@@ -417,7 +417,7 @@ async function pickFreshTopic(ctx: any): Promise<string> {
   const recentTitles = recent.slice(0, 12).map((p: any) => p.title).filter(Boolean).join("; ");
   try {
     const raw = await llmChat([
-      { role: "system", content: "You are a content strategist for Collabnb — a marketplace connecting boutique hotel/Airbnb hosts with UGC travel creators for content-for-stay partnerships. Be specific, never generic." },
+      { role: "system", content: "You are a content strategist for Collabnb — a creator-first hospitality marketing platform connecting boutique properties with vetted creators for professional content campaigns. Be specific, never generic." },
       { role: "user", content: `Recent Collabnb Journal posts: ${recentTitles || "none yet"}.\n\nSuggest ONE fresh, specific blog post topic that does NOT overlap with any of those. Return only the topic itself as a single lowercase phrase, no quotes, no commentary.` },
     ], 100);
     const topic = raw.trim().split("\n")[0].replace(/^["'\-\s]+|["'\s]+$/g, "");
@@ -459,7 +459,7 @@ export const generatePost = action({
       : "";
 
     const researchPrompt = isStatsPost
-      ? `You are a content strategist for Collabnb, a marketplace connecting boutique hotel/Airbnb hosts with UGC travel creators. ${statsContext}
+      ? `You are a content strategist for Collabnb, a creator-first hospitality marketing platform connecting boutique properties with vetted creators. ${statsContext}
 
 Produce a detailed research brief covering: UGC marketing trends in hospitality (2024-2025), creator-driven booking statistics, what's working for boutique properties vs chains. Include specific data points and real-world examples.${webContext}`
       : `You are a content strategist for Collabnb, a marketplace connecting boutique hotel/Airbnb hosts with UGC travel creators for content-for-stay partnerships.
@@ -637,7 +637,7 @@ export const suggestTopics = action({
     let content = "";
     try {
       content = await llmChat([
-        { role: "system", content: "You are a content strategist for Collabnb — a marketplace connecting boutique hotel/Airbnb hosts with UGC travel creators for content-for-stay partnerships. Be creative and specific." },
+        { role: "system", content: "You are a content strategist for Collabnb — a creator-first hospitality marketing platform connecting boutique properties with vetted creators for professional content campaigns. Be creative and specific." },
         { role: "user", content: 'Give me exactly 8 fresh, specific blog post topic ideas for The Collabnb Journal. Mix topics for boutique hosts and UGC creators. Return ONLY a valid JSON array of 8 strings, nothing else. Example: ["topic one", "topic two"]' },
       ], 400);
     } catch {

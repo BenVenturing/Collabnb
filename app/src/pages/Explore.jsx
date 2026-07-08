@@ -9,6 +9,7 @@ import { formatDateRange } from '../lib/dateUtils';
 import { useAppBar } from '../contexts/AppBarContext';
 import { useCollabs } from '../contexts/CollabContext';
 import { useAuth } from '../contexts/AuthContext';
+import { useAccessGate, PendingApprovalScreen, LimitedAccessScreen, TrialBanner } from '../components/AccessGate';
 import { WhereSearchContent, WhatSearchContent, WhenSearchContent, useAnimatedPlaceholder } from '../components/SearchDropdowns';
 import SkeletonCard from '../components/SkeletonCard';
 import { cache } from '../lib/cache';
@@ -595,6 +596,15 @@ export default function Explore() {
   });
   const scored = scoreListings(searchFiltered, creatorCtx);
 
+  // ── Access gate: show pending/limited screens for creators ─────────────
+  const access = useAccessGate();
+  if (!access.loading) {
+    if (!access.canAccess && access.role === 'creator' && !access.isAdmin) {
+      if (access.state === 'pending') return <PendingApprovalScreen />;
+      if (access.state === 'limited') return <LimitedAccessScreen />;
+    }
+  }
+
   const trending    = byPropType(scored.filter((l) => l.is_featured));
   const forYou      = byPropType(
     scored
@@ -614,6 +624,11 @@ export default function Explore() {
 
   return (
     <div>
+
+      {/* ── Trial countdown banner ─────────── */}
+      {!access.loading && access.state === 'trial' && access.daysLeft !== null && (
+        <TrialBanner daysLeft={access.daysLeft} />
+      )}
 
       {/* ── Search header — hidden instantly once nav goes compact ─────────── */}
       <div style={{

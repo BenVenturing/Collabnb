@@ -1166,7 +1166,7 @@ export default function CollabDetail({ collab, onClose }) {
                 { label: 'Dates', value: collab.dates },
                 { label: 'Property', value: collab.property_name },
                 { label: 'Deliverables', value: collab.deliverables },
-                { label: 'Payment', value: collab.payment || 'Free Stay' },
+                { label: 'Payment', value: collab.payment || '—' },
                 { label: 'Usage', value: 'Social Media Only' },
               ].map(({ label, value }) => (
                 <div key={label} style={{ padding: '0.4rem 0.5rem', background: 'rgba(209,235,219,0.15)', borderRadius: '0.5rem' }}>

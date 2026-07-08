@@ -202,7 +202,7 @@ export default function ListingManager() {
 
                   {/* Comp */}
                   <td style={{ padding: '0.75rem', color: SLATE, fontSize: '0.78rem', whiteSpace: 'nowrap' }}>
-                    {l.compensation_type === 'cash' && l.cash_amount ? PFmt(l.cash_amount) : l.compensation_type || '—'}
+                    {(l.compensation_type === 'paid' || l.compensation_type === 'hybrid') && l.cash_amount ? PFmt(l.cash_amount) : l.compensation_type || '—'}
                   </td>
 
                   {/* Collabs */}

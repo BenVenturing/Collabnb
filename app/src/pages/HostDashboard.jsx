@@ -204,9 +204,8 @@ function normalizeConvexListing(l) {
 
   let compensation = l.compensation || '';
   if (!compensation) {
-    if (l.compensation_type === 'free_stay') compensation = `Free Stay · ${l.nights || '?'} nights`;
-    else if (l.compensation_type === 'paid') compensation = `$${l.cash_amount || '?'} cash`;
-    else if (l.compensation_type === 'hybrid') compensation = `Free Stay + $${l.cash_amount || '?'}`;
+    if (l.compensation_type === 'paid') compensation = `$${l.cash_amount || '?'} cash`;
+    else if (l.compensation_type === 'hybrid') compensation = `$${l.cash_amount || '?'} + stay`;
     else compensation = 'See listing';
   }
 
@@ -487,7 +486,7 @@ function HostListingCard({ listing, meta, delay, glowState, onToggleStatus, onDu
                   location_country: listing.location_country || '',
                   property_url: listing.property_url || '',
                   collaboration_brief: listing.collaboration_brief || '',
-                  compensation_type: listing.compensation_type || 'free_stay',
+                  compensation_type: listing.compensation_type || 'paid',
                   nights: listing.nights || 2,
                   cash_amount: listing.cash_amount || 0,
                   creator_tier: listing.creator_tier || '',
@@ -499,6 +498,7 @@ function HostListingCard({ listing, meta, delay, glowState, onToggleStatus, onDu
                   affiliate_percent: listing.affiliate_percent || 0,
                   collab_start: listing.collab_start || '',
                   collab_end: listing.collab_end || '',
+                  date_ranges: listing.date_ranges || [],
                   turnaround_days: listing.turnaround_days || 14,
                   deliverables_list: listing.deliverables_list || [],
                   revision_policy: listing.revision_policy || '1 round of minor revisions included. Major changes require mutual agreement.',
@@ -513,7 +513,7 @@ function HostListingCard({ listing, meta, delay, glowState, onToggleStatus, onDu
                 } else {
                   localStorage.setItem('collabnb_editing_listing_id_v1', String(listingId));
                 }
-                navigate('/host/listings/create');
+                navigate('/host/listings/create/basics');
                 setMenuOpen(false);
               } },
               { label: meta.status === 'paused' ? 'Unpause' : 'Pause', action: (e) => { e.stopPropagation(); if (meta.status !== 'draft') onToggleStatus(listing.id); setMenuOpen(false); }, muted: meta.status === 'draft' },
@@ -547,6 +547,7 @@ function HostListingCard({ listing, meta, delay, glowState, onToggleStatus, onDu
 export default function HostDashboard() {
   const navigate = useNavigate();
   const { profile } = useAuth();
+  const { loadDraft, clearDraft } = useListingDraft();
   const deleteListingMutation = useMutation(api.listings.deleteListing);
 
   // ── Convex: fetch only this host's listings ──────────────────────────────────
@@ -675,7 +676,7 @@ export default function HostDashboard() {
       title: `${listing.title} (Copy)`,
       location_city: listing.location?.split(',')[0]?.trim() || '',
       location_country: '',
-      compensation_type: listing.compensation_type || 'free_stay',
+      compensation_type: listing.compensation_type || 'paid',
       nights: 2,
       cash_amount: listing.cash_amount || 0,
       creator_tier: listing.creator_tier || '',
@@ -693,7 +694,9 @@ export default function HostDashboard() {
       maxOffers: '',
     };
     localStorage.setItem('collabnb_listing_draft_v1', JSON.stringify(copy));
-    navigate('/host/listings/create');
+    localStorage.removeItem('collabnb_editing_listing_id_v1');
+    loadDraft(copy);
+    navigate('/host/listings/create/basics');
   }
 
   function dismissActivity(id) {
@@ -770,7 +773,7 @@ export default function HostDashboard() {
             </h1>
           </div>
           <button
-            onClick={() => navigate('/host/listings/create')}
+            onClick={() => { clearDraft(); navigate('/host/listings/create'); }}
             className="btn-primary"
             style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.65rem 1.25rem', fontSize: '0.875rem', flexShrink: 0 }}
           >
@@ -778,6 +781,25 @@ export default function HostDashboard() {
             New listing
           </button>
         </div>
+
+        {/* ── Compensation review banner ── */}
+        {(() => {
+          const needsReview = (convexHostListings || []).filter((l) => l.needs_compensation_review);
+          if (!needsReview.length) return null;
+          return (
+            <div style={{ background: 'rgba(255,251,230,0.9)', border: '1.5px solid rgba(212,168,67,0.35)', borderRadius: '1rem', padding: '1rem 1.25rem', marginBottom: '2rem', display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+              <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(212,168,67,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: '1rem' }}>💵</div>
+              <div>
+                <p style={{ fontFamily: 'Satoshi, sans-serif', fontWeight: 700, fontSize: 13, color: '#92400E', margin: '0 0 3px' }}>
+                  {needsReview.length === 1 ? '1 listing needs' : `${needsReview.length} listings need`} compensation added
+                </p>
+                <p style={{ fontFamily: 'Satoshi, sans-serif', fontSize: 12.5, color: '#78350F', margin: 0, lineHeight: 1.55 }}>
+                  Every collaboration now includes creator payment. {needsReview.length === 1 ? 'This listing is' : 'These listings are'} hidden from Explore until you edit {needsReview.length === 1 ? 'it' : 'them'} and add a compensation amount: {needsReview.map((l) => l.title).join(', ')}.
+                </p>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* ── Stats strip ── */}
         <div style={{

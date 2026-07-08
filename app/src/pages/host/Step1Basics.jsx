@@ -32,7 +32,6 @@ const LOADS = [
 ];
 
 const COMP_TYPES = [
-  { id: "free_stay", label: "Free Stay" },
   { id: "paid", label: "Paid" },
   { id: "hybrid", label: "Hybrid (Stay + Cash)" },
 ];
@@ -86,7 +85,8 @@ export default function Step1Basics() {
   const fileRef = useRef(null);
   const [uploading, setUploading] = useState(false);
 
-  const canProceed = draft.title.trim() && draft.location_city.trim() && draft.location_country.trim() && draft.creator_tier && draft.deliverable_load;
+  const canProceed = draft.title.trim() && draft.location_city.trim() && draft.location_country.trim() && draft.creator_tier && draft.deliverable_load &&
+    (draft.compensation_type === "paid" || draft.compensation_type === "hybrid") && draft.cash_amount > 0;
 
   async function handleImageUpload(e) {
     const files = Array.from(e.target.files || []);
@@ -221,7 +221,7 @@ export default function Step1Basics() {
           </div>
 
           {/* Conditional: nights */}
-          {(draft.compensation_type === "free_stay" || draft.compensation_type === "hybrid") && (
+          {draft.compensation_type === "hybrid" && (
             <div style={{ marginTop: 16 }}>
               <Label>Number of nights</Label>
               <div style={{ display: "flex", alignItems: "center", gap: 16 }}>

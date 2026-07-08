@@ -1,6 +1,49 @@
 import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
 
+const dateRangesValidator = v.array(v.object({
+  startDate: v.string(),
+  endDate: v.string(),
+}));
+
+const deliverablePointsValidator = v.array(v.object({
+  type: v.union(
+    v.literal("photo"),
+    v.literal("storyFrame"),
+    v.literal("carousel"),
+    v.literal("ugcReel"),
+    v.literal("influencerReel"),
+    v.literal("youtubeVideo")
+  ),
+  quantity: v.number(),
+}));
+
+function validateListingFields(
+  fields: { compensation_type?: string; cash_amount?: number; date_ranges?: { startDate: string; endDate: string }[] },
+  { requireCompensation = false } = {}
+) {
+  const { compensation_type, cash_amount, date_ranges } = fields;
+  if (requireCompensation || compensation_type !== undefined) {
+    if (compensation_type !== "paid" && compensation_type !== "hybrid") {
+      throw new Error('Collaboration type must be "paid" or "hybrid" — a stay alone is not valid compensation.');
+    }
+  }
+  if (requireCompensation || cash_amount !== undefined) {
+    if (typeof cash_amount !== "number" || !(cash_amount > 0)) {
+      throw new Error("Compensation amount is required and must be greater than $0.");
+    }
+  }
+  if (date_ranges !== undefined) {
+    if (date_ranges.length < 1 || date_ranges.length > 3) {
+      throw new Error("A listing must have between 1 and 3 date ranges.");
+    }
+    for (const r of date_ranges) {
+      if (!r.startDate || !r.endDate) throw new Error("Each date range needs a start and end date.");
+      if (r.endDate < r.startDate) throw new Error("A date range cannot end before it starts.");
+    }
+  }
+}
+
 async function resolveImages(ctx: any, ids: string[] | undefined): Promise<string[]> {
   if (!ids?.length) return [];
   const urls = await Promise.all(
@@ -25,7 +68,7 @@ export const getAll = query({
   args: {},
   handler: async (ctx) => {
     const listings = await ctx.db.query("listings").collect();
-    const filtered = listings.filter((l: any) => !l.is_sample);
+    const filtered = listings.filter((l: any) => !l.is_sample && !l.needs_compensation_review);
     return Promise.all(filtered.map((l: any) => withImages(ctx, l)));
   },
 });
@@ -81,7 +124,8 @@ export const search = query({
     is_featured: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
-    let listings = (await ctx.db.query("listings").collect()).filter((l: any) => !l.is_sample);
+    let listings = (await ctx.db.query("listings").collect())
+      .filter((l: any) => !l.is_sample && !l.needs_compensation_review);
 
     if (args.location) {
       const q = args.location.toLowerCase();
@@ -142,7 +186,9 @@ export const create = mutation({
     affiliate_code: v.optional(v.string()),
     collab_start: v.optional(v.string()),
     collab_end: v.optional(v.string()),
+    date_ranges: v.optional(dateRangesValidator),
     turnaround_days: v.optional(v.number()),
+    deliverables: v.optional(deliverablePointsValidator),
     deliverables_list: v.optional(v.array(v.object({
       type: v.string(),
       quantity: v.number(),
@@ -154,6 +200,7 @@ export const create = mutation({
     usage_rights: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    validateListingFields(args, { requireCompensation: true });
     return await ctx.db.insert("listings", args);
   },
 });
@@ -185,7 +232,9 @@ export const update = mutation({
     affiliate_code: v.optional(v.string()),
     collab_start: v.optional(v.string()),
     collab_end: v.optional(v.string()),
+    date_ranges: v.optional(dateRangesValidator),
     turnaround_days: v.optional(v.number()),
+    deliverables: v.optional(deliverablePointsValidator),
     deliverables_list: v.optional(v.array(v.object({
       type: v.string(),
       quantity: v.number(),
@@ -198,7 +247,20 @@ export const update = mutation({
   },
   handler: async (ctx, args) => {
     const { id, ...fields } = args;
-    await ctx.db.patch(id, fields);
+    validateListingFields(fields);
+    const existing = await ctx.db.get(id);
+    if (!existing) throw new Error("Listing not found.");
+    const patch: any = { ...fields };
+    const nextType = fields.compensation_type ?? (existing as any).compensation_type;
+    const nextCash = fields.cash_amount ?? (existing as any).cash_amount;
+    if (
+      (existing as any).needs_compensation_review &&
+      (nextType === "paid" || nextType === "hybrid") &&
+      typeof nextCash === "number" && nextCash > 0
+    ) {
+      patch.needs_compensation_review = false;
+    }
+    await ctx.db.patch(id, patch);
   },
 });
 
@@ -229,8 +291,9 @@ export const seedSampleListings = mutation({
         location: "Lake Tahoe, CA",
         property_type: "Cabin",
         is_featured: true,
-        compensation: "Free Stay · 3 nights",
-        compensation_type: "free",
+        compensation: "$250 + 3-night stay",
+        compensation_type: "hybrid",
+        cash_amount: 250,
         collab_type: "UGC Video",
         creator_tier: "UGC Pro",
         deliverables: "3 Reels, 5 Photos, 1 Blog Post",
@@ -262,8 +325,9 @@ export const seedSampleListings = mutation({
         location: "Bariloche, Argentina",
         property_type: "Villa",
         is_featured: true,
-        compensation: "Free Stay · 2 nights",
-        compensation_type: "free",
+        compensation: "$200 + 2-night stay",
+        compensation_type: "hybrid",
+        cash_amount: 200,
         collab_type: "Instagram Reels",
         creator_tier: "Micro Influencer",
         deliverables: "2 Reels, 8 Photos",
@@ -296,7 +360,7 @@ export const seedSampleListings = mutation({
         property_type: "Lodge",
         is_featured: true,
         compensation: "$500 Cash",
-        compensation_type: "cash",
+        compensation_type: "paid",
         cash_amount: 500,
         collab_type: "YouTube Vlog",
         creator_tier: "UGC Pro",
@@ -330,7 +394,7 @@ export const seedSampleListings = mutation({
         property_type: "Estate",
         is_featured: true,
         compensation: "$800 Cash",
-        compensation_type: "cash",
+        compensation_type: "paid",
         cash_amount: 800,
         collab_type: "Full Package",
         creator_tier: "Macro",
@@ -362,7 +426,7 @@ export const seedSampleListings = mutation({
         location: "Asheville, NC",
         property_type: "Treehouse",
         compensation: "$1,000 Cash",
-        compensation_type: "cash",
+        compensation_type: "paid",
         cash_amount: 1000,
         collab_type: "Photography",
         creator_tier: "UGC Pro",
@@ -393,7 +457,7 @@ export const seedSampleListings = mutation({
         location: "Paphos, Cyprus",
         property_type: "Glamping",
         compensation: "$500 Cash",
-        compensation_type: "cash",
+        compensation_type: "paid",
         cash_amount: 500,
         collab_type: "Instagram Reels",
         creator_tier: "Micro Influencer",
@@ -487,5 +551,47 @@ export const cleanupSampleListings = mutation({
     }
 
     return summary;
+  },
+});
+
+// One-time migration for the paid/hybrid pivot.
+// - Legacy free-stay listings ('free' / 'free_stay' / no compensation at all):
+//   samples are deleted; real listings become 'hybrid' with no cash amount and
+//   needs_compensation_review=true, which hides them from Explore until the
+//   host adds compensation.
+// - 'cash' is normalized to 'paid'.
+// Run with: npx convex run listings:migrateLegacyCompensation
+export const migrateLegacyCompensation = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const all = await ctx.db.query("listings").collect();
+    let flaggedForReview = 0;
+    let deletedSamples = 0;
+    let normalizedToPaid = 0;
+    for (const l of all as any[]) {
+      const t = (l.compensation_type || "").toLowerCase();
+      const hasCash = typeof l.cash_amount === "number" && l.cash_amount > 0;
+      const legacyFree = t === "free" || t === "free_stay" || (!t && !hasCash);
+      if (legacyFree) {
+        if (l.is_sample) {
+          await ctx.db.delete(l._id);
+          deletedSamples++;
+        } else {
+          await ctx.db.patch(l._id, {
+            compensation_type: "hybrid",
+            cash_amount: undefined,
+            needs_compensation_review: true,
+          });
+          flaggedForReview++;
+        }
+      } else if (t === "cash") {
+        await ctx.db.patch(l._id, { compensation_type: "paid" });
+        normalizedToPaid++;
+      } else if ((t === "paid" || t === "hybrid") && !hasCash) {
+        await ctx.db.patch(l._id, { needs_compensation_review: true });
+        flaggedForReview++;
+      }
+    }
+    return { flaggedForReview, deletedSamples, normalizedToPaid };
   },
 });

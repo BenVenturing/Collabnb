@@ -1,6 +1,8 @@
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FileText, Sparkles, Package2, CheckCircle, X, Lock } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
+import { useListingDraft } from "../../contexts/ListingDraftContext";
 
 const STEPS = [
   { icon: FileText, title: "1. The basics", desc: "Tell us about your listing and collaboration type" },
@@ -12,7 +14,14 @@ const STEPS = [
 export default function CreateListingIntro() {
   const navigate = useNavigate();
   const { profile } = useAuth();
+  const { clearDraft } = useListingDraft();
   const isVerified = profile?.is_verified === true || profile?.is_founder === true;
+
+  // New listings always start blank — edit/duplicate flows skip this intro and
+  // load their own draft (edits also carry collabnb_editing_listing_id_v1).
+  useEffect(() => {
+    if (!localStorage.getItem("collabnb_editing_listing_id_v1")) clearDraft();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>

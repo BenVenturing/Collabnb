@@ -60,7 +60,6 @@ function formatComp(l) {
   if (l.compensation) return l.compensation;
   const cash = Number(l.cash_amount || 0).toLocaleString();
   const cur = l.currency && l.currency !== "USD" ? ` ${l.currency}` : "";
-  if (l.compensation_type === "free_stay") return `Free Stay · ${l.nights || "?"} nights`;
   if (l.compensation_type === "paid") return `$${cash}${cur} Cash`;
   if (l.compensation_type === "hybrid") return `$${cash}${cur} + ${l.nights || "?"} nights`;
   return "";

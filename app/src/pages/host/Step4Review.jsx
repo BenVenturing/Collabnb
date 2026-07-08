@@ -10,7 +10,7 @@ import { formatDateRange } from "../../lib/dateUtils";
 import ListingDetail from "../ListingDetail";
 
 const TIER_LABELS = { ugc_beginner: "UGC Beginner", ugc_pro: "UGC Pro", micro: "Micro Influencer", mid: "Influencer" };
-const COMP_LABELS = { free_stay: "Free Stay", paid: "Paid", hybrid: "Hybrid" };
+const COMP_LABELS = { paid: "Paid", hybrid: "Hybrid" };
 const LOAD_LABELS = { light: "Light Load", moderate: "Moderate Load", heavy: "Heavy Load" };
 
 function Section({ title, children }) {
@@ -108,6 +108,12 @@ export default function Step4Review() {
   const tierLabel = TIER_LABELS[draft.creator_tier] || "";
   const loadLabel = LOAD_LABELS[draft.deliverable_load] || "";
 
+  const dateRanges = (draft.date_ranges?.length
+    ? draft.date_ranges
+    : [{ startDate: draft.collab_start || "", endDate: draft.collab_end || "" }]
+  ).filter((r) => r.startDate && r.endDate).slice(0, 3);
+  const hasCompensation = (draft.compensation_type === "paid" || draft.compensation_type === "hybrid") && draft.cash_amount > 0;
+
   const listingFields = {
     title: draft.title,
     location: `${draft.location_city}, ${draft.location_country}`,
@@ -129,8 +135,9 @@ export default function Step4Review() {
     perks: draft.perks,
     vibe_tags: draft.vibe_tags,
     affiliate_code: draft.affiliate_code,
-    collab_start: draft.collab_start,
-    collab_end: draft.collab_end,
+    collab_start: dateRanges[0]?.startDate || draft.collab_start,
+    collab_end: dateRanges[0]?.endDate || draft.collab_end,
+    date_ranges: dateRanges.length ? dateRanges : undefined,
     turnaround_days: draft.turnaround_days,
     deliverables_list: draft.deliverables_list,
     deliverable_count: totalDeliverables,
@@ -177,7 +184,7 @@ export default function Step4Review() {
       <WizardShell
         step={4}
         nextLabel={publishing ? "Publishing..." : "Publish listing"}
-        nextDisabled={publishing}
+        nextDisabled={publishing || !hasCompensation}
         onNext={() => handlePublish("published")}
       >
         <h2 style={{ fontFamily: "Cabinet Grotesk, serif", fontWeight: 800, fontSize: 28, color: "var(--ink)", margin: "0 0 6px", display: "flex", alignItems: "center", gap: 10 }}>
@@ -253,7 +260,9 @@ export default function Step4Review() {
         </Section>
 
         <Section title="Dates & Deadlines">
-          {draft.collab_start && draft.collab_end && <Row label="Collaboration Window" value={formatDateRange(draft.collab_start, draft.collab_end)} />}
+          {dateRanges.map((r, i) => (
+            <Row key={i} label={dateRanges.length > 1 ? `Collaboration Window ${i + 1}` : "Collaboration Window"} value={formatDateRange(r.startDate, r.endDate)} />
+          ))}
           <Row label="Deliverables Due" value={`${draft.turnaround_days} days after stay`} />
         </Section>
 
@@ -299,9 +308,14 @@ export default function Step4Review() {
         </div>
 
         {/* Save draft */}
+        {!hasCompensation && (
+          <p style={{ fontFamily: "Satoshi, sans-serif", fontSize: 13, color: "#b45309", fontWeight: 600, marginBottom: 12 }}>
+            Add a cash compensation amount in step 1 before publishing — every collaboration must include payment.
+          </p>
+        )}
         <button
           onClick={() => handlePublish("draft")}
-          disabled={publishing}
+          disabled={publishing || !hasCompensation}
           style={{ width: "100%", padding: "14px 0", marginBottom: 16, background: "none", border: "none", cursor: "pointer", fontFamily: "Satoshi, sans-serif", fontSize: 15, fontWeight: 600, color: "var(--slate)", textDecoration: "underline" }}
         >
           Save draft

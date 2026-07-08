@@ -61,13 +61,29 @@ export default defineSchema({
     rating: v.optional(v.number()),
     review_count: v.optional(v.number()),
     compensation: v.optional(v.string()),
+    // 'paid' | 'hybrid' — legacy string values are normalized by migrateLegacyCompensation
     compensation_type: v.optional(v.string()),
     cash_amount: v.optional(v.number()),
+    needs_compensation_review: v.optional(v.boolean()),
     currency: v.optional(v.string()),
     max_offers: v.optional(v.number()),
     collab_type: v.optional(v.string()),
     creator_tier: v.optional(v.string()),
-    deliverables: v.optional(v.string()),
+    // legacy display string, or the new points-based array
+    deliverables: v.optional(v.union(
+      v.string(),
+      v.array(v.object({
+        type: v.union(
+          v.literal("photo"),
+          v.literal("storyFrame"),
+          v.literal("carousel"),
+          v.literal("ugcReel"),
+          v.literal("influencerReel"),
+          v.literal("youtubeVideo")
+        ),
+        quantity: v.number(),
+      }))
+    )),
     deliverable_count: v.optional(v.number()),
     deliverable_load: v.optional(v.string()),
     dates_available: v.optional(v.string()),
@@ -98,6 +114,11 @@ export default defineSchema({
     turnaround_days: v.optional(v.number()),
     collab_start: v.optional(v.string()),
     collab_end: v.optional(v.string()),
+    // up to 3 availability windows (ISO dates), validated in create/update
+    date_ranges: v.optional(v.array(v.object({
+      startDate: v.string(),
+      endDate: v.string(),
+    }))),
     deliverables_list: v.optional(v.array(v.object({
       type: v.string(),
       quantity: v.number(),

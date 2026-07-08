@@ -565,7 +565,8 @@ export default function ContractBuilder() {
                       {CURRENCIES.map((c) => (
                         <option key={c} value={c}>{c}</option>
                       ))}
-                      <option value={FREE_STAY_VALUE}>Free Stay</option>
+                      {/* Legacy contracts only — stay-only compensation can no longer be selected */}
+                      {form.isFreeStay && <option value={FREE_STAY_VALUE}>Free Stay</option>}
                     </select>
                     {!form.isFreeStay && (
                       <input

@@ -22,9 +22,8 @@ function normalizeConvexListingDetail(l) {
 
   let compensation = l.compensation || '';
   if (!compensation) {
-    if (l.compensation_type === 'free_stay') compensation = `Free Stay · ${l.nights || '?'} nights`;
-    else if (l.compensation_type === 'paid') compensation = `$${l.cash_amount || '?'} cash`;
-    else if (l.compensation_type === 'hybrid') compensation = `Free Stay + $${l.cash_amount || '?'}`;
+    if (l.compensation_type === 'paid') compensation = `$${l.cash_amount || '?'} cash`;
+    else if (l.compensation_type === 'hybrid') compensation = `$${l.cash_amount || '?'} + stay`;
     else compensation = 'See listing';
   }
 
@@ -46,7 +45,9 @@ function normalizeConvexListingDetail(l) {
     deliverables,
     about: l.about || l.collaboration_brief || '',
     collab_type: l.collab_type || l.deliverable_load || 'Collab',
-    dates_available: l.dates_available || (l.collab_start && l.collab_end ? formatDateRange(l.collab_start, l.collab_end) : ''),
+    dates_available: (l.date_ranges?.length
+      ? l.date_ranges.map((r) => formatDateRange(r.startDate, r.endDate)).join(' · ')
+      : l.dates_available || (l.collab_start && l.collab_end ? formatDateRange(l.collab_start, l.collab_end) : '')),
     due_days: l.due_days ?? l.turnaround_days,
     amenities: l.amenities || [],
     what_you_get: l.what_you_get || [],
@@ -73,7 +74,7 @@ function CompIcon({ type, size = 18 }) {
   if (type === 'paid')    return <DollarSign {...props} color="#2d6a4f" />;
   if (type === 'hybrid')  return <DollarSign {...props} color="#b45309" />;
   if (type === 'product') return <Gift       {...props} color="#7b68c8" />;
-  return <Home {...props} color="var(--sage)" />; // free_stay
+  return <Home {...props} color="var(--sage)" />;
 }
 
 function DeliverableIcon({ type = '', size = 15 }) {
@@ -1498,7 +1499,7 @@ export default function ListingDetail({ previewListing = null, preview = false }
                   <p style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.5rem', color: 'var(--ink)', margin: 0 }}>
                     {listing.compensation_type === 'paid' ? `$${listing.cash_amount}`
                    : listing.compensation_type === 'hybrid' ? `$${listing.cash_amount} + Stay`
-                   : 'Free Stay'}
+                   : listing.compensation || '—'}
                   </p>
                 </div>
                 <p style={{ fontSize: '0.82rem', color: 'var(--sage)', marginBottom: '1.25rem' }}>

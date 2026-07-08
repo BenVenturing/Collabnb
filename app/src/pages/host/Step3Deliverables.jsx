@@ -24,7 +24,32 @@ export default function Step3Deliverables() {
   const [customUsage, setCustomUsage] = useState(draft.usage_rights || DEFAULT_USAGE_RIGHTS);
   const [editIdx, setEditIdx] = useState(null);
 
-  const canProceed = draft.collab_start && draft.collab_end && draft.deliverables_list.length > 0;
+  const MAX_DATE_RANGES = 3;
+  const dateRanges = draft.date_ranges?.length
+    ? draft.date_ranges
+    : [{ startDate: draft.collab_start || "", endDate: draft.collab_end || "" }];
+  const completeRanges = dateRanges.filter((r) => r.startDate && r.endDate);
+
+  // First range mirrors into collab_start/collab_end for existing consumers (contracts, search)
+  function commitRanges(next) {
+    updateDraft({
+      date_ranges: next,
+      collab_start: next[0]?.startDate || "",
+      collab_end: next[0]?.endDate || "",
+    });
+  }
+  function setRange(i, startDate, endDate) {
+    commitRanges(dateRanges.map((r, idx) => (idx === i ? { startDate, endDate } : r)));
+  }
+  function addRange() {
+    if (dateRanges.length >= MAX_DATE_RANGES) return;
+    commitRanges([...dateRanges, { startDate: "", endDate: "" }]);
+  }
+  function removeRange(i) {
+    commitRanges(dateRanges.filter((_, idx) => idx !== i));
+  }
+
+  const canProceed = completeRanges.length > 0 && draft.deliverables_list.length > 0;
 
   function addDeliverable() {
     if (!customType.trim()) return;
@@ -73,15 +98,33 @@ export default function Step3Deliverables() {
       </p>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
-        {/* Collaboration window */}
+        {/* Collaboration windows (up to 3) */}
         <div>
-          <Label required>Collaboration window</Label>
-          <div style={{ fontFamily: "Satoshi, sans-serif", fontSize: 12, color: "var(--sage)", marginBottom: 8 }}>Pick the start and end of the window creators can book within.</div>
-          <ThemedDateRangePicker
-            start={draft.collab_start}
-            end={draft.collab_end}
-            onChange={(start, end) => updateDraft({ collab_start: start, collab_end: end })}
-          />
+          <Label required>Collaboration windows</Label>
+          <div style={{ fontFamily: "Satoshi, sans-serif", fontSize: 12, color: "var(--sage)", marginBottom: 8 }}>Add up to {MAX_DATE_RANGES} date windows creators can book within.</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {dateRanges.map((r, i) => (
+              <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+                <div style={{ flex: 1 }}>
+                  <ThemedDateRangePicker
+                    start={r.startDate}
+                    end={r.endDate}
+                    onChange={(start, end) => setRange(i, start, end)}
+                  />
+                </div>
+                {dateRanges.length > 1 && (
+                  <button onClick={() => removeRange(i)} title="Remove date window" style={{ marginTop: 10, width: 30, height: 30, borderRadius: "50%", border: "1.5px solid rgba(25,37,36,0.15)", background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <X size={14} color="var(--slate)" />
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+          {dateRanges.length < MAX_DATE_RANGES && (
+            <button onClick={addRange} style={{ marginTop: 12, display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", border: "1.5px dashed rgba(25,37,36,0.25)", borderRadius: 9999, background: "transparent", cursor: "pointer", fontFamily: "Satoshi, sans-serif", fontSize: 13, fontWeight: 600, color: "var(--ink)" }}>
+              <Plus size={15} /> Add another date window
+            </button>
+          )}
         </div>
 
         {/* Turnaround */}

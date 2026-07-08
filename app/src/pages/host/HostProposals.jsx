@@ -37,7 +37,7 @@ const PROPOSALS = [
     id: 'p3', listing: 'Cliffside Villa', status: 'approved', type: 'pitch', applied: '3d ago',
     message: "Coastal luxury is my niche. I shoot for boutique hotels and villas full-time — clean editorial style, fast turnaround.",
     pitch_details: [
-      { field: 'Compensation', original: 'Free Stay', proposed: 'Hybrid + $300 cash' },
+      { field: 'Compensation', original: '$200 cash', proposed: 'Hybrid + $300 cash' },
       { field: 'Turnaround', original: '14 days', proposed: '7 days' },
     ],
     creator: { name: 'Maya Chen', username: 'mayachen.travel', tier: 'Influencer', avatar: 'https://i.pravatar.cc/80?img=5', followers: 218000, engagement: 6.8, collab_count: 47, location: 'Los Angeles, CA', platforms: ['Instagram', 'YouTube'], portfolio: 'mayachen.co', verified: true },
@@ -125,7 +125,7 @@ function fmtFollowers(n) {
 // ─── Contract fields ──────────────────────────────────────────────────────────
 const CONTRACT_FIELDS = [
   { key: 'nights',       label: 'Nights',       placeholder: 'e.g. 3' },
-  { key: 'compensation', label: 'Compensation', placeholder: 'e.g. Free Stay or $500' },
+  { key: 'compensation', label: 'Compensation', placeholder: 'e.g. $500 or $300 + stay' },
   { key: 'deliverables', label: 'Deliverables', placeholder: 'e.g. 2 Reels + 5 Photos' },
   { key: 'turnaround',   label: 'Turnaround',   placeholder: 'e.g. 14 days' },
   { key: 'affiliate',    label: 'Affiliate %',  placeholder: 'e.g. 5% or —' },

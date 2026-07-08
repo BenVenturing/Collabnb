@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Trash2 } from 'lucide-react';
 import { useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
-import { SAMPLE_LISTINGS, SAMPLE_HOST, IMG_FALLBACK } from '../lib/mockData';
+import { SAMPLE_HOST, IMG_FALLBACK } from '../lib/mockData';
 import ProfilePopupCard from '../components/ProfilePopupCard';
 import { formatDateRange } from '../lib/dateUtils';
 import { useAppBar } from '../contexts/AppBarContext';
@@ -25,9 +25,8 @@ function normalizeConvexListing(l) {
 
   let compensation = l.compensation || '';
   if (!compensation) {
-    if (l.compensation_type === 'free_stay') compensation = `Free Stay · ${l.nights || '?'} nights`;
-    else if (l.compensation_type === 'paid') compensation = `$${l.cash_amount || '?'} cash`;
-    else if (l.compensation_type === 'hybrid') compensation = `Free Stay + $${l.cash_amount || '?'}`;
+    if (l.compensation_type === 'paid') compensation = `$${l.cash_amount || '?'} cash`;
+    else if (l.compensation_type === 'hybrid') compensation = `$${l.cash_amount || '?'} + stay`;
     else compensation = 'See listing';
   }
 
@@ -49,7 +48,9 @@ function normalizeConvexListing(l) {
     deliverables,
     collab_type: l.collab_type || l.deliverable_load || 'Collab',
     about: l.about || l.collaboration_brief || '',
-    dates_available: l.dates_available || (l.collab_start && l.collab_end ? formatDateRange(l.collab_start, l.collab_end) : ''),
+    dates_available: (l.date_ranges?.length
+      ? l.date_ranges.map((r) => formatDateRange(r.startDate, r.endDate)).join(' · ')
+      : l.dates_available || (l.collab_start && l.collab_end ? formatDateRange(l.collab_start, l.collab_end) : '')),
     due_days: l.due_days ?? l.turnaround_days,
     amenities: l.amenities || [],
     what_you_get: l.what_you_get || [],
@@ -199,6 +200,9 @@ function ListingCard({ listing, saved, onSave, delay, onNavigate, onHostClick, o
           <div>
             <p style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--ink)', lineHeight: 1.2 }}>{listing.compensation}</p>
             <p style={{ fontSize: '0.67rem', color: 'var(--sage)', marginTop: '0.15rem' }}>{listing.deliverables}</p>
+            {listing.dates_available && (
+              <p style={{ fontSize: '0.67rem', color: 'var(--sage)', marginTop: '0.15rem' }}>{listing.dates_available}</p>
+            )}
           </div>
           <span className="chip" style={{ fontSize: '0.62rem', padding: '0.2rem 0.5rem', flexShrink: 0 }}>
             {listing.collab_type}
@@ -487,21 +491,11 @@ export default function Explore() {
         .map(normalizeConvexListing)
     : null; // null = still loading
 
-  // Sample listings: respect the host's localStorage pause toggles (bundled fallback)
-  const listingStatuses = (() => {
-    try { return JSON.parse(localStorage.getItem('@collabnb_host_listings_local_v1') || '{}'); }
-    catch { return {}; }
-  })();
-  const sampleFallback = SAMPLE_LISTINGS
-    .filter((l) => listingStatuses[l.id]?.status !== 'paused')
-    .map((l) => ({ ...l, _isSample: true }));
-
-  // Prefer real Convex sample listings; fall back to bundled samples while loading / pre-seed.
+  // Sample listings come from Convex only (no bundled mock fallback).
   // Filter out any the user has dismissed on this device.
-  const sampleActive = (samplesRaw && samplesRaw.length
-    ? samplesRaw.map((l) => ({ ...normalizeConvexListing(l), _isSample: true }))
-    : sampleFallback
-  ).filter((l) => !hiddenSampleIds.includes(l.id));
+  const sampleActive = (samplesRaw || [])
+    .map((l) => ({ ...normalizeConvexListing(l), _isSample: true }))
+    .filter((l) => !hiddenSampleIds.includes(l.id));
 
   // Client-side cache: seed display instantly on repeat visits, update when fresh data arrives
   const cachedListings = cache.get(EXPLORE_CACHE_KEY);
@@ -550,10 +544,13 @@ export default function Explore() {
         const parts = whenVal.split(' → ');
         const fStart = parts[0].trim();
         const fEnd = (parts[1] || parts[0]).trim();
-        const lStart = toISODate(l.collab_start);
-        const lEnd   = toISODate(l.collab_end);
-        if (!lStart || !lEnd) return false;
-        if (lStart > fEnd || lEnd < fStart) return false;
+        const ranges = l.date_ranges?.length
+          ? l.date_ranges.map((r) => [toISODate(r.startDate), toISODate(r.endDate)])
+          : [[toISODate(l.collab_start), toISODate(l.collab_end)]];
+        const overlaps = ranges.some(([lStart, lEnd]) =>
+          lStart && lEnd && lStart <= fEnd && lEnd >= fStart
+        );
+        if (!overlaps) return false;
       }
       return true;
     });

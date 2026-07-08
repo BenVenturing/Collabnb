@@ -50,7 +50,7 @@ const MOCK_APPLICANTS = {
       id: 'p10', type: 'pitch', status: 'approved', applied: '3d ago',
       message: "Coastal luxury is my niche. I shoot for boutique hotels and villas full-time — clean editorial style, fast turnaround. Happy to deliver ahead of schedule.",
       pitch_details: [
-        { field: 'Compensation', original: 'Free Stay', proposed: 'Hybrid + $300 cash' },
+        { field: 'Compensation', original: '$200 cash', proposed: 'Hybrid + $300 cash' },
         { field: 'Turnaround', original: '10 days', proposed: '7 days' },
       ],
       creator: { name: 'Sam Kowalski', username: 'sam.kowalski', tier: 'Influencer', avatar: 'https://i.pravatar.cc/80?img=59', followers: 58300, platforms: ['Instagram', 'TikTok'], verified: true },
@@ -160,9 +160,8 @@ function normalizeConvexListing(l) {
   const images = l.gallery_images?.length ? l.gallery_images : (l.image ? [l.image] : []);
   let compensation = l.compensation || '';
   if (!compensation) {
-    if (l.compensation_type === 'free_stay') compensation = `Free Stay · ${l.nights || '?'} nights`;
-    else if (l.compensation_type === 'paid') compensation = `$${l.cash_amount || '?'} cash`;
-    else if (l.compensation_type === 'hybrid') compensation = `Free Stay + $${l.cash_amount || '?'}`;
+    if (l.compensation_type === 'paid') compensation = `$${l.cash_amount || '?'} cash`;
+    else if (l.compensation_type === 'hybrid') compensation = `$${l.cash_amount || '?'} + stay`;
     else compensation = 'See listing';
   }
   const status = l.status === 'published' ? 'active' : (l.status || 'draft');
@@ -527,7 +526,7 @@ export default function HostListingDetail() {
       location_country: listing.location?.split(',').slice(1).join(',').trim() || '',
       property_url: listing.property_url || '',
       collaboration_brief: listing.about || listing.collaboration_brief || '',
-      compensation_type: listing.compensation_type || 'free_stay',
+      compensation_type: listing.compensation_type || 'paid',
       nights: listing.nights || 2,
       cash_amount: listing.cash_amount || 0,
       creator_tier: listing.creator_tier || '',
@@ -540,6 +539,7 @@ export default function HostListingDetail() {
       maxOffers: '',
       collab_start: listing.collab_start || '',
       collab_end: listing.collab_end || '',
+      date_ranges: listing.date_ranges || [],
       turnaround_days: listing.turnaround_days || 14,
       deliverables_list: listing.deliverables_list || [],
       revision_policy: listing.revision_policy || '',
@@ -552,7 +552,7 @@ export default function HostListingDetail() {
     } else {
       localStorage.setItem('collabnb_editing_listing_id_v1', id);
     }
-    navigate('/host/listings/create');
+    navigate('/host/listings/create/basics');
   }
 
   // Loading / not-found guards

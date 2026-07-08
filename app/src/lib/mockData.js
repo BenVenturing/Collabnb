@@ -59,9 +59,9 @@ export const SAMPLE_LISTINGS = [
     rating: 4.97,
     review_count: 84,
 
-    compensation: 'Free Stay · 3 nights',
-    compensation_type: 'free',
-    cash_amount: null,
+    compensation: '$250 + 3-night stay',
+    compensation_type: 'hybrid',
+    cash_amount: 250,
 
     collab_type: 'UGC Video',
     creator_tier: 'UGC Pro',
@@ -126,9 +126,9 @@ export const SAMPLE_LISTINGS = [
     rating: 4.93,
     review_count: 112,
 
-    compensation: 'Free Stay · 2 nights',
-    compensation_type: 'free',
-    cash_amount: null,
+    compensation: '$200 + 2-night stay',
+    compensation_type: 'hybrid',
+    cash_amount: 200,
 
     collab_type: 'Instagram Reels',
     creator_tier: 'Micro Influencer',
@@ -193,7 +193,7 @@ export const SAMPLE_LISTINGS = [
     review_count: 203,
 
     compensation: '$500 Cash',
-    compensation_type: 'cash',
+    compensation_type: 'paid',
     cash_amount: 500,
 
     collab_type: 'YouTube Vlog',
@@ -260,7 +260,7 @@ export const SAMPLE_LISTINGS = [
     review_count: 129,
 
     compensation: '$800 Cash',
-    compensation_type: 'cash',
+    compensation_type: 'paid',
     cash_amount: 800,
 
     collab_type: 'Full Package',
@@ -328,7 +328,7 @@ export const SAMPLE_LISTINGS = [
     review_count: 41,
 
     compensation: '$1,000 Cash',
-    compensation_type: 'cash',
+    compensation_type: 'paid',
     cash_amount: 1000,
 
     collab_type: 'Photography',
@@ -395,7 +395,7 @@ export const SAMPLE_LISTINGS = [
     review_count: 78,
 
     compensation: '$500 Cash',
-    compensation_type: 'cash',
+    compensation_type: 'paid',
     cash_amount: 500,
 
     collab_type: 'Instagram Reels',

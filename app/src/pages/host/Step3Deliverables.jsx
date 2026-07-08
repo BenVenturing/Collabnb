@@ -4,6 +4,7 @@ import { Plus, Minus, Pencil, X, Copy } from "lucide-react";
 import WizardShell from "../../components/host/WizardShell";
 import { useListingDraft } from "../../contexts/ListingDraftContext";
 import ThemedDateRangePicker from "../../components/host/ThemedDateRangePicker";
+import PricingTool from "../../components/PricingTool";
 
 function Label({ children, required }) {
   return <div style={{ fontFamily: "Satoshi, sans-serif", fontWeight: 700, fontSize: 14, color: "var(--ink)", marginBottom: 6 }}>{children}{required && <span style={{ color: "#e04" }}> *</span>}</div>;
@@ -12,7 +13,7 @@ function Input({ value, onChange, placeholder, type = "text" }) {
   return <input type={type} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} style={{ width: "100%", padding: "12px 16px", border: "1.5px solid rgba(25,37,36,0.15)", borderRadius: "0.875rem", fontFamily: "Satoshi, sans-serif", fontSize: 14, color: "var(--ink)", background: "#fff", outline: "none", boxSizing: "border-box" }} />;
 }
 
-const LOAD_LABELS = { light: "light", moderate: "moderate", heavy: "heavy" };
+const LOAD_LABELS = { light: "light", moderate: "moderate", heavy: "heavy", custom: "custom campaign" };
 
 export default function Step3Deliverables() {
   const navigate = useNavigate();
@@ -49,7 +50,11 @@ export default function Step3Deliverables() {
     commitRanges(dateRanges.filter((_, idx) => idx !== i));
   }
 
-  const canProceed = completeRanges.length > 0 && draft.deliverables_list.length > 0;
+  const hasCompensation = (draft.compensation_type === "paid" || draft.compensation_type === "hybrid") && draft.cash_amount > 0;
+  const canProceed = completeRanges.length > 0
+    && (draft.deliverables?.length > 0 || draft.deliverables_list.length > 0)
+    && draft.creator_tier
+    && hasCompensation;
 
   function addDeliverable() {
     if (!customType.trim()) return;
@@ -91,13 +96,27 @@ export default function Step3Deliverables() {
       onNext={() => navigate("/host/listings/create/review")}
     >
       <h2 style={{ fontFamily: "Cabinet Grotesk, serif", fontWeight: 800, fontSize: 28, color: "var(--ink)", margin: "0 0 6px" }}>
-        Deliverables & dates
+        Pricing & dates
       </h2>
       <p style={{ fontFamily: "Satoshi, sans-serif", fontSize: 14, color: "var(--slate)", margin: "0 0 32px" }}>
-        Define when the collaboration happens and what content you need.
+        Set the creator tier, compensation, and deliverables — with live pricing guidance — then define when the collaboration happens.
       </p>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
+        {/* Pricing tool — creator tier, compensation, complexity, deliverables */}
+        <PricingTool
+          mode="listing"
+          initialValue={{
+            tierId: draft.creator_tier || undefined,
+            compensationType: draft.compensation_type,
+            complexity: draft.complexity,
+            stayValue: draft.stay_value,
+            cashAmount: draft.cash_amount,
+            deliverables: draft.deliverables,
+          }}
+          onChange={(fields) => updateDraft(fields)}
+        />
+
         {/* Collaboration windows (up to 3) */}
         <div>
           <Label required>Collaboration windows</Label>

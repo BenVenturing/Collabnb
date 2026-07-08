@@ -8,10 +8,11 @@ import { useListingDraft } from "../../contexts/ListingDraftContext";
 import { useAuth } from "../../contexts/AuthContext";
 import { formatDateRange } from "../../lib/dateUtils";
 import ListingDetail from "../ListingDetail";
+import { calcMidpoint, calcStayOffset, calcRange, evaluateZone, totalPoints } from "../../../convex/lib/compensationPoints";
 
 const TIER_LABELS = { ugc_beginner: "UGC Beginner", ugc_pro: "UGC Pro", micro: "Micro Influencer", mid: "Influencer" };
 const COMP_LABELS = { paid: "Paid", hybrid: "Hybrid" };
-const LOAD_LABELS = { light: "Light Load", moderate: "Moderate Load", heavy: "Heavy Load" };
+const LOAD_LABELS = { light: "Light Load", moderate: "Moderate Load", heavy: "Heavy Load", custom: "Custom Campaign" };
 
 function Section({ title, children }) {
   return (
@@ -92,6 +93,7 @@ export default function Step4Review() {
   const [publishing, setPublishing] = useState(false);
   const [confetti, setConfetti] = useState(false);
   const [creatorView, setCreatorView] = useState(false);
+  const [publishError, setPublishError] = useState("");
 
   // Resolve uploaded photos (storageIds → URLs) for reordering + creator preview
   const imageUrls = useQuery(api.uploads.getImageUrls, draft.images.length ? { storageIds: draft.images } : "skip") || [];
@@ -130,6 +132,9 @@ export default function Step4Review() {
     nights: draft.nights,
     creator_tier: draft.creator_tier,
     deliverable_load: draft.deliverable_load,
+    complexity: draft.complexity,
+    stay_value: draft.compensation_type === "hybrid" ? draft.stay_value : undefined,
+    deliverables: draft.deliverables?.length ? draft.deliverables : undefined,
     gallery_images: draft.images,
     amenities: draft.amenities?.length ? draft.amenities : undefined,
     perks: draft.perks,
@@ -158,6 +163,7 @@ export default function Step4Review() {
 
   async function handlePublish(status) {
     setPublishing(true);
+    setPublishError("");
     try {
       if (editingId) {
         await updateListing({ id: editingId, ...listingFields, status });
@@ -174,8 +180,21 @@ export default function Step4Review() {
       }
     } catch (err) {
       console.error(err);
+      setPublishError(err?.message || "Something went wrong publishing this listing.");
       setPublishing(false);
     }
+  }
+
+  // Client-side mirror of the server's three-zone floor check — same source
+  // of truth (compensationPoints), so hosts see the warning before they hit it.
+  let compZone = null;
+  let compRange = null;
+  if (draft.creator_tier && draft.deliverables?.length && hasCompensation) {
+    const points = totalPoints(draft.deliverables);
+    const midpoint = calcMidpoint(points, draft.creator_tier, draft.complexity || "standard");
+    const stayOffset = draft.compensation_type === "hybrid" ? calcStayOffset(draft.stay_value || 0, draft.creator_tier, midpoint) : 0;
+    compZone = evaluateZone(draft.cash_amount, midpoint, stayOffset);
+    compRange = calcRange(midpoint);
   }
 
   return (
@@ -184,7 +203,7 @@ export default function Step4Review() {
       <WizardShell
         step={4}
         nextLabel={publishing ? "Publishing..." : "Publish listing"}
-        nextDisabled={publishing || !hasCompensation}
+        nextDisabled={publishing || !hasCompensation || compZone === "red"}
         onNext={() => handlePublish("published")}
       >
         <h2 style={{ fontFamily: "Cabinet Grotesk, serif", fontWeight: 800, fontSize: 28, color: "var(--ink)", margin: "0 0 6px", display: "flex", alignItems: "center", gap: 10 }}>
@@ -307,10 +326,32 @@ export default function Step4Review() {
           )}
         </div>
 
+        {/* Compensation zone warning */}
+        {compZone === "amber" && compRange && (
+          <div style={{ background: "rgba(212,168,67,0.14)", border: "1px solid rgba(212,168,67,0.35)", borderRadius: "0.875rem", padding: "12px 16px", marginBottom: 16 }}>
+            <p style={{ fontFamily: "Satoshi, sans-serif", fontSize: 13, fontWeight: 700, color: "#7a5a10", margin: "0 0 2px" }}>
+              This compensation is below the recommended range for this workload
+            </p>
+            <p style={{ fontFamily: "Satoshi, sans-serif", fontSize: 12.5, color: "#7a5a10", margin: 0 }}>
+              Recommended range: ${Math.round(compRange.low)}–${Math.round(compRange.high)}. You can still publish — this is a guideline, not a requirement.
+            </p>
+          </div>
+        )}
+        {compZone === "red" && (
+          <p style={{ fontFamily: "Satoshi, sans-serif", fontSize: 13, color: "#b45309", fontWeight: 600, marginBottom: 12 }}>
+            This compensation is below the minimum for the selected deliverables and tier. Raise the amount, reduce the deliverables, or add a stay offset to continue.
+          </p>
+        )}
+        {publishError && (
+          <p style={{ fontFamily: "Satoshi, sans-serif", fontSize: 13, color: "#b45309", fontWeight: 600, marginBottom: 12 }}>
+            {publishError}
+          </p>
+        )}
+
         {/* Save draft */}
         {!hasCompensation && (
           <p style={{ fontFamily: "Satoshi, sans-serif", fontSize: 13, color: "#b45309", fontWeight: 600, marginBottom: 12 }}>
-            Add a cash compensation amount in step 1 before publishing — every collaboration must include payment.
+            Add a cash compensation amount in the pricing step before publishing — every collaboration must include payment.
           </p>
         )}
         <button

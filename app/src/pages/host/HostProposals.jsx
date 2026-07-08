@@ -15,6 +15,11 @@ import {
   useDraggable, useDroppable,
   useSensor, useSensors, PointerSensor,
 } from '@dnd-kit/core';
+import {
+  DELIVERABLE_TYPES, DELIVERABLE_LABELS, DELIVERABLE_POINTS,
+  normalizeTierId, totalPoints, calcMidpoint, calcHardFloor, calcRange, evaluateZone,
+  isDeliverableAllowedForTier,
+} from '../../../convex/lib/compensationPoints';
 
 // ─── Mock proposal data ───────────────────────────────────────────────────────
 const PROPOSALS = [
@@ -245,6 +250,42 @@ function CounterPitchModal({ proposal, fromParty, onSend, onClose }) {
   const version = (proposal.contractHistory?.length ?? 0) + 1;
   const partyLabel = fromParty === 'host' ? 'Host' : proposal.creator.name;
 
+  // ── Live points/pricing — the same math the listing pricing tool uses ──
+  const tierId = normalizeTierId(proposal.creator.tier) || 'ugc_pro';
+  const [pricedDeliverables, setPricedDeliverables] = useState([]);
+  const [cashAmount, setCashAmount] = useState(() => {
+    const parsed = parseFloat(String(fields.compensation || '').replace(/[^0-9.]/g, ''));
+    return Number.isFinite(parsed) ? parsed : 0;
+  });
+  const quantities = Object.fromEntries(DELIVERABLE_TYPES.map((t) => [t, pricedDeliverables.find((d) => d.type === t)?.quantity || 0]));
+
+  function setQuantity(type, quantity) {
+    setPricedDeliverables((prev) => {
+      const next = prev.filter((d) => d.type !== type);
+      if (quantity > 0) next.push({ type, quantity });
+      return next;
+    });
+  }
+
+  const points = totalPoints(pricedDeliverables);
+  const midpoint = calcMidpoint(points, tierId);
+  const range = calcRange(midpoint);
+  const hardFloor = calcHardFloor(midpoint, 0);
+  const zone = points > 0 ? evaluateZone(cashAmount, midpoint, 0) : null;
+  const belowFloor = zone === 'red';
+
+  function handleSend() {
+    if (belowFloor) return;
+    const nextFields = { ...fields };
+    if (points > 0) {
+      nextFields.cash_amount = cashAmount;
+      nextFields.deliverables = pricedDeliverables;
+      nextFields.compensation = `$${cashAmount}`;
+      nextFields.deliverables_summary = pricedDeliverables.map((d) => `${d.quantity}× ${DELIVERABLE_LABELS[d.type]}`).join(', ');
+    }
+    onSend(nextFields, note);
+  }
+
   return (
     <div onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
       style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(25,37,36,0.55)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', padding: '1rem' }}>
@@ -278,11 +319,49 @@ function CounterPitchModal({ proposal, fromParty, onSend, onClose }) {
               onFocus={(e) => { e.target.style.borderColor = 'rgba(25,37,36,0.35)'; }}
               onBlur={(e) => { e.target.style.borderColor = 'rgba(25,37,36,0.12)'; }} />
           </div>
+
+          {/* ── Live pricing calculator — optional, overrides the free-text compensation/deliverables fields when used ── */}
+          <div style={{ borderRadius: '0.875rem', border: '1px solid rgba(25,37,36,0.1)', padding: '0.875rem', background: 'rgba(209,235,219,0.25)' }}>
+            <p style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--sage)', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 0.5rem' }}>
+              Pricing calculator ({proposal.creator.tier})
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '0.4rem', marginBottom: '0.625rem' }}>
+              {DELIVERABLE_TYPES.map((type) => {
+                const allowed = isDeliverableAllowedForTier(type, tierId);
+                return (
+                  <div key={type} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, padding: '0.4rem 0.55rem', borderRadius: '0.5rem', background: '#fff', opacity: allowed ? 1 : 0.4 }}>
+                    <span style={{ fontSize: '0.72rem', color: 'var(--ink)' }}>{DELIVERABLE_LABELS[type]}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <button disabled={!allowed} onClick={() => setQuantity(type, Math.max(0, quantities[type] - 1))} style={{ width: 20, height: 20, borderRadius: '50%', border: '1px solid var(--sage)', background: 'transparent', cursor: allowed ? 'pointer' : 'not-allowed', fontSize: '0.7rem', lineHeight: 1 }}>−</button>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 700, minWidth: 14, textAlign: 'center' }}>{quantities[type]}</span>
+                      <button disabled={!allowed} onClick={() => setQuantity(type, quantities[type] + 1)} style={{ width: 20, height: 20, borderRadius: '50%', border: '1px solid var(--ink)', background: 'var(--ink)', color: '#fff', cursor: allowed ? 'pointer' : 'not-allowed', fontSize: '0.7rem', lineHeight: 1 }}>+</button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: points > 0 ? 8 : 0 }}>
+              <span style={{ fontSize: '0.75rem', color: 'var(--slate)' }}>Cash</span>
+              <input type="number" min={0} value={cashAmount || ''} onChange={(e) => setCashAmount(Number(e.target.value) || 0)}
+                style={{ width: 90, padding: '0.35rem 0.5rem', borderRadius: '0.5rem', border: '1.5px solid rgba(25,37,36,0.15)', fontSize: '0.8rem', outline: 'none' }} />
+              {points > 0 && <span style={{ fontSize: '0.72rem', color: 'var(--sage)' }}>{points} pts · midpoint ${Math.round(midpoint)} · range ${Math.round(range.low)}–${Math.round(range.high)}</span>}
+            </div>
+            {zone === 'red' && (
+              <p style={{ fontSize: '0.72rem', fontWeight: 700, color: '#8a4a30', margin: 0 }}>
+                Below the minimum (${Math.round(hardFloor)}) for this workload — raise the cash amount or reduce deliverables to send.
+              </p>
+            )}
+            {zone === 'amber' && (
+              <p style={{ fontSize: '0.72rem', fontWeight: 600, color: '#7a5a10', margin: 0 }}>
+                Below the recommended range, but above the minimum — can still be sent.
+              </p>
+            )}
+          </div>
         </div>
         <div style={{ display: 'flex', gap: '0.625rem' }}>
           <button onClick={onClose} style={{ flex: 1, padding: '0.75rem', borderRadius: 9999, border: '1.5px solid rgba(25,37,36,0.12)', background: 'transparent', fontFamily: 'var(--font-body)', fontSize: '0.875rem', fontWeight: 600, color: 'var(--slate)', cursor: 'pointer' }}>Cancel</button>
-          <button onClick={() => onSend(fields, note)}
-            style={{ flex: 2, padding: '0.75rem', borderRadius: 9999, border: 'none', background: 'var(--ink)', fontFamily: 'var(--font-body)', fontSize: '0.875rem', fontWeight: 700, color: '#fff', cursor: 'pointer' }}>
+          <button onClick={handleSend} disabled={belowFloor}
+            style={{ flex: 2, padding: '0.75rem', borderRadius: 9999, border: 'none', background: belowFloor ? 'rgba(25,37,36,0.25)' : 'var(--ink)', fontFamily: 'var(--font-body)', fontSize: '0.875rem', fontWeight: 700, color: '#fff', cursor: belowFloor ? 'not-allowed' : 'pointer' }}>
             Send Counter Pitch
           </button>
         </div>

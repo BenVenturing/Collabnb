@@ -1,6 +1,7 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
+import { totalPoints, normalizeTierId, calcMidpoint, calcHardFloor, evaluateZone } from "./lib/compensationPoints";
 
 function currentMonthKey(): string {
   const now = new Date();
@@ -269,6 +270,20 @@ export const sendCounter = mutation({
   handler: async (ctx, { id, fromParty, fields, note }) => {
     const pitch = await ctx.db.get(id);
     if (!pitch) return;
+
+    // Three-zone floor — a negotiation can never settle below the hard floor
+    // for whatever deliverable set it proposes. Server-side is the source of
+    // truth; the pitch UI only warns/disables ahead of this.
+    const cashAmount = typeof fields?.cash_amount === "number" ? fields.cash_amount : undefined;
+    if (cashAmount !== undefined && cashAmount > 0) {
+      const points = Array.isArray(fields?.deliverables) ? totalPoints(fields.deliverables) : 0;
+      const tierId = normalizeTierId(pitch.creator_tier);
+      const midpoint = tierId ? calcMidpoint(points, tierId) : 0;
+      const hardFloor = calcHardFloor(midpoint, 0);
+      if (evaluateZone(cashAmount, midpoint, 0) === "red") {
+        throw new Error(`This offer is below the minimum for the proposed workload. The minimum is $${Math.round(hardFloor)}.`);
+      }
+    }
 
     const history = parseJSON<any[]>(pitch.contract_history, []);
     const version = history.length + 1;

@@ -1,40 +1,12 @@
 import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Camera, X, Plus, Minus } from "lucide-react";
+import { Camera, X, Plus } from "lucide-react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import WizardShell from "../../components/host/WizardShell";
 import { useListingDraft } from "../../contexts/ListingDraftContext";
 
 const MAX_IMAGES = 10;
-
-const CURRENCIES = [
-  { code: "USD", symbol: "$" },
-  { code: "EUR", symbol: "€" },
-  { code: "GBP", symbol: "£" },
-  { code: "CNY", symbol: "¥" },
-  { code: "AUD", symbol: "A$" },
-  { code: "CAD", symbol: "C$" },
-  { code: "JPY", symbol: "¥" },
-];
-
-const TIERS = [
-  { id: "ugc_beginner", label: "UGC Beginner" },
-  { id: "ugc_pro", label: "UGC Pro" },
-  { id: "micro", label: "Micro Influencer" },
-  { id: "mid", label: "Influencer" },
-];
-
-const LOADS = [
-  { id: "light", label: "Light", desc: "Best for simple stays and quick content.", counts: "~6 deliverables across 3 formats" },
-  { id: "moderate", label: "Moderate", desc: "Balanced package for strong coverage.", counts: "~12 deliverables across 3 formats" },
-  { id: "heavy", label: "Heavy", desc: "For full campaigns and multi-format coverage.", counts: "~20 deliverables across 4 formats" },
-];
-
-const COMP_TYPES = [
-  { id: "paid", label: "Paid" },
-  { id: "hybrid", label: "Hybrid (Stay + Cash)" },
-];
 
 // Resolves a Convex storageId (or plain http URL) to a thumbnail image.
 function Thumb({ storageId, onRemove }) {
@@ -85,8 +57,7 @@ export default function Step1Basics() {
   const fileRef = useRef(null);
   const [uploading, setUploading] = useState(false);
 
-  const canProceed = draft.title.trim() && draft.location_city.trim() && draft.location_country.trim() && draft.creator_tier && draft.deliverable_load &&
-    (draft.compensation_type === "paid" || draft.compensation_type === "hybrid") && draft.cash_amount > 0;
+  const canProceed = draft.title.trim() && draft.location_city.trim() && draft.location_country.trim();
 
   async function handleImageUpload(e) {
     const files = Array.from(e.target.files || []);
@@ -205,105 +176,9 @@ export default function Step1Basics() {
           />
         </div>
 
-        {/* Collaboration type */}
-        <div>
-          <Label required>Collaboration type</Label>
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {COMP_TYPES.map((t) => (
-              <button
-                key={t.id}
-                onClick={() => updateDraft({ compensation_type: t.id })}
-                style={{ padding: "14px 18px", border: `1.5px solid ${draft.compensation_type === t.id ? "var(--ink)" : "rgba(25,37,36,0.15)"}`, borderRadius: "0.875rem", background: draft.compensation_type === t.id ? "var(--mint)" : "rgba(255,255,255,0.82)", backdropFilter: "blur(10px)", WebkitBackdropFilter: "blur(10px)", fontFamily: "Satoshi, sans-serif", fontSize: 14, fontWeight: 600, color: "var(--ink)", cursor: "pointer", textAlign: "left" }}
-              >
-                {t.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Conditional: nights */}
-          {draft.compensation_type === "hybrid" && (
-            <div style={{ marginTop: 16 }}>
-              <Label>Number of nights</Label>
-              <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-                <button onClick={() => updateDraft({ nights: Math.max(1, draft.nights - 1) })} style={{ width: 40, height: 40, borderRadius: "50%", border: "1.5px solid var(--ink)", background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <Minus size={16} color="var(--ink)" />
-                </button>
-                <span style={{ fontFamily: "Satoshi, sans-serif", fontWeight: 700, fontSize: 20, color: "var(--ink)", minWidth: 32, textAlign: "center" }}>{draft.nights}</span>
-                <button onClick={() => updateDraft({ nights: draft.nights + 1 })} style={{ width: 40, height: 40, borderRadius: "50%", border: "1.5px solid var(--ink)", background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <Plus size={16} color="var(--ink)" />
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Conditional: cash */}
-          {(draft.compensation_type === "paid" || draft.compensation_type === "hybrid") && (
-            <div style={{ marginTop: 16 }}>
-              <Label>Cash payment</Label>
-              <div style={{ display: "flex", gap: 10 }}>
-                <select
-                  value={draft.currency}
-                  onChange={(e) => updateDraft({ currency: e.target.value })}
-                  style={{ flexShrink: 0, padding: "13px 14px", border: "1.5px solid rgba(25,37,36,0.15)", borderRadius: "0.875rem", fontFamily: "Satoshi, sans-serif", fontSize: 14, fontWeight: 600, color: "var(--ink)", background: "#fff", outline: "none", cursor: "pointer" }}
-                >
-                  {CURRENCIES.map((c) => (
-                    <option key={c.code} value={c.code}>{c.symbol} {c.code}</option>
-                  ))}
-                </select>
-                <div style={{ position: "relative", flex: 1 }}>
-                  <span style={{ position: "absolute", left: 16, top: "50%", transform: "translateY(-50%)", fontFamily: "Satoshi, sans-serif", fontSize: 14, color: "var(--slate)", pointerEvents: "none" }}>
-                    {CURRENCIES.find((c) => c.code === draft.currency)?.symbol || "$"}
-                  </span>
-                  <input
-                    type="text"
-                    inputMode="decimal"
-                    placeholder="0"
-                    value={draft.cash_amount || ""}
-                    onChange={(e) => {
-                      const digits = e.target.value.replace(/[^0-9.]/g, "");
-                      updateDraft({ cash_amount: digits === "" ? 0 : Number(digits) });
-                    }}
-                    style={{ width: "100%", padding: "13px 16px 13px 34px", border: "1.5px solid rgba(25,37,36,0.15)", borderRadius: "0.875rem", fontFamily: "Satoshi, sans-serif", fontSize: 14, color: "var(--ink)", background: "#fff", outline: "none", boxSizing: "border-box" }}
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Creator tier */}
-        <div>
-          <Label required>Creator tier required</Label>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
-            {TIERS.map((t) => (
-              <button
-                key={t.id}
-                onClick={() => updateDraft({ creator_tier: t.id })}
-                style={{ padding: "10px 18px", borderRadius: 9999, border: `1.5px solid ${draft.creator_tier === t.id ? "var(--ink)" : "rgba(25,37,36,0.15)"}`, background: draft.creator_tier === t.id ? "var(--ink)" : "rgba(255,255,255,0.82)", backdropFilter: "blur(10px)", WebkitBackdropFilter: "blur(10px)", fontFamily: "Satoshi, sans-serif", fontSize: 13, fontWeight: 600, color: draft.creator_tier === t.id ? "#fff" : "var(--ink)", cursor: "pointer" }}
-              >
-                {t.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Deliverable load */}
-        <div>
-          <Label required>Deliverable load</Label>
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {LOADS.map((l) => (
-              <button
-                key={l.id}
-                onClick={() => updateDraft({ deliverable_load: l.id })}
-                style={{ padding: "16px 18px", border: `1.5px solid ${draft.deliverable_load === l.id ? "var(--ink)" : "rgba(25,37,36,0.15)"}`, borderRadius: "0.875rem", background: draft.deliverable_load === l.id ? "var(--mint)" : "rgba(255,255,255,0.82)", backdropFilter: "blur(10px)", WebkitBackdropFilter: "blur(10px)", fontFamily: "Satoshi, sans-serif", fontSize: 14, color: "var(--ink)", cursor: "pointer", textAlign: "left" }}
-              >
-                <div style={{ fontWeight: 700 }}>{l.label}</div>
-                <div style={{ fontSize: 12, color: "var(--slate)", marginTop: 2 }}>{l.desc}</div>
-                <div style={{ fontSize: 11.5, color: "var(--sage)", marginTop: 4, fontWeight: 600 }}>{l.counts}</div>
-              </button>
-            ))}
-          </div>
-        </div>
+        <p style={{ fontFamily: "Satoshi, sans-serif", fontSize: 12.5, color: "var(--sage)", margin: 0 }}>
+          Creator tier, compensation, and deliverables are set on the next step, with live pricing guidance.
+        </p>
       </div>
     </WizardShell>
   );

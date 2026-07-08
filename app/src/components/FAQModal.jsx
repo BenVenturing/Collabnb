@@ -56,7 +56,7 @@ const FAQ_SECTIONS = [
     items: [
       {
         q: 'What are the creator tiers?',
-        a: 'Collabnb has four professional tiers across two tracks. UGC tiers are portfolio-driven, where content runs on the host's channels. Influencer tiers are audience-reach driven, where content runs on the creator's channels.:\n• UGC Beginner — building a portfolio, admitted on quality\n• UGC Pro — paid UGC producer with proven output\n• Micro Influencer — 5,000 to 25,000 followers\n• Influencer — 25,000+ followers\n\nYour track and tier are assigned during verification based on your portfolio, follower counts, and professional experience. They determine which listings and deliverable types you can be booked for.',
+        a: "Collabnb has four professional tiers across two tracks. UGC tiers are portfolio-driven, where content runs on the host's channels. Influencer tiers are audience-reach driven, where content runs on the creator's channels.:\n• UGC Beginner — building a portfolio, admitted on quality\n• UGC Pro — paid UGC producer with proven output\n• Micro Influencer — 5,000 to 25,000 followers\n• Influencer — 25,000+ followers\n\nYour track and tier are assigned during verification based on your portfolio, follower counts, and professional experience. They determine which listings and deliverable types you can be booked for.",
       },
       {
         q: 'How do I know which tier I qualify for?',

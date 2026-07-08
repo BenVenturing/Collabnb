@@ -92,7 +92,15 @@ export default defineSchema({
       }))
     )),
     deliverable_count: v.optional(v.number()),
+    // 'light' | 'moderate' | 'heavy' | 'custom' — always derived from points, never picked
     deliverable_load: v.optional(v.string()),
+    // 'standard' | 'complex' (shot lists, drone, multi-location, exclusivity/usage rights)
+    complexity: v.optional(v.string()),
+    // Declared $ value of the stay, used to compute the Hybrid stay offset
+    stay_value: v.optional(v.number()),
+    // Set by the three-zone floor check when cash comp is below the recommended
+    // range (but at/above the hard floor) — for analytics/moderation
+    below_recommended_comp: v.optional(v.boolean()),
     dates_available: v.optional(v.string()),
     due_days: v.optional(v.number()),
     image: v.optional(v.string()),

@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect } from "react";
+import { computeLoadTier, totalPoints } from "../../convex/lib/compensationPoints";
 
 const STORAGE_KEY = "collabnb_listing_draft_v1";
 
@@ -37,7 +38,10 @@ const EMPTY_DRAFT = {
   cash_amount: 0,
   currency: "USD",
   creator_tier: "",
-  deliverable_load: "",
+  deliverable_load: "", // derived from `deliverables` points — never set manually
+  deliverables: [], // points-based array: [{ type, quantity }] — feeds the pricing tool
+  complexity: "standard", // 'standard' | 'complex'
+  stay_value: 0, // declared $ value of the stay (Hybrid stay-offset math)
   images: [],
   amenities: [],
   perks: [],
@@ -82,10 +86,9 @@ export function ListingDraftProvider({ children }) {
   function updateDraft(fields) {
     setDraft((prev) => {
       const next = { ...prev, ...fields };
-      // Auto-populate deliverables when load changes and list is empty or was auto-populated
-      if (fields.deliverable_load && fields.deliverable_load !== prev.deliverable_load) {
-        const preset = DELIVERABLE_PRESETS[fields.deliverable_load];
-        if (preset) next.deliverables_list = preset;
+      // Load tier is always derived from points — never set manually.
+      if (fields.deliverables) {
+        next.deliverable_load = computeLoadTier(next.deliverables) || "";
       }
       return next;
     });
@@ -114,9 +117,10 @@ export function ListingDraftProvider({ children }) {
 
   const totalDeliverables = draft.deliverables_list.reduce((sum, d) => sum + d.quantity, 0);
   const formatCount = draft.deliverables_list.length;
+  const pricingPoints = totalPoints(draft.deliverables);
 
   return (
-    <ListingDraftContext.Provider value={{ draft, updateDraft, loadDraft, hydrateFromStorage, clearDraft, fee, totalDeliverables, formatCount, DELIVERABLE_PRESETS, DEFAULT_USAGE_RIGHTS }}>
+    <ListingDraftContext.Provider value={{ draft, updateDraft, loadDraft, hydrateFromStorage, clearDraft, fee, totalDeliverables, formatCount, pricingPoints, DELIVERABLE_PRESETS, DEFAULT_USAGE_RIGHTS }}>
       {children}
     </ListingDraftContext.Provider>
   );

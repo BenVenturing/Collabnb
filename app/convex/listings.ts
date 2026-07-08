@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
+import { calcMidpoint, calcStayOffset, calcHardFloor, evaluateZone, normalizeTierId, totalPoints } from "./lib/compensationPoints";
 
 const dateRangesValidator = v.array(v.object({
   startDate: v.string(),
@@ -17,6 +18,29 @@ const deliverablePointsValidator = v.array(v.object({
   ),
   quantity: v.number(),
 }));
+
+// Server-side source of truth for the three-zone compensation floor — the UI
+// check can warn/disable, but this is what actually blocks a red-zone listing.
+function evaluateCompensationFloor(fields: {
+  compensation_type?: string;
+  cash_amount?: number;
+  creator_tier?: string;
+  deliverables?: unknown;
+  complexity?: string;
+  stay_value?: number;
+}) {
+  const { compensation_type, cash_amount, creator_tier, deliverables, complexity, stay_value } = fields;
+  if (compensation_type !== "paid" && compensation_type !== "hybrid") return null;
+  if (typeof cash_amount !== "number" || !(cash_amount > 0)) return null;
+
+  const points = Array.isArray(deliverables) ? totalPoints(deliverables as any) : 0;
+  const tierId = normalizeTierId(creator_tier);
+  const midpoint = tierId ? calcMidpoint(points, tierId, (complexity as any) || "standard") : 0;
+  const stayOffset = compensation_type === "hybrid" && tierId ? calcStayOffset(stay_value || 0, tierId, midpoint) : 0;
+  const hardFloor = calcHardFloor(midpoint, stayOffset);
+  const zone = evaluateZone(cash_amount, midpoint, stayOffset);
+  return { zone, hardFloor };
+}
 
 function validateListingFields(
   fields: { compensation_type?: string; cash_amount?: number; date_ranges?: { startDate: string; endDate: string }[] },
@@ -304,10 +328,16 @@ export const create = mutation({
     deliverable_count: v.optional(v.number()),
     revision_policy: v.optional(v.string()),
     usage_rights: v.optional(v.string()),
+    complexity: v.optional(v.string()),
+    stay_value: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     validateListingFields(args, { requireCompensation: true });
-    return await ctx.db.insert("listings", args);
+    const floor = evaluateCompensationFloor(args);
+    if (floor?.zone === "red") {
+      throw new Error(`Compensation is below the minimum for this workload. The minimum for this listing is $${Math.round(floor.hardFloor)}.`);
+    }
+    return await ctx.db.insert("listings", { ...args, below_recommended_comp: floor?.zone === "amber" });
   },
 });
 
@@ -350,6 +380,8 @@ export const update = mutation({
     deliverable_count: v.optional(v.number()),
     revision_policy: v.optional(v.string()),
     usage_rights: v.optional(v.string()),
+    complexity: v.optional(v.string()),
+    stay_value: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const { id, ...fields } = args;
@@ -366,6 +398,21 @@ export const update = mutation({
     ) {
       patch.needs_compensation_review = false;
     }
+
+    const merged = {
+      compensation_type: nextType,
+      cash_amount: nextCash,
+      creator_tier: fields.creator_tier ?? (existing as any).creator_tier,
+      deliverables: fields.deliverables ?? (existing as any).deliverables,
+      complexity: fields.complexity ?? (existing as any).complexity,
+      stay_value: fields.stay_value ?? (existing as any).stay_value,
+    };
+    const floor = evaluateCompensationFloor(merged);
+    if (floor?.zone === "red") {
+      throw new Error(`Compensation is below the minimum for this workload. The minimum for this listing is $${Math.round(floor.hardFloor)}.`);
+    }
+    if (floor) patch.below_recommended_comp = floor.zone === "amber";
+
     await ctx.db.patch(id, patch);
   },
 });

@@ -945,27 +945,55 @@ export default function Explore() {
         />
       )}
 
-      {/* ── Pricing sandbox — floating entry point (FAQ-bubble pattern) ─────── */}
-      <button
-        onClick={() => setPricingToolOpen(true)}
-        aria-label="What does a collab cost?"
-        title="What does a collab cost?"
-        style={{
-          position: 'fixed', bottom: '9.5rem', right: '1.5rem', zIndex: 200,
-          width: 56, height: 56, borderRadius: '50%',
-          border: '1px solid rgba(255,255,255,0.75)',
-          background: 'rgba(255,255,255,0.72)',
-          backdropFilter: 'blur(24px) saturate(140%)',
-          WebkitBackdropFilter: 'blur(24px) saturate(140%)',
-          boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.7), inset 0 -1px 0 rgba(25,37,36,0.04), 0 4px 20px rgba(25,37,36,0.12)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          cursor: 'pointer', transition: 'transform 200ms cubic-bezier(0.16,1,0.3,1)',
-        }}
-        onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.05)'; }}
-        onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
-      >
-        <span style={{ fontFamily: 'var(--font-blog-display)', fontWeight: 700, fontSize: '1.5rem', color: 'var(--ink)' }}>$</span>
-      </button>
+      {/* ── Floating corner stack: Contract + Pricing ─────────────────────── */}
+      <div style={{
+        position: 'fixed', bottom: '5.25rem', right: '0.75rem', zIndex: 200,
+        display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8,
+      }}>
+        <button
+          onClick={() => navigate('/contract')}
+          aria-label="Draft a contract"
+          title="Draft a contract"
+          style={{
+            display: 'flex', alignItems: 'center', gap: 6,
+            height: 40, padding: '0 14px', borderRadius: 9999,
+            border: '1px solid rgba(255,255,255,0.75)',
+            background: 'rgba(255,255,255,0.72)',
+            backdropFilter: 'blur(24px) saturate(140%)',
+            WebkitBackdropFilter: 'blur(24px) saturate(140%)',
+            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.7), inset 0 -1px 0 rgba(25,37,36,0.04), 0 4px 20px rgba(25,37,36,0.12)',
+            cursor: 'pointer', fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 12.5,
+            color: 'var(--ink)', transition: 'transform 200ms cubic-bezier(0.16,1,0.3,1)',
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.04)'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/>
+          </svg>
+          Contract
+        </button>
+
+        <button
+          onClick={() => setPricingToolOpen(true)}
+          aria-label="What does a collab cost?"
+          title="What does a collab cost?"
+          style={{
+            width: 40, height: 40, borderRadius: '50%',
+            border: '1px solid rgba(255,255,255,0.75)',
+            background: 'rgba(255,255,255,0.72)',
+            backdropFilter: 'blur(24px) saturate(140%)',
+            WebkitBackdropFilter: 'blur(24px) saturate(140%)',
+            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.7), inset 0 -1px 0 rgba(25,37,36,0.04), 0 4px 20px rgba(25,37,36,0.12)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer', transition: 'transform 200ms cubic-bezier(0.16,1,0.3,1)',
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.05)'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
+        >
+          <span style={{ fontFamily: 'var(--font-blog-display)', fontWeight: 700, fontSize: '1.05rem', color: 'var(--ink)' }}>$</span>
+        </button>
+      </div>
 
       {pricingToolOpen && (
         <div

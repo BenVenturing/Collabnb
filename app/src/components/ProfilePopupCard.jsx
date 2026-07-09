@@ -103,7 +103,7 @@ export default function ProfilePopupCard({ person, onClose, onMessage, onViewLis
         style={{
           position: 'relative',
           width: '100%', maxWidth: 480,
-          maxHeight: '88dvh', overflowY: 'auto',
+          maxHeight: '88dvh',
           background: 'rgba(255,255,255,0.97)',
           backdropFilter: 'blur(28px) saturate(140%)',
           WebkitBackdropFilter: 'blur(28px) saturate(140%)',
@@ -111,7 +111,7 @@ export default function ProfilePopupCard({ person, onClose, onMessage, onViewLis
           border: '1.5px solid rgba(255,255,255,0.92)',
           boxShadow: '0 28px 90px rgba(25,37,36,0.22), 0 0 0 1px rgba(25,37,36,0.05)',
           animation: 'profilePopupEnter 300ms cubic-bezier(0.25,1,0.5,1) both',
-          scrollbarWidth: 'none',
+          overflow: 'hidden',
         }}
       >
 
@@ -135,6 +135,16 @@ export default function ProfilePopupCard({ person, onClose, onMessage, onViewLis
             <path d="M1 1L9 9M9 1L1 9" stroke="#3C5759" strokeWidth="1.8" strokeLinecap="round"/>
           </svg>
         </button>
+
+        {/* Inner scroll wrapper. The OUTER card holds the border-radius +
+            overflow:hidden so it clips this scroller's content to the
+            rounded corners at every scroll position. This scroller itself
+            must stay rectangular — putting border-radius on the same
+            element as overflow:auto lets WebKit paint content past the
+            corner in mid-scroll. */}
+        <div style={{
+          maxHeight: '100%', overflowY: 'auto', scrollbarWidth: 'none',
+        }}>
 
         {/* ── Hero header ───────────────────────────────────────────────────── */}
         <div style={{
@@ -353,6 +363,7 @@ export default function ProfilePopupCard({ person, onClose, onMessage, onViewLis
             <IconMessage />
             Message {person.name?.split(' ')[0]}
           </button>
+        </div>
         </div>
       </div>
     </div>

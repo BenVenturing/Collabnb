@@ -12,7 +12,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useAccessGate, PendingApprovalScreen, LimitedAccessScreen, TrialBanner } from '../components/AccessGate';
 import { WhereSearchContent, WhatSearchContent, WhenSearchContent, useAnimatedPlaceholder } from '../components/SearchDropdowns';
 import SkeletonCard from '../components/SkeletonCard';
-import PricingTool from '../components/PricingTool';
+import PricingTool, { PointsHelpButton } from '../components/PricingTool';
 import { cache } from '../lib/cache';
 import { buildCreatorContext, scoreListings, MATCH_BADGE_THRESHOLD, FOR_YOU_MIN_SCORE, NEAR_ME_MIN_LOCATION } from '../lib/matchScore';
 
@@ -951,8 +951,8 @@ export default function Explore() {
         aria-label="What does a collab cost?"
         title="What does a collab cost?"
         style={{
-          position: 'fixed', bottom: '1.5rem', right: '1.5rem', zIndex: 200,
-          width: 48, height: 48, borderRadius: '50%',
+          position: 'fixed', bottom: '9.5rem', right: '1.5rem', zIndex: 200,
+          width: 56, height: 56, borderRadius: '50%',
           border: '1px solid rgba(255,255,255,0.75)',
           background: 'rgba(255,255,255,0.72)',
           backdropFilter: 'blur(24px) saturate(140%)',
@@ -964,7 +964,7 @@ export default function Explore() {
         onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.05)'; }}
         onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
       >
-        <span style={{ fontFamily: 'var(--font-blog-display)', fontWeight: 600, fontSize: '1.3rem', color: 'var(--ink)' }}>$</span>
+        <span style={{ fontFamily: 'var(--font-blog-display)', fontWeight: 700, fontSize: '1.5rem', color: 'var(--ink)' }}>$</span>
       </button>
 
       {pricingToolOpen && (
@@ -977,20 +977,22 @@ export default function Explore() {
           }}
         >
           <div style={{ width: '100%', maxWidth: 560, maxHeight: '88dvh', overflowY: 'auto', position: 'relative' }}>
-            <button
-              onClick={() => setPricingToolOpen(false)}
-              aria-label="Close"
-              style={{
-                position: 'absolute', top: 14, right: 14, zIndex: 1,
-                width: 32, height: 32, borderRadius: '50%', border: 'none',
-                background: 'rgba(25,37,36,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                cursor: 'pointer',
-              }}
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--slate)" strokeWidth="2.5" strokeLinecap="round">
-                <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-              </svg>
-            </button>
+            <div style={{ position: 'absolute', top: 14, right: 14, zIndex: 1, display: 'flex', gap: 6 }}>
+              <PointsHelpButton />
+              <button
+                onClick={() => setPricingToolOpen(false)}
+                aria-label="Close"
+                style={{
+                  width: 32, height: 32, borderRadius: '50%', border: 'none',
+                  background: 'rgba(25,37,36,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  cursor: 'pointer',
+                }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--slate)" strokeWidth="2.5" strokeLinecap="round">
+                  <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            </div>
             <PricingTool mode="sandbox" />
           </div>
         </div>

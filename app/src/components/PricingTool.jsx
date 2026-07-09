@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { Plus, Minus } from "lucide-react";
+import { Plus, Minus, HelpCircle } from "lucide-react";
 import {
   TIER_IDS, TIERS, DELIVERABLE_TYPES, DELIVERABLE_LABELS, DELIVERABLE_POINTS,
   PRESET_PACKAGES, LOAD_TIER_LABELS,
@@ -7,7 +7,9 @@ import {
   evaluateZone, computeLoadTier, isDeliverableAllowedForTier, findPackagesForBudget,
 } from "../../convex/lib/compensationPoints";
 
-const ZONE_COLORS = { red: "#BE7A5D", amber: "#D4A843", green: "#3C5759" };
+// Gradient endpoints drawn from the HAZY palette. The bar blends warm terracotta
+// (below floor) through sage (caution band) into deep teal (recommended range),
+// so the three pricing zones read as one continuous scale instead of flat blocks.
 const ZONE_COPY = {
   red: "Below the minimum for this workload — this can't be published as-is.",
   amber: "Below the recommended range for this workload.",
@@ -16,6 +18,93 @@ const ZONE_COPY = {
 
 function fmt(n) {
   return `$${Math.round(n).toLocaleString()}`;
+}
+
+// Small "?" popover: a simple table of deliverable increments, their point
+// values, and which creator tiers can produce each. Kept intentionally compact.
+export function PointsHelpTable({ open, onClose }) {
+  if (!open) return null;
+  return (
+    <div
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      style={{
+        position: "fixed", inset: 0, zIndex: 400,
+        background: "rgba(25,37,36,0.4)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
+        display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem",
+      }}
+    >
+      <div
+        style={{
+          width: "100%", maxWidth: 420, borderRadius: 14,
+          background: "var(--mint)", border: "1px solid rgba(25,37,36,0.12)",
+          boxShadow: "0 12px 40px rgba(25,37,36,0.2)", padding: 18, fontFamily: "var(--font-blog-body)",
+        }}
+      >
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+          <div style={{ fontFamily: "var(--font-blog-display)", fontWeight: 600, fontSize: 15, color: "var(--ink)" }}>
+            Points by deliverable & tier
+          </div>
+          <button
+            onClick={onClose}
+            aria-label="Close"
+            style={{ width: 24, height: 24, borderRadius: "50%", border: "none", background: "rgba(25,37,36,0.08)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+          >
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--slate)" strokeWidth="2.5" strokeLinecap="round">
+              <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
+        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+          <thead>
+            <tr style={{ color: "var(--sage)", textTransform: "uppercase", letterSpacing: "0.05em", fontSize: 10 }}>
+              <th style={{ textAlign: "left", fontWeight: 700, padding: "6px 4px", borderBottom: "1px solid rgba(25,37,36,0.12)" }}>Deliverable</th>
+              <th style={{ textAlign: "center", fontWeight: 700, padding: "6px 4px", borderBottom: "1px solid rgba(25,37,36,0.12)" }}>Pts</th>
+              <th style={{ textAlign: "left", fontWeight: 700, padding: "6px 4px", borderBottom: "1px solid rgba(25,37,36,0.12)" }}>Who can produce</th>
+            </tr>
+          </thead>
+          <tbody>
+            {DELIVERABLE_TYPES.map((type) => {
+              const allowed = TIER_IDS.filter((id) => isDeliverableAllowedForTier(type, id)).map((id) => TIERS[id].label);
+              return (
+                <tr key={type} style={{ color: "var(--ink)" }}>
+                  <td style={{ padding: "7px 4px", fontWeight: 600, borderBottom: "1px solid rgba(25,37,36,0.07)" }}>{DELIVERABLE_LABELS[type]}</td>
+                  <td style={{ padding: "7px 4px", textAlign: "center", fontWeight: 700, borderBottom: "1px solid rgba(25,37,36,0.07)" }}>{DELIVERABLE_POINTS[type]}</td>
+                  <td style={{ padding: "7px 4px", fontSize: 11, color: "var(--slate)", borderBottom: "1px solid rgba(25,37,36,0.07)" }}>
+                    {allowed.length === TIER_IDS.length ? "All tiers" : allowed.join(", ")}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+        <p style={{ fontSize: 11, color: "var(--sage)", marginTop: 10, lineHeight: 1.45 }}>
+          Cash = points × $/pt (set by tier) × complexity. Hybrid stays offset part of the cash.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// Self-contained "?" trigger + popover — drops next to the modal close "x".
+export function PointsHelpButton({ style }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button
+        onClick={() => setOpen(true)}
+        aria-label="How points work"
+        title="How points work"
+        style={{
+          width: 32, height: 32, borderRadius: "50%", border: "none",
+          background: "rgba(25,37,36,0.07)", display: "flex", alignItems: "center", justifyContent: "center",
+          cursor: "pointer", ...style,
+        }}
+      >
+        <HelpCircle size={16} color="var(--slate)" />
+      </button>
+      <PointsHelpTable open={open} onClose={() => setOpen(false)} />
+    </>
+  );
 }
 
 function Pill({ active, onClick, children, disabled }) {
@@ -70,7 +159,9 @@ function SegmentedToggle({ options, value, onChange }) {
   );
 }
 
-function Stepper({ label, points, quantity, onChange, disabled }) {
+function Stepper({ label, points, quantity, onChange, disabled, step = 1, min = 0, renderValue }) {
+  const dec = () => onChange(Math.max(min, quantity - step));
+  const inc = () => onChange(quantity + step);
   return (
     <div style={{
       display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10,
@@ -80,19 +171,21 @@ function Stepper({ label, points, quantity, onChange, disabled }) {
     }}>
       <div>
         <div style={{ fontFamily: "var(--font-blog-body)", fontSize: 13, fontWeight: 600, color: "var(--ink)" }}>{label}</div>
-        <div style={{ fontFamily: "var(--font-blog-body)", fontSize: 11, color: "var(--sage)" }}>{points} pt{points !== 1 ? "s" : ""} each</div>
+        {points > 0 && (
+          <div style={{ fontFamily: "var(--font-blog-body)", fontSize: 11, color: "var(--sage)" }}>{points} pt{points !== 1 ? "s" : ""} each</div>
+        )}
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
         <button
-          onClick={() => onChange(Math.max(0, quantity - 1))}
-          disabled={disabled || quantity <= 0}
+          onClick={dec}
+          disabled={disabled || quantity <= min}
           style={{ width: 26, height: 26, borderRadius: "50%", border: "1.5px solid var(--sage)", background: "transparent", display: "flex", alignItems: "center", justifyContent: "center", cursor: disabled ? "not-allowed" : "pointer" }}
         >
           <Minus size={12} color="var(--slate)" />
         </button>
-        <span style={{ minWidth: 18, textAlign: "center", fontFamily: "var(--font-blog-body)", fontWeight: 700, fontSize: 14, color: "var(--ink)" }}>{quantity}</span>
+        <span style={{ minWidth: 18, textAlign: "center", fontFamily: "var(--font-blog-body)", fontWeight: 700, fontSize: 14, color: "var(--ink)" }}>{renderValue ? renderValue(quantity) : quantity}</span>
         <button
-          onClick={() => onChange(quantity + 1)}
+          onClick={inc}
           disabled={disabled}
           style={{ width: 26, height: 26, borderRadius: "50%", border: "1.5px solid var(--ink)", background: "var(--ink)", display: "flex", alignItems: "center", justifyContent: "center", cursor: disabled ? "not-allowed" : "pointer" }}
         >
@@ -103,33 +196,61 @@ function Stepper({ label, points, quantity, onChange, disabled }) {
   );
 }
 
-// Horizontal red/amber/green scale with the hard floor and range always visible.
-function ThreeZoneScale({ hardFloor, warnThreshold, range, cashAmount }) {
+// Continuous gradient scale: terracotta (below floor) → sage (caution band) →
+// deep teal (recommended range). The hard floor and recommended range stay
+// labelled, and a median pin marks the recommended amount (rounded) inside the
+// range. The cash marker tracks wherever the host has landed.
+function ThreeZoneScale({ hardFloor, warnThreshold, range, cashAmount, midpoint }) {
   const upperBound = Math.max(range.high * 1.3, (cashAmount || 0) * 1.15, hardFloor * 2, 100);
   const pct = (n) => Math.max(0, Math.min(100, (n / upperBound) * 100));
-  const redW = pct(hardFloor);
-  const amberW = pct(warnThreshold) - redW;
-  const greenW = 100 - redW - amberW;
+  const floorP = pct(hardFloor);
+  const cautionP = pct(warnThreshold);
+  const rangeLowP = pct(range.low);
+  const rangeHighP = pct(range.high);
+  const medianP = pct(midpoint);
   const markerLeft = cashAmount ? pct(cashAmount) : null;
+
+  const recommended = Math.round(midpoint / 10) * 10;
 
   return (
     <div style={{ marginTop: 16 }}>
-      <div style={{ position: "relative", height: 10, borderRadius: 9999, overflow: "hidden", display: "flex" }}>
-        <div style={{ width: `${redW}%`, background: ZONE_COLORS.red }} />
-        <div style={{ width: `${amberW}%`, background: ZONE_COLORS.amber }} />
-        <div style={{ width: `${greenW}%`, background: ZONE_COLORS.green }} />
+      <div style={{ position: "relative", height: 10, borderRadius: 9999, overflow: "hidden" }}>
+        <div style={{
+          position: "absolute", inset: 0,
+          background: `linear-gradient(to right,
+            #BE7A5D 0%,
+            #BE7A5D ${floorP}%,
+            #D4A843 ${floorP}%,
+            #959D90 ${cautionP}%,
+            #3C5759 ${rangeLowP}%,
+            #192524 ${rangeHighP}%)`,
+        }} />
         {markerLeft !== null && (
           <div style={{
             position: "absolute", left: `${markerLeft}%`, top: -3, width: 3, height: 16,
-            background: "var(--ink)", borderRadius: 2, transform: "translateX(-50%)",
-            boxShadow: "0 0 0 2px rgba(255,255,255,0.9)",
+            background: "var(--mint)", borderRadius: 2, transform: "translateX(-50%)",
+            boxShadow: "0 0 0 2px rgba(255,255,255,0.95)",
           }} />
         )}
       </div>
-      <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6, fontFamily: "var(--font-blog-body)", fontSize: 10.5, color: "var(--sage)" }}>
-        <span>Floor {fmt(hardFloor)}</span>
-        <span>Warn {fmt(warnThreshold)}</span>
-        <span>Range {fmt(range.low)}–{fmt(range.high)}</span>
+
+      {/* median pin sits above the bar at the recommended amount */}
+      <div style={{ position: "relative", height: 0 }}>
+        <div style={{
+          position: "absolute", left: `${medianP}%`, top: -22, transform: "translateX(-50%)",
+          display: "flex", flexDirection: "column", alignItems: "center",
+        }}>
+          <span style={{ fontFamily: "var(--font-blog-body)", fontSize: 9.5, fontWeight: 700, color: "var(--ink)", whiteSpace: "nowrap" }}>
+            {fmt(recommended)}
+          </span>
+          <div style={{ width: 2, height: 14, background: "var(--ink)", marginTop: 1, borderRadius: 2 }} />
+        </div>
+      </div>
+
+      <div style={{ display: "flex", justifyContent: "space-between", marginTop: 10, fontFamily: "var(--font-blog-body)", fontSize: 10.5, color: "var(--sage)" }}>
+        <span>Minimal {fmt(hardFloor)}</span>
+        <span>Caution {fmt(warnThreshold)}</span>
+        <span>Recommended {fmt(range.low)}–{fmt(range.high)}</span>
       </div>
     </div>
   );
@@ -364,15 +485,30 @@ export default function PricingTool({ mode = "sandbox", initialValue, onChange }
           {/* Cash amount + math */}
           <div style={{ marginBottom: 8 }}>
             <div style={{ fontSize: 11.5, fontWeight: 700, color: "var(--sage)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>Cash compensation</div>
-            <div style={{ position: "relative", maxWidth: 160 }}>
-              <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 14, color: "var(--sage)" }}>$</span>
-              <input
-                type="number"
-                min={0}
-                value={cashAmount || ""}
-                onChange={(e) => setCashAmount(Number(e.target.value) || 0)}
-                style={{ width: "100%", padding: "10px 12px 10px 22px", borderRadius: 10, border: "1.5px solid rgba(25,37,36,0.15)", fontFamily: "var(--font-blog-body)", fontSize: 14, fontWeight: 600, color: "var(--ink)", outline: "none", boxSizing: "border-box" }}
-              />
+            <div style={{ display: "flex", gap: 12, alignItems: "stretch", flexWrap: "wrap" }}>
+              <div style={{ position: "relative", maxWidth: 160 }}>
+                <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 14, color: "var(--sage)" }}>$</span>
+                <input
+                  type="number"
+                  min={0}
+                  step={10}
+                  value={cashAmount || ""}
+                  onChange={(e) => setCashAmount(Number(e.target.value) || 0)}
+                  style={{ width: "100%", padding: "10px 12px 10px 22px", borderRadius: 10, border: "1.5px solid rgba(25,37,36,0.15)", fontFamily: "var(--font-blog-body)", fontSize: 14, fontWeight: 600, color: "var(--ink)", outline: "none", boxSizing: "border-box" }}
+                />
+              </div>
+              <div style={{ flex: "1 1 200px", minWidth: 200 }}>
+                <Stepper
+                  label="Adjust cash"
+                  points={0}
+                  quantity={cashAmount}
+                  step={10}
+                  min={0}
+                  disabled={false}
+                  onChange={(q) => setCashAmount(q)}
+                  renderValue={(q) => fmt(q)}
+                />
+              </div>
             </div>
           </div>
 
@@ -386,7 +522,7 @@ export default function PricingTool({ mode = "sandbox", initialValue, onChange }
                 {stayOffset > 0 && <> · stay offset {fmt(stayOffset)}</>}
               </p>
 
-              <ThreeZoneScale hardFloor={hardFloor} warnThreshold={warnThreshold} range={range} cashAmount={cashAmount} />
+              <ThreeZoneScale hardFloor={hardFloor} warnThreshold={warnThreshold} range={range} cashAmount={cashAmount} midpoint={midpoint} />
 
               {zone && zone !== "green" && (
                 <div style={{

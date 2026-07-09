@@ -143,23 +143,25 @@ async function render() {
 
   if (isGrowthPhase) {
     const countries = [...new Set(listings.map(l => l.location_country).filter(Boolean))];
-    root.innerHTML = renderStateB(stats, listings, countries, '');
 
-    const select = root.querySelector('#signup-country-filter');
-    if (select) {
-      select.addEventListener('change', async () => {
-        const country = select.value;
-        const filtered = country ? await getPublishedListingsPreview(country, 12) : listings;
-        root.innerHTML = renderStateB(stats, listings, countries, country);
-        root.querySelector('#signup-country-filter').value = country;
-        if (filtered.length) initCarouselAutoScroll(root);
-      });
-    }
+    const paintStateB = (activeCountry, scopedListings) => {
+      root.innerHTML = renderStateB(stats, scopedListings, countries, activeCountry);
+      const select = root.querySelector('#signup-country-filter');
+      if (select) {
+        select.addEventListener('change', async () => {
+          const country = select.value;
+          const filtered = country ? await getPublishedListingsPreview(country, 12) : listings;
+          paintStateB(country, filtered);
+        });
+      }
+      if (scopedListings.length) initCarouselAutoScroll(root);
+    };
+
+    paintStateB('', listings);
   } else {
     root.innerHTML = renderStateA(stats, role, listings);
+    initCarouselAutoScroll(root);
   }
-
-  initCarouselAutoScroll(root);
 }
 
 document.addEventListener('DOMContentLoaded', () => {

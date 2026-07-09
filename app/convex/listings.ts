@@ -249,6 +249,7 @@ export const getPublishedPreview = query({
           _id: l._id,
           title: l.title,
           image: withImg.image,
+          property_type: l.property_type,
           location_city: l.location_city,
           location_country: l.location_country,
           compensation: l.compensation,

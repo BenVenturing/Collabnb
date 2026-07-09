@@ -3,7 +3,7 @@ import { useQuery } from 'convex/react';
 import collabnbLogo from '../assets/collabnb-logo.png';
 import { api } from '../../convex/_generated/api';
 import { useAuth } from '../contexts/AuthContext';
-import { SAMPLE_LISTINGS, IMG_FALLBACK } from '../lib/mockData';
+import { IMG_FALLBACK } from '../lib/mockData';
 import GlobeCanvas, { countGlobeStats } from '../components/GlobeCanvas';
 
 // ─── Canvas confetti ──────────────────────────────────────────────────────────
@@ -160,7 +160,18 @@ function LockedCard({ listing }) {
 // ─── Main page ────────────────────────────────────────────────────────────────
 export default function WaitlistPreview() {
   const { profile, signOut } = useAuth();
-  const previewListings = SAMPLE_LISTINGS.slice(0, 6);
+  const publishedPreview = useQuery(api.listings.getPublishedPreview, { limit: 6 });
+  const previewListings = (publishedPreview || []).map((l) => ({
+    id: l._id,
+    image: l.image,
+    property_type: l.property_type,
+    title: l.title,
+    location: [l.location_city, l.location_country].filter(Boolean).join(', '),
+    compensation:
+      typeof l.cash_amount === 'number' && l.cash_amount > 0
+        ? `${l.currency && l.currency !== 'USD' ? l.currency + ' ' : '$'}${l.cash_amount.toLocaleString()}${l.compensation_type === 'hybrid' ? ' + stay' : ''}`
+        : l.compensation || '',
+  }));
 
   // Reactively watch for approval — reloads the page the moment admin approves
   const liveProfile = useQuery(

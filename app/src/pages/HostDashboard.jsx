@@ -7,6 +7,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useListingDraft } from '../contexts/ListingDraftContext';
 import { SAMPLE_LISTINGS, IMG_FALLBACK } from '../lib/mockData';
 import SkeletonCard from '../components/SkeletonCard';
+import PricingTool, { PointsHelpButton } from '../components/PricingTool';
 import { cache } from '../lib/cache';
 
 const EXPLORE_CACHE_KEY = 'explore_listings_all';
@@ -621,6 +622,7 @@ export default function HostDashboard() {
   const [filter, setFilter] = useState('all');
   const [glowState, setGlowState] = useState('idle');
   const [expandedChart, setExpandedChart] = useState(null);
+  const [pricingToolOpen, setPricingToolOpen] = useState(false);
   const [dismissed, setDismissed] = useState(() => getDismissed());
   const [chartsAnimated, setChartsAnimated] = useState(false);
   const [listingStatuses, setListingStatuses] = useState(() => {
@@ -1054,6 +1056,64 @@ export default function HostDashboard() {
 
     {expandedChart && (
       <ExpandedChartModal cardKey={expandedChart} onClose={() => setExpandedChart(null)} stats={hostStats} chartData={hostChartData} />
+    )}
+
+    {/* ── Floating pricing tool widget (see collab cost before creating a listing) ── */}
+    <button
+      onClick={() => setPricingToolOpen(true)}
+      aria-label="What does a collab cost?"
+      title="What does a collab cost?"
+      style={{
+        position: 'fixed', bottom: '5.5rem', right: '1.5rem', zIndex: 200,
+        display: 'flex', alignItems: 'center', gap: 6,
+        height: 40, padding: '0 14px', borderRadius: 9999,
+        border: '1px solid rgba(255,255,255,0.75)',
+        background: 'rgba(255,255,255,0.72)',
+        backdropFilter: 'blur(24px) saturate(140%)',
+        WebkitBackdropFilter: 'blur(24px) saturate(140%)',
+        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.7), inset 0 -1px 0 rgba(25,37,36,0.04), 0 4px 20px rgba(25,37,36,0.12)',
+        cursor: 'pointer', fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 12.5,
+        color: 'var(--ink)', transition: 'transform 200ms cubic-bezier(0.16,1,0.3,1)',
+      }}
+      onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.04)'; }}
+      onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
+    >
+      <span style={{ fontFamily: 'var(--font-blog-display)', fontWeight: 700, fontSize: '1rem', color: 'var(--ink)', lineHeight: 1 }}>$</span>
+      Pricing
+    </button>
+
+    {pricingToolOpen && (
+      <div
+        onClick={(e) => { if (e.target === e.currentTarget) setPricingToolOpen(false); }}
+        style={{
+          position: 'fixed', inset: 0, zIndex: 1000,
+          background: 'rgba(25,37,36,0.4)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem 1rem',
+        }}
+      >
+        <div style={{ position: 'relative', width: '100%', maxWidth: 560, maxHeight: '86dvh', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ position: 'absolute', top: 14, right: 14, zIndex: 2, display: 'flex', gap: 6 }}>
+            <PointsHelpButton />
+            <button
+              onClick={() => setPricingToolOpen(false)}
+              aria-label="Close"
+              style={{
+                width: 32, height: 32, borderRadius: '50%', border: 'none',
+                background: 'rgba(25,37,36,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer',
+              }}
+            >
+              <X size={14} color="var(--slate)" strokeWidth={2.5} />
+            </button>
+          </div>
+          <div style={{
+            flex: 1, minHeight: 0, overflowY: 'auto', borderRadius: '1.25rem',
+            boxShadow: '0 24px 50px -12px rgba(25,37,36,0.35)',
+          }}>
+            <PricingTool mode="sandbox" />
+          </div>
+        </div>
+      </div>
     )}
     </>
   );

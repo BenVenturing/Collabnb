@@ -1,4 +1,6 @@
-export default function HeroSection({ spotsRemaining, isFoundingFull, founderCreatorCount, founderHostCount }) {
+export default function HeroSection({ spotsRemaining, isFoundingFull, founderCreatorCount, founderHostCount, marketplaceStats, marketplaceThreshold = 10 }) {
+  const showMarketplaceLine = marketplaceStats && marketplaceStats.totalPublishedListings >= marketplaceThreshold;
+
   return (
     <section className="text-left max-w-7xl mx-auto px-4 md:px-8 pt-28 pb-12">
       <span className="eyebrow mb-6 inline-flex">
@@ -28,6 +30,12 @@ export default function HeroSection({ spotsRemaining, isFoundingFull, founderCre
             <span className="text-lg">{founderHostCount}</span><span className="text-sage font-normal"> / 100 hosts</span>
           </div>
         </div>
+      )}
+
+      {showMarketplaceLine && (
+        <p className="text-sage text-sm mt-4">
+          {marketplaceStats.totalPublishedListings} active listings across {marketplaceStats.totalCountries} countries
+        </p>
       )}
 
       {isFoundingFull && (

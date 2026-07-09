@@ -1237,6 +1237,141 @@ h3 { font-weight: 700; }
   text-align: center;
 }
 
+/* --- JOIN HERO GRID (form + social proof sidebar) --- */
+.join-hero-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-12);
+  align-items: start;
+}
+.join-hero-main { min-width: 0; }
+@media (min-width: 900px) {
+  .join-hero-grid {
+    grid-template-columns: 1.15fr 0.85fr;
+    text-align: left;
+  }
+  .join-hero-main { text-align: center; }
+}
+
+/* --- SIGNUP SOCIAL PROOF PANEL --- */
+.signup-panel {
+  background: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(24px) saturate(140%);
+  -webkit-backdrop-filter: blur(24px) saturate(140%);
+  border: 0.5px solid var(--stone);
+  border-radius: 1rem;
+  padding: var(--space-6);
+  text-align: left;
+  min-height: 120px;
+}
+.signup-panel-headline {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.25rem;
+  color: var(--ink);
+  line-height: 1.2;
+  margin: 0 0 var(--space-4);
+}
+.signup-panel-spots {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  font-size: var(--fs-sm);
+  color: var(--slate);
+  font-weight: 600;
+  margin-bottom: var(--space-2);
+}
+.signup-panel-bar {
+  width: 100%;
+  height: 6px;
+  background: var(--stone);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: var(--space-6);
+}
+.signup-panel-bar-fill {
+  height: 100%;
+  background: var(--slate);
+  border-radius: 3px;
+  transition: width 1200ms var(--ease-out-quart);
+  width: 0%;
+}
+.signup-panel-select {
+  width: 100%;
+  margin-top: var(--space-4);
+  padding: 0.65rem 0.85rem;
+  border-radius: 0.75rem;
+  border: 1.5px solid var(--stone);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+}
+.signup-panel-select-label {
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--sage);
+  margin-top: var(--space-4);
+  display: block;
+}
+
+/* Vertical auto-scrolling carousel of listing hero images */
+.signup-carousel {
+  position: relative;
+  height: 260px;
+  border-radius: 0.75rem;
+  overflow: hidden;
+  background: var(--stone);
+}
+.signup-carousel-track {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  scroll-snap-type: y mandatory;
+  scrollbar-width: none;
+}
+.signup-carousel-track::-webkit-scrollbar { display: none; }
+.signup-carousel-slide {
+  position: relative;
+  width: 100%;
+  height: 260px;
+  scroll-snap-align: start;
+  flex-shrink: 0;
+}
+.signup-carousel-slide img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.signup-carousel-slide-label {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: var(--space-6) var(--space-4) var(--space-3);
+  background: linear-gradient(to top, rgba(25,37,36,0.6), transparent);
+  color: #fff;
+}
+.signup-carousel-slide-label span {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.95rem;
+  letter-spacing: -0.01em;
+}
+.signup-panel-empty {
+  font-size: var(--fs-sm);
+  color: var(--sage);
+  padding: var(--space-4) 0;
+}
+@media (max-width: 899px) {
+  .signup-panel { order: -1; }
+}
+
+
 /* Role toggle */
 .role-toggle {
   display: inline-flex;

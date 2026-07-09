@@ -225,6 +225,44 @@ export const getById = query({
   },
 });
 
+// Public, unauthenticated preview of published listings for marketing
+// surfaces (signup sidebar carousel, How it works "Browse opportunities").
+// Deliberately thin — never includes about/requirements/host contact info,
+// since these visitors haven't passed the verification gate.
+export const getPublishedPreview = query({
+  args: { country: v.optional(v.string()), limit: v.optional(v.number()) },
+  handler: async (ctx, { country, limit }) => {
+    const all = await ctx.db.query("listings").collect();
+    let published = all.filter(
+      (l: any) => l.status === "published" && !l.is_sample && !l.needs_compensation_review
+    );
+    if (country) {
+      published = published.filter((l: any) => l.location_country === country);
+    }
+    published.sort((a: any, b: any) => b._creationTime - a._creationTime);
+    const capped = published.slice(0, limit ?? 20);
+
+    return Promise.all(
+      capped.map(async (l: any) => {
+        const withImg = await withImages(ctx, l);
+        return {
+          _id: l._id,
+          title: l.title,
+          image: withImg.image,
+          location_city: l.location_city,
+          location_country: l.location_country,
+          compensation: l.compensation,
+          compensation_type: l.compensation_type,
+          cash_amount: l.cash_amount,
+          currency: l.currency,
+          creator_tier: l.creator_tier,
+          deliverable_load: l.deliverable_load,
+        };
+      })
+    );
+  },
+});
+
 export const getByLocation = query({
   args: { location: v.string() },
   handler: async (ctx, args) => {

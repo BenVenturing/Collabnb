@@ -80,7 +80,8 @@
 
     <!-- ── JOIN HERO ── -->
     <section class="join-hero section-lg" aria-labelledby="join-h1">
-      <div class="container" style="text-align:center;">
+      <div class="container join-hero-grid">
+        <div class="join-hero-main">
         <span class="eyebrow-tag reveal" style="justify-content:center;">Early access · Launching July 15</span>
         <h1 id="join-h1" class="display reveal"
           style="font-size:var(--fs-h2);margin-top:1.25rem;transition-delay:60ms;">Join the Collabnb waitlist.</h1>
@@ -118,7 +119,10 @@
             Become a Founder →
           </button>
         </div>
+        </div>
 
+        <!-- Social proof sidebar — populated by scripts/signup-panel.js -->
+        <div id="signup-panel" class="signup-panel reveal" aria-live="polite"></div>
       </div>
     </section>
 
@@ -470,6 +474,7 @@
 </div>
 
 <script type="module" src="/scripts/main.js"></script>
+<script type="module" src="/scripts/signup-panel.js"></script>
   <script>
     // Join page: sync page role toggles with modal role
     document.querySelectorAll('#page-role-creator, #page-role-host').forEach(btn => {

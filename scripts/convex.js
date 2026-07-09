@@ -107,6 +107,28 @@ export async function getMessagesByEmail(email) {
   }
 }
 
+// ── Live marketplace stats (signup sidebar, How it works, pricing counters) ──
+export async function getMarketplaceStats() {
+  try {
+    return await client.query('marketplaceStats:getStats');
+  } catch (err) {
+    console.warn('getMarketplaceStats failed:', err.message);
+    return null;
+  }
+}
+
+export async function getPublishedListingsPreview(country, limit) {
+  try {
+    const args = {};
+    if (country) args.country = country;
+    if (limit) args.limit = limit;
+    return await client.query('listings:getPublishedPreview', args);
+  } catch (err) {
+    console.warn('getPublishedListingsPreview failed:', err.message);
+    return [];
+  }
+}
+
 // ── FAQ bubble: Suggestions tab ──
 export async function getSuggestions(userId) {
   try {

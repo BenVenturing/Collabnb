@@ -118,6 +118,10 @@ export default function ContractBuilder() {
     return '';
   });
 
+  // Structured cash-only value backing the platform fee — single source of
+  // truth over parsing the free-text `payment` display string.
+  const cashValue = form.isFreeStay ? 0 : (parseFloat(form.paymentAmount) || 0);
+
   // ── Auto-save state ──
   const [saveStatus, setSaveStatus] = useState('idle'); // 'idle' | 'saving' | 'saved'
   const autoSaveTimer = useRef(null);
@@ -211,6 +215,7 @@ export default function ContractBuilder() {
         deliverables: form.deliverables,
         currency: form.isFreeStay ? FREE_STAY_VALUE : form.currency,
         payment: form.isFreeStay ? 'Free Stay' : (form.currency && form.paymentAmount ? `${form.currency} ${form.paymentAmount}` : ''),
+        cash_value: cashValue,
         usage_rights: USAGE_RIGHTS.find((u) => u.value === form.usageRights)?.label || form.usageRights,
         summary_note: summaryNote,
         status,
@@ -296,6 +301,7 @@ export default function ContractBuilder() {
     deliverables: form.deliverables,
     currency: form.isFreeStay ? FREE_STAY_VALUE : form.currency,
     payment: computePaymentDisplay(),
+    cash_value: cashValue,
     usage_rights: computeUsageDisplay(),
     summary_note: summaryNote,
     status,
@@ -974,9 +980,9 @@ export default function ContractBuilder() {
       <PaymentModal
         isOpen={showPaymentModal}
         onClose={() => setShowPaymentModal(false)}
-        fee={form.isFreeStay ? 20 : Math.max((parseFloat(form.paymentAmount) || 0) * 0.05, 20)}
+        fee={form.isFreeStay || cashValue < 500 ? 20 : cashValue * 0.05}
         isFreeStay={form.isFreeStay}
-        cashAmount={parseFloat(form.paymentAmount) || 0}
+        cashAmount={cashValue}
         contractId={editingId || 'draft'}
       />
 

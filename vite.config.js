@@ -11,6 +11,7 @@ export default defineConfig({
       input: {
         main: resolve(__dirname, 'index.html'),
         about: resolve(__dirname, 'about.html'),
+        appPreview: resolve(__dirname, 'app-preview.html'),
         how: resolve(__dirname, 'how-it-works.html'),
         faq: resolve(__dirname, 'faq.html'),
         join: resolve(__dirname, 'join.html'),
@@ -27,6 +28,11 @@ export default defineConfig({
     watch: {
       // The app has its own dev server; build outputs shouldn't trigger reloads here.
       ignored: ['**/app/**', '**/dist/**'],
+    },
+    proxy: {
+      // Mirrors the /blog -> /app/index.html rewrite in vercel.json for local dev.
+      // Requires the app's dev server running on port 5174 (cd app && npm run dev).
+      '/blog': 'http://localhost:5174',
     },
   },
 });

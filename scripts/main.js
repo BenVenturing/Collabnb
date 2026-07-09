@@ -3,6 +3,9 @@
    ============================================================ */
 
 import { getProfileCounts, waitlistSignUp, updateWaitlistProfile } from './convex.js';
+import { initFAQBubble } from './faq-bubble.js';
+
+initFAQBubble();
 
 const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL;
 let signedUpName = '';
@@ -133,6 +136,28 @@ if (hamburger) {
       setTimeout(() => { _orientationLocked = false; }, 500);
     }
   });
+
+  // "More" accordion inside the mobile nav overlay
+  const moreToggle = document.querySelector('.nav-overlay-more-toggle');
+  const moreMenu = document.querySelector('.nav-overlay-more-menu');
+  if (moreToggle && moreMenu) {
+    moreToggle.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isOpen = moreMenu.classList.toggle('open');
+      moreToggle.setAttribute('aria-expanded', isOpen);
+    });
+  }
+
+  // Mobile overlay Login button closes the overlay before the login modal opens
+  const overlayLogin = document.querySelector('.nav-overlay-login');
+  if (overlayLogin && hamburger && navOverlay) {
+    overlayLogin.addEventListener('click', () => {
+      hamburger.classList.remove('open');
+      navOverlay.classList.remove('open');
+      hamburger.setAttribute('aria-expanded', 'false');
+      document.body.style.overflow = '';
+    });
+  }
 
   // Close on Escape
   document.addEventListener('keydown', (e) => {
@@ -1322,7 +1347,7 @@ async function initNavAuth() {
       overlayCta.removeAttribute('data-modal');
     }
 
-    // Replace page-body "Join the Waitlist" buttons with profile links
+    // Replace page-body "Become a Founder" buttons with profile links
     document.querySelectorAll('.btn-open-modal').forEach(btn => {
       if (!btn.classList.contains('btn-primary')) return;
 

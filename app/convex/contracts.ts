@@ -48,6 +48,7 @@ export const save = mutation({
     deliverables: v.optional(v.string()),
     currency: v.optional(v.string()),
     payment: v.optional(v.string()),
+    cashValue: v.optional(v.number()),
     usageRights: v.optional(v.string()),
     status: v.string(),
     creatorSigned: v.optional(v.boolean()),
@@ -67,6 +68,7 @@ export const save = mutation({
       deliverables: args.deliverables,
       currency: args.currency,
       payment: args.payment,
+      cash_value: args.cashValue,
       usage_rights: args.usageRights,
       status: args.status,
       creator_signed: args.creatorSigned,
@@ -90,6 +92,7 @@ export const update = mutation({
       deliverables: v.optional(v.string()),
       currency: v.optional(v.string()),
       payment: v.optional(v.string()),
+      cash_value: v.optional(v.number()),
       usage_rights: v.optional(v.string()),
       status: v.optional(v.string()),
       creator_signed: v.optional(v.boolean()),
@@ -473,21 +476,34 @@ export const recordPaymentInternal = internalMutation({
     }
 
     const propertyLabel = (contract as any).property_name || (contract as any).location || "your collab";
+    const cashValue = parseFloat(String((contract as any).payment ?? "").replace(/[^0-9.]/g, "")) || 0;
+    const feeMethod = cashValue >= 500 ? `5% of $${cashValue.toFixed(0)}` : "flat $20 fee";
 
-    for (const party of ["host", "creator"] as const) {
-      await notifyParty(ctx, contract, party, {
-        type: "contract_paid",
-        title: "Payment confirmed 💸",
-        body: `Payment for the ${propertyLabel} contract is confirmed. The collab is good to go.`,
-        email: {
-          subject: "Payment confirmed for your Collabnb contract",
-          heading: "You're all set, {name} 💸",
-          message: `Payment for the <strong>${propertyLabel}</strong> contract has been confirmed. Everything's in place to move forward with the collab.`,
-          calloutLabel: "What's next",
-          calloutText: "Coordinate the remaining details with your collaborator in Collabnb.",
-        },
-      });
-    }
+    await notifyParty(ctx, contract, "creator", {
+      type: "contract_paid",
+      title: "Collaboration wrapped 🎉",
+      body: `The ${propertyLabel} collaboration is complete and the platform fee has been settled.`,
+      email: {
+        subject: "Your Collabnb collaboration is complete",
+        heading: "All wrapped up, {name} 🎉",
+        message: `The <strong>${propertyLabel}</strong> collaboration is officially complete — the platform fee has been settled on the host's end. There's nothing left for you to do here.`,
+        calloutLabel: "What's next",
+        calloutText: "Coordinate any remaining details with your collaborator in Collabnb.",
+      },
+    });
+
+    await notifyParty(ctx, contract, "host", {
+      type: "contract_paid",
+      title: "Fee receipt 💸",
+      body: `Platform fee of $${args.paymentAmount.toFixed(2)} charged for the completed ${propertyLabel} collaboration.`,
+      email: {
+        subject: "Receipt: Collabnb platform fee charged",
+        heading: "Collaboration complete, {name} 💸",
+        message: `Your <strong>${propertyLabel}</strong> collaboration is marked complete and the Collabnb platform fee has been charged to your card on file.`,
+        calloutLabel: "Receipt",
+        calloutText: `Amount charged: $${args.paymentAmount.toFixed(2)} (${feeMethod}). This is Collabnb's platform fee for the completed collaboration — not a charge from your collaborator.`,
+      },
+    });
   },
 });
 

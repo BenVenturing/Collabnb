@@ -2,6 +2,7 @@ import { action, internalAction } from './_generated/server';
 import { api, internal } from './_generated/api';
 import { v } from 'convex/values';
 import Stripe from 'stripe';
+import { computeFee } from './fees';
 
 // Tiered lifetime pricing — price rises as more spots are purchased.
 // First 50 buyers: $100, next 50: $125, next 50: $150, final 50: $200.
@@ -15,13 +16,17 @@ function getLifetimeTier(count) {
 }
 
 // Single source of truth for the platform fee. Always derived from the stored
-// contract — client-supplied amounts are never trusted. Mirrors the computeFee
-// pure function in fees.ts so all fee logic changes in one place.
+// contract — client-supplied amounts are never trusted. Delegates the actual
+// math to fees.ts's computeFee so there's exactly one place fee rules live.
+// Prefers the structured cash_value field; falls back to parsing the legacy
+// free-text `payment` string for contracts created before cash_value existed.
 function computeContractFee(contract) {
-  const cash = parseFloat(String(contract.payment ?? '').replace(/[^0-9.]/g, '')) || 0;
-  const safeCash = Math.max(0, Math.round(cash * 100) / 100);
-  const fee = safeCash < 500 ? 20 : Math.round(safeCash * 0.05 * 100) / 100;
-  return { cash: safeCash, fee, isFreeStay: false };
+  const isFreeStay = contract.payment === 'Free Stay' || contract.currency === 'free_stay';
+  const cash = typeof contract.cash_value === 'number'
+    ? contract.cash_value
+    : (parseFloat(String(contract.payment ?? '').replace(/[^0-9.]/g, '')) || 0);
+  const { fee, basis } = computeFee({ cashValue: isFreeStay ? 0 : cash });
+  return { cash: basis, fee, isFreeStay };
 }
 
 // One-time Checkout for host platform fee.
@@ -92,7 +97,7 @@ export const createSubscriptionSession = action({
         price_data: {
           currency: 'usd',
           product_data: {
-            name: `Collabnb Pro — ${isYearly ? 'Annual' : 'Monthly'}`,
+            name: `Creator Plus — ${isYearly ? 'Annual' : 'Monthly'}`,
             description: isYearly ? '$60/year — save 50% vs monthly' : '$10/month — cancel anytime',
           },
           unit_amount: isYearly ? 6000 : 1000,
@@ -360,9 +365,7 @@ export const chargeContractFee = internalAction({
     // Prefer the fee captured at signing; otherwise recompute from the contract.
     let fee = contract.fee_amount;
     if (!fee || fee <= 0) {
-      const isFreeStay = contract.payment === 'Free Stay' || contract.currency === 'free_stay';
-      const cash = parseFloat(String(contract.payment ?? '').replace(/[^0-9.]/g, '')) || 0;
-      fee = isFreeStay ? 20 : Math.max(cash * 0.05, 20);
+      fee = computeContractFee(contract).fee;
     }
     const amountInCents = Math.round(fee * 100);
 

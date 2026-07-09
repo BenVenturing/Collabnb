@@ -69,6 +69,21 @@ export const create = mutation({
     threadKey: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    // Server-side access gate — mirrors the canViewFull rule in listings.ts.
+    // The UI hides Apply for locked-out creators, but that's bypassable via a
+    // direct mutation call, so it must also be enforced here.
+    const creator = await ctx.db.get(args.creatorId as any);
+    if (creator && (creator as any).role === "creator" && !(creator as any).is_admin) {
+      if ((creator as any).is_verified !== true) {
+        throw new Error("Your account must be verified before you can apply to listings.");
+      }
+      const isFounder = (creator as any).is_founder === true;
+      const state = (creator as any).access_state ?? "active";
+      if (!(isFounder || state === "trial" || state === "active")) {
+        throw new Error("Your trial has ended — subscribe to Creator Plus to keep applying to listings.");
+      }
+    }
+
     // Prevent duplicate applications (same creator + listing)
     const existing = await ctx.db
       .query("pitches")

@@ -1225,7 +1225,7 @@ export default function ListingDetail({ previewListing = null, preview = false }
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginBottom: '1rem' }}>
               {[
                 { label: listing.creator_tier, bg: 'rgba(25,37,36,0.07)', color: 'var(--slate)' },
-                { label: listing.compensation, bg: listing.compensation_type === 'cash' ? 'rgba(209,235,219,0.8)' : 'rgba(25,37,36,0.07)', color: listing.compensation_type === 'cash' ? '#2d6a4f' : 'var(--slate)' },
+                { label: listing.compensation, bg: listing.compensation_type === 'paid' ? 'rgba(209,235,219,0.8)' : 'rgba(25,37,36,0.07)', color: listing.compensation_type === 'paid' ? '#2d6a4f' : 'var(--slate)' },
                 { label: `${listing.deliverable_load} Load`, bg: loadStyle.bg, color: loadStyle.text },
                 { label: `Due in ${listing.due_days} days`, bg: 'rgba(255,220,210,0.7)', color: '#8b3a00' },
               ].map(({ label, bg, color }) => (
@@ -1568,7 +1568,7 @@ export default function ListingDetail({ previewListing = null, preview = false }
         }}>
           <div>
             <p style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.2rem', color: 'var(--ink)', lineHeight: 1.1 }}>
-              {listing.compensation_type === 'cash' ? `$${listing.cash_amount}` : 'Free stay'}
+              {listing.compensation_type === 'paid' ? `$${listing.cash_amount}` : `$${listing.cash_amount} + Stay`}
             </p>
             <p style={{ fontSize: '0.75rem', color: 'var(--sage)' }}>{listing.deliverable_count} deliverables</p>
           </div>

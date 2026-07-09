@@ -115,7 +115,7 @@ export const getAll = query({
     // Redact sensitive fields for unapproved / limited creators
     return filtered.map((l: any) => ({
       ...l,
-      title: l.title,
+      title: undefined,
       subtitle: undefined,
       about: undefined,
       collaboration_brief: undefined,
@@ -191,6 +191,7 @@ export const getById = query({
 
     return {
       ...full,
+      title: undefined,
       subtitle: undefined,
       about: undefined,
       collaboration_brief: undefined,

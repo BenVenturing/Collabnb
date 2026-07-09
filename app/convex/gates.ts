@@ -326,6 +326,12 @@ export const expireTrials = internalMutation({
         read: false,
         created_at: now,
       });
+      if (p.email) {
+        await ctx.scheduler.runAfter(0, internal.emails.sendTrialEndedEmail, {
+          email: p.email,
+          full_name: p.full_name,
+        });
+      }
     }
     return { expired: expired.length };
   },

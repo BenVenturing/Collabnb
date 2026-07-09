@@ -330,7 +330,7 @@ export function WhatSearchContent({ whatVal, setWhatVal, onClose, typeQuery = ''
     const type = parts.find((p) => COLLAB_TYPES.some((ct) => ct.label === p)) || '';
     const delMatch = parts.find((p) => /\d+\s*deliverable/i.test(p));
     const deliverables = delMatch ? delMatch.match(/(\d+)/)?.[1] || '' : '';
-    const freeStay = parts.some((p) => p === 'Free stay');
+    const freeStay = parts.some((p) => p === 'Hybrid');
     const nightMatch = parts.find((p) => /\d+\s*nights?/i.test(p));
     const nights = nightMatch ? nightMatch.match(/(\d+)/)?.[1] || '' : '';
     const valueMatch = parts.find((p) => p.startsWith('$'));
@@ -349,7 +349,7 @@ export function WhatSearchContent({ whatVal, setWhatVal, onClose, typeQuery = ''
     const parts = [];
     if (newType) parts.push(newType);
     if (newDel) parts.push(`${newDel} deliverables`);
-    if (newFreeStay) parts.push('Free stay');
+    if (newFreeStay) parts.push('Hybrid');
     if (newFreeStay && newNights) parts.push(`${newNights} nights`);
     if (!newFreeStay && newValue) parts.push(`$${newValue}`);
     setWhatVal(parts.join(' · '));
@@ -462,14 +462,14 @@ export function WhatSearchContent({ whatVal, setWhatVal, onClose, typeQuery = ''
           Earnings
         </p>
 
-        {/* Free stay toggle */}
+        {/* Paid / Hybrid toggle */}
         <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
-          {['Paid', 'Free stay'].map((opt) => {
-            const active = opt === 'Free stay' ? freeStay : !freeStay;
+          {['Paid', 'Hybrid'].map((opt) => {
+            const active = opt === 'Hybrid' ? freeStay : !freeStay;
             return (
               <button
                 key={opt}
-                onClick={() => handleFreeStayToggle(opt === 'Free stay')}
+                onClick={() => handleFreeStayToggle(opt === 'Hybrid')}
                 style={{
                   flex: 1, padding: '0.5rem', borderRadius: '0.75rem', cursor: 'pointer',
                   border: '1px solid',

@@ -190,6 +190,9 @@ export default defineSchema({
     deliverables: v.optional(v.string()),
     currency: v.optional(v.string()),
     payment: v.optional(v.string()),
+    // Structured cash-only contract value backing fee calculation — the source
+    // of truth over parsing `payment`'s free-text display string.
+    cash_value: v.optional(v.number()),
     usage_rights: v.optional(v.string()),
     status: v.string(),
     creator_signed: v.optional(v.boolean()),

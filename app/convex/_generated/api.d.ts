@@ -20,6 +20,7 @@ import type * as emails from "../emails.js";
 import type * as fees from "../fees.js";
 import type * as gates from "../gates.js";
 import type * as http from "../http.js";
+import type * as lib_compensationPoints from "../lib/compensationPoints.js";
 import type * as listings from "../listings.js";
 import type * as messages from "../messages.js";
 import type * as notifications from "../notifications.js";
@@ -56,6 +57,7 @@ declare const fullApi: ApiFromModules<{
   fees: typeof fees;
   gates: typeof gates;
   http: typeof http;
+  "lib/compensationPoints": typeof lib_compensationPoints;
   listings: typeof listings;
   messages: typeof messages;
   notifications: typeof notifications;

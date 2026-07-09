@@ -660,7 +660,7 @@ export default function Profile() {
             subscription_tier: tier,
             subscription_expires_at: expiresAt ?? undefined,
           }));
-          setToastMsg('Subscription activated! Welcome to Collabnb Pro.');
+          setToastMsg('Subscription activated! Welcome to Creator Plus.');
         })
         .catch(() => setToastMsg('Could not verify payment — contact support@collabnb.com'));
     } else if (subStatus === 'cancelled') {
@@ -1567,7 +1567,7 @@ export default function Profile() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#4A9B7F', flexShrink: 0, display: 'inline-block' }} />
                         <p style={{ fontSize: '0.82rem', fontWeight: 700, color: '#2D7A5F', margin: 0 }}>
-                          Collabnb Pro &middot; {isYearly ? 'Annual' : 'Monthly'}
+                          Creator Plus &middot; {isYearly ? 'Annual' : 'Monthly'}
                         </p>
                       </div>
                       <button

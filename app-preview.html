@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>About — Collabnb</title>
-<meta name="description" content="Collabnb is built for collabs, not ads. A two-sided marketplace for content creators and boutique hospitality." />
+<title>App Preview — Collabnb</title>
+<meta name="description" content="A first look at the Collabnb app — the Explore feed, creator discovery, and host profiles. In development, launching July 15, 2026." />
 <link rel="icon" href="assets/collabnb-logo.png" type="image/svg+xml" />
 <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&f[]=cabinet-grotesk@400,500,700,800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles/main.css" />
@@ -53,14 +53,14 @@
         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
       </button>
       <ul class="nav-dropdown-menu glass" role="list">
-        <li><a href="about.html" class="active">About</a></li>
+        <li><a href="about.html">About</a></li>
         <li><a href="ambassadors.html">Ambassadors <span class="beta-pill">Beta</span></a></li>
-        <li><a href="app-preview.html">App preview <span class="beta-pill">Beta</span></a></li>
+        <li><a href="app-preview.html" class="active">App preview <span class="beta-pill">Beta</span></a></li>
       </ul>
     </li>
   </ul>
   <div class="nav-actions" style="display:flex; align-items:center; gap:0.5rem;">
-    <button class="nav-hamburger" aria-label="Open menu" aria-expanded="false">
+    <button class="nav-hamburger" aria-label="Open menu" aria-expanded="false" aria-controls="mobile-nav">
       <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
         <line class="line line-1" x1="3" y1="5" x2="17" y2="5"/>
         <line class="line line-2" x1="3" y1="10" x2="17" y2="10"/>
@@ -74,122 +74,93 @@
 
 <main id="main">
 
-  <!-- ── ABOUT HERO ── -->
-  <section class="about-hero section-lg" aria-labelledby="about-h1">
-    <div class="container">
-      <span class="eyebrow-tag reveal">Our story</span>
-      <h1 id="about-h1" class="display reveal" style="font-size:var(--fs-h2);margin-top:1.25rem;transition-delay:60ms;">Collabnb is built for collabs,<br>not ads.</h1>
-      <p class="hero-sub reveal" style="margin-top:1.5rem;transition-delay:120ms;">A two-sided marketplace where creators earn cash, hosted stays, or both — and hosts earn authentic
-        content.</p>
+  <!-- ── APP PREVIEW HERO ── -->
+  <section class="about-hero section-lg" aria-labelledby="preview-h1">
+    <div class="container" style="text-align:center;">
+      <span class="eyebrow-tag reveal" style="justify-content:center;">App preview <span class="beta-pill">Beta</span></span>
+      <h1 id="preview-h1" class="display reveal" style="font-size:var(--fs-h2);margin-top:1.25rem;transition-delay:60ms;">A first look at the app.</h1>
+      <p class="hero-sub reveal" style="margin:1.5rem auto 0;max-width:560px;transition-delay:120ms;">Still in development — here's a preview of the Explore feed, creator discovery, and host profiles coming July 15.</p>
     </div>
   </section>
 
-  <!-- ── BRAND STORY ── -->
-  <section class="section" aria-labelledby="story-heading">
+  <!-- ── PHONE MOCKUP ── -->
+  <section class="section phone-mockup-section" aria-label="App preview">
     <div class="container">
-      <div class="about-story reveal">
-        <p id="story-heading">The collab economy already exists — it's scattered across DMs and email threads. A boutique BnB in the Catskills wants a TikTok creator who fits their vibe. A UGC filmmaker in Bali wants a paid shoot — or a hosted stay — that's worth their work. Both sides know the deal they want: a professional campaign with clear deliverables, fair compensation, and mutual respect. What they're missing is the marketplace to find each other.</p>
-        <p>Collabnb is that marketplace. Each listing sets its own compensation — a hosted stay, a cash fee, or a hybrid of both. We built it because the middle layer — discovery, agreement, trust, and follow-through — was missing. Not a travel platform. Not an influencer agency. A direct collaboration infrastructure where every deal is transparent and both sides agree on the creative and commercial terms upfront.</p>
-        <p>We're starting with a waitlist because the first 200 creators and 200 hosts will shape what this platform becomes. If you're early, you're in for life.</p>
-      </div>
-    </div>
-  </section>
+      <div class="mockup-container reveal">
+        <!-- Glow effect -->
+        <div class="mockup-glow" aria-hidden="true"></div>
 
-  <!-- ── WHO IT'S FOR ── -->
-  <section class="section" aria-labelledby="who-heading">
-    <div class="container">
-      <p class="eyebrow-tag reveal">Who it's for</p>
-      <h2 id="who-heading" class="display reveal" style="font-size:var(--fs-h2);margin-top:1rem;margin-bottom:2.5rem;transition-delay:60ms;">Two sides, one place.</h2>
-      <div class="audience-grid stagger">
-        <div class="audience-card glass reveal">
-          <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:1.5rem;">
-            <div style="width:44px;height:44px;border-radius:50%;background:var(--mint);display:flex;align-items:center;justify-content:center;">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M6 20v-2a6 6 0 0112 0v2"/></svg>
+        <!-- Stationary Social Proof Review Cards (Background) -->
+        <div class="social-proof-icons" aria-hidden="true">
+
+          <!-- Sophia Martinez -->
+          <div class="proof-card pos-top-left review-glass">
+            <div class="rc-header">
+              <div class="rc-avatar">
+                <img src="assets/avatar-sophia.png" alt="Sophia Martinez" onerror="this.parentElement.innerHTML='SM'">
+              </div>
+              <div class="rc-meta">
+                <div class="rc-stars">★★★★<span class="rc-star-empty">★</span></div>
+                <div class="rc-name">Sophia Martinez</div>
+              </div>
             </div>
-            <h3 style="margin:0;font-size:1.25rem;">Creators</h3>
+            <p class="rc-text">Great first collaboration! Sophia's cozy aesthetic matched our brand perfectly.</p>
+            <div class="rc-property">Coastal Cottage</div>
           </div>
-          <ul>
-            <li>UGC Beginners building a portfolio</li>
-            <li>UGC Pros doing paid deliverables</li>
-            <li>Micro-influencers (5K–100K followers)</li>
-            <li>Influencers (100K+ followers)</li>
-            <li>Travel creators of all formats</li>
-            <li>Short-form video specialists</li>
-          </ul>
-        </div>
-        <div class="audience-card glass reveal" style="transition-delay:80ms;">
-          <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:1.5rem;">
-            <div style="width:44px;height:44px;border-radius:50%;background:var(--mint);display:flex;align-items:center;justify-content:center;">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" stroke-width="1.8" stroke-linecap="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+
+          <!-- Marcus Chen -->
+          <div class="proof-card pos-bottom-left review-glass">
+            <div class="rc-header">
+              <div class="rc-avatar">
+                <img src="assets/avatar-marcus.png" alt="Marcus Chen" onerror="this.parentElement.innerHTML='MC'">
+              </div>
+              <div class="rc-meta">
+                <div class="rc-stars">★★★★★</div>
+                <div class="rc-name">Marcus Chen</div>
+              </div>
             </div>
-            <h3 style="margin:0;font-size:1.25rem;">Hosts</h3>
+            <p class="rc-text">Marcus's adventure-focused content was exactly what we needed.</p>
+            <div class="rc-property">Desert Oasis Villa</div>
           </div>
-          <ul>
-            <li>Boutique Hotels (independent, 10–60 rooms)</li>
-            <li>BnBs and short-stay properties</li>
-            <li>Glamping and outdoor experiences</li>
-            <li>Small resorts and lodges</li>
-            <li>Curated travel experiences</li>
-            <li>Regional tourism boards</li>
-          </ul>
+
+          <!-- Emma Rodriguez -->
+          <div class="proof-card pos-top-right review-glass">
+            <div class="rc-header">
+              <div class="rc-avatar rc-avatar-initials">ER</div>
+              <div class="rc-meta">
+                <div class="rc-stars">★★★★★</div>
+                <div class="rc-name">Emma Rodriguez</div>
+              </div>
+            </div>
+            <p class="rc-text">Emma delivered incredible content! Her photos captured the cabin's coz...</p>
+            <div class="rc-property">Mountain View Lodge</div>
+          </div>
+
+        </div>
+
+        <!-- Phone Frame -->
+        <div class="phone-frame">
+          <div class="phone-island"></div>
+
+          <!-- Revolving Screenshots -->
+          <div class="phone-screen" id="mockup-carousel">
+            <img src="assets/screenshot-1.png" alt="Treehouse Suite Screenshot" class="carousel-img active" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'400\' height=\'800\'><rect width=\'100%\' height=\'100%\' fill=\'%23d1ebdb\'/><text x=\'50%\' y=\'50%\' font-family=\'sans-serif\' font-size=\'24\' text-anchor=\'middle\' fill=\'%233c5759\'>Treehouse Suite</text></svg>'">
+            <img src="assets/screenshot-2.png" alt="Discover Creators Screenshot" class="carousel-img" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'400\' height=\'800\'><rect width=\'100%\' height=\'100%\' fill=\'%23efece9\'/><text x=\'50%\' y=\'50%\' font-family=\'sans-serif\' font-size=\'24\' text-anchor=\'middle\' fill=\'%233c5759\'>Discover Creators</text></svg>'">
+            <img src="assets/screenshot-3.png" alt="Host Profile Screenshot" class="carousel-img" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'400\' height=\'800\'><rect width=\'100%\' height=\'100%\' fill=\'%23d0d5ce\'/><text x=\'50%\' y=\'50%\' font-family=\'sans-serif\' font-size=\'24\' text-anchor=\'middle\' fill=\'%233c5759\'>Host Profile</text></svg>'">
+            <img src="assets/screenshot-4.png" alt="Main Listing Screenshot" class="carousel-img" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'400\' height=\'800\'><rect width=\'100%\' height=\'100%\' fill=\'%23ffffff\'/><text x=\'50%\' y=\'50%\' font-family=\'sans-serif\' font-size=\'24\' text-anchor=\'middle\' fill=\'%233c5759\'>Main Listings</text></svg>'">
+            <div class="phone-dev-scrim" aria-hidden="true">
+              <span class="phone-dev-scrim-label">In development</span>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
-  </section>
 
-  <!-- ── BRAND PRINCIPLES ── -->
-  <section class="section" aria-labelledby="principles-heading">
-    <div class="container">
-      <p class="eyebrow-tag reveal">What we believe</p>
-      <h2 id="principles-heading" class="display reveal" style="font-size:var(--fs-h2);margin-top:1rem;margin-bottom:2.5rem;transition-delay:60ms;">How we build.</h2>
-      <div class="principles-grid stagger">
-        <div class="principle-card glass reveal">
-          <div class="principle-icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" stroke-width="1.8" stroke-linecap="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
-          </div>
-          <h4>Glass-first UI</h4>
-          <p>Interfaces that feel like the destination, not the platform.</p>
+      <div class="mockup-copy reveal text-center">
+        <h3 class="display">From boutique hotels to unique stays</h3>
+        <p>Swipe, match, and stay. The easiest way for creators and hosts to collaborate.</p>
+        <div class="hero-ctas justify-center">
+          <a href="join.html" class="btn-primary">Become a Founder</a>
         </div>
-        <div class="principle-card glass reveal" style="transition-delay:70ms;">
-          <div class="principle-icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" stroke-width="1.8" stroke-linecap="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-          </div>
-          <h4>Minimal friction</h4>
-          <p>The fastest path from interest to collab agreement.</p>
-        </div>
-        <div class="principle-card glass reveal" style="transition-delay:140ms;">
-          <div class="principle-icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-          </div>
-          <h4>Discovery-driven</h4>
-          <p>Surface the right match before either party has to search.</p>
-        </div>
-        <div class="principle-card glass reveal" style="transition-delay:210ms;">
-          <div class="principle-icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" stroke-width="1.8" stroke-linecap="round"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/><path d="M12 8v4l3 3"/></svg>
-          </div>
-          <h4>Creator-centric</h4>
-          <p>The creator's time is the product. We protect it.</p>
-        </div>
-        <div class="principle-card glass reveal" style="transition-delay:280ms;">
-          <div class="principle-icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" stroke-width="1.8" stroke-linecap="round"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/></svg>
-          </div>
-          <h4>Mobile-first</h4>
-          <p>Built for creators on the go, not executives at desks.</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ── FINAL CTA ── -->
-  <section class="final-cta" aria-label="Call to action">
-    <div class="container">
-      <p class="eyebrow-tag reveal" style="justify-content:center;margin-bottom:1.5rem;">Ready to collab?</p>
-      <h2 class="display reveal" style="font-size:var(--fs-h2);transition-delay:60ms;">Join before the<br>first 200 fill up.</h2>
-      <div class="hero-ctas reveal" style="justify-content:center;transition-delay:120ms;">
-        <a href="join.html" class="btn-primary">Become a Founder</a>
-        <a href="how-it-works.html" class="btn-glass">See how it works</a>
       </div>
     </div>
   </section>

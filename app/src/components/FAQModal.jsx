@@ -94,7 +94,7 @@ const FAQ_SECTIONS = [
     items: [
       {
         q: 'How much does Collabnb cost for hosts?',
-        a: 'Hosts never pay to browse, search, message, or post listings. Fees are charged only after a collaboration is completed. For completed collaborations under $500 cash value: $20 flat fee. For collaborations $500 and above: 5% of the cash value. Hybrid collaborations: cash-only basis — the stay value is excluded. Founding Members pay nothing, ever.',
+        a: 'Hosts never pay to browse, search, message, or post listings. Fees are charged only after a collaboration is completed. For completed collaborations under $500 cash value: $20 flat fee. For collaborations $500 and above: 5% of the cash value. Hybrid Collaborations: cash-only basis — the stay value is excluded. Founding Members pay nothing, ever.',
       },
       {
         q: 'How much does Collabnb cost for creators?',

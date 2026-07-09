@@ -320,6 +320,9 @@ export const updateSubscription = mutation({
     if (args.subscriptionTier !== undefined) patch.subscription_tier = args.subscriptionTier;
     if (args.subscriptionExpiresAt !== undefined) patch.subscription_expires_at = args.subscriptionExpiresAt;
     if (args.stripeCustomerId !== undefined) patch.stripe_customer_id = args.stripeCustomerId;
+    // A successful subscription purchase restores full marketplace access,
+    // regardless of a prior trial/limited state.
+    if (args.subscriptionStatus === "active") patch.access_state = "active";
     await ctx.db.patch(args.profileId as any, patch);
   },
 });
@@ -375,6 +378,7 @@ export const updateSubscriptionByCustomerId = internalMutation({
     if (!profile) return;
     const patch: Record<string, any> = { subscription_status: args.subscriptionStatus };
     if (args.subscriptionExpiresAt !== undefined) patch.subscription_expires_at = args.subscriptionExpiresAt;
+    if (args.subscriptionStatus === "active") patch.access_state = "active";
     await ctx.db.patch(profile._id, patch);
   },
 });

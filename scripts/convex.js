@@ -92,3 +92,43 @@ export async function getProfileByEmail(email) {
     return null;
   }
 }
+
+// ── FAQ bubble: Help Center message form ──
+export async function submitMessage(data) {
+  return await client.mutation('messages:submitMessage', data);
+}
+
+export async function getMessagesByEmail(email) {
+  try {
+    return await client.query('messages:getMessagesByEmail', { email });
+  } catch (err) {
+    console.warn('getMessagesByEmail failed:', err.message);
+    return [];
+  }
+}
+
+// ── FAQ bubble: Suggestions tab ──
+export async function getSuggestions(userId) {
+  try {
+    return await client.query('suggestions:getSuggestions', userId ? { userId } : {});
+  } catch (err) {
+    console.warn('getSuggestions failed:', err.message);
+    return [];
+  }
+}
+
+export async function seedSuggestions() {
+  try {
+    await client.mutation('suggestions:seedSuggestions');
+  } catch (err) {
+    console.warn('seedSuggestions failed:', err.message);
+  }
+}
+
+export async function submitSuggestion(text, userId) {
+  return await client.mutation('suggestions:submitSuggestion', { text, userId });
+}
+
+export async function voteSuggestion(suggestionId, userId) {
+  return await client.mutation('suggestions:vote', { suggestionId, userId, direction: 'up' });
+}

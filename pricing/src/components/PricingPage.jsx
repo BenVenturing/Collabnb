@@ -14,6 +14,9 @@ const HOST_CAP     = 100;
 const LAUNCH_DATE  = new Date('2026-07-15T00:00:00+07:00');
 const CONVEX_URL   = import.meta.env.VITE_CONVEX_URL;
 const APP_URL = import.meta.env.VITE_APP_URL || '/';
+// Below this, the marketplace isn't populated enough to look credible —
+// mirrors the threshold used on the How it works page.
+const MARKETPLACE_LISTINGS_THRESHOLD = 10;
 
 export default function PricingPage() {
   const [founderCreatorCount, setFounderCreatorCount] = useState(0);
@@ -21,6 +24,7 @@ export default function PricingPage() {
   const [lifetimeCount,       setLifetimeCount]       = useState(0);
   const [creatorCount,        setCreatorCount]        = useState(0);
   const [hostCount,           setHostCount]           = useState(0);
+  const [marketplaceStats,    setMarketplaceStats]    = useState(null);
 
   const isUnlocked = new Date() >= LAUNCH_DATE;
 
@@ -41,6 +45,12 @@ export default function PricingPage() {
         setFounderHostCount(profiles.filter(p => p.is_founder === true && p.role === 'host').length);
       } catch (err) {
         console.warn('Pricing count fetch failed:', err);
+      }
+      try {
+        const stats = await client.query('marketplaceStats:getStats');
+        if (!cancelled) setMarketplaceStats(stats);
+      } catch (err) {
+        console.warn('Marketplace stats fetch failed:', err);
       }
     }
 
@@ -96,7 +106,14 @@ export default function PricingPage() {
       </nav>
 
       <main style={{ paddingTop: '5rem' }}>
-        <HeroSection spotsRemaining={spotsRemaining} isFoundingFull={isFoundingFull} founderCreatorCount={founderCreatorCount} founderHostCount={founderHostCount} />
+        <HeroSection
+          spotsRemaining={spotsRemaining}
+          isFoundingFull={isFoundingFull}
+          founderCreatorCount={founderCreatorCount}
+          founderHostCount={founderHostCount}
+          marketplaceStats={marketplaceStats}
+          marketplaceThreshold={MARKETPLACE_LISTINGS_THRESHOLD}
+        />
         <PricingCards
           isFoundingFull={isFoundingFull}
           creatorSpotsRemaining={creatorSpotsRemaining}

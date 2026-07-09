@@ -22,6 +22,7 @@ import type * as gates from "../gates.js";
 import type * as http from "../http.js";
 import type * as lib_compensationPoints from "../lib/compensationPoints.js";
 import type * as listings from "../listings.js";
+import type * as marketplaceStats from "../marketplaceStats.js";
 import type * as messages from "../messages.js";
 import type * as notifications from "../notifications.js";
 import type * as pitches from "../pitches.js";
@@ -59,6 +60,7 @@ declare const fullApi: ApiFromModules<{
   http: typeof http;
   "lib/compensationPoints": typeof lib_compensationPoints;
   listings: typeof listings;
+  marketplaceStats: typeof marketplaceStats;
   messages: typeof messages;
   notifications: typeof notifications;
   pitches: typeof pitches;

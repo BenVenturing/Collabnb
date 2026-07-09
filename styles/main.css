@@ -1371,6 +1371,78 @@ h3 { font-weight: 700; }
   .signup-panel { order: -1; }
 }
 
+/* --- MARKETING SITE MARKETPLACE COUNTERS --- */
+.marketplace-stats-line {
+  text-align: center;
+  font-family: var(--font-body);
+  font-size: var(--fs-sm);
+  color: var(--ink);
+}
+
+/* --- BROWSE OPPORTUNITIES (How it works preview cards) --- */
+.browse-scroll {
+  display: flex;
+  gap: var(--space-6);
+  overflow-x: auto;
+  padding: var(--space-4) var(--space-2) var(--space-6);
+  margin-top: var(--space-8);
+  scroll-snap-type: x mandatory;
+}
+.browse-card {
+  flex: 0 0 260px;
+  scroll-snap-align: start;
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  pointer-events: none;
+  cursor: default;
+}
+.browse-card-img {
+  position: relative;
+  aspect-ratio: 3 / 2;
+  overflow: hidden;
+}
+.browse-card-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.browse-card-badge {
+  position: absolute;
+  top: 0.6rem;
+  left: 0.6rem;
+  background: var(--mint);
+  color: var(--ink);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  padding: 0.25rem 0.65rem;
+  border-radius: 9999px;
+}
+.browse-card-body { padding: var(--space-4); }
+.browse-card-location {
+  font-size: var(--fs-xs);
+  color: var(--sage);
+  margin-bottom: 0.25rem;
+}
+.browse-card-title {
+  font-family: var(--font-body);
+  font-weight: 600;
+  color: var(--ink);
+  margin-bottom: 0.35rem;
+}
+.browse-card-comp {
+  font-weight: 700;
+  color: var(--slate);
+  font-size: var(--fs-sm);
+  margin-bottom: 0.2rem;
+}
+.browse-card-meta {
+  font-size: var(--fs-xs);
+  color: var(--sage);
+}
+
 
 /* Role toggle */
 .role-toggle {

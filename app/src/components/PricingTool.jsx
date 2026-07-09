@@ -1,5 +1,4 @@
 import { useState, useMemo, useEffect } from "react";
-import { Plus, Minus, HelpCircle } from "lucide-react";
 import {
   TIER_IDS, TIERS, DELIVERABLE_TYPES, DELIVERABLE_LABELS, DELIVERABLE_POINTS,
   PRESET_PACKAGES, LOAD_TIER_LABELS,
@@ -7,9 +6,8 @@ import {
   evaluateZone, computeLoadTier, isDeliverableAllowedForTier, findPackagesForBudget,
 } from "../../convex/lib/compensationPoints";
 
-// Gradient endpoints drawn from the HAZY palette. The bar blends warm terracotta
-// (below floor) through sage (caution band) into deep teal (recommended range),
-// so the three pricing zones read as one continuous scale instead of flat blocks.
+// Range bar: a single smooth gradient from very light green to deep green.
+// The hard floor, caution threshold, and recommended range stay labelled beneath.
 const ZONE_COPY = {
   red: "Below the minimum for this workload — this can't be published as-is.",
   amber: "Below the recommended range for this workload.",
@@ -18,6 +16,30 @@ const ZONE_COPY = {
 
 function fmt(n) {
   return `$${Math.round(n).toLocaleString()}`;
+}
+
+// Inline icons (no external icon dependency) so this component can be reused
+// across builds — including the marketing pricing app — without extra installs.
+function Plus({ size = 12, color = "currentColor" }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+    </svg>
+  );
+}
+function Minus({ size = 12, color = "currentColor" }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="5" y1="12" x2="19" y2="12" />
+    </svg>
+  );
+}
+function HelpCircle({ size = 16, color = "currentColor" }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10" /><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" /><line x1="12" y1="17" x2="12.01" y2="17" />
+    </svg>
+  );
 }
 
 // Small "?" popover: a simple table of deliverable increments, their point
@@ -196,17 +218,12 @@ function Stepper({ label, points, quantity, onChange, disabled, step = 1, min = 
   );
 }
 
-// Continuous gradient scale: terracotta (below floor) → sage (caution band) →
-// deep teal (recommended range). The hard floor and recommended range stay
-// labelled, and a median pin marks the recommended amount (rounded) inside the
-// range. The cash marker tracks wherever the host has landed.
+// Smooth light-green → dark-green scale. The hard floor, caution threshold, and
+// recommended range stay labelled, a median pin marks the recommended amount
+// (rounded), and the cash marker tracks wherever the host has landed.
 function ThreeZoneScale({ hardFloor, warnThreshold, range, cashAmount, midpoint }) {
   const upperBound = Math.max(range.high * 1.3, (cashAmount || 0) * 1.15, hardFloor * 2, 100);
   const pct = (n) => Math.max(0, Math.min(100, (n / upperBound) * 100));
-  const floorP = pct(hardFloor);
-  const cautionP = pct(warnThreshold);
-  const rangeLowP = pct(range.low);
-  const rangeHighP = pct(range.high);
   const medianP = pct(midpoint);
   const markerLeft = cashAmount ? pct(cashAmount) : null;
 
@@ -217,13 +234,7 @@ function ThreeZoneScale({ hardFloor, warnThreshold, range, cashAmount, midpoint 
       <div style={{ position: "relative", height: 10, borderRadius: 9999, overflow: "hidden" }}>
         <div style={{
           position: "absolute", inset: 0,
-          background: `linear-gradient(to right,
-            #BE7A5D 0%,
-            #BE7A5D ${floorP}%,
-            #D4A843 ${floorP}%,
-            #959D90 ${cautionP}%,
-            #3C5759 ${rangeLowP}%,
-            #192524 ${rangeHighP}%)`,
+          background: "linear-gradient(to right, #DCEFE3 0%, #6FAE8E 45%, #234A3A 78%, #17352A 100%)",
         }} />
         {markerLeft !== null && (
           <div style={{
@@ -269,7 +280,7 @@ function PresetCard({ preset, points, midpoint, active, onClick }) {
     >
       <div style={{ fontFamily: "var(--font-blog-body)", fontWeight: 700, fontSize: 13, color: "var(--ink)" }}>{preset.name}</div>
       <div style={{ fontFamily: "var(--font-blog-body)", fontSize: 11.5, color: "var(--sage)", marginTop: 2 }}>
-        {points} pts · midpoint {fmt(midpoint)}
+        midrange {fmt(midpoint)}
       </div>
     </button>
   );
@@ -485,30 +496,16 @@ export default function PricingTool({ mode = "sandbox", initialValue, onChange }
           {/* Cash amount + math */}
           <div style={{ marginBottom: 8 }}>
             <div style={{ fontSize: 11.5, fontWeight: 700, color: "var(--sage)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>Cash compensation</div>
-            <div style={{ display: "flex", gap: 12, alignItems: "stretch", flexWrap: "wrap" }}>
-              <div style={{ position: "relative", maxWidth: 160 }}>
-                <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 14, color: "var(--sage)" }}>$</span>
-                <input
-                  type="number"
-                  min={0}
-                  step={10}
-                  value={cashAmount || ""}
-                  onChange={(e) => setCashAmount(Number(e.target.value) || 0)}
-                  style={{ width: "100%", padding: "10px 12px 10px 22px", borderRadius: 10, border: "1.5px solid rgba(25,37,36,0.15)", fontFamily: "var(--font-blog-body)", fontSize: 14, fontWeight: 600, color: "var(--ink)", outline: "none", boxSizing: "border-box" }}
-                />
-              </div>
-              <div style={{ flex: "1 1 200px", minWidth: 200 }}>
-                <Stepper
-                  label="Adjust cash"
-                  points={0}
-                  quantity={cashAmount}
-                  step={10}
-                  min={0}
-                  disabled={false}
-                  onChange={(q) => setCashAmount(q)}
-                  renderValue={(q) => fmt(q)}
-                />
-              </div>
+            <div style={{ position: "relative", maxWidth: 160 }}>
+              <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 14, color: "var(--sage)" }}>$</span>
+              <input
+                type="number"
+                min={0}
+                step={10}
+                value={cashAmount || ""}
+                onChange={(e) => setCashAmount(Number(e.target.value) || 0)}
+                style={{ width: "100%", padding: "10px 12px 10px 22px", borderRadius: 10, border: "1.5px solid rgba(25,37,36,0.15)", fontFamily: "var(--font-blog-body)", fontSize: 14, fontWeight: 600, color: "var(--ink)", outline: "none", boxSizing: "border-box" }}
+              />
             </div>
           </div>
 
@@ -518,22 +515,16 @@ export default function PricingTool({ mode = "sandbox", initialValue, onChange }
                 {fmt(range.low)}–{fmt(range.high)}
               </div>
               <p style={{ fontSize: 12, color: "var(--slate)", margin: "0 0 4px" }}>
-                {points} pts × {fmt(tier.ratePerPoint)}/pt ({tier.label}) × {complexity === "complex" ? "1.25 complex" : "1.0 standard"} = {fmt(midpoint)} midpoint
+                {points} pts × {fmt(tier.ratePerPoint)}/pt ({tier.label}) × {complexity === "complex" ? "1.25 complex" : "1.0 standard"} = {fmt(midpoint)} midrange
                 {stayOffset > 0 && <> · stay offset {fmt(stayOffset)}</>}
               </p>
 
               <ThreeZoneScale hardFloor={hardFloor} warnThreshold={warnThreshold} range={range} cashAmount={cashAmount} midpoint={midpoint} />
 
               {zone && zone !== "green" && (
-                <div style={{
-                  marginTop: 14, padding: "10px 14px", borderRadius: 10,
-                  background: zone === "red" ? "rgba(190,122,93,0.12)" : "rgba(212,168,67,0.14)",
-                  border: `1px solid ${zone === "red" ? "rgba(190,122,93,0.3)" : "rgba(212,168,67,0.35)"}`,
-                }}>
-                  <span style={{ fontSize: 12.5, fontWeight: 600, color: zone === "red" ? "#8a4a30" : "#7a5a10" }}>
-                    {ZONE_COPY[zone]}
-                  </span>
-                </div>
+                <p style={{ marginTop: 10, fontSize: 11, color: "var(--sage)", lineHeight: 1.4 }}>
+                  {ZONE_COPY[zone]}
+                </p>
               )}
             </>
           )}

@@ -4,7 +4,7 @@ import SubscriptionModal from './SubscriptionModal';
 import FloatingHelpButton from './FloatingHelpButton';
 import OnboardingChecklist from './OnboardingChecklist'; // self-positions via fixed CSS
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useQuery } from 'convex/react';
+import { useQuery, useAction } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
@@ -54,6 +54,50 @@ function PendingVerificationBanner() {
   );
 }
 
+function PastDueBanner({ topOffset }) {
+  const { profile } = useAuth();
+  const createBillingPortalSession = useAction(api.stripe.createBillingPortalSession);
+  const [busy, setBusy] = useState(false);
+  if (profile?.subscription_status !== 'past_due') return null;
+
+  const handleFix = async () => {
+    const customerId = profile?.stripe_customer_id;
+    if (!customerId) { window.location.href = '/profile?settings=true'; return; }
+    setBusy(true);
+    try {
+      const { url } = await createBillingPortalSession({
+        customerId,
+        returnUrl: `${window.location.origin}/profile`,
+      });
+      window.location.href = url;
+    } catch {
+      setBusy(false);
+      window.location.href = '/profile?settings=true';
+    }
+  };
+
+  return (
+    <div style={{
+      position: 'fixed', top: topOffset, left: 0, right: 0, zIndex: 9999,
+      background: '#B91C1C', color: '#FEE2E2',
+      padding: '0.5rem 1rem',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem',
+      flexWrap: 'wrap',
+      fontSize: '0.8rem', fontWeight: 500, textAlign: 'center',
+      boxShadow: '0 2px 8px rgba(25,37,36,0.18)',
+    }}>
+      <span><strong>Payment past due</strong> — your last subscription charge failed.</span>
+      <button
+        onClick={handleFix}
+        disabled={busy}
+        style={{ background: '#FEE2E2', color: '#B91C1C', border: 'none', borderRadius: '999px', padding: '0.25rem 0.85rem', fontSize: '0.75rem', fontWeight: 700, cursor: busy ? 'wait' : 'pointer', opacity: busy ? 0.7 : 1, whiteSpace: 'nowrap' }}
+      >
+        {busy ? 'Opening…' : 'Update payment'}
+      </button>
+    </div>
+  );
+}
+
 export default function Layout({ children }) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -69,10 +113,13 @@ export default function Layout({ children }) {
     ? Math.ceil((LAUNCH_DATE - new Date()) / (1000 * 60 * 60 * 24))
     : 0;
 
-  // Hide on contract page and inbox; show on /host/proposals but not other host pages
+  // Hide on contract page and inbox; Explore renders its own Contract+Pricing
+  // corner stack, so suppress the standalone button there. Show on /host/proposals
+  // but not other host pages.
   const showContractBtn =
     location.pathname !== '/contract' &&
     location.pathname !== '/inbox' &&
+    location.pathname !== '/explore' &&
     (!location.pathname.startsWith('/host') || location.pathname === '/host/proposals');
 
   // ── Welcome toast (shown once after Clerk/Google signup redirect) ──────────
@@ -129,6 +176,9 @@ export default function Layout({ children }) {
 
       {/* ── Verification pending bar (fixed top) ──────────────────────────── */}
       {isPending && <PendingVerificationBanner />}
+
+      {/* ── Past-due payment banner (fixed top) ───────────────────────────── */}
+      <PastDueBanner topOffset={isPending ? '1.8rem' : 0} />
 
       {/* ── Floating nav pill ───────────────────────────────────────────────── */}
       <AppNav />

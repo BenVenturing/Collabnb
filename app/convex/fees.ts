@@ -94,19 +94,28 @@ export const recordCompletionFee = mutation({
 });
 
 // ─── Get billing records for a host ─────────────────────────────────────────────
+// Scoped to the host by joining fee_records → collaborations → listings.host_id.
+// (collaborations has no host_id; the only reliable host link is listing_id.)
 export const getBilling = query({
   args: { hostId: v.string() },
   handler: async (ctx, { hostId }) => {
-    const [collabs, fees] = await Promise.all([
+    const [listings, collabs, fees] = await Promise.all([
+      ctx.db
+        .query("listings")
+        .withIndex("by_host", (q) => q.eq("host_id", hostId))
+        .collect(),
       ctx.db.query("collaborations").collect(),
       ctx.db.query("fee_records").collect(),
     ]);
 
-    const hostCollabIds = collabs
-      .filter((c) => c.host_name && c.creator_id)
-      .map((c) => String(c._id));
+    const hostListingIds = new Set(listings.map((l) => String(l._id)));
+    const hostCollabIds = new Set(
+      collabs
+        .filter((c) => hostListingIds.has(String(c.listing_id)))
+        .map((c) => String(c._id))
+    );
 
-    const hostFees = fees.filter((f) => hostCollabIds.includes(f.collaboration_id));
+    const hostFees = fees.filter((f) => hostCollabIds.has(f.collaboration_id));
 
     return hostFees
       .map((f) => {

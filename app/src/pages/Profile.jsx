@@ -577,6 +577,10 @@ export default function Profile() {
   );
   const hasListing = (hostListings?.length ?? 0) > 0;
   const isHostVerified = (profile?.is_verified === true || profile?.is_founder === true) && hasListing;
+  const hostBilling = useQuery(
+    api.fees.getBilling,
+    profile?.role === 'host' && userId && userId !== 'mock-user-001' ? { hostId: String(userId) } : 'skip'
+  );
   const convexCollabs = useQuery(
     api.collaborations.getByCreator,
     userId && userId !== 'mock-user-001' ? { creatorId: String(userId) } : 'skip'
@@ -1539,6 +1543,7 @@ export default function Profile() {
               const expiresAt = dp.subscription_expires_at;
               const isActive = dp.subscription_status === 'active' && (!expiresAt || Date.now() < expiresAt);
               const isExpired = dp.subscription_status === 'active' && expiresAt && Date.now() >= expiresAt;
+              const isPastDue = dp.subscription_status === 'past_due';
               const tier = dp.subscription_tier;
               const isYearly = tier === 'yearly';
               const firstDone = dp.first_collab_completed === true;
@@ -1606,6 +1611,26 @@ export default function Profile() {
                         style={{ fontSize: '0.75rem', fontWeight: 700, color: 'white', background: '#dc2626', border: 'none', borderRadius: '999px', padding: '0.35rem 0.9rem', cursor: 'pointer' }}
                       >
                         Renew
+                      </button>
+                    </div>
+                  </div>
+                );
+              }
+
+              if (isPastDue) {
+                return (
+                  <div style={{ padding: '0.875rem 1.5rem', borderBottom: '1px solid rgba(60,87,89,0.08)', background: 'rgba(239,68,68,0.06)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem' }}>
+                      <div>
+                        <p style={{ fontSize: '0.82rem', fontWeight: 700, color: '#dc2626', margin: 0 }}>Payment past due</p>
+                        <p style={{ fontSize: '0.72rem', color: 'var(--sage)', margin: '0.1rem 0 0' }}>Your last payment failed — update your card to keep your plan active.</p>
+                      </div>
+                      <button
+                        onClick={handleManageSubscription}
+                        disabled={portalLoading}
+                        style={{ flexShrink: 0, fontSize: '0.75rem', fontWeight: 700, color: 'white', background: '#dc2626', border: 'none', borderRadius: '999px', padding: '0.35rem 0.9rem', cursor: portalLoading ? 'wait' : 'pointer', opacity: portalLoading ? 0.6 : 1 }}
+                      >
+                        {portalLoading ? 'Opening…' : 'Update payment'}
                       </button>
                     </div>
                   </div>
@@ -1683,35 +1708,54 @@ export default function Profile() {
               <SettingsRow key={row.label} {...row} isLast={i === SETTINGS.length - 1} />
             ))}
 
-            {/* Host payment history */}
+            {/* Host billing — platform fee ledger (fees.getBilling) */}
             {dp.role === 'host' && (() => {
-              const paid = (contracts || []).filter(c => c.paid === true);
-              if (paid.length === 0) return null;
+              const ledger = hostBilling || [];
+              if (ledger.length === 0) return null;
+              const STATUS = {
+                paid:    { label: 'Paid',    color: '#2D7A5F', bg: 'rgba(74,155,127,0.14)' },
+                pending: { label: 'Pending', color: '#A87820', bg: 'rgba(212,168,67,0.16)' },
+                failed:  { label: 'Failed',  color: '#dc2626', bg: 'rgba(239,68,68,0.12)' },
+                waived:  { label: 'Waived',  color: 'var(--sage)', bg: 'rgba(60,87,89,0.1)' },
+              };
+              const outstanding = ledger
+                .filter((f) => f.status === 'pending' || f.status === 'failed')
+                .reduce((sum, f) => sum + (f.amount || 0), 0);
               return (
                 <div style={{ borderTop: '1px solid rgba(60,87,89,0.1)', padding: '0.875rem 1.5rem' }}>
-                  <p style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--slate)', margin: '0 0 0.625rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Payment History</p>
+                  <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', margin: '0 0 0.625rem' }}>
+                    <p style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--slate)', margin: 0, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Billing</p>
+                    {outstanding > 0 && (
+                      <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#dc2626' }}>${outstanding.toFixed(2)} outstanding</span>
+                    )}
+                  </div>
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.75rem' }}>
                     <thead>
                       <tr style={{ borderBottom: '1px solid rgba(60,87,89,0.1)' }}>
                         <th style={{ textAlign: 'left', padding: '0.25rem 0', fontWeight: 600, color: 'var(--sage)', paddingRight: '1rem' }}>Collab</th>
-                        <th style={{ textAlign: 'right', padding: '0.25rem 0', fontWeight: 600, color: 'var(--sage)', paddingRight: '1rem' }}>Fee Paid</th>
-                        <th style={{ textAlign: 'right', padding: '0.25rem 0', fontWeight: 600, color: 'var(--sage)' }}>Date</th>
+                        <th style={{ textAlign: 'right', padding: '0.25rem 0', fontWeight: 600, color: 'var(--sage)', paddingRight: '1rem' }}>Fee</th>
+                        <th style={{ textAlign: 'right', padding: '0.25rem 0', fontWeight: 600, color: 'var(--sage)' }}>Status</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {paid.map((c, i) => (
-                        <tr key={i} style={{ borderBottom: i < paid.length - 1 ? '1px solid rgba(60,87,89,0.06)' : 'none' }}>
-                          <td style={{ padding: '0.4rem 0', color: 'var(--ink)', paddingRight: '1rem', maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {c.property_name || c.creator_name || '—'}
-                          </td>
-                          <td style={{ padding: '0.4rem 0', color: 'var(--slate)', fontWeight: 600, textAlign: 'right', paddingRight: '1rem' }}>
-                            {c.payment_amount ? `$${c.payment_amount.toFixed(2)}` : '—'}
-                          </td>
-                          <td style={{ padding: '0.4rem 0', color: 'var(--sage)', textAlign: 'right' }}>
-                            {c.host_signed_at ? new Date(c.host_signed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—'}
-                          </td>
-                        </tr>
-                      ))}
+                      {ledger.map((f, i) => {
+                        const s = STATUS[f.status] || STATUS.pending;
+                        const when = f.paid_at || f.created_at;
+                        return (
+                          <tr key={f._id} style={{ borderBottom: i < ledger.length - 1 ? '1px solid rgba(60,87,89,0.06)' : 'none' }}>
+                            <td style={{ padding: '0.4rem 0', color: 'var(--ink)', paddingRight: '1rem', maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {f.collabTitle || '—'}
+                              {when && <span style={{ display: 'block', fontSize: '0.62rem', color: 'var(--sage)' }}>{new Date(when).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>}
+                            </td>
+                            <td style={{ padding: '0.4rem 0', color: 'var(--slate)', fontWeight: 600, textAlign: 'right', paddingRight: '1rem' }}>
+                              {f.method === 'waived' ? '—' : `$${(f.amount || 0).toFixed(2)}`}
+                            </td>
+                            <td style={{ padding: '0.4rem 0', textAlign: 'right' }}>
+                              <span style={{ fontSize: '0.65rem', fontWeight: 700, color: s.color, background: s.bg, borderRadius: '999px', padding: '0.12rem 0.5rem' }}>{s.label}</span>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>

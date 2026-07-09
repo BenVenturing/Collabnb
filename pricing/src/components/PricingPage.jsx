@@ -6,6 +6,7 @@ import PricingCards    from './PricingCards';
 import TierLadder      from './TierLadder';
 import ValueSection    from './ValueSection';
 import ClaritySection  from './ClaritySection';
+import CollabCostSection from './CollabCostSection';
 import FAQSection      from './FAQSection';
 import TermsNote       from './TermsNote';
 
@@ -128,6 +129,7 @@ export default function PricingPage() {
         {!isFoundingFull && <TierLadder />}
         <ValueSection />
         <ClaritySection />
+        <CollabCostSection />
         <FAQSection />
         <TermsNote />
       </main>

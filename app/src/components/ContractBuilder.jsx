@@ -555,40 +555,33 @@ export default function ContractBuilder() {
                     Payment / Compensation
                   </label>
                   <div className="flex items-center gap-2 mb-2">
-                    <select
-                      value={form.isFreeStay ? FREE_STAY_VALUE : form.currency}
-                      onChange={(e) => {
-                        if (e.target.value === FREE_STAY_VALUE) {
-                          updateField('isFreeStay', true);
-                        } else {
-                          updateField('isFreeStay', false);
-                          updateField('currency', e.target.value);
-                        }
-                      }}
-                      className="px-3 py-2 rounded-xl border border-stone/50 bg-white/60 text-ink text-sm
-                                 outline-none transition-colors focus:border-mint focus:bg-white"
-                    >
-                      {CURRENCIES.map((c) => (
-                        <option key={c} value={c}>{c}</option>
-                      ))}
-                      {/* Legacy contracts only — stay-only compensation can no longer be selected */}
-                      {form.isFreeStay && <option value={FREE_STAY_VALUE}>Free Stay</option>}
-                    </select>
-                    {!form.isFreeStay && (
-                      <input
-                        type="text"
-                        placeholder="Amount"
-                        value={form.paymentAmount}
-                        onChange={(e) => updateField('paymentAmount', e.target.value)}
-                        className="flex-1 px-3 py-2 rounded-xl border border-stone/50 bg-white/60 text-ink text-sm
-                                   placeholder:text-sage/60 outline-none transition-colors
-                                   focus:border-mint focus:bg-white focus:shadow-sm"
-                      />
-                    )}
-                    {form.isFreeStay && (
+                    {form.isFreeStay ? (
+                      /* Legacy stay-only contracts — read-only; free stay can no longer be selected */
                       <span className="flex-1 px-3 py-2 text-sm font-semibold text-ink bg-mint/40 rounded-xl">
-                        Free Stay
+                        Free Stay <span className="text-sage font-normal">· legacy</span>
                       </span>
+                    ) : (
+                      <>
+                        <select
+                          value={form.currency}
+                          onChange={(e) => updateField('currency', e.target.value)}
+                          className="px-3 py-2 rounded-xl border border-stone/50 bg-white/60 text-ink text-sm
+                                     outline-none transition-colors focus:border-mint focus:bg-white"
+                        >
+                          {CURRENCIES.map((c) => (
+                            <option key={c} value={c}>{c}</option>
+                          ))}
+                        </select>
+                        <input
+                          type="text"
+                          placeholder="Amount"
+                          value={form.paymentAmount}
+                          onChange={(e) => updateField('paymentAmount', e.target.value)}
+                          className="flex-1 px-3 py-2 rounded-xl border border-stone/50 bg-white/60 text-ink text-sm
+                                     placeholder:text-sage/60 outline-none transition-colors
+                                     focus:border-mint focus:bg-white focus:shadow-sm"
+                        />
+                      </>
                     )}
                   </div>
                 </div>

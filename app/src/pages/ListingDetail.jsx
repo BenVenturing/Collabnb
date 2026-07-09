@@ -7,6 +7,7 @@ import { useCollabs } from '../contexts/CollabContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useVerification } from '../contexts/VerificationContext';
 import { useSubscription } from '../contexts/SubscriptionContext';
+import { useAccessGate, PendingApprovalScreen, LimitedAccessScreen } from '../components/AccessGate';
 import { canSubmitPitch, incrementPitchCount, syncPitchCount } from '../lib/pitchCount';
 import { formatDateRange } from '../lib/dateUtils';
 import { cache } from '../lib/cache';
@@ -911,6 +912,7 @@ export default function ListingDetail({ previewListing = null, preview = false }
   const { profile } = useAuth();
   const { openModal } = useVerification();
   const { isSubscribed, openModal: openSubModal } = useSubscription();
+  const access = useAccessGate();
   const isVerified = profile?.is_verified === true;
 
   // Fetch host profile from Convex to get their Clerk-synced avatar
@@ -1033,6 +1035,13 @@ export default function ListingDetail({ previewListing = null, preview = false }
         }}>Back to Explore</button>
       </div>
     );
+  }
+
+  // Server already redacted this listing for pending/limited creators — block the
+  // full detail page instead of rendering a half-blank page (title/host/etc. are
+  // undefined in the redacted payload). Sample/preview listings are exempt.
+  if (!isPreview && !sampleListing && convexListing?._redacted && !access.loading) {
+    return access.state === 'pending' ? <PendingApprovalScreen /> : <LimitedAccessScreen />;
   }
 
   const applied     = hasApplied(listing.id);

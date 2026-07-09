@@ -4,8 +4,8 @@ import { internal } from "./_generated/api";
 
 // ─── Shared Constants ───────────────────────────────────────────────────────────
 export const FOLLOWER_THRESHOLDS = {
-  UGC_BEGINNER_MIN: 0,
-  UGC_PRO_MIN: 0,     // UGC tracks: portfolio quality, not follower count
+  UGC_BEGINNER_MIN: 2000,  // floor to filter out zero-engagement/spam accounts
+  UGC_PRO_MIN: 2000,       // same floor — Beginner vs. Pro is decided by portfolio quality, not follower count
   MICRO_INFLUENCER_MIN: 5000,
   INFLUENCER_MIN: 25000,
 } as const;
@@ -84,7 +84,22 @@ export const approveCreator = mutation({
     const profile = await ctx.db.get(args.profileId);
     if (!profile || profile.role !== "creator") return;
 
-    // Count existing founders of same role
+    const totalFollowers =
+      (profile.metrics_instagram_followers ?? 0) +
+      (profile.metrics_tiktok_followers ?? 0) +
+      (profile.metrics_youtube_subscribers ?? 0);
+
+    if (args.track === "ugc" && totalFollowers < FOLLOWER_THRESHOLDS.UGC_BEGINNER_MIN) {
+      throw new Error(
+        `UGC applicants need at least ${FOLLOWER_THRESHOLDS.UGC_BEGINNER_MIN.toLocaleString()} combined followers (this profile has ${totalFollowers.toLocaleString()}).`
+      );
+    }
+
+    // Count existing founders of same role. Two concurrent approvals both read
+    // this count before either patches, but Convex's OCC serializes conflicting
+    // mutations on overlapping read/write sets (the "profiles" table here) and
+    // retries the loser — so the cap can't be oversold by a race, without needing
+    // a separate atomic counter document.
     const allProfiles = await ctx.db.query("profiles").collect();
     const existingFounders = allProfiles.filter(
       (p) => p.is_founder === true && p.role === "creator"
@@ -93,10 +108,6 @@ export const approveCreator = mutation({
 
     let tier = args.tier;
     if (!tier) {
-      const totalFollowers =
-        (profile.metrics_instagram_followers ?? 0) +
-        (profile.metrics_tiktok_followers ?? 0) +
-        (profile.metrics_youtube_subscribers ?? 0);
       tier = determineCreatorTier(totalFollowers, args.track);
     }
 
@@ -148,6 +159,7 @@ export const approveHost = mutation({
     const profile = await ctx.db.get(args.profileId);
     if (!profile || profile.role !== "host") return;
 
+    // Race-safe via Convex OCC — see approveCreator above.
     const allProfiles = await ctx.db.query("profiles").collect();
     const existingFounders = allProfiles.filter(
       (p) => p.is_founder === true && p.role === "host"

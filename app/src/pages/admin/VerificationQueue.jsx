@@ -57,22 +57,102 @@ const TIERS_BY_TRACK = {
   influencer: ['Micro Influencer', 'Influencer'],
 };
 
-function ProfileCard({ profile, onApprove, onReject, isRejected, onViewDetails }) {
+const CHECKLIST_ITEMS = {
+  creator: [
+    'Social accounts reviewed',
+    'Follower count & engagement verified',
+    'Portfolio & experience assessed',
+  ],
+  host: [
+    'Property listing reviewed',
+    'Contact & business info verified',
+    'Photos assessed',
+  ],
+};
+
+function ChecklistSection({ items, checked, onToggle }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+      <label style={{ fontSize: '0.78rem', color: '#3C5759', fontWeight: 600 }}>Verification checklist</label>
+      {items.map(item => (
+        <label key={item} style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.8rem', color: '#3C5759', cursor: 'pointer' }}>
+          <input type="checkbox" checked={checked.has(item)} onChange={() => onToggle(item)} />
+          {item}
+        </label>
+      ))}
+    </div>
+  );
+}
+
+function AdminNoteSection({ profile, onSave }) {
+  const [note, setNote] = useState(profile.admin_verification_note || '');
+  const [requestInterview, setRequestInterview] = useState(profile.interview_requested || false);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  const dirty = note !== (profile.admin_verification_note || '') || requestInterview !== !!profile.interview_requested;
+
+  async function handleSave() {
+    setSaving(true);
+    try {
+      await onSave(profile._id, note, requestInterview);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 1500);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div style={{ marginTop: '0.75rem', padding: '0.75rem', background: '#F7F5F2', borderRadius: '0.625rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem', gap: '0.5rem', flexWrap: 'wrap' }}>
+        <label style={{ fontSize: '0.72rem', fontWeight: 600, color: '#3C5759' }}>Admin note</label>
+        <label style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.72rem', color: '#3C5759', cursor: 'pointer' }}>
+          <input type="checkbox" checked={requestInterview} onChange={e => setRequestInterview(e.target.checked)} />
+          Flag for interview
+        </label>
+      </div>
+      <textarea
+        value={note}
+        onChange={e => setNote(e.target.value)}
+        placeholder="Internal note (not shown to applicant)…"
+        rows={2}
+        style={{ width: '100%', padding: '0.4rem 0.6rem', borderRadius: '0.4rem', border: '1px solid rgba(25,37,36,0.12)', fontSize: '0.78rem', fontFamily: 'inherit', resize: 'vertical', outline: 'none', color: '#192524' }}
+      />
+      {dirty && (
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          style={{ marginTop: '0.4rem', padding: '0.3rem 0.7rem', borderRadius: '0.4rem', background: '#192524', color: '#fff', fontSize: '0.72rem', fontWeight: 600, border: 'none', cursor: saving ? 'default' : 'pointer', opacity: saving ? 0.6 : 1, fontFamily: 'inherit' }}
+        >
+          {saving ? 'Saving…' : 'Save'}
+        </button>
+      )}
+      {saved && <span style={{ marginLeft: '0.5rem', fontSize: '0.72rem', color: '#166534' }}>Saved</span>}
+    </div>
+  );
+}
+
+function ProfileCard({ profile, onApprove, onReject, onSaveNote, isRejected, onViewDetails }) {
   const [rejecting, setRejecting] = useState(false);
   const [reason, setReason]       = useState('');
   const [busy, setBusy]           = useState(false);
   const [approving, setApproving] = useState(false);
+  const [error, setError]         = useState('');
+  const [checkedItems, setCheckedItems] = useState(() => new Set());
   const [creatorTrack, setCreatorTrack] = useState('ugc');
   const [creatorTier, setCreatorTier]   = useState('UGC Beginner');
 
   const location    = [profile.city, profile.region].filter(Boolean).join(', ') || null;
   const tierOrRole  = profile.tier || (profile.role === 'host' ? 'Host' : 'Creator');
   const isCreator   = profile.role === 'creator';
+  const checklist   = CHECKLIST_ITEMS[isCreator ? 'creator' : 'host'];
+  const allChecked  = checklist.every(item => checkedItems.has(item));
 
   const totalFollowers = (profile.metrics_instagram_followers ?? 0) + (profile.metrics_tiktok_followers ?? 0) + (profile.metrics_youtube_subscribers ?? 0);
 
   // Auto-select tier based on followers
-  React.useEffect(() => {
+  useEffect(() => {
     if (creatorTrack === 'influencer') {
       if (totalFollowers >= 25000) setCreatorTier('Influencer');
       else setCreatorTier('Micro Influencer');
@@ -81,15 +161,29 @@ function ProfileCard({ profile, onApprove, onReject, isRejected, onViewDetails }
     }
   }, [creatorTrack, totalFollowers]);
 
+  function toggleChecklistItem(item) {
+    setCheckedItems(prev => {
+      const next = new Set(prev);
+      if (next.has(item)) next.delete(item); else next.add(item);
+      return next;
+    });
+  }
+
   async function handleApprove() {
     setBusy(true);
-    if (isCreator) {
-      await onApprove(profile, creatorTrack, creatorTier);
-    } else {
-      await onApprove(profile);
+    setError('');
+    try {
+      if (isCreator) {
+        await onApprove(profile, creatorTrack, creatorTier);
+      } else {
+        await onApprove(profile);
+      }
+      setApproving(false);
+    } catch (err) {
+      setError(err?.message || 'Failed to approve.');
+    } finally {
+      setBusy(false);
     }
-    setBusy(false);
-    setApproving(false);
   }
 
   async function handleReject() {
@@ -143,6 +237,11 @@ function ProfileCard({ profile, onApprove, onReject, isRejected, onViewDetails }
                 Referred
               </span>
             )}
+            {profile.interview_requested && !isRejected && (
+              <span style={{ fontSize: '0.7rem', background: '#DBEAFE', color: '#1D4ED8', padding: '0.1rem 0.5rem', borderRadius: '99px', fontWeight: 600 }}>
+                Interview Requested
+              </span>
+            )}
           </div>
           <div style={{ fontSize: '0.78rem', color: '#959D90', marginTop: '0.2rem', display: 'flex', gap: '0.875rem', flexWrap: 'wrap' }}>
             <span>{profile.email}</span>
@@ -181,17 +280,22 @@ function ProfileCard({ profile, onApprove, onReject, isRejected, onViewDetails }
         </div>
       )}
 
+      {/* ── Admin note / interview flag ── */}
+      {!isRejected && onSaveNote && (
+        <AdminNoteSection profile={profile} onSave={onSaveNote} />
+      )}
+
       {/* ── Actions ── */}
       {!isRejected && (
         <div style={{ marginTop: '1rem', borderTop: '1px solid rgba(25,37,36,0.06)', paddingTop: '0.875rem' }}>
           {!rejecting && !approving ? (
             <div style={{ display: 'flex', gap: '0.5rem' }}>
               <button
-                onClick={() => isCreator ? setApproving(true) : handleApprove()}
+                onClick={() => setApproving(true)}
                 disabled={busy}
                 style={{ padding: '0.45rem 1rem', borderRadius: '0.5rem', background: '#D1EBDB', color: '#166534', fontSize: '0.82rem', fontWeight: 600, border: '1px solid rgba(22,101,52,0.2)', cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.6 : 1, fontFamily: 'inherit' }}
               >
-                ✓ {isCreator ? 'Select Track' : 'Approve'}
+                ✓ {isCreator ? 'Select Track' : 'Review & Approve'}
               </button>
               <button
                 onClick={() => setRejecting(true)}
@@ -243,11 +347,33 @@ function ProfileCard({ profile, onApprove, onReject, isRejected, onViewDetails }
                   )}
                 </>
               )}
+              <ChecklistSection items={checklist} checked={checkedItems} onToggle={toggleChecklistItem} />
+              {error && <p style={{ fontSize: '0.78rem', color: '#991B1B', margin: 0 }}>{error}</p>}
               <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem' }}>
                 <button
                   onClick={handleApprove}
-                  disabled={busy || !creatorTrack}
-                  style={{ padding: '0.4rem 0.875rem', borderRadius: '0.5rem', background: '#192524', color: '#fff', fontSize: '0.82rem', fontWeight: 600, border: 'none', cursor: busy || !creatorTrack ? 'not-allowed' : 'pointer', opacity: busy || !creatorTrack ? 0.5 : 1, fontFamily: 'inherit' }}
+                  disabled={busy || !creatorTrack || !allChecked}
+                  style={{ padding: '0.4rem 0.875rem', borderRadius: '0.5rem', background: '#192524', color: '#fff', fontSize: '0.82rem', fontWeight: 600, border: 'none', cursor: busy || !creatorTrack || !allChecked ? 'not-allowed' : 'pointer', opacity: busy || !creatorTrack || !allChecked ? 0.5 : 1, fontFamily: 'inherit' }}
+                >
+                  {busy ? 'Approving…' : '✓ Confirm Approval'}
+                </button>
+                <button
+                  onClick={() => setApproving(false)}
+                  style={{ padding: '0.4rem 0.875rem', borderRadius: '0.5rem', background: 'transparent', color: '#959D90', fontSize: '0.82rem', border: '1px solid rgba(25,37,36,0.1)', cursor: 'pointer', fontFamily: 'inherit' }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : approving && !isCreator ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+              <ChecklistSection items={checklist} checked={checkedItems} onToggle={toggleChecklistItem} />
+              {error && <p style={{ fontSize: '0.78rem', color: '#991B1B', margin: 0 }}>{error}</p>}
+              <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem' }}>
+                <button
+                  onClick={handleApprove}
+                  disabled={busy || !allChecked}
+                  style={{ padding: '0.4rem 0.875rem', borderRadius: '0.5rem', background: '#192524', color: '#fff', fontSize: '0.82rem', fontWeight: 600, border: 'none', cursor: busy || !allChecked ? 'not-allowed' : 'pointer', opacity: busy || !allChecked ? 0.5 : 1, fontFamily: 'inherit' }}
                 >
                   {busy ? 'Approving…' : '✓ Confirm Approval'}
                 </button>
@@ -393,6 +519,7 @@ export default function VerificationQueue() {
   const approveTier      = useMutation(api.profiles.approveTierChange);
   const declineTier      = useMutation(api.profiles.declineTierChange);
   const addAudit         = useMutation(api.admin.addAuditEntry);
+  const saveNote         = useMutation(api.gates.setAdminNote);
 
   const counts = founderCounts ?? { creator: 0, host: 0 };
 
@@ -409,6 +536,10 @@ export default function VerificationQueue() {
       await approveHost({ profileId: profile._id });
     }
     try { await addAudit({ action: 'approved', targetType: 'profile', targetId: String(profile._id), details: `${profile.full_name}${track ? ` (${track}, ${tier})` : ''}` }); } catch {}
+  }
+
+  async function handleSaveNote(profileId, note, requestInterview) {
+    await saveNote({ profileId, note: note || undefined, requestInterview });
   }
 
   async function handleReject(profile, reason) {
@@ -514,6 +645,7 @@ export default function VerificationQueue() {
           profile={profile}
           onApprove={handleApprove}
           onReject={handleReject}
+          onSaveNote={handleSaveNote}
           isRejected={tab === 'rejected'}
           onViewDetails={setSelectedProfileId}
         />

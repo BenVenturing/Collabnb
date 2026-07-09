@@ -147,7 +147,7 @@ export function LimitedAccessScreen() {
           </ul>
         </div>
 
-        <a href="/#/pricing" style={{
+        <a href="/pricing" style={{
           display: 'inline-block', padding: '0.625rem 1.5rem',
           background: '#192524', color: '#fff', borderRadius: '0.5rem',
           fontSize: '0.82rem', fontWeight: 600, textDecoration: 'none', fontFamily: 'inherit',
@@ -200,7 +200,7 @@ export function TrialBanner({ daysLeft, onDismiss, dismissible = true }) {
           {daysLeft}d remaining
         </span>
       )}
-      <a href="/#/pricing"
+      <a href="/pricing"
         style={{
           padding: '0.3rem 0.75rem', borderRadius: '0.4rem',
           background: isExpired ? '#DC2626' : '#192524',

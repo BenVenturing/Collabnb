@@ -205,6 +205,24 @@
         </span>
       </div>
       <p class="globe-hint reveal" style="transition-delay:300ms;">Drag to explore · Hover to pause</p>
+
+      <!-- ── LIVE MARKETPLACE LINE (hidden until totalPublishedListings >= 10) ── -->
+      <div id="marketplace-stats-wrap" style="display:none;margin-top:2.5rem;">
+        <p class="eyebrow-tag reveal" style="justify-content:center;margin-bottom:0.75rem;">The Collabnb marketplace</p>
+        <p id="marketplace-stats-line" class="marketplace-stats-line reveal"></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── BROWSE OPPORTUNITIES (hidden until 3+ published listings) ── -->
+  <section class="section" id="browse-opportunities-section" aria-labelledby="browse-heading" style="display:none;">
+    <div class="container">
+      <p class="eyebrow-tag reveal" style="justify-content:center;margin-bottom:1.5rem;">Live on Collabnb</p>
+      <h2 id="browse-heading" class="display reveal" style="font-size:var(--fs-h2);text-align:center;transition-delay:60ms;">Browse opportunities.</h2>
+      <div class="browse-scroll" id="browse-scroll-track"></div>
+      <div style="text-align:center;margin-top:2rem;">
+        <a href="join.html" class="btn-glass">Become a Founder to explore all listings →</a>
+      </div>
     </div>
   </section>
 
@@ -286,6 +304,7 @@
 
 <script type="module" src="/scripts/main.js"></script>
 <script type="module" src="/scripts/globe.js"></script>
+<script type="module" src="/scripts/how-it-works.js"></script>
 
 <!-- ── PRIVACY POLICY MODAL ── -->
 <div id="privacy-modal-overlay" class="legal-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="privacy-modal-title" aria-hidden="true">

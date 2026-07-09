@@ -257,31 +257,35 @@ export default function WaitlistPreview() {
           </p>
         </div>
 
-        {/* Divider */}
-        <div style={{
-          width: '100%', maxWidth: 760,
-          display: 'flex', alignItems: 'center', gap: '1rem',
-          padding: '0 1.5rem', marginBottom: '1.75rem',
-        }}>
-          <div style={{ flex: 1, height: 1, background: 'var(--stone)' }} />
-          <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--sage)', whiteSpace: 'nowrap' }}>
-            A sneak peek of what's waiting for you
-          </span>
-          <div style={{ flex: 1, height: 1, background: 'var(--stone)' }} />
-        </div>
+        {previewListings.length > 0 && (
+          <>
+            {/* Divider */}
+            <div style={{
+              width: '100%', maxWidth: 760,
+              display: 'flex', alignItems: 'center', gap: '1rem',
+              padding: '0 1.5rem', marginBottom: '1.75rem',
+            }}>
+              <div style={{ flex: 1, height: 1, background: 'var(--stone)' }} />
+              <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--sage)', whiteSpace: 'nowrap' }}>
+                A sneak peek of what's waiting for you
+              </span>
+              <div style={{ flex: 1, height: 1, background: 'var(--stone)' }} />
+            </div>
 
-        {/* Locked listing grid */}
-        <div style={{
-          width: '100%', maxWidth: 960,
-          padding: '0 1.25rem',
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
-          gap: '1.25rem',
-        }}>
-          {previewListings.map(listing => (
-            <LockedCard key={listing.id} listing={listing} />
-          ))}
-        </div>
+            {/* Locked listing grid */}
+            <div style={{
+              width: '100%', maxWidth: 960,
+              padding: '0 1.25rem',
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
+              gap: '1.25rem',
+            }}>
+              {previewListings.map(listing => (
+                <LockedCard key={listing.id} listing={listing} />
+              ))}
+            </div>
+          </>
+        )}
 
         {/* Bottom status card */}
         <div style={{

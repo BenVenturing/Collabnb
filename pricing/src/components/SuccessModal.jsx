@@ -4,7 +4,7 @@ const CHECKLIST = [
   'Lifetime access to core platform',
   'No commissions — keep 100%',
   'Unlimited messaging',
-  'Founding Partner badge on your profile',
+  'Founding Member badge on your profile',
   'Early access to new features',
 ];
 
@@ -69,7 +69,7 @@ export default function SuccessModal({ open, onClose }) {
               You're in.
             </h2>
             <p className="text-slate text-base mb-6">
-              You've secured Founding Partner status.
+              You've secured Founding Member status.
             </p>
 
             <ul className="text-left space-y-3 mb-8">

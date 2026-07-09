@@ -3,7 +3,7 @@ const BENEFITS = [
   'Unlimited collab applications',
   'Unlimited messaging',
   'Keep 100% of every deal',
-  'Founding Partner badge',
+  'Founding Member badge',
   'Early access to new features',
   'No commissions. Ever.',
 ];

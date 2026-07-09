@@ -8,15 +8,15 @@ const FAQS = [
   },
   {
     q: 'Do creators pay any commission?',
-    a: 'No. Creators keep 100% of what they earn through Collabnb collaborations. Collabnb does not take a cut of any collaboration value on the creator side. Platform fees apply only to hosts — a $20 flat fee on free-stay collabs and a 5% fee on paid collaborations.',
+    a: 'No. Creators keep 100% of what they earn through Collabnb collaborations. Collabnb does not take a cut of any collaboration value on the creator side. Platform fees apply only to hosts — a $20 flat fee on completed collaborations under $500 cash value, and 5% on collaborations $500 and above. Hybrid Collaborations are billed cash-only — stay value is excluded.',
   },
   {
     q: 'When do I have to pay?',
-    a: 'Creators can join and apply to their first collaboration completely free. After your first successful collaboration, applying to new stays and messaging hosts requires either a monthly plan ($10/month), an annual plan ($60/year), or lifetime access. Browsing listings is always free, with or without a plan.',
+    a: 'Creators get a free 30-day trial with full access from the moment they\'re approved. After the trial ends, continuing to apply to stays and message hosts requires either a monthly plan ($10/month), an annual plan ($60/year), or lifetime access. Browsing listings is always free, with or without a plan.',
   },
   {
-    q: 'What is a Founding Partner?',
-    a: 'Founding Partners are the first 100 creators to join Collabnb and secure lifetime access — before public pricing goes live. They pay nothing for core platform access, ever. They also receive a Founding Partner badge on their creator profile and early access to new features before the broader community.',
+    q: 'What is a Founding Member?',
+    a: 'Founding Members are the first 100 creators to join Collabnb and secure lifetime access — before public pricing goes live. They pay nothing for core platform access, ever. They also receive a Founding Member badge on their creator profile and early access to new features before the broader community.',
   },
   {
     q: 'What happens when the free spots are gone?',
@@ -24,11 +24,11 @@ const FAQS = [
   },
   {
     q: 'Can I still use the platform without paying?',
-    a: 'Yes. You can always browse collab listings without any payment. After your first successful collaboration, you\'ll need an active plan to send new messages and apply to additional stays. Think of it as a "see it work first, then decide" model — we earn your subscription, not the other way around.',
+    a: 'Yes. You can always browse collab listings without any payment. Your first 30 days include full access to apply and message at no charge. After the trial ends, you\'ll need an active plan to send new messages and apply to additional stays.',
   },
   {
     q: 'When does the host pay Collabnb’s fee?',
-    a: 'Never up front. The host’s platform fee — a $20 flat fee on free-stay collabs, or 5% on paid collabs — is charged automatically only after the collaboration is marked complete. Once the contract finishes, the fee is released to Collabnb with no manual step. Creators are never charged this fee and keep 100% of their collaboration value.',
+    a: 'Never up front. The host’s platform fee — a $20 flat fee on collaborations under $500 cash value, or 5% on collaborations $500 and above — is charged automatically only after the collaboration is marked complete. Hybrid Collaborations are billed on the cash-only basis. Once the contract finishes, the fee is released to Collabnb with no manual step. Creators are never charged this fee and keep 100% of their collaboration value.',
   },
   {
     q: 'How do referral codes and free months work?',

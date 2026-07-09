@@ -7,7 +7,7 @@ const LOCKED_PLANS = [
     label:    'Monthly',
     price:    '$10',
     period:   '/mo',
-    desc:     'After your first successful collaboration',
+    desc:     'After your 30-day trial ends',
     features: ['Full marketplace access', 'Explore & apply to stays', 'Message hosts', 'Manage collaborations'],
   },
   {

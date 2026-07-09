@@ -17,7 +17,7 @@ const VALUES = [
       </svg>
     ),
     title: 'Pay After Value',
-    body:  'Your first collaboration is completely free. Only after you\'ve seen the platform deliver for you do you choose whether to stay.',
+    body:  'Every creator gets a free 30-day trial with full access. Only after you\'ve seen the platform deliver for you do you choose whether to stay.',
   },
   {
     icon: (

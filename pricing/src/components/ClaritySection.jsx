@@ -1,14 +1,14 @@
 const CREATOR_POINTS = [
   {
-    label:  'Join the waitlist',
+    label:  'Become a Founder',
     detail: 'Free. Always.',
   },
   {
-    label:  'Your first collaboration',
-    detail: 'Completely free — no fee until you\'ve seen it work.',
+    label:  'Your 30-day trial',
+    detail: 'Full access from approval — explore, apply, and message with no charge.',
   },
   {
-    label:  'After your first collab',
+    label:  'After your trial',
     detail: '$10/month or $60/year to continue applying and messaging. Browsing stays free.',
   },
   {
@@ -23,12 +23,12 @@ const HOST_POINTS = [
     detail: 'Always free.',
   },
   {
-    label:  'Free-stay collaborations',
-    detail: '$20 flat fee per successful collab where no money changes hands.',
+    label:  'Collaborations under $500',
+    detail: '$20 flat platform fee, charged only after the collaboration is completed.',
   },
   {
-    label:  'Paid collaborations',
-    detail: '5% platform fee on the total agreed collaboration value.',
+    label:  'Collaborations $500 and above',
+    detail: '5% platform fee on the cash value. Hybrid Collaborations are billed cash-only — stay value is excluded.',
   },
 ];
 

@@ -3,14 +3,13 @@ import { useNavigate, NavLink } from 'react-router-dom';
 import { useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { useAuth } from '../contexts/AuthContext';
-import VerificationQueue from './admin/VerificationQueue';
+import Users from './admin/Users';
 import SuggestionsModeration from './admin/SuggestionsModeration';
 import UserMessages from './admin/UserMessages';
 import PlatformAnalytics from './admin/PlatformAnalytics';
 import AdminSettings from './admin/AdminSettings';
 import FounderTracker from './admin/FounderTracker';
 import Broadcast from './admin/Broadcast';
-import WaitlistManager from './admin/WaitlistManager';
 import ListingManager from './admin/ListingManager';
 import CollabOversight from './admin/CollabOversight';
 import ContractManager from './admin/ContractManager';
@@ -54,12 +53,11 @@ const IC = (d) => (
 const ICONS = {
   overview:     IC(<><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></>),
   discovery:    IC(<><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></>),
-  verification: IC(<><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></>),
+  users:        IC(<><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></>),
   listings:     IC(<><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></>),
   collabs:      IC(<><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></>),
   contracts:    IC(<><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></>),
   founders:     IC(<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>),
-  waitlist:     IC(<><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></>),
   broadcast:    IC(<><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.86a2 2 0 011.72-2.18h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 15.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 22"/><path d="M14.05 2a9 9 0 018 7.94M14.05 6A5 5 0 0119 10"/></>),
   marketing:    IC(<><path d="M3 3h18v4H3z"/><path d="M3 10h11v11H3z"/><path d="M17 10h4v4h-4z"/><path d="M17 17h4v4h-4z"/></>),
   blog:         IC(<><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></>),
@@ -79,13 +77,12 @@ const ICONS = {
 const SECTIONS = [
   { id: 'overview',     label: 'Overview'               },
   { id: 'discovery',    label: 'Discovery'              },
-  { id: 'verification', label: 'Verification Queue'     },
+  { id: 'users',        label: 'Users'                  },
   { id: 'listings',     label: 'Listing Management'     },
   { id: 'collabs',      label: 'Collab Oversight'       },
   { id: 'contracts',    label: 'Contracts'              },
   { id: 'founders',     label: 'Founder Tracker'        },
   { id: 'ambassadors',  label: 'Ambassadors (Beta)'     },
-  { id: 'waitlist',     label: 'Waitlist Manager'       },
   { id: 'messages',     label: 'User Messages'          },
   { id: 'suggestions',  label: 'Suggestions'            },
   { id: 'moderation',   label: 'Moderation'              },
@@ -105,7 +102,7 @@ const ALGORITHM_TABS = [
   { id: 'algo-reference', label: 'How It Works' },
 ];
 
-function VerificationPanel() { return <VerificationQueue />;    }
+function UsersPanel()        { return <Users />;                }
 function ListingsPanel()     { return <ListingManager />;       }
 function CollabPanel()       { return <CollabOversight />;     }
 function ContractPanel()     { return <ContractManager />;      }
@@ -115,7 +112,6 @@ function SuggestionsPanel()  { return <SuggestionsModeration />; }
 function ModerationPanel()   { return <ModerationQueue />;      }
 function AnalyticsPanel()    { return <PlatformAnalytics />;    }
 function SettingsPanel()     { return <AdminSettings />;        }
-function WaitlistPanel()     { return <WaitlistManager />;      }
 function BroadcastPanel()    { return <Broadcast />;            }
 function AuditPanel()        { return <AuditLog />;             }
 function BlogPanel()         { return <BlogManager />;          }
@@ -129,13 +125,12 @@ function AlgoReferencePanel() { return <AlgorithmLab view="reference" />; }
 const PANEL_MAP = {
   overview:     OverviewPanel,
   discovery:    DiscoveryPanel,
-  verification: VerificationPanel,
+  users:        UsersPanel,
   listings:     ListingsPanel,
   collabs:      CollabPanel,
   contracts:    ContractPanel,
   founders:     FoundersPanel,
   ambassadors:  AmbassadorsPanel,
-  waitlist:     WaitlistPanel,
   broadcast:    BroadcastPanel,
   messages:     MessagesPanel,
   suggestions:  SuggestionsPanel,

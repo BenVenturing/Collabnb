@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 
@@ -79,25 +79,8 @@ export default function UserDetailPanel({ profileId, onClose }) {
   const [activeTab, setActiveTab] = useState('overview');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [granting, setGranting] = useState(false);
-  const [granted, setGranted] = useState(false);
   const data = useQuery(api.profiles.getDetailedProfile, profileId ? { profileId } : 'skip');
   const deleteProfile = useMutation(api.profiles.deleteProfile);
-  const approveProfile = useMutation(api.profiles.approveProfile);
-
-  const handleGrantAccess = useCallback(async () => {
-    if (!profileId) return;
-    setGranting(true);
-    try {
-      await approveProfile({ profileId: String(profileId) });
-      setGranted(true);
-    } catch (err) {
-      alert('Failed to grant access. Check console for details.');
-      console.error(err);
-    } finally {
-      setGranting(false);
-    }
-  }, [profileId, approveProfile]);
 
   const handleDelete = useCallback(async () => {
     if (!profileId) return;
@@ -158,6 +141,7 @@ export default function UserDetailPanel({ profileId, onClose }) {
                       ? <Badge bg="#DCFCE7" color="#166534">✓ Verified</Badge>
                       : <Badge bg="#FEF3C7" color="#B45309">Unverified</Badge>
                     }
+                    {data.profile.is_rejected && <Badge bg="#FEE2E2" color="#991B1B">Rejected</Badge>}
                     {data.profile.is_founder && <Badge bg={MINT} color="#166534">Founder</Badge>}
                   </div>
                   <div style={{ fontSize: '0.78rem', color: SAGE, marginTop: '0.15rem' }}>
@@ -229,41 +213,9 @@ export default function UserDetailPanel({ profileId, onClose }) {
             <>
               <TabContent tab={activeTab} data={data} />
 
-              {/* ── Grant Access (waitlist users only) ── */}
-              {data.profile.tier === 'waitlist' && !granted && (
-                <div style={{
-                  marginTop: '2rem',
-                  padding: '1rem 1.25rem',
-                  background: 'rgba(209,235,219,0.3)',
-                  border: '1px solid rgba(74,155,127,0.25)',
-                  borderRadius: '0.75rem',
-                }}>
-                  <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#166534', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.5rem' }}>
-                    Waitlist Action
-                  </div>
-                  <p style={{ fontSize: '0.78rem', color: '#14532D', margin: '0 0 0.75rem', lineHeight: 1.5 }}>
-                    Approve this user, grant full access, and send them the welcome email. Sets verified status and auto-assigns founder badge if under 100 for their role.
-                  </p>
-                  <button
-                    onClick={handleGrantAccess}
-                    disabled={granting}
-                    style={{
-                      padding: '0.45rem 1.125rem', borderRadius: '0.5rem',
-                      background: '#166534', color: '#fff', fontSize: '0.82rem',
-                      fontWeight: 600, border: 'none',
-                      cursor: granting ? 'not-allowed' : 'pointer',
-                      fontFamily: 'inherit', opacity: granting ? 0.7 : 1,
-                      transition: 'opacity 150ms',
-                    }}
-                  >
-                    {granting ? 'Granting…' : 'Grant Access'}
-                  </button>
-                </div>
-              )}
-              {granted && (
-                <div style={{ marginTop: '2rem', padding: '1rem 1.25rem', background: 'rgba(209,235,219,0.5)', border: '1px solid rgba(74,155,127,0.3)', borderRadius: '0.75rem', fontSize: '0.82rem', color: '#166534', fontWeight: 600 }}>
-                  Access granted. Welcome email sent.
-                </div>
+              {/* ── Review actions (unverified or rejected users) ── */}
+              {!data.profile.is_verified && (
+                <ReviewActions profile={data.profile} />
               )}
 
               {/* ── Danger Zone ── */}
@@ -507,6 +459,258 @@ function StatusBadge({ status }) {
     <span style={{ fontSize: '0.65rem', fontWeight: 600, padding: '0.1rem 0.45rem', borderRadius: 99, background: s.bg, color: s.color, textTransform: 'capitalize' }}>
       {status}
     </span>
+  );
+}
+
+// ─── Review actions (approve / reject unverified users) ──────────────────────
+const CREATOR_TRACKS = [
+  { value: 'ugc', label: 'UGC Track', desc: 'Portfolio-driven, delivers on host\'s channels' },
+  { value: 'influencer', label: 'Influencer Track', desc: 'Reach-driven, content on own channels' },
+];
+const TIERS_BY_TRACK = {
+  ugc: ['UGC Beginner', 'UGC Pro'],
+  influencer: ['Micro Influencer', 'Influencer'],
+};
+const CHECKLIST_ITEMS = {
+  creator: [
+    'Social accounts reviewed',
+    'Follower count & engagement verified',
+    'Portfolio & experience assessed',
+  ],
+  host: [
+    'Property listing reviewed',
+    'Contact & business info verified',
+    'Photos assessed',
+  ],
+};
+
+function ReviewActions({ profile }) {
+  const isCreator  = profile.role === 'creator';
+  const isRejected = profile.is_rejected === true;
+  const checklist  = CHECKLIST_ITEMS[isCreator ? 'creator' : 'host'];
+
+  const [checkedItems, setCheckedItems] = useState(() => new Set());
+  const [creatorTrack, setCreatorTrack] = useState('ugc');
+  const [creatorTier, setCreatorTier]   = useState('UGC Beginner');
+  const [rejecting, setRejecting]       = useState(false);
+  const [reason, setReason]             = useState('');
+  const [busy, setBusy]                 = useState(false);
+  const [error, setError]               = useState('');
+  const [note, setNote]                 = useState(profile.admin_verification_note || '');
+  const [requestInterview, setRequestInterview] = useState(!!profile.interview_requested);
+  const [savingNote, setSavingNote]     = useState(false);
+  const [noteSaved, setNoteSaved]       = useState(false);
+
+  const approveCreator = useMutation(api.gates.approveCreator);
+  const approveHost    = useMutation(api.gates.approveHost);
+  const rejectProfile  = useMutation(api.gates.rejectProfile);
+  const saveNote       = useMutation(api.gates.setAdminNote);
+  const addAudit       = useMutation(api.admin.addAuditEntry);
+
+  const totalFollowers = (profile.metrics_instagram_followers ?? 0) + (profile.metrics_tiktok_followers ?? 0) + (profile.metrics_youtube_subscribers ?? 0);
+  const allChecked = checklist.every(item => checkedItems.has(item));
+  const noteDirty  = note !== (profile.admin_verification_note || '') || requestInterview !== !!profile.interview_requested;
+
+  // Auto-select tier based on followers
+  useEffect(() => {
+    if (creatorTrack === 'influencer') {
+      setCreatorTier(totalFollowers >= 25000 ? 'Influencer' : 'Micro Influencer');
+    } else {
+      setCreatorTier('UGC Beginner');
+    }
+  }, [creatorTrack, totalFollowers]);
+
+  function toggleItem(item) {
+    setCheckedItems(prev => {
+      const next = new Set(prev);
+      if (next.has(item)) next.delete(item); else next.add(item);
+      return next;
+    });
+  }
+
+  async function handleApprove() {
+    setBusy(true);
+    setError('');
+    try {
+      if (isCreator) {
+        await approveCreator({ profileId: profile._id, track: creatorTrack, tier: creatorTier });
+      } else {
+        await approveHost({ profileId: profile._id });
+      }
+      try { await addAudit({ action: 'approved', targetType: 'profile', targetId: String(profile._id), details: `${profile.full_name}${isCreator ? ` (${creatorTrack}, ${creatorTier})` : ''}${isRejected ? ' — previously rejected' : ''}` }); } catch {}
+    } catch (err) {
+      setError(err?.message || 'Failed to approve.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleReject() {
+    setBusy(true);
+    try {
+      await rejectProfile({ profileId: profile._id, reason: reason || undefined });
+      try { await addAudit({ action: 'rejected', targetType: 'profile', targetId: String(profile._id), details: `${profile.full_name} — ${reason || 'No reason'}` }); } catch {}
+      setRejecting(false);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleSaveNote() {
+    setSavingNote(true);
+    try {
+      await saveNote({ profileId: profile._id, note: note || undefined, requestInterview });
+      setNoteSaved(true);
+      setTimeout(() => setNoteSaved(false), 1500);
+    } finally {
+      setSavingNote(false);
+    }
+  }
+
+  const pillStyle = (active) => ({
+    padding: '0.4rem 0.75rem', borderRadius: '0.5rem', fontSize: '0.75rem', fontWeight: 600,
+    background: active ? INK : 'rgba(255,255,255,0.7)',
+    color: active ? '#fff' : SLATE,
+    border: active ? `1px solid ${INK}` : '1px solid rgba(25,37,36,0.1)',
+    cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
+  });
+
+  return (
+    <div style={{
+      marginTop: '2rem',
+      padding: '1rem 1.25rem',
+      background: 'rgba(209,235,219,0.30)',
+      border: '1px solid rgba(74,155,127,0.25)',
+      borderRadius: '0.75rem',
+      backdropFilter: 'blur(20px) saturate(140%)',
+    }}>
+      <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#166534', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.6rem' }}>
+        Review Actions
+      </div>
+
+      {isRejected && (
+        <div style={{ marginBottom: '0.75rem', padding: '0.45rem 0.7rem', background: '#FEF2F2', borderRadius: '0.5rem', fontSize: '0.75rem', color: '#991B1B', borderLeft: '3px solid #FECACA' }}>
+          Previously rejected{profile.rejection_reason ? <> — <strong>{profile.rejection_reason}</strong></> : ''}. Granting access clears the rejection.
+        </div>
+      )}
+
+      {/* Track + tier (creators) */}
+      {isCreator && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '0.75rem' }}>
+          <label style={{ fontSize: '0.72rem', color: SLATE, fontWeight: 600 }}>Creator Track</label>
+          <div style={{ display: 'flex', gap: '0.375rem', flexWrap: 'wrap' }}>
+            {CREATOR_TRACKS.map(t => (
+              <button key={t.value} onClick={() => setCreatorTrack(t.value)} style={pillStyle(creatorTrack === t.value)}>
+                <div>{t.label}</div>
+                <div style={{ fontSize: '0.65rem', fontWeight: 400, opacity: 0.7 }}>{t.desc}</div>
+              </button>
+            ))}
+          </div>
+          <label style={{ fontSize: '0.72rem', color: SLATE, fontWeight: 600 }}>Tier</label>
+          <div style={{ display: 'flex', gap: '0.375rem', flexWrap: 'wrap' }}>
+            {TIERS_BY_TRACK[creatorTrack]?.map(t => (
+              <button key={t} onClick={() => setCreatorTier(t)} style={{
+                ...pillStyle(creatorTier === t),
+                background: creatorTier === t ? MINT : 'rgba(255,255,255,0.7)',
+                color: creatorTier === t ? '#166534' : SLATE,
+                border: creatorTier === t ? '1px solid rgba(22,101,52,0.2)' : '1px solid rgba(25,37,36,0.1)',
+              }}>{t}</button>
+            ))}
+          </div>
+          {creatorTrack === 'influencer' && (
+            <p style={{ fontSize: '0.7rem', color: SAGE, margin: 0 }}>Total followers: {totalFollowers.toLocaleString()}</p>
+          )}
+        </div>
+      )}
+
+      {/* Checklist */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', marginBottom: '0.75rem' }}>
+        <label style={{ fontSize: '0.72rem', color: SLATE, fontWeight: 600 }}>Verification checklist</label>
+        {checklist.map(item => (
+          <label key={item} style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.78rem', color: SLATE, cursor: 'pointer' }}>
+            <input type="checkbox" checked={checkedItems.has(item)} onChange={() => toggleItem(item)} />
+            {item}
+          </label>
+        ))}
+      </div>
+
+      {error && <p style={{ fontSize: '0.75rem', color: '#991B1B', margin: '0 0 0.5rem' }}>{error}</p>}
+
+      {/* Approve / Reject */}
+      {!rejecting ? (
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+          <button
+            onClick={handleApprove}
+            disabled={busy || !allChecked}
+            style={{ padding: '0.45rem 1.125rem', borderRadius: '0.5rem', background: '#166534', color: '#fff', fontSize: '0.8rem', fontWeight: 600, border: 'none', cursor: busy || !allChecked ? 'not-allowed' : 'pointer', opacity: busy || !allChecked ? 0.55 : 1, fontFamily: 'inherit', transition: 'opacity 150ms' }}
+          >
+            {busy ? 'Approving…' : isRejected ? '✓ Grant Access' : '✓ Confirm Approval'}
+          </button>
+          {!isRejected && (
+            <button
+              onClick={() => setRejecting(true)}
+              disabled={busy}
+              style={{ padding: '0.45rem 1rem', borderRadius: '0.5rem', background: 'transparent', color: '#991B1B', fontSize: '0.8rem', fontWeight: 500, border: '1px solid rgba(153,27,27,0.2)', cursor: busy ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}
+            >
+              ✕ Reject
+            </button>
+          )}
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          <textarea
+            placeholder="Optional rejection reason (will be included in the email)"
+            value={reason}
+            onChange={e => setReason(e.target.value)}
+            rows={2}
+            style={{ width: '100%', padding: '0.5rem 0.7rem', borderRadius: '0.5rem', border: '1px solid rgba(25,37,36,0.15)', fontSize: '0.78rem', fontFamily: 'inherit', resize: 'vertical', outline: 'none', color: INK, lineHeight: 1.5 }}
+          />
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <button
+              onClick={handleReject}
+              disabled={busy}
+              style={{ padding: '0.4rem 0.875rem', borderRadius: '0.5rem', background: '#FEE2E2', color: '#991B1B', fontSize: '0.78rem', fontWeight: 600, border: '1px solid rgba(153,27,27,0.15)', cursor: busy ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}
+            >
+              {busy ? 'Sending…' : 'Send Rejection'}
+            </button>
+            <button
+              onClick={() => { setRejecting(false); setReason(''); }}
+              style={{ padding: '0.4rem 0.875rem', borderRadius: '0.5rem', background: 'transparent', color: SAGE, fontSize: '0.78rem', border: '1px solid rgba(25,37,36,0.1)', cursor: 'pointer', fontFamily: 'inherit' }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Admin note + interview flag */}
+      <div style={{ marginTop: '0.875rem', padding: '0.7rem', background: 'rgba(255,255,255,0.6)', borderRadius: '0.625rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem', gap: '0.5rem', flexWrap: 'wrap' }}>
+          <label style={{ fontSize: '0.7rem', fontWeight: 600, color: SLATE }}>Admin note</label>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.7rem', color: SLATE, cursor: 'pointer' }}>
+            <input type="checkbox" checked={requestInterview} onChange={e => setRequestInterview(e.target.checked)} />
+            Flag for interview
+          </label>
+        </div>
+        <textarea
+          value={note}
+          onChange={e => setNote(e.target.value)}
+          placeholder="Internal note (not shown to applicant)…"
+          rows={2}
+          style={{ width: '100%', padding: '0.4rem 0.6rem', borderRadius: '0.4rem', border: '1px solid rgba(25,37,36,0.12)', fontSize: '0.75rem', fontFamily: 'inherit', resize: 'vertical', outline: 'none', color: INK }}
+        />
+        {noteDirty && (
+          <button
+            onClick={handleSaveNote}
+            disabled={savingNote}
+            style={{ marginTop: '0.4rem', padding: '0.3rem 0.7rem', borderRadius: '0.4rem', background: INK, color: '#fff', fontSize: '0.7rem', fontWeight: 600, border: 'none', cursor: savingNote ? 'default' : 'pointer', opacity: savingNote ? 0.6 : 1, fontFamily: 'inherit' }}
+          >
+            {savingNote ? 'Saving…' : 'Save'}
+          </button>
+        )}
+        {noteSaved && <span style={{ marginLeft: '0.5rem', fontSize: '0.7rem', color: '#166534' }}>Saved</span>}
+      </div>
+    </div>
   );
 }
 

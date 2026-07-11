@@ -590,7 +590,7 @@ export const bulkApproveProfiles = mutation({
     for (const profileId of args.profileIds) {
       const profile = await ctx.db.get(profileId);
       if (!profile) continue;
-      const patch: Record<string, any> = { is_verified: true, is_founder: args.isFounder };
+      const patch: Record<string, any> = { is_verified: true, is_founder: args.isFounder, is_rejected: undefined, rejection_reason: undefined };
       if (profile.referred_by && !profile.first_collab_completed) {
         patch.referral_bonus_pending = true;
       }

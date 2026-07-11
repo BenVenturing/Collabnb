@@ -2176,7 +2176,34 @@ h3 { font-weight: 700; }
 .modal-card.clerk-active {
   max-height: none;
   overflow-y: visible;
-  max-width: 560px;
+  max-width: 640px;
+}
+/* Clerk's embedded card must fill the mount — no inner card chrome, no
+   clipped corners on any step (sign-up, verification code, missing fields) */
+#wl-clerk-mount .cl-rootBox,
+#wl-clerk-mount .cl-card,
+#wl-clerk-mount .cl-cardBox {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+#wl-clerk-mount .cl-cardBox {
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+#wl-clerk-mount .cl-footer,
+#wl-clerk-mount .cl-footerAction,
+#wl-clerk-mount .cl-footerPages {
+  background: transparent !important;
+}
+/* Refused-close nudge while the mandatory details step is showing */
+@keyframes modal-nudge {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-7px); }
+  75% { transform: translateX(7px); }
+}
+.modal-card.nudge {
+  animation: modal-nudge 0.3s ease;
 }
 /* The overlay must actually scroll when the expanded card exceeds the viewport,
    otherwise the card's top/bottom get clipped with no way to reach the buttons.

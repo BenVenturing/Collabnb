@@ -170,6 +170,8 @@ export const approveProfile = mutation({
     const patch: Record<string, any> = {
       is_verified: true,
       is_founder: isFounder,
+      is_rejected: undefined,
+      rejection_reason: undefined,
     };
     // If referred, stamp the pending collab bonus so their profile shows the indicator
     if (profile?.referred_by && !profile.first_collab_completed) {

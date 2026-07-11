@@ -348,6 +348,9 @@ let currentRole = 'creator';
 let _wizardProfileId = null;
 let _wizardEmail = '';
 let _wizardName = '';
+// True while the mandatory post-signup details step is showing — blocks
+// closing the modal (backdrop, Escape, ×) until the form is submitted/skipped
+let _detailsGate = false;
 
 function _stepDots(active) {
   return [1, 2, 3].map((n, i) => {
@@ -411,6 +414,9 @@ function showWizardStep(step) {
   const area = document.querySelector('#clerk-sign-up-area');
   if (!area) return;
   _updatePageDots(step);
+  _detailsGate = step === 3 && localStorage.getItem('collabnb_details_done') !== '1';
+  const closeX = document.getElementById('modal-close');
+  if (closeX) closeX.style.display = _detailsGate ? 'none' : '';
   const titleEl = document.getElementById('modal-title');
   const subtitleEl = document.getElementById('modal-subtitle');
 
@@ -469,10 +475,11 @@ function showWizardStep(step) {
     document.getElementById('wl-skip-account')?.addEventListener('click', closeModal);
     getClerk().then((clerk) => {
       if (!clerk) { showWizardStep(3); return; }
-      // Already signed in — skip account creation
+      // Already signed in — skip account creation. Fully onboarded users go
+      // straight to their profile (no repeat celebration animation).
       if (clerk.user) {
         if (localStorage.getItem('collabnb_details_done') === '1') {
-          _showWizardDone(_wizardName || clerk.user.fullName || '');
+          window.location.href = '/profile';
         } else {
           showWizardStep(3);
         }
@@ -484,7 +491,6 @@ function showWizardStep(step) {
       mountEl.setAttribute('autocomplete', 'off');
       // Store the name for the celebration screen when OAuth redirects back
       try { localStorage.setItem('collabnb_signup_name', _wizardName || ''); } catch {}
-      try { localStorage.setItem('collabnb_new_signup', '1'); } catch {}
       // Use absolute URLs — Clerk requires these to be listed in dashboard → Redirects
       const origin = window.location.origin;
       const returnUrl = `${origin}/join.html?celebrate=1`;
@@ -520,13 +526,14 @@ function showWizardStep(step) {
               fontSize: '0.9375rem',
             },
             elements: {
-              card: 'box-shadow:none!important;border:none!important;padding:0!important;background:transparent!important;',
-              cardBox: 'box-shadow:none!important;',
+              rootBox: 'width:100%!important;',
+              card: 'box-shadow:none!important;border:none!important;padding:0!important;background:transparent!important;width:100%!important;',
+              cardBox: 'box-shadow:none!important;border:none!important;border-radius:0!important;background:transparent!important;width:100%!important;',
               header: 'display:none!important;',
               logoBox: 'display:none!important;',
-              footer: 'background:#ffffff!important;background-color:#ffffff!important;',
-              footerPages: 'background:#ffffff!important;',
-              footerAction: 'background:#ffffff!important;',
+              footer: 'background:transparent!important;background-color:transparent!important;',
+              footerPages: 'background:transparent!important;',
+              footerAction: 'background:transparent!important;',
             },
           },
         });
@@ -596,6 +603,9 @@ function showWizardStep(step) {
 }
 
 function _showWizardDone(userName) {
+  _detailsGate = false;
+  const closeX = document.getElementById('modal-close');
+  if (closeX) closeX.style.display = '';
   const area = document.querySelector('#clerk-sign-up-area');
   const titleEl = document.getElementById('modal-title');
   const subtitleEl = document.getElementById('modal-subtitle');
@@ -801,6 +811,15 @@ async function handleDetailsSubmit(e) {
 function closeModal() {
   const overlay = document.querySelector('#modal-overlay');
   if (!overlay) return;
+  // The post-signup details step is mandatory — nudge instead of closing
+  if (_detailsGate && overlay.classList.contains('open')) {
+    const gateCard = overlay.querySelector('.modal-card');
+    if (gateCard) {
+      gateCard.classList.add('nudge');
+      setTimeout(() => gateCard.classList.remove('nudge'), 400);
+    }
+    return;
+  }
   overlay.classList.remove('open');
   overlay.setAttribute('aria-hidden', 'true');
   document.body.style.overflow = '';
@@ -1423,9 +1442,10 @@ async function initNavAuth() {
     // Fires when Clerk redirects back with ?celebrate=1 OR when SSO callback URL is join.html
     const onJoinPage = window.location.pathname.endsWith('join.html') || window.location.pathname.endsWith('/join');
     const urlParams = new URLSearchParams(window.location.search);
+    // Only the explicit ?celebrate=1 from the sign-up redirect triggers the
+    // celebration — a plain sign-in must never replay it
     const isCelebrate = urlParams.get('celebrate') === '1';
-    const isNewSignupFlag = localStorage.getItem('collabnb_new_signup') === '1';
-    if (onJoinPage && (isCelebrate || isNewSignupFlag)) {
+    if (onJoinPage && isCelebrate) {
       // Get the name saved before OAuth redirect (localStorage survives cross-origin)
       const savedName = localStorage.getItem('collabnb_signup_name') || '';
       localStorage.removeItem('collabnb_signup_name');

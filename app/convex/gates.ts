@@ -117,6 +117,8 @@ export const approveCreator = mutation({
       creator_track: args.track,
       tier,
       is_founder: isFounder,
+      is_rejected: undefined,
+      rejection_reason: undefined,
       access_state: isFounder ? "active" : "trial",
       trial_starts_at: isFounder ? undefined : now,
       trial_ends_at: isFounder ? undefined : now + TRIAL_DURATION_DAYS * 24 * 60 * 60 * 1000,
@@ -172,6 +174,8 @@ export const approveHost = mutation({
       is_founder: isFounder,
       access_state: "active",
       admin_verification_note: args.adminNote,
+      is_rejected: undefined,
+      rejection_reason: undefined,
     });
 
     await ctx.db.insert("admin_audit_log", {

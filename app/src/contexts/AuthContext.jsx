@@ -121,6 +121,9 @@ function ClerkAuthInner({ children }) {
           return;
         }
         const isAdminUser = ADMIN_EMAIL ? email.toLowerCase() === ADMIN_EMAIL.toLowerCase() : false;
+        const waitlistRole = (() => {
+          try { return localStorage.getItem('collabnb_waitlist_role') || undefined; } catch { return undefined; }
+        })();
         let result = await convex.query(api.profiles.getByEmail, { email });
         const isNewUser = !result;
         if (!result) {
@@ -130,6 +133,7 @@ function ClerkAuthInner({ children }) {
               full_name: clerkUser.fullName || email.split('@')[0],
               avatar_url: clerkUser.imageUrl || undefined,
               is_admin: isAdminUser,
+              role: waitlistRole,
             });
           } catch {
             // getOrCreate not yet deployed — profile remains null

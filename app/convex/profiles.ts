@@ -16,6 +16,7 @@ export const getOrCreate = mutation({
     full_name: v.string(),
     avatar_url: v.optional(v.string()),
     is_admin: v.optional(v.boolean()),
+    role: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const existing = await ctx.db
@@ -53,7 +54,7 @@ export const getOrCreate = mutation({
       email: args.email,
       full_name: args.full_name || args.email.split('@')[0],
       username,
-      role: 'creator',
+      role: args.role || 'creator',
       tier: args.is_admin ? 'UGC Pro' : 'waitlist',
       is_verified: args.is_admin ? true : false,
       is_founder: args.is_admin ? true : undefined,
@@ -336,6 +337,7 @@ export const linkOrCreateFromClerk = internalMutation({
     email: v.string(),
     fullName: v.string(),
     username: v.string(),
+    role: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const existing = await ctx.db
@@ -355,7 +357,7 @@ export const linkOrCreateFromClerk = internalMutation({
       full_name: args.fullName,
       username: args.username,
       email: args.email,
-      role: "creator",
+      role: args.role || "creator",
       tier: "active",
       bio: "",
       is_founder: false,
@@ -437,6 +439,45 @@ export const markFirstCollabCompleted = mutation({
   args: { profileId: v.string() },
   handler: async (ctx, args) => {
     await ctx.db.patch(args.profileId as any, { first_collab_completed: true });
+  },
+});
+
+// Switch a logged-in creator to host — mirrors the waitlist host signup
+// (role flip + host details + admin notification + welcome email) without
+// creating a new account. Keeps the same Clerk login.
+export const switchToHost = mutation({
+  args: {
+    profileId: v.string(),
+    business_name: v.optional(v.string()),
+    city: v.optional(v.string()),
+    country: v.optional(v.string()),
+    property_type: v.optional(v.string()),
+    website_url: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const profile = await ctx.db.get(args.profileId as any);
+    if (!profile) throw new Error("Profile not found.");
+    // Only fields declared on the profiles schema are persisted; business_name,
+    // property_type, website_url are captured for the admin notification email
+    // but not stored on the profile (consistent with waitlist.signUp).
+    const patch: Record<string, any> = { role: "host" };
+    if (args.city !== undefined) patch.city = args.city;
+    if (args.country !== undefined) patch.country = args.country;
+    await ctx.db.patch(args.profileId as any, patch);
+
+    if (profile.email) {
+      await ctx.scheduler.runAfter(0, internal.email.sendAdminNotification, {
+        type: "signup",
+        subject: `New host signup: ${profile.full_name}`,
+        body: `Name: ${profile.full_name}\nEmail: ${profile.email}\nRole: host\nBusiness: ${args.business_name || "—"}\nCity: ${args.city || "—"}\nProperty type: ${args.property_type || "—"}\nWebsite: ${args.website_url || "—"}\n\nExisting account switched to host via in-app signup.`,
+      });
+      await ctx.scheduler.runAfter(0, internal.email.sendWelcomeEmail, {
+        to: profile.email,
+        name: profile.full_name,
+        role: "host",
+      });
+    }
+    return { switched: true };
   },
 });
 

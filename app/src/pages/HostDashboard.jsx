@@ -1,11 +1,11 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, MapPin, Users, Calendar, MessageSquare, MoreVertical, X, UserPlus, Home, CheckCircle2 } from 'lucide-react';
-import { useQuery, useMutation } from 'convex/react';
+import { useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useListingDraft } from '../contexts/ListingDraftContext';
-import { SAMPLE_LISTINGS, IMG_FALLBACK } from '../lib/mockData';
+import { IMG_FALLBACK } from '../lib/mockData';
 import SkeletonCard from '../components/SkeletonCard';
 import PricingTool, { PointsHelpButton } from '../components/PricingTool';
 import { cache } from '../lib/cache';
@@ -549,7 +549,6 @@ export default function HostDashboard() {
   const navigate = useNavigate();
   const { profile } = useAuth();
   const { loadDraft, clearDraft } = useListingDraft();
-  const deleteListingMutation = useMutation(api.listings.deleteListing);
 
   // ── Convex: fetch only this host's listings ──────────────────────────────────
   const hostId = profile?._id || profile?.id;
@@ -645,14 +644,25 @@ export default function HostDashboard() {
     return () => clearTimeout(t);
   }, []);
 
-  // Sample listings are now a single global set (owned by Ben, shown on Explore via
-  // api.listings.getSamples). Per-host auto-seeding was removed because it created a
-  // duplicate set of 6 listings for every account that opened the dashboard.
+  // Sample listings are a single global canonical set (owned by Ben, shown on
+  // Explore via api.listings.getSamples). New hosts see them here too so the
+  // dashboard matches Explore exactly. "Remove sample" hides it locally for
+  // this host (same key Explore uses) — it never deletes the global row.
+  const HIDDEN_SAMPLE_KEY = '@collabnb_hidden_sample_listings_v1';
+  const [hiddenSampleIds, setHiddenSampleIds] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(HIDDEN_SAMPLE_KEY) || '[]'); }
+    catch { return []; }
+  });
 
-  async function removeSampleListing(listing) {
-    const id = listing._id || listing.id;
+  function removeSampleListing(listing) {
+    const id = String(listing._id || listing.id);
     if (!id) return;
-    try { await deleteListingMutation({ id }); } catch {}
+    setHiddenSampleIds((prev) => {
+      if (prev.includes(id)) return prev;
+      const next = [...prev, id];
+      try { localStorage.setItem(HIDDEN_SAMPLE_KEY, JSON.stringify(next)); } catch {}
+      return next;
+    });
   }
 
   function triggerActiveGlow() {
@@ -709,24 +719,31 @@ export default function HostDashboard() {
     });
   }
 
-  // Use host's Convex listings when available; fall back to SAMPLE_LISTINGS for dev/demo
-  const useConvex = convexHostListings !== undefined && convexHostListings.length > 0;
-  const sourceListings = useConvex
+  // Global sample listings (canonical set owned by Ben) — shown when a host has
+  // no real listings yet, so the dashboard reads the same source as Explore.
+  const convexSamples = useQuery(api.listings.getSamples) ?? null;
+
+  // Use the host's real Convex listings when they have any; otherwise show the
+  // global sample set so new hosts see the same canonical samples as Explore.
+  const hasRealListings = (convexHostListings?.length ?? 0) > 0;
+  const rawSource = hasRealListings
     ? convexHostListings.map(normalizeConvexListing)
-    : SAMPLE_LISTINGS;
+    : (convexSamples ?? []).map(normalizeConvexListing);
+  const sourceListings = rawSource.filter((l) =>
+    hasRealListings || !hiddenSampleIds.includes(String(l._id || l.id))
+  );
 
   const hostListings = sourceListings.map((l) => {
     const stored   = listingStatuses[l.id];
-    // Convex listings carry their own status; samples use HOST_META defaults
-    const defaultStatus = useConvex
-      ? (l.status || 'draft')
-      : (HOST_META[l.id]?.status || 'draft');
-    const realCounts = useConvex ? (pitchCountsByListing[l.id] || {}) : {};
+    const defaultStatus = hasRealListings
+      ? (l.status === 'published' ? 'active' : (l.status || 'draft'))
+      : (l.status === 'published' ? 'active' : (l.status || 'draft'));
+    const realCounts = hasRealListings ? (pitchCountsByListing[l.id] || {}) : {};
     const meta = {
       status:     stored?.status     ?? defaultStatus,
-      applicants: realCounts.applicants ?? HOST_META[l.id]?.applicants ?? 0,
-      confirmed:  realCounts.confirmed  ?? HOST_META[l.id]?.confirmed  ?? 0,
-      completed:  realCounts.completed  ?? HOST_META[l.id]?.completed  ?? 0,
+      applicants:  realCounts.applicants ?? (hasRealListings ? 0 : (HOST_META[l.id]?.applicants ?? 0)),
+      confirmed:   realCounts.confirmed  ?? (hasRealListings ? 0 : (HOST_META[l.id]?.confirmed  ?? 0)),
+      completed:   realCounts.completed  ?? (hasRealListings ? 0 : (HOST_META[l.id]?.completed  ?? 0)),
     };
     const autoPaused = meta.status === 'active' && l.maxOffers && meta.confirmed >= l.maxOffers;
     return { ...l, meta: autoPaused ? { ...meta, status: 'paused' } : meta };
@@ -874,7 +891,7 @@ export default function HostDashboard() {
             </div>
           </div>
 
-          {convexHostListings === undefined ? (
+          {(convexHostListings === undefined || (!hasRealListings && convexSamples === null)) ? (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1.25rem', alignItems: 'start' }}>
               {Array.from({ length: 3 }).map((_, i) => (
                 <SkeletonCard key={i} variant="host-listing" />

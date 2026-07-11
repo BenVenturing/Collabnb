@@ -47,6 +47,7 @@ import { SAMPLE_COLLABORATIONS, SAMPLE_LISTINGS } from '../lib/mockData';
 import { getPitchCount } from '../lib/pitchCount';
 import { cache } from '../lib/cache';
 import { reopenChecklist } from '../components/OnboardingChecklist';
+import HostSignupSheet from '../components/HostSignupSheet';
 
 // ─── Creator tier + niche options ────────────────────────────────────────────
 const CREATOR_TIERS = [
@@ -635,6 +636,7 @@ export default function Profile() {
   const [showSettings,      setShowSettings]      = useState(false);
   const [showSwitchConfirm, setShowSwitchConfirm] = useState(false);
   const [showContracts,     setShowContracts]     = useState(false);
+  const [hostSignupOpen,    setHostSignupOpen]    = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showAllCollabs,    setShowAllCollabs]    = useState(false);
   const [showPrivacy,       setShowPrivacy]       = useState(false);
@@ -1916,11 +1918,9 @@ export default function Profile() {
             </p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
-              <button className="btn-primary" onClick={async () => {
-                const newRole = profile?.role === 'host' ? 'creator' : 'host';
-                await updateProfile({ role: newRole });
+              <button className="btn-primary" onClick={() => {
                 setShowSwitchConfirm(false);
-                if (newRole === 'host') navigate('/host');
+                setHostSignupOpen(true);
               }}>
                 {profile?.role === 'host' ? 'Sign up as Creator' : 'Sign up as Host'}
               </button>
@@ -1987,6 +1987,9 @@ export default function Profile() {
           </div>
         </div>
       )}
+
+      {/* ── Host signup sheet (creator → host switcher) ──────────────────── */}
+      <HostSignupSheet open={hostSignupOpen} onClose={() => setHostSignupOpen(false)} />
 
       {/* ── All Collabs modal ────────────────────────────────────────────── */}
       {showAllCollabs && (

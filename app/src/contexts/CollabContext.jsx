@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useCallback, useMemo } from 'react
 import { useMutation, useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { useAuth } from './AuthContext';
-import { SAMPLE_COLLABORATIONS, SAMPLE_THREADS, MOCK_CREATOR, STAGES } from '../lib/mockData';
+import { SAMPLE_THREADS, MOCK_CREATOR, STAGES } from '../lib/mockData';
 import { formatDate } from '../lib/dateUtils';
 
 const CollabContext = createContext(null);
@@ -33,8 +33,20 @@ function migrateCollections(cols) {
 
 export function CollabProvider({ children }) {
   const [collabs, setCollabs] = useState(() => {
-    try { const raw = localStorage.getItem('collabnb_collabs'); if (raw) return JSON.parse(raw); } catch {}
-    return SAMPLE_COLLABORATIONS;
+    try {
+      const raw = localStorage.getItem('collabnb_collabs');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        // Strip legacy seeded sample collabs (Glacier Prime, Tranquil Waterfront,
+        // Mountain Lodge) — these now live only on Explore as sample listings.
+        const cleaned = Array.isArray(parsed) ? parsed.filter((c) => !c.is_sample) : [];
+        if (cleaned.length !== (parsed?.length ?? 0)) {
+          localStorage.setItem('collabnb_collabs', JSON.stringify(cleaned));
+        }
+        return cleaned;
+      }
+    } catch {}
+    return [];
   });
   const [threads, setThreads] = useState(SAMPLE_THREADS);
   const [applyCount, setApplyCount] = useState(() =>

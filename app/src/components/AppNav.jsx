@@ -166,6 +166,7 @@ export default function AppNav() {
   const notifications = useQuery(api.notifications.getForUser, notifOpen && userId ? { userId } : 'skip') ?? [];
   const markRead = useMutation(api.notifications.markRead);
   const markAllRead = useMutation(api.notifications.markAllRead);
+  const clearAllNotifs = useMutation(api.notifications.clearAll);
   const hostListings = useQuery(
     api.listings.getByHost,
     userId && userId !== 'mock-user-001' ? { host_id: String(userId) } : 'skip'
@@ -667,6 +668,21 @@ export default function AppNav() {
                 }}>
                   <div style={{ padding: '14px 18px 10px', borderBottom: '1px solid rgba(25,37,36,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 14, color: 'var(--ink)' }}>Notifications</span>
+                    {notifications.length > 0 && (
+                      <button
+                        onClick={() => clearAllNotifs({ userId })}
+                        style={{
+                          background: 'none', border: 'none', cursor: 'pointer',
+                          fontFamily: 'var(--font-body)', fontSize: 12, fontWeight: 600,
+                          color: 'var(--sage)', padding: '2px 0',
+                          transition: 'color 150ms',
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--ink)'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--sage)'; }}
+                      >
+                        Clear all
+                      </button>
+                    )}
                   </div>
                   <div style={{ overflowY: 'auto', maxHeight: 360 }}>
                     {notifications.length === 0 ? (

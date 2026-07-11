@@ -118,7 +118,7 @@ export const create = mutation({
         type: "new_application",
         title: `New application from ${args.creatorName}`,
         body: args.message.length > 80 ? args.message.slice(0, 80) + "…" : args.message,
-        link: "#/host/proposals",
+        link: `#/host/proposals?pitch=${String(id)}`,
       });
 
       const host = await ctx.db.get(args.hostId as any);
@@ -222,7 +222,7 @@ export const updateStatus = mutation({
         type: status === "approved" ? "pitch_approved" : "pitch_declined",
         title,
         body,
-        link: "#/collabs",
+        link: `#/collabs?open=${String(pitch.listing_id)}`,
       });
 
       const creator = await ctx.db.get(pitch.creator_id as any);
@@ -328,7 +328,9 @@ export const sendCounter = mutation({
           ? "The host proposed changes to your contract"
           : "The creator sent a counter-proposal",
         body: note || "Open proposals to review the updated terms and respond.",
-        link: fromParty === "host" ? "#/collabs" : "#/host/proposals",
+        link: fromParty === "host"
+          ? `#/collabs?open=${String(pitch.listing_id)}`
+          : `#/host/proposals?pitch=${String(id)}`,
       });
 
       const listingPart = pitch.listing_title ? ` for <strong>${pitch.listing_title}</strong>` : "";
@@ -399,7 +401,9 @@ export const signContract = mutation({
         body: bothSigned
           ? "Both parties have signed. Your collab is locked in."
           : "Open to review and add your signature.",
-        link: party === "host" ? "#/collabs" : "#/host/proposals",
+        link: party === "host"
+          ? `#/collabs?open=${String(pitch.listing_id)}`
+          : `#/host/proposals?pitch=${String(id)}`,
       });
 
       const listingPart = pitch.listing_title ? ` for <strong>${pitch.listing_title}</strong>` : "";

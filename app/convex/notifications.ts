@@ -43,6 +43,17 @@ export const markAllRead = mutation({
   },
 });
 
+export const clearAll = mutation({
+  args: { userId: v.string() },
+  handler: async (ctx, { userId }) => {
+    const all = await ctx.db
+      .query("notifications")
+      .withIndex("by_user", (q) => q.eq("user_id", userId))
+      .collect();
+    await Promise.all(all.map((n) => ctx.db.delete(n._id)));
+  },
+});
+
 export const create = internalMutation({
   args: {
     userId: v.string(),

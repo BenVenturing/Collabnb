@@ -623,6 +623,17 @@ export default function Inbox() {
   const searchInputRef = useRef(null);
   const creatorParamHandled = useRef(false);
 
+  // Deep-link from notifications: /inbox?thread=<thread_key> selects that thread
+  useEffect(() => {
+    const threadParam = searchParams.get('thread');
+    if (!threadParam) return;
+    const match = threads.find((t) => t.thread_key === threadParam || t.id === threadParam);
+    if (match) {
+      setSelectedId(match.id);
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams, threads, setSearchParams]);
+
   // Open or create a thread when navigated from HostCreators with ?creatorName=
   useEffect(() => {
     if (creatorParamHandled.current) return;

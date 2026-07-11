@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { useAuth } from '../../contexts/AuthContext';
@@ -988,6 +988,21 @@ export default function HostProposals() {
       };
     });
   }, [rawPitches]);
+
+  // Deep-link from notifications: /host/proposals?pitch=<pitchId> expands that proposal
+  const [searchParams, setSearchParams] = useSearchParams();
+  useEffect(() => {
+    const pitchParam = searchParams.get('pitch');
+    if (!pitchParam) return;
+    const match = allProposals.find((p) => String(p.id) === pitchParam);
+    if (match) {
+      setTab('all');
+      setTypeFilter('all');
+      setListingFilter('All Listings');
+      setExpanded(match.id);
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams, allProposals, setSearchParams]);
 
   const listingNames = useMemo(() => (
     ['All Listings', ...Array.from(new Set(allProposals.map((p) => p.listing)))]

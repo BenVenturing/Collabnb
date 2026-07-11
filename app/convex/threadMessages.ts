@@ -74,7 +74,7 @@ export const sendMessage = mutation({
         type: notifType,
         title: `New message from ${args.senderName}`,
         body: args.text.length > 80 ? args.text.slice(0, 80) + "…" : args.text,
-        link: "#/inbox",
+        link: `#/inbox?thread=${encodeURIComponent(args.threadKey)}`,
       });
 
       if (!hasPendingPing) {

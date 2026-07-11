@@ -307,7 +307,7 @@ async function notifyParty(
     type: opts.type,
     title: opts.title,
     body: opts.body,
-    link: "/contract",
+    link: `/contract?open=${String(contract._id)}`,
   });
 
   await postContractThreadMessage(ctx, contract, party, opts.body);
@@ -362,7 +362,7 @@ export const promptParty = mutation({
       type: "contract_reminder",
       title,
       body,
-      link: "#/collabs",
+      link: `/contract?open=${String(contract._id)}`,
     });
     await postContractThreadMessage(ctx, contract, party, body);
     return { ok: true };
@@ -401,7 +401,7 @@ export const checkContractReminders = internalMutation({
           type: "contract_reminder",
           title,
           body,
-          link: "#/collabs",
+          link: `/contract?open=${String(c._id)}`,
         });
         await postContractThreadMessage(ctx, c, party, body);
         sentAny = true;

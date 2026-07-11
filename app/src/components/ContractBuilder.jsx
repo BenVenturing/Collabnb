@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useQuery, useAction } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { useCollabs } from '../contexts/CollabContext';
@@ -192,6 +192,20 @@ export default function ContractBuilder() {
       }
     } catch {}
   }, []); // eslint-disable-line
+
+  // Deep-link from notifications: /contract?open=<contractId> opens that contract.
+  // Runs after the draft-restore effect so the deep-linked contract wins.
+  const [searchParams, setSearchParams] = useSearchParams();
+  useEffect(() => {
+    const openId = searchParams.get('open');
+    if (!openId) return;
+    const match = (contracts || []).find((c) => String(c.id) === openId);
+    if (match) {
+      loadContract(match);
+      setSearchParams({}, { replace: true });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, contracts]);
 
   // Persist form draft to localStorage on every change
   useEffect(() => {

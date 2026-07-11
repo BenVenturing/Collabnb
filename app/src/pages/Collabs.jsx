@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useCollabs } from '../contexts/CollabContext';
 import { DEMO_COLLAB } from '../lib/mockData';
 import CollabDetail from '../components/CollabDetail';
@@ -257,6 +257,18 @@ export default function Collabs() {
     const hasDemo = withReal.some((c) => c.is_demo);
     return hasDemo ? withReal : [...withReal, DEMO_COLLAB];
   }, [collabs, convexCollabs, pitchStatusMap, demoDismissed, dismissedSamples]);
+
+  // Deep-link from notifications: /collabs?open=<listing_id> auto-opens that collab
+  const [searchParams, setSearchParams] = useSearchParams();
+  useEffect(() => {
+    const openId = searchParams.get('open');
+    if (!openId) return;
+    const match = allCollabs.find((c) => String(c.listing_id) === openId || String(c.id) === openId);
+    if (match) {
+      setSelectedCollab(match);
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams, allCollabs, setSearchParams]);
 
   const active   = allCollabs.filter((c) =>  c.is_active);
   const archived = allCollabs.filter((c) => !c.is_active);

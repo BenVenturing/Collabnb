@@ -348,3 +348,36 @@ export const expireTrials = internalMutation({
     return { expired: expired.length };
   },
 });
+
+// ─── Internal: remind creators whose trial ends within 3 days (called by cron) ──
+export const remindExpiringTrials = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const now = Date.now();
+    const soon = now + 3 * 24 * 60 * 60 * 1000;
+    const profiles = await ctx.db.query("profiles").collect();
+    const ending = profiles.filter(
+      (p) =>
+        p.role === "creator" &&
+        p.access_state === "trial" &&
+        p.trial_ends_at &&
+        p.trial_ends_at > now &&
+        p.trial_ends_at <= soon &&
+        p.trial_reminder_sent !== true &&
+        p.is_founder !== true &&
+        p.is_admin !== true
+    );
+    for (const p of ending) {
+      await ctx.db.patch(p._id, { trial_reminder_sent: true });
+      if (p.email) {
+        const daysLeft = Math.max(1, Math.ceil((p.trial_ends_at! - now) / (24 * 60 * 60 * 1000)));
+        await ctx.scheduler.runAfter(0, internal.emails.sendTrialEndingEmail, {
+          email: p.email,
+          full_name: p.full_name,
+          daysLeft,
+        });
+      }
+    }
+    return { reminded: ending.length };
+  },
+});

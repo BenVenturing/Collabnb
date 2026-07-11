@@ -54,6 +54,7 @@ export default defineSchema({
     access_state: v.optional(v.union(v.literal("pending"), v.literal("trial"), v.literal("active"), v.literal("limited"))),
     trial_starts_at: v.optional(v.number()),
     trial_ends_at: v.optional(v.number()),
+    trial_reminder_sent: v.optional(v.boolean()),
     interview_requested: v.optional(v.boolean()),
     admin_verification_note: v.optional(v.string()),
   }).index("by_email", ["email"]).index("by_stripe_customer", ["stripe_customer_id"]),

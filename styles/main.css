@@ -2178,6 +2178,13 @@ h3 { font-weight: 700; }
   overflow-y: visible;
   max-width: 560px;
 }
+/* The overlay must actually scroll when the expanded card exceeds the viewport,
+   otherwise the card's top/bottom get clipped with no way to reach the buttons.
+   margin:auto on the card keeps it centered when shorter than the viewport. */
+.modal-overlay.clerk-scroll {
+  overflow-y: auto;
+  align-items: flex-start;
+}
 
 /* Ensure wizard success is centered in modal */
 .wizard-success {

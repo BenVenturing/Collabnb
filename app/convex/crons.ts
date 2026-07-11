@@ -60,4 +60,12 @@ crons.daily(
   {}
 );
 
+// Daily at 9am UTC — remind creators whose trial ends within 3 days (once each).
+crons.daily(
+  "trial ending reminders",
+  { hourUTC: 9, minuteUTC: 0 },
+  internal.gates.remindExpiringTrials,
+  {}
+);
+
 export default crons;

@@ -382,6 +382,7 @@ async function openModal() {
   if (_hasJoinedWaitlist) {
     _wizardEmail = localStorage.getItem('collabnb_waitlist_email') || '';
     _wizardName  = localStorage.getItem('collabnb_waitlist_name')  || '';
+    _wizardProfileId = localStorage.getItem('collabnb_waitlist_profile_id') || null;
     currentRole  = localStorage.getItem('collabnb_waitlist_role')  || currentRole;
     if (roleSection) roleSection.style.display = 'none';
     showWizardStep(2);
@@ -438,79 +439,45 @@ function showWizardStep(step) {
     document.getElementById('wl-step1')?.addEventListener('submit', handleStep1Submit);
 
   } else if (step === 2) {
-    if (titleEl) titleEl.textContent = 'Tell us about yourself';
-    if (subtitleEl) subtitleEl.style.display = 'none';
-    // Hide the role & referral sections on step 2 (user already joined)
-    const roleSection = document.getElementById('modal-role-section');
-    if (roleSection) roleSection.style.display = 'none';
-    const refSection = document.getElementById('referral-code-section');
-    if (refSection) refSection.style.display = 'none';
-    const firstName = _wizardName.split(' ')[0];
-    const fields = currentRole === 'creator' ? `
-      <div class="form-group">
-        <label class="form-label" for="wl-instagram">Instagram handle <span style="color:#92400E;font-weight:700;">(required)</span></label>
-        <input class="form-input" type="text" id="wl-instagram" placeholder="@yourhandle" required />
-      </div>
-      <div class="form-group">
-        <label class="form-label" for="wl-tiktok">TikTok handle <span style="color:var(--sage);font-weight:400;">(optional)</span></label>
-        <input class="form-input" type="text" id="wl-tiktok" placeholder="@yourhandle" />
-      </div>
-      <div class="form-group">
-        <label class="form-label" for="wl-portfolio">Website / Portfolio <span style="color:var(--sage);font-weight:400;">(optional)</span></label>
-        <input class="form-input" type="text" id="wl-portfolio" placeholder="https://yourportfolio.com" />
-      </div>` : `
-      <div class="form-group">
-        <label class="form-label" for="wl-business">Property or business name</label>
-        <input class="form-input" type="text" id="wl-business" placeholder="Moss &amp; Pine Cabin" />
-      </div>
-      <div class="form-group">
-        <label class="form-label" for="wl-city">City</label>
-        <input class="form-input" type="text" id="wl-city" placeholder="Asheville" />
-      </div>`;
-    area.innerHTML = `
-      ${_stepBar(2)}
-      <p style="font-size:0.875rem;color:var(--sage);margin-bottom:1.25rem;text-align:center;">Your spot is saved, <strong style="color:var(--ink);">${firstName}</strong>! These details help match you with the right collabs.</p>
-      <form id="wl-step2" style="display:flex;flex-direction:column;gap:1rem;">
-        <div class="form-group">
-          <label class="form-label" for="wl-country">Home country <span style="color:var(--sage);font-weight:400;">(optional)</span></label>
-          <input class="form-input" type="text" id="wl-country" placeholder="United States" />
-        </div>
-        ${fields}
-        <button type="submit" class="btn-primary" style="width:100%;cursor:pointer;">Continue →</button>
-        ${currentRole !== 'creator' ? '<button type="button" id="wl-skip2" style="background:none;border:none;color:var(--sage);font-size:0.8rem;cursor:pointer;padding:0.25rem 0;">Skip for now</button>' : ''}
-        <div id="wl-error2" style="display:none;color:#e74c3c;font-size:0.8125rem;text-align:center;"></div>
-      </form>`;
-    document.getElementById('wl-step2')?.addEventListener('submit', handleStep2Submit);
-    document.getElementById('wl-skip2')?.addEventListener('click', () => showWizardStep(3));
-
-  } else if (step === 3) {
     if (titleEl) titleEl.textContent = 'Create your account';
     if (subtitleEl) subtitleEl.style.display = 'none';
-    // Hide the role section and referral code section on step 3 (Clerk mounts here)
+    // Hide the role section and referral code section on step 2 (Clerk mounts here)
     const roleSection = document.getElementById('modal-role-section');
     if (roleSection) roleSection.style.display = 'none';
     const refSection = document.getElementById('referral-code-section');
     if (refSection) refSection.style.display = 'none';
     const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    if (isLocalhost) { _showWizardDone(); return; }
+    if (isLocalhost) { showWizardStep(3); return; }
 
-    // Expand the modal card so Clerk's component never needs to scroll internally
+    // Expand the modal card so Clerk's component never needs to scroll internally;
+    // the overlay takes over scrolling (see .modal-overlay.clerk-scroll)
     const card = document.querySelector('.modal-card');
     if (card) card.classList.add('clerk-active');
+    const overlayEl = document.querySelector('#modal-overlay');
+    if (overlayEl) overlayEl.classList.add('clerk-scroll');
 
     area.innerHTML = `
-      ${_stepBar(3)}
+      ${_stepBar(2)}
       <div style="text-align:center;margin-bottom:1.25rem;">
         <div style="width:52px;height:52px;border-radius:50%;background:var(--mint);display:flex;align-items:center;justify-content:center;margin:0 auto 0.875rem;">
           <svg viewBox="0 0 24 24" fill="none" stroke="var(--ink)" stroke-width="2" stroke-linecap="round" style="width:22px;height:22px;"><path d="M20 6L9 17l-5-5"/></svg>
         </div>
-        <p style="color:var(--sage);font-size:.8125rem;line-height:1.5;">Sign in or create a password to access your profile and explore the platform.</p>
+        <p style="color:var(--sage);font-size:.8125rem;line-height:1.5;">Create your login — continue with Google or set a username and password.</p>
       </div>
       <div id="wl-clerk-mount"></div>
-      <button id="wl-skip3" style="background:none;border:none;color:var(--sage);font-size:0.8rem;cursor:pointer;width:100%;padding:0.75rem 0 0.25rem;">I'll do this later</button>`;
-    document.getElementById('wl-skip3')?.addEventListener('click', closeModal);
+      <button id="wl-skip-account" style="background:none;border:none;color:var(--sage);font-size:0.8rem;cursor:pointer;width:100%;padding:0.75rem 0 0.25rem;">I'll do this later</button>`;
+    document.getElementById('wl-skip-account')?.addEventListener('click', closeModal);
     getClerk().then((clerk) => {
-      if (!clerk) { _showWizardDone(); return; }
+      if (!clerk) { showWizardStep(3); return; }
+      // Already signed in — skip account creation
+      if (clerk.user) {
+        if (localStorage.getItem('collabnb_details_done') === '1') {
+          _showWizardDone(_wizardName || clerk.user.fullName || '');
+        } else {
+          showWizardStep(3);
+        }
+        return;
+      }
       const mountEl = document.getElementById('wl-clerk-mount');
       if (!mountEl) return;
       // Prevent browser autofill from using saved credentials
@@ -522,9 +489,20 @@ function showWizardStep(step) {
       const origin = window.location.origin;
       const returnUrl = `${origin}/join.html?celebrate=1`;
       const appUrl = `${origin}/app/`;
+      // Pre-fill from the waitlist step
+      const nameParts = (_wizardName || '').trim().split(/\s+/);
+      const wizFirstName = nameParts[0] || undefined;
+      const wizLastName = nameParts.slice(1).join(' ') || undefined;
       try {
         clerk.mountSignUp(mountEl, {
+          initialValues: {
+            emailAddress: _wizardEmail || undefined,
+            firstName: wizFirstName,
+            lastName: wizLastName,
+          },
+          forceRedirectUrl: returnUrl,
           afterSignUpUrl: returnUrl,
+          signInForceRedirectUrl: appUrl,
           afterSignInUrl: appUrl,
           signUpUrl: `${origin}/join.html`,
           appearance: {
@@ -559,7 +537,61 @@ function showWizardStep(step) {
           <a href="${appUrl}" class="btn-primary" style="display:inline-block;text-decoration:none;padding:0.75rem 1.5rem;">Open App →</a>
         </div>`;
       }
-    }).catch(_showWizardDone);
+    }).catch(() => showWizardStep(3));
+
+  } else if (step === 3) {
+    if (titleEl) titleEl.textContent = 'Tell us about yourself';
+    if (subtitleEl) subtitleEl.style.display = 'none';
+    // Hide the role & referral sections on step 3 (user already joined)
+    const roleSection = document.getElementById('modal-role-section');
+    if (roleSection) roleSection.style.display = 'none';
+    const refSection = document.getElementById('referral-code-section');
+    if (refSection) refSection.style.display = 'none';
+    // Shrink the card back down if we're coming from the Clerk step
+    const card = document.querySelector('.modal-card');
+    if (card) card.classList.remove('clerk-active');
+    const overlayEl = document.querySelector('#modal-overlay');
+    if (overlayEl) overlayEl.classList.remove('clerk-scroll');
+    const firstName = _wizardName.split(' ')[0] || 'friend';
+    const fields = currentRole === 'creator' ? `
+      <div class="form-group">
+        <label class="form-label" for="wl-instagram">Instagram handle <span style="color:#92400E;font-weight:700;">(required)</span></label>
+        <input class="form-input" type="text" id="wl-instagram" placeholder="@yourhandle" required />
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="wl-tiktok">TikTok handle <span style="color:var(--sage);font-weight:400;">(optional)</span></label>
+        <input class="form-input" type="text" id="wl-tiktok" placeholder="@yourhandle" />
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="wl-portfolio">Website / Portfolio <span style="color:var(--sage);font-weight:400;">(optional)</span></label>
+        <input class="form-input" type="text" id="wl-portfolio" placeholder="https://yourportfolio.com" />
+      </div>` : `
+      <div class="form-group">
+        <label class="form-label" for="wl-business">Property or business name</label>
+        <input class="form-input" type="text" id="wl-business" placeholder="Moss &amp; Pine Cabin" />
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="wl-city">City</label>
+        <input class="form-input" type="text" id="wl-city" placeholder="Asheville" />
+      </div>`;
+    area.innerHTML = `
+      ${_stepBar(3)}
+      <p style="font-size:0.875rem;color:var(--sage);margin-bottom:1.25rem;text-align:center;">Your spot is saved, <strong style="color:var(--ink);">${firstName}</strong>! These details help match you with the right collabs.</p>
+      <form id="wl-details-form" style="display:flex;flex-direction:column;gap:1rem;">
+        <div class="form-group">
+          <label class="form-label" for="wl-country">Home country <span style="color:var(--sage);font-weight:400;">(optional)</span></label>
+          <input class="form-input" type="text" id="wl-country" placeholder="United States" />
+        </div>
+        ${fields}
+        <button type="submit" class="btn-primary" style="width:100%;cursor:pointer;">Continue →</button>
+        ${currentRole !== 'creator' ? '<button type="button" id="wl-skip-details" style="background:none;border:none;color:var(--sage);font-size:0.8rem;cursor:pointer;padding:0.25rem 0;">Skip for now</button>' : ''}
+        <div id="wl-details-error" style="display:none;color:#e74c3c;font-size:0.8125rem;text-align:center;"></div>
+      </form>`;
+    document.getElementById('wl-details-form')?.addEventListener('submit', handleDetailsSubmit);
+    document.getElementById('wl-skip-details')?.addEventListener('click', () => {
+      try { localStorage.setItem('collabnb_details_done', '1'); } catch {}
+      _showWizardDone(_wizardName);
+    });
   }
 }
 
@@ -663,6 +695,7 @@ async function handleStep1Submit(e) {
     _wizardName = name;
     localStorage.setItem('collabnb_waitlist_name', name);
     localStorage.setItem('collabnb_waitlist_email', email);
+    if (_wizardProfileId) localStorage.setItem('collabnb_waitlist_profile_id', _wizardProfileId);
     launchConfetti();
     initCounters();
     _hasJoinedWaitlist = true;
@@ -733,9 +766,9 @@ function showReferralCodeReveal() {
   render(code);
 }
 
-async function handleStep2Submit(e) {
+async function handleDetailsSubmit(e) {
   e.preventDefault();
-  const errorEl = document.getElementById('wl-error2');
+  const errorEl = document.getElementById('wl-details-error');
   // Validate Instagram is required for creators
   if (currentRole === 'creator') {
     const instagramVal = document.getElementById('wl-instagram')?.value?.trim();
@@ -750,6 +783,8 @@ async function handleStep2Submit(e) {
   if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
   if (errorEl) errorEl.style.display = 'none';
   try {
+    // Module state is lost when Clerk redirects back — restore from localStorage
+    if (!_wizardProfileId) _wizardProfileId = localStorage.getItem('collabnb_waitlist_profile_id') || null;
     if (_wizardProfileId) {
       const countryVal = document.getElementById('wl-country')?.value?.trim();
       const raw = currentRole === 'creator'
@@ -759,7 +794,8 @@ async function handleStep2Submit(e) {
       if (Object.keys(updates).length) await updateWaitlistProfile(_wizardProfileId, updates);
     }
   } catch { /* non-critical — still advance */ }
-  showWizardStep(3);
+  try { localStorage.setItem('collabnb_details_done', '1'); } catch {}
+  _showWizardDone(_wizardName);
 }
 
 function closeModal() {
@@ -771,6 +807,7 @@ function closeModal() {
   // Reset clerk-active expansion so next open starts at normal size
   const card = overlay.querySelector('.modal-card');
   if (card) card.classList.remove('clerk-active');
+  overlay.classList.remove('clerk-scroll');
   const trigger = document.querySelector('.btn-open-modal');
   if (trigger) trigger.focus();
 }
@@ -1214,6 +1251,20 @@ document.addEventListener('DOMContentLoaded', () => {
     openModal();
   }
 
+  // Google/OAuth returns to <page>#/sso-callback — the SignUp component must be
+  // mounted at that route to finish the handshake (and collect missing fields
+  // like username), otherwise the flow hangs on a spinner forever.
+  if (window.location.hash.startsWith('#/sso-callback') && overlay) {
+    _wizardEmail = localStorage.getItem('collabnb_waitlist_email') || '';
+    _wizardName  = localStorage.getItem('collabnb_waitlist_name')  || '';
+    _wizardProfileId = localStorage.getItem('collabnb_waitlist_profile_id') || null;
+    currentRole = localStorage.getItem('collabnb_waitlist_role') || currentRole;
+    overlay.classList.add('open');
+    overlay.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+    showWizardStep(2);
+  }
+
   // Role toggle (kept for Clerk sign-up role selection)
   document.querySelectorAll('.role-btn').forEach(btn => {
     btn.addEventListener('click', () => switchRole(btn.dataset.role));
@@ -1321,9 +1372,12 @@ async function initNavAuth() {
       initWaitlistReturnBanner();
       return;
     }
-    // Signed in — clear any pending waitlist re-engagement data
-    localStorage.removeItem('collabnb_waitlist_name');
-    localStorage.removeItem('collabnb_waitlist_email');
+    // Signed in — clear waitlist re-engagement data, but only once the
+    // post-signup details step is complete (it still needs name/profileId)
+    if (localStorage.getItem('collabnb_details_done') === '1') {
+      localStorage.removeItem('collabnb_waitlist_name');
+      localStorage.removeItem('collabnb_waitlist_email');
+    }
 
     const firstName = clerk.user.fullName?.split(' ')[0];
     const label = firstName ? `${firstName}'s Profile` : 'My Profile';
@@ -1377,18 +1431,25 @@ async function initNavAuth() {
       localStorage.removeItem('collabnb_signup_name');
       localStorage.removeItem('collabnb_new_signup');
       const name = savedName || clerk.user?.fullName || clerk.user?.firstName || '';
+      // Restore wizard state that was lost across the Clerk redirect
+      _wizardName = localStorage.getItem('collabnb_waitlist_name') || name || _wizardName;
+      _wizardEmail = localStorage.getItem('collabnb_waitlist_email') || _wizardEmail;
+      _wizardProfileId = localStorage.getItem('collabnb_waitlist_profile_id') || _wizardProfileId;
+      currentRole = localStorage.getItem('collabnb_waitlist_role') || currentRole;
       // Clean URL param
       window.history.replaceState({}, '', window.location.pathname);
-      // Open the modal with celebration screen
+      // Open the modal — details step first if not yet completed, else celebration
       const overlay = document.querySelector('#modal-overlay');
       if (overlay && !overlay.classList.contains('open')) {
         overlay.classList.add('open');
         overlay.setAttribute('aria-hidden', 'false');
         document.body.style.overflow = 'hidden';
-        setTimeout(() => _showWizardDone(name), 100);
-      } else {
-        _showWizardDone(name);
       }
+      const detailsDone = localStorage.getItem('collabnb_details_done') === '1';
+      setTimeout(() => {
+        if (detailsDone) _showWizardDone(name);
+        else showWizardStep(3);
+      }, 100);
     }
   } catch (_) {
     // silently fail — nav stays as default

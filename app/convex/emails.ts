@@ -243,6 +243,28 @@ export const sendContractEmail = internalAction({
   },
 });
 
+// ─── Trial ending soon ─────────────────────────────────────────────────────────
+
+export const sendTrialEndingEmail = internalAction({
+  args: { email: v.string(), full_name: v.string(), daysLeft: v.number() },
+  handler: async (_ctx, { email, full_name, daysLeft }) => {
+    const apiKey = process.env.RESEND_API_KEY;
+    if (!apiKey) return;
+
+    const firstName = full_name.split(" ")[0];
+    const days = `${daysLeft} day${daysLeft === 1 ? "" : "s"}`;
+
+    const body = `
+      <p style="margin:0 0 8px;font-size:22px;font-weight:700;color:#192524;">${days} left on your trial, ${firstName}</p>
+      <p style="margin:0 0 24px;font-size:15px;color:#3C5759;line-height:1.65;">
+        Subscribe to Creator Plus to keep exploring listings, applying to campaigns, and pitching hosts without interruption.
+      </p>
+      ${button(`${BASE_URL}/#/profile`, "Subscribe to Creator Plus")}`;
+
+    await send(apiKey, email, `${days} left on your Collabnb trial`, layout(body));
+  },
+});
+
 // ─── Trial ended ──────────────────────────────────────────────────────────────
 
 export const sendTrialEndedEmail = internalAction({

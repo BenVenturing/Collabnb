@@ -19,6 +19,7 @@ export default defineConfig({
         login: resolve(__dirname, 'login.html'),
         'sso-callback': resolve(__dirname, 'sso-callback.html'),
         pricing: resolve(__dirname, 'pricing/index.html'),
+        calculator: resolve(__dirname, 'pricing/calculator.html'),
       },
     },
   },

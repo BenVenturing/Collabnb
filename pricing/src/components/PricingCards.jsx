@@ -51,39 +51,6 @@ export default function PricingCards({ isFoundingFull, creatorSpotsRemaining, ho
           <LockedCard plan={LOCKED_PLANS[1]} isUnlocked={isUnlocked} onSubscribe={onSubscribe} />
         </div>
       </div>
-      
-      {/* ── Founders first overprint — host pricing ── */}
-      <div className="max-w-lg mx-auto text-center mt-10 mb-4">
-        <div className="relative">
-          <div className={`rounded-glass p-5 sm:p-6 ${!isFoundingFull ? "opacity-40 blur-[1px] pointer-events-none select-none" : "glass"}`}
-               aria-hidden={!isFoundingFull ? 'true' : undefined}>
-            <p className="text-xs font-medium text-sage uppercase tracking-widest mb-2">Host Platform Fee</p>
-            <div className="font-display font-extrabold text-ink tracking-tight leading-none mt-1">
-              <span className="text-3xl">$20</span>
-              <span className="text-base font-normal text-sage"> flat</span>
-            </div>
-            <p className="text-xs text-sage mt-1 mb-3 leading-relaxed">Per completed collaboration under $500</p>
-            <div className="border-t border-black/[0.06] mb-3" />
-            <ul className="text-left space-y-2 mx-auto max-w-xs text-sm text-sage">
-              <li className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-mint/70 flex-shrink-0" />No fee to list, message, or browse</li>
-              <li className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-mint/70 flex-shrink-0" />$20 flat for collabs under $500</li>
-              <li className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-mint/70 flex-shrink-0" />5% for collabs $500+</li>
-              <li className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-mint/70 flex-shrink-0" />Billed only after you complete</li>
-            </ul>
-          </div>
-          {!isFoundingFull && (
-            <div style={{
-              position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-              borderRadius: '1rem', zIndex: 5,
-            }}>
-              <div className="glass rounded-glass px-5 py-3 text-center shadow-lg">
-                <p className="text-sm font-bold text-ink font-display">Founding Members skip fees</p>
-                <p className="text-xs text-sage mt-1">{Math.min(creatorSpotsRemaining, hostSpotsRemaining)} joint founding spots remain</p>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
 
       {/* Mobile hint */}
       <p className="text-center text-xs text-sage mt-3 md:hidden">← Swipe to compare plans →</p>

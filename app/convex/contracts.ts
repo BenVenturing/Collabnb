@@ -479,16 +479,21 @@ export const recordPaymentInternal = internalMutation({
     const cashValue = parseFloat(String((contract as any).payment ?? "").replace(/[^0-9.]/g, "")) || 0;
     const feeMethod = cashValue >= 500 ? `5% of $${cashValue.toFixed(0)}` : "flat $20 fee";
 
+    // Email copy is editable in Admin → Emails → Templates ({name} filled at send time).
+    const vars = { propertyLabel, amount: args.paymentAmount.toFixed(2), feeMethod };
+    const creatorCopy = await mergedCopy(ctx.db, "collab_complete_creator");
+    const hostCopy = await mergedCopy(ctx.db, "fee_receipt_host");
+
     await notifyParty(ctx, contract, "creator", {
       type: "contract_paid",
       title: "Collaboration wrapped 🎉",
       body: `The ${propertyLabel} collaboration is complete and the platform fee has been settled.`,
       email: {
-        subject: "Your Collabnb collaboration is complete",
-        heading: "All wrapped up, {name} 🎉",
-        message: `The <strong>${propertyLabel}</strong> collaboration is officially complete — the platform fee has been settled on the host's end. There's nothing left for you to do here.`,
-        calloutLabel: "What's next",
-        calloutText: "Coordinate any remaining details with your collaborator in Collabnb.",
+        subject: fill(creatorCopy.subject, vars),
+        heading: fill(creatorCopy.heading, vars),
+        message: fill(creatorCopy.body, vars),
+        calloutLabel: fill(creatorCopy.calloutLabel, vars) || undefined,
+        calloutText: fill(creatorCopy.calloutText, vars) || undefined,
       },
     });
 
@@ -497,11 +502,11 @@ export const recordPaymentInternal = internalMutation({
       title: "Fee receipt 💸",
       body: `Platform fee of $${args.paymentAmount.toFixed(2)} charged for the completed ${propertyLabel} collaboration.`,
       email: {
-        subject: "Receipt: Collabnb platform fee charged",
-        heading: "Collaboration complete, {name} 💸",
-        message: `Your <strong>${propertyLabel}</strong> collaboration is marked complete and the Collabnb platform fee has been charged to your card on file.`,
-        calloutLabel: "Receipt",
-        calloutText: `Amount charged: $${args.paymentAmount.toFixed(2)} (${feeMethod}). This is Collabnb's platform fee for the completed collaboration — not a charge from your collaborator.`,
+        subject: fill(hostCopy.subject, vars),
+        heading: fill(hostCopy.heading, vars),
+        message: fill(hostCopy.body, vars),
+        calloutLabel: fill(hostCopy.calloutLabel, vars) || undefined,
+        calloutText: fill(hostCopy.calloutText, vars) || undefined,
       },
     });
   },

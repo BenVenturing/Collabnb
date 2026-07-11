@@ -38,7 +38,7 @@ export const TIERS = {
   ugc_beginner: {
     id: "ugc_beginner",
     label: "UGC Beginner",
-    requirement: "2,000+ followers, portfolio-admitted",
+    requirement: "0–5K followers, portfolio-admitted",
     track: "ugc",
     // Placeholder $/point rate — pending real marketplace data.
     ratePerPoint: 8,
@@ -46,21 +46,21 @@ export const TIERS = {
   ugc_pro: {
     id: "ugc_pro",
     label: "UGC Pro",
-    requirement: "Portfolio-admitted, professional track record",
+    requirement: "5K–10K followers, portfolio-admitted",
     track: "ugc",
     ratePerPoint: 15,
   },
   micro: {
     id: "micro",
     label: "Micro Influencer",
-    requirement: "5,000–25,000 followers",
+    requirement: "10K–50K followers",
     track: "influencer",
     ratePerPoint: 12,
   },
   mid: {
     id: "mid",
     label: "Influencer",
-    requirement: "25,000+ followers",
+    requirement: "50K+ followers",
     track: "influencer",
     ratePerPoint: 25,
   },

@@ -5,6 +5,7 @@
    ============================================================ */
 
 import { submitMessage, getMessagesByEmail, getSuggestions, seedSuggestions, submitSuggestion, voteSuggestion } from './convex.js';
+import { launchConfetti } from './main.js';
 
 /* ── Lazy Clerk instance (same pattern as main.js/login.js/profile.js) ── */
 let _clerkPromise = null;
@@ -33,7 +34,7 @@ const FAQ_SECTIONS = [
     items: [
       { q: 'How is Collabnb different from Airbnb or influencer platforms?', a: "Airbnb connects paying guests with accommodation. Collabnb is different: boutique hospitality brands hire creators as professional marketing partners to produce authentic content campaigns\n\nUnlike influencer platforms, we are not an agency taking a cut, we do not run gifting campaigns for mass brands, and we do not cater to large hotel chains. We focus exclusively on boutique hospitality and creators who treat content creation as a profession. Every collaboration is structured around clear deliverables, agreed compensation, and a signed contract — never a vague arrangement." },
       { q: 'Can I sign up as both a creator and a host?', a: "Yes. If you're a creator who also owns or manages a boutique property, you can join both waitlists. Submit two separate applications — one as a creator (with your handles and tier) and one as a host (with your property details). Each is reviewed independently, and each counts against its own 100-spot founding pool." },
-      { q: "Can I apply if I'm a small creator?", a: "Yes. Collabnb was explicitly built with beginner tiers: UGC Beginner (under 5K followers, building a portfolio) and UGC Pro (5K–20K followers, paid UGC output). Follower count isn't the only metric.\n\nA focused UGC creator producing high-quality vertical video for boutique properties is exactly what many hosts want — even with 2,000 followers. Quality of output and fit matter more than size." },
+      { q: "Can I apply if I'm a small creator?", a: "Yes. Collabnb was explicitly built with beginner tiers: UGC Beginner (0–5K followers, building a portfolio) and UGC Pro (5K–10K followers, paid UGC output). Follower count isn't the only metric.\n\nA focused UGC creator producing high-quality vertical video for boutique properties is exactly what many hosts want — even with a small following. Quality of output and fit matter more than size." },
       { q: 'I run a boutique property — how do I post a collab listing?', a: 'Sign up on the host waitlist and we\'ll verify your property before launch. Once the app is live, you\'ll post collab listings with: the stay details, your deliverable brief (e.g. "3 Reels + 1 TikTok, romantic vibe, no face required"), the dates available, and your preferred creator tier.\n\nCreators apply to you — you review their portfolio and approve the best fit. No agency, no middleman taking a cut.' },
       { q: 'When does the app launch?', a: 'July 15, 2026. The waitlist closes or fills before then. Verified waitlist members receive early access before the public launch. Beta testers (opt-in on the join form) get access even earlier to help shape the product.' },
     ],
@@ -50,7 +51,7 @@ const FAQ_SECTIONS = [
   {
     title: 'Creator Tiers',
     items: [
-      { q: 'What are the creator tiers?', a: "Collabnb has four professional tiers across two tracks. UGC tiers are portfolio-driven, where content runs on the host's channels. Influencer tiers are audience-reach driven, where content runs on the creator's channels.:\n• UGC Beginner — building a portfolio, admitted on quality\n• UGC Pro — paid UGC producer with proven output\n• Micro Influencer — 5,000 to 25,000 followers\n• Influencer — 25,000+ followers\n\nYour track and tier are assigned during verification based on your portfolio, follower counts, and professional experience. They determine which listings and deliverable types you can be booked for." },
+      { q: 'What are the creator tiers?', a: "Collabnb has four professional tiers across two tracks. UGC tiers are portfolio-driven, where content runs on the host's channels. Influencer tiers are audience-reach driven, where content runs on the creator's channels.:\n• UGC Beginner — 0–5K followers, building a portfolio, admitted on quality\n• UGC Pro — 5K–10K followers, paid UGC producer with proven output\n• Micro Influencer — 10K–50K followers\n• Influencer — 50K+ followers\n\nYour track and tier are assigned during verification based on your portfolio, follower counts, and professional experience. They determine which listings and deliverable types you can be booked for." },
       { q: 'How do I know which tier I qualify for?', a: "Your track and tier are assigned by the Collabnb team during verification. For the UGC track, tier is based on portfolio quality. For the Influencer track, tier is based on verified follower counts. You can view your current track and tier on your Profile page." },
     ],
   },
@@ -292,9 +293,14 @@ async function renderMessageTab(container) {
       });
     } catch (err) {
       console.warn('submitMessage failed:', err.message);
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Try again';
+      return;
     }
     form.hidden = true;
+    prevWrap.hidden = true;
     sentEl.hidden = false;
+    launchConfetti();
   });
 }
 

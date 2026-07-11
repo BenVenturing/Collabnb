@@ -988,7 +988,7 @@ function closeLoginModal() {
   if (nav) nav.style.display = '';
 }
 
-function launchConfetti() {
+export function launchConfetti() {
   const canvas = document.createElement('canvas');
   canvas.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;z-index:9999;pointer-events:none;';
   document.body.appendChild(canvas);

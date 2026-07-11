@@ -66,6 +66,11 @@ function ListingCard({ listing, saved, onSave, delay, onNavigate, onHostClick, o
   const { profile } = useAuth();
   const [rippling, setRippling] = useState(false);
   const isSample = listing._isSample === true;
+  // Viewer's avatar may only stand in for the host's when the viewer owns the listing
+  const isOwnListing = !!profile && (
+    (listing.host_id && String(listing.host_id) === String(profile._id)) ||
+    (isSample && profile.is_founder === true)
+  );
 
   const handleSave = (e) => {
     e.stopPropagation();
@@ -242,7 +247,7 @@ function ListingCard({ listing, saved, onSave, delay, onNavigate, onHostClick, o
             onMouseLeave={e => e.currentTarget.style.opacity = '1'}
           >
             <div style={{ width: 18, height: 18, borderRadius: '50%', overflow: 'hidden', flexShrink: 0, border: '1px solid rgba(25,37,36,0.07)', background: 'var(--mint)' }}>
-              <img src={listing.host_avatar || profile?.avatar_url || SAMPLE_HOST.avatar_fallback} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.currentTarget.style.display = 'none'; }} />
+              <img src={listing.host_avatar || (isOwnListing ? profile.avatar_url : null) || SAMPLE_HOST.avatar_fallback} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.currentTarget.style.display = 'none'; }} />
             </div>
             <span style={{ fontSize: '0.67rem', color: 'var(--sage)' }}>
               by <span style={{ fontWeight: 600, color: 'var(--slate)' }}>{listing.host_name || SAMPLE_HOST.name}</span>
@@ -406,7 +411,7 @@ export default function Explore() {
   const [pricingToolOpen, setPricingToolOpen] = useState(false);
   const searchRef = useRef(null);
 
-  const hostAvatar = profile?.avatar_url || SAMPLE_HOST.avatar_fallback;
+  const hostAvatar = (profile?.is_founder && profile.avatar_url) || SAMPLE_HOST.avatar_fallback;
   const sampleHostPerson = {
     name:         SAMPLE_HOST.name,
     username:     SAMPLE_HOST.username,

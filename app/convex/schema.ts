@@ -331,6 +331,21 @@ export default defineSchema({
     sent_at: v.number(),
   }).index("by_sent", ["sent_at"]),
 
+  // Admin copy overrides for transactional emails; defaults live in emailCopy.ts.
+  email_templates: defineTable({
+    template_id: v.string(),
+    subject: v.optional(v.string()),
+    heading: v.optional(v.string()),
+    body: v.optional(v.string()),
+    calloutLabel: v.optional(v.string()),
+    calloutText: v.optional(v.string()),
+    callout2Label: v.optional(v.string()),
+    callout2Text: v.optional(v.string()),
+    buttonLabel: v.optional(v.string()),
+    footnote: v.optional(v.string()),
+    updated_at: v.number(),
+  }).index("by_template", ["template_id"]),
+
   notifications: defineTable({
     user_id: v.string(),
     type: v.string(), // 'pitch_approved' | 'pitch_declined' | 'new_message' | 'host_reply'

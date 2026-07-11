@@ -95,9 +95,9 @@ const TIER_COLORS = {
 };
 
 const TIER_DEFS = {
-  'UGC Beginner':     '< 5K followers — New creators building their portfolio',
-  'UGC Pro':          '5K–20K followers — Content creators, not influencer reach',
-  'Micro Influencer': '5K–50K followers — Influencer-style content, engaged audience',
+  'UGC Beginner':     '0–5K followers — New creators building their portfolio',
+  'UGC Pro':          '5K–10K followers — Content creators, not influencer reach',
+  'Micro Influencer': '10K–50K followers — Influencer-style content, engaged audience',
   'Influencer':       '50K+ followers — Broad reach, established audience',
 };
 

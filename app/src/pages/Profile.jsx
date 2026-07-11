@@ -50,18 +50,18 @@ import { reopenChecklist } from '../components/OnboardingChecklist';
 
 // ─── Creator tier + niche options ────────────────────────────────────────────
 const CREATOR_TIERS = [
-  { value: 'UGC Beginner',     label: 'UGC Beginner',     range: '< 5K followers',     desc: 'New creators building their portfolio' },
-  { value: 'UGC Pro',          label: 'UGC Pro',           range: '5K–20K followers',   desc: 'Content creators, not influencer reach' },
-  { value: 'Micro Influencer', label: 'Micro Influencer',  range: '5K–50K followers',   desc: 'Influencer-style, engaged audience' },
+  { value: 'UGC Beginner',     label: 'UGC Beginner',     range: '0–5K followers',     desc: 'New creators building their portfolio' },
+  { value: 'UGC Pro',          label: 'UGC Pro',           range: '5K–10K followers',   desc: 'Content creators, not influencer reach' },
+  { value: 'Micro Influencer', label: 'Micro Influencer',  range: '10K–50K followers',  desc: 'Influencer-style, engaged audience' },
   { value: 'Influencer',       label: 'Influencer',        range: '50K+ followers',     desc: 'Broad reach, established audience' },
 ];
 
 function suggestTier(followerCount) {
   const n = parseInt(followerCount, 10);
-  if (!n || isNaN(n)) return null;
+  if (isNaN(n)) return null;
   if (n >= 50000) return 'Influencer';
-  if (n >= 5000)  return 'Micro Influencer';
-  if (n >= 1000)  return 'UGC Pro';
+  if (n >= 10000) return 'Micro Influencer';
+  if (n >= 5000)  return 'UGC Pro';
   return 'UGC Beginner';
 }
 
@@ -70,6 +70,40 @@ const NICHE_OPTIONS = [
   'Adventure', 'Lifestyle', 'Food & Dining', 'Fashion', 'Fitness', 'Wellness',
   'Photography', 'Tech', 'City Life', 'Eco & Sustainable', 'Luxury', 'Design',
 ];
+
+// Extended tags — searchable, not shown by default
+const NICHE_OPTIONS_MORE = [
+  'Family Travel', 'Solo Travel', 'Couples Travel', 'Budget Travel', 'Backpacking',
+  'Road Trips', 'Van Life', 'Digital Nomad', 'Glamping', 'Camping',
+  'Tiny Homes', 'Treehouses', 'Villas & Resorts', 'Boutique Hotels', 'Bed & Breakfast',
+  'Lakefront', 'Desert', 'Countryside', 'National Parks', 'Island Life',
+  'Ski & Snowboard', 'Surfing', 'Hiking', 'Climbing', 'Water Sports',
+  'Boating & Sailing', 'Fishing', 'Golf', 'Yoga & Meditation', 'Spa & Retreats',
+  'Honeymoon & Romance', 'Weddings & Events', 'Pet-Friendly', 'Family & Parenting', 'Beauty',
+  'Home & Interior', 'Art & Culture', 'History & Heritage', 'Architecture', 'Music & Festivals',
+  'Nightlife', 'Coffee & Cafés', 'Wine & Vineyards', 'Craft Beer & Spirits', 'Vegan & Plant-Based',
+  'Street Food', 'Fine Dining', 'Wildlife & Safari',
+];
+
+function NichePill({ niche, selected, maxed, onToggle }) {
+  return (
+    <button
+      disabled={maxed && !selected}
+      onClick={onToggle}
+      style={{
+        padding: '5px 12px', borderRadius: 9999,
+        fontSize: '0.72rem', fontWeight: 600,
+        background: selected ? 'var(--ink)' : (maxed ? 'rgba(25,37,36,0.03)' : 'rgba(25,37,36,0.06)'),
+        color: selected ? 'var(--bone)' : (maxed ? 'rgba(25,37,36,0.25)' : 'var(--slate)'),
+        border: `1px solid ${selected ? 'var(--ink)' : 'rgba(25,37,36,0.1)'}`,
+        cursor: (maxed && !selected) ? 'not-allowed' : 'pointer',
+        transition: 'all 150ms', fontFamily: 'var(--font-body)',
+      }}
+    >
+      {niche}
+    </button>
+  );
+}
 
 // ─── Formatters ───────────────────────────────────────────────────────────────
 function fmtFollowers(n) {
@@ -610,6 +644,7 @@ export default function Profile() {
   const [exitConfirmDraft, setExitConfirmDraft] = useState(null);
   const [portalLoading, setPortalLoading]       = useState(false);
   const [cropEditorFile, setCropEditorFile]     = useState(null);
+  const [nicheQuery, setNicheQuery]             = useState('');
   const [lifetimeModalOpen, setLifetimeModalOpen] = useState(false);
 
   // Metrics form state
@@ -771,7 +806,17 @@ export default function Profile() {
     return draftNiches !== dpNiches;
   }
 
+  function toggleNiche(niche) {
+    const current = editDraft.niches ?? [];
+    if (current.includes(niche)) {
+      setEditDraft({ ...editDraft, niches: current.filter(n => n !== niche) });
+    } else if (current.length < 5) {
+      setEditDraft({ ...editDraft, niches: [...current, niche] });
+    }
+  }
+
   function openEditProfile() {
+    setNicheQuery('');
     setEditDraft({
       full_name:        dp.full_name        ?? '',
       bio:              dp.bio              ?? '',
@@ -1308,36 +1353,77 @@ export default function Profile() {
                       {editDraft.niches?.length ?? 0} / 5
                     </span>
                   </div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                    {NICHE_OPTIONS.map(niche => {
-                      const selected = editDraft.niches?.includes(niche);
-                      const maxed    = (editDraft.niches?.length ?? 0) >= 5 && !selected;
-                      return (
-                        <button
-                          key={niche}
-                          disabled={maxed}
-                          onClick={() => {
-                            if (selected) {
-                              setEditDraft({ ...editDraft, niches: editDraft.niches.filter(n => n !== niche) });
-                            } else if (!maxed) {
-                              setEditDraft({ ...editDraft, niches: [...(editDraft.niches ?? []), niche] });
-                            }
-                          }}
+                  {(() => {
+                    const selectedNiches = editDraft.niches ?? [];
+                    const maxed = selectedNiches.length >= 5;
+                    const extraSelected = selectedNiches.filter(n => !NICHE_OPTIONS.includes(n));
+                    const q = nicheQuery.trim().toLowerCase();
+                    const results = q
+                      ? NICHE_OPTIONS_MORE.filter(t => t.toLowerCase().includes(q) && !selectedNiches.includes(t))
+                      : [];
+                    const exactExists = q && [...NICHE_OPTIONS, ...NICHE_OPTIONS_MORE, ...selectedNiches].some(t => t.toLowerCase() === q);
+                    const customTag = nicheQuery.trim().slice(0, 30);
+                    return (
+                      <>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                          {[...NICHE_OPTIONS, ...extraSelected].map(niche => (
+                            <NichePill
+                              key={niche}
+                              niche={niche}
+                              selected={selectedNiches.includes(niche)}
+                              maxed={maxed}
+                              onToggle={() => toggleNiche(niche)}
+                            />
+                          ))}
+                        </div>
+                        <input
+                          type="text"
+                          value={nicheQuery}
+                          onChange={e => setNicheQuery(e.target.value)}
+                          placeholder={`Search ${NICHE_OPTIONS_MORE.length}+ more tags or create your own…`}
                           style={{
-                            padding: '5px 12px', borderRadius: 9999,
-                            fontSize: '0.72rem', fontWeight: 600,
-                            background: selected ? 'var(--ink)' : maxed ? 'rgba(25,37,36,0.03)' : 'rgba(25,37,36,0.06)',
-                            color: selected ? 'var(--bone)' : maxed ? 'rgba(25,37,36,0.25)' : 'var(--slate)',
-                            border: `1px solid ${selected ? 'var(--ink)' : 'rgba(25,37,36,0.1)'}`,
-                            cursor: maxed ? 'not-allowed' : 'pointer',
-                            transition: 'all 150ms', fontFamily: 'var(--font-body)',
+                            width: '100%', marginTop: 10, padding: '7px 12px',
+                            borderRadius: 10, border: '1px solid rgba(25,37,36,0.1)',
+                            background: 'rgba(255,255,255,0.7)', fontSize: '0.75rem',
+                            fontFamily: 'var(--font-body)', color: 'var(--ink)', outline: 'none',
                           }}
-                        >
-                          {niche}
-                        </button>
-                      );
-                    })}
-                  </div>
+                        />
+                        {q && (
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
+                            {results.map(niche => (
+                              <NichePill
+                                key={niche}
+                                niche={niche}
+                                selected={false}
+                                maxed={maxed}
+                                onToggle={() => { toggleNiche(niche); setNicheQuery(''); }}
+                              />
+                            ))}
+                            {!exactExists && customTag && (
+                              <button
+                                disabled={maxed}
+                                onClick={() => { toggleNiche(customTag); setNicheQuery(''); }}
+                                style={{
+                                  padding: '5px 12px', borderRadius: 9999,
+                                  fontSize: '0.72rem', fontWeight: 600,
+                                  background: maxed ? 'rgba(25,37,36,0.03)' : 'var(--mint)',
+                                  color: maxed ? 'rgba(25,37,36,0.25)' : 'var(--ink)',
+                                  border: '1px dashed rgba(25,37,36,0.25)',
+                                  cursor: maxed ? 'not-allowed' : 'pointer',
+                                  transition: 'all 150ms', fontFamily: 'var(--font-body)',
+                                }}
+                              >
+                                + Add “{customTag}”
+                              </button>
+                            )}
+                            {results.length === 0 && selectedNiches.some(t => t.toLowerCase() === q) && (
+                              <span style={{ fontSize: '0.7rem', color: 'var(--sage)', padding: '5px 2px' }}>Already added</span>
+                            )}
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
                   <p style={{ fontSize: 10, color: 'var(--sage)', margin: '8px 0 0' }}>
                     Hosts filter by these when searching for creators.
                   </p>

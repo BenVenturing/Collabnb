@@ -1,88 +1,33 @@
 import { v } from "convex/values";
 import { internalAction } from "./_generated/server";
+import { internal } from "./_generated/api";
+import { BASE_URL, renderTemplate, sendViaResend, layout, callout, button } from "./emailCopy";
 
-const FROM = "Collabnb <hello@collabnb.com>";
-const BASE_URL = "https://www.collabnb.com";
+// All copy below is editable in Admin → Emails → Templates (overrides stored in
+// the email_templates table); defaults live in emailCopy.ts.
 
-async function send(apiKey: string, to: string, subject: string, html: string) {
-  await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ from: FROM, to: [to], subject, html }),
-  });
-}
-
-function layout(body: string) {
-  return `<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background:#F7F5F2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#F7F5F2;padding:48px 16px;">
-    <tr><td align="center">
-      <table width="560" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:20px;overflow:hidden;border:1px solid #E8E4DF;box-shadow:0 4px 24px rgba(25,37,36,0.07);">
-        <!-- Header -->
-        <tr>
-          <td style="background:linear-gradient(135deg,#192524,#2d4a3e);padding:36px 40px;text-align:center;">
-            <div style="font-size:26px;font-weight:800;color:#ffffff;letter-spacing:-0.5px;">Collabnb</div>
-            <div style="font-size:11px;color:#7ecfc4;margin-top:5px;letter-spacing:2px;text-transform:uppercase;">Creator-First Hospitality Marketing</div>
-          </td>
-        </tr>
-        <!-- Body -->
-        <tr><td style="padding:40px 40px 32px;">${body}</td></tr>
-        <!-- Footer -->
-        <tr>
-          <td style="padding:20px 40px;background:#F7F5F2;border-top:1px solid #E8E4DF;text-align:center;">
-            <p style="margin:0;font-size:12px;color:#959D90;">© 2026 Collabnb · <a href="${BASE_URL}" style="color:#2dd4bf;text-decoration:none;">collabnb.com</a></p>
-          </td>
-        </tr>
-      </table>
-    </td></tr>
-  </table>
-</body>
-</html>`;
-}
-
-function callout(color: string, label: string, text: string) {
-  return `<div style="background:${color}12;border:1px solid ${color}30;border-radius:12px;padding:18px 22px;margin-bottom:24px;">
-    <div style="font-size:11px;color:${color};font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">${label}</div>
-    <p style="margin:0;font-size:14px;color:#3C5759;line-height:1.65;">${text}</p>
-  </div>`;
-}
-
-function button(href: string, label: string) {
-  return `<a href="${href}" style="display:inline-block;margin-top:8px;padding:14px 32px;background:linear-gradient(135deg,#192524,#2d4a3e);color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;border-radius:12px;letter-spacing:-0.1px;">${label}</a>`;
+async function sendFromTemplate(
+  ctx: any,
+  templateId: string,
+  to: string,
+  vars: Record<string, string>,
+  buttonHref?: string
+) {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) return;
+  const t = await ctx.runQuery(internal.emailTemplates.getCopy, { templateId });
+  const { subject, html } = renderTemplate(t, vars, buttonHref);
+  await sendViaResend(apiKey, to, subject, html);
 }
 
 // ─── Welcome (waitlist signup) ────────────────────────────────────────────────
 
 export const sendWelcomeEmail = internalAction({
   args: { email: v.string(), full_name: v.string(), role: v.string() },
-  handler: async (_ctx, { email, full_name, role }) => {
-    const apiKey = process.env.RESEND_API_KEY;
-    if (!apiKey) return;
-
+  handler: async (ctx, { email, full_name, role }) => {
     const firstName = full_name.split(" ")[0];
-    const isHost = role === "host";
-
-    const body = `
-      <p style="margin:0 0 8px;font-size:22px;font-weight:700;color:#192524;">Hey ${firstName} 👋</p>
-      <p style="margin:0 0 24px;font-size:15px;color:#3C5759;line-height:1.65;">
-        ${isHost
-          ? "We're hand-picking a founding group of hosts to list their properties and connect with creators. You're in the queue."
-          : "We're hand-picking a founding group of creators to partner with boutique hospitality brands. You're in the queue."}
-      </p>
-      ${callout("#2dd4bf", "What happens next", "We'll reach out personally as we approach launch with early access details. Founding members get priority placement, locked-in rates, and a direct line to the team.")}
-      <p style="margin:0;font-size:14px;color:#959D90;line-height:1.65;">In the meantime, spread the word — every signup helps us build something worth waiting for.</p>`;
-
-    await send(
-      apiKey,
-      email,
-      isHost ? "You're on the Collabnb host waitlist 🏡" : "You're on the Collabnb creator waitlist 🎬",
-      layout(body)
-    );
+    const templateId = role === "host" ? "welcome_host" : "welcome_creator";
+    await sendFromTemplate(ctx, templateId, email, { firstName });
   },
 });
 
@@ -90,24 +35,10 @@ export const sendWelcomeEmail = internalAction({
 
 export const sendAccessGrantedEmail = internalAction({
   args: { email: v.string(), full_name: v.string(), role: v.string() },
-  handler: async (_ctx, { email, full_name, role }) => {
-    const apiKey = process.env.RESEND_API_KEY;
-    if (!apiKey) return;
-
+  handler: async (ctx, { email, full_name, role }) => {
     const firstName = full_name.split(" ")[0];
-    const isHost = role === "host";
-
-    const body = `
-      <p style="margin:0 0 8px;font-size:22px;font-weight:700;color:#192524;">You're in, ${firstName} 🎉</p>
-      <p style="margin:0 0 24px;font-size:15px;color:#3C5759;line-height:1.65;">
-        Your Collabnb ${isHost ? "host" : "creator"} account has been approved. Create your login below to access the platform.
-      </p>
-      ${callout("#2dd4bf", "You're a founding member", `As one of our first ${isHost ? "hosts" : "creators"}, you're a Founding Member — lifetime free access as part of the inaugural cohort.`)}
-      ${callout("#f59e0b", "Full launch is July 15", isHost ? "In the meantime, log in and start building your listing so you're ready to go live on day one." : "In the meantime, log in and complete your creator profile so hosts can find you on launch day.")}
-      ${button(`${BASE_URL}/login.html`, "Create your account")}
-      <p style="margin:12px 0 0;font-size:12px;color:#959D90;">Sign up with email or continue with Google — takes 30 seconds.</p>`;
-
-    await send(apiKey, email, "You've been granted access to Collabnb ✅", layout(body));
+    const templateId = role === "host" ? "access_granted_host" : "access_granted_creator";
+    await sendFromTemplate(ctx, templateId, email, { firstName });
   },
 });
 
@@ -115,21 +46,15 @@ export const sendAccessGrantedEmail = internalAction({
 
 export const sendRejectionEmail = internalAction({
   args: { email: v.string(), full_name: v.string(), reason: v.optional(v.string()) },
-  handler: async (_ctx, { email, full_name, reason }) => {
+  handler: async (ctx, { email, full_name, reason }) => {
     const apiKey = process.env.RESEND_API_KEY;
     if (!apiKey) return;
-
     const firstName = full_name.split(" ")[0];
-
-    const body = `
-      <p style="margin:0 0 8px;font-size:22px;font-weight:600;color:#ffffff;">Hey ${firstName},</p>
-      <p style="margin:0 0 24px;font-size:16px;color:#9ca3af;line-height:1.6;">
-        Thank you for applying to Collabnb. After reviewing your application, we're not able to offer access at this time.
-      </p>
-      ${reason ? callout("#f59e0b", "Feedback", reason) : ""}
-      <p style="margin:0;font-size:14px;color:#6b7280;line-height:1.6;">We're being selective with our founding cohort to keep quality high for everyone on the platform. We appreciate your interest and wish you the best.</p>`;
-
-    await send(apiKey, email, "Your Collabnb application", layout(body));
+    const t = await ctx.runQuery(internal.emailTemplates.getCopy, { templateId: "rejection" });
+    // Feedback callout only renders when a reason was given.
+    const copy = reason ? t : { ...t, calloutText: undefined };
+    const { subject, html } = renderTemplate(copy, { firstName, reason: reason || "" });
+    await sendViaResend(apiKey, email, subject, html);
   },
 });
 
@@ -143,21 +68,15 @@ export const sendApplicationReceivedEmail = internalAction({
     listingTitle: v.string(),
     applicationId: v.string(),
   },
-  handler: async (_ctx, { hostEmail, hostName, creatorName, listingTitle, applicationId }) => {
-    const apiKey = process.env.RESEND_API_KEY;
-    if (!apiKey) return;
-
+  handler: async (ctx, { hostEmail, hostName, creatorName, listingTitle, applicationId }) => {
     const firstName = hostName.split(" ")[0];
-
-    const body = `
-      <p style="margin:0 0 8px;font-size:22px;font-weight:600;color:#ffffff;">New application, ${firstName}</p>
-      <p style="margin:0 0 24px;font-size:16px;color:#9ca3af;line-height:1.6;">
-        <strong style="color:#ffffff;">${creatorName}</strong> just applied to collaborate on <strong style="color:#ffffff;">${listingTitle}</strong>.
-      </p>
-      ${callout("#7c3aed", "Next step", "Review their profile and pitch in your dashboard, then accept or decline.")}
-      ${button(`https://www.collabnb.com/inbox?application=${applicationId}`, "Review application")}`;
-
-    await send(apiKey, hostEmail, `New application from ${creatorName}`, layout(body));
+    await sendFromTemplate(
+      ctx,
+      "application_received",
+      hostEmail,
+      { firstName, creatorName, listingTitle },
+      `${BASE_URL}/inbox?application=${applicationId}`
+    );
   },
 });
 
@@ -170,21 +89,9 @@ export const sendApplicationAcceptedEmail = internalAction({
     hostName: v.string(),
     listingTitle: v.string(),
   },
-  handler: async (_ctx, { creatorEmail, creatorName, hostName, listingTitle }) => {
-    const apiKey = process.env.RESEND_API_KEY;
-    if (!apiKey) return;
-
+  handler: async (ctx, { creatorEmail, creatorName, hostName, listingTitle }) => {
     const firstName = creatorName.split(" ")[0];
-
-    const body = `
-      <p style="margin:0 0 8px;font-size:22px;font-weight:600;color:#ffffff;">You got the collab, ${firstName} 🙌</p>
-      <p style="margin:0 0 24px;font-size:16px;color:#9ca3af;line-height:1.6;">
-        <strong style="color:#ffffff;">${hostName}</strong> accepted your application for <strong style="color:#ffffff;">${listingTitle}</strong>.
-      </p>
-      ${callout("#2dd4bf", "What's next", "Head to your inbox to connect with your host and align on dates, deliverables, and logistics.")}
-      ${button("https://www.collabnb.com/inbox", "Open your inbox")}`;
-
-    await send(apiKey, creatorEmail, `${hostName} accepted your application 🎉`, layout(body));
+    await sendFromTemplate(ctx, "application_accepted", creatorEmail, { firstName, hostName, listingTitle });
   },
 });
 
@@ -197,25 +104,15 @@ export const sendApplicationDeclinedEmail = internalAction({
     hostName: v.string(),
     listingTitle: v.string(),
   },
-  handler: async (_ctx, { creatorEmail, creatorName, hostName, listingTitle }) => {
-    const apiKey = process.env.RESEND_API_KEY;
-    if (!apiKey) return;
-
+  handler: async (ctx, { creatorEmail, creatorName, hostName, listingTitle }) => {
     const firstName = creatorName.split(" ")[0];
-
-    const body = `
-      <p style="margin:0 0 8px;font-size:22px;font-weight:600;color:#ffffff;">Hey ${firstName},</p>
-      <p style="margin:0 0 24px;font-size:16px;color:#9ca3af;line-height:1.6;">
-        ${hostName} passed on your application for <strong style="color:#ffffff;">${listingTitle}</strong> this time.
-      </p>
-      ${callout("#6b7280", "Keep going", "There are more listings waiting. Browse other hosts and keep pitching — the right collab is out there.")}
-      ${button("https://www.collabnb.com", "Browse listings")}`;
-
-    await send(apiKey, creatorEmail, `Update on your application to ${hostName}`, layout(body));
+    await sendFromTemplate(ctx, "application_declined", creatorEmail, { firstName, hostName, listingTitle });
   },
 });
 
 // ─── Contract lifecycle (sent / signed / fully signed / paid) ────────────────
+// Copy is provided by the caller (contracts.ts / pitches.ts); the completion +
+// fee receipt callers pull their copy from the editable template registry.
 
 export const sendContractEmail = internalAction({
   args: {
@@ -239,7 +136,7 @@ export const sendContractEmail = internalAction({
       ${calloutLabel ? callout("#2dd4bf", calloutLabel, calloutText || "") : ""}
       ${button(`${BASE_URL}/contract`, "View contract")}`;
 
-    await send(apiKey, to, subject, layout(body));
+    await sendViaResend(apiKey, to, subject, layout(body));
   },
 });
 
@@ -247,21 +144,10 @@ export const sendContractEmail = internalAction({
 
 export const sendTrialEndingEmail = internalAction({
   args: { email: v.string(), full_name: v.string(), daysLeft: v.number() },
-  handler: async (_ctx, { email, full_name, daysLeft }) => {
-    const apiKey = process.env.RESEND_API_KEY;
-    if (!apiKey) return;
-
+  handler: async (ctx, { email, full_name, daysLeft }) => {
     const firstName = full_name.split(" ")[0];
     const days = `${daysLeft} day${daysLeft === 1 ? "" : "s"}`;
-
-    const body = `
-      <p style="margin:0 0 8px;font-size:22px;font-weight:700;color:#192524;">${days} left on your trial, ${firstName}</p>
-      <p style="margin:0 0 24px;font-size:15px;color:#3C5759;line-height:1.65;">
-        Subscribe to Creator Plus to keep exploring listings, applying to campaigns, and pitching hosts without interruption.
-      </p>
-      ${button(`${BASE_URL}/#/profile`, "Subscribe to Creator Plus")}`;
-
-    await send(apiKey, email, `${days} left on your Collabnb trial`, layout(body));
+    await sendFromTemplate(ctx, "trial_ending", email, { firstName, days });
   },
 });
 
@@ -269,21 +155,9 @@ export const sendTrialEndingEmail = internalAction({
 
 export const sendTrialEndedEmail = internalAction({
   args: { email: v.string(), full_name: v.string() },
-  handler: async (_ctx, { email, full_name }) => {
-    const apiKey = process.env.RESEND_API_KEY;
-    if (!apiKey) return;
-
+  handler: async (ctx, { email, full_name }) => {
     const firstName = full_name.split(" ")[0];
-
-    const body = `
-      <p style="margin:0 0 8px;font-size:22px;font-weight:700;color:#192524;">Your trial has ended, ${firstName}</p>
-      <p style="margin:0 0 24px;font-size:15px;color:#3C5759;line-height:1.65;">
-        Your 30-day Collabnb trial is over. Subscribe to Creator Plus to keep exploring listings, applying to campaigns, and pitching hosts.
-      </p>
-      ${callout("#f59e0b", "Creator Plus", "$10/month or $60/year — cancel anytime. Founding Members keep free access forever.")}
-      ${button(`${BASE_URL}/#/profile`, "Subscribe to Creator Plus")}`;
-
-    await send(apiKey, email, "Your Collabnb trial has ended", layout(body));
+    await sendFromTemplate(ctx, "trial_ended", email, { firstName });
   },
 });
 
@@ -296,20 +170,9 @@ export const sendNewMessageEmail = internalAction({
     senderName: v.string(),
     preview: v.string(),
   },
-  handler: async (_ctx, { recipientEmail, recipientName, senderName, preview }) => {
-    const apiKey = process.env.RESEND_API_KEY;
-    if (!apiKey) return;
-
+  handler: async (ctx, { recipientEmail, recipientName, senderName, preview }) => {
     const firstName = recipientName.split(" ")[0];
-
-    const body = `
-      <p style="margin:0 0 8px;font-size:22px;font-weight:600;color:#ffffff;">New message, ${firstName}</p>
-      <p style="margin:0 0 24px;font-size:16px;color:#9ca3af;line-height:1.6;">
-        <strong style="color:#ffffff;">${senderName}</strong> sent you a message.
-      </p>
-      ${callout("#2dd4bf", "Message preview", preview.length > 200 ? preview.slice(0, 200) + "…" : preview)}
-      ${button("https://www.collabnb.com/inbox", "Reply in inbox")}`;
-
-    await send(apiKey, recipientEmail, `${senderName} sent you a message`, layout(body));
+    const trimmed = preview.length > 200 ? preview.slice(0, 200) + "…" : preview;
+    await sendFromTemplate(ctx, "new_message", recipientEmail, { firstName, senderName, preview: trimmed });
   },
 });

@@ -4,10 +4,10 @@ import { internal } from "./_generated/api";
 
 // ─── Shared Constants ───────────────────────────────────────────────────────────
 export const FOLLOWER_THRESHOLDS = {
-  UGC_BEGINNER_MIN: 2000,  // floor to filter out zero-engagement/spam accounts
-  UGC_PRO_MIN: 2000,       // same floor — Beginner vs. Pro is decided by portfolio quality, not follower count
-  MICRO_INFLUENCER_MIN: 5000,
-  INFLUENCER_MIN: 25000,
+  UGC_BEGINNER_MIN: 0,     // UGC Beginner tier spans 0–5K followers
+  UGC_PRO_MIN: 5000,       // UGC Pro tier spans 5K–10K followers
+  MICRO_INFLUENCER_MIN: 10000,  // Micro Influencer tier spans 10K–50K followers
+  INFLUENCER_MIN: 50000,  // Influencer tier is 50K+ followers
 } as const;
 
 export const CREATOR_TRACKS = ["ugc", "influencer"] as const;

@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import { internalAction } from "./_generated/server";
 import { internal } from "./_generated/api";
-import { BASE_URL, renderTemplate, sendViaResend, layout, callout, button } from "./emailCopy";
+import { BASE_URL, TRUSTPILOT_BCC, renderTemplate, sendViaResend, layout, callout, button } from "./emailCopy";
 
 // All copy below is editable in Admin → Emails → Templates (overrides stored in
 // the email_templates table); defaults live in emailCopy.ts.
@@ -11,13 +11,14 @@ async function sendFromTemplate(
   templateId: string,
   to: string,
   vars: Record<string, string>,
-  buttonHref?: string
+  buttonHref?: string,
+  bcc?: string
 ) {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) return;
   const t = await ctx.runQuery(internal.emailTemplates.getCopy, { templateId });
   const { subject, html } = renderTemplate(t, vars, buttonHref);
-  await sendViaResend(apiKey, to, subject, html);
+  await sendViaResend(apiKey, to, subject, html, bcc);
 }
 
 // ─── Welcome (waitlist signup) ────────────────────────────────────────────────
@@ -158,6 +159,18 @@ export const sendTrialEndedEmail = internalAction({
   handler: async (ctx, { email, full_name }) => {
     const firstName = full_name.split(" ")[0];
     await sendFromTemplate(ctx, "trial_ended", email, { firstName });
+  },
+});
+
+// ─── Trustpilot review invite (after in-app rating at collab close-out) ──────
+// BCC'd to Trustpilot's Automatic Feedback Service, which then sends the
+// recipient an official Trustpilot review invitation.
+
+export const sendReviewRequestEmail = internalAction({
+  args: { email: v.string(), full_name: v.string(), propertyLabel: v.string() },
+  handler: async (ctx, { email, full_name, propertyLabel }) => {
+    const firstName = (full_name || "there").split(" ")[0];
+    await sendFromTemplate(ctx, "review_request", email, { firstName, propertyLabel }, undefined, TRUSTPILOT_BCC);
   },
 });
 

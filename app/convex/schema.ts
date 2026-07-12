@@ -544,4 +544,17 @@ export default defineSchema({
     paid_at: v.optional(v.number()),
     created_at: v.number(),
   }).index("by_collaboration", ["collaboration_id"]),
+
+  reviews: defineTable({
+    collab_id: v.string(),
+    contract_id: v.optional(v.string()),
+    reviewer_id: v.optional(v.string()),
+    reviewer_role: v.string(), // 'creator' | 'host'
+    reviewer_name: v.optional(v.string()),
+    reviewee_name: v.optional(v.string()),
+    property_name: v.optional(v.string()),
+    rating: v.number(), // 1–5
+    comment: v.optional(v.string()),
+    created_at: v.number(),
+  }).index("by_collab", ["collab_id"]),
 });

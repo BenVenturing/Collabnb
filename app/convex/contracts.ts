@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { query, mutation, internalMutation, internalQuery } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { recordEarningForContract } from "./ambassadors";
+import { mergedCopy, fill } from "./emailCopy";
 
 export const getAll = query({
   args: {},

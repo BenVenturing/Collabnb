@@ -515,85 +515,10 @@ function makeStages(completedUpTo, notes = {}) {
 }
 
 // ─── Sample collaborations ────────────────────────────────────────────────────
-export const SAMPLE_COLLABORATIONS = [
-  {
-    id: 1,
-    listing_id: '1',
-    property_name: 'Glacier Prime Cabin',
-    location: 'Lake Tahoe, CA',
-    host_name: 'Ben Venturing',
-    image: 'https://images.unsplash.com/photo-1587061949409-02df41d5e562?w=800&q=80',
-    status: 'pending',
-    status_text: 'Pending Upload',
-    dates: 'Feb 15–18, 2026',
-    deliverables: '3 Reels, 5 Photos, 1 Blog Post',
-    days_left: 12,
-    is_active: true,
-    is_sample: true,
-    current_stage: 'pending',
-    stages: makeStages('pending', {
-      pending: { date: 'Feb 1, 2026', note: 'Application submitted — waiting for host response' },
-    }),
-    drive_url: '',
-    content_stats: null,
-    contract_id: null,
-    listing_description: 'A stunning old-growth forest cabin perched above Lake Tahoe with sweeping mountain and lake views.',
-  },
-  {
-    id: 2,
-    listing_id: '2',
-    property_name: 'Tranquil Waterfront Retreat',
-    location: 'Bariloche, Argentina',
-    host_name: 'Ben Venturing',
-    image: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&q=80',
-    status: 'uploaded',
-    status_text: 'Uploaded',
-    dates: 'Jan 28–31, 2026',
-    deliverables: '2 Reels, 8 Photos',
-    days_left: 0,
-    is_active: true,
-    is_sample: true,
-    current_stage: 'uploaded_tagged',
-    stages: makeStages('uploaded_tagged', {
-      pending:         { date: 'Jan 5, 2026',  note: 'Application submitted and accepted' },
-      accepted:        { date: 'Jan 8, 2026',  note: 'Host confirmed the collaboration' },
-      updated:         { date: 'Jan 15, 2026', note: 'Content plan submitted and reviewed' },
-      uploaded_tagged: { date: 'Feb 1, 2026',  note: 'All content uploaded and tagged' },
-    }),
-    drive_url: 'https://drive.google.com/drive/folders/example123',
-    content_stats: { reels: 2, photos: 8 },
-    contract_id: null,
-    listing_description: 'A breathtaking cliffside villa perched above the Pacific Ocean with unobstructed views from every room.',
-  },
-  {
-    id: 3,
-    listing_id: '4',
-    property_name: 'Mountain Lodge Escape',
-    location: 'Chiang Mai, Thailand',
-    host_name: 'Ben Venturing',
-    image: 'https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=800&q=80',
-    status: 'archived',
-    status_text: 'Archived',
-    dates: 'Jan 10–13, 2026',
-    deliverables: '5 Reels, 12 Photos, 1 YouTube Vlog',
-    days_left: null,
-    payment: '$500',
-    is_active: false,
-    current_stage: 'archived',
-    stages: makeStages('archived', {
-      pending:         { date: 'Dec 20, 2025', note: 'Application submitted and accepted' },
-      accepted:        { date: 'Dec 22, 2025', note: 'Host confirmed the collaboration' },
-      updated:         { date: 'Dec 28, 2025', note: 'Content plan submitted and reviewed' },
-      uploaded_tagged: { date: 'Jan 15, 2026', note: 'All content uploaded and tagged' },
-      closed:          { date: 'Jan 20, 2026', note: 'Content approved — payment released' },
-      archived:        { date: 'Jan 25, 2026', note: 'Collaboration completed and archived' },
-    }),
-    drive_url: '',
-    content_stats: { reels: 5, photos: 12, youtube_vlog: 1 },
-    contract_id: null,
-    listing_description: 'Ski-in, ski-out luxury lodge at the base of Aspen Mountain with panoramic views.',
-  },
-];
+// Sample collabs were removed from the Collabs view — new accounts now see only
+// the Demo Tour collab (injected in Collabs.jsx) plus any real Convex collabs.
+// Sample listings live exclusively on the Explore page.
+export const SAMPLE_COLLABORATIONS = [];
 
 // ─── Demo collaboration (guided tour, all stages pre-filled) ──────────────────
 export const DEMO_COLLAB = {

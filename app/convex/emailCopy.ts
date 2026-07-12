@@ -4,6 +4,10 @@
 
 export const FROM = "Collabnb <hello@collabnb.com>";
 export const BASE_URL = "https://www.collabnb.com";
+// Trustpilot Automatic Feedback Service: BCC'ing this address on an email makes
+// Trustpilot send its own review invitation to the "to" recipient.
+export const TRUSTPILOT_BCC = "collabnb.com+46e7d484c3@invite.trustpilot.com";
+export const TRUSTPILOT_REVIEW_URL = "https://www.trustpilot.com/evaluate/collabnb.com";
 
 export type TemplateCopy = {
   subject: string;
@@ -235,6 +239,20 @@ export const TEMPLATE_DEFAULTS: Record<string, TemplateDef> = {
       buttonLabel: "Subscribe to Creator Plus",
     },
   },
+  review_request: {
+    name: "Trustpilot review invite",
+    trigger: "Sent when a party submits their rating while closing out a collab (BCC'd to Trustpilot, which follows up with its own invitation)",
+    category: "Collabs & Messaging",
+    vars: ["firstName", "propertyLabel"],
+    buttonHref: TRUSTPILOT_REVIEW_URL,
+    copy: {
+      subject: "Thanks for your rating — one last thing 💚",
+      heading: "Thanks, {{firstName}}!",
+      body: "Your rating for <strong>{{propertyLabel}}</strong> is in. If you have 60 seconds, we'd love an honest review of your Collabnb experience on Trustpilot — it helps creators and hosts trust the platform.",
+      buttonLabel: "Review us on Trustpilot",
+      footnote: "You may also receive an invitation email from Trustpilot — reviewing through either link works.",
+    },
+  },
 };
 
 // Sample values used by "Send test" in the admin panel.
@@ -352,13 +370,13 @@ export function renderTemplate(
   return { subject: f(t.subject), html: layout(parts.join("\n")) };
 }
 
-export async function sendViaResend(apiKey: string, to: string, subject: string, html: string) {
+export async function sendViaResend(apiKey: string, to: string, subject: string, html: string, bcc?: string) {
   await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ from: FROM, to: [to], subject, html }),
+    body: JSON.stringify({ from: FROM, to: [to], subject, html, ...(bcc ? { bcc: [bcc] } : {}) }),
   });
 }

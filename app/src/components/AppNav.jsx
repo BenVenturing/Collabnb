@@ -11,6 +11,7 @@ import { formatDate } from '../lib/dateUtils';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import FAQModal from './FAQModal';
+import HostSignupSheet from './HostSignupSheet';
 
 function fmtNavWhen(val) {
   if (!val) return 'Any time';
@@ -147,6 +148,7 @@ export default function AppNav() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [faqOpen,     setFaqOpen]     = useState(false);
   const [faqBubble,   setFaqBubble]   = useState(false);
+  const [hostSignupOpen, setHostSignupOpen] = useState(false);
 
   // In-nav search state
   const [navSearchOpen, setNavSearchOpen] = useState(false);
@@ -863,7 +865,7 @@ export default function AppNav() {
                         await updateProfile?.({ role: 'host' });
                         navigate('/host');
                       } else {
-                        navigate('/profile?settings=true');
+                        setHostSignupOpen(true);
                       }
                     }}
                     className="w-full text-left px-4 py-3 text-sm hover:bg-mint/30 transition-colors"
@@ -910,6 +912,9 @@ export default function AppNav() {
 
       {/* ── FAQ modal ─────────────────────────────────────────────────────────── */}
       <FAQModal isOpen={faqOpen} onClose={() => setFaqOpen(false)} />
+
+      {/* ── Host signup sheet (creator → host switcher) ──────────────────────── */}
+      <HostSignupSheet open={hostSignupOpen} onClose={() => setHostSignupOpen(false)} />
 
       {/* ── FAQ persistent bubble (bottom-right, shown after first FAQ trigger) ── */}
       {faqBubble && (

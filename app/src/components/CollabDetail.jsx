@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from 'convex/react';
+import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { useCollabs } from '../contexts/CollabContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -590,6 +590,34 @@ const INPUT_S = {
 };
 const LABEL_S = { fontSize: '0.65rem', fontWeight: 700, color: 'var(--sage)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: '0.3rem' };
 
+const TRUSTPILOT_REVIEW_URL = 'https://www.trustpilot.com/evaluate/collabnb.com';
+
+function StarRow({ value, onChange, size = '1.6rem' }) {
+  const [hover, setHover] = useState(0);
+  return (
+    <div style={{ display: 'flex', gap: '0.25rem' }}>
+      {[1, 2, 3, 4, 5].map((n) => (
+        <button
+          key={n}
+          type="button"
+          onClick={() => onChange(n)}
+          onMouseEnter={() => setHover(n)}
+          onMouseLeave={() => setHover(0)}
+          aria-label={`${n} star${n === 1 ? '' : 's'}`}
+          style={{
+            background: 'none', border: 'none', padding: 0, cursor: 'pointer',
+            fontSize: size, lineHeight: 1, transition: 'transform 120ms',
+            transform: (hover || value) >= n ? 'scale(1.08)' : 'scale(1)',
+            color: (hover || value) >= n ? '#D4A843' : 'rgba(25,37,36,0.18)',
+          }}
+        >
+          ★
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function ClosedPanel({ collab, toggleCloseCollab }) {
   const stage = collab.stages?.closed || {};
   const creatorDone = !!stage.creator_closed;
@@ -597,6 +625,45 @@ function ClosedPanel({ collab, toggleCloseCollab }) {
   const bothDone = creatorDone && hostDone;
   const closedCount = [creatorDone, hostDone].filter(Boolean).length;
   const { submitContentMetrics } = useCollabs();
+  const { profile } = useAuth();
+
+  // Mutual ratings — required to confirm close
+  const submitReviewCvx = useMutation(api.reviews.submit);
+  const reviews = useQuery(api.reviews.getForCollab, { collabId: String(collab.id) }) || [];
+  const reviewByRole = (role) => reviews.find((r) => r.reviewer_role === role);
+  const [ratingParty, setRatingParty] = useState(null); // 'creator' | 'host' | null
+  const [stars, setStars] = useState(0);
+  const [reviewComment, setReviewComment] = useState('');
+  const [submittingReview, setSubmittingReview] = useState(false);
+
+  const openRating = (party) => {
+    if ((party === 'creator' && creatorDone) || (party === 'host' && hostDone)) return;
+    setRatingParty(party);
+    setStars(0);
+    setReviewComment('');
+  };
+
+  const handleSubmitReview = async () => {
+    if (!ratingParty || stars < 1 || submittingReview) return;
+    setSubmittingReview(true);
+    try {
+      await submitReviewCvx({
+        collabId: String(collab.id),
+        contractId: collab.contract_id ? String(collab.contract_id) : undefined,
+        reviewerRole: ratingParty,
+        rating: stars,
+        comment: reviewComment.trim() || undefined,
+        reviewerId: profile?._id ? String(profile._id) : undefined,
+        reviewerName: profile?.full_name || undefined,
+        revieweeName: ratingParty === 'creator' ? collab.host_name : (collab.creator_name || undefined),
+        propertyName: collab.property_name || undefined,
+      }).catch(() => {});
+      toggleCloseCollab(collab.id, ratingParty);
+      setRatingParty(null);
+    } finally {
+      setSubmittingReview(false);
+    }
+  };
 
   const [form, setForm] = useState({ post_url: '', views: '', likes: '', comments: '', saves: '' });
   const [metricsSubmitted, setMetricsSubmitted] = useState(!!collab.content_metrics);
@@ -627,40 +694,78 @@ function ClosedPanel({ collab, toggleCloseCollab }) {
       {/* Dual-close progress */}
       <div style={{ marginBottom: '1.25rem' }}>
         <p style={{ fontSize: '0.85rem', color: 'var(--slate)', margin: '0 0 0.75rem', lineHeight: 1.6 }}>
-          Both parties must confirm to close this collaboration and release payment.
+          Both parties rate each other to confirm the close — this closes the collaboration and releases payment.
         </p>
         <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '0.75rem' }}>
-          <button
-            onClick={() => toggleCloseCollab(collab.id, 'creator')}
-            style={{
-              flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
-              padding: '0.75rem', borderRadius: '0.875rem', cursor: 'pointer',
-              background: creatorDone ? 'rgba(74,155,127,0.15)' : 'rgba(255,255,255,0.75)',
-              border: `1.5px solid ${creatorDone ? '#4A9B7F' : 'rgba(25,37,36,0.12)'}`,
-              fontFamily: 'var(--font-body)', fontSize: '0.8rem', fontWeight: 600,
-              color: creatorDone ? '#4A9B7F' : 'var(--slate)',
-              transition: 'all 150ms',
-            }}
-          >
-            {creatorDone ? <CheckIcon /> : <span style={{ width: 12, height: 12, borderRadius: '50%', border: '2px solid var(--stone)', display: 'inline-block' }} />}
-            Creator: {creatorDone ? 'Confirmed' : 'Confirm Close'}
-          </button>
-          <button
-            onClick={() => toggleCloseCollab(collab.id, 'host')}
-            style={{
-              flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
-              padding: '0.75rem', borderRadius: '0.875rem', cursor: 'pointer',
-              background: hostDone ? 'rgba(74,155,127,0.15)' : 'rgba(255,255,255,0.75)',
-              border: `1.5px solid ${hostDone ? '#4A9B7F' : 'rgba(25,37,36,0.12)'}`,
-              fontFamily: 'var(--font-body)', fontSize: '0.8rem', fontWeight: 600,
-              color: hostDone ? '#4A9B7F' : 'var(--slate)',
-              transition: 'all 150ms',
-            }}
-          >
-            {hostDone ? <CheckIcon /> : <span style={{ width: 12, height: 12, borderRadius: '50%', border: '2px solid var(--stone)', display: 'inline-block' }} />}
-            Host: {hostDone ? 'Confirmed' : 'Confirm Close'}
-          </button>
+          {[
+            { party: 'creator', done: creatorDone, label: 'Creator' },
+            { party: 'host', done: hostDone, label: 'Host' },
+          ].map(({ party, done, label }) => {
+            const rev = reviewByRole(party);
+            return (
+              <button
+                key={party}
+                onClick={() => openRating(party)}
+                style={{
+                  flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.35rem',
+                  padding: '0.75rem', borderRadius: '0.875rem', cursor: done ? 'default' : 'pointer',
+                  background: done ? 'rgba(74,155,127,0.15)' : ratingParty === party ? 'rgba(212,168,67,0.1)' : 'rgba(255,255,255,0.75)',
+                  border: `1.5px solid ${done ? '#4A9B7F' : ratingParty === party ? '#D4A843' : 'rgba(25,37,36,0.12)'}`,
+                  fontFamily: 'var(--font-body)', fontSize: '0.8rem', fontWeight: 600,
+                  color: done ? '#4A9B7F' : 'var(--slate)',
+                  transition: 'all 150ms',
+                }}
+              >
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  {done ? <CheckIcon /> : <span style={{ width: 12, height: 12, borderRadius: '50%', border: '2px solid var(--stone)', display: 'inline-block' }} />}
+                  {label}: {done ? 'Confirmed' : 'Rate & Close'}
+                </span>
+                {rev && (
+                  <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#D4A843' }}>
+                    {'★'.repeat(rev.rating)}{'☆'.repeat(5 - rev.rating)}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
+
+        {ratingParty && (
+          <div style={{ marginBottom: '0.75rem', padding: '1rem', borderRadius: '0.875rem', background: 'rgba(255,255,255,0.6)', border: '1px solid rgba(255,255,255,0.8)', backdropFilter: 'blur(20px) saturate(140%)', WebkitBackdropFilter: 'blur(20px) saturate(140%)' }}>
+            <p style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--ink)', margin: '0 0 0.25rem', fontFamily: 'var(--font-display)' }}>
+              {ratingParty === 'creator' ? `Rate your host${collab.host_name ? ` — ${collab.host_name}` : ''}` : `Rate your creator${collab.creator_name ? ` — ${collab.creator_name}` : ''}`}
+            </p>
+            <p style={{ fontSize: '0.72rem', color: 'var(--sage)', margin: '0 0 0.75rem' }}>
+              How was the collaboration? Your rating confirms your close.
+            </p>
+            <div style={{ marginBottom: '0.75rem' }}>
+              <StarRow value={stars} onChange={setStars} />
+            </div>
+            <textarea
+              value={reviewComment}
+              onChange={(e) => setReviewComment(e.target.value)}
+              placeholder="Share a few words about the experience (optional)"
+              rows={2}
+              style={{ ...INPUT_S, resize: 'vertical', marginBottom: '0.75rem' }}
+            />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <button
+                className="btn-primary"
+                disabled={stars < 1 || submittingReview}
+                onClick={handleSubmitReview}
+                style={{ fontSize: '0.8rem', padding: '0.6rem 1.25rem', opacity: stars < 1 || submittingReview ? 0.5 : 1, cursor: stars < 1 ? 'not-allowed' : 'pointer' }}
+              >
+                {submittingReview ? 'Submitting…' : 'Submit Rating & Confirm Close'}
+              </button>
+              <button
+                onClick={() => setRatingParty(null)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 600, color: 'var(--sage)', fontFamily: 'var(--font-body)' }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <div style={{ flex: 1, height: '6px', borderRadius: '3px', background: 'rgba(208,213,206,0.4)', overflow: 'hidden' }}>
             <div style={{ height: '100%', borderRadius: '3px', background: 'var(--slate)', transition: 'width 300ms', width: `${(closedCount / 2) * 100}%` }} />
@@ -752,9 +857,25 @@ function ClosedPanel({ collab, toggleCloseCollab }) {
       </div>
 
       {bothDone && (
-        <div style={{ marginTop: '1rem', padding: '0.75rem', borderRadius: '0.875rem', background: 'rgba(74,155,127,0.1)', textAlign: 'center' }}>
-          <p style={{ fontSize: '0.85rem', fontWeight: 700, color: '#4A9B7F', margin: 0 }}>
+        <div style={{ marginTop: '1rem', padding: '1rem', borderRadius: '0.875rem', background: 'rgba(74,155,127,0.1)', textAlign: 'center' }}>
+          <p style={{ fontSize: '0.85rem', fontWeight: 700, color: '#4A9B7F', margin: '0 0 0.75rem' }}>
             ✓ Both parties confirmed — collaboration will be archived
+          </p>
+          <a
+            href={TRUSTPILOT_REVIEW_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
+              padding: '0.55rem 1.1rem', borderRadius: '999px', textDecoration: 'none',
+              background: '#00B67A', color: '#fff', fontSize: '0.78rem', fontWeight: 700,
+              fontFamily: 'var(--font-body)',
+            }}
+          >
+            ★ Review Collabnb on Trustpilot
+          </a>
+          <p style={{ fontSize: '0.68rem', color: 'var(--sage)', margin: '0.6rem 0 0', fontStyle: 'italic' }}>
+            We've also emailed you a Trustpilot review link.
           </p>
         </div>
       )}
@@ -777,6 +898,21 @@ function ArchivedPanel({ collab }) {
           <p style={{ fontSize: '0.85rem', fontWeight: 700, color: '#4A9B7F', margin: 0 }}>Payment: {collab.payment}</p>
         </div>
       )}
+      <div style={{ marginTop: '1rem', textAlign: 'center' }}>
+        <a
+          href={TRUSTPILOT_REVIEW_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
+            padding: '0.5rem 1rem', borderRadius: '999px', textDecoration: 'none',
+            background: '#00B67A', color: '#fff', fontSize: '0.75rem', fontWeight: 700,
+            fontFamily: 'var(--font-body)',
+          }}
+        >
+          ★ Review Collabnb on Trustpilot
+        </a>
+      </div>
     </div>
   );
 }

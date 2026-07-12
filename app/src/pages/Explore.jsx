@@ -68,8 +68,7 @@ function ListingCard({ listing, saved, onSave, delay, onNavigate, onHostClick, o
   const isSample = listing._isSample === true;
   // Viewer's avatar may only stand in for the host's when the viewer owns the listing
   const isOwnListing = !!profile && (
-    (listing.host_id && String(listing.host_id) === String(profile._id)) ||
-    (isSample && profile.is_founder === true)
+    listing.host_id && String(listing.host_id) === String(profile._id)
   );
 
   const handleSave = (e) => {

@@ -86,6 +86,13 @@ export const getBySlug = query({
   },
 });
 
+export const getById = query({
+  args: { id: v.id("blog_posts") },
+  handler: async (ctx, { id }) => {
+    return await ctx.db.get(id);
+  },
+});
+
 // ─── Mutations ────────────────────────────────────────────────────────────────
 
 export const updatePost = mutation({
@@ -239,6 +246,35 @@ export const createGeneratedPost = mutation({
     return await ctx.db.insert("blog_posts", {
       ...args,
       status: "draft",
+      generated_at: Date.now(),
+    });
+  },
+});
+
+// Overwrite a draft's written fields after regeneration. Images are untouched
+// on purpose — regenerate keeps the photos the editor already chose.
+export const applyRegenerated = mutation({
+  args: {
+    id: v.id("blog_posts"),
+    title: v.string(),
+    excerpt: v.string(),
+    content: v.string(),
+    tags: v.array(v.string()),
+    pull_quote: v.optional(v.string()),
+    sources: v.array(v.string()),
+    seo_description: v.string(),
+    topic: v.optional(v.string()),
+    review_notes: v.optional(v.string()),
+    review_score: v.optional(v.number()),
+  },
+  handler: async (ctx, { id, ...fields }) => {
+    const post = await ctx.db.get(id);
+    if (!post) throw new Error("Post not found");
+    if (post.status === "published") throw new Error("Unpublish the post before regenerating it.");
+    await ctx.db.patch(id, {
+      ...fields,
+      slug: slugify(fields.title),
+      reading_time: readingTime(fields.content),
       generated_at: Date.now(),
     });
   },
@@ -531,7 +567,10 @@ async function pickFreshTopic(ctx: any, headlines: { title: string; source: stri
 function parseWriterOutput(raw: string) {
   const extract = (key: string) => {
     const match = raw.match(new RegExp(`${key}\\**:\\**\\s*(.+)`));
-    return match ? match[1].trim().replace(/^[*\[\s]+|[*\]\s]+$/g, "") : "";
+    if (!match) return "";
+    return match[1].trim()
+      .replace(/^[*\[\s]+|[*\]\s]+$/g, "")
+      .replace(/^["'“”‘’]+|["'“”‘’]+$/g, "");
   };
   const contentMatch = raw.match(/CONTENT\**:\**\s*([\s\S]+)/);
   return {
@@ -546,6 +585,87 @@ function parseWriterOutput(raw: string) {
     img3: extract("IMAGE_QUERY_3"),
     content: contentMatch ? contentMatch[1].trim().replace(/^\*+\s*/, "").replace(/```html?|```/g, "").trim() : "",
   };
+}
+
+// Write → structural lint (one retry) → DeepSeek review. Shared by generatePost
+// and regeneratePost. `direction` is an optional human note steering the angle.
+async function composePost(topic: string, research: string, briefContext: string, direction?: string) {
+  const today = new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+
+  const writePrompt = `You are the editorial voice of The Collabnb Journal. Today is ${today}.
+
+Below is the Journal's style guide. Follow every rule in it — narrative arc, HTML skeleton, voice, banned words, citation rules.
+
+<style_guide>
+${STYLE_GUIDE}
+</style_guide>
+
+RESEARCH BRIEF — the ONLY permitted source of statistics. Attribute every number to its publication; if a fact is not in this brief, do not state it as a statistic:
+<research>
+${research}
+</research>
+
+Write one post on this topic: ${topic}
+${direction ? `\nEDITOR'S DIRECTION — the human editor asked for this specific angle. Follow it closely while keeping the Journal's structure and narrative flow:\n${direction}\n` : ""}
+Respond with EXACTLY this format, no extra commentary:
+TITLE: [60 chars max, Title Case, editorial — states a specific idea, not a topic area]
+EXCERPT: [one conversational sentence, under 120 chars — renders as the deck under the title]
+SEO_DESC: [155 chars max, human-sounding]
+TAGS: [3-5 lowercase comma-separated, specific]
+PULL_QUOTE: [the single most resonant sentence from the post, lightly polished]
+IMAGE_QUERY_HERO: [black and white editorial photo subject matching the hook scene — 5-7 words]
+IMAGE_QUERY_1: [black and white editorial — 5-7 words, a DIFFERENT subject than hero]
+IMAGE_QUERY_2: [black and white editorial — 5-7 words, a DIFFERENT subject than above]
+IMAGE_QUERY_3: [black and white editorial — 5-7 words, a DIFFERENT subject than above]
+CONTENT:
+[the full HTML following the style guide skeleton, with %%INLINE_IMAGE_1%%, %%INLINE_IMAGE_2%%, %%INLINE_IMAGE_3%% and %%PULL_QUOTE%% markers in place]`;
+
+  const writerSystem = "You are an editorial writer for a boutique travel publication. Follow the output format exactly. Place image and pull-quote markers exactly where the style guide's skeleton specifies.";
+  let raw = await llmChat([
+    { role: "system", content: writerSystem },
+    { role: "user", content: writePrompt },
+  ], 3500);
+  console.log(`composePost write ok — ${raw.length} chars`);
+
+  let parsed = parseWriterOutput(raw);
+
+  // One structural retry — markers and skeleton are non-negotiable.
+  let lint = parsed.title && parsed.content
+    ? lintPost(parsed.title, parsed.content)
+    : { violations: [], structural: ["Writer returned incomplete output"] };
+  if (lint.structural.length > 0) {
+    console.log(`composePost structural retry — ${lint.structural.join("; ")}`);
+    raw = await llmChat([
+      { role: "system", content: writerSystem },
+      { role: "user", content: `${writePrompt}\n\nYour previous attempt failed these structural requirements — fix ALL of them this time:\n${lint.structural.map((s) => `- ${s}`).join("\n")}` },
+    ], 3500);
+    const retryParsed = parseWriterOutput(raw);
+    if (retryParsed.title && retryParsed.content) {
+      const retryLint = lintPost(retryParsed.title, retryParsed.content);
+      if (retryLint.structural.length <= lint.structural.length) {
+        parsed = retryParsed;
+        lint = retryLint;
+      }
+    }
+  }
+
+  const { title, excerpt, seoDesc, tags, pullQuote, imgHero, img1, img2, img3 } = parsed;
+  let content = parsed.content;
+  if (!title || !content) {
+    throw new Error("The writer model returned incomplete post data — try again");
+  }
+
+  const review = await deepseekReview(title, content, briefContext, [...lint.violations, ...lint.structural]);
+  if (review) content = review.html;
+  const finalLint = lintPost(title, content);
+  const reviewNotes = [
+    review ? `DeepSeek review — score ${review.score}/10` : "DeepSeek review skipped (no key or error) — lint only",
+    review?.notes || "",
+    finalLint.violations.length ? `Remaining lint flags:\n${finalLint.violations.map((v) => `- ${v}`).join("\n")}` : "",
+    finalLint.structural.length ? `Structural flags:\n${finalLint.structural.map((v) => `- ${v}`).join("\n")}` : "",
+  ].filter(Boolean).join("\n");
+
+  return { title, excerpt, seoDesc, tags, pullQuote, imgHero, img1, img2, img3, content, reviewNotes, reviewScore: review?.score };
 }
 
 export const generatePost = action({
@@ -578,87 +698,16 @@ export const generatePost = action({
       (brief.context || "(No live research available for this run — write qualitatively and use NO specific statistics.)") +
       statsContext;
 
-    // ── 2. Write the post (style guide + scraped research embedded) ──────────
-    const today = new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+    // ── 2. Write, lint, and review ────────────────────────────────────────────
     const category = isStatsPost ? "stats" : (
       topic.toLowerCase().includes("host") ? "hosts" :
       topic.toLowerCase().includes("creator") ? "creators" : "industry"
     );
 
-    const writePrompt = `You are the editorial voice of The Collabnb Journal. Today is ${today}.
+    const { title, excerpt, seoDesc, tags, pullQuote, imgHero, img1, img2, img3, content, reviewNotes, reviewScore } =
+      await composePost(topic, research, brief.context);
 
-Below is the Journal's style guide. Follow every rule in it — narrative arc, HTML skeleton, voice, banned words, citation rules.
-
-<style_guide>
-${STYLE_GUIDE}
-</style_guide>
-
-RESEARCH BRIEF — the ONLY permitted source of statistics. Attribute every number to its publication; if a fact is not in this brief, do not state it as a statistic:
-<research>
-${research}
-</research>
-
-Write one post on this topic: ${topic}
-
-Respond with EXACTLY this format, no extra commentary:
-TITLE: [60 chars max, Title Case, editorial — states a specific idea, not a topic area]
-EXCERPT: [one conversational sentence, under 120 chars — renders as the deck under the title]
-SEO_DESC: [155 chars max, human-sounding]
-TAGS: [3-5 lowercase comma-separated, specific]
-PULL_QUOTE: [the single most resonant sentence from the post, lightly polished]
-IMAGE_QUERY_HERO: [black and white editorial photo subject matching the hook scene — 5-7 words]
-IMAGE_QUERY_1: [black and white editorial — 5-7 words, a DIFFERENT subject than hero]
-IMAGE_QUERY_2: [black and white editorial — 5-7 words, a DIFFERENT subject than above]
-IMAGE_QUERY_3: [black and white editorial — 5-7 words, a DIFFERENT subject than above]
-CONTENT:
-[the full HTML following the style guide skeleton, with %%INLINE_IMAGE_1%%, %%INLINE_IMAGE_2%%, %%INLINE_IMAGE_3%% and %%PULL_QUOTE%% markers in place]`;
-
-    const writerSystem = "You are an editorial writer for a boutique travel publication. Follow the output format exactly. Place image and pull-quote markers exactly where the style guide's skeleton specifies.";
-    let raw = await llmChat([
-      { role: "system", content: writerSystem },
-      { role: "user", content: writePrompt },
-    ], 3500);
-    console.log(`generatePost write ok — ${raw.length} chars`);
-
-    let parsed = parseWriterOutput(raw);
-
-    // One structural retry — markers and skeleton are non-negotiable.
-    let lint = parsed.title && parsed.content
-      ? lintPost(parsed.title, parsed.content)
-      : { violations: [], structural: ["Writer returned incomplete output"] };
-    if (lint.structural.length > 0) {
-      console.log(`generatePost structural retry — ${lint.structural.join("; ")}`);
-      raw = await llmChat([
-        { role: "system", content: writerSystem },
-        { role: "user", content: `${writePrompt}\n\nYour previous attempt failed these structural requirements — fix ALL of them this time:\n${lint.structural.map((s) => `- ${s}`).join("\n")}` },
-      ], 3500);
-      const retryParsed = parseWriterOutput(raw);
-      if (retryParsed.title && retryParsed.content) {
-        const retryLint = lintPost(retryParsed.title, retryParsed.content);
-        if (retryLint.structural.length <= lint.structural.length) {
-          parsed = retryParsed;
-          lint = retryLint;
-        }
-      }
-    }
-
-    const { title, excerpt, seoDesc, tags, pullQuote, imgHero, img1, img2, img3 } = parsed;
-    let content = parsed.content;
-    if (!title || !content) {
-      throw new Error("The writer model returned incomplete post data — try again");
-    }
-
-    // ── 3. DeepSeek editorial review pass ─────────────────────────────────────
-    const review = await deepseekReview(title, content, brief.context, [...lint.violations, ...lint.structural]);
-    if (review) content = review.html;
-    const finalLint = lintPost(title, content);
-    const reviewNotes = [
-      review ? `DeepSeek review — score ${review.score}/10` : "DeepSeek review skipped (no key or error) — lint only",
-      review?.notes || "",
-      finalLint.violations.length ? `Remaining lint flags:\n${finalLint.violations.map((v) => `- ${v}`).join("\n")}` : "",
-      finalLint.structural.length ? `Structural flags:\n${finalLint.structural.map((v) => `- ${v}`).join("\n")}` : "",
-    ].filter(Boolean).join("\n");
-    console.log(`generatePost review ok — score ${review?.score ?? "n/a"}, ${finalLint.violations.length} lint flags`);
+    console.log(`generatePost review ok — score ${reviewScore ?? "n/a"}`);
 
     // ── 4. Fetch images from Unsplash (B&W filter) ────────────────────────────
     async function fetchUnsplashImage(query: string, fallback: string) {
@@ -726,10 +775,55 @@ CONTENT:
       is_stats_post: isStatsPost,
       topic,
       review_notes: reviewNotes,
-      review_score: review?.score,
+      review_score: reviewScore,
     });
 
     return { postId, title, slug };
+  },
+});
+
+// ─── Action: regenerate an existing draft in place ────────────────────────────
+// Re-runs research + writing on the same post, keeping its photos. `direction`
+// is the editor's steering note ("same flow, but focus on X").
+export const regeneratePost = action({
+  args: {
+    id: v.id("blog_posts"),
+    direction: v.optional(v.string()),
+  },
+  handler: async (ctx, { id, direction }) => {
+    const post: any = await ctx.runQuery(api.blog.getById, { id });
+    if (!post) throw new Error("Post not found");
+    if (post.status === "published") throw new Error("Unpublish the post before regenerating it.");
+
+    const baseTopic = post.topic || post.title || "boutique hospitality and creator collaborations";
+    const topic = direction
+      ? `${baseTopic} — refocused by the editor: ${direction.slice(0, 300)}`
+      : baseTopic;
+    console.log(`regeneratePost topic: ${topic.slice(0, 100)}`);
+
+    const brief = await buildResearchBrief(topic);
+    console.log(`regeneratePost research ok — ${brief.sources.length} sources, ${brief.context.length} chars`);
+    const research =
+      brief.context || "(No live research available for this run — write qualitatively and use NO specific statistics.)";
+
+    const composed = await composePost(topic, research, brief.context, direction);
+    console.log(`regeneratePost review ok — score ${composed.reviewScore ?? "n/a"}`);
+
+    await ctx.runMutation(api.blog.applyRegenerated, {
+      id,
+      title: composed.title,
+      excerpt: composed.excerpt,
+      content: composed.content,
+      tags: composed.tags,
+      pull_quote: composed.pullQuote || undefined,
+      sources: brief.sources,
+      seo_description: composed.seoDesc,
+      topic,
+      review_notes: composed.reviewNotes,
+      review_score: composed.reviewScore,
+    });
+
+    return { postId: id, title: composed.title };
   },
 });
 

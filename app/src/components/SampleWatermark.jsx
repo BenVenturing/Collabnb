@@ -1,28 +1,38 @@
 // Subtle on-brand watermark overlaid on sample-listing hero images —
-// a single slightly-diagonal pill: deep forest text on a translucent light scrim.
+// tiled diagonal rows of light text, like a stock-photo watermark.
+const ROW_TEXT = new Array(4).fill('SAMPLE LISTING').join('   ·   ');
+const ROWS = new Array(10).fill(ROW_TEXT);
+
 export default function SampleWatermark() {
   return (
-    <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-      <span style={{
-        transform: 'rotate(-8deg)',
-        padding: '0.32rem 1rem',
-        borderRadius: 9999,
-        background: 'rgba(239,236,233,0.78)',
-        backdropFilter: 'blur(6px)',
-        WebkitBackdropFilter: 'blur(6px)',
-        border: '1px solid rgba(25,37,36,0.08)',
-        boxShadow: '0 2px 10px rgba(25,37,36,0.10)',
-        fontFamily: 'var(--font-body)',
-        fontSize: '0.6rem',
-        fontWeight: 700,
-        letterSpacing: '0.14em',
-        textTransform: 'uppercase',
-        color: '#192524',
-        whiteSpace: 'nowrap',
-        userSelect: 'none',
+    <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden' }}>
+      <div style={{
+        position: 'absolute',
+        top: '50%',
+        left: '50%',
+        width: '220%',
+        transform: 'translate(-50%, -50%) rotate(-30deg)',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '1.2rem',
       }}>
-        Sample listing
-      </span>
+        {ROWS.map((text, i) => (
+          <div key={i} style={{
+            fontFamily: 'var(--font-body)',
+            fontSize: '0.75rem',
+            fontWeight: 700,
+            letterSpacing: '0.22em',
+            textTransform: 'uppercase',
+            color: 'rgba(255,255,255,0.45)',
+            textShadow: '0 1px 3px rgba(0,0,0,0.3)',
+            whiteSpace: 'nowrap',
+            textAlign: 'center',
+            userSelect: 'none',
+          }}>
+            {text}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

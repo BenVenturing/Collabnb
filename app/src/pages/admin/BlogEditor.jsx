@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useMutation } from 'convex/react';
+import { useMutation, useAction } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { useEditor, EditorContent } from '@tiptap/react';
 import { Node, mergeAttributes } from '@tiptap/core';
@@ -160,10 +160,11 @@ function ToolbarBtn({ active, onClick, title, children }) {
 }
 
 // ─── Main editor ──────────────────────────────────────────────────────────────
-export default function BlogEditor({ post, onClose, onRegenerate }) {
-  const updatePost   = useMutation(api.blog.updatePost);
-  const updateStatus = useMutation(api.blog.updateStatus);
-  const deletePost   = useMutation(api.blog.deletePost);
+export default function BlogEditor({ post, onClose, onReopen }) {
+  const updatePost     = useMutation(api.blog.updatePost);
+  const updateStatus   = useMutation(api.blog.updateStatus);
+  const deletePost     = useMutation(api.blog.deletePost);
+  const regeneratePost = useAction(api.blog.regeneratePost);
 
   const [title,     setTitle]     = useState(post.title === 'Untitled post' ? '' : post.title);
   const [excerpt,   setExcerpt]   = useState(post.excerpt || '');
@@ -182,7 +183,10 @@ export default function BlogEditor({ post, onClose, onRegenerate }) {
   const [preview,  setPreview]  = useState(false);
   const [saveState, setSaveState] = useState('clean'); // 'clean' | 'dirty' | 'saving' | 'saved'
   const [confirm,  setConfirm]  = useState(null); // 'publish' | 'reject' | 'delete' | 'unpublish'
+  const [regenOpen, setRegenOpen] = useState(false);
+  const [regenDirection, setRegenDirection] = useState('');
   const [regenBusy, setRegenBusy] = useState(false);
+  const [regenErr, setRegenErr] = useState('');
 
   const contentRef  = useRef(post.content || '');
   const saveTimer   = useRef(null);
@@ -300,8 +304,17 @@ export default function BlogEditor({ post, onClose, onRegenerate }) {
 
   async function handleRegenerate() {
     setRegenBusy(true);
-    try { await onRegenerate?.(post.topic); onClose(); }
-    finally { setRegenBusy(false); }
+    setRegenErr('');
+    clearTimeout(saveTimer.current);
+    const started = Date.now();
+    try {
+      await regeneratePost({ id: post._id, direction: regenDirection.trim() || undefined });
+      // Reopen with the fresh version (photos are kept; text is rewritten).
+      onReopen?.(post._id, started);
+    } catch (e) {
+      setRegenErr(e.message || 'Regeneration failed — try again.');
+      setRegenBusy(false);
+    }
   }
 
   const previewPost = {
@@ -328,11 +341,14 @@ export default function BlogEditor({ post, onClose, onRegenerate }) {
 
         <div style={{ flex: 1 }} />
 
-        {isDraft && post.topic && (
-          <button onClick={handleRegenerate} disabled={regenBusy} title="Generate a fresh draft on the same topic" style={{ padding: '0.45rem 0.9rem', borderRadius: 9999, border: '1px solid rgba(25,37,36,0.14)', background: 'transparent', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 600, color: 'var(--slate)', opacity: regenBusy ? 0.5 : 1 }}>
+        {isDraft && (
+          <button onClick={() => setRegenOpen(true)} disabled={regenBusy} title="Rewrite this post — keeps your photos, you steer the angle" style={{ padding: '0.45rem 0.9rem', borderRadius: 9999, border: '1px solid rgba(25,37,36,0.14)', background: 'transparent', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 600, color: 'var(--slate)', opacity: regenBusy ? 0.5 : 1 }}>
             {regenBusy ? 'Regenerating…' : '⟳ Regenerate'}
           </button>
         )}
+        <button onClick={() => setConfirm('delete')} title="Delete this post entirely" style={{ padding: '0.45rem 0.9rem', borderRadius: 9999, border: '1px solid rgba(200,104,104,0.35)', background: 'transparent', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 600, color: '#c0392b' }}>
+          Delete
+        </button>
         <button onClick={() => setPreview(p => !p)} style={{ padding: '0.45rem 0.9rem', borderRadius: 9999, border: '1px solid rgba(25,37,36,0.14)', background: preview ? 'var(--ink)' : 'transparent', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 600, color: preview ? '#fff' : 'var(--slate)' }}>
           {preview ? 'Edit' : 'Preview'}
         </button>
@@ -482,6 +498,43 @@ export default function BlogEditor({ post, onClose, onRegenerate }) {
           </div>
         )}
       </div>
+
+      {/* Regenerate dialog */}
+      {regenOpen && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 600, background: 'rgba(25,37,36,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={e => { if (e.target === e.currentTarget && !regenBusy) setRegenOpen(false); }}>
+          <div style={{ background: '#fff', borderRadius: '1rem', padding: '1.5rem', maxWidth: 460, width: '92%', boxShadow: '0 16px 40px rgba(25,37,36,0.2)' }}>
+            {regenBusy ? (
+              <div style={{ textAlign: 'center', padding: '1rem 0' }}>
+                <span style={{ display: 'inline-block', width: 18, height: 18, border: '2px solid rgba(25,37,36,0.15)', borderTopColor: '#3C5759', borderRadius: '50%', animation: 'spin 0.7s linear infinite', marginBottom: '0.75rem' }} />
+                <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.95rem', color: 'var(--ink)', margin: '0 0 0.35rem' }}>Rewriting this post…</p>
+                <p style={{ fontSize: '0.78rem', color: 'var(--sage)', margin: 0 }}>Researching the journals, writing, and running the editorial review — about a minute. Your photos stay.</p>
+              </div>
+            ) : (
+              <>
+                <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1rem', color: 'var(--ink)', margin: '0 0 0.35rem' }}>Regenerate this post</p>
+                <p style={{ fontSize: '0.78rem', color: 'var(--sage)', margin: '0 0 0.9rem', lineHeight: 1.5 }}>
+                  Rewrites the article with fresh research while keeping your current photos and the Journal's flow. Optionally tell it what to change — a new angle, a shifted topic, a different emphasis.
+                </p>
+                <textarea
+                  value={regenDirection}
+                  onChange={e => setRegenDirection(e.target.value)}
+                  rows={3}
+                  autoFocus
+                  placeholder={'e.g. "same idea, but focus on small Airbnb hosts instead of hotels" or "make it about pricing the collab"'}
+                  style={{ width: '100%', boxSizing: 'border-box', padding: '0.6rem 0.75rem', border: '1.5px solid rgba(25,37,36,0.12)', borderRadius: '0.6rem', fontFamily: 'var(--font-body)', fontSize: '0.82rem', color: 'var(--ink)', background: '#fafafa', outline: 'none', resize: 'vertical', marginBottom: '0.9rem' }}
+                />
+                {regenErr && <p style={{ fontSize: '0.75rem', color: '#9b2d2d', margin: '0 0 0.75rem' }}>{regenErr}</p>}
+                <div style={{ display: 'flex', gap: '0.6rem', justifyContent: 'flex-end' }}>
+                  <button onClick={() => setRegenOpen(false)} style={{ padding: '0.55rem 1rem', borderRadius: 9999, border: '1.5px solid rgba(25,37,36,0.15)', background: 'transparent', fontSize: '0.8rem', fontWeight: 600, color: 'var(--slate)', cursor: 'pointer' }}>Cancel</button>
+                  <button onClick={handleRegenerate} style={{ padding: '0.55rem 1.2rem', borderRadius: 9999, border: 'none', background: '#192524', fontSize: '0.8rem', fontWeight: 700, color: '#fff', cursor: 'pointer' }}>
+                    {regenDirection.trim() ? 'Regenerate with direction' : 'Regenerate'}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Confirm dialog */}
       {confirm && (

@@ -93,7 +93,7 @@ export default function BlogManager() {
 
   const [tab,          setTab]          = useState('drafts');
   const [editing,      setEditing]      = useState(null);
-  const [pendingOpenId, setPendingOpenId] = useState(null);
+  const [pendingOpen,  setPendingOpen]  = useState(null); // { id, minGen? }
   const [generating,   setGenerating]   = useState(false);
   const [genError,     setGenError]     = useState(null);
   const [topic,        setTopic]        = useState('');
@@ -109,12 +109,16 @@ export default function BlogManager() {
   const rejected  = allPosts.filter(p => p.status === 'rejected');
   const tabPosts  = { drafts, published, rejected }[tab] || [];
 
-  // Open a just-created blank post as soon as the live query returns it.
+  // Open a just-created or just-regenerated post as soon as the live query
+  // returns the fresh version (minGen guards against a stale copy).
   useEffect(() => {
-    if (!pendingOpenId) return;
-    const post = allPosts.find(p => p._id === pendingOpenId);
-    if (post) { setEditing(post); setPendingOpenId(null); }
-  }, [pendingOpenId, allPosts]);
+    if (!pendingOpen) return;
+    const post = allPosts.find(p => p._id === pendingOpen.id);
+    if (post && (!pendingOpen.minGen || post.generated_at >= pendingOpen.minGen)) {
+      setEditing(post);
+      setPendingOpen(null);
+    }
+  }, [pendingOpen, allPosts]);
 
   function startProgress() {
     let stageIdx = 0;
@@ -186,7 +190,7 @@ export default function BlogManager() {
   async function handleNewPost() {
     const id = await createBlank({});
     setTab('drafts');
-    setPendingOpenId(id);
+    setPendingOpen({ id });
   }
 
   return (
@@ -354,9 +358,10 @@ export default function BlogManager() {
 
       {editing && (
         <BlogEditor
+          key={`${editing._id}-${editing.generated_at}`}
           post={editing}
           onClose={() => setEditing(null)}
-          onRegenerate={(t) => handleGenerate(t)}
+          onReopen={(id, minGen) => { setEditing(null); setPendingOpen({ id, minGen }); }}
         />
       )}
     </div>

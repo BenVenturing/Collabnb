@@ -1,6 +1,8 @@
 import { v } from "convex/values";
 import { query, mutation, action } from "./_generated/server";
 import { api } from "./_generated/api";
+import { STYLE_GUIDE } from "./styleGuide";
+import { buildResearchBrief, fetchHeadlines } from "./blogResearch";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -116,7 +118,11 @@ export const updatePost = mutation({
     const updates: Record<string, unknown> = {};
     if (fields.title !== undefined) {
       updates.title = fields.title;
-      updates.slug = slugify(fields.title);
+      // Re-slugging a published post would break its live URL — drafts only.
+      const existing = await ctx.db.get(id);
+      if (existing && existing.status !== "published") {
+        updates.slug = slugify(fields.title);
+      }
     }
     if (fields.content !== undefined) {
       updates.content = fields.content;
@@ -161,6 +167,41 @@ export const deletePost = mutation({
   },
 });
 
+// Blank draft for writing a post by hand in the admin editor.
+export const createBlankPost = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const title = "Untitled post";
+    const id = await ctx.db.insert("blog_posts", {
+      title,
+      slug: slugify(title),
+      excerpt: "",
+      content: [
+        "<p>Start with a scene — a place, a person, a decision.</p>",
+        "<h2>First section</h2>",
+        "<p></p>",
+        "%%INLINE_IMAGE_1%%",
+        "<h2>Second section</h2>",
+        "<p></p>",
+        "%%PULL_QUOTE%%",
+        "%%INLINE_IMAGE_2%%",
+        "<h2>Third section</h2>",
+        "<p></p>",
+        "%%INLINE_IMAGE_3%%",
+      ].join("\n"),
+      category: "industry",
+      tags: [],
+      author: "Ben Venturing",
+      sources: [],
+      seo_description: "",
+      reading_time: 1,
+      status: "draft",
+      generated_at: Date.now(),
+    });
+    return id;
+  },
+});
+
 // ─── Internal: create post from generated data ────────────────────────────────
 
 export const createGeneratedPost = mutation({
@@ -190,6 +231,9 @@ export const createGeneratedPost = mutation({
     seo_description: v.string(),
     reading_time: v.number(),
     is_stats_post: v.optional(v.boolean()),
+    topic: v.optional(v.string()),
+    review_notes: v.optional(v.string()),
+    review_score: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     return await ctx.db.insert("blog_posts", {
@@ -309,60 +353,113 @@ export async function llmChat(messages: ChatMessage[], maxTokens = 2048): Promis
   throw lastError || new Error("All LLM providers failed");
 }
 
-// Real web research via ScrapeGraphAI (preferred) or Firecrawl. Returns source
-// URLs plus condensed page content to ground the post in real, current data.
-// Degrades to empty (pure-LLM research) when neither key is configured.
-async function webResearch(topic: string): Promise<{ context: string; sources: string[] }> {
-  const sgaiKey = process.env.SGAI_API_KEY;
-  const firecrawlKey = process.env.FIRECRAWL_API_KEY;
+// ─── Deterministic lint against the style guide ───────────────────────────────
 
-  if (sgaiKey) {
-    try {
-      const res = await fetch("https://api.scrapegraphai.com/v1/searchscraper", {
-        method: "POST",
-        headers: { "SGAI-APIKEY": sgaiKey, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          user_prompt: `Find current data, statistics, and real examples about: ${topic}. Focus on hospitality, UGC creators, and content-for-stay partnerships.`,
-        }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        const sources: string[] = Array.isArray(data.reference_urls) ? data.reference_urls.slice(0, 6) : [];
-        const context = typeof data.result === "string" ? data.result : JSON.stringify(data.result ?? "");
-        if (context) return { context: context.slice(0, 4000), sources };
-      }
-    } catch {
-      // fall through to Firecrawl / pure-LLM
+const BANNED_PHRASES = [
+  "evolving landscape", "ever-evolving", "navigate the world of", "navigate the landscape",
+  "in today's fast-paced world", "the realm of", "tapestry", "embark",
+  "elevate", "unlock", "unleash", "harness", "leverage", "supercharge", "revolutionize",
+  "capitalize on", "boost your bookings",
+  "stunning", "breathtaking", "vibrant", "seamless", "game-changer", "must-have", "cutting-edge",
+  "treasure trove", "canvas waiting to be painted", "weave into the fabric", "testament to",
+  "at the end of the day", "when it comes to", "look no further", "it's worth noting",
+  "needless to say", "delve", "dive into",
+  "in summary", "in conclusion", "to summarize", "all in all", "in essence",
+  "join collabnb today", "discover how", "don't miss out",
+];
+
+type LintResult = { violations: string[]; structural: string[] };
+
+function lintPost(title: string, html: string): LintResult {
+  const violations: string[] = [];
+  const structural: string[] = [];
+  const text = (title + " " + html.replace(/<[^>]+>/g, " ")).toLowerCase();
+
+  for (const phrase of BANNED_PHRASES) {
+    if (text.includes(phrase)) violations.push(`Banned phrase: "${phrase}"`);
+  }
+
+  if (/\b(I|we|us|my|me|ours?)\b/.test(html.replace(/<[^>]+>/g, " "))) {
+    violations.push("First-person pronoun found — the Journal writes in strict third person");
+  }
+
+  const firstTag = html.match(/<(h2|p)[\s>]/i)?.[1]?.toLowerCase();
+  if (firstTag !== "p") structural.push("Post must open with a <p> hook paragraph before the first <h2>");
+
+  const markerCount = (html.match(/%%INLINE_IMAGE_[123]%%/g) || []).length;
+  if (markerCount !== 3) structural.push(`Expected 3 inline image markers, found ${markerCount}`);
+
+  if (!html.includes("%%PULL_QUOTE%%")) structural.push("Missing %%PULL_QUOTE%% marker (belongs mid-article, after section 2)");
+
+  const h2s = [...html.matchAll(/<h2[^>]*>([\s\S]*?)<\/h2>/gi)].map((m) => m[1].replace(/<[^>]+>/g, "").trim());
+  if (h2s.length < 3) structural.push(`Expected at least 3 <h2> sections, found ${h2s.length}`);
+  for (const h of h2s) {
+    const words = h.split(/\s+/).filter(Boolean);
+    const capitalized = words.filter((w) => /^[A-Z]/.test(w)).length;
+    if (words.length >= 3 && capitalized > Math.ceil(words.length / 2)) {
+      violations.push(`Heading looks Title Case (must be sentence case): "${h}"`);
     }
   }
 
-  if (firecrawlKey) {
-    try {
-      const res = await fetch("https://api.firecrawl.dev/v1/search", {
-        method: "POST",
-        headers: { "Authorization": `Bearer ${firecrawlKey}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          query: topic,
-          limit: 5,
-          scrapeOptions: { formats: ["markdown"] },
-        }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        const results: any[] = data.data || [];
-        const sources = results.map((r) => r.url).filter(Boolean).slice(0, 6);
-        const context = results
-          .map((r) => `SOURCE: ${r.url}\n${String(r.markdown || r.description || "").slice(0, 800)}`)
-          .join("\n\n")
-          .slice(0, 4000);
-        if (context) return { context, sources };
-      }
-    } catch {
-      // fall through to pure-LLM
-    }
-  }
+  return { violations, structural };
+}
 
-  return { context: "", sources: [] };
+// ─── DeepSeek editorial review pass ────────────────────────────────────────────
+// Reviews the NVIDIA draft against the style guide and research brief, returns
+// a corrected revision plus notes. Skipped silently when no DEEPSEEK_API_KEY.
+async function deepseekReview(
+  title: string,
+  html: string,
+  researchContext: string,
+  lintNotes: string[]
+): Promise<{ html: string; notes: string; score: number } | null> {
+  const key = process.env.DEEPSEEK_API_KEY;
+  if (!key) return null;
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 90_000);
+  try {
+    const res = await fetch("https://api.deepseek.com/chat/completions", {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${key}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "deepseek-chat",
+        response_format: { type: "json_object" },
+        max_tokens: 4000,
+        temperature: 0.3,
+        messages: [
+          {
+            role: "system",
+            content: "You are the copy chief of The Collabnb Journal. You review drafts against the style guide with a light hand: fix violations, keep the writer's voice, never expand length.",
+          },
+          {
+            role: "user",
+            content: `STYLE GUIDE:\n${STYLE_GUIDE}\n\nRESEARCH BRIEF (the only permitted source of statistics):\n${researchContext || "(none — the post must not contain specific statistics)"}\n\nDRAFT TITLE: ${title}\n\nDRAFT HTML:\n${html}\n\nAutomated lint already flagged:\n${lintNotes.length ? lintNotes.map((n) => `- ${n}`).join("\n") : "- nothing"}\n\nTasks:\n1. Fix every banned phrase, first-person slip, Title Case heading, and any statistic not present in the research brief (rewrite qualitatively or attribute it correctly).\n2. Keep the HTML structure and all %%INLINE_IMAGE_n%% / %%PULL_QUOTE%% markers exactly where they are. Only h2/p/ul/li/strong/em/a tags.\n3. Keep length within ±10%.\n\nRespond with JSON: {"score": <1-10 quality after your fixes>, "notes": ["short note per change or concern, max 8"], "revised_html": "<the corrected full HTML>"}`,
+          },
+        ],
+      }),
+      signal: controller.signal,
+    });
+    if (!res.ok) throw new Error(`DeepSeek review error ${res.status}`);
+    const data = await res.json();
+    const raw = data.choices?.[0]?.message?.content || "";
+    const parsed = JSON.parse(raw.slice(raw.indexOf("{"), raw.lastIndexOf("}") + 1));
+    const revised = typeof parsed.revised_html === "string" ? parsed.revised_html.trim() : "";
+    const markersIntact =
+      (revised.match(/%%INLINE_IMAGE_[123]%%/g) || []).length === (html.match(/%%INLINE_IMAGE_[123]%%/g) || []).length &&
+      revised.includes("%%PULL_QUOTE%%") === html.includes("%%PULL_QUOTE%%");
+    const notes = Array.isArray(parsed.notes) ? parsed.notes.filter((n: unknown) => typeof n === "string").slice(0, 8) : [];
+    return {
+      html: revised.length > 400 && markersIntact ? revised : html,
+      notes: notes.join("\n"),
+      score: typeof parsed.score === "number" ? Math.max(1, Math.min(10, parsed.score)) : 5,
+    };
+  } catch (err: any) {
+    console.log(`deepseekReview failed: ${err?.message}`);
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 // ─── Action: search Unsplash for editor photo swaps ───────────────────────────
@@ -412,13 +509,14 @@ const TOPIC_POOL = [
   "negotiating deliverables: what a host can reasonably ask for one night",
 ];
 
-async function pickFreshTopic(ctx: any): Promise<string> {
+async function pickFreshTopic(ctx: any, headlines: { title: string; source: string }[]): Promise<string> {
   const recent: any[] = await ctx.runQuery(api.blog.getAll, {});
   const recentTitles = recent.slice(0, 12).map((p: any) => p.title).filter(Boolean).join("; ");
+  const news = headlines.slice(0, 12).map((h) => `- [${h.source}] ${h.title}`).join("\n");
   try {
     const raw = await llmChat([
       { role: "system", content: "You are a content strategist for Collabnb — a creator-first hospitality marketing platform connecting boutique properties with vetted creators for professional content campaigns. Be specific, never generic." },
-      { role: "user", content: `Recent Collabnb Journal posts: ${recentTitles || "none yet"}.\n\nSuggest ONE fresh, specific blog post topic that does NOT overlap with any of those. Return only the topic itself as a single lowercase phrase, no quotes, no commentary.` },
+      { role: "user", content: `Industry headlines this week:\n${news || "(none available)"}\n\nRecent Collabnb Journal posts (do NOT overlap with these): ${recentTitles || "none yet"}.\n\nSuggest ONE fresh, specific blog post topic for boutique hosts or UGC travel creators that reacts to what the industry is talking about this week. Return only the topic itself as a single lowercase phrase, no quotes, no commentary.` },
     ], 100);
     const topic = raw.trim().split("\n")[0].replace(/^["'\-\s]+|["'\s]+$/g, "");
     if (topic.length >= 20 && topic.length <= 200) return topic;
@@ -427,6 +525,27 @@ async function pickFreshTopic(ctx: any): Promise<string> {
   }
   const day = Math.floor(Date.now() / 86_400_000);
   return TOPIC_POOL[day % TOPIC_POOL.length];
+}
+
+// Parse the writer model's structured response into post fields.
+function parseWriterOutput(raw: string) {
+  const extract = (key: string) => {
+    const match = raw.match(new RegExp(`${key}\\**:\\**\\s*(.+)`));
+    return match ? match[1].trim().replace(/^[*\[\s]+|[*\]\s]+$/g, "") : "";
+  };
+  const contentMatch = raw.match(/CONTENT\**:\**\s*([\s\S]+)/);
+  return {
+    title: toTitleCase(extract("TITLE")),
+    excerpt: extract("EXCERPT"),
+    seoDesc: extract("SEO_DESC"),
+    tags: extract("TAGS").split(",").map((t) => t.trim()).filter(Boolean),
+    pullQuote: extract("PULL_QUOTE"),
+    imgHero: extract("IMAGE_QUERY_HERO"),
+    img1: extract("IMAGE_QUERY_1"),
+    img2: extract("IMAGE_QUERY_2"),
+    img3: extract("IMAGE_QUERY_3"),
+    content: contentMatch ? contentMatch[1].trim().replace(/^\*+\s*/, "").replace(/```html?|```/g, "").trim() : "",
+  };
 }
 
 export const generatePost = action({
@@ -440,126 +559,108 @@ export const generatePost = action({
       throw new Error("Missing UNSPLASH_ACCESS_KEY in Convex env.");
     }
 
-    // ── 1. Research phase ─────────────────────────────────────────────────────
+    // ── 1. Research phase — real headlines + scraped articles + stats ────────
+    // No LLM "research brief" pass anymore: the writer only sees genuinely
+    // scraped material, so it cannot launder invented facts through research.
     let statsContext = "";
     if (isStatsPost) {
       const stats: any = await ctx.runQuery(api.blog.getPlatformStats_internal, {});
-      statsContext = `Platform stats: ${stats.creators} creators, ${stats.hosts} hosts, ${stats.approvedCollabs} completed collabs, ${stats.activeListings} active listings.`;
+      statsContext = `\n\nCOLLABNB PLATFORM STATS (cite freely, attribute to Collabnb): ${stats.creators} creators, ${stats.hosts} hosts, ${stats.approvedCollabs} completed collabs, ${stats.activeListings} active listings.`;
     }
 
-    const topic = topicHint || (await pickFreshTopic(ctx));
+    const headlines = await fetchHeadlines();
+    const topic = topicHint || (await pickFreshTopic(ctx, headlines));
     console.log(`generatePost step 1 ok — topic: ${topic.slice(0, 80)}`);
 
-    // Real web research when ScrapeGraphAI / Firecrawl keys are configured;
-    // otherwise the LLM research brief runs on its own knowledge.
-    const web = await webResearch(topic);
-    console.log(`generatePost webResearch ok — ${web.sources.length} sources`);
-    const webContext = web.context
-      ? `\n\nLive web research (cite these facts where relevant, do not invent beyond them):\n${web.context}`
-      : "";
+    const brief = await buildResearchBrief(topic, headlines);
+    console.log(`generatePost research ok — ${brief.sources.length} sources, ${brief.context.length} chars`);
+    const research =
+      (brief.context || "(No live research available for this run — write qualitatively and use NO specific statistics.)") +
+      statsContext;
 
-    const researchPrompt = isStatsPost
-      ? `You are a content strategist for Collabnb, a creator-first hospitality marketing platform connecting boutique properties with vetted creators. ${statsContext}
-
-Produce a detailed research brief covering: UGC marketing trends in hospitality (2024-2025), creator-driven booking statistics, what's working for boutique properties vs chains. Include specific data points and real-world examples.${webContext}`
-      : `You are a content strategist for Collabnb, a marketplace connecting boutique hotel/Airbnb hosts with UGC travel creators for content-for-stay partnerships.
-
-Produce a detailed research brief on: ${topic}. Cover: key trends and data (2024-2025), real-world examples of creator-property collaborations, what boutique hosts and UGC creators each need from partnerships, actionable insights. Be concrete — include specific examples, data points where known, and avoid vague generalities.${webContext}`;
-
-    const research = await llmChat([
-      { role: "system", content: "You are an expert content strategist specializing in travel, hospitality, and the creator economy. Produce detailed, concrete research briefs — name real properties, real campaigns, real data points." },
-      { role: "user", content: researchPrompt },
-    ], 1500);
-    console.log(`generatePost research ok — ${research.length} chars`);
-
-    // ── 2. Write the post ─────────────────────────────────────────────────────
+    // ── 2. Write the post (style guide + scraped research embedded) ──────────
     const today = new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
     const category = isStatsPost ? "stats" : (
       topic.toLowerCase().includes("host") ? "hosts" :
       topic.toLowerCase().includes("creator") ? "creators" : "industry"
     );
 
-    const writePrompt = `You are the editorial voice of The Collabnb Journal — a blog for people who run boutique stays and UGC travel creators who partner with them for content-for-stay collabs.
+    const writePrompt = `You are the editorial voice of The Collabnb Journal. Today is ${today}.
 
-Voice model: think Cereal Magazine meets Morning Brew. Curious, observational, direct. Never corporate. Never "Discover how" or "Unlock the power of." Write from a perspective grounded in real travel — notice specific things, name real places, be precise.
+Below is the Journal's style guide. Follow every rule in it — narrative arc, HTML skeleton, voice, banned words, citation rules.
 
-Perspective — STRICT: Write in the third person at all times. Never use first person — no "I", "we", "me", "my", "us", "our", or "ours" anywhere. This is not a personal account and the author has not personally stayed anywhere; do not invent personal experiences or opinions framed as lived. Write it as an editorial overview, analysis, or highlight ABOUT boutique hotels and small luxury stays in general — observing the category, not narrating a personal trip. Anything that reads as a personal diary entry is wrong.
+<style_guide>
+${STYLE_GUIDE}
+</style_guide>
 
-Based on this research:
+RESEARCH BRIEF — the ONLY permitted source of statistics. Attribute every number to its publication; if a fact is not in this brief, do not state it as a statistic:
+<research>
 ${research}
+</research>
 
-Write a blog post (700–900 words). Structure:
-1. Opening paragraph — 2-3 sentences, scene-setting or observation. NO statistics here.
-2. Three body sections, each ~150 words, each starting with an <h2> in sentence case (not title case, no question marks, under 7 words).
-   — After section 1, place the marker: %%INLINE_IMAGE_1%%
-   — After section 2, place the marker: %%INLINE_IMAGE_2%%
-   — After section 3, place the marker: %%INLINE_IMAGE_3%%
-3. A synthesis section (~150 words), no image.
-4. One pull quote — pick the single most resonant sentence from the post. Make it slightly more poetic without changing its meaning.
-5. Closing paragraph (2-3 sentences) — ties back to Collabnb without being salesy.
-6. Subtle CTA: one italicized line, e.g. <em>Collabnb is open for early access — <a href="https://collabnb.com/join">collabnb.com/join</a></em>
-
-HTML rules: use ONLY h2, p, ul, li, strong, em, a tags. NO h1. NO html/body wrapper. NO markdown.
-
-Anti-patterns to avoid:
-- Never open with a statistic
-- Never use "Discover how" / "Unlock" / "Boost your bookings"
-- Never end with "Join Collabnb today!"
-- No generic listicles without specific examples
-- No title case in section headers (the TITLE is Title Case; h2 headers stay sentence case)
-- Today: ${today}
-
-Banned words and phrases — NEVER use these or close variants. They read as low-quality AI filler, not editorial writing:
-- Summary/conclusion crutches: "in summary", "in conclusion", "to summarize", "as a final thought", "at the end of the day", "all in all", "in essence", "ultimately" (as a paragraph opener)
-- Empathy/filler verbs: "sympathize", "empathize", "resonate with", "speaks to"
-- AI tells: "delve", "dive into", "navigate the world of", "navigate the landscape", "tapestry", "realm", "elevate", "embark", "unleash", "unlock", "harness", "leverage", "seamless", "game-changer", "testament to", "in today's fast-paced world", "when it comes to", "look no further", "the world of", "it's worth noting", "needless to say"
-- Hype adjectives stacked for effect: "stunning", "breathtaking", "must-have", "ultimate guide"
-Write plainly and concretely instead. If a sentence only works with one of these words, rewrite the sentence.
+Write one post on this topic: ${topic}
 
 Respond with EXACTLY this format, no extra commentary:
-TITLE: [60 chars max, Title Case — capitalize the first word and every major word (e.g. "Why Small Luxury Stays Win on Trust"); editorial, not SEO-stuffed]
-EXCERPT: [one sentence, under 120 chars, conversational]
-SEO_DESC: [155 chars, search-optimized but human]
-TAGS: [3-5 lowercase comma-separated]
-PULL_QUOTE: [the one most resonant sentence from the post]
-IMAGE_QUERY_HERO: [black and white boutique hotel editorial subject — 5-7 words]
-IMAGE_QUERY_1: [black and white travel editorial — 5-7 words, different from hero]
-IMAGE_QUERY_2: [black and white hospitality editorial — 5-7 words, different from above]
-IMAGE_QUERY_3: [black and white creator travel editorial — 5-7 words, different from above]
+TITLE: [60 chars max, Title Case, editorial — states a specific idea, not a topic area]
+EXCERPT: [one conversational sentence, under 120 chars — renders as the deck under the title]
+SEO_DESC: [155 chars max, human-sounding]
+TAGS: [3-5 lowercase comma-separated, specific]
+PULL_QUOTE: [the single most resonant sentence from the post, lightly polished]
+IMAGE_QUERY_HERO: [black and white editorial photo subject matching the hook scene — 5-7 words]
+IMAGE_QUERY_1: [black and white editorial — 5-7 words, a DIFFERENT subject than hero]
+IMAGE_QUERY_2: [black and white editorial — 5-7 words, a DIFFERENT subject than above]
+IMAGE_QUERY_3: [black and white editorial — 5-7 words, a DIFFERENT subject than above]
 CONTENT:
-[your full HTML here, with %%INLINE_IMAGE_1%%, %%INLINE_IMAGE_2%%, %%INLINE_IMAGE_3%% markers in place]`;
+[the full HTML following the style guide skeleton, with %%INLINE_IMAGE_1%%, %%INLINE_IMAGE_2%%, %%INLINE_IMAGE_3%% and %%PULL_QUOTE%% markers in place]`;
 
-    const raw = await llmChat([
-      { role: "system", content: "You are an editorial writer for a boutique travel publication. Follow the output format exactly. Place image markers exactly where specified." },
+    const writerSystem = "You are an editorial writer for a boutique travel publication. Follow the output format exactly. Place image and pull-quote markers exactly where the style guide's skeleton specifies.";
+    let raw = await llmChat([
+      { role: "system", content: writerSystem },
       { role: "user", content: writePrompt },
-    ], 3000);
+    ], 3500);
     console.log(`generatePost write ok — ${raw.length} chars`);
 
-    // Models sometimes bold the format labels (**TITLE:** ...) — strip the
-    // markdown asterisks and bracket wrappers from label lines and values.
-    const extract = (key: string) => {
-      const match = raw.match(new RegExp(`${key}\\**:\\**\\s*(.+)`));
-      return match ? match[1].trim().replace(/^[*\[\s]+|[*\]\s]+$/g, "") : "";
-    };
-    const contentMatch = raw.match(/CONTENT\**:\**\s*([\s\S]+)/);
+    let parsed = parseWriterOutput(raw);
 
-    const title      = toTitleCase(extract("TITLE"));
-    const excerpt    = extract("EXCERPT");
-    const seoDesc    = extract("SEO_DESC");
-    const tagsRaw    = extract("TAGS");
-    const pullQuote  = extract("PULL_QUOTE");
-    const imgHero    = extract("IMAGE_QUERY_HERO");
-    const img1       = extract("IMAGE_QUERY_1");
-    const img2       = extract("IMAGE_QUERY_2");
-    const img3       = extract("IMAGE_QUERY_3");
-    const content    = contentMatch ? contentMatch[1].trim().replace(/^\*+\s*/, "") : raw;
-    const tags       = tagsRaw.split(",").map((t: string) => t.trim()).filter(Boolean);
+    // One structural retry — markers and skeleton are non-negotiable.
+    let lint = parsed.title && parsed.content
+      ? lintPost(parsed.title, parsed.content)
+      : { violations: [], structural: ["Writer returned incomplete output"] };
+    if (lint.structural.length > 0) {
+      console.log(`generatePost structural retry — ${lint.structural.join("; ")}`);
+      raw = await llmChat([
+        { role: "system", content: writerSystem },
+        { role: "user", content: `${writePrompt}\n\nYour previous attempt failed these structural requirements — fix ALL of them this time:\n${lint.structural.map((s) => `- ${s}`).join("\n")}` },
+      ], 3500);
+      const retryParsed = parseWriterOutput(raw);
+      if (retryParsed.title && retryParsed.content) {
+        const retryLint = lintPost(retryParsed.title, retryParsed.content);
+        if (retryLint.structural.length <= lint.structural.length) {
+          parsed = retryParsed;
+          lint = retryLint;
+        }
+      }
+    }
 
+    const { title, excerpt, seoDesc, tags, pullQuote, imgHero, img1, img2, img3 } = parsed;
+    let content = parsed.content;
     if (!title || !content) {
       throw new Error("The writer model returned incomplete post data — try again");
     }
 
-    // ── 3. Fetch images from Unsplash (B&W filter) ────────────────────────────
+    // ── 3. DeepSeek editorial review pass ─────────────────────────────────────
+    const review = await deepseekReview(title, content, brief.context, [...lint.violations, ...lint.structural]);
+    if (review) content = review.html;
+    const finalLint = lintPost(title, content);
+    const reviewNotes = [
+      review ? `DeepSeek review — score ${review.score}/10` : "DeepSeek review skipped (no key or error) — lint only",
+      review?.notes || "",
+      finalLint.violations.length ? `Remaining lint flags:\n${finalLint.violations.map((v) => `- ${v}`).join("\n")}` : "",
+      finalLint.structural.length ? `Structural flags:\n${finalLint.structural.map((v) => `- ${v}`).join("\n")}` : "",
+    ].filter(Boolean).join("\n");
+    console.log(`generatePost review ok — score ${review?.score ?? "n/a"}, ${finalLint.violations.length} lint flags`);
+
+    // ── 4. Fetch images from Unsplash (B&W filter) ────────────────────────────
     async function fetchUnsplashImage(query: string, fallback: string) {
       try {
         let photo: any = null;
@@ -595,7 +696,7 @@ CONTENT:
       fetchUnsplashImage(img3,    "black and white creator photographer travel"),
     ]);
 
-    // ── 4. Store as draft ─────────────────────────────────────────────────────
+    // ── 5. Store as draft ─────────────────────────────────────────────────────
     const slug = slugify(title);
     const postId = await ctx.runMutation(api.blog.createGeneratedPost, {
       title,
@@ -619,10 +720,13 @@ CONTENT:
       inline_image_3_url:    inline3?.url,
       inline_image_3_alt:    inline3?.alt,
       inline_image_3_credit: inline3?.credit,
-      sources: web.sources,
+      sources: brief.sources,
       seo_description: seoDesc,
       reading_time: readingTime(content),
       is_stats_post: isStatsPost,
+      topic,
+      review_notes: reviewNotes,
+      review_score: review?.score,
     });
 
     return { postId, title, slug };
@@ -636,9 +740,11 @@ export const suggestTopics = action({
   handler: async (): Promise<string[]> => {
     let content = "";
     try {
+      const headlines = await fetchHeadlines();
+      const news = headlines.slice(0, 12).map((h) => `- [${h.source}] ${h.title}`).join("\n");
       content = await llmChat([
         { role: "system", content: "You are a content strategist for Collabnb — a creator-first hospitality marketing platform connecting boutique properties with vetted creators for professional content campaigns. Be creative and specific." },
-        { role: "user", content: 'Give me exactly 8 fresh, specific blog post topic ideas for The Collabnb Journal. Mix topics for boutique hosts and UGC creators. Return ONLY a valid JSON array of 8 strings, nothing else. Example: ["topic one", "topic two"]' },
+        { role: "user", content: `Industry headlines this week:\n${news || "(none available)"}\n\nGive me exactly 8 fresh, specific blog post topic ideas for The Collabnb Journal — at least half should react to the headlines above. Mix topics for boutique hosts and UGC creators. Return ONLY a valid JSON array of 8 strings, nothing else. Example: ["topic one", "topic two"]` },
       ], 400);
     } catch {
       return [];

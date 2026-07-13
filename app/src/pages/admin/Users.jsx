@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQuery, useMutation } from 'convex/react';
+import { useQuery } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import UserDetailPanel from '../../components/admin/UserDetailPanel';
 import { formatDate as fmtDate } from '../../lib/dateUtils';
@@ -99,31 +99,25 @@ export default function Users() {
   const [copied, setCopied]         = useState(false);
   const [selectedProfileId, setSelectedProfileId] = useState(null);
 
-  const unverified     = useQuery(api.profiles.getUnverified);
-  const rejected       = useQuery(api.profiles.getRejected);
-  const tierChangeReqs = useQuery(api.profiles.getTierChangeRequests);
-  const founderCounts  = useQuery(api.admin.getFounderCounts);
-  const approveTier    = useMutation(api.profiles.approveTierChange);
-  const declineTier    = useMutation(api.profiles.declineTierChange);
-  const addAudit       = useMutation(api.admin.addAuditEntry);
+  const allProfiles   = useQuery(api.profiles.getAll);
+  const founderCounts = useQuery(api.admin.getFounderCounts);
 
-  const counts   = founderCounts ?? { creator: 0, host: 0 };
-  const pending  = unverified || [];
-  const pendingCreators = pending.filter(p => p.role === 'creator');
-  const pendingHosts    = pending.filter(p => p.role === 'host');
-  const rejectedAll     = rejected || [];
-  const tierRequests    = tierChangeReqs || [];
-  const isLoading = unverified === undefined || rejected === undefined || tierChangeReqs === undefined;
+  const counts = founderCounts ?? { creator: 0, host: 0 };
+  const isLoading = allProfiles === undefined;
+
+  const nonRejected  = (allProfiles || []).filter(p => p.is_rejected !== true);
+  const pending       = nonRejected.filter(p => p.is_verified !== true);
+  const creatorsAll   = nonRejected.filter(p => p.role === 'creator');
+  const hostsAll       = nonRejected.filter(p => p.role === 'host');
+  const rejectedAll   = (allProfiles || []).filter(p => p.is_rejected === true);
 
   const baseRows =
-    tab === 'creators' ? pendingCreators :
-    tab === 'hosts'    ? pendingHosts    :
-    tab === 'tiers'    ? tierRequests    :
+    tab === 'creators' ? creatorsAll :
+    tab === 'hosts'    ? hostsAll    :
     rejectedAll;
 
   const filtered = baseRows
     .filter(p => {
-      if (tab === 'tiers') return true;
       if (acctFilter === 'no_account')  return !p.clerk_registered;
       if (acctFilter === 'has_account') return !!p.clerk_registered;
       return true;
@@ -147,22 +141,11 @@ export default function Users() {
     });
   }
 
-  async function handleApproveTier(profile) {
-    await approveTier({ profileId: String(profile._id) });
-    try { await addAudit({ action: 'approved', targetType: 'profile', targetId: String(profile._id), details: `Tier change: ${profile.tier} → ${profile.pending_tier} for ${profile.full_name}` }); } catch {}
-  }
-
-  async function handleDeclineTier(profile) {
-    await declineTier({ profileId: String(profile._id) });
-    try { await addAudit({ action: 'rejected', targetType: 'profile', targetId: String(profile._id), details: `Tier change declined: ${profile.pending_tier} for ${profile.full_name}` }); } catch {}
-  }
-
   const stats = [
-    { label: 'Pending',        value: pending.length,                                       color: INK },
-    { label: 'Creators',       value: pendingCreators.length,                               color: '#0369A1' },
-    { label: 'Hosts',          value: pendingHosts.length,                                  color: '#92400E' },
-    { label: 'No Account Yet', value: pending.filter(p => !p.clerk_registered).length,      color: '#B45309' },
-    { label: 'Rejected',       value: rejectedAll.length,                                   color: '#991B1B' },
+    { label: 'Pending',  value: pending.length,                                              color: INK },
+    { label: 'Creators', value: creatorsAll.filter(p => p.is_verified === true).length,       color: '#0369A1' },
+    { label: 'Hosts',    value: hostsAll.filter(p => p.is_verified === true).length,          color: '#92400E' },
+    { label: 'Rejected', value: rejectedAll.length,                                           color: '#991B1B' },
   ];
 
   return (
@@ -174,6 +157,16 @@ export default function Users() {
       <p style={{ fontSize: '0.85rem', color: SAGE, marginTop: '0.3rem', marginBottom: '1.25rem' }}>
         Everyone in the pipeline — review, approve, and manage signups in one place.
       </p>
+
+      {/* ── Stat tiles ── */}
+      <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
+        {stats.map(s => (
+          <div key={s.label} style={{ ...GLASS, borderRadius: '1.25rem', padding: '0.875rem 1.25rem', display: 'flex', flexDirection: 'column', gap: '0.15rem', minWidth: 110 }}>
+            <span style={{ fontFamily: 'Cabinet Grotesk, sans-serif', fontSize: '1.5rem', fontWeight: 700, color: s.color, lineHeight: 1 }}>{s.value}</span>
+            <span style={{ fontSize: '0.72rem', color: SAGE }}>{s.label}</span>
+          </div>
+        ))}
+      </div>
 
       {/* ── Founder counters ── */}
       <div style={{ ...GLASS, display: 'flex', alignItems: 'center', gap: '1.25rem', fontSize: '0.82rem', color: SLATE, padding: '0.625rem 1rem', borderRadius: 999, width: 'fit-content', marginBottom: '1.25rem', boxShadow: '0 1px 2px rgba(25,37,36,0.04)' }}>
@@ -188,26 +181,13 @@ export default function Users() {
         </span>
       </div>
 
-      {/* ── Stat tiles ── */}
-      <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
-        {stats.map(s => (
-          <div key={s.label} style={{ ...GLASS, borderRadius: '1.25rem', padding: '0.875rem 1.25rem', display: 'flex', flexDirection: 'column', gap: '0.15rem', minWidth: 110 }}>
-            <span style={{ fontFamily: 'Cabinet Grotesk, sans-serif', fontSize: '1.5rem', fontWeight: 700, color: s.color, lineHeight: 1 }}>{s.value}</span>
-            <span style={{ fontSize: '0.72rem', color: SAGE }}>{s.label}</span>
-          </div>
-        ))}
-      </div>
-
       {/* ── Tabs ── */}
       <div style={{ ...GLASS, display: 'flex', gap: '0.2rem', marginBottom: '1rem', padding: '0.2rem', borderRadius: 999, width: 'fit-content' }}>
         <TabBtn active={tab === 'creators'} onClick={() => setTab('creators')}>
-          Creators <CountBadge n={pendingCreators.length} />
+          Creators <CountBadge n={creatorsAll.length} />
         </TabBtn>
         <TabBtn active={tab === 'hosts'} onClick={() => setTab('hosts')}>
-          Hosts <CountBadge n={pendingHosts.length} />
-        </TabBtn>
-        <TabBtn active={tab === 'tiers'} onClick={() => setTab('tiers')}>
-          Account Status <CountBadge n={tierRequests.length} variant="amber" />
+          Hosts <CountBadge n={hostsAll.length} />
         </TabBtn>
         <TabBtn active={tab === 'rejected'} onClick={() => setTab('rejected')}>
           Rejected <CountBadge n={rejectedAll.length} variant="red" />
@@ -215,8 +195,8 @@ export default function Users() {
       </div>
 
       {/* ── Filter row ── */}
-      {tab !== 'tiers' && (
-        <div style={{ display: 'flex', gap: '0.625rem', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap' }}>
+      <div style={{ marginBottom: '1rem' }}>
+        <div style={{ display: 'flex', gap: '0.625rem', alignItems: 'center', flexWrap: 'wrap' }}>
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
@@ -258,7 +238,10 @@ export default function Users() {
             {copied ? 'Copied!' : `Copy ${filtered.length} emails`}
           </button>
         </div>
-      )}
+        <p style={{ fontSize: '0.72rem', color: SAGE, margin: '0.4rem 0 0' }}>
+          Email only = we have their email but they haven't created a Collabnb account yet · Full account = they've signed up on the platform
+        </p>
+      </div>
 
       {/* ── Loading / empty ── */}
       {isLoading && (
@@ -267,71 +250,20 @@ export default function Users() {
       {!isLoading && filtered.length === 0 && (
         <div style={{ ...GLASS, padding: '3rem', textAlign: 'center', color: SAGE, fontSize: '0.85rem', borderRadius: '1.25rem' }}>
           {tab === 'rejected' ? 'No rejected users.'
-            : tab === 'tiers' ? 'No pending account status changes.'
-            : baseRows.length === 0 ? 'Queue is empty — all caught up.'
+            : baseRows.length === 0 ? 'Nobody here yet.'
             : 'No results match your filters.'}
         </div>
       )}
 
-      {/* ── Tier change table ── */}
-      {!isLoading && tab === 'tiers' && filtered.length > 0 && (
-        <div style={{ ...GLASS, borderRadius: '1.25rem', overflow: 'hidden' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
-            <thead>
-              <tr style={{ borderBottom: '1px solid rgba(25,37,36,0.07)' }}>
-                {['Name / Email', 'Change', 'Requested', ''].map(h => <th key={h} style={TH_STYLE}>{h}</th>)}
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((p, i) => (
-                <tr key={p._id} style={{ borderBottom: i < filtered.length - 1 ? '1px solid rgba(25,37,36,0.05)' : 'none' }}>
-                  <td style={TD_STYLE}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
-                      <Avatar url={p.avatar_url} name={p.full_name} />
-                      <div>
-                        <div style={{ fontWeight: 600, color: INK }}>{p.full_name}</div>
-                        <div style={{ color: SAGE, fontSize: '0.75rem' }}>{p.email}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td style={TD_STYLE}>
-                    <span style={{ fontWeight: 600, color: SLATE }}>{p.tier || 'None'}</span>
-                    <span style={{ margin: '0 0.375rem', color: '#D0D5CE' }}>→</span>
-                    <span style={{ fontWeight: 700, color: INK }}>{p.pending_tier}</span>
-                  </td>
-                  <td style={{ ...TD_STYLE, color: SLATE, whiteSpace: 'nowrap' }}>
-                    {p.tier_change_requested_at ? fmtDate(p.tier_change_requested_at) : '—'}
-                  </td>
-                  <td style={TD_STYLE}>
-                    <div style={{ display: 'flex', gap: '0.4rem' }}>
-                      <button
-                        onClick={() => handleApproveTier(p)}
-                        style={{ padding: '0.35rem 0.8rem', borderRadius: '0.5rem', border: 'none', background: INK, color: '#fff', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
-                      >
-                        Approve
-                      </button>
-                      <button
-                        onClick={() => handleDeclineTier(p)}
-                        style={{ padding: '0.35rem 0.8rem', borderRadius: '0.5rem', border: '1px solid rgba(25,37,36,0.15)', background: 'transparent', color: SLATE, fontSize: '0.75rem', fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }}
-                      >
-                        Decline
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-
       {/* ── User table ── */}
-      {!isLoading && tab !== 'tiers' && filtered.length > 0 && (
+      {!isLoading && filtered.length > 0 && (
         <div style={{ ...GLASS, borderRadius: '1.25rem', overflow: 'hidden' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid rgba(25,37,36,0.07)' }}>
-                {['Name / Email', 'Role', 'Account', 'Social', 'Location', 'Joined', 'Tags', ''].map(h => <th key={h} style={TH_STYLE}>{h}</th>)}
+                {['Name / Email', 'Role', 'Account', 'Social', 'Location', 'Joined', 'Tags', ''].map((h, i, arr) => (
+                  <th key={h} style={i === arr.length - 1 ? { ...TH_STYLE, paddingRight: '1.5rem' } : TH_STYLE}>{h}</th>
+                ))}
               </tr>
             </thead>
             <tbody>
@@ -376,6 +308,7 @@ export default function Users() {
                   </td>
                   <td style={TD_STYLE}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', alignItems: 'flex-start' }}>
+                      {p.is_verified !== true && !p.is_rejected && <Badge bg="#FEF3C7" color="#92400E">Pending</Badge>}
                       {p.is_founder && !p.is_rejected && <Badge bg={MINT} color="#166534">Founder</Badge>}
                       {p.beta && <Badge bg="#F3E8FF" color="#7E22CE">Beta</Badge>}
                       {p.referred_by && <Badge bg="#EDE9FE" color="#5B21B6">Referred</Badge>}
@@ -383,7 +316,7 @@ export default function Users() {
                       {p.is_rejected && <Badge bg="#FEE2E2" color="#991B1B">Rejected</Badge>}
                     </div>
                   </td>
-                  <td style={TD_STYLE}>
+                  <td style={{ ...TD_STYLE, paddingRight: '1.5rem' }}>
                     <button
                       onClick={e => { e.stopPropagation(); setSelectedProfileId(p._id); }}
                       style={{ padding: '0.35rem 0.8rem', borderRadius: 999, background: 'rgba(255,255,255,0.7)', border: '1px solid rgba(25,37,36,0.1)', cursor: 'pointer', color: SLATE, fontSize: '0.75rem', fontWeight: 600, fontFamily: 'inherit', whiteSpace: 'nowrap' }}

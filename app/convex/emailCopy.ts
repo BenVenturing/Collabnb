@@ -371,7 +371,7 @@ export function renderTemplate(
 }
 
 export async function sendViaResend(apiKey: string, to: string, subject: string, html: string, bcc?: string) {
-  await fetch("https://api.resend.com/emails", {
+  const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,
@@ -379,4 +379,9 @@ export async function sendViaResend(apiKey: string, to: string, subject: string,
     },
     body: JSON.stringify({ from: FROM, to: [to], subject, html, ...(bcc ? { bcc: [bcc] } : {}) }),
   });
+  if (!res.ok) {
+    const errBody = await res.text().catch(() => "");
+    console.error(`Resend send failed (${res.status}) to ${to}: ${errBody}`);
+    throw new Error(`Resend send failed (${res.status}): ${errBody}`);
+  }
 }

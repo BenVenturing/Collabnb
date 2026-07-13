@@ -11,6 +11,7 @@
 import type * as admin from "../admin.js";
 import type * as ambassadors from "../ambassadors.js";
 import type * as blog from "../blog.js";
+import type * as blogResearch from "../blogResearch.js";
 import type * as collaborations from "../collaborations.js";
 import type * as collections from "../collections.js";
 import type * as contracts from "../contracts.js";
@@ -36,6 +37,7 @@ import type * as reviews from "../reviews.js";
 import type * as seed from "../seed.js";
 import type * as social from "../social.js";
 import type * as stripe from "../stripe.js";
+import type * as styleGuide from "../styleGuide.js";
 import type * as suggestions from "../suggestions.js";
 import type * as threadMessages from "../threadMessages.js";
 import type * as threads from "../threads.js";
@@ -52,6 +54,7 @@ declare const fullApi: ApiFromModules<{
   admin: typeof admin;
   ambassadors: typeof ambassadors;
   blog: typeof blog;
+  blogResearch: typeof blogResearch;
   collaborations: typeof collaborations;
   collections: typeof collections;
   contracts: typeof contracts;
@@ -77,6 +80,7 @@ declare const fullApi: ApiFromModules<{
   seed: typeof seed;
   social: typeof social;
   stripe: typeof stripe;
+  styleGuide: typeof styleGuide;
   suggestions: typeof suggestions;
   threadMessages: typeof threadMessages;
   threads: typeof threads;

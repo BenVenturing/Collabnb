@@ -517,6 +517,9 @@ export default defineSchema({
     generated_at: v.number(),
     published_at: v.optional(v.number()),
     is_stats_post: v.optional(v.boolean()),
+    topic: v.optional(v.string()),
+    review_notes: v.optional(v.string()),
+    review_score: v.optional(v.number()),
   })
     .index("by_status", ["status"])
     .index("by_slug", ["slug"])

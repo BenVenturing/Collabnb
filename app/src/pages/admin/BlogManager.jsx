@@ -1,21 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
-import { useQuery, useMutation, useAction, useConvex } from 'convex/react';
+import { useQuery, useMutation, useAction } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
-
-// Replace %%INLINE_IMAGE_n%% markers with real <figure> blocks so the preview
-// matches what the public blog renders.
-function renderContentWithImages(content, images) {
-  let html = content || '';
-  [1, 2, 3].forEach(n => {
-    const img = images[`inline${n}`];
-    const marker = new RegExp(`(<p>\\s*)?%%INLINE_IMAGE_${n}%%(\\s*</p>)?`, 'g');
-    const figure = img?.url
-      ? `<figure style="margin:1.5rem 0"><img src="${img.url}" alt="${(img.alt || '').replace(/"/g, '&quot;')}" style="width:100%;border-radius:0.75rem;display:block" />${img.credit ? `<figcaption style="font-size:0.7rem;color:#959D90;margin-top:0.3rem">Photo: ${img.credit} / Unsplash</figcaption>` : ''}</figure>`
-      : '';
-    html = html.replace(marker, figure);
-  });
-  return html;
-}
+import BlogEditor from './BlogEditor';
 
 // A post is "legacy format" if it predates the structured template (no hero
 // image or no inline image markers in the content).
@@ -30,13 +16,6 @@ const STATUS_CFG = {
   rejected:  { label: 'Rejected',  bg: 'rgba(200,104,104,0.1)', color: '#9b2d2d' },
 };
 
-const CAT_COLORS = {
-  creators: '#7B68C8',
-  hosts:    '#4A9B7F',
-  industry: '#3C5759',
-  stats:    '#D4A843',
-};
-
 function Badge({ status }) {
   const cfg = STATUS_CFG[status] || STATUS_CFG.draft;
   return (
@@ -46,393 +25,9 @@ function Badge({ status }) {
   );
 }
 
-// ─── Swappable image field (Unsplash search · upload · paste URL) ─────────────
-function ImageSwapField({ label, value, onChange }) {
-  const searchUnsplash    = useAction(api.blog.searchUnsplash);
-  const generateUploadUrl = useMutation(api.uploads.generateUploadUrl);
-  const fetchImageUrl     = useQueryImageUrl();
-
-  const [open,    setOpen]    = useState(false);
-  const [mode,    setMode]    = useState('unsplash'); // 'unsplash' | 'upload' | 'url'
-  const [query,   setQuery]   = useState('');
-  const [results, setResults] = useState([]);
-  const [busy,    setBusy]    = useState(false);
-  const [err,     setErr]     = useState('');
-  const [urlInput, setUrlInput] = useState('');
-  const fileRef = useRef(null);
-
-  async function runSearch() {
-    setBusy(true); setErr('');
-    try { setResults(await searchUnsplash({ query })); }
-    catch (e) { setErr(e.message || 'Search failed'); }
-    finally { setBusy(false); }
-  }
-
-  async function handleUpload(file) {
-    if (!file) return;
-    setBusy(true); setErr('');
-    try {
-      const uploadUrl = await generateUploadUrl();
-      const res = await fetch(uploadUrl, { method: 'POST', headers: { 'Content-Type': file.type }, body: file });
-      const { storageId } = await res.json();
-      const url = await fetchImageUrl(storageId);
-      if (!url) throw new Error('Upload failed');
-      onChange({ url, alt: file.name.replace(/\.[^.]+$/, ''), credit: '' });
-      setOpen(false);
-    } catch (e) { setErr(e.message || 'Upload failed'); }
-    finally { setBusy(false); }
-  }
-
-  const labelStyle = { fontSize: '0.72rem', fontWeight: 700, color: 'var(--sage)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: '0.35rem' };
-  const modeBtn = (m, txt) => (
-    <button onClick={() => setMode(m)} style={{ padding: '0.35rem 0.7rem', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: '0.75rem', fontWeight: mode === m ? 700 : 500, background: mode === m ? 'var(--ink)' : 'rgba(25,37,36,0.06)', color: mode === m ? '#fff' : 'var(--slate)' }}>{txt}</button>
-  );
-
-  return (
-    <div>
-      <label style={labelStyle}>{label}</label>
-      <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-        <div style={{ width: 96, height: 64, borderRadius: '0.5rem', overflow: 'hidden', background: 'rgba(25,37,36,0.06)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          {value.url
-            ? <img src={value.url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            : <span style={{ fontSize: '0.65rem', color: 'var(--sage)' }}>No image</span>}
-        </div>
-        <button onClick={() => { setOpen(o => !o); setMode('unsplash'); }} style={{ padding: '0.45rem 0.9rem', borderRadius: 8, border: '1.5px solid rgba(25,37,36,0.2)', background: 'transparent', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 600, color: 'var(--ink)' }}>
-          {open ? 'Close' : (value.url ? 'Replace' : 'Add image')}
-        </button>
-        {value.url && (
-          <button onClick={() => onChange({ url: '', alt: '', credit: '' })} style={{ padding: '0.45rem 0.7rem', borderRadius: 8, border: 'none', background: 'transparent', cursor: 'pointer', fontSize: '0.75rem', color: '#9b2d2d' }}>Remove</button>
-        )}
-      </div>
-
-      {open && (
-        <div style={{ marginTop: '0.6rem', padding: '0.75rem', border: '1px solid rgba(25,37,36,0.1)', borderRadius: '0.6rem', background: '#fafafa' }}>
-          <div style={{ display: 'flex', gap: '0.4rem', marginBottom: '0.6rem' }}>
-            {modeBtn('unsplash', 'Search Unsplash')}
-            {modeBtn('upload', 'Upload')}
-            {modeBtn('url', 'Paste URL')}
-          </div>
-
-          {mode === 'unsplash' && (
-            <div>
-              <div style={{ display: 'flex', gap: '0.4rem', marginBottom: '0.6rem' }}>
-                <input value={query} onChange={e => setQuery(e.target.value)} onKeyDown={e => e.key === 'Enter' && runSearch()} placeholder="e.g. boutique hotel pool" style={{ flex: 1, padding: '0.5rem 0.7rem', border: '1.5px solid rgba(25,37,36,0.12)', borderRadius: 8, fontSize: '0.8rem', outline: 'none' }} />
-                <button onClick={runSearch} disabled={busy} style={{ padding: '0.5rem 1rem', borderRadius: 8, border: 'none', background: 'var(--ink)', color: '#fff', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 600 }}>{busy ? '…' : 'Search'}</button>
-              </div>
-              {results.length > 0 && (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.4rem', maxHeight: 220, overflowY: 'auto' }}>
-                  {results.map((r, i) => (
-                    <button key={i} onClick={() => { onChange({ url: r.url, alt: r.alt, credit: r.credit }); setOpen(false); }} style={{ padding: 0, border: 'none', borderRadius: 6, overflow: 'hidden', cursor: 'pointer', aspectRatio: '4/3', background: '#eee' }} title={`Photo: ${r.credit}`}>
-                      <img src={r.thumb} alt={r.alt} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          {mode === 'upload' && (
-            <div>
-              <input ref={fileRef} type="file" accept="image/*" onChange={e => handleUpload(e.target.files?.[0])} style={{ fontSize: '0.8rem' }} />
-              {busy && <p style={{ fontSize: '0.75rem', color: 'var(--sage)', margin: '0.5rem 0 0' }}>Uploading…</p>}
-            </div>
-          )}
-
-          {mode === 'url' && (
-            <div style={{ display: 'flex', gap: '0.4rem' }}>
-              <input value={urlInput} onChange={e => setUrlInput(e.target.value)} placeholder="https://images.unsplash.com/..." style={{ flex: 1, padding: '0.5rem 0.7rem', border: '1.5px solid rgba(25,37,36,0.12)', borderRadius: 8, fontSize: '0.8rem', outline: 'none' }} />
-              <button onClick={() => { if (urlInput.trim()) { onChange({ url: urlInput.trim(), alt: '', credit: '' }); setUrlInput(''); setOpen(false); } }} style={{ padding: '0.5rem 1rem', borderRadius: 8, border: 'none', background: 'var(--ink)', color: '#fff', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 600 }}>Use</button>
-            </div>
-          )}
-
-          {err && <p style={{ fontSize: '0.75rem', color: '#9b2d2d', margin: '0.5rem 0 0' }}>{err}</p>}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// Resolve a Convex storage id → public URL (uploads.getImageUrl is a query; wrap for imperative use)
-function useQueryImageUrl() {
-  const convex = useConvex();
-  return (storageId) => convex.query(api.uploads.getImageUrl, { storageId });
-}
-
-// ─── Post editor / preview modal ──────────────────────────────────────────────
-function PostEditor({ post, onClose }) {
-  const updatePost   = useMutation(api.blog.updatePost);
-  const updateStatus = useMutation(api.blog.updateStatus);
-  const deletePost   = useMutation(api.blog.deletePost);
-
-  const [tab,      setTab]      = useState('preview');
-  const [title,    setTitle]    = useState(post.title);
-  const [excerpt,  setExcerpt]  = useState(post.excerpt);
-  const [content,  setContent]  = useState(post.content);
-  const [tags,     setTags]     = useState((post.tags || []).join(', '));
-  const [category, setCategory] = useState(post.category || 'industry');
-  const [seoDesc,  setSeoDesc]  = useState(post.seo_description || '');
-  const [pullQuote, setPullQuote] = useState(post.pull_quote || '');
-  const [igEmbed,  setIgEmbed]  = useState(post.instagram_embed_url || '');
-  const [saving,   setSaving]   = useState(false);
-  const [saved,    setSaved]    = useState(false);
-  const [confirm,  setConfirm]  = useState(null); // 'approve' | 'reject' | 'delete'
-
-  // Swappable images (hero + 3 inline). Each holds { url, alt, credit }.
-  const [images, setImages] = useState({
-    hero:    { url: post.hero_image_url || '',     alt: post.hero_image_alt || '',     credit: post.hero_image_credit || '' },
-    inline1: { url: post.inline_image_1_url || '', alt: post.inline_image_1_alt || '', credit: post.inline_image_1_credit || '' },
-    inline2: { url: post.inline_image_2_url || '', alt: post.inline_image_2_alt || '', credit: post.inline_image_2_credit || '' },
-    inline3: { url: post.inline_image_3_url || '', alt: post.inline_image_3_alt || '', credit: post.inline_image_3_credit || '' },
-  });
-  const setImage = (key, next) => setImages(prev => ({ ...prev, [key]: next }));
-
-  async function handleSave() {
-    setSaving(true);
-    try {
-      await updatePost({
-        id: post._id,
-        title,
-        excerpt,
-        content,
-        tags: tags.split(',').map(t => t.trim()).filter(Boolean),
-        category,
-        pull_quote: pullQuote,
-        seo_description: seoDesc,
-        instagram_embed_url: igEmbed || undefined,
-        hero_image_url:        images.hero.url,
-        hero_image_alt:        images.hero.alt,
-        hero_image_credit:     images.hero.credit,
-        hero_image_credit_url: images.hero.credit ? (post.hero_image_credit_url || '') : '',
-        inline_image_1_url:    images.inline1.url,
-        inline_image_1_alt:    images.inline1.alt,
-        inline_image_1_credit: images.inline1.credit,
-        inline_image_2_url:    images.inline2.url,
-        inline_image_2_alt:    images.inline2.alt,
-        inline_image_2_credit: images.inline2.credit,
-        inline_image_3_url:    images.inline3.url,
-        inline_image_3_alt:    images.inline3.alt,
-        inline_image_3_credit: images.inline3.credit,
-      });
-    } finally {
-      setSaving(false);
-      setSaved(true);
-      setTimeout(() => setSaved(false), 1800);
-    }
-  }
-
-  async function handleApprove() {
-    await updateStatus({ id: post._id, status: 'published' });
-    onClose();
-  }
-
-  async function handleReject() {
-    await updateStatus({ id: post._id, status: 'rejected' });
-    onClose();
-  }
-
-  async function handleDelete() {
-    await deletePost({ id: post._id });
-    onClose();
-  }
-
-  const inputStyle = {
-    width: '100%', padding: '0.6rem 0.75rem',
-    border: '1.5px solid rgba(25,37,36,0.12)', borderRadius: '0.6rem',
-    fontFamily: 'var(--font-body)', fontSize: '0.875rem', color: 'var(--ink)',
-    background: '#fafafa', outline: 'none', boxSizing: 'border-box',
-  };
-
-  return (
-    <div
-      style={{ position: 'fixed', inset: 0, zIndex: 500, background: 'rgba(25,37,36,0.6)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '1.5rem', overflowY: 'auto' }}
-      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
-    >
-      <div style={{ width: '100%', maxWidth: 860, background: '#fff', borderRadius: '1.5rem', boxShadow: '0 24px 64px rgba(25,37,36,0.2)', overflow: 'hidden', marginBottom: '2rem' }}>
-
-        {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1.25rem 1.5rem', borderBottom: '1px solid rgba(25,37,36,0.08)' }}>
-          <div>
-            <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1rem', color: 'var(--ink)', margin: 0 }}>
-              {post.status === 'draft' ? 'Review Draft' : 'Edit Post'}
-            </p>
-            <p style={{ fontSize: '0.72rem', color: 'var(--sage)', margin: '0.1rem 0 0' }}>
-              Generated {new Date(post.generated_at).toLocaleDateString()} · {post.reading_time || 1} min read
-              {post.is_stats_post && ' · Monthly Stats'}
-            </p>
-          </div>
-          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-            {post.status === 'published' && (
-              <a href={`/blog/${post.slug}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--slate)', textDecoration: 'none', padding: '0.3rem 0.7rem', borderRadius: 9999, border: '1px solid rgba(25,37,36,0.15)' }}>
-                View live
-              </a>
-            )}
-            <Badge status={post.status} />
-            <button onClick={onClose} aria-label="Close editor" style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(25,37,36,0.07)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--slate)', fontSize: '0.875rem' }}>✕</button>
-          </div>
-        </div>
-
-        {/* Tabs */}
-        <div style={{ display: 'flex', borderBottom: '1px solid rgba(25,37,36,0.08)', padding: '0 1.5rem' }}>
-          {['preview', 'edit'].map(t => (
-            <button key={t} onClick={() => setTab(t)} style={{ padding: '0.75rem 1rem', border: 'none', background: 'none', cursor: 'pointer', fontFamily: 'var(--font-body)', fontSize: '0.82rem', fontWeight: tab === t ? 700 : 400, color: tab === t ? 'var(--ink)' : 'var(--sage)', borderBottom: tab === t ? '2px solid var(--ink)' : '2px solid transparent', marginBottom: -1, textTransform: 'capitalize' }}>
-              {t}
-            </button>
-          ))}
-        </div>
-
-        <div style={{ padding: '1.5rem', maxHeight: '65vh', overflowY: 'auto' }}>
-
-          {tab === 'preview' ? (
-            <div>
-              {/* Hero image */}
-              {post.hero_image_url && (
-                <div style={{ marginBottom: '1.5rem', borderRadius: '0.875rem', overflow: 'hidden', position: 'relative' }}>
-                  <img src={post.hero_image_url} alt={post.hero_image_alt || ''} style={{ width: '100%', height: 260, objectFit: 'cover', display: 'block' }} />
-                  {post.hero_image_credit && (
-                    <a href={post.hero_image_credit_url || '#'} target="_blank" rel="noopener noreferrer" style={{ position: 'absolute', bottom: '0.5rem', right: '0.75rem', fontSize: '0.65rem', color: 'rgba(255,255,255,0.8)', background: 'rgba(0,0,0,0.35)', padding: '0.2rem 0.5rem', borderRadius: 4, textDecoration: 'none' }}>
-                      Photo: {post.hero_image_credit} / Unsplash
-                    </a>
-                  )}
-                </div>
-              )}
-              {/* Meta */}
-              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
-                <span style={{ fontSize: '0.7rem', fontWeight: 700, padding: '0.2rem 0.55rem', borderRadius: 9999, background: `${CAT_COLORS[post.category] || '#3C5759'}20`, color: CAT_COLORS[post.category] || '#3C5759', textTransform: 'capitalize' }}>{post.category}</span>
-                {(post.tags || []).map(tag => (
-                  <span key={tag} style={{ fontSize: '0.65rem', padding: '0.15rem 0.45rem', borderRadius: 9999, background: 'rgba(25,37,36,0.06)', color: 'var(--sage)' }}>#{tag}</span>
-                ))}
-              </div>
-              <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.5rem', color: 'var(--ink)', margin: '0 0 0.5rem', lineHeight: 1.25 }}>{title}</h1>
-              <p style={{ fontSize: '0.9rem', color: 'var(--sage)', margin: '0 0 1.5rem', lineHeight: 1.6 }}>{excerpt}</p>
-              <div style={{ fontSize: '0.9rem', lineHeight: 1.75, color: 'var(--ink)' }} dangerouslySetInnerHTML={{ __html: renderContentWithImages(content, images) }} />
-              {pullQuote && (
-                <blockquote style={{ margin: '1.5rem 0', padding: '1rem 1.25rem', borderLeft: '3px solid var(--mint, #D1EBDB)', background: 'rgba(209,235,219,0.15)', borderRadius: '0 0.75rem 0.75rem 0', fontFamily: 'var(--font-display)', fontSize: '1.05rem', color: 'var(--ink)', fontStyle: 'italic' }}>
-                  {pullQuote}
-                </blockquote>
-              )}
-              {igEmbed && (
-                <div style={{ margin: '1.5rem 0', padding: '1rem', background: 'rgba(25,37,36,0.04)', borderRadius: '0.75rem', fontSize: '0.8rem', color: 'var(--slate)' }}>
-                  Instagram embed: <a href={igEmbed} target="_blank" rel="noopener noreferrer" style={{ color: '#7B68C8' }}>{igEmbed}</a>
-                </div>
-              )}
-              {/* Sources */}
-              {(post.sources || []).length > 0 && (
-                <div style={{ marginTop: '2rem', paddingTop: '1rem', borderTop: '1px solid rgba(25,37,36,0.08)' }}>
-                  <p style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--sage)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.5rem' }}>Sources</p>
-                  {(post.sources || []).map((s, i) => (
-                    <a key={i} href={s} target="_blank" rel="noopener noreferrer" style={{ display: 'block', fontSize: '0.75rem', color: '#7B68C8', marginBottom: '0.25rem', wordBreak: 'break-all' }}>{s}</a>
-                  ))}
-                </div>
-              )}
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <div>
-                <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--sage)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: '0.35rem' }}>Title</label>
-                <input value={title} onChange={e => setTitle(e.target.value)} style={inputStyle} />
-              </div>
-
-              {/* Photos — swap hero + inline images */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', padding: '1rem', border: '1px solid rgba(25,37,36,0.08)', borderRadius: '0.75rem', background: 'rgba(25,37,36,0.015)' }}>
-                <p style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--sage)', textTransform: 'uppercase', letterSpacing: '0.06em', margin: 0 }}>Photos</p>
-                <ImageSwapField label="Hero image"   value={images.hero}    onChange={v => setImage('hero', v)} />
-                <ImageSwapField label="Inline 1"     value={images.inline1} onChange={v => setImage('inline1', v)} />
-                <ImageSwapField label="Inline 2"     value={images.inline2} onChange={v => setImage('inline2', v)} />
-                <ImageSwapField label="Inline 3"     value={images.inline3} onChange={v => setImage('inline3', v)} />
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                <div>
-                  <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--sage)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: '0.35rem' }}>Category</label>
-                  <select value={category} onChange={e => setCategory(e.target.value)} style={inputStyle}>
-                    <option value="creators">Creators</option>
-                    <option value="hosts">Hosts</option>
-                    <option value="industry">Industry</option>
-                    <option value="stats">Stats</option>
-                  </select>
-                </div>
-                <div>
-                  <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--sage)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: '0.35rem' }}>SEO description ({seoDesc.length}/155)</label>
-                  <input value={seoDesc} onChange={e => setSeoDesc(e.target.value)} maxLength={155} style={inputStyle} placeholder="Search result snippet" />
-                </div>
-              </div>
-              <div>
-                <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--sage)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: '0.35rem' }}>Excerpt</label>
-                <textarea value={excerpt} onChange={e => setExcerpt(e.target.value)} rows={2} style={{ ...inputStyle, resize: 'vertical' }} />
-              </div>
-              <div>
-                <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--sage)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: '0.35rem' }}>Pull quote</label>
-                <textarea value={pullQuote} onChange={e => setPullQuote(e.target.value)} rows={2} style={{ ...inputStyle, resize: 'vertical' }} placeholder="The single most resonant sentence from the post" />
-              </div>
-              <div>
-                <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--sage)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: '0.35rem' }}>Content (HTML)</label>
-                <textarea value={content} onChange={e => setContent(e.target.value)} rows={16} style={{ ...inputStyle, resize: 'vertical', fontFamily: 'monospace', fontSize: '0.8rem' }} />
-              </div>
-              <div>
-                <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--sage)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: '0.35rem' }}>Tags (comma-separated)</label>
-                <input value={tags} onChange={e => setTags(e.target.value)} style={inputStyle} placeholder="creator travel, UGC, boutique hotels" />
-              </div>
-              <div>
-                <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--sage)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: '0.35rem' }}>Instagram Embed URL (optional)</label>
-                <input value={igEmbed} onChange={e => setIgEmbed(e.target.value)} style={inputStyle} placeholder="https://www.instagram.com/p/..." />
-              </div>
-              <button onClick={handleSave} disabled={saving} aria-live="polite" style={{ alignSelf: 'flex-start', padding: '0.6rem 1.25rem', borderRadius: 9999, border: '1.5px solid rgba(25,37,36,0.2)', background: saved ? 'rgba(209,235,219,0.5)' : 'transparent', fontFamily: 'var(--font-body)', fontSize: '0.82rem', fontWeight: 600, color: saved ? '#166534' : 'var(--ink)', cursor: saving ? 'default' : 'pointer', opacity: saving ? 0.5 : 1, transition: 'background 200ms' }}>
-                {saving ? 'Saving' : saved ? 'Saved' : 'Save changes'}
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* Action footer */}
-        <div style={{ padding: '1rem 1.5rem', borderTop: '1px solid rgba(25,37,36,0.08)', display: 'flex', gap: '0.625rem', justifyContent: 'flex-end', background: '#fafafa' }}>
-          {post.status !== 'published' && (
-            <>
-              <button onClick={() => setConfirm('reject')} style={{ padding: '0.6rem 1.1rem', borderRadius: 9999, border: '1.5px solid rgba(200,104,104,0.35)', background: 'transparent', fontFamily: 'var(--font-body)', fontSize: '0.82rem', fontWeight: 600, color: '#9b2d2d', cursor: 'pointer' }}>
-                Reject
-              </button>
-              <button onClick={() => setConfirm('approve')} style={{ padding: '0.6rem 1.25rem', borderRadius: 9999, border: 'none', background: '#192524', fontFamily: 'var(--font-body)', fontSize: '0.82rem', fontWeight: 700, color: '#fff', cursor: 'pointer' }}>
-                Approve & Publish
-              </button>
-            </>
-          )}
-          {post.status === 'published' && (
-            <button onClick={() => setConfirm('reject')} style={{ padding: '0.6rem 1.1rem', borderRadius: 9999, border: '1.5px solid rgba(25,37,36,0.2)', background: 'transparent', fontFamily: 'var(--font-body)', fontSize: '0.82rem', fontWeight: 600, color: 'var(--slate)', cursor: 'pointer' }}>
-              Unpublish
-            </button>
-          )}
-          <button onClick={() => setConfirm('delete')} style={{ padding: '0.6rem 1rem', borderRadius: 9999, border: '1.5px solid rgba(200,104,104,0.25)', background: 'transparent', fontFamily: 'var(--font-body)', fontSize: '0.82rem', fontWeight: 600, color: '#c0392b', cursor: 'pointer' }}>
-            Delete
-          </button>
-        </div>
-      </div>
-
-      {/* Confirm dialog */}
-      {confirm && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 600, background: 'rgba(25,37,36,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ background: '#fff', borderRadius: '1rem', padding: '1.5rem', maxWidth: 360, width: '90%', textAlign: 'center', boxShadow: '0 16px 40px rgba(25,37,36,0.2)' }}>
-            <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1rem', color: 'var(--ink)', marginBottom: '0.5rem' }}>
-              {confirm === 'approve' ? 'Publish this post?' : confirm === 'reject' ? 'Reject this post?' : 'Delete this post?'}
-            </p>
-            <p style={{ fontSize: '0.82rem', color: 'var(--sage)', marginBottom: '1.25rem' }}>
-              {confirm === 'approve' ? 'It will appear on the public Collabnb blog immediately.' : confirm === 'reject' ? 'It will be moved to rejected status.' : 'This cannot be undone.'}
-            </p>
-            <div style={{ display: 'flex', gap: '0.625rem', justifyContent: 'center' }}>
-              <button onClick={() => setConfirm(null)} style={{ padding: '0.6rem 1.1rem', borderRadius: 9999, border: '1.5px solid rgba(25,37,36,0.15)', background: 'transparent', fontFamily: 'var(--font-body)', fontSize: '0.82rem', fontWeight: 600, color: 'var(--slate)', cursor: 'pointer' }}>Cancel</button>
-              <button
-                onClick={() => { setConfirm(null); if (confirm === 'approve') handleApprove(); else if (confirm === 'reject') handleReject(); else handleDelete(); }}
-                style={{ padding: '0.6rem 1.25rem', borderRadius: 9999, border: 'none', background: confirm === 'approve' ? '#192524' : '#c0392b', fontFamily: 'var(--font-body)', fontSize: '0.82rem', fontWeight: 700, color: '#fff', cursor: 'pointer' }}
-              >
-                {confirm === 'approve' ? 'Publish' : confirm === 'reject' ? 'Reject' : 'Delete'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
 // ─── Post row card ────────────────────────────────────────────────────────────
 function PostCard({ post, onOpen }) {
+  const score = post.review_score;
   return (
     <div
       onClick={() => onOpen(post)}
@@ -444,8 +39,18 @@ function PostCard({ post, onOpen }) {
         <img src={post.hero_image_url} alt="" style={{ width: 80, height: 56, objectFit: 'cover', borderRadius: '0.5rem', flexShrink: 0 }} />
       )}
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '0.3rem' }}>
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '0.3rem', flexWrap: 'wrap' }}>
           <Badge status={post.status} />
+          {typeof score === 'number' && (
+            <span title="DeepSeek editorial review score" style={{ fontSize: '0.62rem', padding: '0.15rem 0.4rem', borderRadius: 9999, background: score >= 7 ? 'rgba(74,155,127,0.12)' : 'rgba(212,168,67,0.15)', color: score >= 7 ? '#2d7d5e' : '#b45309', fontWeight: 700 }}>
+              ✓ {score}/10
+            </span>
+          )}
+          {(post.sources || []).length > 0 && (
+            <span title="Cited sources from live research" style={{ fontSize: '0.62rem', padding: '0.15rem 0.4rem', borderRadius: 9999, background: 'rgba(123,104,200,0.1)', color: '#7B68C8', fontWeight: 600 }}>
+              {post.sources.length} sources
+            </span>
+          )}
           {post.is_stats_post && <span style={{ fontSize: '0.62rem', padding: '0.15rem 0.4rem', borderRadius: 9999, background: 'rgba(212,168,67,0.12)', color: '#b45309', fontWeight: 600 }}>Stats</span>}
           {isLegacyFormat(post) && <span title="Missing hero image, inline images, or pull quote. Open to update, or regenerate." style={{ fontSize: '0.62rem', padding: '0.15rem 0.4rem', borderRadius: 9999, background: 'rgba(200,104,104,0.1)', color: '#9b2d2d', fontWeight: 600 }}>Legacy format</span>}
           <span style={{ fontSize: '0.65rem', color: 'var(--stone)' }}>{new Date(post.generated_at).toLocaleDateString()}</span>
@@ -462,16 +67,19 @@ function PostCard({ post, onOpen }) {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 const PROGRESS_STAGES = [
-  { to: 28, label: 'Researching topic…',  ms: 13000 },
-  { to: 68, label: 'Writing article…',    ms: 16000 },
-  { to: 88, label: 'Finding photos…',     ms: 3000  },
-  { to: 97, label: 'Saving draft…',       ms: 1500  },
+  { to: 22, label: 'Reading industry journals…', ms: 8000  },
+  { to: 45, label: 'Researching topic…',         ms: 10000 },
+  { to: 72, label: 'Writing article…',           ms: 16000 },
+  { to: 86, label: 'Editorial review…',          ms: 9000  },
+  { to: 94, label: 'Finding photos…',            ms: 3000  },
+  { to: 98, label: 'Saving draft…',              ms: 1500  },
 ];
 
 export default function BlogManager() {
   const allPosts       = useQuery(api.blog.getAll) || [];
   const generatePost   = useAction(api.blog.generatePost);
   const suggestTopics  = useAction(api.blog.suggestTopics);
+  const createBlank    = useMutation(api.blog.createBlankPost);
   const getIntegrationStatus = useAction(api.social.getIntegrationStatus);
   const [integrations, setIntegrations] = useState(null);
 
@@ -480,10 +88,12 @@ export default function BlogManager() {
   }, [getIntegrationStatus]);
 
   const writer = integrations?.nvidia ? 'NVIDIA' : integrations?.deepseek ? 'DeepSeek' : integrations?.openrouter ? 'OpenRouter' : null;
-  const research = integrations?.scrapegraph ? 'ScrapeGraphAI' : integrations?.firecrawl ? 'Firecrawl' : null;
+  const reviewer = integrations?.deepseek ? 'DeepSeek' : null;
+  const research = integrations?.scrapegraph ? 'Journals + ScrapeGraphAI' : 'Journals (RSS + Jina)';
 
   const [tab,          setTab]          = useState('drafts');
   const [editing,      setEditing]      = useState(null);
+  const [pendingOpenId, setPendingOpenId] = useState(null);
   const [generating,   setGenerating]   = useState(false);
   const [genError,     setGenError]     = useState(null);
   const [topic,        setTopic]        = useState('');
@@ -498,6 +108,13 @@ export default function BlogManager() {
   const published = allPosts.filter(p => p.status === 'published');
   const rejected  = allPosts.filter(p => p.status === 'rejected');
   const tabPosts  = { drafts, published, rejected }[tab] || [];
+
+  // Open a just-created blank post as soon as the live query returns it.
+  useEffect(() => {
+    if (!pendingOpenId) return;
+    const post = allPosts.find(p => p._id === pendingOpenId);
+    if (post) { setEditing(post); setPendingOpenId(null); }
+  }, [pendingOpenId, allPosts]);
 
   function startProgress() {
     let stageIdx = 0;
@@ -549,11 +166,11 @@ export default function BlogManager() {
     }
   }
 
-  async function handleGenerate() {
+  async function handleGenerate(topicOverride) {
     setGenerating(true);
     setGenError(null);
     startProgress();
-    const hint = topic.trim() || (suggestions.length > 0 ? suggestions[suggIdx] : undefined);
+    const hint = topicOverride || topic.trim() || (suggestions.length > 0 ? suggestions[suggIdx] : undefined);
     try {
       await generatePost({ isStatsPost: false, topicHint: hint || undefined });
       stopProgress(true);
@@ -566,14 +183,30 @@ export default function BlogManager() {
     }
   }
 
+  async function handleNewPost() {
+    const id = await createBlank({});
+    setTab('drafts');
+    setPendingOpenId(id);
+  }
+
   return (
     <div style={{ padding: '2rem 2rem 1.75rem' }}>
       {/* Header */}
       <div style={{ marginBottom: '1.5rem' }}>
-        <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.25rem', color: 'var(--ink)', margin: '0 0 0.2rem' }}>Blog</h2>
-        <p style={{ fontSize: '0.78rem', color: 'var(--sage)', margin: '0 0 1rem' }}>
-          {drafts.length} draft{drafts.length !== 1 ? 's' : ''} · {published.length} published
-        </p>
+        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '1rem', marginBottom: '1rem' }}>
+          <div>
+            <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.25rem', color: 'var(--ink)', margin: '0 0 0.2rem' }}>Blog</h2>
+            <p style={{ fontSize: '0.78rem', color: 'var(--sage)', margin: 0 }}>
+              {drafts.length} draft{drafts.length !== 1 ? 's' : ''} · {published.length} published
+            </p>
+          </div>
+          <button
+            onClick={handleNewPost}
+            style={{ padding: '0.55rem 1.1rem', borderRadius: 9999, border: '1.5px solid rgba(25,37,36,0.15)', background: 'transparent', cursor: 'pointer', fontFamily: 'var(--font-body)', fontSize: '0.8rem', fontWeight: 600, color: 'var(--ink)', whiteSpace: 'nowrap' }}
+          >
+            + New post
+          </button>
+        </div>
 
         {/* Topic row */}
         <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
@@ -581,7 +214,7 @@ export default function BlogManager() {
           <button
             onClick={handleShuffle}
             disabled={generating}
-            title={suggestions.length > 0 ? `${suggIdx + 1} / ${suggestions.length} — click to cycle` : 'Get topic ideas from NVIDIA'}
+            title={suggestions.length > 0 ? `${suggIdx + 1} / ${suggestions.length} — click to cycle` : 'Get topic ideas from this week’s industry news'}
             style={{
               flexShrink: 0, width: 38, height: 38,
               borderRadius: 9999, border: '1.5px solid rgba(25,37,36,0.14)',
@@ -605,7 +238,7 @@ export default function BlogManager() {
             value={topic}
             onChange={e => setTopic(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter' && !generating) handleGenerate(); }}
-            placeholder="Topic — leave blank for a random pick, or ⇄ to get ideas"
+            placeholder="Topic — leave blank to react to this week's industry news, or ⇄ for ideas"
             style={{
               flex: 1, padding: '0.65rem 1rem',
               border: '1.5px solid rgba(25,37,36,0.12)', borderRadius: 9999,
@@ -615,7 +248,7 @@ export default function BlogManager() {
           />
 
           <button
-            onClick={handleGenerate}
+            onClick={() => handleGenerate()}
             disabled={generating}
             style={{
               flexShrink: 0,
@@ -669,7 +302,8 @@ export default function BlogManager() {
         <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', marginBottom: '1.25rem' }}>
           {[
             { label: writer ? `Writer: ${writer}` : 'Writer: none', ok: !!writer, hint: !writer && 'Set NVIDIA_API_KEY in Convex env' },
-            { label: research ? `Research: ${research}` : 'Research: model only', ok: !!research, hint: !research && 'Add SGAI_API_KEY or FIRECRAWL_API_KEY for live web research' },
+            { label: `Research: ${research}`, ok: true, hint: !integrations.scrapegraph && 'Add SGAI_API_KEY in Convex env for deeper stats scraping' },
+            { label: reviewer ? `Reviewer: ${reviewer}` : 'Reviewer: lint only', ok: !!reviewer, hint: !reviewer && 'Set DEEPSEEK_API_KEY in Convex env for the editorial review pass' },
             { label: integrations.unsplash ? 'Photos: Unsplash' : 'Photos: missing key', ok: !!integrations.unsplash, hint: !integrations.unsplash && 'Set UNSPLASH_ACCESS_KEY in Convex env' },
           ].map((chip, i) => (
             <span key={i} title={chip.hint || ''} style={{
@@ -718,7 +352,13 @@ export default function BlogManager() {
         </div>
       )}
 
-      {editing && <PostEditor post={editing} onClose={() => setEditing(null)} />}
+      {editing && (
+        <BlogEditor
+          post={editing}
+          onClose={() => setEditing(null)}
+          onRegenerate={(t) => handleGenerate(t)}
+        />
+      )}
     </div>
   );
 }

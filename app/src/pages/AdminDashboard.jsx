@@ -62,7 +62,6 @@ const ICONS = {
   marketing:    IC(<><path d="M3 3h18v4H3z"/><path d="M3 10h11v11H3z"/><path d="M17 10h4v4h-4z"/><path d="M17 17h4v4h-4z"/></>),
   blog:         IC(<><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></>),
   social:       IC(<><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></>),
-  algorithm:      IC(<><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></>),
   'algo-simulator': IC(<><polygon points="5 3 19 12 5 21 5 3"/></>),
   'algo-reference': IC(<><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></>),
   messages:     IC(<path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>),
@@ -77,7 +76,6 @@ const ICONS = {
 const SECTIONS = [
   { id: 'overview',     label: 'Overview'               },
   { id: 'discovery',    label: 'Discovery'              },
-  { id: 'users',        label: 'Users'                  },
   { id: 'listings',     label: 'Listing Management'     },
   { id: 'collabs',      label: 'Collab Oversight'       },
   { id: 'contracts',    label: 'Contracts'              },
@@ -97,9 +95,10 @@ const MARKETING_TABS = [
   { id: 'social',    label: 'Social'      },
 ];
 
-const ALGORITHM_TABS = [
-  { id: 'algo-simulator', label: 'Simulator'    },
-  { id: 'algo-reference', label: 'How It Works' },
+const USERS_TABS = [
+  { id: 'users',           label: 'All Users'          },
+  { id: 'algo-simulator',  label: 'Algorithm Simulator' },
+  { id: 'algo-reference',  label: 'How It Works'        },
 ];
 
 function UsersPanel()        { return <Users />;                }
@@ -149,11 +148,11 @@ export default function AdminDashboard() {
   const { authorized, loading, profile } = useAdminGuard();
   const [activeSection, setActiveSection] = useState('overview');
   const [marketingOpen, setMarketingOpen] = useState(false);
-  const [algoOpen, setAlgoOpen] = useState(false);
+  const [usersOpen, setUsersOpen] = useState(false);
   const unreadCount = useQuery(api.messages.getUnreadCount);
 
   const isMarketingTab = MARKETING_TABS.some(t => t.id === activeSection);
-  const isAlgoTab = ALGORITHM_TABS.some(t => t.id === activeSection);
+  const isUsersTab = USERS_TABS.some(t => t.id === activeSection);
 
   useEffect(() => {
     const handler = (e) => {
@@ -174,12 +173,44 @@ export default function AdminDashboard() {
   const badges = { messages: unreadCount || 0 };
   const activeLabel = isMarketingTab
     ? `Marketing › ${MARKETING_TABS.find(t => t.id === activeSection)?.label}`
-    : isAlgoTab
-      ? `Algorithm › ${ALGORITHM_TABS.find(t => t.id === activeSection)?.label}`
+    : isUsersTab
+      ? `Users › ${USERS_TABS.find(t => t.id === activeSection)?.label}`
       : SECTIONS.find(s => s.id === activeSection)?.label;
 
   // Decide where "Back to my account" goes based on role
   const backPath = profile?.role === 'host' ? '/host' : '/profile';
+
+  const renderSection = (s) => {
+    const active = activeSection === s.id;
+    return (
+      <button
+        key={s.id}
+        onClick={() => setActiveSection(s.id)}
+        style={{
+          display: 'flex', alignItems: 'center', gap: '0.625rem',
+          width: '100%', padding: '0.55rem 0.75rem',
+          borderRadius: '0.625rem', marginBottom: '0.15rem',
+          background: active ? 'rgba(255,255,255,0.85)' : 'transparent',
+          color: active ? '#192524' : '#3C5759',
+          fontWeight: active ? 600 : 400,
+          fontSize: '0.875rem', textAlign: 'left',
+          transition: 'background 0.15s, color 0.15s',
+          cursor: 'pointer', border: 'none',
+          boxShadow: active ? '0 1px 4px rgba(25,37,36,0.08)' : 'none',
+        }}
+        onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'rgba(255,255,255,0.5)'; }}
+        onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent'; }}
+      >
+        <span style={{ display: 'flex', alignItems: 'center', color: active ? '#192524' : '#3C5759', opacity: active ? 1 : 0.7 }}>{ICONS[s.id]}</span>
+        <span style={{ flex: 1 }}>{s.label}</span>
+        {badges[s.id] > 0 && (
+          <span style={{ fontSize: '0.65rem', fontWeight: 700, background: '#D1EBDB', color: '#166534', borderRadius: '99px', padding: '0 0.4rem', lineHeight: 1.7 }}>
+            {badges[s.id]}
+          </span>
+        )}
+      </button>
+    );
+  };
 
   return (
     <>
@@ -228,37 +259,59 @@ export default function AdminDashboard() {
 
           {/* Nav items */}
           <nav style={{ padding: '0.75rem 0.75rem', flex: 1 }}>
-            {SECTIONS.map(s => {
-              const active = activeSection === s.id;
+            {SECTIONS.slice(0, 2).map(renderSection)}
+
+            {/* ── Users group ─────────────────────────────────────────── */}
+            <button
+              onClick={() => { setUsersOpen(o => !o); if (!isUsersTab) setActiveSection('users'); }}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '0.625rem',
+                width: '100%', padding: '0.55rem 0.75rem',
+                borderRadius: '0.625rem', marginBottom: '0.15rem',
+                background: isUsersTab ? 'rgba(255,255,255,0.85)' : 'transparent',
+                color: isUsersTab ? '#192524' : '#3C5759',
+                fontWeight: isUsersTab ? 600 : 400,
+                fontSize: '0.875rem', textAlign: 'left',
+                transition: 'background 0.15s, color 0.15s',
+                cursor: 'pointer', border: 'none',
+                boxShadow: isUsersTab ? '0 1px 4px rgba(25,37,36,0.08)' : 'none',
+              }}
+              onMouseEnter={e => { if (!isUsersTab) e.currentTarget.style.background = 'rgba(255,255,255,0.5)'; }}
+              onMouseLeave={e => { if (!isUsersTab) e.currentTarget.style.background = 'transparent'; }}
+            >
+              <span style={{ display: 'flex', alignItems: 'center', color: isUsersTab ? '#192524' : '#3C5759', opacity: isUsersTab ? 1 : 0.7 }}>{ICONS.users}</span>
+              <span style={{ flex: 1 }}>Users</span>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ transition: 'transform 150ms', transform: (usersOpen || isUsersTab) ? 'rotate(90deg)' : 'rotate(0deg)', opacity: 0.5 }}>
+                <path d="M9 18l6-6-6-6"/>
+              </svg>
+            </button>
+            {(usersOpen || isUsersTab) && USERS_TABS.map(t => {
+              const active = activeSection === t.id;
               return (
                 <button
-                  key={s.id}
-                  onClick={() => setActiveSection(s.id)}
+                  key={t.id}
+                  onClick={() => setActiveSection(t.id)}
                   style={{
-                    display: 'flex', alignItems: 'center', gap: '0.625rem',
-                    width: '100%', padding: '0.55rem 0.75rem',
-                    borderRadius: '0.625rem', marginBottom: '0.15rem',
-                    background: active ? 'rgba(255,255,255,0.85)' : 'transparent',
-                    color: active ? '#192524' : '#3C5759',
+                    display: 'flex', alignItems: 'center', gap: '0.5rem',
+                    width: '100%', padding: '0.45rem 0.75rem 0.45rem 2rem',
+                    borderRadius: '0.625rem', marginBottom: '0.1rem',
+                    background: active ? 'rgba(255,255,255,0.75)' : 'transparent',
+                    color: active ? '#192524' : '#5a7070',
                     fontWeight: active ? 600 : 400,
-                    fontSize: '0.875rem', textAlign: 'left',
-                    transition: 'background 0.15s, color 0.15s',
+                    fontSize: '0.82rem', textAlign: 'left',
                     cursor: 'pointer', border: 'none',
-                    boxShadow: active ? '0 1px 4px rgba(25,37,36,0.08)' : 'none',
+                    transition: 'background 0.15s',
                   }}
-                  onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'rgba(255,255,255,0.5)'; }}
+                  onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'rgba(255,255,255,0.4)'; }}
                   onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent'; }}
                 >
-                  <span style={{ display: 'flex', alignItems: 'center', color: active ? '#192524' : '#3C5759', opacity: active ? 1 : 0.7 }}>{ICONS[s.id]}</span>
-                  <span style={{ flex: 1 }}>{s.label}</span>
-                  {badges[s.id] > 0 && (
-                    <span style={{ fontSize: '0.65rem', fontWeight: 700, background: '#D1EBDB', color: '#166534', borderRadius: '99px', padding: '0 0.4rem', lineHeight: 1.7 }}>
-                      {badges[s.id]}
-                    </span>
-                  )}
+                  <span style={{ display: 'flex', alignItems: 'center', opacity: active ? 1 : 0.6 }}>{ICONS[t.id]}</span>
+                  {t.label}
                 </button>
               );
             })}
+
+            {SECTIONS.slice(2).map(renderSection)}
 
             {/* ── Marketing group ─────────────────────────────────────── */}
             <button
@@ -285,56 +338,6 @@ export default function AdminDashboard() {
               </svg>
             </button>
             {(marketingOpen || isMarketingTab) && MARKETING_TABS.map(t => {
-              const active = activeSection === t.id;
-              return (
-                <button
-                  key={t.id}
-                  onClick={() => setActiveSection(t.id)}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: '0.5rem',
-                    width: '100%', padding: '0.45rem 0.75rem 0.45rem 2rem',
-                    borderRadius: '0.625rem', marginBottom: '0.1rem',
-                    background: active ? 'rgba(255,255,255,0.75)' : 'transparent',
-                    color: active ? '#192524' : '#5a7070',
-                    fontWeight: active ? 600 : 400,
-                    fontSize: '0.82rem', textAlign: 'left',
-                    cursor: 'pointer', border: 'none',
-                    transition: 'background 0.15s',
-                  }}
-                  onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'rgba(255,255,255,0.4)'; }}
-                  onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent'; }}
-                >
-                  <span style={{ display: 'flex', alignItems: 'center', opacity: active ? 1 : 0.6 }}>{ICONS[t.id]}</span>
-                  {t.label}
-                </button>
-              );
-            })}
-
-            {/* ── Algorithm group ─────────────────────────────────────── */}
-            <button
-              onClick={() => { setAlgoOpen(o => !o); if (!isAlgoTab) setActiveSection('algo-simulator'); }}
-              style={{
-                display: 'flex', alignItems: 'center', gap: '0.625rem',
-                width: '100%', padding: '0.55rem 0.75rem',
-                borderRadius: '0.625rem', marginBottom: '0.15rem',
-                background: isAlgoTab ? 'rgba(255,255,255,0.85)' : 'transparent',
-                color: isAlgoTab ? '#192524' : '#3C5759',
-                fontWeight: isAlgoTab ? 600 : 400,
-                fontSize: '0.875rem', textAlign: 'left',
-                transition: 'background 0.15s, color 0.15s',
-                cursor: 'pointer', border: 'none',
-                boxShadow: isAlgoTab ? '0 1px 4px rgba(25,37,36,0.08)' : 'none',
-              }}
-              onMouseEnter={e => { if (!isAlgoTab) e.currentTarget.style.background = 'rgba(255,255,255,0.5)'; }}
-              onMouseLeave={e => { if (!isAlgoTab) e.currentTarget.style.background = 'transparent'; }}
-            >
-              <span style={{ display: 'flex', alignItems: 'center', color: isAlgoTab ? '#192524' : '#3C5759', opacity: isAlgoTab ? 1 : 0.7 }}>{ICONS.algorithm}</span>
-              <span style={{ flex: 1 }}>Algorithm</span>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ transition: 'transform 150ms', transform: (algoOpen || isAlgoTab) ? 'rotate(90deg)' : 'rotate(0deg)', opacity: 0.5 }}>
-                <path d="M9 18l6-6-6-6"/>
-              </svg>
-            </button>
-            {(algoOpen || isAlgoTab) && ALGORITHM_TABS.map(t => {
               const active = activeSection === t.id;
               return (
                 <button

@@ -153,7 +153,6 @@ export const seed = mutation({
         gallery_images: [
           "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=1200&q=85",
           "https://images.unsplash.com/photo-1528181304800-259b08848526?w=800&q=80",
-          "https://images.unsplash.com/photo-1504214208698-ea1916a2195a?w=800&q=80",
           "https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=800&q=80",
           "https://images.unsplash.com/photo-1506665531195-3566af2b4dfa?w=800&q=80",
         ],
@@ -295,10 +294,7 @@ export const seed = mutation({
         image: "https://images.unsplash.com/photo-1533104816931-20fa691ff6ca?w=800&q=80",
         gallery_images: [
           "https://images.unsplash.com/photo-1533104816931-20fa691ff6ca?w=1200&q=85",
-          "https://outgoing-anaconda-357.convex.cloud/api/storage/d6974384-e2cf-43ee-a2aa-3af4a4b30c86",
           "https://images.unsplash.com/photo-1595867818082-083862f3d630?w=800&q=80",
-          "https://images.unsplash.com/photo-1585970480901-90d6bb2a48b5?w=800&q=80",
-          "https://images.unsplash.com/photo-1532339142463-fd0a8979791a?w=800&q=80",
         ],
         about:
           "Perched on a hillside above the Paphos coastline on the southwest tip of Cyprus, this geodesic glass dome is designed to disappear into the landscape during the day and become a lantern at night. The structure is 7 meters in diameter with a 270-degree glass panel roof — at night, you fall asleep looking directly at the Milky Way, with the Mediterranean glittering below the hill line.\n\nThe dome sits on a private terraced plot with a stone meditation terrace facing west, a traditional ceramic fire bowl for evening fires, and an outdoor rain shower fed by a cistern of collected rainwater. The nearest neighboring structure is 400 meters away. The light on this hillside is extraordinary — harsh and sculptural at noon, warm and directional in the final hour before sunset when the limestone cliffs glow amber.\n\nPaphos itself is a UNESCO World Heritage city with 4,000-year-old mosaics, a working harbor, and a craft food scene that has developed significantly over the past decade. The property is 12 minutes from the old harbor and 8 minutes from the Akamas Peninsula National Park. For creators with a more minimal, meditative aesthetic, this is one of the most visually distinctive stays on the platform.",

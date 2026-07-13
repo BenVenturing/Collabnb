@@ -47,7 +47,7 @@ import { SAMPLE_COLLABORATIONS, SAMPLE_LISTINGS } from '../lib/mockData';
 import { getPitchCount } from '../lib/pitchCount';
 import { cache } from '../lib/cache';
 import { reopenChecklist } from '../components/OnboardingChecklist';
-import HostSignupSheet from '../components/HostSignupSheet';
+import RoleSwitchSheet from '../components/RoleSwitchSheet';
 
 // ─── Creator tier + niche options ────────────────────────────────────────────
 const CREATOR_TIERS = [
@@ -611,7 +611,10 @@ export default function Profile() {
     userId && userId !== 'mock-user-001' ? { host_id: String(userId) } : 'skip'
   );
   const hasListing = (hostListings?.length ?? 0) > 0;
-  const isHostVerified = (profile?.is_verified === true || profile?.is_founder === true) && hasListing;
+  const isHostVerified = profile?.host_verified === true
+    || ((profile?.is_verified === true || profile?.is_founder === true) && hasListing);
+  const isCreatorVerified = profile?.creator_verified === true;
+  const pendingRole = profile?.pending_role || null;
   const hostBilling = useQuery(
     api.fees.getBilling,
     profile?.role === 'host' && userId && userId !== 'mock-user-001' ? { hostId: String(userId) } : 'skip'
@@ -636,7 +639,7 @@ export default function Profile() {
   const [showSettings,      setShowSettings]      = useState(false);
   const [showSwitchConfirm, setShowSwitchConfirm] = useState(false);
   const [showContracts,     setShowContracts]     = useState(false);
-  const [hostSignupOpen,    setHostSignupOpen]    = useState(false);
+  const [roleSwitchTarget,  setRoleSwitchTarget]  = useState(null); // null | 'host' | 'creator'
   const [showNotifications, setShowNotifications] = useState(false);
   const [showAllCollabs,    setShowAllCollabs]    = useState(false);
   const [showPrivacy,       setShowPrivacy]       = useState(false);
@@ -906,11 +909,15 @@ export default function Profile() {
     { icon: <BellIcon />,        label: 'Notifications',   sublabel: 'Manage email & push preferences',               onClick: () => { setShowSettings(false); setShowNotifications(true); } },
     { icon: <LockIcon />,        label: 'Privacy Policy',  sublabel: 'Review how your data is used',                  onClick: () => { setShowSettings(false); setShowPrivacy(true); } },
     { icon: <SealCheck />,       label: 'Verification',    sublabel: 'Submit a re-verification request',              onClick: () => { setShowSettings(false); setShowVerification(true); } },
-    ...(profile?.role === 'host'
-      ? [{ icon: <SwitchIcon />, label: 'Switch to Creator View', sublabel: 'Browse and apply to listings as a creator', onClick: async () => { setShowSettings(false); await updateProfile({ role: 'creator' }); navigate('/explore'); } }]
-      : (isAdmin || isHostVerified)
-        ? [{ icon: <SwitchIcon />, label: 'Switch to Host View', sublabel: 'Go to your host dashboard and listings', onClick: async () => { setShowSettings(false); await updateProfile({ role: 'host' }); navigate('/host'); } }]
-        : [{ icon: <SwitchIcon />, label: 'Sign up as Host', sublabel: 'Create listings and collaborate with creators', onClick: () => { setShowSettings(false); setShowSwitchConfirm(true); } }]
+    ...(pendingRole
+      ? [{ icon: <SwitchIcon />, label: `${pendingRole === 'host' ? 'Host' : 'Creator'} access pending review`, sublabel: "We'll email you once your request is approved", onClick: () => setShowSettings(false) }]
+      : profile?.role === 'host'
+        ? ((isAdmin || isCreatorVerified)
+          ? [{ icon: <SwitchIcon />, label: 'Switch to Creator View', sublabel: 'Browse and apply to listings as a creator', onClick: async () => { setShowSettings(false); await updateProfile({ role: 'creator' }); navigate('/explore'); } }]
+          : [{ icon: <SwitchIcon />, label: 'Sign up as Creator', sublabel: 'Apply to collabs — goes through creator verification', onClick: () => { setShowSettings(false); setShowSwitchConfirm(true); } }])
+        : (isAdmin || isHostVerified)
+          ? [{ icon: <SwitchIcon />, label: 'Switch to Host View', sublabel: 'Go to your host dashboard and listings', onClick: async () => { setShowSettings(false); await updateProfile({ role: 'host' }); navigate('/host'); } }]
+          : [{ icon: <SwitchIcon />, label: 'Sign up as Host', sublabel: 'Create listings — goes through host verification', onClick: () => { setShowSettings(false); setShowSwitchConfirm(true); } }]
     ),
   ];
 
@@ -1913,14 +1920,14 @@ export default function Profile() {
 
             <p style={{ color: 'var(--slate)', fontSize: '0.875rem', lineHeight: 1.6, marginBottom: '1.5rem' }}>
               {profile?.role === 'host'
-                ? 'You\'ll join as a creator using the same account — browse and apply to listings right away.'
-                : 'You\'ll join as a host using the same account — create listings and connect with creators.'}
+                ? 'You\'ll join as a creator using the same account. Your details go through the same quick review as any new creator before creator access unlocks.'
+                : 'You\'ll join as a host using the same account. Your details go through the same quick review as any new host before host tools unlock.'}
             </p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
               <button className="btn-primary" onClick={() => {
                 setShowSwitchConfirm(false);
-                setHostSignupOpen(true);
+                setRoleSwitchTarget(profile?.role === 'host' ? 'creator' : 'host');
               }}>
                 {profile?.role === 'host' ? 'Sign up as Creator' : 'Sign up as Host'}
               </button>
@@ -1988,8 +1995,8 @@ export default function Profile() {
         </div>
       )}
 
-      {/* ── Host signup sheet (creator → host switcher) ──────────────────── */}
-      <HostSignupSheet open={hostSignupOpen} onClose={() => setHostSignupOpen(false)} />
+      {/* ── Role-switch signup sheet (verification-gated) ─────────────────── */}
+      <RoleSwitchSheet open={!!roleSwitchTarget} targetRole={roleSwitchTarget || 'host'} onClose={() => setRoleSwitchTarget(null)} />
 
       {/* ── All Collabs modal ────────────────────────────────────────────── */}
       {showAllCollabs && (

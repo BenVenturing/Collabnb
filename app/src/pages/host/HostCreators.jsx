@@ -199,7 +199,12 @@ function fmtFollowers(n) {
 const DEPRIO_KEY       = '@collabnb_swipe_deprioritized_v1';
 const HIST_KEY         = '@collabnb_swipe_history_v1';
 const HIDDEN_SAMPLE_KEY = '@collabnb_hidden_sample_creators_v1';
-function lsGet(k) { try { return JSON.parse(localStorage.getItem(k) || '[]'); } catch { return []; } }
+function lsGet(k) {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(k) || '[]');
+    return Array.isArray(parsed) ? parsed : [];
+  } catch { return []; }
+}
 function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
 
 // ─── Location consent modal ───────────────────────────────────────────────────
@@ -741,14 +746,14 @@ function SwipeView({ creators, onBack, savedIds, onToggleSaved }) {
 
   const deck = useMemo(() => {
     const deprioSet = new Set(deprioIds);
-    let base = creators;
+    let base = Array.isArray(creators) ? creators : [];
     if (swipeTier !== 'All') base = base.filter(c => c.tier === swipeTier);
     if (swipeQuery.trim()) {
       const q = swipeQuery.toLowerCase();
       base = base.filter(c =>
-        c.name.toLowerCase().includes(q) ||
-        c.username.toLowerCase().includes(q) ||
-        c.location.toLowerCase().includes(q)
+        c.name?.toLowerCase().includes(q) ||
+        c.username?.toLowerCase().includes(q) ||
+        c.location?.toLowerCase().includes(q)
       );
     }
     return [
@@ -827,7 +832,7 @@ function SwipeView({ creators, onBack, savedIds, onToggleSaved }) {
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  const savedCreators = creators.filter(c => savedIds.includes(c.id));
+  const savedCreators = (Array.isArray(creators) ? creators : []).filter(c => (savedIds || []).includes(c.id));
 
   return (
     <div style={{
@@ -1099,11 +1104,11 @@ export default function HostCreators() {
       if (query) {
         const q = query.toLowerCase();
         return (
-          c.name.toLowerCase().includes(q) ||
-          c.username.toLowerCase().includes(q) ||
-          c.niches.some(n => n.toLowerCase().includes(q)) ||
-          c.location.toLowerCase().includes(q) ||
-          c.platforms.some(p => p.toLowerCase().includes(q))
+          c.name?.toLowerCase().includes(q) ||
+          c.username?.toLowerCase().includes(q) ||
+          c.niches?.some(n => n.toLowerCase().includes(q)) ||
+          c.location?.toLowerCase().includes(q) ||
+          c.platforms?.some(p => p.toLowerCase().includes(q))
         );
       }
       return true;

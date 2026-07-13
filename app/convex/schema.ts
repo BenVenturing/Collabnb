@@ -57,6 +57,13 @@ export default defineSchema({
     trial_reminder_sent: v.optional(v.boolean()),
     interview_requested: v.optional(v.boolean()),
     admin_verification_note: v.optional(v.string()),
+    // Role switching — a switch to the other role goes through the same
+    // verification review as a fresh signup; role only flips on admin approval.
+    pending_role: v.optional(v.string()),
+    role_switch_requested_at: v.optional(v.number()),
+    role_switch_email: v.optional(v.string()),
+    host_verified: v.optional(v.boolean()),
+    creator_verified: v.optional(v.boolean()),
   }).index("by_email", ["email"]).index("by_stripe_customer", ["stripe_customer_id"]),
 
   listings: defineTable({

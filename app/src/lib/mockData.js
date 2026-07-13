@@ -207,8 +207,6 @@ export const SAMPLE_LISTINGS = [
     image: 'https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=800&q=80',
     gallery_images: [
       'https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=1200&q=85',
-      'https://images.unsplash.com/photo-1559327291-72ee739d0d9a?w=800&q=80',
-      'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&q=80',
       'https://images.unsplash.com/photo-1506665531195-3566af2b4dfa?w=800&q=80',
     ],
 
@@ -344,7 +342,6 @@ export const SAMPLE_LISTINGS = [
       'https://images.unsplash.com/photo-1542718610-a1d656d1884c?w=1200&q=85',
       'https://images.unsplash.com/photo-1448375240586-882707db888b?w=800&q=80',
       'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=800&q=80',
-      'https://images.unsplash.com/photo-1519974719765-e6559eac2575?w=800&q=80',
     ],
 
     about: 'A custom-built 600 sq ft treehouse suspended 30 feet up in a 200-year-old white oak grove at the edge of a private 3-acre lake in the Blue Ridge Mountains outside Asheville. Accessed by a 40-foot rope bridge, the interior features Douglas fir tongue-and-groove walls, a king bed with a 180° forest canopy view, and a glass-floor observatory panel that looks straight down through the oaks to the ground below. Outside, a wraparound deck with string lights and a spring-fed wood-fired hot tub sits above the water line.\n\nThe lake catches morning mist from October through May between 6:30am and 8am — a low, still layer that sits just above the surface and makes for some of the most distinct natural-light photography conditions in the American Southeast. The rope bridge arrival is a near-universal creator hook: multiple creators who\'ve shot here have hit 400K–700K views on the walk-across reel alone, with zero paid promotion.\n\nAsheville\'s River Arts District is 20 minutes. The Blue Ridge Parkway begins 10 minutes from the property. Chimney Rock State Park is 45 minutes east. The Biltmore Estate — an extraordinary architectural content location on its own — is 25 minutes away. Local farmstead breakfast spots within 5 minutes of the property.',
@@ -409,10 +406,7 @@ export const SAMPLE_LISTINGS = [
     image: 'https://images.unsplash.com/photo-1533104816931-20fa691ff6ca?w=800&q=80',
     gallery_images: [
       'https://images.unsplash.com/photo-1533104816931-20fa691ff6ca?w=1200&q=85',
-      'https://images.unsplash.com/photo-1525130413817-d45c1d127c42?w=800&q=80',
       'https://images.unsplash.com/photo-1595867818082-083862f3d630?w=800&q=80',
-      'https://images.unsplash.com/photo-1532339142463-fd0a8979791a?w=800&q=80',
-      'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&q=80',
     ],
 
     about: 'A 475 sq ft geodesic dome with 40% transparent polycarbonate panels, perched on a limestone hillside 80 meters above the Mediterranean at the edge of the Paphos coastline. The interior centers on a king bed raised on a platform aimed directly at the night sky, surrounded by hand-thrown ceramic fixtures, a Moroccan-tiled wet room, and a handmade walnut writing desk. An outdoor fire pit is encircled by 200-year-old olive trees and wild lavender. The architecture is genuinely unlike anything common to European glamping — this is a property that reads as editorial-quality on first look.\n\nPaphos sits at the edge of one of Europe\'s darkest sky corridors. The Milky Way is visible to the naked eye from late March through October, and the transparent dome panels create a 3×4m live star ceiling above the bed — a Reel asset that no amount of editing can replicate at a standard glamping site. The sunrise over the Mediterranean appears at the horizon line directly through the dome\'s east-facing panel and catches the water in a way that is unusually cinematic for a coastal stay.\n\nKato Paphos Archaeological Park — a UNESCO World Heritage Site with mosaics from the 2nd century AD — is 5 minutes by car and entirely free to visit at dawn before the crowds. Coral Bay beach is 15 minutes north. The Akamas Peninsula nature reserve, with sea turtle nesting beaches and cliff-side trails, begins 30 minutes away.',

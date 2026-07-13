@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Trash2 } from 'lucide-react';
 import { useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { SAMPLE_HOST, IMG_FALLBACK } from '../lib/mockData';
@@ -12,6 +11,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useAccessGate, PendingApprovalScreen, LimitedAccessScreen, TrialBanner } from '../components/AccessGate';
 import { WhereSearchContent, WhatSearchContent, WhenSearchContent, useAnimatedPlaceholder } from '../components/SearchDropdowns';
 import SkeletonCard from '../components/SkeletonCard';
+import SampleWatermark from '../components/SampleWatermark';
 import PricingTool, { PointsHelpButton } from '../components/PricingTool';
 import { cache } from '../lib/cache';
 import { buildCreatorContext, scoreListings, MATCH_BADGE_THRESHOLD, FOR_YOU_MIN_SCORE, NEAR_ME_MIN_LOCATION } from '../lib/matchScore';
@@ -62,7 +62,9 @@ function normalizeConvexListing(l) {
 }
 
 // ─── Listing Card ─────────────────────────────────────────────────────────────
-function ListingCard({ listing, saved, onSave, delay, onNavigate, onHostClick, onHide }) {
+// Also reused by the host dashboard's in-place browse view (browseOnly hides
+// the creator-only save action and click-through)
+export function ListingCard({ listing, saved, onSave, delay, onNavigate, onHostClick, browseOnly = false }) {
   const { profile } = useAuth();
   const [rippling, setRippling] = useState(false);
   const isSample = listing._isSample === true;
@@ -81,8 +83,8 @@ function ListingCard({ listing, saved, onSave, delay, onNavigate, onHostClick, o
   return (
     <div
       className="listing-card reveal-up"
-      onClick={onNavigate}
-      style={{ width: 260, maxWidth: '100%', animationDelay: `${delay}ms`, opacity: 0, cursor: 'pointer' }}
+      onClick={browseOnly ? undefined : onNavigate}
+      style={{ width: 260, maxWidth: '100%', animationDelay: `${delay}ms`, opacity: 0, cursor: browseOnly ? 'default' : 'pointer' }}
     >
       {/* Photo */}
       <div style={{ position: 'relative', height: 176, overflow: 'hidden' }}>
@@ -110,23 +112,8 @@ function ListingCard({ listing, saved, onSave, delay, onNavigate, onHostClick, o
           </div>
         )}
 
-        {/* SAMPLE LISTING watermark — demo listings only */}
-        {isSample && (
-          <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden' }}>
-            {[18, 50, 82].map((top, i) => (
-              <div key={i} style={{
-                position: 'absolute', top: `${top}%`, left: '50%',
-                transform: 'translateX(-50%) rotate(-35deg)',
-                fontFamily: 'var(--font-display)', fontWeight: 900,
-                fontSize: '0.8rem', color: 'rgba(255,255,255,0.15)',
-                letterSpacing: '0.3em', whiteSpace: 'nowrap', userSelect: 'none',
-                textShadow: 'none',
-              }}>
-                SAMPLE LISTING
-              </div>
-            ))}
-          </div>
-        )}
+        {/* Sample listing watermark — demo listings only */}
+        {isSample && <SampleWatermark />}
 
         {/* Featured badge */}
         {listing.is_featured && (
@@ -155,32 +142,12 @@ function ListingCard({ listing, saved, onSave, delay, onNavigate, onHostClick, o
           </span>
         )}
 
-        {/* Trash — dismiss sample listing (top-right), only on samples */}
-        {isSample && onHide && (
-          <button
-            onClick={(e) => { e.stopPropagation(); onHide(listing.id); }}
-            title="Hide this sample listing"
-            style={{
-              position: 'absolute', top: '0.75rem', right: '0.75rem',
-              width: '2rem', height: '2rem', borderRadius: '50%',
-              background: 'rgba(255,255,255,0.88)', backdropFilter: 'blur(8px)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              border: 'none', cursor: 'pointer',
-              transition: 'transform 200ms var(--ease-out-quart), color 150ms',
-              boxShadow: '0 2px 8px rgba(25,37,36,0.1)', color: '#959D90',
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.1)'; e.currentTarget.style.color = '#dc2626'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.color = '#959D90'; }}
-          >
-            <Trash2 size={13} />
-          </button>
-        )}
-
         {/* Save heart */}
+        {!browseOnly && (
         <button
           onClick={handleSave}
           style={{
-            position: 'absolute', top: '0.75rem', right: isSample ? '3rem' : '0.75rem',
+            position: 'absolute', top: '0.75rem', right: '0.75rem',
             width: '2rem', height: '2rem', borderRadius: '50%',
             background: 'rgba(255,255,255,0.88)', backdropFilter: 'blur(8px)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -208,6 +175,7 @@ function ListingCard({ listing, saved, onSave, delay, onNavigate, onHostClick, o
             <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
           </svg>
         </button>
+        )}
       </div>
 
       {/* Info */}
@@ -305,7 +273,7 @@ function GhostSection() {
 }
 
 // ─── Section Row ──────────────────────────────────────────────────────────────
-function SectionRow({ title, subtitle, listings, saved, onSave, onNavigate, expanded, onToggleExpand, hidden, onHostClick, onHide }) {
+function SectionRow({ title, subtitle, listings, saved, onSave, onNavigate, expanded, onToggleExpand, hidden, onHostClick }) {
   if (!listings.length || hidden) return null;
   return (
     <div style={{ marginBottom: expanded ? '3rem' : '2.5rem' }}>
@@ -345,7 +313,6 @@ function SectionRow({ title, subtitle, listings, saved, onSave, onNavigate, expa
               delay={i * 55}
               onNavigate={() => onNavigate(l.id)}
               onHostClick={onHostClick}
-              onHide={onHide}
             />
           ))}
         </div>
@@ -360,7 +327,6 @@ function SectionRow({ title, subtitle, listings, saved, onSave, onNavigate, expa
               delay={i * 55}
               onNavigate={() => onNavigate(l.id)}
               onHostClick={onHostClick}
-              onHide={onHide}
             />
           ))}
         </div>
@@ -494,19 +460,11 @@ export default function Explore() {
     profile?._id ? { creatorId: String(profile._id) } : 'skip'
   ) ?? [];
 
-  // Per-device hidden sample listing ids
-  const [hiddenSampleIds, setHiddenSampleIds] = useState(() => {
+  // Per-device hidden sample listing ids (honors past dismissals)
+  const [hiddenSampleIds] = useState(() => {
     try { return JSON.parse(localStorage.getItem(HIDDEN_SAMPLE_LISTINGS_KEY) || '[]'); }
     catch { return []; }
   });
-  const hideListing = (id) => {
-    setHiddenSampleIds((prev) => {
-      if (prev.includes(id)) return prev;
-      const next = [...prev, id];
-      try { localStorage.setItem(HIDDEN_SAMPLE_LISTINGS_KEY, JSON.stringify(next)); } catch {}
-      return next;
-    });
-  };
 
   const convexActive = convexRaw
     ? convexRaw
@@ -870,7 +828,6 @@ export default function Explore() {
               onToggleExpand={() => setExpandedSection(expandedSection === 'Trending Now' ? null : 'Trending Now')}
               hidden={expandedSection !== null && expandedSection !== 'Trending Now'}
               onHostClick={() => setPopupHost(sampleHostPerson)}
-              onHide={hideListing}
             />
 
             <SectionRow
@@ -884,7 +841,6 @@ export default function Explore() {
               onToggleExpand={() => setExpandedSection(expandedSection === 'Picked for You' ? null : 'Picked for You')}
               hidden={expandedSection !== null && expandedSection !== 'Picked for You'}
               onHostClick={() => setPopupHost(sampleHostPerson)}
-              onHide={hideListing}
             />
 
             <SectionRow
@@ -898,7 +854,6 @@ export default function Explore() {
               onToggleExpand={() => setExpandedSection(expandedSection === 'Near' ? null : 'Near')}
               hidden={expandedSection !== null && expandedSection !== 'Near'}
               onHostClick={() => setPopupHost(sampleHostPerson)}
-              onHide={hideListing}
             />
 
             <SectionRow
@@ -912,7 +867,6 @@ export default function Explore() {
               onToggleExpand={() => setExpandedSection(expandedSection === 'All Stays' ? null : 'All Stays')}
               hidden={expandedSection !== null && expandedSection !== 'All Stays'}
               onHostClick={() => setPopupHost(sampleHostPerson)}
-              onHide={hideListing}
             />
 
             {allFiltered.length === 0 && (

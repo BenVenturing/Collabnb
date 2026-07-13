@@ -11,7 +11,7 @@ import { formatDate } from '../lib/dateUtils';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import FAQModal from './FAQModal';
-import HostSignupSheet from './HostSignupSheet';
+import RoleSwitchSheet from './RoleSwitchSheet';
 
 function fmtNavWhen(val) {
   if (!val) return 'Any time';
@@ -148,7 +148,7 @@ export default function AppNav() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [faqOpen,     setFaqOpen]     = useState(false);
   const [faqBubble,   setFaqBubble]   = useState(false);
-  const [hostSignupOpen, setHostSignupOpen] = useState(false);
+  const [roleSwitchTarget, setRoleSwitchTarget] = useState(null); // null | 'host' | 'creator'
 
   // In-nav search state
   const [navSearchOpen, setNavSearchOpen] = useState(false);
@@ -173,7 +173,13 @@ export default function AppNav() {
     api.listings.getByHost,
     userId && userId !== 'mock-user-001' ? { host_id: String(userId) } : 'skip'
   );
-  const isHostVerified = (profile?.is_verified === true || profile?.is_founder === true) && (hostListings?.length ?? 0) > 0;
+  // Per-role verification: only a role the user has already been approved for
+  // can be switched to instantly — anything else goes through the same
+  // verification review as a fresh signup (RoleSwitchSheet → admin approval)
+  const isHostVerified = profile?.host_verified === true
+    || ((profile?.is_verified === true || profile?.is_founder === true) && (hostListings?.length ?? 0) > 0);
+  const isCreatorVerified = profile?.creator_verified === true;
+  const pendingRole = profile?.pending_role || null;
 
   // Scroll detection
   useEffect(() => {
@@ -854,24 +860,35 @@ export default function AppNav() {
                 {!isAdmin && (
                   <div className="border-t border-stone/20" />
                 )}
-                {!isAdmin && (
+                {!isAdmin && pendingRole && (
+                  <div className="px-4 py-3 text-sm" style={{ color: 'var(--sage)', fontWeight: 500 }}>
+                    {pendingRole === 'host' ? 'Host' : 'Creator'} access pending review
+                  </div>
+                )}
+                {!isAdmin && !pendingRole && (
                   <button
                     onClick={async () => {
                       setProfileOpen(false);
                       if (isHost) {
-                        await updateProfile?.({ role: 'creator' });
-                        navigate('/explore');
+                        if (isCreatorVerified) {
+                          await updateProfile?.({ role: 'creator' });
+                          navigate('/explore');
+                        } else {
+                          setRoleSwitchTarget('creator');
+                        }
                       } else if (isHostVerified) {
                         await updateProfile?.({ role: 'host' });
                         navigate('/host');
                       } else {
-                        setHostSignupOpen(true);
+                        setRoleSwitchTarget('host');
                       }
                     }}
                     className="w-full text-left px-4 py-3 text-sm hover:bg-mint/30 transition-colors"
                     style={{ color: 'var(--slate)', fontWeight: 500 }}
                   >
-                    {isHost ? 'Switch to Creator View' : (isHostVerified ? 'Switch to Host View' : 'Sign up as Host')}
+                    {isHost
+                      ? (isCreatorVerified ? 'Switch to Creator View' : 'Sign up as Creator')
+                      : (isHostVerified ? 'Switch to Host View' : 'Sign up as Host')}
                   </button>
                 )}
                 {isAdmin && (
@@ -913,8 +930,8 @@ export default function AppNav() {
       {/* ── FAQ modal ─────────────────────────────────────────────────────────── */}
       <FAQModal isOpen={faqOpen} onClose={() => setFaqOpen(false)} />
 
-      {/* ── Host signup sheet (creator → host switcher) ──────────────────────── */}
-      <HostSignupSheet open={hostSignupOpen} onClose={() => setHostSignupOpen(false)} />
+      {/* ── Role-switch signup sheet (verification-gated, both directions) ───── */}
+      <RoleSwitchSheet open={!!roleSwitchTarget} targetRole={roleSwitchTarget || 'host'} onClose={() => setRoleSwitchTarget(null)} />
 
       {/* ── FAQ persistent bubble (bottom-right, shown after first FAQ trigger) ── */}
       {faqBubble && (

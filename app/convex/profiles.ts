@@ -442,42 +442,56 @@ export const markFirstCollabCompleted = mutation({
   },
 });
 
-// Switch a logged-in creator to host — mirrors the waitlist host signup
-// (role flip + host details + admin notification + welcome email) without
-// creating a new account. Keeps the same Clerk login.
-export const switchToHost = mutation({
+// Request a role switch (creator → host or host → creator). Mirrors a fresh
+// signup for the target role: details are collected, the account enters the
+// admin verification queue, and the role only flips when an admin approves.
+// Until then the user keeps their current role and access.
+export const requestRoleSwitch = mutation({
   args: {
     profileId: v.string(),
+    targetRole: v.union(v.literal("host"), v.literal("creator")),
+    contact_email: v.optional(v.string()),
+    // host details
     business_name: v.optional(v.string()),
     city: v.optional(v.string()),
     country: v.optional(v.string()),
     property_type: v.optional(v.string()),
     website_url: v.optional(v.string()),
+    // creator details
+    instagram_handle: v.optional(v.string()),
+    tiktok_handle: v.optional(v.string()),
+    portfolio: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const profile = await ctx.db.get(args.profileId as any);
     if (!profile) throw new Error("Profile not found.");
-    // Only fields declared on the profiles schema are persisted; business_name,
-    // property_type, website_url are captured for the admin notification email
-    // but not stored on the profile (consistent with waitlist.signUp).
-    const patch: Record<string, any> = { role: "host" };
+    if (profile.role === args.targetRole) throw new Error("You already have this role.");
+
+    const patch: Record<string, any> = {
+      pending_role: args.targetRole,
+      role_switch_requested_at: Date.now(),
+    };
+    if (args.contact_email && args.contact_email !== profile.email) {
+      patch.role_switch_email = args.contact_email;
+    }
     if (args.city !== undefined) patch.city = args.city;
     if (args.country !== undefined) patch.country = args.country;
+    if (args.targetRole === "creator") {
+      if (args.instagram_handle !== undefined) patch.instagram_handle = args.instagram_handle;
+      if (args.tiktok_handle !== undefined) patch.tiktok_handle = args.tiktok_handle;
+      if (args.portfolio !== undefined) patch.portfolio = args.portfolio;
+    }
     await ctx.db.patch(args.profileId as any, patch);
 
-    if (profile.email) {
-      await ctx.scheduler.runAfter(0, internal.email.sendAdminNotification, {
-        type: "signup",
-        subject: `New host signup: ${profile.full_name}`,
-        body: `Name: ${profile.full_name}\nEmail: ${profile.email}\nRole: host\nBusiness: ${args.business_name || "—"}\nCity: ${args.city || "—"}\nProperty type: ${args.property_type || "—"}\nWebsite: ${args.website_url || "—"}\n\nExisting account switched to host via in-app signup.`,
-      });
-      await ctx.scheduler.runAfter(0, internal.email.sendWelcomeEmail, {
-        to: profile.email,
-        name: profile.full_name,
-        role: "host",
-      });
-    }
-    return { switched: true };
+    const detailLines = args.targetRole === "host"
+      ? `Business: ${args.business_name || "—"}\nCity: ${args.city || "—"}\nProperty type: ${args.property_type || "—"}\nWebsite: ${args.website_url || "—"}`
+      : `Instagram: ${args.instagram_handle || "—"}\nTikTok: ${args.tiktok_handle || "—"}\nPortfolio: ${args.portfolio || "—"}`;
+    await ctx.scheduler.runAfter(0, internal.email.sendAdminNotification, {
+      type: "signup",
+      subject: `Role switch request (${profile.role} → ${args.targetRole}): ${profile.full_name}`,
+      body: `Name: ${profile.full_name}\nAccount email: ${profile.email}\nContact email: ${args.contact_email || profile.email}\nRequested role: ${args.targetRole}\n${detailLines}\n\nExisting account requested a role switch — approve in Admin → Users to activate the new role.`,
+    });
+    return { pending: true };
   },
 });
 

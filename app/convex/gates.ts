@@ -34,11 +34,14 @@ export const getVerificationQueue = query({
   handler: async (ctx) => {
     const profiles = await ctx.db.query("profiles").collect();
     return profiles
-      .filter((p) => p.is_verified !== true && p.is_rejected !== true)
+      .filter((p) => (p.is_verified !== true || p.pending_role) && p.is_rejected !== true)
       .map((p) => ({
         ...p,
         _id: String(p._id),
         _creationTime: p._creationTime,
+        // role switchers surface under the role they're applying for
+        role: p.pending_role ?? p.role,
+        is_role_switch: !!p.pending_role,
         // computed access state
         admin_verification_note: p.admin_verification_note,
         interview_requested: p.interview_requested,
@@ -82,7 +85,8 @@ export const approveCreator = mutation({
   },
   handler: async (ctx, args) => {
     const profile = await ctx.db.get(args.profileId);
-    if (!profile || profile.role !== "creator") return;
+    if (!profile || (profile.role !== "creator" && profile.pending_role !== "creator")) return;
+    const isRoleSwitch = profile.pending_role === "creator";
 
     const totalFollowers =
       (profile.metrics_instagram_followers ?? 0) +
@@ -114,6 +118,7 @@ export const approveCreator = mutation({
     const now = Date.now();
     const patch: Record<string, any> = {
       is_verified: true,
+      creator_verified: true,
       creator_track: args.track,
       tier,
       is_founder: isFounder,
@@ -124,6 +129,13 @@ export const approveCreator = mutation({
       trial_ends_at: isFounder ? undefined : now + TRIAL_DURATION_DAYS * 24 * 60 * 60 * 1000,
       admin_verification_note: args.adminNote,
     };
+    // Approving a role switch is what actually flips the role
+    if (isRoleSwitch) {
+      patch.role = "creator";
+      patch.pending_role = undefined;
+      patch.role_switch_requested_at = undefined;
+      patch.role_switch_email = undefined;
+    }
 
     if (profile.referred_by && !profile.first_collab_completed) {
       patch.referral_bonus_pending = true;
@@ -159,7 +171,8 @@ export const approveHost = mutation({
   },
   handler: async (ctx, args) => {
     const profile = await ctx.db.get(args.profileId);
-    if (!profile || profile.role !== "host") return;
+    if (!profile || (profile.role !== "host" && profile.pending_role !== "host")) return;
+    const isRoleSwitch = profile.pending_role === "host";
 
     // Race-safe via Convex OCC — see approveCreator above.
     const allProfiles = await ctx.db.query("profiles").collect();
@@ -169,14 +182,23 @@ export const approveHost = mutation({
     const isFounder = existingFounders < FOUNDER_CAP_PER_ROLE;
 
     const now = Date.now();
-    await ctx.db.patch(args.profileId, {
+    const patch: Record<string, any> = {
       is_verified: true,
+      host_verified: true,
       is_founder: isFounder,
       access_state: "active",
       admin_verification_note: args.adminNote,
       is_rejected: undefined,
       rejection_reason: undefined,
-    });
+    };
+    // Approving a role switch is what actually flips the role
+    if (isRoleSwitch) {
+      patch.role = "host";
+      patch.pending_role = undefined;
+      patch.role_switch_requested_at = undefined;
+      patch.role_switch_email = undefined;
+    }
+    await ctx.db.patch(args.profileId, patch);
 
     await ctx.db.insert("admin_audit_log", {
       action: "approve_host",
@@ -203,10 +225,31 @@ export const rejectProfile = mutation({
     reason: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    const existing = await ctx.db.get(args.profileId);
+    // Rejecting a role-switch request only cancels the request — the account
+    // keeps its current role and access untouched
+    if (existing?.pending_role && existing.is_verified === true) {
+      await ctx.db.patch(args.profileId, {
+        pending_role: undefined,
+        role_switch_requested_at: undefined,
+        role_switch_email: undefined,
+      });
+      await ctx.db.insert("admin_audit_log", {
+        action: "reject_role_switch",
+        target_type: "profile",
+        target_id: String(args.profileId),
+        details: args.reason || "No reason given",
+        created_at: Date.now(),
+      });
+      return;
+    }
     await ctx.db.patch(args.profileId, {
       is_rejected: true,
       rejection_reason: args.reason,
       access_state: undefined,
+      pending_role: undefined,
+      role_switch_requested_at: undefined,
+      role_switch_email: undefined,
     });
 
     await ctx.db.insert("admin_audit_log", {

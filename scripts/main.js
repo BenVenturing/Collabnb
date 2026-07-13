@@ -636,10 +636,10 @@ function _showWizardDone(userName) {
       <!-- Subtitle -->
       <p id="cw-subtitle" style="color:var(--sage);font-size:0.8125rem;line-height:1.55;margin:0 0 1.25rem;display:none;">We're building out the rest of your profile.</p>
 
-      <!-- Verification pending banner -->
-      <div id="cw-verify" style="display:none;background:rgba(255,251,230,0.9);border:1px solid rgba(212,168,67,0.3);border-radius:0.875rem;padding:0.875rem 1rem;margin-bottom:1.375rem;text-align:left;">
-        <p style="font-family:var(--font-body);font-size:0.8125rem;font-weight:700;color:#92400E;margin:0 0 0.2rem;">⏳ Verification pending</p>
-        <p style="font-family:var(--font-body);font-size:0.78rem;color:#78350F;line-height:1.55;margin:0;">The Collabnb team will review your account before you can apply or publish. You'll get an email once you're approved — usually within 1–2 business days.</p>
+      <!-- Verification pending note — calm, informational (not a warning) -->
+      <div id="cw-verify" style="display:none;background:rgba(208,213,206,0.28);border:1px solid rgba(149,157,144,0.35);border-radius:0.875rem;padding:0.875rem 1rem;margin-bottom:1.375rem;text-align:left;">
+        <p style="font-family:var(--font-body);font-size:0.8125rem;font-weight:700;color:var(--ink);margin:0 0 0.2rem;">Verification pending</p>
+        <p style="font-family:var(--font-body);font-size:0.78rem;color:var(--slate);line-height:1.55;margin:0;">The Collabnb team will review your account before you can apply or publish. You'll get an email once you're approved — usually within 1–2 business days.</p>
       </div>
 
       <!-- Continue button -->

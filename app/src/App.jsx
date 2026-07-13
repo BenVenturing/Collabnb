@@ -164,6 +164,11 @@ function AppRoutes() {
     // Public routes (the Journal/blog) and localhost dev fall through.
   }
 
+  // Host routes require the host role — a pending role switch or a creator
+  // deep-linking to /host is sent back to their own experience
+  const isLocalhostDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  const hostOnly = (el) => (isAdmin || isLocalhostDev || profile?.role === 'host') ? el : <Navigate to="/explore" replace />;
+
   return (
     <CollabProvider>
       <VerificationProvider>
@@ -171,11 +176,11 @@ function AppRoutes() {
       <ListingDraftProvider>
         <Routes>
             {/* Host wizard — full-screen, no nav chrome */}
-          <Route path="/host/listings/create"              element={<CreateListingIntro />} />
-          <Route path="/host/listings/create/basics"       element={<Step1Basics />} />
-          <Route path="/host/listings/create/offer"        element={<Step2Offer />} />
-          <Route path="/host/listings/create/deliverables" element={<Step3Deliverables />} />
-          <Route path="/host/listings/create/review"       element={<Step4Review />} />
+          <Route path="/host/listings/create"              element={hostOnly(<CreateListingIntro />)} />
+          <Route path="/host/listings/create/basics"       element={hostOnly(<Step1Basics />)} />
+          <Route path="/host/listings/create/offer"        element={hostOnly(<Step2Offer />)} />
+          <Route path="/host/listings/create/deliverables" element={hostOnly(<Step3Deliverables />)} />
+          <Route path="/host/listings/create/review"       element={hostOnly(<Step4Review />)} />
 
           {/* Admin panel — full-screen, no nav chrome */}
           <Route path="/admin" element={<AdminDashboard />} />
@@ -190,10 +195,10 @@ function AppRoutes() {
               <Routes>
                 <Route path="/"                  element={<Navigate to={isAdmin ? '/admin' : profile?.role === 'host' ? '/host' : '/explore'} replace />} />
                 {/* Host dashboard pages */}
-                <Route path="/host"              element={<HostDashboard />} />
-                <Route path="/host/listing/:id"  element={<HostListingDetail />} />
-                <Route path="/host/proposals"    element={<HostProposals />} />
-                <Route path="/host/creators"     element={<HostCreators />} />
+                <Route path="/host"              element={hostOnly(<HostDashboard />)} />
+                <Route path="/host/listing/:id"  element={hostOnly(<HostListingDetail />)} />
+                <Route path="/host/proposals"    element={hostOnly(<HostProposals />)} />
+                <Route path="/host/creators"     element={hostOnly(<HostCreators />)} />
                 {/* Creator pages */}
                 <Route path="/explore"           element={<Explore />} />
                 <Route path="/listing/:id"       element={<ListingDetail />} />

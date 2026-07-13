@@ -44,6 +44,13 @@ export const sendMessage = mutation({
     recipientId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    // Unverified accounts (pending review) can't message anyone — enforced
+    // server-side so hiding the UI isn't the only barrier
+    let sender: any = null;
+    try { sender = await ctx.db.get(args.senderId as any); } catch { sender = null; }
+    if (sender && sender.is_verified !== true && sender.is_admin !== true) {
+      throw new Error("Your account is pending verification. Messaging unlocks once you're approved.");
+    }
     const id = await ctx.db.insert("thread_messages", {
       thread_key: args.threadKey,
       sender_id: args.senderId,

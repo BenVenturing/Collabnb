@@ -389,6 +389,13 @@ export const create = mutation({
   },
   handler: async (ctx, args) => {
     validateListingFields(args, { requireCompensation: true });
+    // Publishing requires a verified host — pending hosts can only save drafts
+    if (args.status === "published" && args.host_id) {
+      const host: any = await ctx.db.get(args.host_id as any);
+      if (host && host.is_verified !== true && host.is_admin !== true) {
+        throw new Error("Your account is pending verification. You can save this listing as a draft — publishing unlocks once you're approved.");
+      }
+    }
     const floor = evaluateCompensationFloor(args);
     if (floor?.zone === "red") {
       throw new Error(`Compensation is below the minimum for this workload. The minimum for this listing is $${Math.round(floor.hardFloor)}.`);
@@ -444,6 +451,17 @@ export const update = mutation({
     validateListingFields(fields);
     const existing = await ctx.db.get(id);
     if (!existing) throw new Error("Listing not found.");
+    // Sample listings are permanently locked to draft — no UI path may publish them
+    if ((existing as any).is_sample === true && fields.status && fields.status !== "draft") {
+      throw new Error("Sample listings can't be published — they stay drafts. Create your own listing to go live.");
+    }
+    if (fields.status === "published" && !(existing as any).is_sample) {
+      const hostId = fields.host_id ?? (existing as any).host_id;
+      const host: any = hostId ? await ctx.db.get(hostId as any) : null;
+      if (host && host.is_verified !== true && host.is_admin !== true) {
+        throw new Error("Your account is pending verification. You can save this listing as a draft — publishing unlocks once you're approved.");
+      }
+    }
     const patch: any = { ...fields };
     const nextType = fields.compensation_type ?? (existing as any).compensation_type;
     const nextCash = fields.cash_amount ?? (existing as any).cash_amount;
@@ -480,20 +498,7 @@ export const deleteListing = mutation({
   },
 });
 
-export const seedSampleListings = mutation({
-  args: {
-    host_id: v.string(),
-    host_name: v.string(),
-  },
-  handler: async (ctx, args) => {
-    // Idempotency guard — skip if samples already exist for this host
-    const existing = await ctx.db
-      .query("listings")
-      .withIndex("by_host", (q) => q.eq("host_id", args.host_id))
-      .collect();
-    if (existing.some((l: any) => l.is_sample)) return { alreadySeeded: true };
-
-    const samples = [
+const SAMPLE_LISTINGS = [
       {
         title: "Glacier Prime Cabin",
         subtitle: "Rustic cabin in old-growth forest",
@@ -612,9 +617,7 @@ export const seedSampleListings = mutation({
         gallery_images: [
           "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=1200&q=85",
           "https://images.unsplash.com/photo-1528181304800-259b08848526?w=800&q=80",
-          "https://images.unsplash.com/photo-1504214208698-ea1916a2195a?w=800&q=80",
           "https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=800&q=80",
-          "https://images.unsplash.com/photo-1506665531195-3366daf6b4dfa?w=800&q=80",
         ],
         about: "Perched 900 meters above Chiang Mai in the Doi Suthep-Pui National Park buffer zone, this jungle mountain lodge is carved into a ridge overlooking layered rice terraces, teak forest, and the valley city below. On clear mornings, you can see all the way to the Burmese border — on misty ones, the property floats above a sea of white cloud.\n\nThe lodge was built using a traditional Northern Thai construction method called 'sala' architecture — open-air pavilions connected by elevated walkways through the canopy. The main living pavilion has no fourth wall, just a view that opens directly onto the jungle and the valley beyond. The infinity pool hangs at the edge of the ridge and at certain angles appears to pour directly into the cityscape below.\n\nThis is a heavy-content stay by design. The property has a dedicated yoga sala that catches the sunrise, an outdoor fire pit that draws in fireflies after dark, and an on-site guide who can arrange a private pre-dawn trek to Doi Suthep temple before the tourists arrive. The host provides daily chef-prepared meals using ingredients from the on-site garden. It's a place built for creators who want depth, not just aesthetics.",
         amenities: [
@@ -748,10 +751,7 @@ export const seedSampleListings = mutation({
         image: "https://images.unsplash.com/photo-1533104816931-20fa691ff6ca?w=800&q=80",
         gallery_images: [
           "https://images.unsplash.com/photo-1533104816931-20fa691ff6ca?w=1200&q=85",
-          "https://outgoing-anaconda-357.convex.cloud/api/storage/d6974384-e2cf-43ee-a2aa-3af4a4b30c86",
           "https://images.unsplash.com/photo-1595867818082-083862f3d630?w=800&q=80",
-          "https://images.unsplash.com/photo-1585970480901-90d6bb2a48b5?w=800&q=80",
-          "https://images.unsplash.com/photo-1532339142463-fd0a8979791a?w=800&q=80",
         ],
         about: "Perched on a hillside above the Paphos coastline on the southwest tip of Cyprus, this geodesic glass dome is designed to disappear into the landscape during the day and become a lantern at night. The structure is 7 meters in diameter with a 270-degree glass panel roof — at night, you fall asleep looking directly at the Milky Way, with the Mediterranean glittering below the hill line.\n\nThe dome sits on a private terraced plot with a stone meditation terrace facing west, a traditional ceramic fire bowl for evening fires, and an outdoor rain shower fed by a cistern of collected rainwater. The nearest neighboring structure is 400 meters away. The light on this hillside is extraordinary — harsh and sculptural at noon, warm and directional in the final hour before sunset when the limestone cliffs glow amber.\n\nPaphos itself is a UNESCO World Heritage city with 4,000-year-old mosaics, a working harbor, and a craft food scene that has developed significantly over the past decade. The property is 12 minutes from the old harbor and 8 minutes from the Akamas Peninsula National Park. For creators with a more minimal, meditative aesthetic, this is one of the most visually distinctive stays on the platform.",
         amenities: [
@@ -775,18 +775,75 @@ export const seedSampleListings = mutation({
         lat: 34.7754, lng: 32.4218,
         status: "published",
       },
-    ];
+];
 
-    for (const listing of samples) {
+export const seedSampleListings = mutation({
+  args: {
+    host_id: v.string(),
+    host_name: v.string(),
+  },
+  handler: async (ctx, args) => {
+    // Idempotency guard — skip if samples already exist for this host
+    const existing = await ctx.db
+      .query("listings")
+      .withIndex("by_host", (q) => q.eq("host_id", args.host_id))
+      .collect();
+    if (existing.some((l: any) => l.is_sample)) return { alreadySeeded: true };
+
+    for (const listing of SAMPLE_LISTINGS) {
       await ctx.db.insert("listings", {
         ...listing,
         host_id: args.host_id,
         host_name: args.host_name,
         is_sample: true,
+        status: "draft",
       });
     }
 
     return { seeded: true };
+  },
+});
+
+// One-time data sync for the canonical sample set:
+// - restores any of the 6 canonical samples missing from the DB (owned by Ben)
+// - locks every sample to status "draft"
+// - resets each sample's gallery to the cleaned canonical photo set
+// Run with: npx convex run listings:syncSampleListings
+export const syncSampleListings = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const profiles = await ctx.db.query("profiles").collect();
+    const ben = profiles.find(
+      (p: any) => (p.email || "").toLowerCase() === "benventuring@gmail.com"
+    );
+    if (!ben) throw new Error("Owner profile not found.");
+
+    const all = await ctx.db.query("listings").collect();
+    const result: Record<string, string> = {};
+
+    for (const canonical of SAMPLE_LISTINGS as any[]) {
+      const existing = all.find(
+        (l: any) => l.is_sample === true && l.title === canonical.title
+      );
+      if (existing) {
+        await ctx.db.patch(existing._id, {
+          status: "draft",
+          gallery_images: canonical.gallery_images,
+          image: canonical.image,
+        });
+        result[canonical.title] = "updated";
+      } else {
+        await ctx.db.insert("listings", {
+          ...canonical,
+          host_id: String(ben._id),
+          host_name: ben.full_name || "Ben Venturing",
+          is_sample: true,
+          status: "draft",
+        });
+        result[canonical.title] = "restored";
+      }
+    }
+    return result;
   },
 });
 

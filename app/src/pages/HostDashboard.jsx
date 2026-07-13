@@ -1,12 +1,14 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, MapPin, Users, Calendar, MessageSquare, MoreVertical, X, UserPlus, Home, CheckCircle2 } from 'lucide-react';
+import { Plus, MapPin, Users, Calendar, MessageSquare, MoreVertical, X, Trash2, ArrowLeft } from 'lucide-react';
 import { useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useListingDraft } from '../contexts/ListingDraftContext';
 import { IMG_FALLBACK } from '../lib/mockData';
 import SkeletonCard from '../components/SkeletonCard';
+import SampleWatermark from '../components/SampleWatermark';
+import { ListingCard } from './Explore';
 import PricingTool, { PointsHelpButton } from '../components/PricingTool';
 import { cache } from '../lib/cache';
 
@@ -21,16 +23,6 @@ const GC = {
   boxShadow: '0 4px 20px rgba(25,37,36,0.08), inset 0 1px 0 rgba(255,255,255,0.7)',
   borderRadius: '1.25rem',
 };
-
-// ─── Activity dismiss — localStorage ─────────────────────────────────────────
-const DISMISS_KEY = '@collabnb_dismissed_activity_v1';
-function getDismissed() {
-  try { return new Set(JSON.parse(localStorage.getItem(DISMISS_KEY) || '[]')); }
-  catch { return new Set(); }
-}
-function saveDismissed(set) {
-  try { localStorage.setItem(DISMISS_KEY, JSON.stringify([...set])); } catch {}
-}
 
 // ─── Listing status — localStorage ───────────────────────────────────────────
 const LISTINGS_STATUS_KEY = '@collabnb_host_listings_local_v1';
@@ -175,29 +167,11 @@ function BlurredReachChart({ data, color, delay = 0 }) {
   );
 }
 
-// ─── Mock data ────────────────────────────────────────────────────────────────
-const HOST_META = {
-  '1': { status: 'active',  applicants: 4, confirmed: 1, completed: 0 },
-  '2': { status: 'active',  applicants: 2, confirmed: 1, completed: 0 },
-  '3': { status: 'paused',  applicants: 6, confirmed: 2, completed: 2 },
-  '4': { status: 'draft',   applicants: 0, confirmed: 0, completed: 0 },
-  '5': { status: 'active',  applicants: 3, confirmed: 0, completed: 0 },
-  '6': { status: 'draft',   applicants: 0, confirmed: 0, completed: 0 },
-};
-
 const STATUS_CFG = {
   active: { label: 'Active',  bg: 'rgba(74,155,127,0.85)',  color: '#fff' },
   paused: { label: 'Paused',  bg: 'rgba(212,168,67,0.85)',  color: '#fff' },
   draft:  { label: 'Draft',   bg: 'rgba(149,157,144,0.7)',  color: '#fff' },
 };
-
-const ACTIVITY = [
-  { id: 'a1', Icon: UserPlus,      iconColor: '#3C5759', bg: 'rgba(60,87,89,0.12)',   text: 'Priya Nair applied to Glacier Prime Cabin', sub: '2h ago',  cta: 'Review',  route: '/host/proposals' },
-  { id: 'a2', Icon: MessageSquare, iconColor: '#7B68C8', bg: 'rgba(123,104,200,0.1)', text: 'Jordan Ellis sent you a message',            sub: '5h ago',  cta: 'Reply',   route: '/inbox' },
-  { id: 'a3', Icon: Home,          iconColor: '#4A9B7F', bg: 'rgba(74,155,127,0.12)', text: "Maya Chen's stay starts in 3 days",          sub: 'July 4',  cta: 'Details', route: '/host/proposals' },
-  { id: 'a4', Icon: UserPlus,      iconColor: '#3C5759', bg: 'rgba(60,87,89,0.12)',   text: 'Lena Park applied to Cliffside Villa',       sub: '1d ago',  cta: 'Review',  route: '/host/proposals' },
-  { id: 'a5', Icon: CheckCircle2,  iconColor: '#D4A843', bg: 'rgba(212,168,67,0.12)', text: 'Sam Kowalski completed their collab',        sub: '2d ago',  cta: 'Rate',    route: '/host/proposals' },
-];
 
 // ─── Convex listing normalizer ────────────────────────────────────────────────
 function normalizeConvexListing(l) {
@@ -219,8 +193,9 @@ function normalizeConvexListing(l) {
     deliverables = `${l.deliverable_count} deliverables`;
   }
 
-  // Normalize 'published' → 'active' so STATUS_CFG renders correctly
-  const status = l.status === 'published' ? 'active' : (l.status || 'draft');
+  // Normalize 'published' → 'active' so STATUS_CFG renders correctly.
+  // Sample listings are permanently locked to Draft (never publishable).
+  const status = l.is_sample ? 'draft' : (l.status === 'published' ? 'active' : (l.status || 'draft'));
 
   return {
     ...l,
@@ -387,22 +362,7 @@ function HostListingCard({ listing, meta, delay, glowState, onToggleStatus, onDu
             onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = IMG_FALLBACK; }}
             style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
           />
-          {listing.is_sample && (
-            <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden' }}>
-              {[18, 50, 82].map((top, i) => (
-                <div key={i} style={{
-                  position: 'absolute', top: `${top}%`, left: '50%',
-                  transform: 'translateX(-50%) rotate(-35deg)',
-                  fontFamily: 'var(--font-display)', fontWeight: 900,
-                  fontSize: '0.8rem', color: 'rgba(255,255,255,0.72)',
-                  letterSpacing: '0.3em', whiteSpace: 'nowrap', userSelect: 'none',
-                  textShadow: '0 1px 4px rgba(0,0,0,0.45)',
-                }}>
-                  SAMPLE · SAMPLE · SAMPLE
-                </div>
-              ))}
-            </div>
-          )}
+          {listing.is_sample && <SampleWatermark />}
           <span style={{
             position: 'absolute', top: '0.75rem', left: '0.75rem',
             padding: '0.25rem 0.6rem', borderRadius: 9999,
@@ -477,8 +437,11 @@ function HostListingCard({ listing, meta, delay, glowState, onToggleStatus, onDu
             overflow: 'hidden',
             animation: 'fadeUp 120ms ease forwards',
           }}>
-            {[
-              ...(listing.is_sample ? [{ label: 'Remove sample', danger: true, action: (e) => { e.stopPropagation(); onRemoveSample?.(listing); setMenuOpen(false); } }] : []),
+            {(listing.is_sample ? [
+              // Samples get one consolidated action — removes it from this
+              // host's dashboard only; other hosts and Explore keep their copy
+              { label: 'Delete sample', Icon: Trash2, danger: true, action: (e) => { e.stopPropagation(); onRemoveSample?.(listing); setMenuOpen(false); } },
+            ] : [
               { label: 'Edit', action: (e) => {
                 e.stopPropagation();
                 const draft = {
@@ -519,12 +482,13 @@ function HostListingCard({ listing, meta, delay, glowState, onToggleStatus, onDu
               } },
               { label: meta.status === 'paused' ? 'Unpause' : 'Pause', action: (e) => { e.stopPropagation(); if (meta.status !== 'draft') onToggleStatus(listing.id); setMenuOpen(false); }, muted: meta.status === 'draft' },
               { label: 'Duplicate', action: (e) => { e.stopPropagation(); onDuplicate(listing); setMenuOpen(false); } },
-            ].map(({ label, action, muted, danger }) => (
+            ]).map(({ label, action, muted, danger, Icon }) => (
               <button
                 key={label}
                 onClick={action}
                 style={{
-                  display: 'block', width: '100%', padding: '0.625rem 1rem',
+                  display: 'flex', alignItems: 'center', gap: '0.5rem',
+                  width: '100%', padding: '0.625rem 1rem',
                   textAlign: 'left', background: 'none', border: 'none',
                   cursor: muted ? 'default' : 'pointer',
                   fontSize: '0.82rem', fontWeight: 500,
@@ -534,12 +498,73 @@ function HostListingCard({ listing, meta, delay, glowState, onToggleStatus, onDu
                 onMouseEnter={(e) => { if (!muted) e.currentTarget.style.background = 'rgba(25,37,36,0.04)'; }}
                 onMouseLeave={(e) => { e.currentTarget.style.background = 'none'; }}
               >
+                {Icon && <Icon size={13} style={{ flexShrink: 0 }} />}
                 {label}
               </button>
             ))}
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+// ─── In-place marketplace browse ──────────────────────────────────────────────
+// Reuses Explore's data + card component but keeps the host inside their own
+// dashboard shell — no creator navigation, actions, or account state
+function BrowseMarketplace({ onBack }) {
+  const real    = useQuery(api.listings.getAll, {});
+  const samples = useQuery(api.listings.getSamples);
+  const loading = real === undefined && samples === undefined;
+  const listings = [
+    ...(real || []).filter((l) => l.status === 'published' || l.status === 'active'),
+    ...(samples || []),
+  ].map((l) => ({ ...normalizeConvexListing(l), _isSample: l.is_sample === true }));
+
+  return (
+    <div style={{ maxWidth: 1100, margin: '0 auto', padding: '2rem 1.5rem 5rem' }}>
+      <button
+        onClick={onBack}
+        style={{
+          display: 'inline-flex', alignItems: 'center', gap: '0.45rem',
+          padding: '0.45rem 1rem', borderRadius: 9999, marginBottom: '1.25rem',
+          background: 'rgba(255,255,255,0.72)', backdropFilter: 'blur(16px)',
+          WebkitBackdropFilter: 'blur(16px)',
+          border: '1px solid rgba(25,37,36,0.12)', cursor: 'pointer',
+          fontSize: '0.8rem', fontWeight: 600, color: 'var(--ink)',
+          fontFamily: 'var(--font-body)', transition: 'background 150ms',
+        }}
+        onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.95)'}
+        onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.72)'}
+      >
+        <ArrowLeft size={14} />
+        Back to dashboard
+      </button>
+
+      <div style={{ marginBottom: '1.5rem' }}>
+        <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 'clamp(1.5rem, 4vw, 2rem)', color: 'var(--ink)', margin: 0, lineHeight: 1.1 }}>
+          The marketplace
+        </h1>
+        <p style={{ fontSize: '0.82rem', color: 'var(--sage)', marginTop: '0.3rem' }}>
+          Browse other properties for inspiration — this is what creators see when they explore listings.
+        </p>
+      </div>
+
+      {loading ? (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '1rem', justifyItems: 'center' }}>
+          {Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)}
+        </div>
+      ) : listings.length === 0 ? (
+        <div style={{ ...GC, padding: '3rem', textAlign: 'center' }}>
+          <p style={{ fontSize: '0.85rem', color: 'var(--sage)', margin: 0 }}>No listings to browse yet.</p>
+        </div>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '1rem', justifyItems: 'center' }}>
+          {listings.map((l, i) => (
+            <ListingCard key={l.id} listing={l} browseOnly saved={false} delay={i * 45} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -622,18 +647,13 @@ export default function HostDashboard() {
   const [glowState, setGlowState] = useState('idle');
   const [expandedChart, setExpandedChart] = useState(null);
   const [pricingToolOpen, setPricingToolOpen] = useState(false);
-  const [dismissed, setDismissed] = useState(() => getDismissed());
+  const [browseMode, setBrowseMode] = useState(false);
   const [chartsAnimated, setChartsAnimated] = useState(false);
   const [listingStatuses, setListingStatuses] = useState(() => {
     const stored = getListingStatuses();
     const merged = {};
-    // Seed mock-listing statuses from HOST_META + any stored overrides
-    Object.keys(HOST_META).forEach((id) => {
-      merged[id] = { ...HOST_META[id], ...(stored[id] ? { status: stored[id].status } : {}) };
-    });
-    // Also carry forward any stored statuses for Convex listing IDs
     Object.keys(stored).forEach((id) => {
-      if (!merged[id]) merged[id] = { status: stored[id].status };
+      merged[id] = { status: stored[id].status };
     });
     return merged;
   });
@@ -653,6 +673,16 @@ export default function HostDashboard() {
     try { return JSON.parse(localStorage.getItem(HIDDEN_SAMPLE_KEY) || '[]'); }
     catch { return []; }
   });
+
+  // One-time explainer banner above the sample listings
+  const SAMPLE_BANNER_KEY = '@collabnb_sample_banner_dismissed_v1';
+  const [sampleBannerDismissed, setSampleBannerDismissed] = useState(() => {
+    try { return localStorage.getItem(SAMPLE_BANNER_KEY) === '1'; } catch { return true; }
+  });
+  function dismissSampleBanner() {
+    setSampleBannerDismissed(true);
+    try { localStorage.setItem(SAMPLE_BANNER_KEY, '1'); } catch {}
+  }
 
   function removeSampleListing(listing) {
     const id = String(listing._id || listing.id);
@@ -711,14 +741,6 @@ export default function HostDashboard() {
     navigate('/host/listings/create/basics');
   }
 
-  function dismissActivity(id) {
-    setDismissed((prev) => {
-      const next = new Set([...prev, id]);
-      saveDismissed(next);
-      return next;
-    });
-  }
-
   // Global sample listings (canonical set owned by Ben) — shown when a host has
   // no real listings yet, so the dashboard reads the same source as Explore.
   const convexSamples = useQuery(api.listings.getSamples) ?? null;
@@ -734,16 +756,19 @@ export default function HostDashboard() {
   );
 
   const hostListings = sourceListings.map((l) => {
+    // Samples are locked to Draft with no counts; real listings use live pitch
+    // data only — no placeholder numbers anywhere
+    if (l.is_sample) {
+      return { ...l, meta: { status: 'draft', applicants: 0, confirmed: 0, completed: 0 } };
+    }
     const stored   = listingStatuses[l.id];
-    const defaultStatus = hasRealListings
-      ? (l.status === 'published' ? 'active' : (l.status || 'draft'))
-      : (l.status === 'published' ? 'active' : (l.status || 'draft'));
-    const realCounts = hasRealListings ? (pitchCountsByListing[l.id] || {}) : {};
+    const defaultStatus = l.status === 'published' ? 'active' : (l.status || 'draft');
+    const realCounts = pitchCountsByListing[l.id] || {};
     const meta = {
       status:     stored?.status     ?? defaultStatus,
-      applicants:  realCounts.applicants ?? (hasRealListings ? 0 : (HOST_META[l.id]?.applicants ?? 0)),
-      confirmed:   realCounts.confirmed  ?? (hasRealListings ? 0 : (HOST_META[l.id]?.confirmed  ?? 0)),
-      completed:   realCounts.completed  ?? (hasRealListings ? 0 : (HOST_META[l.id]?.completed  ?? 0)),
+      applicants: realCounts.applicants ?? 0,
+      confirmed:  realCounts.confirmed  ?? 0,
+      completed:  realCounts.completed  ?? 0,
     };
     const autoPaused = meta.status === 'active' && l.maxOffers && meta.confirmed >= l.maxOffers;
     return { ...l, meta: autoPaused ? { ...meta, status: 'paused' } : meta };
@@ -754,10 +779,13 @@ export default function HostDashboard() {
   const applicantSum   = hostListings.reduce((a, l) => a + (l.meta?.applicants || 0), 0);
   const upcomingStays  = (convexPitches || []).filter((p) => p.status === 'approved').length;
   const firstName      = profile?.full_name?.split(' ')[0] ?? 'there';
-  const displayActivity = ACTIVITY.filter((a) => !dismissed.has(a.id));
 
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+
+  if (browseMode) {
+    return <BrowseMarketplace onBack={() => setBrowseMode(false)} />;
+  }
 
   return (
     <>
@@ -862,6 +890,35 @@ export default function HostDashboard() {
           )}
         </div>
 
+        {/* ── Sample listings explainer ── */}
+        {!hasRealListings && sourceListings.length > 0 && !sampleBannerDismissed && (
+          <div style={{ ...GC, padding: '1.25rem 1.5rem', marginBottom: '1.5rem', display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
+            <div style={{ flex: 1 }}>
+              <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.95rem', color: 'var(--ink)', margin: '0 0 0.3rem' }}>
+                A few examples to get you started
+              </p>
+              <p style={{ fontSize: '0.8rem', color: 'var(--slate)', lineHeight: 1.55, margin: 0 }}>
+                The listings below are samples — they show what a finished collab listing looks like.
+                They stay drafts, don't count toward your stats, and can be deleted anytime from each card's menu.
+              </p>
+            </div>
+            <button
+              onClick={dismissSampleBanner}
+              aria-label="Dismiss"
+              style={{
+                width: 28, height: 28, borderRadius: '50%', border: 'none', flexShrink: 0,
+                background: 'rgba(25,37,36,0.06)', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: 'var(--slate)', transition: 'background 140ms',
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(25,37,36,0.12)'}
+              onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(25,37,36,0.06)'}
+            >
+              <X size={13} />
+            </button>
+          </div>
+        )}
+
         {/* ── My Listings ── */}
         <div ref={listingsSectionRef} style={{ marginBottom: '2.5rem', scrollMarginTop: '8rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.75rem' }}>
@@ -922,7 +979,7 @@ export default function HostDashboard() {
             <p style={{ fontSize: '0.78rem', color: 'var(--sage)', margin: 0 }}>Browse other properties for inspiration and see what creators are looking for.</p>
           </div>
           <button
-            onClick={() => navigate('/explore')}
+            onClick={() => { window.scrollTo({ top: 0 }); setBrowseMode(true); }}
             style={{
               display: 'flex', alignItems: 'center', gap: '0.4rem',
               padding: '0.6rem 1.25rem', borderRadius: 9999,
@@ -951,61 +1008,9 @@ export default function HostDashboard() {
                 <SkeletonCard key={i} variant="activity" />
               ))}
             </div>
-          ) : displayActivity.length === 0 ? (
-            <div style={{ ...GC, padding: '2rem', textAlign: 'center' }}>
-              <p style={{ fontSize: '0.85rem', color: 'var(--sage)', margin: 0 }}>All caught up — no new activity.</p>
-            </div>
           ) : (
-            <div style={{ ...GC, overflow: 'hidden' }}>
-              {displayActivity.map((item, i) => (
-                <div key={item.id}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem', padding: '0.875rem 1.25rem' }}>
-                    <div style={{
-                      width: 38, height: 38, borderRadius: '0.75rem', flexShrink: 0,
-                      background: item.bg, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    }}>
-                      <item.Icon size={16} color={item.iconColor} strokeWidth={1.75} />
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ fontSize: '0.82rem', fontWeight: 500, color: 'var(--ink)', lineHeight: 1.35, marginBottom: '0.1rem' }}>
-                        {item.text}
-                      </p>
-                      <p style={{ fontSize: '0.7rem', color: 'var(--sage)' }}>{item.sub}</p>
-                    </div>
-                    <button
-                      onClick={() => navigate(item.route)}
-                      style={{
-                        padding: '0.35rem 0.875rem', borderRadius: 9999,
-                        background: 'rgba(25,37,36,0.06)', border: '1px solid rgba(25,37,36,0.1)',
-                        color: 'var(--ink)', fontSize: '0.72rem', fontWeight: 600,
-                        cursor: 'pointer', flexShrink: 0, fontFamily: 'var(--font-body)',
-                        transition: 'background 140ms',
-                      }}
-                      onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(25,37,36,0.1)'}
-                      onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(25,37,36,0.06)'}
-                    >
-                      {item.cta}
-                    </button>
-                    <button
-                      onClick={() => dismissActivity(item.id)}
-                      aria-label="Dismiss"
-                      style={{
-                        width: 26, height: 26, borderRadius: '50%', border: 'none',
-                        background: 'transparent', cursor: 'pointer', flexShrink: 0,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        color: 'var(--sage)', transition: 'background 140ms, color 140ms',
-                      }}
-                      onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(25,37,36,0.07)'; e.currentTarget.style.color = 'var(--ink)'; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--sage)'; }}
-                    >
-                      <X size={13} />
-                    </button>
-                  </div>
-                  {i < displayActivity.length - 1 && (
-                    <div style={{ height: 1, background: 'rgba(25,37,36,0.07)', margin: '0 1.25rem' }} />
-                  )}
-                </div>
-              ))}
+            <div style={{ ...GC, padding: '2rem', textAlign: 'center' }}>
+              <p style={{ fontSize: '0.85rem', color: 'var(--sage)', margin: 0 }}>No activity. All caught up.</p>
             </div>
           )}
         </div>

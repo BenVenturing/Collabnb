@@ -13,7 +13,7 @@ import { formatDateRange } from '../lib/dateUtils';
 import { cache } from '../lib/cache';
 import {
   Sprout, BadgeCheck, Radio, Zap,
-  Home, DollarSign, Gift,
+  Home, DollarSign, Gift, Star, Quote,
   Image, Film, Smartphone, PlayCircle, Camera, FileText, Package,
 } from 'lucide-react';
 import { AmenityIcon } from '../lib/amenityIcons';
@@ -68,6 +68,13 @@ function TierIcon({ tier, size = 18 }) {
   if (tier === 'Micro Influencer') return <Radio      {...props} color="#7b68c8" />;
   if (tier === 'Influencer')       return <Zap        {...props} color="#b45309" />;
   return <Sprout {...props} color="var(--sage)" />;
+}
+
+// Prefer the host-chosen currency code over a hardcoded $ so non-USD listings
+// aren't mislabeled; USD keeps the familiar $ symbol.
+function formatCash(amount, currency) {
+  const n = typeof amount === 'number' ? amount.toLocaleString() : (amount ?? '?');
+  return currency && currency !== 'USD' ? `${currency} ${n}` : `$${n}`;
 }
 
 function CompIcon({ type, size = 18 }) {
@@ -136,6 +143,71 @@ function LockIcon({ size = 13 }) {
       <rect x="3" y="8" width="10" height="6" rx="1"/>
       <path d="M5 8V5.5a3 3 0 0 1 6 0V8"/>
     </svg>
+  );
+}
+
+// ─── Reviews Carousel ─────────────────────────────────────────────────────────
+const PLACEHOLDER_REVIEWS = [
+  { rating: 5, comment: 'The stay exceeded expectations and the content came together effortlessly.', reviewer_name: 'Creator' },
+  { rating: 5, comment: 'Clear communication from the host and a genuinely beautiful property to shoot.', reviewer_name: 'Creator' },
+  { rating: 4, comment: 'Great collaboration overall — would happily work with this host again.', reviewer_name: 'Creator' },
+];
+
+function ReviewCard({ rating, comment, reviewer_name, blurred }) {
+  return (
+    <div style={{
+      flexShrink: 0, width: 280, scrollSnapAlign: 'start',
+      background: 'rgba(255,255,255,0.6)', backdropFilter: 'blur(16px)',
+      border: '1px solid rgba(255,255,255,0.65)', borderRadius: '1.25rem',
+      padding: '1.25rem', boxShadow: '0 4px 16px rgba(25,37,36,0.05)',
+      filter: blurred ? 'blur(5px)' : 'none',
+      userSelect: blurred ? 'none' : 'auto',
+    }}>
+      <Quote size={18} strokeWidth={1.75} color="var(--sage)" style={{ marginBottom: '0.5rem' }} />
+      <p style={{ fontSize: '0.85rem', color: 'var(--slate)', lineHeight: 1.6, marginBottom: '1rem', minHeight: '3.4em' }}>
+        {comment}
+      </p>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--ink)' }}>{reviewer_name || 'Creator'}</span>
+        <div style={{ display: 'flex', gap: '2px' }}>
+          {Array.from({ length: 5 }).map((_, i) => (
+            <Star key={i} size={12} strokeWidth={0} fill={i < rating ? '#d9a441' : 'rgba(25,37,36,0.15)'} />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ReviewsCarousel({ reviews }) {
+  const hasReviews = reviews && reviews.length > 0;
+  const shown = hasReviews ? reviews : PLACEHOLDER_REVIEWS;
+  return (
+    <div style={{ position: 'relative' }}>
+      <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.2rem', color: 'var(--ink)', marginBottom: '1.25rem' }}>
+        What creators are saying
+      </h2>
+      <div style={{ display: 'flex', gap: '1rem', overflowX: 'auto', scrollSnapType: 'x proximity', paddingBottom: '0.5rem' }}>
+        {shown.map((r, i) => (
+          <ReviewCard key={i} {...r} blurred={!hasReviews} />
+        ))}
+      </div>
+      {!hasReviews && (
+        <div style={{
+          position: 'absolute', inset: '2.25rem 0 0.5rem', zIndex: 2,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: 'rgba(239,236,233,0.35)', borderRadius: '1.25rem', pointerEvents: 'none',
+        }}>
+          <span style={{
+            fontFamily: 'var(--font-body)', fontSize: '0.8rem', fontWeight: 600, color: 'var(--ink)',
+            background: 'rgba(255,255,255,0.85)', padding: '0.5rem 1rem', borderRadius: '999px',
+            border: '1px solid rgba(25,37,36,0.1)',
+          }}>
+            No reviews yet for this stay
+          </span>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -927,6 +999,12 @@ export default function ListingDetail({ previewListing = null, preview = false }
   );
   const hostProfile = convexHostProfile ?? sampleHostProfile;
 
+  // Reviews left by creators on past collaborations for this listing.
+  const listingReviews = useQuery(
+    api.reviews.getForListing,
+    (listing?.id && !isSampleListing && !isPreview) ? { listingId: listing.id } : 'skip'
+  );
+
   const isDesktop = useIsDesktop();
   const isMd      = useIsMd();
 
@@ -1495,7 +1573,7 @@ export default function ListingDetail({ previewListing = null, preview = false }
           {isDesktop && (
             <div style={{ width: 360, flexShrink: 0, alignSelf: 'stretch' }}>
               <div style={{
-                position: 'sticky', top: '7.5rem',
+                position: 'sticky', top: 'calc(8rem + var(--banner-h, 0rem))',
                 background: 'rgba(255,255,255,0.72)',
                 backdropFilter: 'blur(24px) saturate(140%)',
                 WebkitBackdropFilter: 'blur(24px) saturate(140%)',
@@ -1504,10 +1582,12 @@ export default function ListingDetail({ previewListing = null, preview = false }
                 boxShadow: '0 20px 40px -15px rgba(25,37,36,0.12), inset 0 1px 0 rgba(255,255,255,0.6)',
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
-                  <CompIcon type={listing.compensation_type} size={22} />
+                  {listing.compensation_type !== 'paid' && listing.compensation_type !== 'hybrid' && (
+                    <CompIcon type={listing.compensation_type} size={22} />
+                  )}
                   <p style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.5rem', color: 'var(--ink)', margin: 0 }}>
-                    {listing.compensation_type === 'paid' ? `$${listing.cash_amount}`
-                   : listing.compensation_type === 'hybrid' ? `$${listing.cash_amount} + Stay`
+                    {listing.compensation_type === 'paid' ? formatCash(listing.cash_amount, listing.currency)
+                   : listing.compensation_type === 'hybrid' ? `${formatCash(listing.cash_amount, listing.currency)} + Stay`
                    : listing.compensation || '—'}
                   </p>
                 </div>
@@ -1562,6 +1642,11 @@ export default function ListingDetail({ previewListing = null, preview = false }
             </div>
           )}
         </div>
+
+        {/* ── Reviews carousel — sits below both columns, doesn't affect sidebar sticky height ── */}
+        <div style={{ marginTop: '2rem', marginBottom: isDesktop ? '3rem' : '6rem' }}>
+          <ReviewsCarousel reviews={listingReviews} />
+        </div>
       </div>
 
       {/* ── Mobile bottom bar ─────────────────────────────────────────────────── */}
@@ -1577,7 +1662,7 @@ export default function ListingDetail({ previewListing = null, preview = false }
         }}>
           <div>
             <p style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.2rem', color: 'var(--ink)', lineHeight: 1.1 }}>
-              {listing.compensation_type === 'paid' ? `$${listing.cash_amount}` : `$${listing.cash_amount} + Stay`}
+              {listing.compensation_type === 'paid' ? formatCash(listing.cash_amount, listing.currency) : `${formatCash(listing.cash_amount, listing.currency)} + Stay`}
             </p>
             <p style={{ fontSize: '0.75rem', color: 'var(--sage)' }}>{listing.deliverable_count} deliverables</p>
           </div>

@@ -67,6 +67,35 @@ export const submit = mutation({
   },
 });
 
+export const getForListing = query({
+  args: { listingId: v.string() },
+  handler: async (ctx, { listingId }) => {
+    const collabs = await ctx.db
+      .query("collaborations")
+      .filter((q) => q.eq(q.field("listing_id"), listingId))
+      .collect();
+    if (collabs.length === 0) return [];
+
+    const reviews = [];
+    for (const c of collabs) {
+      const rows = await ctx.db
+        .query("reviews")
+        .withIndex("by_collab", (q) => q.eq("collab_id", String(c._id)))
+        .collect();
+      for (const r of rows) {
+        if (r.reviewer_role !== "creator" || !r.comment) continue;
+        reviews.push({
+          rating: r.rating,
+          comment: r.comment,
+          reviewer_name: r.reviewer_name,
+          created_at: r.created_at,
+        });
+      }
+    }
+    return reviews.sort((a, b) => b.created_at - a.created_at);
+  },
+});
+
 export const getForCollab = query({
   args: { collabId: v.string() },
   handler: async (ctx, { collabId }) => {

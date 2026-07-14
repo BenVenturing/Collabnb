@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useSearchParams, useLocation, useNavigate } from 'react-router-dom';
 import { useCollabs } from '../contexts/CollabContext';
-import { SAMPLE_LISTINGS, THREAD_MESSAGES } from '../lib/mockData';
+import { THREAD_MESSAGES } from '../lib/mockData';
 import CollabDetail from '../components/CollabDetail';
 import ProfilePopupCard from '../components/ProfilePopupCard';
 import { useAuth } from '../contexts/AuthContext';
@@ -497,110 +497,34 @@ function EmptyState() {
   );
 }
 
-// ─── New Message Modal ─────────────────────────────────────────────────────────
-function NewMessageModal({ listings, onSelect, onClose }) {
-  const [query, setQuery] = useState('');
-  const inputRef = useRef(null);
-  const modalRef = useRef(null);
-
-  useEffect(() => {
-    inputRef.current?.focus();
-    const handler = (e) => {
-      if (modalRef.current && !modalRef.current.contains(e.target)) onClose();
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [onClose]);
-
-  const filtered = query.trim()
-    ? listings.filter((l) =>
-        l.title.toLowerCase().includes(query.toLowerCase()) ||
-        l.location.toLowerCase().includes(query.toLowerCase())
-      )
-    : listings;
-
+// ─── Listing row (new-conversation search results) ────────────────────────────
+function ListingRow({ listing, onClick }) {
   return (
-    <div
-      style={{
-        position: 'fixed', inset: 0, zIndex: 9999,
-        background: 'rgba(25,37,36,0.25)',
-        backdropFilter: 'blur(4px)',
-        display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
-        paddingTop: '12vh',
-      }}
+    <button
+      onClick={onClick}
+      className="w-full flex items-center gap-3 px-5 py-3 hover:bg-bone/60 transition-colors text-left border-b border-stone/10 last:border-0"
     >
-      <div
-        ref={modalRef}
-        className="bg-white rounded-2xl shadow-xl border border-stone/20 overflow-hidden"
-        style={{ width: 'min(90vw, 420px)', maxHeight: '70vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(25,37,36,0.18)' }}
-      >
-        {/* Header */}
-        <div className="px-5 pt-4 pb-3 border-b border-stone/20">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="font-display font-bold text-ink text-base">New Message</h2>
-            <button
-              onClick={onClose}
-              className="w-7 h-7 rounded-full bg-bone hover:bg-stone/50 flex items-center justify-center transition-colors"
-            >
-              <svg viewBox="0 0 16 16" fill="none" stroke="#3C5759" strokeWidth="2" strokeLinecap="round" width="12" height="12">
-                <line x1="2" y1="2" x2="14" y2="14"/><line x1="14" y1="2" x2="2" y2="14"/>
-              </svg>
-            </button>
+      {/* Thumbnail */}
+      <div className="w-10 h-10 rounded-lg bg-mint overflow-hidden flex-shrink-0">
+        {listing.image ? (
+          <img src={listing.image} alt={listing.title} className="w-full h-full object-cover" loading="lazy" />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #D1EBDB, #959D90)' }}>
+            <span className="font-display font-bold text-slate text-xs">{listing.title[0]}</span>
           </div>
-          <div className="bg-bone rounded-xl px-3 py-2 flex items-center gap-2 border border-stone/30">
-            <svg viewBox="0 0 256 256" fill="none" stroke="#959D90" strokeWidth="16" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 flex-shrink-0">
-              <circle cx="112" cy="112" r="80"/><line x1="168.57" y1="168.57" x2="224" y2="224"/>
-            </svg>
-            <input
-              ref={inputRef}
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search listings..."
-              className="flex-1 bg-transparent text-sm text-ink placeholder-sage outline-none"
-            />
-          </div>
-        </div>
-
-        {/* Listing list */}
-        <div className="flex-1 overflow-y-auto">
-          {filtered.length === 0 ? (
-            <div className="py-12 text-center">
-              <p className="text-sage text-sm">No listings found</p>
-            </div>
-          ) : (
-            filtered.map((listing) => (
-              <button
-                key={listing.id}
-                onClick={() => onSelect(listing)}
-                className="w-full flex items-center gap-3 px-5 py-3 hover:bg-bone/60 transition-colors text-left border-b border-stone/10 last:border-0"
-              >
-                {/* Thumbnail */}
-                <div
-                  className="w-10 h-10 rounded-lg bg-mint overflow-hidden flex-shrink-0"
-                >
-                  {listing.image ? (
-                    <img src={listing.image} alt={listing.title} className="w-full h-full object-cover" loading="lazy" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #D1EBDB, #959D90)' }}>
-                      <span className="font-display font-bold text-slate text-xs">{listing.title[0]}</span>
-                    </div>
-                  )}
-                </div>
-                {/* Info */}
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-ink truncate">{listing.title}</p>
-                  <p className="text-xs text-sage truncate">{listing.location}</p>
-                </div>
-                <svg viewBox="0 0 256 256" fill="none" stroke="#959D90" strokeWidth="12" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 flex-shrink-0">
-                  <polyline points="96 48 176 128 96 208"/>
-                </svg>
-              </button>
-            ))
-          )}
-        </div>
+        )}
       </div>
-    </div>
+      {/* Info */}
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-semibold text-ink truncate">{listing.title}</p>
+        <p className="text-xs text-sage truncate">
+          {listing.host_name ? `${listing.host_name} · ${listing.location}` : listing.location}
+        </p>
+      </div>
+      <svg viewBox="0 0 256 256" fill="none" stroke="#959D90" strokeWidth="12" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 flex-shrink-0">
+        <polyline points="96 48 176 128 96 208"/>
+      </svg>
+    </button>
   );
 }
 
@@ -610,7 +534,8 @@ function ShimmerRow() {
 }
 
 export default function Inbox() {
-  const { threads, collabs, archiveThread, deleteThread, updateThreadTag, createThread } = useCollabs();
+  const { threads, collabs, archiveThread, deleteThread, updateThreadTag, createThread, savedIds } = useCollabs();
+  const { profile } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
   const [activeFilter, setActiveFilter] = useState('All');
@@ -619,9 +544,13 @@ export default function Inbox() {
   const [searchQuery, setSearchQuery] = useState('');
   const [viewingCollab, setViewingCollab] = useState(null);
   const [toastMsg, setToastMsg] = useState('');
-  const [newMessageOpen, setNewMessageOpen] = useState(false);
   const searchInputRef = useRef(null);
   const creatorParamHandled = useRef(false);
+
+  // Real listings power the "start a new conversation" search (mirrors Explore)
+  const realRaw   = useQuery(api.listings.getAll, profile?._id ? { viewerId: String(profile._id) } : {}) ?? [];
+  const sampleRaw = useQuery(api.listings.getSamples) ?? [];
+  const allListings = [...realRaw, ...sampleRaw];
 
   // Deep-link from notifications: /inbox?thread=<thread_key> selects that thread
   useEffect(() => {
@@ -682,12 +611,13 @@ export default function Inbox() {
     }
   }, [collabs, showToast]);
 
-  // Handle selecting a listing to start a new message
-  const handleNewMessage = useCallback((listing) => {
-    const newId = createThread(listing.title, 'Ben Venturing');
-    setSelectedId(newId);
-    setNewMessageOpen(false);
-  }, [createThread]);
+  // Start (or open) a conversation from a listing chosen in search
+  const handleStartFromListing = useCallback((listing) => {
+    const existing = threads.find((t) => !t.archived && t.listing_title === listing.title);
+    setSelectedId(existing ? existing.id : createThread(listing.title, listing.host_name || 'Host', 'Collab'));
+    setIsSearching(false);
+    setSearchQuery('');
+  }, [threads, createThread]);
 
   // Non-archived threads
   const activeThreads = threads.filter((t) => !t.archived);
@@ -697,23 +627,37 @@ export default function Inbox() {
     ? activeThreads
     : activeThreads.filter((t) => t.tag === activeFilter.slice(0, -1) || t.tag === activeFilter);
 
-  // Apply search filter
-  const filtered = searchQuery.trim()
-    ? tagFiltered.filter((t) => {
-        const q = searchQuery.toLowerCase();
-        return (
-          t.listing_title.toLowerCase().includes(q) ||
-          t.host_name.toLowerCase().includes(q) ||
-          t.last_message.toLowerCase().includes(q)
-        );
-      })
+  const q = searchQuery.trim().toLowerCase();
+
+  // Conversations matching the search query (within the active tag)
+  const matchedThreads = q
+    ? tagFiltered.filter((t) =>
+        t.listing_title.toLowerCase().includes(q) ||
+        t.host_name.toLowerCase().includes(q) ||
+        t.last_message.toLowerCase().includes(q)
+      )
     : tagFiltered;
+
+  // New-conversation candidates: real listings without an existing thread
+  const existingTitles = new Set(threads.map((t) => t.listing_title));
+  const newChatBase = allListings.filter((l) => !existingTitles.has(l.title));
+  const savedListings = newChatBase.filter((l) => savedIds.has(l.id));
+  const matchedListings = q
+    ? newChatBase.filter((l) =>
+        (l.title || '').toLowerCase().includes(q) ||
+        (l.location || '').toLowerCase().includes(q) ||
+        (l.host_name || '').toLowerCase().includes(q)
+      )
+    : [];
 
   const selectedThread = activeThreads.find((t) => t.id === selectedId) || null;
 
-  // Deduplicated listings for New Message
-  const existingTitles = new Set(threads.map((t) => t.listing_title));
-  const listingsForNewMessage = SAMPLE_LISTINGS.filter((l) => !existingTitles.has(l.title));
+  // Auto-open the most recent conversation so the panel is never blank
+  useEffect(() => {
+    if (selectedId) return;
+    if (searchParams.get('thread') || searchParams.get('creatorName')) return;
+    if (activeThreads.length > 0) setSelectedId(activeThreads[0].id);
+  }, [activeThreads, selectedId, searchParams]);
 
   return (
     <div className="flex overflow-hidden" style={{ height: 'calc(100dvh - 7rem)' }}>
@@ -741,7 +685,7 @@ export default function Inbox() {
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search messages…"
+                  placeholder="Search messages or start a new chat…"
                   className="flex-1 mx-2 text-sm text-ink bg-transparent border-none outline-none placeholder-sage"
                 />
               </>
@@ -758,7 +702,7 @@ export default function Inbox() {
                     </svg>
                   </button>
                   <button
-                    onClick={() => setNewMessageOpen(true)}
+                    onClick={() => setIsSearching(true)}
                     className="w-8 h-8 rounded-full bg-bone hover:bg-stone/60 flex items-center justify-center transition-colors"
                     title="New message"
                   >
@@ -791,36 +735,68 @@ export default function Inbox() {
 
         {/* Thread list */}
         <div className="flex-1 overflow-y-auto">
-          {filtered.length === 0 && !searchQuery ? (
-            // Empty state: shimmer placeholders to show where conversations will appear
-            <div>
-              {[0, 1, 2].map((i) => <ShimmerRow key={i} />)}
-              <div className="px-4 py-5 text-center">
-                <p className="text-sage text-xs leading-relaxed">
-                  Your conversations will appear here once you apply to a listing and start chatting with a host.
-                </p>
+          {!isSearching ? (
+            tagFiltered.length === 0 ? (
+              // Empty state: shimmer placeholders to show where conversations will appear
+              <div>
+                {[0, 1, 2].map((i) => <ShimmerRow key={i} />)}
+                <div className="px-4 py-5 text-center">
+                  <p className="text-sage text-xs leading-relaxed">
+                    Your conversations will appear here once you apply to a listing and start chatting with a host.
+                  </p>
+                </div>
               </div>
-            </div>
-          ) : filtered.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-sage text-sm">No matching messages</p>
-            </div>
+            ) : (
+              tagFiltered.map((t) => (
+                <ThreadRow
+                  key={t.id}
+                  thread={t}
+                  isActive={t.id === selectedId}
+                  onClick={() => setSelectedId(t.id)}
+                  onDelete={deleteThread ? () => {
+                    deleteThread(t.id);
+                    if (selectedId === t.id) setSelectedId(null);
+                  } : undefined}
+                />
+              ))
+            )
           ) : (
-            filtered.map((t) => (
-              <ThreadRow
-                key={t.id}
-                thread={t}
-                isActive={t.id === selectedId}
-                onClick={() => {
-                  setSelectedId(t.id);
-                  if (t.id !== selectedId) setIsSearching(false);
-                }}
-                onDelete={deleteThread ? () => {
-                  deleteThread(t.id);
-                  if (selectedId === t.id) setSelectedId(null);
-                } : undefined}
-              />
-            ))
+            <>
+              {/* Existing conversations matching the search */}
+              {matchedThreads.length > 0 && (
+                <>
+                  <p className="px-5 pt-4 pb-2 text-[11px] font-bold uppercase tracking-wide text-sage">Conversations</p>
+                  {matchedThreads.map((t) => (
+                    <ThreadRow
+                      key={t.id}
+                      thread={t}
+                      isActive={t.id === selectedId}
+                      onClick={() => { setSelectedId(t.id); setIsSearching(false); setSearchQuery(''); }}
+                      onDelete={deleteThread ? () => {
+                        deleteThread(t.id);
+                        if (selectedId === t.id) setSelectedId(null);
+                      } : undefined}
+                    />
+                  ))}
+                </>
+              )}
+
+              {/* Start a new conversation — Saved listings when empty, matches while typing */}
+              <p className="px-5 pt-4 pb-2 text-[11px] font-bold uppercase tracking-wide text-sage">
+                {q ? 'New conversation' : 'Start a new conversation'}
+              </p>
+              {(q ? matchedListings : savedListings).length > 0 ? (
+                (q ? matchedListings : savedListings).map((l) => (
+                  <ListingRow key={l.id} listing={l} onClick={() => handleStartFromListing(l)} />
+                ))
+              ) : (
+                <p className="px-5 py-4 text-sage text-xs leading-relaxed">
+                  {q
+                    ? 'No listings match. Try a host name, place, or listing title.'
+                    : 'Save a listing to message its host instantly, or search above to find one.'}
+                </p>
+              )}
+            </>
           )}
         </div>
       </div>
@@ -850,15 +826,6 @@ export default function Inbox() {
       {/* ── Toast notification ── */}
       {toastMsg && (
         <div className="toast">{toastMsg}</div>
-      )}
-
-      {/* ── New Message Modal ── */}
-      {newMessageOpen && (
-        <NewMessageModal
-          listings={listingsForNewMessage}
-          onSelect={handleNewMessage}
-          onClose={() => setNewMessageOpen(false)}
-        />
       )}
     </div>
   );

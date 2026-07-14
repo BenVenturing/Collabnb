@@ -4,6 +4,9 @@
 
 export const FROM = "Collabnb <hello@collabnb.com>";
 export const BASE_URL = "https://www.collabnb.com";
+// Logo hosted in Convex file storage (permanent CDN URL, independent of the
+// frontend deploy) so it always loads in email clients.
+export const LOGO_URL = "https://outgoing-anaconda-357.convex.cloud/api/storage/b6d28787-59e6-45ec-8093-80a04d34bcd8";
 // Trustpilot Automatic Feedback Service: BCC'ing this address on an email makes
 // Trustpilot send its own review invitation to the "to" recipient.
 export const TRUSTPILOT_BCC = "collabnb.com+46e7d484c3@invite.trustpilot.com";
@@ -38,7 +41,7 @@ export const TEMPLATE_DEFAULTS: Record<string, TemplateDef> = {
     trigger: "Creator signs up on the marketing site",
     category: "Account",
     vars: ["firstName"],
-    calloutColor: "#2dd4bf",
+    calloutColor: "#4A9B7F",
     copy: {
       subject: "You're on the Collabnb creator waitlist 🎬",
       heading: "Hey {{firstName}} 👋",
@@ -53,7 +56,7 @@ export const TEMPLATE_DEFAULTS: Record<string, TemplateDef> = {
     trigger: "Host signs up on the marketing site",
     category: "Account",
     vars: ["firstName"],
-    calloutColor: "#2dd4bf",
+    calloutColor: "#4A9B7F",
     copy: {
       subject: "You're on the Collabnb host waitlist 🏡",
       heading: "Hey {{firstName}} 👋",
@@ -68,7 +71,7 @@ export const TEMPLATE_DEFAULTS: Record<string, TemplateDef> = {
     trigger: "Admin approves a creator (any approve path)",
     category: "Account",
     vars: ["firstName"],
-    calloutColor: "#2dd4bf",
+    calloutColor: "#4A9B7F",
     callout2Color: "#f59e0b",
     buttonHref: `${BASE_URL}/login.html`,
     copy: {
@@ -88,7 +91,7 @@ export const TEMPLATE_DEFAULTS: Record<string, TemplateDef> = {
     trigger: "Admin approves a host (any approve path)",
     category: "Account",
     vars: ["firstName"],
-    calloutColor: "#2dd4bf",
+    calloutColor: "#4A9B7F",
     callout2Color: "#f59e0b",
     buttonHref: `${BASE_URL}/login.html`,
     copy: {
@@ -139,7 +142,7 @@ export const TEMPLATE_DEFAULTS: Record<string, TemplateDef> = {
     trigger: "Host accepts a creator's application",
     category: "Collabs & Messaging",
     vars: ["firstName", "hostName", "listingTitle"],
-    calloutColor: "#2dd4bf",
+    calloutColor: "#4A9B7F",
     buttonHref: `${BASE_URL}/inbox`,
     copy: {
       subject: "{{hostName}} accepted your application 🎉",
@@ -171,7 +174,7 @@ export const TEMPLATE_DEFAULTS: Record<string, TemplateDef> = {
     trigger: "User receives an inbox message",
     category: "Collabs & Messaging",
     vars: ["firstName", "senderName", "preview"],
-    calloutColor: "#2dd4bf",
+    calloutColor: "#4A9B7F",
     buttonHref: `${BASE_URL}/inbox`,
     copy: {
       subject: "{{senderName}} sent you a message",
@@ -187,7 +190,7 @@ export const TEMPLATE_DEFAULTS: Record<string, TemplateDef> = {
     trigger: "Collaboration marked complete and platform fee settled",
     category: "Contracts & Payments",
     vars: ["name", "propertyLabel"],
-    calloutColor: "#2dd4bf",
+    calloutColor: "#4A9B7F",
     copy: {
       subject: "Your Collabnb collaboration is complete",
       heading: "All wrapped up, {name} 🎉",
@@ -201,7 +204,7 @@ export const TEMPLATE_DEFAULTS: Record<string, TemplateDef> = {
     trigger: "Platform fee charged on collab completion",
     category: "Contracts & Payments",
     vars: ["name", "propertyLabel", "amount", "feeMethod"],
-    calloutColor: "#2dd4bf",
+    calloutColor: "#4A9B7F",
     copy: {
       subject: "Receipt: Collabnb platform fee charged",
       heading: "Collaboration complete, {name} 💸",
@@ -305,23 +308,34 @@ export function layout(body: string) {
   return `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background:#F7F5F2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#F7F5F2;padding:48px 16px;">
+<body style="margin:0;padding:0;background:#F7F5F2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#F7F5F2;padding:44px 16px;">
     <tr><td align="center">
-      <table width="560" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:20px;overflow:hidden;border:1px solid #E8E4DF;box-shadow:0 4px 24px rgba(25,37,36,0.07);">
-        <!-- Header -->
+      <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background:#ffffff;border-radius:24px;overflow:hidden;border:1px solid #EAE7E1;box-shadow:0 8px 40px rgba(25,37,36,0.08);">
+        <!-- Mint header with plain logo -->
         <tr>
-          <td style="background:linear-gradient(135deg,#192524,#2d4a3e);padding:36px 40px;text-align:center;">
-            <div style="font-size:26px;font-weight:800;color:#ffffff;letter-spacing:-0.5px;">Collabnb</div>
-            <div style="font-size:11px;color:#7ecfc4;margin-top:5px;letter-spacing:2px;text-transform:uppercase;">Creator-First Hospitality Marketing</div>
+          <td bgcolor="#D1EBDB" style="background:linear-gradient(135deg,#D1EBDB 0%,#EAF6F0 48%,#C6E6D5 100%);padding:32px 40px 28px;text-align:center;border-bottom:1px solid rgba(255,255,255,0.6);">
+            <img src="${LOGO_URL}" alt="Collabnb" width="52" height="52" style="display:block;width:52px;height:52px;margin:0 auto;border:0;outline:none;" />
+            <div style="font-size:21px;font-weight:800;color:#192524;letter-spacing:-0.4px;margin-top:12px;">Collabnb</div>
+            <div style="font-size:10.5px;color:#5B7A6E;margin-top:4px;letter-spacing:2.2px;text-transform:uppercase;font-weight:600;">Creator-First Hospitality</div>
           </td>
         </tr>
+        <!-- Mint accent line -->
+        <tr><td bgcolor="#4A9B7F" style="height:3px;background:linear-gradient(90deg,rgba(74,155,127,0) 0%,#4A9B7F 30%,#D1EBDB 50%,#4A9B7F 70%,rgba(74,155,127,0) 100%);font-size:0;line-height:0;">&nbsp;</td></tr>
         <!-- Body -->
-        <tr><td style="padding:40px 40px 32px;">${body}</td></tr>
+        <tr><td style="padding:38px 40px 8px;">${body}</td></tr>
+        <!-- Warm sign-off -->
+        <tr>
+          <td style="padding:8px 40px 34px;">
+            <p style="margin:0;font-size:15px;color:#3C5759;line-height:1.65;">With gratitude,</p>
+            <p style="margin:2px 0 0;font-size:15px;font-weight:700;color:#192524;">The Collabnb Team <span style="color:#4A9B7F;">💚</span></p>
+          </td>
+        </tr>
         <!-- Footer -->
         <tr>
-          <td style="padding:20px 40px;background:#F7F5F2;border-top:1px solid #E8E4DF;text-align:center;">
-            <p style="margin:0;font-size:12px;color:#959D90;">© 2026 Collabnb · <a href="${BASE_URL}" style="color:#2dd4bf;text-decoration:none;">collabnb.com</a></p>
+          <td bgcolor="#F4F7F4" style="padding:22px 40px;background:#F4F7F4;border-top:1px solid #E7EDE7;text-align:center;">
+            <p style="margin:0 0 4px;font-size:12px;color:#7B8C82;">Creators &amp; boutique stays, matched with care.</p>
+            <p style="margin:0;font-size:12px;color:#959D90;">© 2026 Collabnb · <a href="${BASE_URL}" style="color:#4A9B7F;text-decoration:none;font-weight:600;">collabnb.com</a></p>
           </td>
         </tr>
       </table>
@@ -331,15 +345,26 @@ export function layout(body: string) {
 </html>`;
 }
 
+// The email's focal point: the key line / summary paragraph in a liquid-glass chip.
+export function heroChip(text: string) {
+  return `<table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px;"><tr>
+    <td bgcolor="#E9F5EF" style="background:linear-gradient(135deg,#DCF0E5 0%,#F3FAF6 100%);border:1px solid rgba(255,255,255,0.9);border-radius:18px;padding:22px 24px;box-shadow:0 6px 20px rgba(25,37,36,0.06);">
+      <p style="margin:0;font-size:16px;font-weight:500;color:#192524;line-height:1.6;">${text}</p>
+    </td>
+  </tr></table>`;
+}
+
 export function callout(color: string, label: string, text: string) {
-  return `<div style="background:${color}12;border:1px solid ${color}30;border-radius:12px;padding:18px 22px;margin-bottom:24px;">
-    <div style="font-size:11px;color:${color};font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">${label}</div>
-    <p style="margin:0;font-size:14px;color:#3C5759;line-height:1.65;">${text}</p>
-  </div>`;
+  return `<table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;"><tr>
+    <td style="background:${color}14;border:1px solid ${color}33;border-left:3px solid ${color};border-radius:14px;padding:16px 20px;">
+      <div style="font-size:11px;color:${color};font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">${label}</div>
+      <p style="margin:0;font-size:14px;color:#3C5759;line-height:1.65;">${text}</p>
+    </td>
+  </tr></table>`;
 }
 
 export function button(href: string, label: string) {
-  return `<a href="${href}" style="display:inline-block;margin-top:8px;padding:14px 32px;background:linear-gradient(135deg,#192524,#2d4a3e);color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;border-radius:12px;letter-spacing:-0.1px;">${label}</a>`;
+  return `<a href="${href}" style="display:inline-block;margin-top:4px;padding:14px 34px;background:linear-gradient(135deg,#192524,#2d4a3e);color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;border-radius:999px;letter-spacing:-0.1px;box-shadow:0 6px 18px rgba(74,155,127,0.28);">${label}</a>`;
 }
 
 // Assemble a full email (subject + html) from merged copy + variables.
@@ -351,11 +376,12 @@ export function renderTemplate(
 ) {
   const f = (s?: string) => fill(s, vars);
   const parts: string[] = [
-    `<p style="margin:0 0 8px;font-size:22px;font-weight:700;color:#192524;">${f(t.heading)}</p>`,
-    `<p style="margin:0 0 24px;font-size:15px;color:#3C5759;line-height:1.65;">${f(t.body)}</p>`,
+    `<p style="margin:0 0 18px;font-size:22px;font-weight:700;color:#192524;">${f(t.heading)}</p>`,
+    // The body doubles as the focal summary — shown in the liquid-glass chip.
+    heroChip(f(t.body)),
   ];
   if (t.calloutText && f(t.calloutText).trim()) {
-    parts.push(callout(t.calloutColor || "#2dd4bf", f(t.calloutLabel), f(t.calloutText)));
+    parts.push(callout(t.calloutColor || "#4A9B7F", f(t.calloutLabel), f(t.calloutText)));
   }
   if (t.callout2Text && f(t.callout2Text).trim()) {
     parts.push(callout(t.callout2Color || "#f59e0b", f(t.callout2Label), f(t.callout2Text)));

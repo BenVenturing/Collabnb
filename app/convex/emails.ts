@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import { internalAction } from "./_generated/server";
 import { internal } from "./_generated/api";
-import { BASE_URL, TRUSTPILOT_BCC, renderTemplate, sendViaResend, layout, callout, button } from "./emailCopy";
+import { BASE_URL, TRUSTPILOT_BCC, renderTemplate, sendViaResend, layout, callout, button, heroChip } from "./emailCopy";
 
 // All copy below is editable in Admin → Emails → Templates (overrides stored in
 // the email_templates table); defaults live in emailCopy.ts.
@@ -132,9 +132,9 @@ export const sendContractEmail = internalAction({
     const firstName = (recipientName || "there").split(" ")[0];
 
     const body = `
-      <p style="margin:0 0 8px;font-size:22px;font-weight:700;color:#192524;">${heading.replace("{name}", firstName)}</p>
-      <p style="margin:0 0 24px;font-size:15px;color:#3C5759;line-height:1.65;">${message}</p>
-      ${calloutLabel ? callout("#2dd4bf", calloutLabel, calloutText || "") : ""}
+      <p style="margin:0 0 18px;font-size:22px;font-weight:700;color:#192524;">${heading.replace("{name}", firstName)}</p>
+      ${heroChip(message)}
+      ${calloutLabel ? callout("#4A9B7F", calloutLabel, calloutText || "") : ""}
       ${button(`${BASE_URL}/contract`, "View contract")}`;
 
     await sendViaResend(apiKey, to, subject, layout(body));

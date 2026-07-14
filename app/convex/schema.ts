@@ -383,7 +383,21 @@ export default defineSchema({
     status: v.string(),                  // 'new' | 'queued' | 'contacted' | 'replied' | 'signed' | 'declined'
     dm_draft: v.optional(v.string()),
     notes: v.optional(v.string()),
-    score: v.optional(v.number()),       // 0-100 fit score
+    score: v.optional(v.number()),       // 0-100 composite fit score
+    score_reach: v.optional(v.number()),   // 0-100, log-scale follower reach
+    score_views: v.optional(v.number()),   // 0-100, avg video views vs followers
+    score_quality: v.optional(v.number()), // 0-100, hybrid metrics + LLM judgment
+    avg_video_views: v.optional(v.number()),
+    recent_posts: v.optional(v.array(v.object({
+      caption: v.string(),               // trimmed to ~300 chars
+      type: v.string(),                  // 'video' | 'image' | 'carousel'
+      views: v.optional(v.number()),
+      likes: v.optional(v.number()),
+      comments: v.optional(v.number()),
+      url: v.optional(v.string()),
+      taken_at: v.optional(v.number()),
+    }))),                                // top 5 by engagement
+    enriched_at: v.optional(v.number()),
     queued_for: v.optional(v.string()),  // 'YYYY-MM-DD' daily outreach date
     contacted_at: v.optional(v.number()),
     replied_at: v.optional(v.number()),

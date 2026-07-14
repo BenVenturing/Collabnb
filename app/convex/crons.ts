@@ -11,6 +11,16 @@ crons.monthly(
   {}
 );
 
+// Daily at 7am UTC — auto-discover creators for the admin-configured
+// location/niche (runs before the 8am queue build so fresh finds can enter
+// today's queue). No-op unless the Auto-discovery toggle is on in Discovery.
+crons.daily(
+  "daily creator discovery",
+  { hourUTC: 7, minuteUTC: 0 },
+  internal.prospects.runDailyDiscovery,
+  {}
+);
+
 // Daily at 8am UTC — auto-fill the outreach queue (20 creators + 20 hosts)
 // so it's ready before the day starts; the button in Discovery still works.
 crons.daily(

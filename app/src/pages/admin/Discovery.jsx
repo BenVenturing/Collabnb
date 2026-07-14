@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useAction } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
+import { NICHE_KEYWORDS } from '../../lib/matchScore';
+
+const NICHES = Object.keys(NICHE_KEYWORDS);
 
 const STATUS_FLOW = ['new', 'queued', 'contacted', 'replied', 'signed'];
 const STATUS_CFG = {
@@ -36,18 +39,65 @@ function StatusBadge({ status }) {
   );
 }
 
+function scoreChipColors(score) {
+  if (score >= 70) return { bg: 'rgba(209,235,219,0.8)', color: '#166534' };
+  if (score >= 45) return { bg: 'rgba(25,37,36,0.07)', color: '#3C5759' };
+  return { bg: 'rgba(180,83,9,0.1)', color: '#b45309' };
+}
+
+function ScoreChip({ score }) {
+  if (score === undefined || score === null) return null;
+  const c = scoreChipColors(score);
+  return (
+    <span title="Composite fit score (views 35% · quality 35% · reach 30%)" style={{ fontSize: '0.7rem', fontWeight: 800, padding: '0.15rem 0.5rem', borderRadius: 8, background: c.bg, color: c.color, fontVariantNumeric: 'tabular-nums' }}>
+      {score}
+    </span>
+  );
+}
+
+function ScoreBar({ name, value }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }} title={`${name}: ${value}/100`}>
+      <span style={{ fontSize: '0.6rem', color: '#959D90', width: 44, flexShrink: 0 }}>{name}</span>
+      <div style={{ flex: 1, height: 5, borderRadius: 99, background: 'rgba(25,37,36,0.07)', overflow: 'hidden' }}>
+        <div style={{ width: `${Math.min(100, value ?? 0)}%`, height: '100%', borderRadius: 99, background: value >= 70 ? '#4A9B7F' : value >= 45 ? '#8FBCA8' : '#C9CFC6' }} />
+      </div>
+      <span style={{ fontSize: '0.6rem', color: '#3C5759', width: 24, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{value ?? 0}</span>
+    </div>
+  );
+}
+
+function ScoreBars({ p }) {
+  if (p.enriched_at === undefined && p.score_reach === undefined) return null;
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+      <ScoreBar name="reach" value={p.score_reach} />
+      <ScoreBar name="views" value={p.score_views} />
+      <ScoreBar name="quality" value={p.score_quality} />
+    </div>
+  );
+}
+
+function bestPost(p) {
+  return (p.recent_posts || [])
+    .slice()
+    .sort((a, b) => ((b.views ?? b.likes ?? 0) - (a.views ?? a.likes ?? 0)))[0];
+}
+
 // ─── Single prospect card ─────────────────────────────────────────────────────
 function ProspectCard({ prospect }) {
   const updateStatus = useMutation(api.prospects.updateStatus);
   const update = useMutation(api.prospects.update);
   const remove = useMutation(api.prospects.remove);
   const generateDm = useAction(api.prospects.generateDmDraft);
+  const enrich = useAction(api.prospects.enrichProspect);
   const [open, setOpen] = useState(false);
   const [dmDraft, setDmDraft] = useState(prospect.dm_draft || '');
   const [notes, setNotes] = useState(prospect.notes || '');
   const [copied, setCopied] = useState(false);
   const [genBusy, setGenBusy] = useState(false);
   const [genErr, setGenErr] = useState('');
+  const [enrichBusy, setEnrichBusy] = useState(false);
 
   async function genDm() {
     setGenBusy(true); setGenErr('');
@@ -58,6 +108,24 @@ function ProspectCard({ prospect }) {
     } finally {
       setGenBusy(false);
     }
+  }
+
+  async function analyze() {
+    setEnrichBusy(true); setGenErr('');
+    try {
+      await enrich({ id: prospect._id });
+    } catch (e) {
+      setGenErr(e.message?.replace(/^.*Error:\s*/, '') || 'Analysis failed');
+    } finally {
+      setEnrichBusy(false);
+    }
+  }
+
+  async function dmOnInstagram() {
+    if (dmDraft) {
+      try { await navigator.clipboard.writeText(dmDraft); } catch { /* clipboard unavailable */ }
+    }
+    window.open(`https://ig.me/m/${prospect.instagram_handle}`, '_blank', 'noopener');
   }
 
   const nextStatus = STATUS_FLOW[STATUS_FLOW.indexOf(prospect.status) + 1];
@@ -86,6 +154,7 @@ function ProspectCard({ prospect }) {
             </a>
             <StatusBadge status={prospect.status} />
             {prospect.tier && <span style={{ fontSize: '0.62rem', padding: '0.15rem 0.45rem', borderRadius: 9999, background: 'rgba(209,235,219,0.6)', color: '#166534', fontWeight: 600, textTransform: 'capitalize' }}>{prospect.tier}</span>}
+            <ScoreChip score={prospect.score} />
           </div>
           <div style={{ fontSize: '0.7rem', color: '#959D90', marginTop: '0.1rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {[prospect.display_name, fmtFollowers(prospect.follower_count) && `${fmtFollowers(prospect.follower_count)} followers`, prospect.location].filter(Boolean).join(' · ')}
@@ -120,6 +189,39 @@ function ProspectCard({ prospect }) {
       {open && (
         <div style={{ marginTop: '0.7rem', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
           {prospect.bio && <p style={{ fontSize: '0.74rem', color: '#3C5759', margin: 0, lineHeight: 1.5 }}>{prospect.bio}</p>}
+
+          {/* Profile analysis: score breakdown when enriched, Analyze button otherwise */}
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.3rem' }}>
+              <span style={{ ...label, display: 'inline', marginBottom: 0 }}>Profile analysis</span>
+              <button onClick={analyze} disabled={enrichBusy}
+                style={{ padding: '0.2rem 0.6rem', borderRadius: 9999, border: '1px solid rgba(25,37,36,0.15)', background: 'transparent', color: '#3C5759', fontSize: '0.66rem', fontWeight: 600, cursor: 'pointer', opacity: enrichBusy ? 0.5 : 1 }}>
+                {enrichBusy ? 'Analyzing…' : prospect.enriched_at ? 'Re-analyze' : 'Analyze profile'}
+              </button>
+              {prospect.enriched_at && (
+                <span style={{ fontSize: '0.64rem', color: '#959D90' }}>
+                  {new Date(prospect.enriched_at).toLocaleDateString()}
+                  {prospect.avg_video_views ? ` · ~${fmtFollowers(prospect.avg_video_views)} avg views` : ''}
+                </span>
+              )}
+            </div>
+            {prospect.enriched_at
+              ? <ScoreBars p={prospect} />
+              : <p style={{ fontSize: '0.7rem', color: '#959D90', margin: 0 }}>Not analyzed yet — pulls their recent posts to score reach, views, and quality (uses Apify credits).</p>}
+            {(() => {
+              const post = bestPost(prospect);
+              if (!post) return null;
+              return (
+                <p style={{ fontSize: '0.7rem', color: '#3C5759', margin: '0.4rem 0 0', lineHeight: 1.45, background: 'rgba(25,37,36,0.04)', padding: '0.4rem 0.55rem', borderRadius: 8 }}>
+                  <strong style={{ color: '#192524' }}>Top recent {post.type}</strong>
+                  {post.views ? ` · ${fmtFollowers(post.views)} views` : post.likes ? ` · ${fmtFollowers(post.likes)} likes` : ''}
+                  {post.caption ? ` — “${post.caption.slice(0, 140)}${post.caption.length > 140 ? '…' : ''}”` : ''}
+                  {post.url && <> <a href={post.url} target="_blank" rel="noopener noreferrer" style={{ color: '#2d7d5e' }}>view</a></>}
+                </p>
+              );
+            })()}
+          </div>
+
           <div>
             <span style={label}>DM draft</span>
             <textarea value={dmDraft} onChange={e => setDmDraft(e.target.value)}
@@ -134,6 +236,11 @@ function ProspectCard({ prospect }) {
               <button onClick={copyDm} disabled={!dmDraft}
                 style={{ padding: '0.3rem 0.8rem', borderRadius: 9999, border: '1px solid rgba(25,37,36,0.15)', background: copied ? 'rgba(209,235,219,0.6)' : 'transparent', color: copied ? '#166534' : '#3C5759', fontSize: '0.7rem', fontWeight: 600, cursor: 'pointer' }}>
                 {copied ? 'Copied' : 'Copy DM'}
+              </button>
+              <button onClick={dmOnInstagram}
+                title="Copies the draft, then opens their Instagram DM thread"
+                style={{ padding: '0.3rem 0.8rem', borderRadius: 9999, border: '1px solid rgba(123,104,200,0.35)', background: 'rgba(123,104,200,0.08)', color: '#5b4aa8', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer' }}>
+                DM on Instagram ↗
               </button>
               {genErr && <span style={{ fontSize: '0.68rem', color: '#9b2d2d', alignSelf: 'center' }}>{genErr}</span>}
             </div>
@@ -289,13 +396,136 @@ function ApifyImport() {
   );
 }
 
+// ─── Find creators (niche search + ranked top 10) ─────────────────────────────
+function FindCreators() {
+  const search = useAction(api.prospects.searchCreators);
+  const [niche, setNiche] = useState('travel');
+  const [loc, setLoc] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const [results, setResults] = useState(null); // { imported, fetched, ranked }
+
+  async function run() {
+    setBusy(true); setErr(''); setResults(null);
+    try {
+      setResults(await search({ niche, location: loc.trim() || undefined }));
+    } catch (e) {
+      setErr(e.message?.replace(/^.*Error:\s*/, '') || 'Search failed');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div>
+      <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', alignItems: 'center' }}>
+        <select aria-label="Niche" value={niche} onChange={e => setNiche(e.target.value)} style={{ ...input, width: 160, textTransform: 'capitalize' }}>
+          {NICHES.map(n => <option key={n} value={n}>{n}</option>)}
+        </select>
+        <input aria-label="Location" value={loc} onChange={e => setLoc(e.target.value)} onKeyDown={e => e.key === 'Enter' && run()}
+          placeholder="Location (optional), e.g. Asheville" style={{ ...input, flex: 1, minWidth: 180 }} />
+        <button onClick={run} disabled={busy}
+          style={{ padding: '0.5rem 1.1rem', borderRadius: 9999, border: 'none', background: '#192524', color: '#fff', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', opacity: busy ? 0.5 : 1 }}>
+          {busy ? 'Searching…' : 'Find creators'}
+        </button>
+        {busy && <span style={{ fontSize: '0.7rem', color: '#959D90' }}>Scraping + scoring the top 10 — this can take a minute.</span>}
+        {err && <span style={{ fontSize: '0.72rem', color: '#9b2d2d', width: '100%' }}>{err}</span>}
+      </div>
+
+      {results && (
+        <div style={{ marginTop: '0.9rem' }}>
+          <p style={{ fontSize: '0.72rem', color: '#959D90', margin: '0 0 0.5rem' }}>
+            Found {results.fetched}, imported {results.imported} new. Top {results.ranked.length} by fit score — all are saved as prospects below.
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+            {results.ranked.map((p, i) => {
+              const post = bestPost(p);
+              return (
+                <div key={String(p._id)} style={{ display: 'flex', gap: '0.7rem', alignItems: 'center', padding: '0.55rem 0.65rem', borderRadius: '0.75rem', background: 'rgba(255,255,255,0.72)', border: '1px solid rgba(25,37,36,0.07)' }}>
+                  <span style={{ fontSize: '0.7rem', color: '#959D90', width: 16, textAlign: 'right', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>{i + 1}</span>
+                  {p.avatar_url
+                    ? <img src={p.avatar_url} alt="" style={{ width: 30, height: 30, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+                    : <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'rgba(149,157,144,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 700, color: '#3C5759', flexShrink: 0 }}>{p.instagram_handle[0]?.toUpperCase()}</div>}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                      <a href={`https://instagram.com/${p.instagram_handle}`} target="_blank" rel="noopener noreferrer"
+                        style={{ fontSize: '0.8rem', fontWeight: 700, color: '#192524', textDecoration: 'none' }}>
+                        @{p.instagram_handle}
+                      </a>
+                      <span style={{ fontSize: '0.68rem', color: '#959D90' }}>{fmtFollowers(p.follower_count)} followers{p.avg_video_views ? ` · ~${fmtFollowers(p.avg_video_views)} avg views` : ''}</span>
+                    </div>
+                    {post?.caption && (
+                      <div style={{ fontSize: '0.66rem', color: '#959D90', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        “{post.caption.slice(0, 90)}”
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ width: 150, flexShrink: 0 }}><ScoreBars p={p} /></div>
+                  <ScoreChip score={p.score} />
+                </div>
+              );
+            })}
+            {results.ranked.length === 0 && <p style={{ fontSize: '0.74rem', color: '#959D90', margin: 0 }}>No creators found for that search.</p>}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Auto-discovery config (daily cron) ───────────────────────────────────────
+function AutoDiscoveryCard() {
+  const settings = useQuery(api.admin.getSettings);
+  const setSetting = useMutation(api.admin.setSetting);
+  const saved = (() => {
+    try { return JSON.parse(settings?.discovery_auto || 'null') || {}; } catch { return {}; }
+  })();
+  const [draft, setDraft] = useState(null); // null = mirror saved
+  const cfg = draft ?? { enabled: !!saved.enabled, niche: saved.niche || 'travel', location: saved.location || '', perDay: saved.perDay || 10 };
+  const [savedMsg, setSavedMsg] = useState('');
+
+  async function save(next) {
+    const merged = { ...cfg, ...next };
+    setDraft(merged);
+    await setSetting({ key: 'discovery_auto', value: JSON.stringify(merged) });
+    setSavedMsg('Saved');
+    setTimeout(() => setSavedMsg(''), 2000);
+  }
+
+  return (
+    <div>
+      <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', alignItems: 'center' }}>
+        <button onClick={() => save({ enabled: !cfg.enabled })}
+          role="switch" aria-checked={cfg.enabled}
+          style={{ padding: '0.45rem 1rem', borderRadius: 9999, border: 'none', background: cfg.enabled ? '#166534' : 'rgba(25,37,36,0.12)', color: cfg.enabled ? '#fff' : '#3C5759', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer' }}>
+          {cfg.enabled ? 'On' : 'Off'}
+        </button>
+        <select aria-label="Auto-discovery niche" value={cfg.niche} onChange={e => save({ niche: e.target.value })} style={{ ...input, width: 150, textTransform: 'capitalize' }}>
+          {NICHES.map(n => <option key={n} value={n}>{n}</option>)}
+        </select>
+        <input aria-label="Auto-discovery location" value={cfg.location} onChange={e => setDraft({ ...cfg, location: e.target.value })} onBlur={() => save({})}
+          placeholder="Target location" style={{ ...input, width: 160 }} />
+        <input aria-label="Creators per day" type="number" min="1" max="20" value={cfg.perDay}
+          onChange={e => setDraft({ ...cfg, perDay: Math.max(1, Math.min(20, parseInt(e.target.value, 10) || 10)) })} onBlur={() => save({})}
+          style={{ ...input, width: 70 }} />
+        <span style={{ fontSize: '0.7rem', color: '#959D90' }}>
+          per day{savedMsg && <span style={{ color: '#166534', fontWeight: 700 }}> · {savedMsg}</span>}
+        </span>
+      </div>
+      <p style={{ fontSize: '0.7rem', color: '#959D90', margin: '0.5rem 0 0' }}>
+        Every morning at 7am UTC this searches Instagram for {cfg.niche} creators{cfg.location ? ` around ${cfg.location}` : ''}, imports new ones, and scores the top {cfg.perDay} — ready before the 8am outreach queue builds. Uses Apify credits daily while on.
+      </p>
+    </div>
+  );
+}
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
 export default function Discovery() {
   const stats = useQuery(api.prospects.getStats);
   const buildQueue = useMutation(api.prospects.buildTodayQueue);
-  const [showAdd, setShowAdd] = useState(false);
-  const [showImport, setShowImport] = useState(false);
+  const [openPanel, setOpenPanel] = useState('find'); // 'find' | 'add' | 'import' | 'auto' | null
   const [queueMsg, setQueueMsg] = useState('');
+  const togglePanel = (p) => setOpenPanel(cur => (cur === p ? null : p));
 
   const contactedCreators = stats?.contactedToday?.creators ?? 0;
   const contactedHosts = stats?.contactedToday?.hosts ?? 0;
@@ -320,14 +550,17 @@ export default function Discovery() {
             style={{ padding: '0.5rem 1.1rem', borderRadius: 9999, border: 'none', background: '#192524', color: '#fff', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}>
             Build today's queue
           </button>
-          <button onClick={() => { setShowAdd(a => !a); setShowImport(false); }}
-            style={{ padding: '0.5rem 1.1rem', borderRadius: 9999, border: '1.5px solid rgba(25,37,36,0.2)', background: showAdd ? 'rgba(25,37,36,0.06)' : 'transparent', color: '#192524', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}>
-            Add manually
-          </button>
-          <button onClick={() => { setShowImport(i => !i); setShowAdd(false); }}
-            style={{ padding: '0.5rem 1.1rem', borderRadius: 9999, border: '1.5px solid rgba(25,37,36,0.2)', background: showImport ? 'rgba(25,37,36,0.06)' : 'transparent', color: '#192524', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}>
-            Import
-          </button>
+          {[
+            { id: 'find',   label: 'Find creators' },
+            { id: 'auto',   label: 'Auto-discovery' },
+            { id: 'add',    label: 'Add manually' },
+            { id: 'import', label: 'Import' },
+          ].map(({ id, label: l }) => (
+            <button key={id} onClick={() => togglePanel(id)}
+              style={{ padding: '0.5rem 1.1rem', borderRadius: 9999, border: '1.5px solid rgba(25,37,36,0.2)', background: openPanel === id ? 'rgba(25,37,36,0.06)' : 'transparent', color: '#192524', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}>
+              {l}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -337,10 +570,12 @@ export default function Discovery() {
         </div>
       )}
 
-      {(showAdd || showImport) && (
+      {openPanel && (
         <div style={{ marginBottom: '1.25rem', padding: '1rem', borderRadius: '1rem', background: 'rgba(255,255,255,0.6)', border: '1px solid rgba(25,37,36,0.08)' }}>
-          {showAdd && <AddProspectForm onDone={() => setShowAdd(false)} />}
-          {showImport && <ApifyImport />}
+          {openPanel === 'find' && <FindCreators />}
+          {openPanel === 'auto' && <AutoDiscoveryCard />}
+          {openPanel === 'add' && <AddProspectForm onDone={() => setOpenPanel(null)} />}
+          {openPanel === 'import' && <ApifyImport />}
         </div>
       )}
 

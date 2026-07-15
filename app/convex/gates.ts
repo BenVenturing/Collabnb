@@ -428,3 +428,17 @@ export const remindExpiringTrials = internalMutation({
     return { reminded: ending.length };
   },
 });
+
+// ─── Internal test utility: backdate a profile's trial to simulate expiry ──────
+export const forceTrialExpiry = internalMutation({
+  args: { profileId: v.id("profiles") },
+  handler: async (ctx, { profileId }) => {
+    const day = 24 * 60 * 60 * 1000;
+    await ctx.db.patch(profileId, {
+      access_state: "limited",
+      trial_starts_at: Date.now() - (TRIAL_DURATION_DAYS + 1) * day,
+      trial_ends_at: Date.now() - day,
+    });
+    return await ctx.db.get(profileId);
+  },
+});

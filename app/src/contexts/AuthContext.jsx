@@ -122,6 +122,12 @@ function ClerkAuthInner({ children }) {
         }
         const isAdminUser = ADMIN_EMAIL ? email.toLowerCase() === ADMIN_EMAIL.toLowerCase() : false;
         const waitlistRole = (() => {
+          // The Clerk account carries the chosen role in unsafeMetadata — this is
+          // authoritative because it travels with the identity across the
+          // marketing→app origin boundary and any email mismatch. Fall back to
+          // the origin-scoped localStorage bridge only when metadata is absent.
+          const metaRole = clerkUser.unsafeMetadata?.role;
+          if (metaRole) return metaRole;
           try { return localStorage.getItem('collabnb_waitlist_role') || undefined; } catch { return undefined; }
         })();
         let result = await convex.query(api.profiles.getByEmail, { email });

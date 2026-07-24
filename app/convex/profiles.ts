@@ -32,6 +32,12 @@ export const getOrCreate = mutation({
         adminPatch.is_founder = true;
         adminPatch.beta = true;
       }
+      // Apply the signup-selected role when claiming a not-yet-registered
+      // waitlist row. Established (already clerk_registered) accounts are never
+      // touched here — deliberate role changes go through requestRoleSwitch.
+      if (!existing.clerk_registered && !args.is_admin && args.role && args.role !== existing.role) {
+        adminPatch.role = args.role;
+      }
       if (!existing.clerk_registered || args.is_admin) {
         await ctx.db.patch(existing._id, adminPatch);
       }
@@ -346,10 +352,16 @@ export const linkOrCreateFromClerk = internalMutation({
       .unique();
 
     if (existing) {
-      await ctx.db.patch(existing._id, {
+      const patch: Record<string, any> = {
         full_name: args.fullName,
         clerk_registered: true,
-      });
+      };
+      // Apply the signup-selected role only when claiming a not-yet-registered
+      // waitlist row (mirrors getOrCreate). Established accounts are untouched.
+      if (!existing.clerk_registered && args.role && args.role !== existing.role) {
+        patch.role = args.role;
+      }
+      await ctx.db.patch(existing._id, patch);
       return { linked: true, profileId: existing._id };
     }
 

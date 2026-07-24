@@ -386,7 +386,17 @@ async function openModal() {
     _wizardEmail = localStorage.getItem('collabnb_waitlist_email') || '';
     _wizardName  = localStorage.getItem('collabnb_waitlist_name')  || '';
     _wizardProfileId = localStorage.getItem('collabnb_waitlist_profile_id') || null;
-    currentRole  = localStorage.getItem('collabnb_waitlist_role')  || currentRole;
+    const storedRole = localStorage.getItem('collabnb_waitlist_role') || currentRole;
+    // Honor an explicit page-toggle selection over the stored role — otherwise
+    // a returning user who toggles "I'm a Host" is silently kept on their old
+    // role. An active toggle that differs is treated as an intentional switch.
+    const activePageBtn = document.querySelector('#page-role-creator.active, #page-role-host.active');
+    const pageRole = activePageBtn ? (activePageBtn.id.includes('creator') ? 'creator' : 'host') : null;
+    if (pageRole && pageRole !== storedRole) {
+      switchRole(pageRole);
+    } else {
+      currentRole = storedRole;
+    }
     if (roleSection) roleSection.style.display = 'none';
     showWizardStep(2);
     return;
@@ -506,6 +516,9 @@ function showWizardStep(step) {
             firstName: wizFirstName,
             lastName: wizLastName,
           },
+          // Persist the chosen role on the Clerk account so it survives OAuth
+          // redirects, email mismatches, and the marketing→app origin boundary.
+          unsafeMetadata: { role: currentRole },
           forceRedirectUrl: returnUrl,
           afterSignUpUrl: returnUrl,
           signInForceRedirectUrl: appUrl,
@@ -514,10 +527,12 @@ function showWizardStep(step) {
           appearance: {
             variables: {
               colorPrimary: '#192524',
-              colorBackground: '#ffffff',
+              // Transparent so the Clerk form shares the modal-card surface
+              // instead of painting a brighter white block over it.
+              colorBackground: 'transparent',
               colorText: '#192524',
               colorTextSecondary: '#3C5759',
-              colorInputBackground: '#f9f9f7',
+              colorInputBackground: 'rgba(25,37,36,0.03)',
               colorInputText: '#192524',
               colorNeutral: '#3C5759',
               colorDanger: '#dc2626',
@@ -526,9 +541,11 @@ function showWizardStep(step) {
               fontSize: '0.9375rem',
             },
             elements: {
-              rootBox: 'width:100%!important;',
+              rootBox: 'width:100%!important;background:transparent!important;',
               card: 'box-shadow:none!important;border:none!important;padding:0!important;background:transparent!important;width:100%!important;',
               cardBox: 'box-shadow:none!important;border:none!important;border-radius:0!important;background:transparent!important;width:100%!important;',
+              main: 'background:transparent!important;',
+              form: 'background:transparent!important;',
               header: 'display:none!important;',
               logoBox: 'display:none!important;',
               footer: 'background:transparent!important;background-color:transparent!important;',
@@ -848,6 +865,13 @@ function updatePageAfterWaitlistJoin(role) {
 
 function switchRole(role) {
   currentRole = role;
+  // Persist every explicit selection so the choice survives a returning-user
+  // flow and reaches the app. If a waitlist profile already exists, update its
+  // role server-side too so the toggle is authoritative, not just cosmetic.
+  try { localStorage.setItem('collabnb_waitlist_role', role); } catch {}
+  if (_wizardProfileId) {
+    updateWaitlistProfile(_wizardProfileId, { role }).catch(() => {});
+  }
   document.querySelectorAll('.role-btn').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.role === role);
   });

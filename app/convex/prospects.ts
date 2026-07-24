@@ -40,19 +40,31 @@ export const NICHE_SEARCH_TERMS: Record<string, string[]> = {
   'design': ['design', 'interior', 'architecture'],
 };
 
-function apifyToken(): string {
-  const token = process.env.APIFY_API_TOKEN;
-  if (!token) {
-    throw new Error(
-      "APIFY_API_TOKEN is not set. Get one at apify.com, then run: npx convex env set APIFY_API_TOKEN apify_api_..."
-    );
+// ─── Scraping providers: HikerAPI (primary) or Apify (fallback) ───────────────
+// HikerAPI: npx convex env set HIKERAPI_KEY <access key from hikerapi.com>
+// Apify:    npx convex env set APIFY_API_TOKEN apify_api_...
+
+const NO_KEY_MSG =
+  "No Instagram API key set. Set HIKERAPI_KEY (preferred — hikerapi.com) or APIFY_API_TOKEN (apify.com): npx convex env set HIKERAPI_KEY ...";
+
+async function hikerGet(path: string, params: Record<string, any>): Promise<any> {
+  const key = process.env.HIKERAPI_KEY!;
+  const qs = new URLSearchParams(
+    Object.entries(params).filter(([, val]) => val !== undefined).map(([k, val]) => [k, String(val)])
+  );
+  const res = await fetch(`https://api.hikerapi.com${path}?${qs}`, {
+    headers: { "x-access-key": key, accept: "application/json" },
+  });
+  if (!res.ok) {
+    const detail = await res.text().catch(() => String(res.status));
+    throw new Error(`HikerAPI request failed (${res.status}): ${detail.slice(0, 200)}`);
   }
-  return token;
+  return await res.json();
 }
 
 // Run an Apify actor synchronously and return its dataset items.
 async function apifyRun(actorId: string, input: Record<string, any>): Promise<any[]> {
-  const token = apifyToken();
+  const token = process.env.APIFY_API_TOKEN!;
   const res = await fetch(
     `https://api.apify.com/v2/acts/${actorId}/run-sync-get-dataset-items?token=${token}`,
     {
@@ -66,6 +78,159 @@ async function apifyRun(actorId: string, input: Record<string, any>): Promise<an
     throw new Error(`Apify request failed (${res.status}): ${detail.slice(0, 200)}`);
   }
   return await res.json();
+}
+
+const emailFromBio = (bio?: string) =>
+  typeof bio === "string" ? (bio.match(/[\w.+-]+@[\w-]+\.[\w.]+/) || [])[0] : undefined;
+
+// Normalized account shape used by import/search/enrich regardless of provider.
+type IgAccount = {
+  username: string;
+  fullName?: string;
+  avatarUrl?: string;
+  followers?: number;
+  bio?: string;
+  website?: string;
+  email?: string;
+};
+
+type IgPost = {
+  caption: string;
+  type: string; // 'video' | 'image' | 'carousel'
+  views?: number;
+  likes?: number;
+  comments?: number;
+  url?: string;
+  taken_at?: number;
+};
+
+// HikerAPI search responses vary in wrapping — dig the user list out defensively.
+function extractHikerUsers(data: any): any[] {
+  if (Array.isArray(data)) return data.map((u) => u?.user ?? u);
+  for (const k of ["users", "accounts", "items"]) {
+    if (Array.isArray(data?.[k])) return data[k].map((u: any) => u?.user ?? u);
+    if (Array.isArray(data?.response?.[k])) return data.response[k].map((u: any) => u?.user ?? u);
+  }
+  return [];
+}
+
+// Search Instagram accounts by keyword. Returns normalized rows.
+async function searchInstagramUsers(query: string, limit: number): Promise<IgAccount[]> {
+  if (process.env.HIKERAPI_KEY) {
+    const data = await hikerGet("/v2/search/accounts", { query });
+    return extractHikerUsers(data)
+      .filter((u) => u?.username && !u.is_private)
+      .slice(0, limit)
+      .map((u) => ({
+        username: String(u.username),
+        fullName: u.full_name ? String(u.full_name) : undefined,
+        avatarUrl: u.profile_pic_url ? String(u.profile_pic_url) : undefined,
+        followers: typeof u.follower_count === "number" ? u.follower_count : undefined,
+        bio: u.biography ? String(u.biography).slice(0, 500) : undefined,
+        website: u.external_url ? String(u.external_url) : undefined,
+        email: u.public_email || emailFromBio(u.biography),
+      }));
+  }
+  if (process.env.APIFY_API_TOKEN) {
+    const items = await apifyRun("apify~instagram-search-scraper", {
+      search: query,
+      searchType: "user",
+      resultsLimit: limit,
+    });
+    return items
+      .filter((it) => it?.username)
+      .map((it) => ({
+        username: String(it.username),
+        fullName: it.fullName ? String(it.fullName) : undefined,
+        avatarUrl: it.profilePicUrl ? String(it.profilePicUrl) : undefined,
+        followers: typeof it.followersCount === "number" ? it.followersCount : undefined,
+        bio: it.biography ? String(it.biography).slice(0, 500) : undefined,
+        website: it.externalUrl ? String(it.externalUrl) : undefined,
+        email: emailFromBio(it.biography),
+      }));
+  }
+  throw new Error(NO_KEY_MSG);
+}
+
+function normalizeHikerPost(m: any): IgPost {
+  const isVideo = m.media_type === 2 || /clips|igtv/i.test(String(m.product_type || ""));
+  const takenAt =
+    typeof m.taken_at_ts === "number" ? m.taken_at_ts * 1000
+      : typeof m.taken_at === "number" ? (m.taken_at > 1e12 ? m.taken_at : m.taken_at * 1000)
+      : m.taken_at ? Date.parse(m.taken_at) || undefined
+      : undefined;
+  return {
+    caption: String(m.caption_text || "").slice(0, 300),
+    type: isVideo ? "video" : m.media_type === 8 ? "carousel" : "image",
+    views: typeof m.play_count === "number" ? m.play_count
+      : typeof m.view_count === "number" ? m.view_count : undefined,
+    likes: typeof m.like_count === "number" ? m.like_count : undefined,
+    comments: typeof m.comment_count === "number" ? m.comment_count : undefined,
+    url: m.code ? `https://www.instagram.com/p/${m.code}/` : undefined,
+    taken_at: takenAt,
+  };
+}
+
+// Fetch full profiles + recent posts for a batch of usernames (normalized).
+async function fetchProfilesWithPosts(
+  usernames: string[]
+): Promise<(IgAccount & { posts: IgPost[] })[]> {
+  if (process.env.HIKERAPI_KEY) {
+    const out: (IgAccount & { posts: IgPost[] })[] = [];
+    for (const username of usernames) {
+      let u: any;
+      try {
+        u = await hikerGet("/v1/user/by/username", { username });
+      } catch {
+        continue; // renamed/banned profile — skip, don't fail the batch
+      }
+      if (!u?.username) continue;
+      let posts: IgPost[] = [];
+      if (!u.is_private && u.pk) {
+        try {
+          const medias = await hikerGet("/v1/user/medias", { user_id: String(u.pk), amount: 12 });
+          posts = (Array.isArray(medias) ? medias : []).map(normalizeHikerPost);
+        } catch { /* medias unavailable — score on profile alone */ }
+      }
+      out.push({
+        username: String(u.username).toLowerCase(),
+        fullName: u.full_name ? String(u.full_name) : undefined,
+        avatarUrl: u.profile_pic_url_hd || u.profile_pic_url || undefined,
+        followers: typeof u.follower_count === "number" ? u.follower_count : undefined,
+        bio: u.biography ? String(u.biography).slice(0, 500) : undefined,
+        website: u.external_url ? String(u.external_url) : undefined,
+        email: u.public_email || emailFromBio(u.biography),
+        posts,
+      });
+    }
+    return out;
+  }
+  if (process.env.APIFY_API_TOKEN) {
+    const items = await apifyRun("apify~instagram-profile-scraper", { usernames });
+    return items
+      .filter((it) => it?.username)
+      .map((it) => ({
+        username: String(it.username).toLowerCase(),
+        fullName: it.fullName ? String(it.fullName) : undefined,
+        avatarUrl: it.profilePicUrl ? String(it.profilePicUrl) : undefined,
+        followers: typeof it.followersCount === "number" ? it.followersCount : undefined,
+        bio: it.biography ? String(it.biography).slice(0, 500) : undefined,
+        website: it.externalUrl ? String(it.externalUrl) : undefined,
+        email: emailFromBio(it.biography),
+        posts: (Array.isArray(it.latestPosts) ? it.latestPosts : []).map((post: any) => ({
+          caption: String(post.caption || "").slice(0, 300),
+          type: /video/i.test(String(post.type || "")) ? "video"
+            : /sidecar|carousel/i.test(String(post.type || "")) ? "carousel" : "image",
+          views: typeof post.videoViewCount === "number" ? post.videoViewCount
+            : typeof post.videoPlayCount === "number" ? post.videoPlayCount : undefined,
+          likes: typeof post.likesCount === "number" ? post.likesCount : undefined,
+          comments: typeof post.commentsCount === "number" ? post.commentsCount : undefined,
+          url: post.url ? String(post.url) : undefined,
+          taken_at: post.timestamp ? new Date(post.timestamp).getTime() : undefined,
+        })),
+      }));
+  }
+  throw new Error(NO_KEY_MSG);
 }
 
 // ─── Scoring ──────────────────────────────────────────────────────────────────
@@ -394,10 +559,10 @@ export const bulkInsert = internalMutation({
 
 // ─── Actions (API-key ready) ──────────────────────────────────────────────────
 
-// Import prospects from an Apify Instagram scraper run.
-// Requires: npx convex env set APIFY_API_TOKEN apify_api_...
-// Uses the Instagram Search Scraper (hashtag/location based) via the sync
-// run-and-get-items endpoint, then dedupes into the prospects table.
+// Import prospects from an Instagram keyword/hashtag search (HikerAPI if
+// HIKERAPI_KEY is set, else Apify's Instagram Search Scraper), then dedupes
+// into the prospects table. Kept as "importFromApify" — the name is now a
+// misnomer but it's wired into the existing Discovery UI action call.
 export const importFromApify = action({
   args: {
     kind: v.string(),        // 'creator' | 'host'
@@ -406,31 +571,22 @@ export const importFromApify = action({
   },
   handler: async (ctx, args): Promise<{ inserted: number; fetched: number }> => {
     const limit = Math.min(args.limit ?? 50, 200);
-    const items = await apifyRun("apify~instagram-search-scraper", {
-      search: args.searchQuery,
-      searchType: "user",
-      resultsLimit: limit,
-    });
+    const accounts = await searchInstagramUsers(args.searchQuery, limit);
 
-    const rows = items
-      .filter((it) => it?.username)
-      .map((it) => ({
-        kind: args.kind,
-        instagram_handle: String(it.username),
-        display_name: it.fullName ? String(it.fullName) : undefined,
-        avatar_url: it.profilePicUrl ? String(it.profilePicUrl) : undefined,
-        follower_count: typeof it.followersCount === "number" ? it.followersCount : undefined,
-        bio: it.biography ? String(it.biography).slice(0, 500) : undefined,
-        website: it.externalUrl ? String(it.externalUrl) : undefined,
-        email:
-          typeof it.biography === "string"
-            ? (it.biography.match(/[\w.+-]+@[\w-]+\.[\w.]+/) || [])[0]
-            : undefined,
-        source: "apify",
-      }));
+    const rows = accounts.map((acc) => ({
+      kind: args.kind,
+      instagram_handle: acc.username,
+      display_name: acc.fullName,
+      avatar_url: acc.avatarUrl,
+      follower_count: acc.followers,
+      bio: acc.bio,
+      website: acc.website,
+      email: acc.email,
+      source: process.env.HIKERAPI_KEY ? "hikerapi" : "apify",
+    }));
 
     const { inserted } = await ctx.runMutation(internal.prospects.bulkInsert, { rows });
-    return { inserted, fetched: items.length };
+    return { inserted, fetched: accounts.length };
   },
 });
 
@@ -496,36 +652,20 @@ export const saveEnrichment = internalMutation({
   },
 });
 
-// Scrape recent posts for a batch of prospects (one Apify run for all handles),
-// compute reach/views/quality sub-scores, and save. Returns enriched count.
+// Scrape recent posts for a batch of prospects (HikerAPI or Apify), compute
+// reach/views/quality sub-scores, and save. Returns enriched count.
 async function enrichBatch(ctx: any, prospects: any[]): Promise<number> {
   if (!prospects.length) return 0;
-  const items = await apifyRun("apify~instagram-profile-scraper", {
-    usernames: prospects.map((p) => p.instagram_handle),
-  });
-  const byUsername = new Map<string, any>();
-  for (const it of items) {
-    if (it?.username) byUsername.set(String(it.username).toLowerCase(), it);
-  }
+  const profiles = await fetchProfilesWithPosts(prospects.map((p) => p.instagram_handle));
+  const byUsername = new Map(profiles.map((pr) => [pr.username, pr]));
 
   let enriched = 0;
   for (const p of prospects) {
     const it = byUsername.get(p.instagram_handle);
     if (!it) continue;
 
-    const followers = typeof it.followersCount === "number" ? it.followersCount : p.follower_count;
-    const posts = (Array.isArray(it.latestPosts) ? it.latestPosts : [])
-      .map((post: any) => ({
-        caption: String(post.caption || "").slice(0, 300),
-        type: /video/i.test(String(post.type || "")) ? "video"
-          : /sidecar|carousel/i.test(String(post.type || "")) ? "carousel" : "image",
-        views: typeof post.videoViewCount === "number" ? post.videoViewCount
-          : typeof post.videoPlayCount === "number" ? post.videoPlayCount : undefined,
-        likes: typeof post.likesCount === "number" ? post.likesCount : undefined,
-        comments: typeof post.commentsCount === "number" ? post.commentsCount : undefined,
-        url: post.url ? String(post.url) : undefined,
-        taken_at: post.timestamp ? new Date(post.timestamp).getTime() : undefined,
-      }));
+    const followers = it.followers ?? p.follower_count;
+    const posts = it.posts;
 
     const videos = posts.filter((post: any) => post.type === "video" && post.views);
     const avgViews = videos.length
@@ -542,7 +682,7 @@ async function enrichBatch(ctx: any, prospects: any[]): Promise<number> {
       const captions = posts.slice(0, 5).map((post: any, i: number) => `${i + 1}. ${post.caption || "(no caption)"}`).join("\n");
       const raw = await llmChat([
         { role: "system", content: "You evaluate Instagram creators for Collabnb, a platform matching travel/lifestyle creators with boutique stays. Reply with ONLY a JSON object, no prose." },
-        { role: "user", content: `Rate this creator 0-100 on content quality and fit for promoting boutique stays (caption craft, storytelling, aesthetic signals, travel/lifestyle relevance). Reply as {"quality": <number>, "reason": "<max 12 words>"}.\n\nBio: ${it.biography || p.bio || "(none)"}\nFollowers: ${followers ?? "?"}\nAvg video views: ${avgViews || "?"}\n\nRecent captions:\n${captions || "(none)"}` },
+        { role: "user", content: `Rate this creator 0-100 on content quality and fit for promoting boutique stays (caption craft, storytelling, aesthetic signals, travel/lifestyle relevance). Reply as {"quality": <number>, "reason": "<max 12 words>"}.\n\nBio: ${it.bio || p.bio || "(none)"}\nFollowers: ${followers ?? "?"}\nAvg video views: ${avgViews || "?"}\n\nRecent captions:\n${captions || "(none)"}` },
       ], 120);
       const m = raw.match(/"quality"\s*:\s*(\d{1,3})/);
       if (m) sLlm = Math.min(100, parseInt(m[1], 10));
@@ -569,9 +709,9 @@ async function enrichBatch(ctx: any, prospects: any[]): Promise<number> {
       avgVideoViews: avgViews || undefined,
       engagementRate: avgEngagement !== undefined ? Math.round(avgEngagement * 10000) / 100 : undefined,
       followerCount: followers,
-      bio: it.biography ? String(it.biography).slice(0, 500) : undefined,
-      avatarUrl: it.profilePicUrl ? String(it.profilePicUrl) : undefined,
-      displayName: it.fullName ? String(it.fullName) : undefined,
+      bio: it.bio,
+      avatarUrl: it.avatarUrl,
+      displayName: it.fullName,
       recentPosts: topPosts,
     });
     enriched++;
@@ -601,30 +741,21 @@ async function discoverAndScore(
   const searchQuery = [keywords[0], "creator", opts.location].filter(Boolean).join(" ");
   const limit = Math.min(opts.importLimit ?? 30, 100);
 
-  const items = await apifyRun("apify~instagram-search-scraper", {
-    search: searchQuery,
-    searchType: "user",
-    resultsLimit: limit,
-  });
+  const accounts = await searchInstagramUsers(searchQuery, limit);
 
-  const rows = items
-    .filter((it) => it?.username)
-    .map((it) => ({
-      kind: "creator",
-      instagram_handle: String(it.username),
-      display_name: it.fullName ? String(it.fullName) : undefined,
-      avatar_url: it.profilePicUrl ? String(it.profilePicUrl) : undefined,
-      follower_count: typeof it.followersCount === "number" ? it.followersCount : undefined,
-      bio: it.biography ? String(it.biography).slice(0, 500) : undefined,
-      website: it.externalUrl ? String(it.externalUrl) : undefined,
-      email:
-        typeof it.biography === "string"
-          ? (it.biography.match(/[\w.+-]+@[\w-]+\.[\w.]+/) || [])[0]
-          : undefined,
-      location: opts.location || undefined,
-      niche: opts.niche,
-      source: "niche-search",
-    }));
+  const rows = accounts.map((acc) => ({
+    kind: "creator",
+    instagram_handle: acc.username,
+    display_name: acc.fullName,
+    avatar_url: acc.avatarUrl,
+    follower_count: acc.followers,
+    bio: acc.bio,
+    website: acc.website,
+    email: acc.email,
+    location: opts.location || undefined,
+    niche: opts.niche,
+    source: "niche-search",
+  }));
 
   const { inserted } = await ctx.runMutation(internal.prospects.bulkInsert, { rows });
 
@@ -641,7 +772,7 @@ async function discoverAndScore(
     handles: top.map((d) => d.instagram_handle),
   });
   const ranked = refreshed.sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
-  return { imported: inserted, fetched: items.length, ranked };
+  return { imported: inserted, fetched: accounts.length, ranked };
 }
 
 // Niche search from the Discovery tab: import + score, return ranked top 10.

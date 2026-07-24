@@ -289,14 +289,19 @@ export default function Saved() {
   const [moveState, setMoveState] = useState(null); // { listingId, pos: {x,y} }
 
   const rawConvexListings = useQuery(api.listings.getAll);
-  const convexDataLoaded = rawConvexListings !== undefined;
-  const convexListings = rawConvexListings ?? [];
-  // Normalize Convex listings so they use string `id` like SAMPLE_LISTINGS
-  const convexNormalized = convexListings.map((l) => ({ ...l, id: String(l._id) }));
-  // Merged pool: Convex listings take precedence, then sample (for demos/testing)
+  const rawSampleListings = useQuery(api.listings.getSamples);
+  // Loaded once both real + sample queries have responded (even with 0 rows)
+  const convexDataLoaded = rawConvexListings !== undefined && rawSampleListings !== undefined;
+  // Normalize Convex listings so they use string `id` — matches what Explore saves
+  const convexNormalized = (rawConvexListings ?? []).map((l) => ({ ...l, id: String(l._id) }));
+  // Convex sample listings (real _ids) — Explore hearts these, so Saved must
+  // resolve them from the same source, not the bundled mock SAMPLE_LISTINGS.
+  const sampleNormalized = (rawSampleListings ?? []).map((l) => ({ ...l, id: String(l._id) }));
+  // Merged pool: real + Convex samples take precedence, then mock samples (demo fallback)
+  const resolved = [...convexNormalized, ...sampleNormalized];
   const allListings = [
-    ...convexNormalized,
-    ...SAMPLE_LISTINGS.filter((s) => !convexNormalized.some((c) => c.id === s.id)),
+    ...resolved,
+    ...SAMPLE_LISTINGS.filter((s) => !resolved.some((c) => c.id === s.id)),
   ];
 
   const allSaved = allListings.filter((l) => savedIds.has(l.id));
@@ -333,9 +338,9 @@ export default function Saved() {
         <p style={{ fontSize: '0.82rem', color: 'var(--sage)' }}>
           {!hasSavedIds
             ? 'No saved collaborations yet'
-            : totalCount > 0
-              ? `${totalCount} saved collaboration${totalCount !== 1 ? 's' : ''}`
-              : 'Loading…'}
+            : !convexDataLoaded
+              ? 'Loading…'
+              : `${totalCount} saved collaboration${totalCount !== 1 ? 's' : ''}`}
         </p>
       </div>
 
@@ -462,7 +467,9 @@ export default function Saved() {
                   textAlign: 'center',
                 }}>
                   <p style={{ fontSize: '0.82rem', color: 'var(--sage)' }}>
-                    No listings in this collection yet — heart a listing to add it here.
+                    {col.listingIds.length > 0 && !convexDataLoaded
+                      ? 'Loading…'
+                      : 'No listings in this collection yet — heart a listing to add it here.'}
                   </p>
                 </div>
               </div>

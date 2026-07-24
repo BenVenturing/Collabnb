@@ -540,7 +540,7 @@ export default function Inbox() {
   const location = useLocation();
   const [activeFilter, setActiveFilter] = useState('All');
   const [selectedId, setSelectedId] = useState(() => location.state?.selectedThreadId ?? null);
-  const [isSearching, setIsSearching] = useState(false);
+  const [searchFocused, setSearchFocused] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [viewingCollab, setViewingCollab] = useState(null);
   const [toastMsg, setToastMsg] = useState('');
@@ -588,12 +588,13 @@ export default function Inbox() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Auto-focus search input
-  useEffect(() => {
-    if (isSearching && searchInputRef.current) {
-      searchInputRef.current.focus();
-    }
-  }, [isSearching]);
+  // Select a thread and dismiss the search dropdown
+  const openThread = useCallback((id) => {
+    setSelectedId(id);
+    setSearchQuery('');
+    setSearchFocused(false);
+    searchInputRef.current?.blur();
+  }, []);
 
   // Show a brief toast message
   const showToast = useCallback((msg) => {
@@ -614,10 +615,9 @@ export default function Inbox() {
   // Start (or open) a conversation from a listing chosen in search
   const handleStartFromListing = useCallback((listing) => {
     const existing = threads.find((t) => !t.archived && t.listing_title === listing.title);
-    setSelectedId(existing ? existing.id : createThread(listing.title, listing.host_name || 'Host', 'Collab'));
-    setIsSearching(false);
-    setSearchQuery('');
-  }, [threads, createThread]);
+    const id = existing ? existing.id : createThread(listing.title, listing.host_name || 'Host', 'Collab');
+    openThread(id);
+  }, [threads, createThread, openThread]);
 
   // Non-archived threads
   const activeThreads = threads.filter((t) => !t.archived);
@@ -642,6 +642,18 @@ export default function Inbox() {
   const existingTitles = new Set(threads.map((t) => t.listing_title));
   const newChatBase = allListings.filter((l) => !existingTitles.has(l.title));
   const savedListings = newChatBase.filter((l) => savedIds.has(l.id));
+
+  // Suggestions shown before the user types: saved listings first, then fill
+  const suggestedListings = (() => {
+    const seen = new Set();
+    const out = [];
+    for (const l of [...savedListings, ...newChatBase]) {
+      if (out.length >= 6) break;
+      if (!seen.has(l.id)) { seen.add(l.id); out.push(l); }
+    }
+    return out;
+  })();
+
   const matchedListings = q
     ? newChatBase.filter((l) =>
         (l.title || '').toLowerCase().includes(q) ||
@@ -669,51 +681,48 @@ export default function Inbox() {
       >
         {/* Header */}
         <div className="px-5 pt-6 pb-0 border-b border-stone/20">
-          <div className="flex items-center justify-between mb-4">
-            {isSearching ? (
-              <>
+          <h1 className="font-display font-bold text-ink text-xl mb-3">Messages</h1>
+          <div className="flex items-center gap-2 mb-4">
+            {/* Always-open search field */}
+            <div className="flex-1 flex items-center gap-2 h-9 px-3 rounded-full bg-bone focus-within:ring-2 focus-within:ring-mint transition-shadow">
+              <svg viewBox="0 0 256 256" fill="none" stroke="#959D90" strokeWidth="16" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5 flex-shrink-0">
+                <circle cx="112" cy="112" r="80"/><line x1="168.57" y1="168.57" x2="224" y2="224"/>
+              </svg>
+              <input
+                ref={searchInputRef}
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onFocus={() => setSearchFocused(true)}
+                onBlur={() => setSearchFocused(false)}
+                onKeyDown={(e) => { if (e.key === 'Escape') { setSearchQuery(''); e.currentTarget.blur(); } }}
+                placeholder="Search or start a new chat…"
+                className="flex-1 min-w-0 text-sm text-ink bg-transparent border-none outline-none placeholder-sage"
+              />
+              {searchQuery && (
                 <button
-                  onClick={() => { setIsSearching(false); setSearchQuery(''); }}
-                  className="w-8 h-8 rounded-full bg-bone hover:bg-stone/60 flex items-center justify-center transition-colors flex-shrink-0"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => { setSearchQuery(''); searchInputRef.current?.focus(); }}
+                  className="flex-shrink-0 text-sage hover:text-slate transition-colors"
+                  title="Clear"
                 >
-                  <svg viewBox="0 0 24 24" fill="none" stroke="#3C5759" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5">
-                    <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5">
+                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
                   </svg>
                 </button>
-                <input
-                  ref={searchInputRef}
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search messages or start a new chat…"
-                  className="flex-1 mx-2 text-sm text-ink bg-transparent border-none outline-none placeholder-sage"
-                />
-              </>
-            ) : (
-              <>
-                <h1 className="font-display font-bold text-ink text-xl">Messages</h1>
-                <div className="flex gap-1.5">
-                  <button
-                    onClick={() => setIsSearching(true)}
-                    className="w-8 h-8 rounded-full bg-bone hover:bg-stone/60 flex items-center justify-center transition-colors"
-                  >
-                    <svg viewBox="0 0 256 256" fill="none" stroke="#3C5759" strokeWidth="16" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5">
-                      <circle cx="112" cy="112" r="80"/><line x1="168.57" y1="168.57" x2="224" y2="224"/>
-                    </svg>
-                  </button>
-                  <button
-                    onClick={() => setIsSearching(true)}
-                    className="w-8 h-8 rounded-full bg-bone hover:bg-stone/60 flex items-center justify-center transition-colors"
-                    title="New message"
-                  >
-                    <svg viewBox="0 0 24 24" fill="none" stroke="#3C5759" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5">
-                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                    </svg>
-                  </button>
-                </div>
-              </>
-            )}
+              )}
+            </div>
+            {/* New message */}
+            <button
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => { searchInputRef.current?.focus(); setSearchFocused(true); }}
+              className="w-9 h-9 rounded-full bg-ink text-bone hover:bg-slate flex items-center justify-center transition-colors flex-shrink-0"
+              title="New message"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+                <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+              </svg>
+            </button>
           </div>
           {/* Filter pills */}
           <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-3">
@@ -734,35 +743,13 @@ export default function Inbox() {
         </div>
 
         {/* Thread list */}
-        <div className="flex-1 overflow-y-auto">
-          {!isSearching ? (
-            tagFiltered.length === 0 ? (
-              // Empty state: shimmer placeholders to show where conversations will appear
-              <div>
-                {[0, 1, 2].map((i) => <ShimmerRow key={i} />)}
-                <div className="px-4 py-5 text-center">
-                  <p className="text-sage text-xs leading-relaxed">
-                    Your conversations will appear here once you apply to a listing and start chatting with a host.
-                  </p>
-                </div>
-              </div>
-            ) : (
-              tagFiltered.map((t) => (
-                <ThreadRow
-                  key={t.id}
-                  thread={t}
-                  isActive={t.id === selectedId}
-                  onClick={() => setSelectedId(t.id)}
-                  onDelete={deleteThread ? () => {
-                    deleteThread(t.id);
-                    if (selectedId === t.id) setSelectedId(null);
-                  } : undefined}
-                />
-              ))
-            )
-          ) : (
+        <div
+          className="flex-1 overflow-y-auto"
+          onMouseDown={searchFocused ? (e) => e.preventDefault() : undefined}
+        >
+          {q ? (
+            /* ── Search results ── */
             <>
-              {/* Existing conversations matching the search */}
               {matchedThreads.length > 0 && (
                 <>
                   <p className="px-5 pt-4 pb-2 text-[11px] font-bold uppercase tracking-wide text-sage">Conversations</p>
@@ -771,7 +758,7 @@ export default function Inbox() {
                       key={t.id}
                       thread={t}
                       isActive={t.id === selectedId}
-                      onClick={() => { setSelectedId(t.id); setIsSearching(false); setSearchQuery(''); }}
+                      onClick={() => openThread(t.id)}
                       onDelete={deleteThread ? () => {
                         deleteThread(t.id);
                         if (selectedId === t.id) setSelectedId(null);
@@ -780,21 +767,68 @@ export default function Inbox() {
                   ))}
                 </>
               )}
-
-              {/* Start a new conversation — Saved listings when empty, matches while typing */}
-              <p className="px-5 pt-4 pb-2 text-[11px] font-bold uppercase tracking-wide text-sage">
-                {q ? 'New conversation' : 'Start a new conversation'}
-              </p>
-              {(q ? matchedListings : savedListings).length > 0 ? (
-                (q ? matchedListings : savedListings).map((l) => (
+              <p className="px-5 pt-4 pb-2 text-[11px] font-bold uppercase tracking-wide text-sage">New conversation</p>
+              {matchedListings.length > 0 ? (
+                matchedListings.map((l) => (
                   <ListingRow key={l.id} listing={l} onClick={() => handleStartFromListing(l)} />
                 ))
               ) : (
                 <p className="px-5 py-4 text-sage text-xs leading-relaxed">
-                  {q
-                    ? 'No listings match. Try a host name, place, or listing title.'
-                    : 'Save a listing to message its host instantly, or search above to find one.'}
+                  No listings match. Try a host name, place, or listing title.
                 </p>
+              )}
+            </>
+          ) : (
+            /* ── No query ── */
+            <>
+              {/* Suggestions surface as soon as the search is focused */}
+              {searchFocused && (
+                <>
+                  <p className="px-5 pt-4 pb-2 text-[11px] font-bold uppercase tracking-wide text-sage">
+                    {savedListings.length > 0 ? 'Saved — start a chat' : 'Suggested for you'}
+                  </p>
+                  {suggestedListings.length > 0 ? (
+                    suggestedListings.map((l) => (
+                      <ListingRow key={l.id} listing={l} onClick={() => handleStartFromListing(l)} />
+                    ))
+                  ) : (
+                    <p className="px-5 py-4 text-sage text-xs leading-relaxed">
+                      Save a listing to message its host instantly, or type to search.
+                    </p>
+                  )}
+                </>
+              )}
+
+              {/* Conversation list */}
+              {tagFiltered.length === 0 ? (
+                !searchFocused && (
+                  <div>
+                    {[0, 1, 2].map((i) => <ShimmerRow key={i} />)}
+                    <div className="px-4 py-5 text-center">
+                      <p className="text-sage text-xs leading-relaxed">
+                        Your conversations will appear here once you apply to a listing and start chatting with a host.
+                      </p>
+                    </div>
+                  </div>
+                )
+              ) : (
+                <>
+                  {searchFocused && (
+                    <p className="px-5 pt-4 pb-2 text-[11px] font-bold uppercase tracking-wide text-sage">Your conversations</p>
+                  )}
+                  {tagFiltered.map((t) => (
+                    <ThreadRow
+                      key={t.id}
+                      thread={t}
+                      isActive={t.id === selectedId}
+                      onClick={() => openThread(t.id)}
+                      onDelete={deleteThread ? () => {
+                        deleteThread(t.id);
+                        if (selectedId === t.id) setSelectedId(null);
+                      } : undefined}
+                    />
+                  ))}
+                </>
               )}
             </>
           )}

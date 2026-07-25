@@ -64,6 +64,9 @@ export default defineSchema({
     role_switch_email: v.optional(v.string()),
     host_verified: v.optional(v.boolean()),
     creator_verified: v.optional(v.boolean()),
+    // Creator-controlled listing visibility. Undefined/true = discoverable by
+    // hosts; false = hidden from the Creators page and not messageable.
+    profile_visible: v.optional(v.boolean()),
   }).index("by_email", ["email"]).index("by_stripe_customer", ["stripe_customer_id"]),
 
   listings: defineTable({
@@ -184,7 +187,16 @@ export default defineSchema({
     unread: v.optional(v.number()),
     is_founder: v.optional(v.boolean()),
     collab_id: v.optional(v.string()),
-  }).index("by_collab", ["collab_id"]),
+    // Admin-brand messaging: owner_id is the "Collabnb" persona profile that
+    // sent/owns the thread; participant_id is the user being messaged;
+    // thread_key links to thread_messages (admin threads use "admin_<userId>").
+    owner_id: v.optional(v.string()),
+    participant_id: v.optional(v.string()),
+    thread_key: v.optional(v.string()),
+  })
+    .index("by_collab", ["collab_id"])
+    .index("by_owner", ["owner_id"])
+    .index("by_participant", ["participant_id"]),
 
   contracts: defineTable({
     owner_id: v.optional(v.string()),

@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
 import {
   Search, MessageSquare, Check, X,
   MapPin, Calendar, ChevronRight, ChevronLeft,
@@ -199,6 +201,7 @@ function fmtFollowers(n) {
 const DEPRIO_KEY       = '@collabnb_swipe_deprioritized_v1';
 const HIST_KEY         = '@collabnb_swipe_history_v1';
 const HIDDEN_SAMPLE_KEY = '@collabnb_hidden_sample_creators_v1';
+const HIDE_ALL_SAMPLES_KEY = '@collabnb_hide_all_samples_v1';
 function lsGet(k) {
   try {
     const parsed = JSON.parse(localStorage.getItem(k) || '[]');
@@ -1006,6 +1009,25 @@ export default function HostCreators() {
   const { profile, toggleSavedCreator: toggleSaved } = useAuth();
   const savedCreatorIds = profile?.saved_creator_ids ?? [];
 
+  // Real, verified creators from Convex — shown above the sample pool.
+  const realCreators = useQuery(api.profiles.listPublicCreators);
+  const ALL_CREATORS = useMemo(
+    () => [...(realCreators ?? []), ...CREATORS],
+    [realCreators],
+  );
+  const hasRealCreators = (realCreators?.length ?? 0) > 0;
+
+  const [hideSamples, setHideSamples] = useState(() => {
+    try { return localStorage.getItem(HIDE_ALL_SAMPLES_KEY) === '1'; } catch { return false; }
+  });
+  function toggleHideSamples() {
+    setHideSamples(v => {
+      const next = !v;
+      try { localStorage.setItem(HIDE_ALL_SAMPLES_KEY, next ? '1' : '0'); } catch {}
+      return next;
+    });
+  }
+
   const [locationConsent,  setLocationConsent]  = useState(() => {
     try { return localStorage.getItem(LOCATION_CONSENT_KEY); } catch { return null; }
   });
@@ -1086,16 +1108,18 @@ export default function HostCreators() {
     !!(dateStart && dateEnd),
   ].filter(Boolean).length;
 
-  const nearbyCreators = CREATORS.filter(c => isNearHost(c));
+  const nearbyCreators = ALL_CREATORS.filter(c => isNearHost(c));
 
   const profileSavedIds = profile?.saved_creator_ids ?? [];
 
-  // Cache key derived from all active filter params (incl. saved ids, since savedOnly depends on them)
-  const filterParams = { query, tierFilter, platformFilter, sortBy, showPast, nearbyOnly, savedOnly, dateStart, dateEnd, savedIds: profileSavedIds };
+  // Cache key derived from all active filter params (incl. saved ids, since savedOnly depends on them,
+  // plus real-creator count + hideSamples so the cache invalidates when real creators load or samples are hidden)
+  const filterParams = { query, tierFilter, platformFilter, sortBy, showPast, nearbyOnly, savedOnly, dateStart, dateEnd, savedIds: profileSavedIds, realCount: realCreators?.length ?? 0, hideSamples };
   const searchCacheKey = cacheKey('creator_search', filterParams);
 
   const computeFiltered = () => {
-    let base = CREATORS.filter((c) => {
+    let base = ALL_CREATORS.filter((c) => {
+      if (hideSamples && c.isSample) return false;
       if (showPast && !c.past_collab) return false;
       if (tierFilter !== 'All' && c.tier !== tierFilter) return false;
       if (platformFilter.length > 0 && !platformFilter.every(p => c.platforms.includes(p))) return false;
@@ -1119,6 +1143,8 @@ export default function HostCreators() {
     if (sortBy === 'followers') base = [...base].sort((a, b) => b.followers - a.followers);
     else if (sortBy === 'engagement') base = [...base].sort((a, b) => b.engagement - a.engagement);
     else if (sortBy === 'collabs') base = [...base].sort((a, b) => b.collab_count - a.collab_count);
+    // Pin real (non-sample) creators above samples, preserving sort within each group.
+    base = [...base.filter(c => !c.isSample), ...base.filter(c => c.isSample)];
     return base;
   };
 
@@ -1373,11 +1399,33 @@ export default function HostCreators() {
 
         {viewMode === 'grid' ? (
           <>
-            {/* ── Results count ── */}
+            {/* ── Results count + sample toggle ── */}
             {!creatorsLoading && (
-              <p style={{ fontSize: '0.78rem', color: 'var(--sage)', marginBottom: '1.25rem' }}>
-                {filtered.length} creator{filtered.length !== 1 ? 's' : ''}{nearbyOnly ? ' nearby' : ''}
-              </p>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: '1.25rem', flexWrap: 'wrap' }}>
+                <p style={{ fontSize: '0.78rem', color: 'var(--sage)', margin: 0 }}>
+                  {filtered.length} creator{filtered.length !== 1 ? 's' : ''}{nearbyOnly ? ' nearby' : ''}
+                </p>
+                {hasRealCreators && (
+                  <button
+                    onClick={toggleHideSamples}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 7,
+                      padding: '0.4rem 0.9rem', borderRadius: 9999,
+                      fontSize: '0.75rem', fontWeight: 700,
+                      background: hideSamples ? 'var(--ink)' : 'rgba(255,255,255,0.78)',
+                      color: hideSamples ? 'var(--bone)' : 'var(--slate)',
+                      border: `1px solid ${hideSamples ? 'var(--ink)' : 'rgba(25,37,36,0.12)'}`,
+                      backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
+                      cursor: 'pointer', boxShadow: '0 2px 10px rgba(25,37,36,0.06)',
+                      fontFamily: 'var(--font-body)', whiteSpace: 'nowrap',
+                      transition: 'all 180ms var(--ease-out-quart)',
+                    }}
+                  >
+                    <X size={12} />
+                    {hideSamples ? 'Showing real creators only' : 'Hide sample creators'}
+                  </button>
+                )}
+              </div>
             )}
 
             {/* ── Grid ── */}
@@ -1419,7 +1467,7 @@ export default function HostCreators() {
           </>
         ) : (
           <SwipeView
-            creators={CREATORS}
+            creators={hideSamples ? ALL_CREATORS.filter(c => !c.isSample) : ALL_CREATORS}
             onBack={() => setViewMode('grid')}
             savedIds={savedCreatorIds}
             onToggleSaved={toggleSaved}

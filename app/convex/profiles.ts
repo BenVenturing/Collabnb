@@ -525,6 +525,7 @@ export const updateProfile = mutation({
       country: v.optional(v.string()),
       role: v.optional(v.string()),
       niches: v.optional(v.array(v.string())),
+      profile_visible: v.optional(v.boolean()),
     }),
   },
   handler: async (ctx, args) => {
@@ -706,5 +707,148 @@ export const toggleSavedCreator = mutation({
       : [...current, creatorId];
     await ctx.db.patch(profileId, { saved_creator_ids: next });
     return next;
+  },
+});
+
+// Creator toggles their own discoverability on/off from profile settings.
+export const setProfileVisibility = mutation({
+  args: { profileId: v.id("profiles"), visible: v.boolean() },
+  handler: async (ctx, { profileId, visible }) => {
+    await ctx.db.patch(profileId, { profile_visible: visible });
+    return visible;
+  },
+});
+
+function deriveCreatorTier(followers: number): string {
+  if (followers >= 50000) return "Influencer";
+  if (followers >= 10000) return "Micro Influencer";
+  if (followers >= 5000) return "UGC Pro";
+  return "UGC Beginner";
+}
+
+// Real, verified, opted-in creators for the host-facing Creators page. Shaped
+// to match the mock CREATORS cards so the frontend can merge them directly.
+export const listPublicCreators = query({
+  args: {},
+  handler: async (ctx) => {
+    const all = await ctx.db.query("profiles").collect();
+    return all
+      .filter(
+        (p) =>
+          p.role === "creator" &&
+          p.is_verified === true &&
+          p.is_rejected !== true &&
+          p.profile_visible !== false
+      )
+      .map((p) => {
+        const followers = p.follower_count ?? 0;
+        const platforms: string[] = [];
+        if (p.instagram_handle) platforms.push("Instagram");
+        if (p.tiktok_handle) platforms.push("TikTok");
+        if (p.youtube_handle) platforms.push("YouTube");
+        const location =
+          [p.city, p.region].filter(Boolean).join(", ") || p.country || "";
+        return {
+          id: String(p._id),
+          name: p.full_name,
+          username: p.username,
+          tier: p.tier || deriveCreatorTier(followers),
+          avatar: p.avatar_url ?? null,
+          followers,
+          engagement: p.engagement_rate ?? 0,
+          collab_count: p.collab_count ?? 0,
+          location,
+          lat: null,
+          lng: null,
+          platforms,
+          niches: p.niches ?? [],
+          isFounder: p.is_founder === true,
+          isSample: false,
+          avg_reach_30d: p.metrics_avg_views ?? followers,
+          er_30d: p.engagement_rate ?? 0,
+          past_collab: false,
+          bio: p.bio ?? "",
+          portfolioUrl: p.portfolio ?? null,
+          instagram_handle: p.instagram_handle ?? null,
+          tiktok_handle: p.tiktok_handle ?? null,
+          youtube_handle: p.youtube_handle ?? null,
+          travelCalendar: [],
+          created_at: p._creationTime,
+        };
+      })
+      .sort((a, b) => b.created_at - a.created_at);
+  },
+});
+
+// ─── "Collabnb Admin" brand messaging persona ─────────────────────────────────
+// A dedicated profile record that admin messages are sent from. Recipients see
+// "Collabnb" + the logo as the sender. Idempotent — safe to call on every admin
+// dashboard mount.
+export const ensureAdminPersona = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const all = await ctx.db.query("profiles").collect();
+    const existing = all.find((p) => p.username === "collabnb");
+    if (existing) return String(existing._id);
+    const id = await ctx.db.insert("profiles", {
+      full_name: "Collabnb",
+      username: "collabnb",
+      email: "admin@collabnb.com",
+      role: "admin",
+      tier: "Admin",
+      bio: "The Collabnb team. Here to help you get the most out of the platform.",
+      avatar_url: "/assets/collabnb-logo.png",
+      is_admin: true,
+      is_verified: true,
+      is_founder: true,
+      beta: true,
+      profile_visible: false,
+      city: "Asheville",
+      region: "NC",
+    });
+    return String(id);
+  },
+});
+
+export const getAdminPersona = query({
+  args: {},
+  handler: async (ctx) => {
+    const all = await ctx.db.query("profiles").collect();
+    const p = all.find((row) => row.username === "collabnb");
+    if (!p) return null;
+    return {
+      _id: String(p._id),
+      full_name: p.full_name,
+      username: p.username,
+      avatar_url: p.avatar_url ?? null,
+      role: p.role,
+    };
+  },
+});
+
+// Verified, non-rejected, non-admin users the admin can welcome via inbox.
+export const listMessagable = query({
+  args: {},
+  handler: async (ctx) => {
+    const all = await ctx.db.query("profiles").collect();
+    return all
+      .filter(
+        (p) =>
+          p.is_verified === true &&
+          p.is_rejected !== true &&
+          p.is_admin !== true &&
+          p.username !== "collabnb"
+      )
+      .map((p) => ({
+        _id: String(p._id),
+        full_name: p.full_name,
+        username: p.username,
+        avatar_url: p.avatar_url ?? null,
+        role: p.role,
+        city: p.city ?? "",
+        is_founder: p.is_founder === true,
+        created_at: p._creationTime,
+      }))
+      .sort((a, b) => a.created_at - b.created_at);
   },
 });

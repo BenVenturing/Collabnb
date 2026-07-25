@@ -1493,6 +1493,44 @@ export default function Profile() {
             </div>
             {/* Scrollable body */}
             <div style={{ flex: 1, overflowY: 'auto' }}>
+            {/* Profile visibility — creator only */}
+            {dp.role === 'creator' && (() => {
+              const isVisible = dp.profile_visible !== false;
+              return (
+                <div style={{ padding: '0.875rem 1.5rem', borderBottom: '1px solid rgba(60,87,89,0.08)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
+                    <div style={{ minWidth: 0 }}>
+                      <p style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--slate)', margin: '0 0 0.15rem' }}>
+                        {isVisible ? 'Profile is visible to hosts' : 'Profile is hidden'}
+                      </p>
+                      <p style={{ fontSize: '0.7rem', color: 'var(--sage)', margin: 0, lineHeight: 1.5 }}>
+                        {isVisible
+                          ? 'Hosts can find you on the Creators page and message you.'
+                          : "You won't appear in host search and hosts can't message you. Existing conversations stay open."}
+                      </p>
+                    </div>
+                    <button
+                      role="switch"
+                      aria-checked={isVisible}
+                      aria-label="Toggle profile visibility"
+                      onClick={() => updateProfile({ profile_visible: !isVisible })}
+                      style={{
+                        flexShrink: 0, position: 'relative', width: '44px', height: '26px',
+                        borderRadius: '999px', border: 'none', cursor: 'pointer', padding: 0,
+                        background: isVisible ? '#4A9B7F' : 'rgba(25,37,36,0.15)',
+                        transition: 'background 250ms ease',
+                      }}
+                    >
+                      <span style={{
+                        position: 'absolute', top: '2px', left: isVisible ? '20px' : '2px',
+                        width: '22px', height: '22px', borderRadius: '50%', background: '#fff',
+                        boxShadow: '0 1px 4px rgba(0,0,0,0.2)', transition: 'left 250ms ease',
+                      }} />
+                    </button>
+                  </div>
+                </div>
+              );
+            })()}
             {dp.role === 'creator' && (() => {
               const count = serverPitchCount ?? getPitchCount().count;
               return (

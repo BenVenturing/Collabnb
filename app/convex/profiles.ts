@@ -1,6 +1,6 @@
 import { v } from "convex/values";
-import { query, mutation, internalMutation } from "./_generated/server";
-import { internal } from "./_generated/api";
+import { query, mutation, action, internalMutation } from "./_generated/server";
+import { internal, api } from "./_generated/api";
 
 export const countAll = query({
   args: {},
@@ -597,7 +597,40 @@ export const deleteProfile = mutation({
     // Finally delete the profile itself
     await ctx.db.delete(args.profileId);
 
-    return { deleted: true };
+    return { deleted: true, email };
+  },
+});
+
+// ─── Delete account + free the Clerk user so the email can be reused ─────────
+// Runs the full Convex cascade (deleteProfile), then deletes the matching Clerk
+// user by email. If CLERK_SECRET_KEY is unset or Clerk errors, the Convex delete
+// still succeeds — the email is simply left for manual cleanup in Clerk.
+export const deleteAccount = action({
+  args: { profileId: v.id("profiles") },
+  handler: async (ctx, args): Promise<{ deleted: boolean; email?: string; reason?: string }> => {
+    const res: { deleted: boolean; email?: string; reason?: string } =
+      await ctx.runMutation(api.profiles.deleteProfile, { profileId: args.profileId });
+
+    const key = process.env.CLERK_SECRET_KEY;
+    if (key && res.deleted && res.email) {
+      try {
+        const listRes = await fetch(
+          `https://api.clerk.com/v1/users?email_address[]=${encodeURIComponent(res.email)}`,
+          { headers: { Authorization: `Bearer ${key}` } },
+        );
+        const users = (await listRes.json()) as Array<{ id: string }>;
+        for (const u of users ?? []) {
+          await fetch(`https://api.clerk.com/v1/users/${u.id}`, {
+            method: "DELETE",
+            headers: { Authorization: `Bearer ${key}` },
+          });
+        }
+      } catch (err) {
+        console.error("Clerk user deletion failed for", res.email, err);
+      }
+    }
+
+    return res;
   },
 });
 

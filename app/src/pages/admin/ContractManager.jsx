@@ -138,8 +138,8 @@ export default function ContractManager() {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid rgba(25,37,36,0.07)' }}>
-                {['Creator', 'Host', 'Property', 'Status', 'Dates', 'Payment', 'Signatures', 'Created', 'Nudge'].map((h) => (
-                  <th key={h} style={{ padding: '0.75rem', textAlign: 'left', fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: SAGE, whiteSpace: 'nowrap', minWidth: h === 'Nudge' ? 150 : undefined }}>
+                {['Creator', 'Host', 'Property', 'Status', 'Dates', 'Payment', 'Signatures', 'Created', 'Actions'].map((h) => (
+                  <th key={h} style={{ padding: '0.75rem', textAlign: 'left', fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: SAGE, whiteSpace: 'nowrap', minWidth: h === 'Actions' ? 150 : undefined }}>
                     {h}
                   </th>
                 ))}
@@ -159,7 +159,10 @@ export default function ContractManager() {
                   <td style={{ padding: '0.75rem', color: SLATE, maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {c.property_name || c.location || '—'}
                   </td>
-                  <td style={{ padding: '0.75rem' }}><StatusBadge status={c.status} /></td>
+                  <td style={{ padding: '0.75rem' }}>
+                    <StatusBadge status={c.status} />
+                    {c.admin_dismissed && <HandledBadge />}
+                  </td>
                   <td style={{ padding: '0.75rem', color: SLATE, whiteSpace: 'nowrap' }}>{c.dates || '—'}</td>
                   <td style={{ padding: '0.75rem', whiteSpace: 'nowrap' }}>
                     {c.paid
@@ -178,7 +181,10 @@ export default function ContractManager() {
                     {fmtDate(c._creationTime)}
                   </td>
                   <td style={{ padding: '0.75rem' }} onClick={(e) => e.stopPropagation()}>
-                    <PromptButtons contract={c} size="sm" direction="column" />
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', alignItems: 'flex-start' }}>
+                      <PromptButtons contract={c} size="sm" direction="column" />
+                      <ManageButtons contract={c} size="sm" />
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -249,6 +255,69 @@ function PromptButtons({ contract: c, size = 'md', direction = 'row' }) {
   );
 }
 
+function HandledBadge() {
+  return (
+    <span style={{
+      display: 'inline-block', marginLeft: '0.4rem', fontSize: '0.6rem', fontWeight: 700,
+      padding: '0.1rem 0.4rem', borderRadius: 99, background: '#E5E7EB', color: '#4B5563',
+      textTransform: 'uppercase', letterSpacing: '0.04em', verticalAlign: 'middle',
+    }}>
+      Handled
+    </span>
+  );
+}
+
+function ManageButtons({ contract: c, size = 'md' }) {
+  const removeContract = useMutation(api.contracts.remove);
+  const setHandled = useMutation(api.contracts.setHandled);
+  const [busy, setBusy] = useState(null);   // 'handle' | 'delete'
+
+  const pad = size === 'sm' ? '0.25rem 0.55rem' : '0.4rem 0.8rem';
+  const fs = size === 'sm' ? '0.7rem' : '0.8rem';
+
+  const toggleHandled = async () => {
+    setBusy('handle');
+    try { await setHandled({ contractId: c._id, handled: !c.admin_dismissed }); }
+    finally { setBusy(null); }
+  };
+
+  const del = async () => {
+    if (!window.confirm(`Delete this contract (${c.creator_name || '—'} ↔ ${c.host_name || '—'})? This permanently removes it and cannot be undone.`)) return;
+    setBusy('delete');
+    try { await removeContract({ contractId: c._id }); }
+    finally { setBusy(null); }
+  };
+
+  return (
+    <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
+      <button
+        onClick={toggleHandled}
+        disabled={busy === 'handle'}
+        style={{
+          padding: pad, fontSize: fs, fontWeight: 600, borderRadius: '0.4rem',
+          border: '1px solid rgba(60,87,89,0.3)', background: c.admin_dismissed ? '#EEF2F0' : '#fff',
+          color: SLATE, cursor: busy === 'handle' ? 'default' : 'pointer',
+          fontFamily: 'inherit', whiteSpace: 'nowrap', opacity: busy === 'handle' ? 0.6 : 1,
+        }}
+      >
+        {busy === 'handle' ? '…' : c.admin_dismissed ? 'Unmark' : 'Mark handled'}
+      </button>
+      <button
+        onClick={del}
+        disabled={busy === 'delete'}
+        style={{
+          padding: pad, fontSize: fs, fontWeight: 600, borderRadius: '0.4rem',
+          border: '1px solid rgba(153,27,27,0.3)', background: '#fff',
+          color: '#991B1B', cursor: busy === 'delete' ? 'default' : 'pointer',
+          fontFamily: 'inherit', whiteSpace: 'nowrap', opacity: busy === 'delete' ? 0.6 : 1,
+        }}
+      >
+        {busy === 'delete' ? '…' : 'Delete'}
+      </button>
+    </div>
+  );
+}
+
 function Row({ label, value }) {
   if (value === undefined || value === null || value === '') return null;
   return (
@@ -310,8 +379,9 @@ function ContractDetailModal({ contract: c, onClose }) {
           {c.creator_name} &nbsp;↔&nbsp; {c.host_name}
         </p>
 
-        <div style={{ marginBottom: '1.25rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginBottom: '1.25rem' }}>
           <PromptButtons contract={c} />
+          <ManageButtons contract={c} />
         </div>
 
         <Row label="Creator" value={c.creator_name} />

@@ -66,6 +66,7 @@ const ICONS = {
   'algo-reference': IC(<><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></>),
   messages:     IC(<path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>),
   suggestions:  IC(<><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17" strokeWidth="3"/></>),
+  moderation:   IC(<><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></>),
   audit:        IC(<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>),
   analytics:    IC(<><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></>),
   ambassadors:  IC(<><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10A15.3 15.3 0 0112 2z"/></>),
@@ -73,32 +74,51 @@ const ICONS = {
 };
 
 // ─── Sidebar nav items ────────────────────────────────────────────────────────
-const SECTIONS = [
-  { id: 'overview',     label: 'Overview'               },
-  { id: 'discovery',    label: 'Discovery'              },
-  { id: 'listings',     label: 'Listing Management'     },
-  { id: 'collabs',      label: 'Collab Oversight'       },
-  { id: 'contracts',    label: 'Contracts'              },
-  { id: 'founders',     label: 'Founder Tracker'        },
-  { id: 'ambassadors',  label: 'Ambassadors (Beta)'     },
-  { id: 'messages',     label: 'User Messages'          },
-  { id: 'suggestions',  label: 'Suggestions'            },
-  { id: 'moderation',   label: 'Moderation'              },
-  { id: 'audit',        label: 'Audit Log'              },
-  { id: 'analytics',    label: 'Platform Analytics'     },
-  { id: 'settings',     label: 'Settings'               },
+// Flat items shown above the collapsible groups.
+const TOP_SECTIONS = [
+  { id: 'overview', label: 'Overview' },
 ];
 
-const MARKETING_TABS = [
-  { id: 'blog',      label: 'Blog'        },
-  { id: 'broadcast', label: 'Emails'      },
-  { id: 'social',    label: 'Social'      },
+// Pinned to the footer — always visible.
+const SETTINGS_SECTION = { id: 'settings', label: 'Settings' };
+
+// Collapsible groups. `icon` keys into ICONS; each group opens its first tab.
+const GROUPS = [
+  { id: 'users', label: 'Users', icon: 'users', tabs: [
+    { id: 'users',          label: 'All Users'           },
+    { id: 'messages',       label: 'User Messages'       },
+    { id: 'founders',       label: 'Founder Tracker'     },
+    { id: 'algo-simulator', label: 'Algorithm Simulator' },
+    { id: 'algo-reference', label: 'How It Works'        },
+  ] },
+  { id: 'collabs', label: 'Collab Oversight', icon: 'collabs', tabs: [
+    { id: 'collabs',   label: 'Oversight'          },
+    { id: 'listings',  label: 'Listing Management' },
+    { id: 'contracts', label: 'Contracts'          },
+  ] },
+  { id: 'marketing', label: 'Marketing', icon: 'marketing', tabs: [
+    { id: 'discovery', label: 'Discovery' },
+    { id: 'blog',      label: 'Blog'      },
+    { id: 'broadcast', label: 'Emails'    },
+    { id: 'social',    label: 'Social'    },
+  ] },
+  { id: 'suggestions', label: 'Suggestions / Beta', icon: 'suggestions', tabs: [
+    { id: 'suggestions', label: 'Suggestions'        },
+    { id: 'ambassadors', label: 'Ambassadors (Beta)' },
+    { id: 'moderation',  label: 'Moderation'         },
+    { id: 'audit',       label: 'Audit Log'          },
+  ] },
 ];
 
-const USERS_TABS = [
-  { id: 'users',           label: 'All Users'          },
-  { id: 'algo-simulator',  label: 'Algorithm Simulator' },
-  { id: 'algo-reference',  label: 'How It Works'        },
+// Panels reachable outside the sidebar (e.g. Overview widgets) — kept here so
+// the breadcrumb can still resolve their label.
+const HIDDEN_SECTIONS = [
+  { id: 'analytics', label: 'Platform Analytics' },
+];
+
+const ALL_LABELS = [
+  ...TOP_SECTIONS, SETTINGS_SECTION, ...HIDDEN_SECTIONS,
+  ...GROUPS.flatMap(g => g.tabs),
 ];
 
 function UsersPanel()        { return <Users />;                }
@@ -147,16 +167,20 @@ const PANEL_MAP = {
 export default function AdminDashboard() {
   const { authorized, loading, profile } = useAdminGuard();
   const [activeSection, setActiveSection] = useState('overview');
-  const [marketingOpen, setMarketingOpen] = useState(false);
-  const [usersOpen, setUsersOpen] = useState(false);
+  const [openGroups, setOpenGroups] = useState({});
+  const [usersInitialView, setUsersInitialView] = useState(null);
   const unreadCount = useQuery(api.messages.getUnreadCount);
 
-  const isMarketingTab = MARKETING_TABS.some(t => t.id === activeSection);
-  const isUsersTab = USERS_TABS.some(t => t.id === activeSection);
+  // Manual nav clears any deep-linked Users sub-view (e.g. Overview → pending).
+  const selectSection = (id) => { setUsersInitialView(null); setActiveSection(id); };
 
   useEffect(() => {
     const handler = (e) => {
-      if (e.detail?.tab && PANEL_MAP[e.detail.tab]) setActiveSection(e.detail.tab);
+      const { tab, view } = e.detail || {};
+      if (tab && PANEL_MAP[tab]) {
+        setUsersInitialView(view || null);
+        setActiveSection(tab);
+      }
     };
     window.addEventListener('collabnb-admin-tab', handler);
     return () => window.removeEventListener('collabnb-admin-tab', handler);
@@ -171,11 +195,10 @@ export default function AdminDashboard() {
 
   const ActivePanel = PANEL_MAP[activeSection] || PANEL_MAP['overview'];
   const badges = { messages: unreadCount || 0 };
-  const activeLabel = isMarketingTab
-    ? `Marketing › ${MARKETING_TABS.find(t => t.id === activeSection)?.label}`
-    : isUsersTab
-      ? `Users › ${USERS_TABS.find(t => t.id === activeSection)?.label}`
-      : SECTIONS.find(s => s.id === activeSection)?.label;
+  const activeGroup = GROUPS.find(g => g.tabs.some(t => t.id === activeSection));
+  const activeLabel = activeGroup
+    ? `${activeGroup.label} › ${activeGroup.tabs.find(t => t.id === activeSection)?.label}`
+    : ALL_LABELS.find(s => s.id === activeSection)?.label;
 
   // Decide where "Back to my account" goes based on role
   const backPath = profile?.role === 'host' ? '/host' : '/profile';
@@ -185,7 +208,7 @@ export default function AdminDashboard() {
     return (
       <button
         key={s.id}
-        onClick={() => setActiveSection(s.id)}
+        onClick={() => selectSection(s.id)}
         style={{
           display: 'flex', alignItems: 'center', gap: '0.625rem',
           width: '100%', padding: '0.55rem 0.75rem',
@@ -209,6 +232,73 @@ export default function AdminDashboard() {
           </span>
         )}
       </button>
+    );
+  };
+
+  const renderSubTab = (t) => {
+    const active = activeSection === t.id;
+    return (
+      <button
+        key={t.id}
+        onClick={() => selectSection(t.id)}
+        style={{
+          display: 'flex', alignItems: 'center', gap: '0.5rem',
+          width: '100%', padding: '0.45rem 0.75rem 0.45rem 2rem',
+          borderRadius: '0.625rem', marginBottom: '0.1rem',
+          background: active ? 'rgba(255,255,255,0.75)' : 'transparent',
+          color: active ? '#192524' : '#5a7070',
+          fontWeight: active ? 600 : 400,
+          fontSize: '0.82rem', textAlign: 'left',
+          cursor: 'pointer', border: 'none',
+          transition: 'background 0.15s',
+        }}
+        onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'rgba(255,255,255,0.4)'; }}
+        onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent'; }}
+      >
+        <span style={{ display: 'flex', alignItems: 'center', opacity: active ? 1 : 0.6 }}>{ICONS[t.id]}</span>
+        <span style={{ flex: 1 }}>{t.label}</span>
+        {badges[t.id] > 0 && (
+          <span style={{ fontSize: '0.65rem', fontWeight: 700, background: '#D1EBDB', color: '#166534', borderRadius: '99px', padding: '0 0.4rem', lineHeight: 1.7 }}>
+            {badges[t.id]}
+          </span>
+        )}
+      </button>
+    );
+  };
+
+  const renderGroup = (group) => {
+    const isActive = group.tabs.some(t => t.id === activeSection);
+    const expanded = openGroups[group.id] || isActive;
+    return (
+      <div key={group.id}>
+        <button
+          onClick={() => {
+            setOpenGroups(o => ({ ...o, [group.id]: !expanded }));
+            if (!isActive) selectSection(group.tabs[0].id);
+          }}
+          style={{
+            display: 'flex', alignItems: 'center', gap: '0.625rem',
+            width: '100%', padding: '0.55rem 0.75rem',
+            borderRadius: '0.625rem', marginBottom: '0.15rem',
+            background: isActive ? 'rgba(255,255,255,0.85)' : 'transparent',
+            color: isActive ? '#192524' : '#3C5759',
+            fontWeight: isActive ? 600 : 400,
+            fontSize: '0.875rem', textAlign: 'left',
+            transition: 'background 0.15s, color 0.15s',
+            cursor: 'pointer', border: 'none',
+            boxShadow: isActive ? '0 1px 4px rgba(25,37,36,0.08)' : 'none',
+          }}
+          onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = 'rgba(255,255,255,0.5)'; }}
+          onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
+        >
+          <span style={{ display: 'flex', alignItems: 'center', color: isActive ? '#192524' : '#3C5759', opacity: isActive ? 1 : 0.7 }}>{ICONS[group.icon]}</span>
+          <span style={{ flex: 1 }}>{group.label}</span>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ transition: 'transform 150ms', transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)', opacity: 0.5 }}>
+            <path d="M9 18l6-6-6-6"/>
+          </svg>
+        </button>
+        {expanded && group.tabs.map(renderSubTab)}
+      </div>
     );
   };
 
@@ -259,113 +349,17 @@ export default function AdminDashboard() {
 
           {/* Nav items */}
           <nav style={{ padding: '0.75rem 0.75rem', flex: 1 }}>
-            {SECTIONS.slice(0, 2).map(renderSection)}
-
-            {/* ── Users group ─────────────────────────────────────────── */}
-            <button
-              onClick={() => { setUsersOpen(o => !o); if (!isUsersTab) setActiveSection('users'); }}
-              style={{
-                display: 'flex', alignItems: 'center', gap: '0.625rem',
-                width: '100%', padding: '0.55rem 0.75rem',
-                borderRadius: '0.625rem', marginBottom: '0.15rem',
-                background: isUsersTab ? 'rgba(255,255,255,0.85)' : 'transparent',
-                color: isUsersTab ? '#192524' : '#3C5759',
-                fontWeight: isUsersTab ? 600 : 400,
-                fontSize: '0.875rem', textAlign: 'left',
-                transition: 'background 0.15s, color 0.15s',
-                cursor: 'pointer', border: 'none',
-                boxShadow: isUsersTab ? '0 1px 4px rgba(25,37,36,0.08)' : 'none',
-              }}
-              onMouseEnter={e => { if (!isUsersTab) e.currentTarget.style.background = 'rgba(255,255,255,0.5)'; }}
-              onMouseLeave={e => { if (!isUsersTab) e.currentTarget.style.background = 'transparent'; }}
-            >
-              <span style={{ display: 'flex', alignItems: 'center', color: isUsersTab ? '#192524' : '#3C5759', opacity: isUsersTab ? 1 : 0.7 }}>{ICONS.users}</span>
-              <span style={{ flex: 1 }}>Users</span>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ transition: 'transform 150ms', transform: (usersOpen || isUsersTab) ? 'rotate(90deg)' : 'rotate(0deg)', opacity: 0.5 }}>
-                <path d="M9 18l6-6-6-6"/>
-              </svg>
-            </button>
-            {(usersOpen || isUsersTab) && USERS_TABS.map(t => {
-              const active = activeSection === t.id;
-              return (
-                <button
-                  key={t.id}
-                  onClick={() => setActiveSection(t.id)}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: '0.5rem',
-                    width: '100%', padding: '0.45rem 0.75rem 0.45rem 2rem',
-                    borderRadius: '0.625rem', marginBottom: '0.1rem',
-                    background: active ? 'rgba(255,255,255,0.75)' : 'transparent',
-                    color: active ? '#192524' : '#5a7070',
-                    fontWeight: active ? 600 : 400,
-                    fontSize: '0.82rem', textAlign: 'left',
-                    cursor: 'pointer', border: 'none',
-                    transition: 'background 0.15s',
-                  }}
-                  onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'rgba(255,255,255,0.4)'; }}
-                  onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent'; }}
-                >
-                  <span style={{ display: 'flex', alignItems: 'center', opacity: active ? 1 : 0.6 }}>{ICONS[t.id]}</span>
-                  {t.label}
-                </button>
-              );
-            })}
-
-            {SECTIONS.slice(2).map(renderSection)}
-
-            {/* ── Marketing group ─────────────────────────────────────── */}
-            <button
-              onClick={() => { setMarketingOpen(o => !o); if (!isMarketingTab) setActiveSection('blog'); }}
-              style={{
-                display: 'flex', alignItems: 'center', gap: '0.625rem',
-                width: '100%', padding: '0.55rem 0.75rem',
-                borderRadius: '0.625rem', marginBottom: '0.15rem',
-                background: isMarketingTab ? 'rgba(255,255,255,0.85)' : 'transparent',
-                color: isMarketingTab ? '#192524' : '#3C5759',
-                fontWeight: isMarketingTab ? 600 : 400,
-                fontSize: '0.875rem', textAlign: 'left',
-                transition: 'background 0.15s, color 0.15s',
-                cursor: 'pointer', border: 'none',
-                boxShadow: isMarketingTab ? '0 1px 4px rgba(25,37,36,0.08)' : 'none',
-              }}
-              onMouseEnter={e => { if (!isMarketingTab) e.currentTarget.style.background = 'rgba(255,255,255,0.5)'; }}
-              onMouseLeave={e => { if (!isMarketingTab) e.currentTarget.style.background = isMarketingTab ? 'rgba(255,255,255,0.85)' : 'transparent'; }}
-            >
-              <span style={{ display: 'flex', alignItems: 'center', color: isMarketingTab ? '#192524' : '#3C5759', opacity: isMarketingTab ? 1 : 0.7 }}>{ICONS.marketing}</span>
-              <span style={{ flex: 1 }}>Marketing</span>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ transition: 'transform 150ms', transform: (marketingOpen || isMarketingTab) ? 'rotate(90deg)' : 'rotate(0deg)', opacity: 0.5 }}>
-                <path d="M9 18l6-6-6-6"/>
-              </svg>
-            </button>
-            {(marketingOpen || isMarketingTab) && MARKETING_TABS.map(t => {
-              const active = activeSection === t.id;
-              return (
-                <button
-                  key={t.id}
-                  onClick={() => setActiveSection(t.id)}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: '0.5rem',
-                    width: '100%', padding: '0.45rem 0.75rem 0.45rem 2rem',
-                    borderRadius: '0.625rem', marginBottom: '0.1rem',
-                    background: active ? 'rgba(255,255,255,0.75)' : 'transparent',
-                    color: active ? '#192524' : '#5a7070',
-                    fontWeight: active ? 600 : 400,
-                    fontSize: '0.82rem', textAlign: 'left',
-                    cursor: 'pointer', border: 'none',
-                    transition: 'background 0.15s',
-                  }}
-                  onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'rgba(255,255,255,0.4)'; }}
-                  onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent'; }}
-                >
-                  <span style={{ display: 'flex', alignItems: 'center', opacity: active ? 1 : 0.6 }}>{ICONS[t.id]}</span>
-                  {t.label}
-                </button>
-              );
-            })}
+            {TOP_SECTIONS.map(renderSection)}
+            {GROUPS.map(renderGroup)}
           </nav>
 
+          {/* Pinned Settings — always visible */}
+          <div style={{ padding: '0.5rem 0.75rem', borderTop: '1px solid rgba(25,37,36,0.07)' }}>
+            {renderSection(SETTINGS_SECTION)}
+          </div>
+
           {/* Footer */}
-          <div style={{ padding: '1rem 1.25rem', borderTop: '1px solid rgba(25,37,36,0.07)', fontSize: '0.75rem', color: '#959D90' }}>
+          <div style={{ padding: '0.75rem 1.25rem', fontSize: '0.75rem', color: '#959D90' }}>
             Internal use only
           </div>
         </aside>
@@ -400,7 +394,9 @@ export default function AdminDashboard() {
               overflow: 'hidden',
               minHeight: 'calc(100dvh - 52px - 3rem)',
             }}>
-              <ActivePanel />
+              {activeSection === 'users'
+                ? <Users initialTab={usersInitialView} />
+                : <ActivePanel />}
             </div>
           </div>
         </main>

@@ -271,6 +271,52 @@ export const rejectProfile = mutation({
   },
 });
 
+// ─── Admin: Nudge an email-only signup to finish creating their account ─────────
+export const nudgeFinishSignup = mutation({
+  args: { profileId: v.id("profiles") },
+  handler: async (ctx, { profileId }) => {
+    const profile = await ctx.db.get(profileId);
+    if (!profile) return { ok: false, reason: "not_found" };
+    if (!profile.email) return { ok: false, reason: "no_email" };
+
+    await ctx.scheduler.runAfter(0, internal.emails.sendFinishSignupEmail, {
+      email: profile.email,
+      full_name: profile.full_name,
+    });
+
+    await ctx.db.insert("admin_audit_log", {
+      action: "finish_signup_nudge",
+      target_type: "profile",
+      target_id: String(profileId),
+      details: profile.full_name,
+      created_at: Date.now(),
+    });
+
+    return { ok: true };
+  },
+});
+
+// ─── ONE-OFF (remove after running) ─────────────────────────────────────────────
+// Grants a named profile Creator + Host + Admin in one shot. Run once via:
+//   npx convex run gates:grantFullAccessByName '{"name":"Benjamin Grief"}'
+export const grantFullAccessByName = internalMutation({
+  args: { name: v.string() },
+  handler: async (ctx, { name }) => {
+    const profiles = await ctx.db.query("profiles").collect();
+    const p = profiles.find((x) => x.full_name === name);
+    if (!p) throw new Error(`No profile found with full_name "${name}"`);
+    await ctx.db.patch(p._id, {
+      is_admin: true,
+      is_verified: true,
+      creator_verified: true,
+      host_verified: true,
+      is_rejected: undefined,
+      rejection_reason: undefined,
+    });
+    return { granted: String(p._id), email: p.email };
+  },
+});
+
 // ─── Admin: Set admin note / request interview ──────────────────────────────────
 export const setAdminNote = mutation({
   args: {

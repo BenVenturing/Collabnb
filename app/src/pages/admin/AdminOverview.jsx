@@ -3,8 +3,9 @@ import { api } from '../../../convex/_generated/api';
 import { useAuth } from '../../contexts/AuthContext';
 
 // Switch the active admin tab via the AdminDashboard event bridge.
-function goToTab(tab) {
-  window.dispatchEvent(new CustomEvent('collabnb-admin-tab', { detail: { tab } }));
+// `view` optionally selects a sub-view within the target panel (e.g. Users → pending).
+function goToTab(tab, view) {
+  window.dispatchEvent(new CustomEvent('collabnb-admin-tab', { detail: { tab, view } }));
 }
 
 function greeting() {
@@ -36,13 +37,13 @@ export default function AdminOverview() {
   const pendingDrafts = drafts?.length ?? 0;
   const awaitingSignature = (contracts || []).filter(c => {
     const s = (c.status || '').toLowerCase();
-    return s !== 'completed' && s !== 'cancelled' && s !== 'draft' && !(c.creator_signed && c.host_signed);
+    return !c.admin_dismissed && s !== 'completed' && s !== 'cancelled' && s !== 'draft' && !(c.creator_signed && c.host_signed);
   }).length;
   const failedFees = (contracts || []).filter(c => c.fee_charge_failed && !c.paid).length;
   const outreachDone = (prospectStats?.contactedToday?.creators ?? 0) + (prospectStats?.contactedToday?.hosts ?? 0);
 
   const attention = [
-    pendingVerifications > 0 && { label: `${pendingVerifications} profile${pendingVerifications === 1 ? '' : 's'} waiting for verification`, tab: 'verification' },
+    pendingVerifications > 0 && { label: `${pendingVerifications} profile${pendingVerifications === 1 ? '' : 's'} waiting for verification`, tab: 'users', view: 'pending' },
     (unreadCount ?? 0) > 0 && { label: `${unreadCount} unread user message${unreadCount === 1 ? '' : 's'}`, tab: 'messages' },
     failedFees > 0 && { label: `${failedFees} platform fee charge${failedFees === 1 ? '' : 's'} failed and need manual payment`, tab: 'contracts' },
     awaitingSignature > 0 && { label: `${awaitingSignature} contract${awaitingSignature === 1 ? '' : 's'} awaiting signatures`, tab: 'contracts' },
@@ -50,8 +51,8 @@ export default function AdminOverview() {
   ].filter(Boolean);
 
   const tiles = [
-    { label: 'Creators',        value: fmt(stats?.creators),        tab: 'verification' },
-    { label: 'Hosts',           value: fmt(stats?.hosts),           tab: 'verification' },
+    { label: 'Creators',        value: fmt(stats?.creators),        tab: 'users' },
+    { label: 'Hosts',           value: fmt(stats?.hosts),           tab: 'users', view: 'hosts' },
     { label: 'Active listings', value: fmt(stats?.activeListings),  tab: 'listings' },
     { label: 'Collabs',         value: fmt(stats?.approvedCollabs), tab: 'collabs' },
     { label: 'Outreach today',  value: `${outreachDone}/40`,        tab: 'discovery' },
@@ -104,7 +105,7 @@ export default function AdminOverview() {
           <button className="admin-focusable" style={pill}
             onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.24)'; }}
             onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.12)'; }}
-            onClick={() => goToTab('verification')}>
+            onClick={() => goToTab('users', 'pending')}>
             Review queue
           </button>
         </div>
@@ -117,7 +118,7 @@ export default function AdminOverview() {
             <button
               key={t.label}
               className="admin-focusable"
-              onClick={() => goToTab(t.tab)}
+              onClick={() => goToTab(t.tab, t.view)}
               style={{
                 textAlign: 'left', padding: '1rem 1.1rem', borderRadius: '1.25rem',
                 background: 'rgba(255,255,255,0.72)', border: '1px solid rgba(255,255,255,0.8)',
@@ -133,6 +134,30 @@ export default function AdminOverview() {
           ))}
         </div>
 
+        {/* Platform analytics widget → opens the full dashboard */}
+        <button
+          className="admin-focusable"
+          onClick={() => goToTab('analytics')}
+          style={{
+            display: 'flex', alignItems: 'center', gap: '0.9rem', width: '100%',
+            textAlign: 'left', padding: '1rem 1.25rem', borderRadius: '1.25rem', marginBottom: '1.75rem',
+            background: 'rgba(255,255,255,0.72)', border: '1px solid rgba(255,255,255,0.8)',
+            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.9), 0 4px 16px rgba(25,37,36,0.05)',
+            cursor: 'pointer', transition: 'transform 0.8s cubic-bezier(0.19,1,0.22,1), box-shadow 0.8s cubic-bezier(0.19,1,0.22,1)',
+          }}
+          onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = 'inset 0 1px 0 rgba(255,255,255,0.9), 0 10px 28px rgba(25,37,36,0.1)'; }}
+          onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = 'inset 0 1px 0 rgba(255,255,255,0.9), 0 4px 16px rgba(25,37,36,0.05)'; }}
+        >
+          <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 40, height: 40, flexShrink: 0, borderRadius: '0.875rem', background: 'rgba(209,235,219,0.5)', color: '#166534' }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+          </span>
+          <span style={{ flex: 1 }}>
+            <div style={{ fontFamily: 'Cabinet Grotesk, sans-serif', fontWeight: 700, fontSize: '1rem', color: '#192524' }}>Platform analytics</div>
+            <div style={{ fontSize: '0.75rem', color: '#959D90', marginTop: '0.15rem', fontFamily: 'Satoshi, sans-serif' }}>Open the full dashboard</div>
+          </span>
+          <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#959D90" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+        </button>
+
         {/* Needs attention */}
         <p style={{ fontFamily: 'Cabinet Grotesk, sans-serif', fontWeight: 700, fontSize: '0.95rem', color: '#192524', margin: '0 0 0.75rem' }}>Needs attention</p>
         {attention.length === 0 ? (
@@ -145,7 +170,7 @@ export default function AdminOverview() {
               <button
                 key={i}
                 className="admin-focusable"
-                onClick={() => goToTab(item.tab)}
+                onClick={() => goToTab(item.tab, item.view)}
                 style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                   padding: '0.8rem 1.1rem', borderRadius: '0.875rem', textAlign: 'left',

@@ -256,6 +256,23 @@ export const TEMPLATE_DEFAULTS: Record<string, TemplateDef> = {
       footnote: "You may also receive an invitation email from Trustpilot — reviewing through either link works.",
     },
   },
+  finish_signup: {
+    name: "Finish creating your account",
+    trigger: "Admin nudges an email-only signup to complete their account",
+    category: "Account",
+    vars: ["firstName"],
+    calloutColor: "#4A9B7F",
+    buttonHref: `${BASE_URL}/login.html`,
+    copy: {
+      subject: "Finish setting up your Collabnb account",
+      heading: "You're almost there, {{firstName}} 👋",
+      body: "You started signing up for Collabnb but haven't finished creating your login yet. It only takes 30 seconds — set your password (or continue with Google) and you're in.",
+      calloutLabel: "One step left",
+      calloutText: "Create your login below to complete your account and unlock your dashboard.",
+      buttonLabel: "Finish creating your account",
+      footnote: "If you didn't start a Collabnb signup, you can safely ignore this email.",
+    },
+  },
 };
 
 // Sample values used by "Send test" in the admin panel.

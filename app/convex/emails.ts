@@ -32,6 +32,16 @@ export const sendWelcomeEmail = internalAction({
   },
 });
 
+// ─── Finish signup nudge (email-only account, no login yet) ───────────────────
+
+export const sendFinishSignupEmail = internalAction({
+  args: { email: v.string(), full_name: v.string() },
+  handler: async (ctx, { email, full_name }) => {
+    const firstName = full_name.split(" ")[0];
+    await sendFromTemplate(ctx, "finish_signup", email, { firstName });
+  },
+});
+
 // ─── Early access granted ─────────────────────────────────────────────────────
 
 export const sendAccessGrantedEmail = internalAction({

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQuery } from 'convex/react';
+import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import UserDetailPanel from '../../components/admin/UserDetailPanel';
 import { formatDate as fmtDate } from '../../lib/dateUtils';
@@ -36,6 +36,82 @@ function Badge({ color, bg, children }) {
     <span style={{ fontSize: '0.68rem', fontWeight: 700, padding: '0.15rem 0.5rem', borderRadius: 99, background: bg, color, display: 'inline-block', lineHeight: 1.6, whiteSpace: 'nowrap' }}>
       {children}
     </span>
+  );
+}
+
+function RowReviewActions({ p, onReview }) {
+  const rejectProfile = useMutation(api.gates.rejectProfile);
+  const nudgeFinishSignup = useMutation(api.gates.nudgeFinishSignup);
+  const [busy, setBusy] = useState(null);   // 'reject' | 'nudge'
+  const [done, setDone] = useState(null);   // 'sent' | 'error'
+
+  const isPending = p.is_verified !== true && !p.is_rejected;
+
+  const btn = {
+    padding: '0.35rem 0.7rem', borderRadius: 999, cursor: 'pointer',
+    fontSize: '0.75rem', fontWeight: 600, fontFamily: 'inherit', whiteSpace: 'nowrap',
+  };
+
+  if (!isPending) {
+    return (
+      <button
+        onClick={e => { e.stopPropagation(); onReview(); }}
+        style={{ ...btn, background: 'rgba(255,255,255,0.7)', border: '1px solid rgba(25,37,36,0.1)', color: SLATE }}
+      >
+        Review
+      </button>
+    );
+  }
+
+  const reject = async (e) => {
+    e.stopPropagation();
+    if (!window.confirm(`Reject ${p.full_name}? They'll receive a rejection email.`)) return;
+    setBusy('reject');
+    try { await rejectProfile({ profileId: p._id }); }
+    finally { setBusy(null); }
+  };
+
+  const nudge = async (e) => {
+    e.stopPropagation();
+    setBusy('nudge');
+    setDone(null);
+    try {
+      const res = await nudgeFinishSignup({ profileId: p._id });
+      setDone(res?.ok ? 'sent' : 'error');
+    } catch {
+      setDone('error');
+    } finally {
+      setBusy(null);
+      setTimeout(() => setDone(null), 3000);
+    }
+  };
+
+  return (
+    <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'flex-end' }}>
+      <button
+        onClick={e => { e.stopPropagation(); onReview(); }}
+        style={{ ...btn, background: '#166534', border: 'none', color: '#fff' }}
+      >
+        Approve ▸
+      </button>
+      <button
+        onClick={reject}
+        disabled={busy === 'reject'}
+        style={{ ...btn, background: 'transparent', border: '1px solid rgba(153,27,27,0.25)', color: '#991B1B', opacity: busy === 'reject' ? 0.6 : 1 }}
+      >
+        {busy === 'reject' ? '…' : 'Reject'}
+      </button>
+      {!p.clerk_registered && (
+        <button
+          onClick={nudge}
+          disabled={busy === 'nudge'}
+          title="Email them a link to finish creating their account"
+          style={{ ...btn, background: 'rgba(255,255,255,0.7)', border: '1px solid rgba(25,37,36,0.12)', color: SLATE, opacity: busy === 'nudge' ? 0.6 : 1 }}
+        >
+          {busy === 'nudge' ? 'Sending…' : done === 'sent' ? 'Sent ✓' : done === 'error' ? 'Failed' : 'Finish signup ✉'}
+        </button>
+      )}
+    </div>
   );
 }
 
@@ -92,8 +168,8 @@ function SocialCell({ p }) {
 const TH_STYLE = { padding: '0.7rem 1rem', textAlign: 'left', fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: SAGE, whiteSpace: 'nowrap' };
 const TD_STYLE = { padding: '0.8rem 1rem', verticalAlign: 'top' };
 
-export default function Users() {
-  const [tab, setTab]               = useState('creators');
+export default function Users({ initialTab } = {}) {
+  const [tab, setTab]               = useState(initialTab || 'creators');
   const [search, setSearch]         = useState('');
   const [acctFilter, setAcctFilter] = useState('all');
   const [copied, setCopied]         = useState(false);
@@ -112,6 +188,7 @@ export default function Users() {
   const rejectedAll   = (allProfiles || []).filter(p => p.is_rejected === true);
 
   const baseRows =
+    tab === 'pending'  ? pending      :
     tab === 'creators' ? creatorsAll :
     tab === 'hosts'    ? hostsAll    :
     rejectedAll;
@@ -149,7 +226,7 @@ export default function Users() {
   ];
 
   return (
-    <div style={{ padding: '2rem 2.5rem', maxWidth: 1000 }}>
+    <div style={{ padding: '2rem 2.5rem', maxWidth: 1180 }}>
       {/* ── Title ── */}
       <h1 style={{ fontFamily: 'Cabinet Grotesk, sans-serif', fontSize: '1.5rem', fontWeight: 700, color: INK, letterSpacing: '-0.025em', margin: 0 }}>
         Users
@@ -183,6 +260,9 @@ export default function Users() {
 
       {/* ── Tabs ── */}
       <div style={{ ...GLASS, display: 'flex', gap: '0.2rem', marginBottom: '1rem', padding: '0.2rem', borderRadius: 999, width: 'fit-content' }}>
+        <TabBtn active={tab === 'pending'} onClick={() => setTab('pending')}>
+          Pending <CountBadge n={pending.length} variant="amber" />
+        </TabBtn>
         <TabBtn active={tab === 'creators'} onClick={() => setTab('creators')}>
           Creators <CountBadge n={creatorsAll.length} />
         </TabBtn>
@@ -257,7 +337,7 @@ export default function Users() {
 
       {/* ── User table ── */}
       {!isLoading && filtered.length > 0 && (
-        <div style={{ ...GLASS, borderRadius: '1.25rem', overflow: 'hidden' }}>
+        <div style={{ ...GLASS, borderRadius: '1.25rem', overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid rgba(25,37,36,0.07)' }}>
@@ -317,12 +397,7 @@ export default function Users() {
                     </div>
                   </td>
                   <td style={{ ...TD_STYLE, paddingRight: '1.5rem' }}>
-                    <button
-                      onClick={e => { e.stopPropagation(); setSelectedProfileId(p._id); }}
-                      style={{ padding: '0.35rem 0.8rem', borderRadius: 999, background: 'rgba(255,255,255,0.7)', border: '1px solid rgba(25,37,36,0.1)', cursor: 'pointer', color: SLATE, fontSize: '0.75rem', fontWeight: 600, fontFamily: 'inherit', whiteSpace: 'nowrap' }}
-                    >
-                      Review
-                    </button>
+                    <RowReviewActions p={p} onReview={() => setSelectedProfileId(p._id)} />
                   </td>
                 </tr>
               ))}

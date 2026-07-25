@@ -11,6 +11,30 @@ export const getAll = query({
   },
 });
 
+// Admin: permanently delete a contract.
+export const remove = mutation({
+  args: { contractId: v.id("contracts") },
+  handler: async (ctx, { contractId }) => {
+    const contract = await ctx.db.get(contractId);
+    if (!contract) return { deleted: false, reason: "not_found" };
+    await ctx.db.delete(contractId);
+    return { deleted: true };
+  },
+});
+
+// Admin: mark/unmark a contract as handled, hiding it from the Overview
+// "awaiting signatures" count without deleting the record.
+export const setHandled = mutation({
+  args: { contractId: v.id("contracts"), handled: v.boolean() },
+  handler: async (ctx, { contractId, handled }) => {
+    await ctx.db.patch(contractId, {
+      admin_dismissed: handled,
+      admin_dismissed_at: handled ? Date.now() : undefined,
+    });
+    return { ok: true };
+  },
+});
+
 export const getByOwner = query({
   args: { ownerId: v.string() },
   handler: async (ctx, args) => {

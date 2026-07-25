@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useQuery, useMutation } from 'convex/react';
+import { useQuery, useMutation, useAction } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
@@ -80,13 +80,13 @@ export default function UserDetailPanel({ profileId, onClose }) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const data = useQuery(api.profiles.getDetailedProfile, profileId ? { profileId } : 'skip');
-  const deleteProfile = useMutation(api.profiles.deleteProfile);
+  const deleteAccount = useAction(api.profiles.deleteAccount);
 
   const handleDelete = useCallback(async () => {
     if (!profileId) return;
     setDeleting(true);
     try {
-      await deleteProfile({ profileId });
+      await deleteAccount({ profileId });
       setDeleting(false);
       onClose();
     } catch (err) {
@@ -95,7 +95,7 @@ export default function UserDetailPanel({ profileId, onClose }) {
       alert('Failed to delete user. Check console for details.');
       console.error('Delete failed:', err);
     }
-  }, [profileId, deleteProfile, onClose]);
+  }, [profileId, deleteAccount, onClose]);
 
   // ── Close on Escape ─────────────────────────────────────────────────────────
   // (handled by the overlay click below)
@@ -232,7 +232,7 @@ export default function UserDetailPanel({ profileId, onClose }) {
                 </div>
                 <p style={{ fontSize: '0.78rem', color: '#7F1D1D', margin: '0 0 0.75rem', lineHeight: 1.5 }}>
                   Permanently delete this user and all associated data (collabs, pitches, messages, referral codes).
-                  This cannot be undone. You should also delete them from Clerk separately.
+                  This cannot be undone. Their Clerk login is also removed automatically (when CLERK_SECRET_KEY is set), freeing the email for reuse.
                 </p>
                 {!showDeleteConfirm ? (
                   <button

@@ -219,6 +219,8 @@ export default defineSchema({
     fee_charge_failed: v.optional(v.boolean()),
     sent_at: v.optional(v.number()),
     last_reminder_at: v.optional(v.number()),
+    admin_dismissed: v.optional(v.boolean()),
+    admin_dismissed_at: v.optional(v.number()),
   })
     .index("by_owner", ["owner_id"])
     .index("by_host", ["host_id"])

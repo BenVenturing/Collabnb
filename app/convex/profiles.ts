@@ -732,15 +732,33 @@ export const listPublicCreators = query({
   args: {},
   handler: async (ctx) => {
     const all = await ctx.db.query("profiles").collect();
-    return all
-      .filter(
-        (p) =>
-          p.role === "creator" &&
-          p.is_verified === true &&
-          p.is_rejected !== true &&
-          p.profile_visible !== false
-      )
-      .map((p) => {
+    const creators = all.filter(
+      (p) =>
+        p.role === "creator" &&
+        p.is_verified === true &&
+        p.is_rejected !== true &&
+        p.profile_visible !== false
+    );
+
+    // Completed-vs-total collab counts, used by creatorScore.js to rank
+    // creators by success rate. Computed live rather than stored so it never
+    // drifts from the collaborations table.
+    const collabStats = await Promise.all(
+      creators.map(async (p) => {
+        const collabs = await ctx.db
+          .query("collaborations")
+          .withIndex("by_creator", (q) => q.eq("creator_id", String(p._id)))
+          .collect();
+        const real = collabs.filter((c) => c.is_sample !== true);
+        const completed = real.filter(
+          (c) => c.status === "completed" || c.status === "approved"
+        ).length;
+        return { total: real.length, completed };
+      })
+    );
+
+    return creators
+      .map((p, i) => {
         const followers = p.follower_count ?? 0;
         const platforms: string[] = [];
         if (p.instagram_handle) platforms.push("Instagram");
@@ -757,7 +775,12 @@ export const listPublicCreators = query({
           followers,
           engagement: p.engagement_rate ?? 0,
           collab_count: p.collab_count ?? 0,
+          completed_collab_count: collabStats[i].completed,
+          total_collab_count: collabStats[i].total,
           location,
+          city: p.city ?? null,
+          region: p.region ?? null,
+          country: p.country ?? null,
           lat: null,
           lng: null,
           platforms,

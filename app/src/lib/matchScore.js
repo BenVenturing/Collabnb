@@ -42,9 +42,9 @@ const US_STATES = {
   virginia: 'va', washington: 'wa', 'west virginia': 'wv', wisconsin: 'wi', wyoming: 'wy',
 };
 
-const norm = (s) => (s || '').toString().trim().toLowerCase();
+export const norm = (s) => (s || '').toString().trim().toLowerCase();
 
-function regionTerms(region) {
+export function regionTerms(region) {
   const r = norm(region);
   if (!r) return [];
   const abbr = US_STATES[r];

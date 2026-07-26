@@ -1,6 +1,8 @@
 import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
+import { internal } from "./_generated/api";
 import { calcMidpoint, calcStayOffset, calcHardFloor, evaluateZone, normalizeTierId, totalPoints } from "./lib/compensationPoints";
+import { approxCoords } from "./lib/geo";
 
 const dateRangesValidator = v.array(v.object({
   startDate: v.string(),
@@ -109,12 +111,19 @@ export const getAll = query({
     }
 
     if (canViewFull) {
-      return Promise.all(filtered.map((l: any) => withImages(ctx, l)));
+      return Promise.all(filtered.map(async (l: any) => {
+        const w = await withImages(ctx, l);
+        // Never expose a host's exact coordinates — jitter before returning.
+        return { ...w, ...approxCoords(w.lat, w.lng, String(w._id), false) };
+      }));
     }
 
     // Redact sensitive fields for unapproved / limited creators
     return filtered.map((l: any) => ({
       ...l,
+      // Coarse (city-level) coords for gated viewers; the ...l spread above
+      // would otherwise leak the true lat/lng.
+      ...approxCoords(l.lat, l.lng, String(l._id), true),
       title: undefined,
       subtitle: undefined,
       about: undefined,
@@ -173,6 +182,7 @@ export const getSamples = query({
       const host = l.host_id ? hostMap.get(String(l.host_id)) : null;
       return {
         ...withImg,
+        ...approxCoords(withImg.lat, withImg.lng, String(withImg._id), false),
         host_avatar: host?.avatar_url || null,
         host_name: l.host_name || host?.full_name || null,
       };
@@ -203,10 +213,13 @@ export const getById = query({
     }
 
     const full = await withImages(ctx, listing);
-    if (canViewFull) return full;
+    if (canViewFull) {
+      return { ...full, ...approxCoords(full.lat, full.lng, String(full._id), false) };
+    }
 
     return {
       ...full,
+      ...approxCoords(full.lat, full.lng, String(full._id), true),
       title: undefined,
       subtitle: undefined,
       about: undefined,
@@ -400,7 +413,12 @@ export const create = mutation({
     if (floor?.zone === "red") {
       throw new Error(`Compensation is below the minimum for this workload. The minimum for this listing is $${Math.round(floor.hardFloor)}.`);
     }
-    return await ctx.db.insert("listings", { ...args, below_recommended_comp: floor?.zone === "amber" });
+    const id = await ctx.db.insert("listings", { ...args, below_recommended_comp: floor?.zone === "amber" });
+    // Geocode city/country → coords for the Explore map (skipped for samples).
+    if (args.location_city || args.location_country || args.location) {
+      await ctx.scheduler.runAfter(0, internal.geocode.geocodeListing, { listingId: id });
+    }
+    return id;
   },
 });
 
@@ -488,6 +506,15 @@ export const update = mutation({
     if (floor) patch.below_recommended_comp = floor.zone === "amber";
 
     await ctx.db.patch(id, patch);
+
+    // Re-geocode when the host changes where the listing is.
+    if (
+      fields.location_city !== undefined ||
+      fields.location_country !== undefined ||
+      fields.location !== undefined
+    ) {
+      await ctx.scheduler.runAfter(0, internal.geocode.geocodeListing, { listingId: id, force: true });
+    }
   },
 });
 

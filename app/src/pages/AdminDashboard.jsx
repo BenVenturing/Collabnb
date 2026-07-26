@@ -20,7 +20,9 @@ import Discovery from './admin/Discovery';
 import SocialHub from './admin/SocialHub';
 import AmbassadorManager from './admin/AmbassadorManager';
 import AlgorithmLab from './admin/AlgorithmLab';
+import CreatorAlgorithmLab from './admin/CreatorAlgorithmLab';
 import ModerationQueue from './admin/ModerationQueue';
+import AdminInbox from './admin/AdminInbox';
 
 const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL;
 
@@ -65,6 +67,7 @@ const ICONS = {
   'algo-simulator': IC(<><polygon points="5 3 19 12 5 21 5 3"/></>),
   'algo-reference': IC(<><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></>),
   messages:     IC(<path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>),
+  inbox:        IC(<><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z"/></>),
   suggestions:  IC(<><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17" strokeWidth="3"/></>),
   moderation:   IC(<><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></>),
   audit:        IC(<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>),
@@ -90,6 +93,8 @@ const GROUPS = [
     { id: 'founders',       label: 'Founder Tracker'     },
     { id: 'algo-simulator', label: 'Algorithm Simulator' },
     { id: 'algo-reference', label: 'How It Works'        },
+    { id: 'creator-algo-simulator', label: 'Creator Algorithm Simulator' },
+    { id: 'creator-algo-reference', label: 'How Creators Rank'          },
   ] },
   { id: 'collabs', label: 'Collab Oversight', icon: 'collabs', tabs: [
     { id: 'collabs',   label: 'Oversight'          },
@@ -114,6 +119,7 @@ const GROUPS = [
 // the breadcrumb can still resolve their label.
 const HIDDEN_SECTIONS = [
   { id: 'analytics', label: 'Platform Analytics' },
+  { id: 'admin-inbox', label: 'Inbox' },
 ];
 
 const ALL_LABELS = [
@@ -140,6 +146,9 @@ function DiscoveryPanel()    { return <Discovery />;            }
 function AmbassadorsPanel()  { return <AmbassadorManager />;    }
 function AlgoSimulatorPanel() { return <AlgorithmLab view="simulator" />; }
 function AlgoReferencePanel() { return <AlgorithmLab view="reference" />; }
+function CreatorAlgoSimulatorPanel() { return <CreatorAlgorithmLab view="simulator" />; }
+function CreatorAlgoReferencePanel() { return <CreatorAlgorithmLab view="reference" />; }
+function AdminInboxPanel()   { return <AdminInbox />; }
 
 const PANEL_MAP = {
   overview:     OverviewPanel,
@@ -161,6 +170,9 @@ const PANEL_MAP = {
   social:       SocialPanel,
   'algo-simulator': AlgoSimulatorPanel,
   'algo-reference': AlgoReferencePanel,
+  'creator-algo-simulator': CreatorAlgoSimulatorPanel,
+  'creator-algo-reference': CreatorAlgoReferencePanel,
+  'admin-inbox':    AdminInboxPanel,
 };
 
 // ─── AdminDashboard ───────────────────────────────────────────────────────────
@@ -169,7 +181,9 @@ export default function AdminDashboard() {
   const [activeSection, setActiveSection] = useState('overview');
   const [openGroups, setOpenGroups] = useState({});
   const [usersInitialView, setUsersInitialView] = useState(null);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const unreadCount = useQuery(api.messages.getUnreadCount);
+  const adminUnread = useQuery(api.adminThreads.unreadCount) ?? 0;
 
   // Manual nav clears any deep-linked Users sub-view (e.g. Overview → pending).
   const selectSection = (id) => { setUsersInitialView(null); setActiveSection(id); };

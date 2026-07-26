@@ -86,13 +86,21 @@ function CreatorModal({ creator, onClose, onMessage, saved, onSave }) {
     .filter(trip => new Date(trip.endDate) >= new Date())
     .sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
 
+  // Social links — each button only renders when the creator actually submitted
+  // that link. Real creators carry handle fields from Convex; sample/mock
+  // creators have none, so they fall back to username for their declared
+  // platforms. A real creator with no Instagram handle sees no Instagram button.
+  const ig = (creator.instagram_handle || (creator.isSample ? creator.username : '') || '').replace(/^@/, '');
+  const tt = (creator.tiktok_handle || (creator.isSample ? creator.username : '') || '').replace(/^@/, '');
+  const yt = (creator.youtube_handle || (creator.isSample ? creator.username : '') || '').replace(/^@/, '');
+
   const socialLinks = [];
-  if (creator.platforms?.includes('Instagram'))
-    socialLinks.push({ icon: <IconInstagram />, label: 'Instagram', url: `https://instagram.com/${creator.username}` });
-  if (creator.platforms?.includes('TikTok'))
-    socialLinks.push({ icon: <IconTikTok />, label: 'TikTok', url: `https://tiktok.com/@${creator.username}` });
-  if (creator.platforms?.includes('YouTube'))
-    socialLinks.push({ icon: <IconYouTube />, label: 'YouTube', url: `https://youtube.com/@${creator.username}` });
+  if (ig && creator.platforms?.includes('Instagram'))
+    socialLinks.push({ icon: <IconInstagram />, label: 'Instagram', url: `https://instagram.com/${ig}` });
+  if (tt && creator.platforms?.includes('TikTok'))
+    socialLinks.push({ icon: <IconTikTok />, label: 'TikTok', url: `https://tiktok.com/@${tt}` });
+  if (yt && creator.platforms?.includes('YouTube'))
+    socialLinks.push({ icon: <IconYouTube />, label: 'YouTube', url: `https://youtube.com/@${yt}` });
   if (creator.portfolioUrl)
     socialLinks.push({ icon: <IconExt />, label: 'Portfolio', url: creator.portfolioUrl });
 

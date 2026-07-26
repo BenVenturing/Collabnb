@@ -9,6 +9,7 @@
  */
 
 import type * as admin from "../admin.js";
+import type * as adminThreads from "../adminThreads.js";
 import type * as ambassadors from "../ambassadors.js";
 import type * as blog from "../blog.js";
 import type * as blogResearch from "../blogResearch.js";
@@ -22,8 +23,10 @@ import type * as emailTemplates from "../emailTemplates.js";
 import type * as emails from "../emails.js";
 import type * as fees from "../fees.js";
 import type * as gates from "../gates.js";
+import type * as geocode from "../geocode.js";
 import type * as http from "../http.js";
 import type * as lib_compensationPoints from "../lib/compensationPoints.js";
+import type * as lib_geo from "../lib/geo.js";
 import type * as listings from "../listings.js";
 import type * as marketplaceStats from "../marketplaceStats.js";
 import type * as messages from "../messages.js";
@@ -52,6 +55,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   admin: typeof admin;
+  adminThreads: typeof adminThreads;
   ambassadors: typeof ambassadors;
   blog: typeof blog;
   blogResearch: typeof blogResearch;
@@ -65,8 +69,10 @@ declare const fullApi: ApiFromModules<{
   emails: typeof emails;
   fees: typeof fees;
   gates: typeof gates;
+  geocode: typeof geocode;
   http: typeof http;
   "lib/compensationPoints": typeof lib_compensationPoints;
+  "lib/geo": typeof lib_geo;
   listings: typeof listings;
   marketplaceStats: typeof marketplaceStats;
   messages: typeof messages;

@@ -12,6 +12,7 @@ import { useAccessGate, PendingApprovalScreen, LimitedAccessScreen, TrialBanner 
 import { WhereSearchContent, WhatSearchContent, WhenSearchContent, useAnimatedPlaceholder } from '../components/SearchDropdowns';
 import SkeletonCard from '../components/SkeletonCard';
 import SampleWatermark from '../components/SampleWatermark';
+import CollabMap, { MapPopup } from '../components/map/CollabMap';
 import PricingTool, { PointsHelpButton } from '../components/PricingTool';
 import { cache } from '../lib/cache';
 import { buildCreatorContext, scoreListings, MATCH_BADGE_THRESHOLD, FOR_YOU_MIN_SCORE, NEAR_ME_MIN_LOCATION } from '../lib/matchScore';
@@ -20,6 +21,18 @@ const EXPLORE_CACHE_KEY = 'explore_listings_all';
 const HIDDEN_SAMPLE_LISTINGS_KEY = '@collabnb_hidden_sample_listings_v1';
 
 const PROP_FILTERS = ['All', 'Cabin', 'Villa', 'Treehouse', 'Glamping', 'Lodge', 'Estate', 'Cottage'];
+
+// Short pin/price label from a listing's compensation.
+function pinLabel(l) {
+  if (l._redacted) return '•••';
+  const cash = l.cash_amount;
+  if (typeof cash === 'number' && cash > 0) {
+    return cash >= 1000 ? `$${(cash / 1000).toFixed(cash % 1000 ? 1 : 0)}k` : `$${cash}`;
+  }
+  const m = String(l.compensation || '').match(/\$([\d,]+)/);
+  if (m) return `$${m[1]}`;
+  return l.collab_type || '·';
+}
 
 // ─── Convex listing normalizer ────────────────────────────────────────────────
 function normalizeConvexListing(l) {
@@ -375,6 +388,42 @@ export default function Explore() {
   const [popupHost, setPopupHost] = useState(null);
   const [pricingToolOpen, setPricingToolOpen] = useState(false);
   const searchRef = useRef(null);
+  const mapWhereRef = useRef(null);
+
+  // ── Map view state ───────────────────────────────────────────────────────────
+  const [mapOpen, setMapOpen] = useState(() => typeof window !== 'undefined' && window.innerWidth >= 900); // map is the primary Explore view on desktop
+  const [mapExpanded, setMapExpanded] = useState(false);   // full-screen map (hides the list column)
+  const [mapInstance, setMapInstance] = useState(null);
+  const [mapBounds, setMapBounds] = useState(null);
+  const [mapCenter, setMapCenter] = useState(null);        // {lng,lat} → reverse-geocoded area label
+  const [mapAreaLabel, setMapAreaLabel] = useState('');
+  const [activePinId, setActivePinId] = useState(null);
+  const [hoveredCardId, setHoveredCardId] = useState(null); // pin-driven: which card's pin is hovered
+  const [fitKey, setFitKey] = useState(0);
+  const [isNarrow, setIsNarrow] = useState(() => typeof window !== 'undefined' && window.innerWidth < 900);
+  useEffect(() => {
+    const on = () => setIsNarrow(window.innerWidth < 900);
+    window.addEventListener('resize', on);
+    return () => window.removeEventListener('resize', on);
+  }, []);
+  const handleMapMove = (b) => { setMapBounds(b); setMapCenter({ lng: b.centerLng, lat: b.centerLat }); };
+
+  // Reverse-geocode the map centre → "Homes in {area}" label (debounced).
+  useEffect(() => {
+    if (!mapOpen || !mapCenter) return;
+    const token = import.meta.env.VITE_MAPBOX_TOKEN;
+    if (!token) return;
+    let cancelled = false;
+    const t = setTimeout(async () => {
+      try {
+        const r = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${mapCenter.lng},${mapCenter.lat}.json?access_token=${token}&types=place,region,country&limit=1`);
+        const d = await r.json();
+        const name = d?.features?.[0]?.place_name || d?.features?.[0]?.text || '';
+        if (!cancelled) setMapAreaLabel(name);
+      } catch { /* ignore */ }
+    }, 350);
+    return () => { cancelled = true; clearTimeout(t); };
+  }, [mapOpen, mapCenter]);
 
   const hostAvatar = (profile?.is_founder && profile.avatar_url) || SAMPLE_HOST.avatar_fallback;
   const sampleHostPerson = {
@@ -434,23 +483,33 @@ export default function Explore() {
     return () => clearTimeout(t);
   }, [whatQuery]);
 
+  // Re-fit the map to results on open and on a new location search. (Kept above
+  // the access-gate early return so hook order stays stable.)
+  useEffect(() => { if (mapOpen) setFitKey((k) => k + 1); }, [mapOpen, debouncedWhere]);
+
   // Outside-click closes dropdowns
   useEffect(() => {
     const handler = (e) => {
-      if (searchRef.current && !searchRef.current.contains(e.target)) {
-        setActiveField(null);
-      }
+      if (searchRef.current?.contains(e.target)) return;
+      if (mapWhereRef.current?.contains(e.target)) return;
+      setActiveField(null);
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  // Sync compact search with scroll threshold
+  // Compact the top nav into a single bar. Forced on in map view (keeps Explore
+  // uncluttered); scroll-driven in the classic list view.
   useEffect(() => {
+    if (mapOpen) {
+      setCompactSearch(true);
+      return () => setCompactSearch(false);
+    }
     const onScroll = () => setCompactSearch(window.scrollY > 80);
+    onScroll();
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => { window.removeEventListener('scroll', onScroll); setCompactSearch(false); };
-  }, [setCompactSearch]);
+  }, [mapOpen, setCompactSearch]);
 
   // ── Data source: real Convex listings + global sample listings ───────────────
   const convexRaw  = useQuery(api.listings.getAll, profile?._id ? { viewerId: String(profile._id) } : {}) ?? null;       // real (excludes is_sample)
@@ -540,6 +599,13 @@ export default function Explore() {
   const byPropType = (arr) =>
     propFilter === 'All' ? arr : arr.filter((l) => l.property_type === propFilter);
 
+  function inBounds(l) {
+    if (!mapBounds) return true;
+    if (typeof l.lat !== 'number' || typeof l.lng !== 'number') return false;
+    return l.lat >= mapBounds.south && l.lat <= mapBounds.north
+        && l.lng >= mapBounds.west  && l.lng <= mapBounds.east;
+  }
+
   const searchFiltered = isLoading ? [] : applySearch(allListings);
 
   const nearLocationLabel = (whereVal || debouncedWhere || profile?.city || '').split(',')[0].trim() || 'You';
@@ -565,9 +631,12 @@ export default function Explore() {
   if (!access.loading) {
     if (!access.canAccess && access.role === 'creator' && !access.isAdmin) {
       if (access.state === 'pending') return <PendingApprovalScreen />;
-      if (access.state === 'limited') return <LimitedAccessScreen />;
+      // 'limited' (trial expired) intentionally falls through: the server returns
+      // a redacted payload, so these creators still see the map + blurred cards
+      // (drives FOMO) with the upgrade banner below — instead of a hard block.
     }
   }
+  const isLimited = !access.loading && access.state === 'limited' && access.role === 'creator' && !access.isAdmin;
 
   const trending    = byPropType(scored.filter((l) => l.is_featured));
   const forYou      = byPropType(
@@ -582,9 +651,62 @@ export default function Explore() {
   );
   const allFiltered = byPropType(scored);
 
+  // ── Map data: search/filter matches that have coordinates ────────────────────
+  const mapListings = allFiltered.filter((l) => typeof l.lat === 'number' && typeof l.lng === 'number');
+  const mapListInBounds = mapListings.filter(inBounds);
+  const mapPoints = mapListings.map((l) => ({
+    id: l.id, lat: l.lat, lng: l.lng, label: pinLabel(l), redacted: l._redacted === true,
+  }));
+  const activeListing = activePinId ? mapListings.find((l) => l.id === activePinId) : null;
+
   const forYouSubtitle = profile?.niches?.length
     ? `Matched to your ${profile.niches.slice(0, 2).join(' & ')} niches`
     : 'Matched to your profile and collab history';
+
+  const openListingNewTab = (id) => window.open(`/listing/${id}`, '_blank', 'noopener');
+
+  // Shared map element (desktop split + mobile full-screen reuse it). Only built
+  // when the map is open so Mapbox never initialises otherwise.
+  const collabMapNode = mapOpen ? (
+    <CollabMap
+      points={mapPoints}
+      activeId={activePinId}
+      savedIds={savedIds}
+      onPinClick={setActivePinId}
+      onPinHover={setHoveredCardId}
+      onMoveEnd={handleMapMove}
+      onReady={setMapInstance}
+      onToggleExpand={isNarrow ? undefined : () => setMapExpanded((v) => !v)}
+      expanded={mapExpanded}
+      fitKey={fitKey}
+    >
+      {activeListing && (
+        <MapPopup map={mapInstance} lng={activeListing.lng} lat={activeListing.lat}>
+          <div style={{ position: 'relative', width: 260, filter: 'drop-shadow(0 12px 28px rgba(25,37,36,0.28))' }}>
+            <button
+              onClick={(e) => { e.stopPropagation(); setActivePinId(null); }}
+              aria-label="Close"
+              style={{
+                position: 'absolute', top: -10, left: -10, zIndex: 2,
+                width: 26, height: 26, borderRadius: '50%', border: '1px solid rgba(255,255,255,0.6)',
+                background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(8px)', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                boxShadow: '0 2px 8px rgba(25,37,36,0.2)', fontSize: 16, lineHeight: 1, color: 'var(--ink)',
+              }}
+            >×</button>
+            <ListingCard
+              listing={activeListing}
+              saved={savedIds.has(activeListing.id)}
+              onSave={toggleSave}
+              delay={0}
+              onNavigate={() => openListingNewTab(activeListing.id)}
+              onHostClick={() => setPopupHost(sampleHostPerson)}
+            />
+          </div>
+        </MapPopup>
+      )}
+    </CollabMap>
+  ) : null;
 
   return (
     <div>
@@ -592,6 +714,22 @@ export default function Explore() {
       {/* ── Trial countdown banner ─────────── */}
       {!access.loading && access.state === 'trial' && access.daysLeft !== null && (
         <TrialBanner daysLeft={access.daysLeft} />
+      )}
+
+      {/* ── Limited (trial expired): browse stays visible but redacted ─────── */}
+      {isLimited && (
+        <button
+          onClick={() => navigate('/pricing')}
+          style={{
+            width: '100%', border: 'none', cursor: 'pointer', textAlign: 'center',
+            padding: '0.6rem 1rem', fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: '0.82rem',
+            color: 'var(--ink)', background: 'rgba(209,235,219,0.95)',
+            backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
+            borderBottom: '1px solid rgba(25,37,36,0.06)',
+          }}
+        >
+          Your trial has ended — listing details are hidden. Upgrade to Creator&nbsp;Plus to unlock the full map →
+        </button>
       )}
 
       {/* ── Search header — hidden instantly once nav goes compact ─────────── */}
@@ -748,13 +886,13 @@ export default function Explore() {
           )}
         </div>
 
-        {/* ── Property type chips ──────────────────────────────────────────── */}
-        <div style={{ maxWidth: '680px', margin: '0.75rem auto 0', overflow: 'hidden' }}>
+        {/* ── Property type chips + Show map toggle ────────────────────────── */}
+        <div style={{ maxWidth: '820px', margin: '0.75rem auto 0', overflow: 'hidden', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <div
             className="no-scrollbar"
             style={{
               display: 'flex', gap: '0.5rem', overflowX: 'auto',
-              paddingBottom: '0.875rem', justifyContent: 'center',
+              paddingBottom: '0.875rem', justifyContent: 'center', flex: 1,
             }}
           >
             {PROP_FILTERS.map((f) => (
@@ -768,11 +906,29 @@ export default function Explore() {
               </button>
             ))}
           </div>
+          <button
+            onClick={() => setMapOpen((o) => !o)}
+            className="btn-glass"
+            style={{ flexShrink: 0, marginBottom: '0.875rem', display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.8rem', fontWeight: 700 }}
+          >
+            {mapOpen ? (
+              <>
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                Show list
+              </>
+            ) : (
+              <>
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+                Show map
+              </>
+            )}
+          </button>
         </div>
+
       </div>
 
       {/* ── Listing rows ─────────────────────────────────────────────────────── */}
-      <div style={{ paddingTop: '2.25rem', paddingBottom: '4rem' }}>
+      <div style={{ paddingTop: '2.25rem', paddingBottom: '4rem', display: (mapOpen && !isNarrow) ? 'none' : undefined }}>
 
         {isLoading ? (
           <div style={{ marginBottom: '2.5rem' }}>
@@ -895,6 +1051,115 @@ export default function Explore() {
         )}
       </div>
 
+      {/* ── Map split (desktop) — primary Explore view ──────────────────────── */}
+      {mapOpen && !isNarrow && (
+        <div style={{ padding: '0 1.5rem 1rem' }}>
+          {/* Slim control row: area pill + property chips + Show list */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', paddingBottom: '0.75rem' }}>
+            <div ref={mapWhereRef} style={{ position: 'relative', flexShrink: 0 }}>
+              <button
+                onClick={() => setActiveField(activeField === 'where' ? null : 'where')}
+                className="btn-glass"
+                style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.8rem', fontWeight: 600, maxWidth: 300 }}
+              >
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {whereVal || mapAreaLabel || 'Search this area'}
+                </span>
+              </button>
+              {activeField === 'where' && (
+                <Dropdown width="380px">
+                  <WhereSearchContent whereVal={whereVal} setWhereVal={setWhereVal} onClose={() => setActiveField(null)} listings={allListings} />
+                </Dropdown>
+              )}
+            </div>
+            <div className="no-scrollbar" style={{ display: 'flex', gap: '0.5rem', overflowX: 'auto', flex: 1 }}>
+              {PROP_FILTERS.map((f) => (
+                <button key={f} onClick={() => setPropFilter(f)} className={`chip ${propFilter === f ? 'active' : ''}`} style={{ flexShrink: 0 }}>{f}</button>
+              ))}
+            </div>
+            <button
+              onClick={() => setMapOpen(false)}
+              className="btn-glass"
+              style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.8rem', fontWeight: 700 }}
+            >
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+              Show list
+            </button>
+          </div>
+
+          <div style={{ display: 'flex', gap: '1rem', height: 'calc(100vh - 150px)', minHeight: 460 }}>
+            {!mapExpanded && (
+              <div className="no-scrollbar" style={{ flex: '0 0 clamp(320px, 46%, 620px)', overflowY: 'auto', paddingRight: '0.25rem' }}>
+                <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.95rem', color: 'var(--ink)', margin: '0 0 0.9rem' }}>
+                  {mapListInBounds.length} {mapListInBounds.length === 1 ? 'collab' : 'collabs'}{mapAreaLabel ? ` in ${mapAreaLabel.split(',')[0]}` : ' in this area'}
+                </p>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, 260px)', justifyContent: 'center', gap: '1rem' }}>
+                  {mapListInBounds.map((l, i) => {
+                    const lifted = hoveredCardId === l.id || activePinId === l.id;
+                    return (
+                      <div
+                        key={l.id}
+                        style={{
+                          borderRadius: 18,
+                          transition: 'transform 300ms var(--ease-out-quart), box-shadow 300ms var(--ease-out-quart)',
+                          transform: lifted ? 'translateY(-4px)' : 'none',
+                          boxShadow: lifted ? '0 8px 24px rgba(25,37,36,0.10), 0 24px 48px rgba(25,37,36,0.08)' : 'none',
+                        }}
+                      >
+                        <ListingCard
+                          listing={l}
+                          saved={savedIds.has(l.id)}
+                          onSave={toggleSave}
+                          delay={Math.min(i * 20, 200)}
+                          onNavigate={() => goToListing(l.id)}
+                          onHostClick={() => setPopupHost(sampleHostPerson)}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+                {mapListInBounds.length === 0 && (
+                  <p style={{ fontSize: '0.85rem', color: 'var(--sage)', textAlign: 'center', paddingTop: '2rem' }}>
+                    No collabs in this area — zoom out or move the map.
+                  </p>
+                )}
+              </div>
+            )}
+            <div style={{ flex: 1, position: 'relative', borderRadius: '1.25rem', overflow: 'hidden', boxShadow: '0 8px 32px rgba(25,37,36,0.12)' }}>
+              {collabMapNode}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Map full-screen (mobile) ────────────────────────────────────────── */}
+      {mapOpen && isNarrow && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 300 }}>
+          {collabMapNode}
+          <button
+            onClick={() => setMapOpen(false)}
+            className="btn-primary"
+            style={{ position: 'fixed', bottom: '1.5rem', left: '50%', transform: 'translateX(-50%)', zIndex: 310, display: 'flex', alignItems: 'center', gap: 8, borderRadius: 9999, padding: '0.7rem 1.4rem', fontWeight: 700, boxShadow: '0 6px 20px rgba(25,37,36,0.3)' }}
+          >
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+            Show list
+          </button>
+        </div>
+      )}
+
+      {/* ── Floating Map pill (mobile, list view) ───────────────────────────── */}
+      {isNarrow && !mapOpen && (
+        <button
+          onClick={() => setMapOpen(true)}
+          className="btn-primary"
+          style={{ position: 'fixed', bottom: '5.25rem', left: '50%', transform: 'translateX(-50%)', zIndex: 200, display: 'flex', alignItems: 'center', gap: 8, borderRadius: 9999, padding: '0.7rem 1.4rem', fontWeight: 700, boxShadow: '0 6px 20px rgba(25,37,36,0.3)' }}
+        >
+          Map
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+        </button>
+      )}
+
       {popupHost && (
         <ProfilePopupCard
           person={popupHost}
@@ -903,7 +1168,8 @@ export default function Explore() {
         />
       )}
 
-      {/* ── Floating corner stack: Contract + Pricing ─────────────────────── */}
+      {/* ── Floating corner stack: Contract + Pricing (hidden in map view) ─── */}
+      {!mapOpen && (
       <div style={{
         position: 'fixed', bottom: '5.25rem', right: '0.75rem', zIndex: 200,
         display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8,
@@ -954,6 +1220,7 @@ export default function Explore() {
           Contract
         </button>
       </div>
+      )}
 
       {pricingToolOpen && (
         <div

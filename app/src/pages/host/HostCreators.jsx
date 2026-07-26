@@ -13,6 +13,7 @@ import CreatorAvatar from '../../components/CreatorAvatar';
 import CreatorCard from '../../components/CreatorCard';
 import { useAppBar } from '../../contexts/AppBarContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { buildHostContext, scoreCreators } from '../../lib/creatorScore';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const LOCATION_CONSENT_KEY = '@collabnb_location_consent_v1';
@@ -1036,7 +1037,7 @@ export default function HostCreators() {
   const [query,            setQuery]            = useState('');
   const [tierFilter,       setTierFilter]       = useState('All');
   const [platformFilter,   setPlatformFilter]   = useState([]);
-  const [sortBy,           setSortBy]           = useState('followers');
+  const [sortBy,           setSortBy]           = useState('recommended');
   const [showPast,         setShowPast]         = useState(false);
   const [nearbyOnly,       setNearbyOnly]       = useState(false);
   const [savedOnly,        setSavedOnly]        = useState(false);
@@ -1091,7 +1092,7 @@ export default function HostCreators() {
   function clearAllFilters() {
     setTierFilter('All');
     setPlatformFilter([]);
-    setSortBy('followers');
+    setSortBy('recommended');
     setShowPast(false);
     setNearbyOnly(false);
     setSavedOnly(false);
@@ -1112,9 +1113,12 @@ export default function HostCreators() {
 
   const profileSavedIds = profile?.saved_creator_ids ?? [];
 
+  // Host's own city/region/country — drives the "Recommended" sort's proximity score.
+  const hostCtx = useMemo(() => buildHostContext(profile), [profile?.city, profile?.region, profile?.country]);
+
   // Cache key derived from all active filter params (incl. saved ids, since savedOnly depends on them,
   // plus real-creator count + hideSamples so the cache invalidates when real creators load or samples are hidden)
-  const filterParams = { query, tierFilter, platformFilter, sortBy, showPast, nearbyOnly, savedOnly, dateStart, dateEnd, savedIds: profileSavedIds, realCount: realCreators?.length ?? 0, hideSamples };
+  const filterParams = { query, tierFilter, platformFilter, sortBy, showPast, nearbyOnly, savedOnly, dateStart, dateEnd, savedIds: profileSavedIds, realCount: realCreators?.length ?? 0, hideSamples, hostLoc: `${profile?.city ?? ''}|${profile?.region ?? ''}|${profile?.country ?? ''}` };
   const searchCacheKey = cacheKey('creator_search', filterParams);
 
   const computeFiltered = () => {
@@ -1140,7 +1144,8 @@ export default function HostCreators() {
     if (dateStart && dateEnd) {
       base = base.filter(c => isNearHost(c) || tripsOverlapWithHost(c, dateStart, dateEnd));
     }
-    if (sortBy === 'followers') base = [...base].sort((a, b) => b.followers - a.followers);
+    if (sortBy === 'recommended') base = scoreCreators(base, hostCtx).sort((a, b) => b._score - a._score);
+    else if (sortBy === 'followers') base = [...base].sort((a, b) => b.followers - a.followers);
     else if (sortBy === 'engagement') base = [...base].sort((a, b) => b.engagement - a.engagement);
     else if (sortBy === 'collabs') base = [...base].sort((a, b) => b.collab_count - a.collab_count);
     // Pin real (non-sample) creators above samples, preserving sort within each group.
@@ -1275,6 +1280,32 @@ export default function HostCreators() {
                       }} />
                     </div>
                   </button>
+                </div>
+
+                {/* Sort By */}
+                <div style={{ marginBottom: 16 }}>
+                  <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--sage)', margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    Sort By
+                  </p>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                    {[
+                      { value: 'recommended', label: 'Recommended' },
+                      { value: 'followers', label: 'Most Followers' },
+                      { value: 'engagement', label: 'Highest Engagement' },
+                      { value: 'collabs', label: 'Most Collabs' },
+                    ].map(({ value, label }) => (
+                      <button key={value} onClick={() => setSortBy(value)} style={{
+                        padding: '5px 12px', borderRadius: 9999,
+                        fontSize: '0.75rem', fontWeight: 600,
+                        background: sortBy === value ? 'var(--ink)' : 'rgba(255,255,255,0.5)',
+                        color: sortBy === value ? 'var(--bone)' : 'var(--slate)',
+                        border: `1px solid ${sortBy === value ? 'var(--ink)' : 'rgba(255,255,255,0.7)'}`,
+                        cursor: 'pointer', transition: 'all 150ms', fontFamily: 'var(--font-body)',
+                      }}>
+                        {label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 {/* Creator Type */}

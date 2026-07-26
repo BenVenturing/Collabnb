@@ -40,49 +40,71 @@ function clusterPoints(points, zoom) {
   return out;
 }
 
+// IMPORTANT: the returned (outer) element is the Mapbox marker — Mapbox owns its
+// `transform` (translate) to position it. We must NEVER set transform on it, or
+// the pin snaps to the container origin (top-left). All hover/active scaling goes
+// on the INNER element instead.
 function pillEl({ label, active, saved, redacted }) {
-  const el = document.createElement('button');
-  el.type = 'button';
+  const wrap = document.createElement('div');
+  wrap.style.cursor = 'pointer';
+  wrap.style.willChange = 'transform';
+  const el = document.createElement('div');
   el.textContent = redacted ? '•••' : (label || '·');
-  Object.assign(el.style, {
-    font: '700 0.72rem var(--font-body, system-ui)',
-    padding: redacted ? '0.3rem 0.55rem' : '0.32rem 0.6rem',
-    borderRadius: '9999px',
-    border: active ? '1px solid rgba(25,37,36,0.9)' : '1px solid rgba(25,37,36,0.12)',
-    cursor: 'pointer',
-    whiteSpace: 'nowrap',
-    lineHeight: 1,
-    letterSpacing: '0.01em',
-    transition: 'transform 160ms cubic-bezier(0.16,1,0.3,1), background 160ms ease',
-    color: active ? '#fff' : '#192524',
-    background: active ? '#192524' : '#ffffff',
-    boxShadow: active
-      ? '0 4px 14px rgba(25,37,36,0.45)'
-      : '0 2px 10px rgba(25,37,36,0.30)',
-    transform: active ? 'scale(1.08)' : 'scale(1)',
-  });
-  if (saved && !active) el.style.background = '#c6e6d2';
-  el.onmouseenter = () => { if (!active) el.style.transform = 'scale(1.08)'; };
-  el.onmouseleave = () => { if (!active) el.style.transform = 'scale(1)'; };
-  return el;
+
+  function updateStyle(isActive, isSaved) {
+    Object.assign(el.style, {
+      font: '700 0.72rem var(--font-body, system-ui)',
+      padding: redacted ? '0.3rem 0.55rem' : '0.32rem 0.6rem',
+      borderRadius: '9999px',
+      border: isActive ? '1px solid rgba(25,37,36,0.9)' : '1px solid rgba(25,37,36,0.12)',
+      whiteSpace: 'nowrap',
+      lineHeight: '1',
+      letterSpacing: '0.01em',
+      transition: 'transform 160ms cubic-bezier(0.16,1,0.3,1), background-color 160ms ease, color 160ms ease, border-color 160ms ease, box-shadow 160ms ease',
+      color: isActive ? '#ffffff' : '#192524',
+      background: isActive ? '#192524' : (isSaved ? '#c6e6d2' : '#ffffff'),
+      boxShadow: isActive
+        ? '0 4px 14px rgba(25,37,36,0.45)'
+        : '0 2px 10px rgba(25,37,36,0.30)',
+      transform: isActive ? 'scale(1.08)' : 'scale(1)',
+    });
+  }
+
+  updateStyle(active, saved);
+
+  el.onmouseenter = () => { if (!wrap._isActive) el.style.transform = 'scale(1.08)'; };
+  el.onmouseleave = () => { if (!wrap._isActive) el.style.transform = 'scale(1)'; };
+
+  wrap.appendChild(el);
+  wrap._isActive = active;
+  wrap._updateStyle = (newActiveId, savedSet) => {
+    const isAct = wrap._pointId === newActiveId;
+    const isSvg = savedSet?.has?.(wrap._pointId);
+    wrap._isActive = isAct;
+    updateStyle(isAct, isSvg);
+  };
+  return wrap;
 }
 
 function clusterEl(count) {
-  const el = document.createElement('button');
-  el.type = 'button';
+  const wrap = document.createElement('div');
+  wrap.style.cursor = 'pointer';
+  wrap.style.willChange = 'transform';
+  const el = document.createElement('div');
   el.textContent = String(count);
   Object.assign(el.style, {
     font: '700 0.8rem var(--font-body, system-ui)',
     width: '2.35rem', height: '2.35rem', borderRadius: '50%',
     display: 'flex', alignItems: 'center', justifyContent: 'center',
-    border: '1.5px solid rgba(25,37,36,0.15)', cursor: 'pointer',
+    border: '1.5px solid rgba(25,37,36,0.15)',
     color: '#192524', background: '#ffffff',
     boxShadow: '0 3px 12px rgba(25,37,36,0.3)',
-    transition: 'transform 160ms cubic-bezier(0.16,1,0.3,1)',
+    transition: 'transform 160ms cubic-bezier(0.16,1,0.3,1), background-color 160ms ease',
   });
   el.onmouseenter = () => { el.style.transform = 'scale(1.1)'; };
   el.onmouseleave = () => { el.style.transform = 'scale(1)'; };
-  return el;
+  wrap.appendChild(el);
+  return wrap;
 }
 
 export default function CollabMap({
@@ -103,7 +125,7 @@ export default function CollabMap({
   const containerRef = useRef(null);
   const mapRef = useRef(null);
   const markersRef = useRef([]);
-  const sigRef = useRef('');
+  const clusterSigRef = useRef('');
   const [map, setMap] = useState(null);
   const [zoom, setZoom] = useState(DEFAULT_ZOOM);
 
@@ -121,7 +143,7 @@ export default function CollabMap({
     const m = new mapboxgl.Map({
       container: containerRef.current,
       style: STYLE_URL,
-      projection: 'mercator', // flat map: every listing is visible at once (no globe back-side)
+      projection: 'globe', // globe when zoomed out, flattens as you zoom in
       center: DEFAULT_CENTER,
       zoom: DEFAULT_ZOOM,
       attributionControl: false,
@@ -144,60 +166,74 @@ export default function CollabMap({
     return () => ro.disconnect();
   }, [map]);
 
-  // Rebuild markers on data / zoom / selection change. `points` is a fresh array
-  // every parent render, so we guard on a content signature — hovering a list
-  // card (which re-renders the parent) never rebuilds the map.
+  // Rebuild markers on data / zoom change. Update selection in-place so markers
+  // never get torn down or bounce to top-left when clicking a pin.
   useEffect(() => {
     const m = mapRef.current;
     if (!m) return;
     const withCoords = points.filter((p) => typeof p.lat === 'number' && typeof p.lng === 'number');
     const clusters = clusterPoints(withCoords, zoom);
-    const savedSig = withCoords.filter((p) => savedIds?.has?.(p.id)).map((p) => p.id).join(',');
-    const sig = clusters
+
+    const cSig = clusters
       .map((c) => c.type === 'cluster'
         ? `C${c.count}@${c.lat.toFixed(3)},${c.lng.toFixed(3)}`
         : `${c.id}:${c.lat.toFixed(4)},${c.lng.toFixed(4)}:${c.label}:${c.redacted ? 1 : 0}`)
-      .join('|') + `#a${activeId}#s${savedSig}`;
-    if (sig === sigRef.current) return;
-    sigRef.current = sig;
+      .join('|');
 
-    markersRef.current.forEach((mk) => mk.remove());
-    markersRef.current = [];
-    for (const c of clusters) {
-      let el;
-      if (c.type === 'cluster') {
-        el = clusterEl(c.count);
-        el.addEventListener('click', (e) => {
-          e.stopPropagation();
-          // Zoom to frame this cluster's actual members (fixes the pin jumping
-          // to a corner). Fall back to a centered zoom if members coincide.
-          const b = new mapboxgl.LngLatBounds();
-          (c.pts || []).forEach((p) => b.extend(p));
-          if (!b.isEmpty() && b.getNorthEast().distanceTo(b.getSouthWest()) > 1) {
-            m.fitBounds(b, { padding: 96, maxZoom: 14, duration: 600 });
-          } else {
-            m.easeTo({ center: [c.lng, c.lat], zoom: Math.min(m.getZoom() + 3, 14), duration: 500 });
-          }
-          onClusterClick?.(c);
-        });
-      } else {
-        el = pillEl({
-          label: c.label,
-          active: c.id === activeId,
-          saved: savedIds?.has?.(c.id),
-          redacted: c.redacted,
-        });
-        el.addEventListener('click', (e) => {
-          e.stopPropagation();
-          // Zoom into the pin and centre it, so the popup lands over the middle.
-          m.flyTo({ center: [c.lng, c.lat], zoom: Math.min(Math.max(m.getZoom() + 2, 10), 13), duration: 700, essential: true });
-          onPinClick?.(c.id);
-        });
-        el.addEventListener('mouseenter', () => onPinHover?.(c.id));
-        el.addEventListener('mouseleave', () => onPinHover?.(null));
+    if (cSig !== clusterSigRef.current) {
+      clusterSigRef.current = cSig;
+      markersRef.current.forEach((mk) => mk.remove());
+      markersRef.current = [];
+
+      for (const c of clusters) {
+        let wrap;
+        if (c.type === 'cluster') {
+          wrap = clusterEl(c.count);
+          wrap.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const b = new mapboxgl.LngLatBounds();
+            (c.pts || []).forEach((p) => b.extend(p));
+            if (!b.isEmpty() && b.getNorthEast().distanceTo(b.getSouthWest()) > 0.01) {
+              m.fitBounds(b, { padding: 96, maxZoom: 14, duration: 600 });
+            } else {
+              m.easeTo({ center: [c.lng, c.lat], zoom: Math.min(m.getZoom() + 3, 14), duration: 500 });
+            }
+            onClusterClick?.(c);
+          });
+        } else {
+          wrap = pillEl({
+            label: c.label,
+            active: c.id === activeId,
+            saved: savedIds?.has?.(c.id),
+            redacted: c.redacted,
+          });
+          wrap._pointId = c.id;
+          wrap.addEventListener('click', (e) => {
+            e.stopPropagation();
+            m.flyTo({
+              center: [c.lng, c.lat],
+              padding: { top: 240, bottom: 60, left: 40, right: 40 },
+              zoom: Math.min(Math.max(m.getZoom() + 2, 10), 13),
+              duration: 700,
+              essential: true,
+            });
+            onPinClick?.(c.id);
+          });
+          wrap.addEventListener('mouseenter', () => onPinHover?.(c.id));
+          wrap.addEventListener('mouseleave', () => onPinHover?.(null));
+        }
+
+        const marker = new mapboxgl.Marker({ element: wrap }).setLngLat([c.lng, c.lat]).addTo(m);
+        marker._wrap = wrap;
+        markersRef.current.push(marker);
       }
-      const marker = new mapboxgl.Marker({ element: el }).setLngLat([c.lng, c.lat]).addTo(m);
-      markersRef.current.push(marker);
+    } else {
+      // Geometry unchanged: update active pin selection and saved state in-place
+      for (const mk of markersRef.current) {
+        if (mk._wrap?._updateStyle) {
+          mk._wrap._updateStyle(activeId, savedIds);
+        }
+      }
     }
   }, [points, zoom, activeId, savedIds, onPinClick, onPinHover, onClusterClick]);
 
@@ -230,6 +266,12 @@ export default function CollabMap({
 
   return (
     <div style={{ position: 'absolute', inset: 0 }}>
+      <style>{`
+        @keyframes mapDotBounce {
+          0%, 80%, 100% { transform: translateY(0); opacity: 0.3; }
+          40% { transform: translateY(-6px); opacity: 1; }
+        }
+      `}</style>
       {/* Gentle desaturation mutes the outdoors preset toward the HAZY palette.
           Pins/popup/controls render outside this node, so they stay full-clarity. */}
       <div ref={containerRef} style={{ position: 'absolute', inset: 0, filter: 'saturate(0.82) brightness(1.02)' }} />
@@ -273,36 +315,70 @@ function MapControls({ map, onToggleExpand, expanded }) {
   );
 }
 
-// Popup anchored just above its pin. It is positioned ONCE (the parent reveals it
-// only after the click's fly-to has settled the pin near centre), so it never
-// chases the pin into a corner. Any user pan/zoom simply closes it via
-// onOffscreen (deselect + whiten the pin). Clamps so the whole card stays in view.
-export function MapPopup({ map, lng, lat, onOffscreen, children, cardWidth = 264, cardHeight = 380, gap = 16 }) {
+// Popup anchored just above its pin. Positioned with padding & clamping so the card
+// is always 100% visible inside the map window in both split and full-screen modes.
+export function MapPopup({ map, lng, lat, onOffscreen, children, cardWidth = 264, cardHeight = 390, gap = 16 }) {
   const [anchor, setAnchor] = useState(null);
   const offRef = useRef(onOffscreen);
   offRef.current = onOffscreen;
+
   useEffect(() => {
     if (!map || typeof lng !== 'number' || typeof lat !== 'number') return;
     const el = map.getContainer();
     const p = map.project([lng, lat]);
     setAnchor({ x: p.x, y: p.y, W: el.clientWidth, H: el.clientHeight });
-    // Close on user-initiated pan/zoom (originalEvent guards out programmatic moves).
-    const onMove = (e) => { if (e && e.originalEvent) offRef.current?.(); };
-    map.on('movestart', onMove);
-    return () => map.off('movestart', onMove);
+
+    // Collapse card on user pan/zoom/scroll/drag
+    const onUserInteract = (e) => {
+      if (e && (e.originalEvent || e.type === 'wheel' || e.type === 'dragstart')) {
+        offRef.current?.();
+      }
+    };
+
+    const userEvents = ['movestart', 'zoomstart', 'dragstart', 'wheel', 'touchstart'];
+    userEvents.forEach((evt) => map.on(evt, onUserInteract));
+
+    const onMapMove = () => {
+      const proj = map.project([lng, lat]);
+      setAnchor({ x: proj.x, y: proj.y, W: el.clientWidth, H: el.clientHeight });
+    };
+    map.on('move', onMapMove);
+
+    return () => {
+      userEvents.forEach((evt) => map.off(evt, onUserInteract));
+      map.off('move', onMapMove);
+    };
   }, [map, lng, lat]);
+
   if (!anchor) return null;
+
   const halfW = cardWidth / 2;
-  const left = Math.max(halfW + 8, Math.min(anchor.W - halfW - 8, anchor.x));
-  const below = anchor.y < cardHeight + gap + 8; // not enough room above → drop below the pin
-  const top = below ? anchor.y + gap : anchor.y - gap;
+  const left = Math.max(halfW + 12, Math.min(anchor.W - halfW - 12, anchor.x));
+
+  const spaceAbove = anchor.y - gap;
+  const spaceBelow = anchor.H - (anchor.y + gap);
+  const showBelow = spaceAbove < cardHeight && spaceBelow >= spaceAbove;
+
+  let top;
+  if (showBelow) {
+    top = Math.min(anchor.H - cardHeight - 12, anchor.y + gap);
+  } else {
+    top = Math.max(cardHeight + 12, anchor.y - gap);
+  }
+
   return (
     <div style={{
-      position: 'absolute', left, top,
-      transform: below ? 'translate(-50%, 0)' : 'translate(-50%, -100%)',
-      zIndex: 6, pointerEvents: 'auto',
+      position: 'absolute',
+      left,
+      top,
+      transform: showBelow ? 'translate(-50%, 0)' : 'translate(-50%, -100%)',
+      zIndex: 6,
+      pointerEvents: 'auto',
+      maxHeight: anchor.H - 24,
+      overflow: 'visible',
     }}>
       {children}
     </div>
   );
 }
+

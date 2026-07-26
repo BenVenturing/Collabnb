@@ -402,6 +402,9 @@ export default function Explore() {
   const [hoveredCardId, setHoveredCardId] = useState(null); // pin-driven: which card's pin is hovered
   const [fitKey, setFitKey] = useState(0);
   const [isNarrow, setIsNarrow] = useState(() => typeof window !== 'undefined' && window.innerWidth < 900);
+  const [isSearchingArea, setIsSearchingArea] = useState(false);
+  const [areaResultMsg, setAreaResultMsg] = useState(null);
+
   useEffect(() => {
     const on = () => setIsNarrow(window.innerWidth < 900);
     window.addEventListener('resize', on);
@@ -417,7 +420,35 @@ export default function Explore() {
     clearTimeout(popupTimerRef.current);
     popupTimerRef.current = setTimeout(() => setPopupReady(true), 720);
   };
-  const handleMapMove = (b) => { setMapBounds(b); setMapCenter({ lng: b.centerLng, lat: b.centerLat }); };
+  const handleMapMove = (b) => {
+    setMapBounds(b);
+    setMapCenter({ lng: b.centerLng, lat: b.centerLat });
+    if (areaResultMsg) setAreaResultMsg(null);
+  };
+
+  const handleSearchThisArea = () => {
+    if (isSearchingArea) return;
+    if (areaResultMsg) {
+      setAreaResultMsg(null);
+      return;
+    }
+    setIsSearchingArea(true);
+    setAreaResultMsg(null);
+    if (mapAreaLabel) setMapAreaDisplay(mapAreaLabel);
+
+    setTimeout(() => {
+      setIsSearchingArea(false);
+      const listingsInArea = mapListings.filter(inBounds);
+      const count = listingsInArea.length;
+      if (count === 0) {
+        setAreaResultMsg("Sorry, no listings in this specific area");
+        setTimeout(() => setAreaResultMsg(null), 4500);
+      } else {
+        setAreaResultMsg(`${count} ${count === 1 ? 'listing' : 'listings'} in this area`);
+        setTimeout(() => setAreaResultMsg(null), 2600);
+      }
+    }, 650);
+  };
 
   // Reverse-geocode the map centre → "Homes in {area}" label (debounced).
   useEffect(() => {
@@ -745,20 +776,51 @@ export default function Explore() {
           </div>
         </MapPopup>
       )}
-      {/* Search-this-area — bottom centre of the map */}
+      {/* Search-this-area button (supports 3 bouncing dots + in-place results count feedback with X close button) */}
       <button
-        onClick={() => setMapAreaDisplay(mapAreaLabel || '')}
+        onClick={handleSearchThisArea}
+        disabled={isSearchingArea}
         style={{
           position: 'absolute', bottom: 20, left: '50%', transform: 'translateX(-50%)', zIndex: 5,
-          display: 'flex', alignItems: 'center', gap: 7, padding: '0.6rem 1.1rem', borderRadius: 9999,
-          border: '1px solid rgba(25,37,36,0.14)', background: '#fff', color: 'var(--ink)',
-          fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer',
-          boxShadow: '0 4px 16px rgba(25,37,36,0.28)',
+          display: 'flex', alignItems: 'center', gap: 7, padding: '0.6rem 1.25rem', borderRadius: 9999,
+          border: areaResultMsg ? '1px solid rgba(25,37,36,0.22)' : '1px solid rgba(25,37,36,0.14)',
+          background: '#fff', color: 'var(--ink)',
+          fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: '0.82rem',
+          cursor: isSearchingArea ? 'default' : 'pointer',
+          boxShadow: '0 4px 16px rgba(25,37,36,0.28)', minWidth: 148, justifyContent: 'center',
+          transition: 'all 200ms cubic-bezier(0.16, 1, 0.3, 1)', whiteSpace: 'nowrap',
         }}
       >
-        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" style={{ width: 14, height: 14 }}><circle cx="8.5" cy="8.5" r="5.25"/><line x1="13.25" y1="13.25" x2="18" y2="18"/></svg>
-        Search this area
+        {isSearchingArea ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5, height: 18, padding: '0 4px' }}>
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#192524', display: 'inline-block', animation: 'mapDotBounce 1.2s infinite ease-in-out 0s' }} />
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#192524', display: 'inline-block', animation: 'mapDotBounce 1.2s infinite ease-in-out 0.2s' }} />
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#192524', display: 'inline-block', animation: 'mapDotBounce 1.2s infinite ease-in-out 0.4s' }} />
+          </div>
+        ) : areaResultMsg ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" style={{ width: 14, height: 14, color: areaResultMsg.includes('Sorry') ? '#d97706' : '#10b981' }}>
+              <circle cx="8.5" cy="8.5" r="5.25"/><line x1="13.25" y1="13.25" x2="18" y2="18"/>
+            </svg>
+            <span>{areaResultMsg}</span>
+            <span
+              onClick={(e) => { e.stopPropagation(); setAreaResultMsg(null); }}
+              title="Clear and refresh"
+              style={{
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                width: 18, height: 18, borderRadius: '50%', background: 'rgba(25,37,36,0.08)',
+                marginLeft: 4, cursor: 'pointer', fontSize: 13, lineHeight: 1, color: 'var(--ink)'
+              }}
+            >×</span>
+          </div>
+        ) : (
+          <>
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" style={{ width: 14, height: 14 }}><circle cx="8.5" cy="8.5" r="5.25"/><line x1="13.25" y1="13.25" x2="18" y2="18"/></svg>
+            Search this area
+          </>
+        )}
       </button>
+
     </CollabMap>
   ) : null;
 

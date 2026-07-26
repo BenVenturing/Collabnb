@@ -13,6 +13,7 @@ import Explore       from './pages/Explore';
 import Collabs       from './pages/Collabs';
 import Saved         from './pages/Saved';
 import Inbox         from './pages/Inbox';
+import Founders      from './pages/Founders';
 import Profile       from './pages/Profile';
 import ListingDetail from './pages/ListingDetail';
 import HostDashboard        from './pages/HostDashboard';
@@ -168,6 +169,8 @@ function AppRoutes() {
   // deep-linking to /host is sent back to their own experience
   const isLocalhostDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
   const hostOnly = (el) => (isAdmin || isLocalhostDev || profile?.role === 'host') ? el : <Navigate to="/explore" replace />;
+  // Founders space is founder-only (dev/admin always allowed for preview)
+  const founderOnly = (el) => (isAdmin || isLocalhostDev || profile?.is_founder === true) ? el : <Navigate to="/explore" replace />;
 
   return (
     <CollabProvider>
@@ -205,6 +208,7 @@ function AppRoutes() {
                 <Route path="/collabs"           element={<Collabs />} />
                 <Route path="/saved"             element={<Saved />} />
                 <Route path="/inbox"             element={<Inbox />} />
+                <Route path="/founders"          element={founderOnly(<Founders />)} />
                 <Route path="/profile"           element={<Profile />} />
                 <Route path="/contract"          element={<ContractBuilder />} />
                 <Route path="*"                  element={<Navigate to="/explore" replace />} />

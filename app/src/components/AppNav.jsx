@@ -24,10 +24,11 @@ function fmtNavWhen(val) {
 const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL;
 
 const CREATOR_NAV = [
-  { to: '/explore', label: 'Explore' },
-  { to: '/collabs', label: 'Collabs' },
-  { to: '/saved',   label: 'Saved'   },
-  { to: '/inbox',   label: 'Inbox'   },
+  { to: '/explore',  label: 'Explore'  },
+  { to: '/collabs',  label: 'Collabs'  },
+  { to: '/saved',    label: 'Saved'    },
+  { to: '/inbox',    label: 'Inbox'    },
+  { to: '/founders', label: 'Founders' },
 ];
 
 const HOST_NAV = [
@@ -35,6 +36,7 @@ const HOST_NAV = [
   { to: '/host/proposals', label: 'Proposals' },
   { to: '/inbox',          label: 'Inbox'     },
   { to: '/host/creators',  label: 'Creators'  },
+  { to: '/founders',       label: 'Founders'  },
 ];
 
 // ─── Dropdown panel (appears below nav pill) ──────────────────────────────────
@@ -120,7 +122,6 @@ export default function AppNav() {
   const checklistProgress = getChecklistProgress(profile, checklistTick);
   const checklistAllDone = checklistProgress.completed >= checklistProgress.total;
   const { compactSearch, hideNav } = useAppBar();
-  if (hideNav) return null;
   const { savedIds } = useCollabs();
   const navigate = useNavigate();
   const savedCount = savedIds.size;
@@ -255,16 +256,24 @@ export default function AppNav() {
 
   const location = useLocation();
   const isHost = profile?.role === 'host' || location.pathname.startsWith('/host');
-  const NAV_LINKS = isHost ? HOST_NAV : CREATOR_NAV;
+  const NAV_LINKS_BASE = isHost ? HOST_NAV : CREATOR_NAV;
   const initials = profile?.full_name?.split(' ').map((n) => n[0]).join('').slice(0, 2) ?? '?';
   const { session } = useAuth();
   const userEmail = (session?.user?.email || profile?.email || '').toLowerCase();
   const isAdmin = profile?.is_admin === true
     || userEmail === 'benventuring@gmail.com'
     || (!!ADMIN_EMAIL && userEmail === ADMIN_EMAIL.toLowerCase());
+  // Founders is founder-only — hide the nav item from everyone else
+  const canSeeFounders = profile?.is_founder === true || isAdmin;
+  const NAV_LINKS = canSeeFounders ? NAV_LINKS_BASE : NAV_LINKS_BASE.filter((l) => l.to !== '/founders');
 
   // Whether the "Search stays" pill is visible
   const showSearchPill = compactSearch && !menuOpen && !navSearchOpen;
+
+  // Bail out on render only — must come after every hook above so hook
+  // call order/count stays identical across renders (hideNav toggles from
+  // the swipe creator view). See React error #300.
+  if (hideNav) return null;
 
   return (
     <>
@@ -840,6 +849,16 @@ export default function AppNav() {
                   <p className="font-display font-bold text-ink text-sm">{profile?.full_name}</p>
                   <p className="text-sage text-xs mt-0.5">@{profile?.username}</p>
                 </NavLink>
+                {isAdmin && (
+                  <NavLink
+                    to="/admin"
+                    onClick={() => setProfileOpen(false)}
+                    className="block px-4 py-3 text-sm font-medium hover:bg-mint/30 transition-colors"
+                    style={{ color: '#3C5759' }}
+                  >
+                    Admin Panel
+                  </NavLink>
+                )}
                 <NavLink to="/profile?settings=true" onClick={() => setProfileOpen(false)} className="block px-4 py-3 text-sm text-ink hover:bg-mint/30 transition-colors">
                   Settings
                 </NavLink>
@@ -855,6 +874,25 @@ export default function AppNav() {
                     }}>
                       {checklistProgress.completed}/{checklistProgress.total}
                     </span>
+                  </button>
+                )}
+                {/* Role switch — admin toggles directly between views */}
+                {isAdmin && (
+                  <button
+                    onClick={async () => {
+                      setProfileOpen(false);
+                      if (isHost) {
+                        await updateProfile?.({ role: 'creator' });
+                        navigate('/explore');
+                      } else {
+                        await updateProfile?.({ role: 'host' });
+                        navigate('/host');
+                      }
+                    }}
+                    className="w-full text-left px-4 py-3 text-sm hover:bg-mint/30 transition-colors"
+                    style={{ color: 'var(--slate)', fontWeight: 500 }}
+                  >
+                    {isHost ? 'Switch to Creator View' : 'Switch to Host View'}
                   </button>
                 )}
                 {!isAdmin && (
@@ -891,29 +929,11 @@ export default function AppNav() {
                       : (isHostVerified ? 'Switch to Host View' : 'Sign up as Host')}
                   </button>
                 )}
-                {isAdmin && (
-                  <>
-                    <div className="border-t border-stone/30" />
-                    <NavLink
-                      to="/admin"
-                      onClick={() => setProfileOpen(false)}
-                      className="block px-4 py-3 text-sm font-medium hover:bg-mint/30 transition-colors"
-                      style={{ color: '#3C5759' }}
-                    >
-                      Admin Panel
-                    </NavLink>
-                  </>
-                )}
                 <div className="border-t border-stone/30" />
                 <button
                   onClick={() => { setProfileOpen(false); setFaqOpen(true); setFaqBubble(true); }}
-                  className="w-full text-left px-4 py-3 text-sm text-ink hover:bg-mint/30 transition-colors flex items-center gap-2"
+                  className="w-full text-left px-4 py-3 text-sm text-ink hover:bg-mint/30 transition-colors"
                 >
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5 text-sage flex-shrink-0">
-                    <circle cx="12" cy="12" r="10"/>
-                    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
-                    <line x1="12" y1="17" x2="12.01" y2="17"/>
-                  </svg>
                   FAQ &amp; Help
                 </button>
                 <div className="border-t border-stone/30" />

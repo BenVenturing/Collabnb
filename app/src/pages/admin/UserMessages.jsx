@@ -13,6 +13,7 @@ const CATEGORY_COLORS = {
   'Feature Request':  { bg: '#EDE9FE', color: '#5B21B6' },
   'Account Help':     { bg: '#DBEAFE', color: '#1E40AF' },
   'General Question': { bg: '#F0FDF4', color: '#166534' },
+  'FAQ Question':     { bg: '#FEF3C7', color: '#92400E' },
   'Other':            { bg: '#F7F5F2', color: '#3C5759' },
 };
 
@@ -73,8 +74,13 @@ function MessageRow({ msg, toggleRead, archiveMessage, unarchiveMessage }) {
         </div>
 
         {/* Category */}
-        <div style={{ flex: '0 0 140px' }}>
+        <div style={{ flex: '0 0 140px', display: 'flex', alignItems: 'center', gap: '0.3rem', flexWrap: 'wrap' }}>
           <CategoryBadge category={msg.category} />
+          {msg.add_to_faq && (
+            <span title="Live on the public Help Center FAQ" style={{ fontSize: '0.65rem', fontWeight: 700, color: '#166534', background: '#D1FAE5', padding: '0.1rem 0.4rem', borderRadius: '99px', whiteSpace: 'nowrap' }}>
+              ● Public FAQ
+            </span>
+          )}
         </div>
 
         {/* Preview */}
@@ -117,7 +123,7 @@ function MessageRow({ msg, toggleRead, archiveMessage, unarchiveMessage }) {
               <textarea
                 value={replyText}
                 onChange={(e) => setReplyText(e.target.value)}
-                placeholder="Type your reply — the user will see this when they open the Help Center…"
+                placeholder={msg.add_to_faq ? "Type your answer — it will appear publicly on the FAQ immediately…" : "Type your reply — the user will see this when they open the Help Center…"}
                 rows={3}
                 style={{
                   width: '100%', padding: '0.65rem 0.875rem', borderRadius: '0.5rem',
@@ -143,7 +149,7 @@ function MessageRow({ msg, toggleRead, archiveMessage, unarchiveMessage }) {
           )}
           {replySent && (
             <div style={{ fontSize: '0.78rem', color: '#166534', background: 'rgba(209,235,219,0.5)', borderRadius: '0.4rem', padding: '0.35rem 0.75rem', marginBottom: '0.625rem', display: 'inline-block' }}>
-              ✓ Reply saved — user will see it in their Help Center
+              ✓ {msg.add_to_faq ? 'Reply saved — now live on the public FAQ' : 'Reply saved — user will see it in their Help Center'}
             </div>
           )}
 

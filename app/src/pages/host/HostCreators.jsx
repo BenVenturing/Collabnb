@@ -644,7 +644,7 @@ function SwipeCardWrapper({ creator, exitDir, onMessage, onHide }) {
 
   return (
     <div style={{ transition: 'transform 340ms cubic-bezier(0.25,1,0.5,1), opacity 300ms ease', ...dynStyle }}>
-      <CreatorCard creator={creator} onMessage={onMessage} onHide={onHide} />
+      <CreatorCard creator={creator} large onMessage={onMessage} onHide={onHide} />
     </div>
   );
 }
@@ -727,9 +727,16 @@ function SwipeView({ creators, onBack, savedIds, onToggleSaved }) {
   const [swipeQuery,   setSwipeQuery]   = useState('');
   const [swipeTier,    setSwipeTier]    = useState('All');
   const [filtersOpen,  setFiltersOpen]  = useState(false);
+  const [saveError,    setSaveError]    = useState(null); // { name } | null — shown when a swipe-save fails to persist
   const filterRef   = useRef(null);
   const savedIdsRef = useRef(savedIds);
   useEffect(() => { savedIdsRef.current = savedIds; }, [savedIds]);
+
+  useEffect(() => {
+    if (!saveError) return;
+    const t = setTimeout(() => setSaveError(null), 4000);
+    return () => clearTimeout(t);
+  }, [saveError]);
 
   // Hide nav while in swipe mode, restore on exit
   useEffect(() => {
@@ -774,10 +781,20 @@ function SwipeView({ creators, onBack, savedIds, onToggleSaved }) {
     navigate(`/inbox?creatorName=${encodeURIComponent(creator.name)}&creatorAvatar=${encodeURIComponent(creator.avatar ?? '')}`);
   }
 
-  function mutateSaved(creatorId, add) {
+  // Awaits the real Convex mutation and checks the returned saved-ids list to
+  // confirm the toggle actually landed — the optimistic UI in AuthContext
+  // rolls back silently on failure, so without this a failed save would look
+  // identical to a successful one after the card has already swiped away.
+  async function mutateSaved(creatorId, add, name) {
     const cur = savedIdsRef.current;
     if (add === cur.includes(creatorId)) return; // already in desired state
-    onToggleSaved?.(creatorId);
+    try {
+      const result = await onToggleSaved?.(creatorId);
+      const persisted = Array.isArray(result) ? result.includes(creatorId) === add : true;
+      if (!persisted) setSaveError({ name: name || 'this creator' });
+    } catch {
+      setSaveError({ name: name || 'this creator' });
+    }
   }
 
   const handleSwipe = useCallback((dir) => {
@@ -787,7 +804,7 @@ function SwipeView({ creators, onBack, savedIds, onToggleSaved }) {
 
     setTimeout(() => {
       if (dir === 'right') {
-        mutateSaved(currentCreator.id, true);
+        mutateSaved(currentCreator.id, true, currentCreator.name);
       } else if (dir === 'left') {
         const next = [...deprioIds, currentCreator.id];
         setDeprioIds(next); lsSet(DEPRIO_KEY, next);
@@ -845,6 +862,27 @@ function SwipeView({ creators, onBack, savedIds, onToggleSaved }) {
       display: 'flex', flexDirection: 'column',
       overflow: 'hidden',
     }}>
+      {/* ── Save-failed toast ── */}
+      {saveError && (
+        <div style={{
+          position: 'fixed', top: 16, left: '50%', transform: 'translateX(-50%)',
+          zIndex: 300, display: 'flex', alignItems: 'center', gap: 10,
+          padding: '0.7rem 1.1rem', borderRadius: 9999,
+          background: 'rgba(200,104,104,0.95)', color: '#fff',
+          fontFamily: 'var(--font-body)', fontSize: 12.5, fontWeight: 600,
+          boxShadow: '0 8px 28px rgba(0,0,0,0.35)',
+          animation: 'fadeUp 180ms cubic-bezier(0.16,1,0.3,1) forwards',
+        }}>
+          Couldn't save {saveError.name} — check your connection and try again
+          <button
+            onClick={() => setSaveError(null)}
+            style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', display: 'flex', padding: 0, opacity: 0.85 }}
+          >
+            <X size={13} />
+          </button>
+        </div>
+      )}
+
       {/* ── Top bar ── */}
       <div style={{
         flexShrink: 0,
@@ -941,11 +979,15 @@ function SwipeView({ creators, onBack, savedIds, onToggleSaved }) {
       </div>
 
       {/* ── Scrollable content ── */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '0.5rem 1.25rem 2rem' }}>
+      <div style={{
+        flex: 1, overflowY: 'auto', padding: '0.5rem 1.25rem 2rem',
+        display: 'flex', flexDirection: 'column',
+        justifyContent: savedCreators.length > 0 ? 'flex-start' : 'center',
+      }}>
 
         {/* Card */}
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: savedCreators.length > 0 ? '2rem' : 0 }}>
-          <div style={{ width: '100%', maxWidth: 420 }}>
+          <div style={{ width: '100%', maxWidth: 520 }}>
             {currentCreator ? (
               <SwipeCardWrapper
                 key={`${deckIdx}-${swipeTier}-${swipeQuery}`}
@@ -985,7 +1027,7 @@ function SwipeView({ creators, onBack, savedIds, onToggleSaved }) {
 
         {/* Saved section */}
         {savedCreators.length > 0 && (
-          <div style={{ maxWidth: 420, margin: '0 auto' }}>
+          <div style={{ maxWidth: 520, width: '100%', margin: '0 auto' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
               <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 13, color: 'rgba(255,255,255,0.75)', margin: 0, letterSpacing: '0.02em' }}>Saved</h3>
               <span style={{ padding: '2px 8px', borderRadius: 9999, fontSize: 10, fontWeight: 700, background: 'rgba(126,207,196,0.2)', color: '#7ecfc4' }}>

@@ -376,7 +376,7 @@ function Dropdown({ children, align = 'left', width }) {
 export default function Explore() {
   const navigate = useNavigate();
   const { profile } = useAuth();
-  const { compactSearch, setCompactSearch } = useAppBar();
+  const { compactSearch, setCompactSearch, mapDestination } = useAppBar();
   const [activeField, setActiveField] = useState(null); // 'where' | 'what' | 'when'
   const [whereVal,    setWhereVal]    = useState('');
   const [whatVal,     setWhatVal]     = useState('');
@@ -424,6 +424,28 @@ export default function Explore() {
     }, 350);
     return () => { cancelled = true; clearTimeout(t); };
   }, [mapOpen, mapCenter]);
+
+  // Type a destination in the nav search → fly the map there (even with 0 collabs).
+  useEffect(() => {
+    if (!mapOpen || !mapInstance || !mapDestination || mapDestination.trim().length < 3) return;
+    const token = import.meta.env.VITE_MAPBOX_TOKEN;
+    if (!token) return;
+    let cancelled = false;
+    const t = setTimeout(async () => {
+      try {
+        const r = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(mapDestination)}.json?access_token=${token}&limit=1&types=country,region,place,locality,district`);
+        const d = await r.json();
+        const f = d?.features?.[0];
+        if (cancelled || !f) return;
+        if (Array.isArray(f.bbox) && f.bbox.length === 4) {
+          mapInstance.fitBounds([[f.bbox[0], f.bbox[1]], [f.bbox[2], f.bbox[3]]], { padding: 60, maxZoom: 11, duration: 900 });
+        } else if (Array.isArray(f.center)) {
+          mapInstance.flyTo({ center: f.center, zoom: 9, duration: 900, essential: true });
+        }
+      } catch { /* ignore */ }
+    }, 600);
+    return () => { cancelled = true; clearTimeout(t); };
+  }, [mapOpen, mapInstance, mapDestination]);
 
   const hostAvatar = (profile?.is_founder && profile.avatar_url) || SAMPLE_HOST.avatar_fallback;
   const sampleHostPerson = {
@@ -485,7 +507,7 @@ export default function Explore() {
 
   // Re-fit the map to results on open and on a new location search. (Kept above
   // the access-gate early return so hook order stays stable.)
-  useEffect(() => { if (mapOpen) setFitKey((k) => k + 1); }, [mapOpen, debouncedWhere]);
+  useEffect(() => { if (mapOpen) setFitKey((k) => k + 1); }, [mapOpen, debouncedWhere, mapExpanded]);
 
   // Outside-click closes dropdowns
   useEffect(() => {
@@ -659,6 +681,12 @@ export default function Explore() {
   }));
   const activeListing = activePinId ? mapListings.find((l) => l.id === activePinId) : null;
 
+  // Initial map framing: zoom into the most trending listings (fallback: for-you, then all).
+  const focusSrc = trending.length ? trending : (forYou.length ? forYou : mapListings);
+  const focusMapPoints = focusSrc
+    .filter((l) => typeof l.lat === 'number' && typeof l.lng === 'number')
+    .map((l) => ({ lat: l.lat, lng: l.lng }));
+
   const forYouSubtitle = profile?.niches?.length
     ? `Matched to your ${profile.niches.slice(0, 2).join(' & ')} niches`
     : 'Matched to your profile and collab history';
@@ -679,6 +707,7 @@ export default function Explore() {
       onToggleExpand={isNarrow ? undefined : () => setMapExpanded((v) => !v)}
       expanded={mapExpanded}
       fitKey={fitKey}
+      fitPoints={focusMapPoints}
     >
       {activeListing && (
         <MapPopup map={mapInstance} lng={activeListing.lng} lat={activeListing.lat}>
@@ -1052,43 +1081,10 @@ export default function Explore() {
       </div>
 
       {/* ── Map split (desktop) — primary Explore view ──────────────────────── */}
+      {/* Fixed so the page itself never scrolls in map view; only the left list scrolls. */}
       {mapOpen && !isNarrow && (
-        <div style={{ padding: '0 1.5rem 1rem' }}>
-          {/* Slim control row: area pill + property chips + Show list */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', paddingBottom: '0.75rem' }}>
-            <div ref={mapWhereRef} style={{ position: 'relative', flexShrink: 0 }}>
-              <button
-                onClick={() => setActiveField(activeField === 'where' ? null : 'where')}
-                className="btn-glass"
-                style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.8rem', fontWeight: 600, maxWidth: 300 }}
-              >
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-                <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {whereVal || mapAreaLabel || 'Search this area'}
-                </span>
-              </button>
-              {activeField === 'where' && (
-                <Dropdown width="380px">
-                  <WhereSearchContent whereVal={whereVal} setWhereVal={setWhereVal} onClose={() => setActiveField(null)} listings={allListings} />
-                </Dropdown>
-              )}
-            </div>
-            <div className="no-scrollbar" style={{ display: 'flex', gap: '0.5rem', overflowX: 'auto', flex: 1 }}>
-              {PROP_FILTERS.map((f) => (
-                <button key={f} onClick={() => setPropFilter(f)} className={`chip ${propFilter === f ? 'active' : ''}`} style={{ flexShrink: 0 }}>{f}</button>
-              ))}
-            </div>
-            <button
-              onClick={() => setMapOpen(false)}
-              className="btn-glass"
-              style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.8rem', fontWeight: 700 }}
-            >
-              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
-              Show list
-            </button>
-          </div>
-
-          <div style={{ display: 'flex', gap: '1rem', height: 'calc(100vh - 150px)', minHeight: 460 }}>
+        <div style={{ position: 'fixed', top: 'calc(var(--banner-h, 0rem) + 5.5rem)', left: 0, right: 0, bottom: 0, padding: '0 1.5rem 1rem', zIndex: 40 }}>
+          <div style={{ display: 'flex', gap: '1rem', height: '100%' }}>
             {!mapExpanded && (
               <div className="no-scrollbar" style={{ flex: '0 0 clamp(320px, 46%, 620px)', overflowY: 'auto', paddingRight: '0.25rem' }}>
                 <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.95rem', color: 'var(--ink)', margin: '0 0 0.9rem' }}>
@@ -1128,6 +1124,21 @@ export default function Explore() {
             )}
             <div style={{ flex: 1, position: 'relative', borderRadius: '1.25rem', overflow: 'hidden', boxShadow: '0 8px 32px rgba(25,37,36,0.12)' }}>
               {collabMapNode}
+              {/* Clean single "Show list" control on the map */}
+              <button
+                onClick={() => setMapOpen(false)}
+                style={{
+                  position: 'absolute', top: 12, left: 12, zIndex: 5,
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  padding: '0.5rem 0.9rem', borderRadius: 9999,
+                  border: '1px solid rgba(25,37,36,0.12)', background: '#fff',
+                  color: 'var(--ink)', fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: '0.8rem',
+                  cursor: 'pointer', boxShadow: '0 3px 12px rgba(25,37,36,0.25)',
+                }}
+              >
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                Show list
+              </button>
             </div>
           </div>
         </div>

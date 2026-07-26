@@ -46,22 +46,20 @@ function pillEl({ label, active, saved, redacted }) {
     font: '700 0.72rem var(--font-body, system-ui)',
     padding: redacted ? '0.3rem 0.55rem' : '0.32rem 0.6rem',
     borderRadius: '9999px',
-    border: '1px solid rgba(255,255,255,0.55)',
+    border: active ? '1px solid rgba(25,37,36,0.9)' : '1px solid rgba(25,37,36,0.12)',
     cursor: 'pointer',
     whiteSpace: 'nowrap',
     lineHeight: 1,
     letterSpacing: '0.01em',
     transition: 'transform 160ms cubic-bezier(0.16,1,0.3,1), background 160ms ease',
-    backdropFilter: 'blur(8px)',
-    WebkitBackdropFilter: 'blur(8px)',
     color: active ? '#fff' : '#192524',
-    background: active ? 'rgba(25,37,36,0.92)' : 'rgba(255,255,255,0.92)',
+    background: active ? '#192524' : '#ffffff',
     boxShadow: active
-      ? '0 4px 14px rgba(25,37,36,0.35)'
-      : '0 2px 8px rgba(25,37,36,0.18)',
+      ? '0 4px 14px rgba(25,37,36,0.45)'
+      : '0 2px 10px rgba(25,37,36,0.30)',
     transform: active ? 'scale(1.08)' : 'scale(1)',
   });
-  if (saved && !active) el.style.background = 'rgba(209,235,219,0.95)';
+  if (saved && !active) el.style.background = '#c6e6d2';
   el.onmouseenter = () => { if (!active) el.style.transform = 'scale(1.08)'; };
   el.onmouseleave = () => { if (!active) el.style.transform = 'scale(1)'; };
   return el;
@@ -75,10 +73,9 @@ function clusterEl(count) {
     font: '700 0.8rem var(--font-body, system-ui)',
     width: '2.35rem', height: '2.35rem', borderRadius: '50%',
     display: 'flex', alignItems: 'center', justifyContent: 'center',
-    border: '1.5px solid rgba(255,255,255,0.7)', cursor: 'pointer',
-    color: '#192524', background: 'rgba(255,255,255,0.9)',
-    backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)',
-    boxShadow: '0 3px 12px rgba(25,37,36,0.22)',
+    border: '1.5px solid rgba(25,37,36,0.15)', cursor: 'pointer',
+    color: '#192524', background: '#ffffff',
+    boxShadow: '0 3px 12px rgba(25,37,36,0.3)',
     transition: 'transform 160ms cubic-bezier(0.16,1,0.3,1)',
   });
   el.onmouseenter = () => { el.style.transform = 'scale(1.1)'; };
@@ -98,6 +95,7 @@ export default function CollabMap({
   onToggleExpand,  // show the expand/collapse control when provided
   expanded = false,
   fitKey,          // change this to trigger a fit-to-points
+  fitPoints,       // optional subset to frame on fit (e.g. trending); falls back to points
   children,
 }) {
   const containerRef = useRef(null);
@@ -125,11 +123,35 @@ export default function CollabMap({
       zoom: DEFAULT_ZOOM,
       attributionControl: false,
     });
-    m.on('load', () => { setMap(m); onReady?.(m); emitMove(); });
+    m.on('load', () => {
+      // Starfield space background instead of solid black when zoomed out.
+      try {
+        m.setFog({
+          color: 'rgb(220, 228, 235)',
+          'high-color': 'rgb(115, 145, 200)',
+          'horizon-blend': 0.02,
+          'space-color': 'rgb(11, 16, 38)',
+          'star-intensity': 0.5,
+        });
+      } catch { /* style may not support fog */ }
+      setMap(m); onReady?.(m); emitMove();
+    });
     m.on('moveend', () => { setZoom(m.getZoom()); emitMove(); });
     mapRef.current = m;
     return () => { m.remove(); mapRef.current = null; };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Keep the GL canvas sized to its container — when the list column hides
+  // (full-screen) or the window resizes, Mapbox must be told to re-measure,
+  // otherwise it renders at the old width and leaves an empty gap.
+  useEffect(() => {
+    const m = mapRef.current;
+    const el = containerRef.current;
+    if (!m || !el || typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(() => m.resize());
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [map]);
 
   // Rebuild markers on data / zoom / selection change. `points` is a fresh array
   // every parent render, so we guard on a content signature — hovering a list
@@ -174,7 +196,12 @@ export default function CollabMap({
           saved: savedIds?.has?.(c.id),
           redacted: c.redacted,
         });
-        el.addEventListener('click', (e) => { e.stopPropagation(); onPinClick?.(c.id); });
+        el.addEventListener('click', (e) => {
+          e.stopPropagation();
+          // Zoom into the pin and centre it, so the popup lands over the middle.
+          m.flyTo({ center: [c.lng, c.lat], zoom: Math.min(Math.max(m.getZoom() + 2, 10), 13), duration: 700, essential: true });
+          onPinClick?.(c.id);
+        });
         el.addEventListener('mouseenter', () => onPinHover?.(c.id));
         el.addEventListener('mouseleave', () => onPinHover?.(null));
       }
@@ -183,15 +210,17 @@ export default function CollabMap({
     }
   }, [points, zoom, activeId, savedIds, onPinClick, onPinHover, onClusterClick]);
 
-  // Fit to points when asked
+  // Fit to points when asked. Prefer `fitPoints` (e.g. trending) so the initial
+  // view opens zoomed into those rather than the whole globe.
   useEffect(() => {
     const m = mapRef.current;
     if (!m || fitKey == null) return;
-    const coords = points.filter((p) => typeof p.lat === 'number' && typeof p.lng === 'number');
+    const src = (fitPoints && fitPoints.length) ? fitPoints : points;
+    const coords = src.filter((p) => typeof p.lat === 'number' && typeof p.lng === 'number');
     if (!coords.length) return;
     const b = new mapboxgl.LngLatBounds();
     coords.forEach((p) => b.extend([p.lng, p.lat]));
-    m.fitBounds(b, { padding: 80, maxZoom: 12, duration: 600 });
+    m.fitBounds(b, { padding: 90, maxZoom: 9, duration: 600 });
   }, [fitKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!TOKEN) {
@@ -253,22 +282,18 @@ function MapControls({ map, onToggleExpand, expanded }) {
   );
 }
 
-// Absolutely-positioned overlay that tracks a lng/lat as the map moves. Render
-// the popup mini-card inside it. Lives in the map container (position: relative).
-export function MapPopup({ map, lng, lat, children, offsetY = 46 }) {
-  const [pos, setPos] = useState(null);
-  useEffect(() => {
-    if (!map || typeof lng !== 'number' || typeof lat !== 'number') return;
-    const update = () => { const p = map.project([lng, lat]); setPos({ x: p.x, y: p.y }); };
-    update();
-    map.on('move', update);
-    return () => map.off('move', update);
-  }, [map, lng, lat]);
-  if (!pos) return null;
+// Fixed, always-visible popup slot. The pin is flown to the map centre on click,
+// so the card sits at horizontal centre, just above the middle — no projection
+// math, so it can never land in a corner or need a second click. Falls back to a
+// safe top offset on short maps.
+export function MapPopup({ map, children, cardHeight = 400 }) {
+  if (!map) return null;
+  const H = map.getContainer().clientHeight;
+  const top = Math.max(16, H / 2 - cardHeight - 18); // card bottom ~18px above the centred pin
   return (
     <div style={{
-      position: 'absolute', left: pos.x, top: pos.y - offsetY,
-      transform: 'translate(-50%, -100%)', zIndex: 6, pointerEvents: 'auto',
+      position: 'absolute', left: '50%', top,
+      transform: 'translateX(-50%)', zIndex: 6, pointerEvents: 'auto',
     }}>
       {children}
     </div>

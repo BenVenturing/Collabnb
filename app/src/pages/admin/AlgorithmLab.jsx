@@ -79,7 +79,7 @@ function Simulator() {
   return (
     <div style={{ padding: '2rem 2.5rem', maxWidth: 980 }}>
       <h1 style={{ fontFamily: 'Cabinet Grotesk, sans-serif', fontSize: '1.5rem', fontWeight: 700, color: INK, letterSpacing: '-0.025em', margin: 0 }}>
-        Algorithm Simulator
+        Listing Feed Algorithm Simulator
       </h1>
       <p style={{ fontSize: '0.85rem', color: SAGE, marginTop: '0.3rem', marginBottom: '1.5rem' }}>
         Pick a creator and see their Explore feed exactly as the ranking engine computes it — same code the app runs.

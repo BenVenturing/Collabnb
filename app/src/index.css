@@ -428,6 +428,12 @@ button { font: inherit; cursor: pointer; border: none; background: none; }
 }
 .search-field .search-value { color: var(--sage); }
 
+/* Compact nav search (map view) — slimmer + tighter so it doesn't tower over the map */
+.nav-search-compact .search-field { padding: 0.38rem 1.05rem; }
+.nav-search-compact .search-field label { font-size: 0.55rem; letter-spacing: 0.1em; margin-bottom: 0.04rem; }
+.nav-search-compact .search-field input,
+.nav-search-compact .search-field .search-value { font-size: 0.8rem; }
+
 /* ── REVEAL ANIMATION ───────────────────────────────────────────────────────── */
 @keyframes fadeUp {
   from { opacity: 0; transform: translateY(16px); }

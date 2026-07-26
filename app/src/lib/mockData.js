@@ -3,6 +3,7 @@ import vineyard2 from '../assets/vineyard-2.jpg';
 import vineyard3 from '../assets/vineyard-3.jpg';
 import vineyard4 from '../assets/vineyard-4.jpg';
 import vineyard5 from '../assets/vineyard-5.jpg';
+import benVenturingPhoto from '../assets/ben-venturing.png';
 
 // Fallback for broken/missing listing images — warm gray placeholder
 export const IMG_FALLBACK = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='600'%3E%3Crect fill='%23EFECE9' width='800' height='600'/%3E%3C/svg%3E";
@@ -16,7 +17,7 @@ export const MOCK_CREATOR = {
   role: 'creator',
   tier: 'UGC Pro',
   bio: 'Travel & lifestyle creator documenting unique stays and hidden gems around the world. Passionate about authentic content that inspires people to explore.',
-  avatar_url: 'https://ucarecdn.com/6d425040-e4c3-46f0-a774-91ac597ebe24/-/format/auto/',
+  avatar_url: benVenturingPhoto,
   follower_count: 413500,
   engagement_rate: 8.2,
   collab_count: 47,
@@ -36,7 +37,7 @@ export const SAMPLE_HOST = {
   name: 'Ben Venturing',
   username: 'ben.venturing',
   avatar_url: null,
-  avatar_fallback: 'https://ucarecdn.com/6d425040-e4c3-46f0-a774-91ac597ebe24/-/format/auto/',
+  avatar_fallback: benVenturingPhoto,
   role: 'Collabnb Host',
   verified: true,
   years_hosting: 3,

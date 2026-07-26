@@ -420,11 +420,12 @@ function ChipCard({ creator, onMessage, onHide }) {
 }
 
 // ─── Collapsed card ───────────────────────────────────────────────────────────
-function FullCard({ creator, narrow = false, onMessage, onHide, visitingBadge, delay = 0, saved = false, onToggleSave }) {
+function FullCard({ creator, narrow = false, large = false, onMessage, onHide, visitingBadge, delay = 0, saved = false, onToggleSave }) {
   const [open, setOpen]       = useState(false);
   const [hovered, setHovered] = useState(false);
   const t    = TIER_COLORS[creator.tier] || TIER_COLORS['UGC Beginner'];
   const city = creator.location?.split(',')[0] ?? creator.location ?? '';
+  const avatarSize = narrow ? 68 : large ? 116 : 72;
 
   return (
     <>
@@ -450,7 +451,7 @@ function FullCard({ creator, narrow = false, onMessage, onHide, visitingBadge, d
             background: hovered ? 'rgba(255,255,255,0.97)' : 'rgba(255,255,255,0.84)',
             backdropFilter: 'blur(24px) saturate(140%)', WebkitBackdropFilter: 'blur(24px) saturate(140%)',
             border: '1px solid rgba(255,255,255,0.85)',
-            borderRadius: '1.375rem',
+            borderRadius: large ? '1.75rem' : '1.375rem',
             boxShadow: hovered
               ? '0 14px 36px rgba(25,37,36,0.13), inset 0 1px 0 rgba(255,255,255,0.7)'
               : '0 4px 18px rgba(25,37,36,0.07), inset 0 1px 0 rgba(255,255,255,0.6)',
@@ -504,23 +505,23 @@ function FullCard({ creator, narrow = false, onMessage, onHide, visitingBadge, d
           )}
 
           {/* Avatar */}
-          <div style={{ padding: narrow ? '14px 13px 0' : '16px 16px 0' }}>
-            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 10 }}>
+          <div style={{ padding: large ? '30px 26px 0' : narrow ? '14px 13px 0' : '16px 16px 0' }}>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: large ? 16 : 10 }}>
               <div style={{ position: 'relative' }}>
                 <div style={{
-                  width: narrow ? 68 : 72, height: narrow ? 68 : 72,
+                  width: avatarSize, height: avatarSize,
                   borderRadius: '50%', overflow: 'hidden',
                   border: '2.5px solid rgba(255,255,255,0.97)',
                   boxShadow: '0 3px 14px rgba(25,37,36,0.13)', flexShrink: 0,
                 }}>
-                  <CreatorAvatar src={creator.avatar} name={creator.name} size={narrow ? 68 : 72} style={{ border: 'none', width: '100%', height: '100%' }} />
+                  <CreatorAvatar src={creator.avatar} name={creator.name} size={avatarSize} style={{ border: 'none', width: '100%', height: '100%' }} />
                 </div>
                 {creator.isFounder && (
                   <div
                     title="Founder — one of the first 100 on Collabnb"
                     style={{
-                      position: 'absolute', top: 2, right: -5,
-                      width: 18, height: 18, borderRadius: '50%',
+                      position: 'absolute', top: large ? 3 : 2, right: large ? -8 : -5,
+                      width: large ? 30 : 18, height: large ? 30 : 18, borderRadius: '50%',
                       background: 'linear-gradient(135deg, #D4A843, #B8922A)',
                       border: '2.5px solid #fff',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -535,18 +536,18 @@ function FullCard({ creator, narrow = false, onMessage, onHide, visitingBadge, d
 
             {/* Name / handle / location / tier */}
             <div style={{ textAlign: 'center' }}>
-              <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: narrow ? 13 : 14, color: 'var(--ink)', lineHeight: 1.2 }}>
+              <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: large ? 21 : narrow ? 13 : 14, color: 'var(--ink)', lineHeight: 1.2 }}>
                 {creator.name}
               </div>
-              <div style={{ fontSize: 10.5, color: 'var(--sage)', marginTop: 2 }}>
+              <div style={{ fontSize: large ? 13.5 : 10.5, color: 'var(--sage)', marginTop: large ? 4 : 2 }}>
                 @{creator.username}
               </div>
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 9px', borderRadius: 9999, marginTop: 6, background: 'rgba(25,37,36,0.05)', border: '1px solid rgba(25,37,36,0.08)' }}>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: large ? '5px 13px' : '3px 9px', borderRadius: 9999, marginTop: large ? 10 : 6, background: 'rgba(25,37,36,0.05)', border: '1px solid rgba(25,37,36,0.08)' }}>
                 <IconPin />
-                <span style={{ fontSize: 10, color: 'var(--slate)' }}>{city}</span>
+                <span style={{ fontSize: large ? 12.5 : 10, color: 'var(--slate)' }}>{city}</span>
               </div>
-              <div style={{ marginTop: 8 }}>
-                <span style={{ display: 'inline-block', padding: '3px 10px', borderRadius: 9999, fontSize: 9.5, fontWeight: 700, background: t.bg, color: t.color }}>
+              <div style={{ marginTop: large ? 12 : 8 }}>
+                <span style={{ display: 'inline-block', padding: large ? '5px 14px' : '3px 10px', borderRadius: 9999, fontSize: large ? 12 : 9.5, fontWeight: 700, background: t.bg, color: t.color }}>
                   {creator.tier}
                 </span>
               </div>
@@ -554,43 +555,43 @@ function FullCard({ creator, narrow = false, onMessage, onHide, visitingBadge, d
           </div>
 
           {/* Stats */}
-          <div style={{ padding: narrow ? '10px 13px 0' : '12px 16px 0' }}>
+          <div style={{ padding: large ? '20px 26px 0' : narrow ? '10px 13px 0' : '12px 16px 0' }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1, background: 'rgba(25,37,36,0.06)', borderRadius: '0.625rem', overflow: 'hidden' }}>
               {[
                 { label: 'Avg. Reach',       value: fmtNum(creator.avg_reach_30d ?? creator.followers), tooltip: 'Average number of people who saw this creator\'s posts in the last 30 days.' },
                 { label: '30-Day Eng. Rate', value: `${creator.er_30d ?? creator.engagement}%`,         tooltip: 'Percentage of followers who liked, commented, or shared posts in the last 30 days. Higher = more active, loyal audience.' },
                 { label: 'Collabs',          value: creator.collab_count ?? '—',                        tooltip: 'Number of completed collaborations with properties on Collabnb.' },
               ].map(({ label, value, tooltip }) => (
-                <div key={label} title={tooltip} style={{ padding: '9px 0', background: 'rgba(255,255,255,0.78)', textAlign: 'center', cursor: 'help' }}>
-                  <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: narrow ? 12 : 13, color: 'var(--ink)', lineHeight: 1 }}>{value}</div>
-                  <div style={{ fontSize: 9.5, color: 'var(--sage)', marginTop: 2 }}>{label}</div>
+                <div key={label} title={tooltip} style={{ padding: large ? '15px 0' : '9px 0', background: 'rgba(255,255,255,0.78)', textAlign: 'center', cursor: 'help' }}>
+                  <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: large ? 19 : narrow ? 12 : 13, color: 'var(--ink)', lineHeight: 1 }}>{value}</div>
+                  <div style={{ fontSize: large ? 11.5 : 9.5, color: 'var(--sage)', marginTop: large ? 4 : 2 }}>{label}</div>
                 </div>
               ))}
             </div>
           </div>
 
           {/* Platform chips */}
-          <div style={{ padding: narrow ? '8px 13px 0' : '10px 16px 0', display: 'flex', gap: 5, flexWrap: 'wrap' }}>
-            {creator.platforms?.slice(0, narrow ? 1 : 2).map(p => (
-              <span key={p} style={{ padding: '3px 9px', borderRadius: 9999, fontSize: 10, fontWeight: 600, background: 'rgba(60,87,89,0.08)', color: 'var(--ink)' }}>{p}</span>
+          <div style={{ padding: large ? '16px 26px 0' : narrow ? '8px 13px 0' : '10px 16px 0', display: 'flex', gap: large ? 7 : 5, flexWrap: 'wrap', justifyContent: large ? 'center' : 'flex-start' }}>
+            {creator.platforms?.slice(0, narrow ? 1 : large ? 3 : 2).map(p => (
+              <span key={p} style={{ padding: large ? '5px 13px' : '3px 9px', borderRadius: 9999, fontSize: large ? 12 : 10, fontWeight: 600, background: 'rgba(60,87,89,0.08)', color: 'var(--ink)' }}>{p}</span>
             ))}
             {visitingBadge && (
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 9999, fontSize: 10, fontWeight: 600, background: 'rgba(60,87,89,0.08)', color: 'var(--slate)' }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: large ? '5px 12px' : '3px 8px', borderRadius: 9999, fontSize: large ? 12 : 10, fontWeight: 600, background: 'rgba(60,87,89,0.08)', color: 'var(--slate)' }}>
                 <IconPin />{visitingBadge}
               </span>
             )}
           </div>
 
           {/* Message button */}
-          <div style={{ padding: narrow ? '10px 13px 13px' : '10px 16px 14px' }}>
+          <div style={{ padding: large ? '22px 26px 26px' : narrow ? '10px 13px 13px' : '10px 16px 14px' }}>
             <button
               onClick={(e) => { e.stopPropagation(); onMessage?.(creator); }}
               style={{
                 width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
-                padding: '8px 0', borderRadius: '0.875rem',
+                padding: large ? '15px 0' : '8px 0', borderRadius: large ? '1rem' : '0.875rem',
                 background: 'var(--ink)', color: 'var(--bone)',
                 border: 'none', cursor: 'pointer',
-                fontSize: 11.5, fontWeight: 600, fontFamily: 'var(--font-body)',
+                fontSize: large ? 15 : 11.5, fontWeight: 600, fontFamily: 'var(--font-body)',
                 transition: 'opacity 150ms',
               }}
               onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
@@ -606,7 +607,7 @@ function FullCard({ creator, narrow = false, onMessage, onHide, visitingBadge, d
 }
 
 // ─── Default export ───────────────────────────────────────────────────────────
-export default function CreatorCard({ creator, variant = 'card', narrow = false, onMessage, onHide, visitingBadge, delay = 0, saved = false, onToggleSave }) {
+export default function CreatorCard({ creator, variant = 'card', narrow = false, large = false, onMessage, onHide, visitingBadge, delay = 0, saved = false, onToggleSave }) {
   if (variant === 'chip') {
     return <ChipCard creator={creator} onMessage={onMessage} onHide={onHide} />;
   }
@@ -614,6 +615,7 @@ export default function CreatorCard({ creator, variant = 'card', narrow = false,
     <FullCard
       creator={creator}
       narrow={narrow}
+      large={large}
       onMessage={onMessage}
       onHide={onHide}
       visitingBadge={visitingBadge}

@@ -8,6 +8,7 @@ export const submitMessage = mutation({
     email: v.string(),
     category: v.optional(v.string()),
     message: v.string(),
+    add_to_faq: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     await ctx.db.insert("messages", {
@@ -17,13 +18,33 @@ export const submitMessage = mutation({
       message: args.message,
       is_read: false,
       is_archived: false,
+      add_to_faq: args.add_to_faq,
     });
 
     await ctx.scheduler.runAfter(0, internal.email.sendAdminNotification, {
       type: "message",
-      subject: `New message from ${args.name}`,
-      body: `From: ${args.name} <${args.email}>\nCategory: ${args.category || "General"}\n\n${args.message}\n\nView in admin: https://collabnb.com/#/admin`,
+      subject: args.add_to_faq ? `New Help Center question from ${args.name}` : `New message from ${args.name}`,
+      body: `From: ${args.name} <${args.email}>\nCategory: ${args.category || "General"}\n${args.add_to_faq ? "This question is already live in the public FAQ awaiting your answer.\n" : ""}\n${args.message}\n\nView in admin: https://collabnb.com/#/admin`,
     });
+  },
+});
+
+// Public: questions submitted via "no FAQ match" — shown live in the Help Center,
+// answered in place once an admin replies. No email/name exposed.
+export const getFaqQuestions = query({
+  args: {},
+  handler: async (ctx) => {
+    const all = await ctx.db.query("messages").collect();
+    return all
+      .filter((m) => m.add_to_faq && !m.is_archived)
+      .sort((a, b) => b._creationTime - a._creationTime)
+      .map((m) => ({
+        _id: m._id,
+        question: m.message,
+        answer: m.admin_reply || null,
+        answered_at: m.admin_reply_at || null,
+        _creationTime: m._creationTime,
+      }));
   },
 });
 

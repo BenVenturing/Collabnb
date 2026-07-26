@@ -95,10 +95,12 @@ const FAQ_SECTIONS = [
       {
         q: 'How much does Collabnb cost for hosts?',
         a: 'Hosts never pay to browse, search, message, or post listings. Fees are charged only after a collaboration is completed. For completed collaborations under $500 cash value: $20 flat fee. For collaborations $500 and above: 5% of the cash value. Hybrid Collaborations: cash-only basis — the stay value is excluded. Founding Members pay nothing, ever.',
+        keywords: ['pricing', 'price', 'plan', 'plans', 'host pricing', 'host cost'],
       },
       {
         q: 'How much does Collabnb cost for creators?',
         a: "Collabnb is free for all approved creators during your 30-day trial. After the trial, Creator Plus is $10/month or $60/year. Founding Members — the first 100 verified creators — keep full access forever at no cost. There is no charge to browse, apply, or communicate. The subscription only starts after your trial ends.",
+        keywords: ['pricing', 'price', 'plan', 'plans', 'subscription cost', 'creator pricing'],
       },
       {
         q: 'What is a Founding Member?',
@@ -141,6 +143,31 @@ const FAQ_SECTIONS = [
       {
         q: 'What is 30-Day Engagement Rate?',
         a: "30-Day Engagement Rate is the percentage of a creator's followers who actively liked, commented, or shared their posts in the last 30 days. A high rate signals a loyal, responsive audience — often more valuable to hosts than raw follower count.\n\nFor example, a creator with 10K followers and a 12% engagement rate (1,200 engaged people per post) typically drives more real visibility than a creator with 100K followers and a 1% rate. We show the 30-day rolling average so you see current momentum, not a historical snapshot.",
+      },
+      {
+        q: 'Can I hide my profile from the Host Creators page?',
+        a: "Yes. In Edit Profile, toggle \"Profile is visible to hosts\" off to hide yourself from the Host Creators directory. Hosts won't be able to find or message you while hidden, but any conversations you already have stay open. Turn it back on anytime — it takes effect immediately.",
+        keywords: ['visibility', 'hide profile', 'privacy'],
+      },
+    ],
+  },
+  {
+    title: 'Founders',
+    items: [
+      {
+        q: 'What is the Founders space?',
+        a: "The Founders space is a private area for verified Founding Members, at /founders. It includes a role-scoped lounge (creators only see other creators, hosts only see other hosts), a resources library, early-access listings, and a directory of fellow founders.",
+        keywords: ['founder', 'founders tab', 'lounge'],
+      },
+      {
+        q: 'Who can access the Founders space?',
+        a: "Only verified Founding Members — the first 100 verified creators and first 100 verified hosts. If you're not a Founding Member, the Founders tab is hidden from your navigation and the /founders route redirects you elsewhere.",
+        keywords: ['founder access', 'founding member'],
+      },
+      {
+        q: 'What can I do in the Founders lounge?',
+        a: "Post and reply in a threaded lounge with other founders in your role. It's a space to connect with peers, share tips, and get early visibility into new features and resources before they roll out more broadly.",
+        keywords: ['founder lounge', 'threads'],
       },
     ],
   },
@@ -214,18 +241,171 @@ function AccordionItem({ q, a, visible }) {
   );
 }
 
+// ─── Matching: tokenized AND-match across question + answer + keyword aliases ──
+function itemMatches(item, tokens) {
+  if (tokens.length === 0) return true;
+  const haystack = `${item.q} ${item.a} ${(item.keywords || []).join(' ')}`.toLowerCase();
+  return tokens.every((tok) => haystack.includes(tok));
+}
+
+// ─── Ask-a-question CTA (shown when no FAQ or community answer matches) ────────
+function AskQuestionCTA({ search, profile }) {
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState(profile?.full_name || '');
+  const [email, setEmail] = useState(profile?.email || '');
+  const [question, setQuestion] = useState(search);
+  const [sent, setSent] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const submitMessage = useMutation(api.messages.submitMessage);
+
+  useEffect(() => { setQuestion(search); }, [search]);
+
+  const inputStyle = {
+    width: '100%', padding: '0.65rem 0.85rem',
+    background: 'rgba(255,255,255,0.7)',
+    border: '1px solid rgba(25,37,36,0.1)',
+    borderRadius: '0.625rem',
+    fontFamily: 'var(--font-body)', fontSize: '0.85rem',
+    color: 'var(--ink)', outline: 'none', boxSizing: 'border-box',
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!question.trim() || submitting) return;
+    setSubmitting(true);
+    try {
+      await submitMessage({
+        name: name || 'Anonymous',
+        email,
+        category: 'FAQ Question',
+        message: question.trim(),
+        add_to_faq: true,
+      });
+      setSent(true);
+    } catch {}
+    setSubmitting(false);
+  };
+
+  if (sent) {
+    return (
+      <div style={{ textAlign: 'center', padding: '1.5rem 1rem', background: 'rgba(209,235,219,0.25)', borderRadius: '0.875rem', border: '1px solid rgba(74,155,127,0.2)' }}>
+        <p style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--ink)', marginBottom: '0.3rem' }}>
+          Question posted!
+        </p>
+        <p style={{ fontSize: '0.8rem', color: 'var(--slate)', lineHeight: 1.6, maxWidth: 320, margin: '0 auto' }}>
+          It's now live in the FAQ below marked "Awaiting answer." We've emailed the team and the answer will appear right here as soon as we reply.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ textAlign: 'center', padding: '1.75rem 1rem', border: '1px dashed rgba(25,37,36,0.15)', borderRadius: '0.875rem' }}>
+      <p style={{ fontSize: '0.875rem', color: 'var(--slate)', marginBottom: '0.875rem' }}>
+        {search ? <>No questions match "{search}".</> : 'No questions found.'}
+      </p>
+      {!open ? (
+        <button
+          onClick={() => setOpen(true)}
+          style={{
+            padding: '0.65rem 1.25rem', background: 'var(--ink)', color: 'var(--bone)',
+            borderRadius: '999px', border: 'none', cursor: 'pointer',
+            fontFamily: 'var(--font-body)', fontSize: '0.85rem', fontWeight: 700,
+          }}
+        >
+          Ask this as a question
+        </button>
+      ) : (
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem', textAlign: 'left', maxWidth: 360, margin: '0 auto' }}>
+          <textarea
+            required value={question}
+            onChange={(e) => setQuestion(e.target.value)}
+            rows={2} placeholder="Type your question…"
+            style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.5 }}
+          />
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.625rem' }}>
+            <input type="text" required placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} />
+            <input type="email" required placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} style={inputStyle} />
+          </div>
+          <p style={{ fontSize: '0.72rem', color: 'var(--sage)', margin: 0, lineHeight: 1.5 }}>
+            This posts publicly to the Help Center right away as "Awaiting answer," and emails our team so we can reply fast.
+          </p>
+          <button
+            type="submit"
+            disabled={submitting || !question.trim()}
+            style={{
+              padding: '0.7rem', background: 'var(--ink)', color: 'var(--bone)',
+              borderRadius: '999px', border: 'none', cursor: submitting ? 'not-allowed' : 'pointer',
+              fontFamily: 'var(--font-body)', fontSize: '0.85rem', fontWeight: 700,
+              opacity: submitting ? 0.7 : 1,
+            }}
+          >
+            {submitting ? 'Posting…' : 'Post question'}
+          </button>
+        </form>
+      )}
+    </div>
+  );
+}
+
+// ─── Community question item (submitted via "Ask this as a question") ─────────
+function CommunityQuestionItem({ question, answer, answered_at }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div style={{ borderBottom: '1px solid rgba(25,37,36,0.07)' }}>
+      <button
+        onClick={() => answer && setOpen((o) => !o)}
+        style={{
+          width: '100%', textAlign: 'left', padding: '0.875rem 0',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          gap: '1rem', background: 'none', border: 'none', cursor: answer ? 'pointer' : 'default',
+          fontFamily: 'var(--font-body)', fontSize: '0.9rem', fontWeight: 600,
+          color: 'var(--ink)',
+        }}
+      >
+        <span>{question}</span>
+        {answer ? (
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
+            style={{ flexShrink: 0, color: 'var(--slate)', transition: 'transform 200ms', transform: open ? 'rotate(180deg)' : 'rotate(0deg)' }}>
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+        ) : (
+          <span style={{ flexShrink: 0, fontSize: '0.68rem', fontWeight: 700, color: '#92400E', background: 'rgba(212,168,67,0.15)', padding: '0.2rem 0.5rem', borderRadius: '999px', whiteSpace: 'nowrap' }}>
+            Awaiting answer
+          </span>
+        )}
+      </button>
+      {answer && (
+        <div style={{ overflow: 'hidden', maxHeight: open ? '400px' : '0', transition: 'max-height 250ms cubic-bezier(0.16,1,0.3,1)' }}>
+          <p style={{ fontSize: '0.875rem', color: 'var(--slate)', lineHeight: 1.75, paddingBottom: '1rem', whiteSpace: 'pre-line' }}>
+            {answer}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Tab 1: FAQ ────────────────────────────────────────────────────────────────
-function FAQTab() {
+function FAQTab({ profile }) {
   const [search, setSearch] = useState('');
   const term = search.toLowerCase().trim();
+  const tokens = term ? term.split(/\s+/).filter(Boolean) : [];
+
+  const communityQuestions = useQuery(api.messages.getFaqQuestions) || [];
+  const visibleCommunity = communityQuestions.filter((c) =>
+    tokens.length === 0 || itemMatches({ q: c.question, a: c.answer || '' }, tokens)
+  );
 
   const sectionsWithVisibility = FAQ_SECTIONS.map((section) => ({
     ...section,
     items: section.items.map((item) => ({
       ...item,
-      visible: !term || item.q.toLowerCase().includes(term) || item.a.toLowerCase().includes(term),
+      visible: itemMatches(item, tokens),
     })),
   })).filter((s) => s.items.some((i) => i.visible));
+
+  const noResults = sectionsWithVisibility.length === 0 && visibleCommunity.length === 0;
 
   return (
     <div>
@@ -257,24 +437,38 @@ function FAQTab() {
       </div>
 
       {/* Sections */}
-      {sectionsWithVisibility.length === 0 ? (
-        <p style={{ textAlign: 'center', color: 'var(--sage)', fontSize: '0.875rem', padding: '2rem 0' }}>
-          No questions match "{search}"
-        </p>
+      {noResults ? (
+        <AskQuestionCTA search={search} profile={profile} />
       ) : (
-        sectionsWithVisibility.map((section) => (
-          <div key={section.title} style={{ marginBottom: '1.5rem' }}>
-            <p style={{
-              fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.12em',
-              textTransform: 'uppercase', color: 'var(--sage)', marginBottom: '0.25rem',
-            }}>
-              {section.title}
-            </p>
-            {section.items.map((item) => (
-              <AccordionItem key={item.q} q={item.q} a={item.a} visible={item.visible} />
-            ))}
-          </div>
-        ))
+        <>
+          {sectionsWithVisibility.map((section) => (
+            <div key={section.title} style={{ marginBottom: '1.5rem' }}>
+              <p style={{
+                fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.12em',
+                textTransform: 'uppercase', color: 'var(--sage)', marginBottom: '0.25rem',
+              }}>
+                {section.title}
+              </p>
+              {section.items.map((item) => (
+                <AccordionItem key={item.q} q={item.q} a={item.a} visible={item.visible} />
+              ))}
+            </div>
+          ))}
+
+          {visibleCommunity.length > 0 && (
+            <div style={{ marginBottom: '1.5rem' }}>
+              <p style={{
+                fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.12em',
+                textTransform: 'uppercase', color: 'var(--sage)', marginBottom: '0.25rem',
+              }}>
+                Community Questions
+              </p>
+              {visibleCommunity.map((c) => (
+                <CommunityQuestionItem key={c._id} question={c.question} answer={c.answer} answered_at={c.answered_at} />
+              ))}
+            </div>
+          )}
+        </>
       )}
     </div>
   );
@@ -769,7 +963,7 @@ export default function FAQModal({ isOpen, onClose }) {
 
         {/* ── Scrollable body ── */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '1.25rem 1.5rem 1.5rem' }}>
-          {activeTab === 0 && <FAQTab />}
+          {activeTab === 0 && <FAQTab profile={profile} />}
           {activeTab === 1 && <MessageTab profile={profile} />}
           {activeTab === 2 && <SuggestionsTab userId={userId} />}
         </div>

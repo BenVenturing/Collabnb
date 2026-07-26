@@ -121,7 +121,7 @@ export default function AppNav() {
   useEffect(() => onChecklistProgress(() => setChecklistTick(t => t + 1)), []);
   const checklistProgress = getChecklistProgress(profile, checklistTick);
   const checklistAllDone = checklistProgress.completed >= checklistProgress.total;
-  const { compactSearch, hideNav } = useAppBar();
+  const { compactSearch, hideNav, setMapDestination } = useAppBar();
   const { savedIds } = useCollabs();
   const navigate = useNavigate();
   const savedCount = savedIds.size;
@@ -241,6 +241,9 @@ export default function AppNav() {
       setMenuOpen(false);
     }
   }, [compactSearch]);
+
+  // Publish the typed destination so the Explore map can fly to it.
+  useEffect(() => { setMapDestination(navWhere); }, [navWhere, setMapDestination]);
 
   const openNavSearch = () => {
     setNavSearchOpen(true);
@@ -365,7 +368,7 @@ export default function AppNav() {
 
       {/* ── Floating pill nav ─────────────────────────────────────────────────── */}
       <nav
-        className={`nav-pill glass ${scrolled ? 'scrolled' : ''}`}
+        className={`nav-pill glass ${(scrolled || compactSearch) ? 'scrolled' : ''}`}
         aria-label="Main navigation"
         style={{ top: isPending ? 'calc(var(--banner-h, 0rem) + 1.8rem + 0.5rem)' : 'calc(var(--banner-h, 0rem) + 1rem)' }}
       >
@@ -461,18 +464,20 @@ export default function AppNav() {
           {compactSearch && navSearchOpen && (
             <div
               ref={navSearchRef}
+              className="nav-search-compact"
               style={{
-                flex: 1,
+                flex: '1 1 auto',
+                maxWidth: '520px',
                 display: 'flex',
                 alignItems: 'stretch',
-                background: 'rgba(255,255,255,0.72)',
+                background: 'rgba(255,255,255,0.85)',
                 backdropFilter: 'blur(20px)',
                 WebkitBackdropFilter: 'blur(20px)',
-                border: '1.5px solid rgba(255,255,255,0.85)',
-                borderRadius: '0.875rem',
+                border: '1px solid rgba(25,37,36,0.1)',
+                borderRadius: '9999px',
                 overflow: 'visible',
                 margin: '0 0.625rem',
-                boxShadow: '0 4px 20px rgba(25,37,36,0.08)',
+                boxShadow: '0 2px 12px rgba(25,37,36,0.1)',
                 position: 'relative',
                 animation: 'fadeUp 200ms cubic-bezier(0.16,1,0.3,1) forwards',
               }}
@@ -481,7 +486,7 @@ export default function AppNav() {
               <div
                 className="search-field"
                 style={{
-                  borderRadius: '0.875rem 0 0 0.875rem',
+                  borderRadius: '9999px 0 0 9999px',
                   background: navField === 'where' ? 'rgba(255,255,255,0.7)' : undefined,
                   position: 'relative',
                   cursor: 'text',

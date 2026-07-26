@@ -66,6 +66,8 @@ const ICONS = {
   social:       IC(<><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></>),
   'algo-simulator': IC(<><polygon points="5 3 19 12 5 21 5 3"/></>),
   'algo-reference': IC(<><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></>),
+  'creator-algo-simulator': IC(<><polygon points="5 3 19 12 5 21 5 3"/></>),
+  'creator-algo-reference': IC(<><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></>),
   messages:     IC(<path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>),
   inbox:        IC(<><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z"/></>),
   suggestions:  IC(<><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17" strokeWidth="3"/></>),
@@ -91,10 +93,12 @@ const GROUPS = [
     { id: 'users',          label: 'All Users'           },
     { id: 'messages',       label: 'User Messages'       },
     { id: 'founders',       label: 'Founder Tracker'     },
-    { id: 'algo-simulator', label: 'Algorithm Simulator' },
-    { id: 'algo-reference', label: 'How It Works'        },
-    { id: 'creator-algo-simulator', label: 'Creator Algorithm Simulator' },
-    { id: 'creator-algo-reference', label: 'How Creators Rank'          },
+    { id: 'algo-simulator', label: 'Listing Feed Algorithm Simulator', children: [
+      { id: 'algo-reference', label: 'How It Works' },
+    ] },
+    { id: 'creator-algo-simulator', label: 'Creator Ranking Algorithm Simulator', children: [
+      { id: 'creator-algo-reference', label: 'How It Works' },
+    ] },
   ] },
   { id: 'collabs', label: 'Collab Oversight', icon: 'collabs', tabs: [
     { id: 'collabs',   label: 'Oversight'          },
@@ -122,9 +126,13 @@ const HIDDEN_SECTIONS = [
   { id: 'admin-inbox', label: 'Inbox' },
 ];
 
+// A group's tabs, flattened to include any nested children.
+const flatTabs = (group) => group.tabs.flatMap(t => [t, ...(t.children || [])]);
+const groupContains = (group, id) => flatTabs(group).some(t => t.id === id);
+
 const ALL_LABELS = [
   ...TOP_SECTIONS, SETTINGS_SECTION, ...HIDDEN_SECTIONS,
-  ...GROUPS.flatMap(g => g.tabs),
+  ...GROUPS.flatMap(flatTabs),
 ];
 
 function UsersPanel()        { return <Users />;                }
@@ -180,6 +188,7 @@ export default function AdminDashboard() {
   const { authorized, loading, profile } = useAdminGuard();
   const [activeSection, setActiveSection] = useState('overview');
   const [openGroups, setOpenGroups] = useState({});
+  const [openSubGroups, setOpenSubGroups] = useState({});
   const [usersInitialView, setUsersInitialView] = useState(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const unreadCount = useQuery(api.messages.getUnreadCount);
@@ -209,9 +218,9 @@ export default function AdminDashboard() {
 
   const ActivePanel = PANEL_MAP[activeSection] || PANEL_MAP['overview'];
   const badges = { messages: unreadCount || 0 };
-  const activeGroup = GROUPS.find(g => g.tabs.some(t => t.id === activeSection));
+  const activeGroup = GROUPS.find(g => groupContains(g, activeSection));
   const activeLabel = activeGroup
-    ? `${activeGroup.label} › ${activeGroup.tabs.find(t => t.id === activeSection)?.label}`
+    ? `${activeGroup.label} › ${flatTabs(activeGroup).find(t => t.id === activeSection)?.label}`
     : ALL_LABELS.find(s => s.id === activeSection)?.label;
 
   // Decide where "Back to my account" goes based on role
@@ -249,8 +258,72 @@ export default function AdminDashboard() {
     );
   };
 
+  // Nested item one level deeper than a sub-tab (e.g. a simulator's "How It Works").
+  const renderSubChild = (c) => {
+    const active = activeSection === c.id;
+    return (
+      <button
+        key={c.id}
+        onClick={() => selectSection(c.id)}
+        style={{
+          display: 'flex', alignItems: 'center', gap: '0.5rem',
+          width: '100%', padding: '0.4rem 0.75rem 0.4rem 3rem',
+          borderRadius: '0.625rem', marginBottom: '0.1rem',
+          background: active ? 'rgba(255,255,255,0.75)' : 'transparent',
+          color: active ? '#192524' : '#5a7070',
+          fontWeight: active ? 600 : 400,
+          fontSize: '0.8rem', textAlign: 'left',
+          cursor: 'pointer', border: 'none',
+          transition: 'background 0.15s',
+        }}
+        onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'rgba(255,255,255,0.4)'; }}
+        onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent'; }}
+      >
+        <span style={{ display: 'flex', alignItems: 'center', opacity: active ? 1 : 0.6 }}>{ICONS[c.id]}</span>
+        <span style={{ flex: 1 }}>{c.label}</span>
+      </button>
+    );
+  };
+
   const renderSubTab = (t) => {
     const active = activeSection === t.id;
+
+    // Sub-tab that owns nested children (e.g. a simulator + its "How It Works").
+    if (t.children) {
+      const childActive = t.children.some(c => c.id === activeSection);
+      const expanded = openSubGroups[t.id] || active || childActive;
+      return (
+        <div key={t.id}>
+          <button
+            onClick={() => {
+              setOpenSubGroups(o => ({ ...o, [t.id]: !expanded }));
+              if (!active) selectSection(t.id);
+            }}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '0.5rem',
+              width: '100%', padding: '0.45rem 0.75rem 0.45rem 2rem',
+              borderRadius: '0.625rem', marginBottom: '0.1rem',
+              background: active ? 'rgba(255,255,255,0.75)' : 'transparent',
+              color: active ? '#192524' : '#5a7070',
+              fontWeight: active ? 600 : 400,
+              fontSize: '0.82rem', textAlign: 'left',
+              cursor: 'pointer', border: 'none',
+              transition: 'background 0.15s',
+            }}
+            onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'rgba(255,255,255,0.4)'; }}
+            onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent'; }}
+          >
+            <span style={{ display: 'flex', alignItems: 'center', opacity: active ? 1 : 0.6 }}>{ICONS[t.id]}</span>
+            <span style={{ flex: 1 }}>{t.label}</span>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ transition: 'transform 150ms', transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)', opacity: 0.45 }}>
+              <path d="M9 18l6-6-6-6"/>
+            </svg>
+          </button>
+          {expanded && t.children.map(renderSubChild)}
+        </div>
+      );
+    }
+
     return (
       <button
         key={t.id}
@@ -281,7 +354,7 @@ export default function AdminDashboard() {
   };
 
   const renderGroup = (group) => {
-    const isActive = group.tabs.some(t => t.id === activeSection);
+    const isActive = groupContains(group, activeSection);
     const expanded = openGroups[group.id] || isActive;
     return (
       <div key={group.id}>

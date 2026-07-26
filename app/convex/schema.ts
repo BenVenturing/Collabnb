@@ -265,6 +265,7 @@ export default defineSchema({
     is_archived: v.optional(v.boolean()),
     admin_reply: v.optional(v.string()),
     admin_reply_at: v.optional(v.number()),
+    add_to_faq: v.optional(v.boolean()),
   }),
 
   admin_settings: defineTable({

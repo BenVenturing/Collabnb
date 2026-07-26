@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { DESTINATIONS, COLLAB_TYPES } from '../lib/searchData';
+import { DESTINATIONS, COUNTRIES, COLLAB_TYPES } from '../lib/searchData';
 import { formatDate, formatDateRange } from '../lib/dateUtils';
 
 // ─── Animated placeholder hook (typewriter + thinking dots) ────────────────
@@ -99,6 +99,10 @@ const ICON_DEFS = {
     color: '#2178A8', bg: 'rgba(33,120,168,0.10)',
     path: <><path d="M2 11C4.5 9 6.5 13 9 11C11.5 9 13.5 13 16 11C18.5 9 20.5 13 22 11" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></>,
   },
+  globe: {
+    color: '#3C5759', bg: 'rgba(60,87,89,0.08)',
+    path: <><circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.6"/><path d="M12 3C10 6 9 9 9 12C9 15 10 18 12 21" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/><path d="M12 3C14 6 15 9 15 12C15 15 14 18 12 21" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/><line x1="3.5" y1="9" x2="20.5" y2="9" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/><line x1="3.5" y1="15" x2="20.5" y2="15" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></>,
+  },
 };
 
 function LocationIcon({ type, size = 30 }) {
@@ -163,6 +167,12 @@ function useNearYouLabels() {
   return labels;
 }
 
+// Curated region groupings (Near You / West Coast / Mountain & Desert) are kept
+// in code for when we have enough real listings to back every category, but
+// stay hidden for now since they'd mostly surface sample data. Flip this on
+// once real inventory covers these regions.
+const SHOW_REGIONS = false;
+
 // ─── Where search content (scrollable, grouped by region + nearby stays) ──────
 export function WhereSearchContent({ whereVal, setWhereVal, onClose, listings = [] }) {
   const q = whereVal.toLowerCase().trim();
@@ -184,17 +194,32 @@ export function WhereSearchContent({ whereVal, setWhereVal, onClose, listings = 
         dests: DESTINATIONS.filter((d) => r.labels.includes(d.label)),
       }));
 
-  const hasExact = DESTINATIONS.some((d) => d.label.toLowerCase() === q);
+  // Real (host-created) listings only — sample listings shouldn't drive search suggestions
+  const realListings = listings.filter((l) => !l._isSample);
 
-  // Nearby stays — match listings by location or title
+  // Country match — lets "Indonesia" resolve to a recognized country even with no listings yet
+  const matchedCountry = q
+    ? COUNTRIES.find((c) => {
+        const name = c.name.toLowerCase();
+        if (name.includes(q) || q.includes(name)) return true;
+        return (c.aliases || []).some((a) => a.toLowerCase().includes(q));
+      })
+    : null;
+  const countryListingCount = matchedCountry
+    ? realListings.filter((l) => (l.location_country || '').toLowerCase().includes(matchedCountry.name.toLowerCase())).length
+    : 0;
+
+  const hasExact = DESTINATIONS.some((d) => d.label.toLowerCase() === q) || !!matchedCountry;
+
+  // Nearby stays — match real listings by location or title
   const nearbyStays = q
-    ? listings.filter((l) => l.location.toLowerCase().includes(q) || l.title.toLowerCase().includes(q))
-    : listings.slice(0, 6);
+    ? realListings.filter((l) => l.location.toLowerCase().includes(q) || l.title.toLowerCase().includes(q))
+    : realListings.slice(0, 6);
 
   return (
     <div style={{ maxHeight: '440px', overflowY: 'auto' }}>
       {/* Region groups */}
-      {filteredRegions.length > 0 && (
+      {SHOW_REGIONS && filteredRegions.length > 0 && (
         <>
           {filteredRegions.map((region) => (
             <div key={region.name} style={{ marginBottom: '0.625rem' }}>
@@ -236,7 +261,34 @@ export function WhereSearchContent({ whereVal, setWhereVal, onClose, listings = 
         </>
       )}
 
-      {/* Worldwide search option */}
+      {/* Country match */}
+      {q && matchedCountry && (
+        <button
+          onClick={() => { setWhereVal(matchedCountry.name); onClose?.(); }}
+          style={{
+            display: 'flex', alignItems: 'center', gap: '0.5rem',
+            padding: '0.5rem 0.75rem', borderRadius: '0.75rem',
+            background: whereVal === matchedCountry.name ? 'rgba(209,235,219,0.55)' : 'transparent',
+            border: 'none', cursor: 'pointer', textAlign: 'left',
+            fontFamily: 'var(--font-body)', marginBottom: '0.5rem',
+            transition: 'background 130ms', width: '100%',
+          }}
+          onMouseEnter={(e) => { if (whereVal !== matchedCountry.name) e.currentTarget.style.background = 'rgba(209,235,219,0.35)'; }}
+          onMouseLeave={(e) => { if (whereVal !== matchedCountry.name) e.currentTarget.style.background = 'transparent'; }}
+        >
+          <LocationIcon type="globe" size={30} />
+          <div style={{ minWidth: 0 }}>
+            <p style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--ink)', lineHeight: 1.3 }}>{matchedCountry.name}</p>
+            <p style={{ fontSize: '0.72rem', color: 'var(--sage)', marginTop: '0.05rem' }}>
+              {countryListingCount > 0
+                ? `${countryListingCount} stay${countryListingCount > 1 ? 's' : ''} available`
+                : 'No listings yet in ' + matchedCountry.name + ' — more coming soon'}
+            </p>
+          </div>
+        </button>
+      )}
+
+      {/* Worldwide search option (no recognized country match) */}
       {q && !hasExact && (
         <button
           onClick={() => { onClose?.(); }}
@@ -268,7 +320,7 @@ export function WhereSearchContent({ whereVal, setWhereVal, onClose, listings = 
       )}
 
       {/* Nearby Stays */}
-      {nearbyStays.length > 0 && !q && (
+      {nearbyStays.length > 0 && (
         <div style={{ marginTop: '0.25rem', borderTop: '1px solid rgba(25,37,36,0.06)', paddingTop: '0.75rem' }}>
           <p style={{
             fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase',

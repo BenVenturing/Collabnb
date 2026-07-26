@@ -27,6 +27,7 @@ import type * as geocode from "../geocode.js";
 import type * as http from "../http.js";
 import type * as lib_compensationPoints from "../lib/compensationPoints.js";
 import type * as lib_geo from "../lib/geo.js";
+import type * as lib_moderation from "../lib/moderation.js";
 import type * as listings from "../listings.js";
 import type * as marketplaceStats from "../marketplaceStats.js";
 import type * as messages from "../messages.js";
@@ -73,6 +74,7 @@ declare const fullApi: ApiFromModules<{
   http: typeof http;
   "lib/compensationPoints": typeof lib_compensationPoints;
   "lib/geo": typeof lib_geo;
+  "lib/moderation": typeof lib_moderation;
   listings: typeof listings;
   marketplaceStats: typeof marketplaceStats;
   messages: typeof messages;

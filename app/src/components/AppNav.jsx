@@ -121,7 +121,7 @@ export default function AppNav() {
   useEffect(() => onChecklistProgress(() => setChecklistTick(t => t + 1)), []);
   const checklistProgress = getChecklistProgress(profile, checklistTick);
   const checklistAllDone = checklistProgress.completed >= checklistProgress.total;
-  const { compactSearch, hideNav, setMapDestination } = useAppBar();
+  const { compactSearch, hideNav, setMapDestination, mapAreaDisplay } = useAppBar();
   const { savedIds } = useCollabs();
   const navigate = useNavigate();
   const savedCount = savedIds.size;
@@ -607,7 +607,7 @@ export default function AppNav() {
 
           {/* "Search stays" compact pill — collapses width when hidden so hamburger stays flush */}
           <div style={{
-            maxWidth: showSearchPill ? '200px' : '0px',
+            maxWidth: showSearchPill ? '280px' : '0px',
             overflow: 'hidden',
             flexShrink: 0,
             transition: 'max-width 300ms var(--ease-out-quart)',
@@ -639,8 +639,8 @@ export default function AppNav() {
                   <line x1="13.25" y1="13.25" x2="18" y2="18"/>
                 </svg>
               </div>
-              <span style={{ fontSize: '0.8rem', fontWeight: 500, color: 'var(--ink)', whiteSpace: 'nowrap' }}>
-                Search stays
+              <span style={{ fontSize: '0.8rem', fontWeight: mapAreaDisplay ? 600 : 500, color: 'var(--ink)', whiteSpace: 'nowrap', maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {mapAreaDisplay || 'Search stays'}
               </span>
             </button>
           </div>

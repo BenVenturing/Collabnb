@@ -376,7 +376,7 @@ function Dropdown({ children, align = 'left', width }) {
 export default function Explore() {
   const navigate = useNavigate();
   const { profile } = useAuth();
-  const { compactSearch, setCompactSearch, mapDestination } = useAppBar();
+  const { compactSearch, setCompactSearch, mapDestination, setMapAreaDisplay } = useAppBar();
   const [activeField, setActiveField] = useState(null); // 'where' | 'what' | 'when'
   const [whereVal,    setWhereVal]    = useState('');
   const [whatVal,     setWhatVal]     = useState('');
@@ -398,6 +398,7 @@ export default function Explore() {
   const [mapCenter, setMapCenter] = useState(null);        // {lng,lat} → reverse-geocoded area label
   const [mapAreaLabel, setMapAreaLabel] = useState('');
   const [activePinId, setActivePinId] = useState(null);
+  const [popupReady, setPopupReady] = useState(false);      // show the card only after the click's fly settles
   const [hoveredCardId, setHoveredCardId] = useState(null); // pin-driven: which card's pin is hovered
   const [fitKey, setFitKey] = useState(0);
   const [isNarrow, setIsNarrow] = useState(() => typeof window !== 'undefined' && window.innerWidth < 900);
@@ -406,6 +407,16 @@ export default function Explore() {
     window.addEventListener('resize', on);
     return () => window.removeEventListener('resize', on);
   }, []);
+  // Selecting a pin: open it, but reveal the card only AFTER the fly-to lands
+  // (fixed 720ms, just past the 700ms fly) so it positions once over the centred
+  // pin and never chases it into a corner.
+  const popupTimerRef = useRef(null);
+  const handlePinClick = (id) => {
+    setActivePinId(id);
+    setPopupReady(false);
+    clearTimeout(popupTimerRef.current);
+    popupTimerRef.current = setTimeout(() => setPopupReady(true), 720);
+  };
   const handleMapMove = (b) => { setMapBounds(b); setMapCenter({ lng: b.centerLng, lat: b.centerLat }); };
 
   // Reverse-geocode the map centre → "Homes in {area}" label (debounced).
@@ -700,7 +711,7 @@ export default function Explore() {
       points={mapPoints}
       activeId={activePinId}
       savedIds={savedIds}
-      onPinClick={setActivePinId}
+      onPinClick={(id) => { handlePinClick(id); const l = mapListings.find((x) => x.id === id); if (l?.location) setMapAreaDisplay(l.location); }}
       onPinHover={setHoveredCardId}
       onMoveEnd={handleMapMove}
       onReady={setMapInstance}
@@ -709,9 +720,9 @@ export default function Explore() {
       fitKey={fitKey}
       fitPoints={focusMapPoints}
     >
-      {activeListing && (
-        <MapPopup map={mapInstance} lng={activeListing.lng} lat={activeListing.lat}>
-          <div style={{ position: 'relative', width: 260, filter: 'drop-shadow(0 12px 28px rgba(25,37,36,0.28))' }}>
+      {activeListing && popupReady && (
+        <MapPopup map={mapInstance} lng={activeListing.lng} lat={activeListing.lat} onOffscreen={() => setActivePinId(null)}>
+          <div style={{ position: 'relative', width: 264, background: '#fff', borderRadius: '1.25rem', filter: 'drop-shadow(0 12px 28px rgba(25,37,36,0.28))' }}>
             <button
               onClick={(e) => { e.stopPropagation(); setActivePinId(null); }}
               aria-label="Close"
@@ -734,6 +745,20 @@ export default function Explore() {
           </div>
         </MapPopup>
       )}
+      {/* Search-this-area — bottom centre of the map */}
+      <button
+        onClick={() => setMapAreaDisplay(mapAreaLabel || '')}
+        style={{
+          position: 'absolute', bottom: 20, left: '50%', transform: 'translateX(-50%)', zIndex: 5,
+          display: 'flex', alignItems: 'center', gap: 7, padding: '0.6rem 1.1rem', borderRadius: 9999,
+          border: '1px solid rgba(25,37,36,0.14)', background: '#fff', color: 'var(--ink)',
+          fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer',
+          boxShadow: '0 4px 16px rgba(25,37,36,0.28)',
+        }}
+      >
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" style={{ width: 14, height: 14 }}><circle cx="8.5" cy="8.5" r="5.25"/><line x1="13.25" y1="13.25" x2="18" y2="18"/></svg>
+        Search this area
+      </button>
     </CollabMap>
   ) : null;
 

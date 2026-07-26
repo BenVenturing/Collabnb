@@ -20,7 +20,9 @@ const DEFAULT_ZOOM = 3.4;
 // Grid clustering in lng/lat space — no extra deps. Cell size shrinks with zoom;
 // past zoom 12 every point is its own pin (matches Airbnb's split-on-zoom feel).
 function clusterPoints(points, zoom) {
-  if (zoom >= 12) return points.map((p) => ({ type: 'point', ...p }));
+  // Never cluster while there are only a handful of listings — every pin must
+  // stay visible. Only clump once the map gets genuinely crowded.
+  if (points.length <= 18 || zoom >= 12) return points.map((p) => ({ type: 'point', ...p }));
   const cell = (360 / Math.pow(2, zoom)) * 0.6;
   const grid = new Map();
   for (const p of points) {
@@ -119,23 +121,12 @@ export default function CollabMap({
     const m = new mapboxgl.Map({
       container: containerRef.current,
       style: STYLE_URL,
+      projection: 'mercator', // flat map: every listing is visible at once (no globe back-side)
       center: DEFAULT_CENTER,
       zoom: DEFAULT_ZOOM,
       attributionControl: false,
     });
-    m.on('load', () => {
-      // Starfield space background instead of solid black when zoomed out.
-      try {
-        m.setFog({
-          color: 'rgb(220, 228, 235)',
-          'high-color': 'rgb(115, 145, 200)',
-          'horizon-blend': 0.02,
-          'space-color': 'rgb(11, 16, 38)',
-          'star-intensity': 0.5,
-        });
-      } catch { /* style may not support fog */ }
-      setMap(m); onReady?.(m); emitMove();
-    });
+    m.on('load', () => { setMap(m); onReady?.(m); emitMove(); });
     m.on('moveend', () => { setZoom(m.getZoom()); emitMove(); });
     mapRef.current = m;
     return () => { m.remove(); mapRef.current = null; };
@@ -282,18 +273,34 @@ function MapControls({ map, onToggleExpand, expanded }) {
   );
 }
 
-// Fixed, always-visible popup slot. The pin is flown to the map centre on click,
-// so the card sits at horizontal centre, just above the middle — no projection
-// math, so it can never land in a corner or need a second click. Falls back to a
-// safe top offset on short maps.
-export function MapPopup({ map, children, cardHeight = 400 }) {
-  if (!map) return null;
-  const H = map.getContainer().clientHeight;
-  const top = Math.max(16, H / 2 - cardHeight - 18); // card bottom ~18px above the centred pin
+// Popup anchored just above its pin. It is positioned ONCE (the parent reveals it
+// only after the click's fly-to has settled the pin near centre), so it never
+// chases the pin into a corner. Any user pan/zoom simply closes it via
+// onOffscreen (deselect + whiten the pin). Clamps so the whole card stays in view.
+export function MapPopup({ map, lng, lat, onOffscreen, children, cardWidth = 264, cardHeight = 380, gap = 16 }) {
+  const [anchor, setAnchor] = useState(null);
+  const offRef = useRef(onOffscreen);
+  offRef.current = onOffscreen;
+  useEffect(() => {
+    if (!map || typeof lng !== 'number' || typeof lat !== 'number') return;
+    const el = map.getContainer();
+    const p = map.project([lng, lat]);
+    setAnchor({ x: p.x, y: p.y, W: el.clientWidth, H: el.clientHeight });
+    // Close on user-initiated pan/zoom (originalEvent guards out programmatic moves).
+    const onMove = (e) => { if (e && e.originalEvent) offRef.current?.(); };
+    map.on('movestart', onMove);
+    return () => map.off('movestart', onMove);
+  }, [map, lng, lat]);
+  if (!anchor) return null;
+  const halfW = cardWidth / 2;
+  const left = Math.max(halfW + 8, Math.min(anchor.W - halfW - 8, anchor.x));
+  const below = anchor.y < cardHeight + gap + 8; // not enough room above → drop below the pin
+  const top = below ? anchor.y + gap : anchor.y - gap;
   return (
     <div style={{
-      position: 'absolute', left: '50%', top,
-      transform: 'translateX(-50%)', zIndex: 6, pointerEvents: 'auto',
+      position: 'absolute', left, top,
+      transform: below ? 'translate(-50%, 0)' : 'translate(-50%, -100%)',
+      zIndex: 6, pointerEvents: 'auto',
     }}>
       {children}
     </div>

@@ -1,5 +1,7 @@
 import { v } from "convex/values";
-import { query, mutation } from "./_generated/server";
+import { query, mutation, action } from "./_generated/server";
+import { api } from "./_generated/api";
+import { llmChat } from "./blog";
 
 // Admin-brand inbox: threads owned by the "Collabnb" persona (username 'collabnb').
 // Each thread is a 1:1 conversation with a single user (participant_id), keyed
@@ -139,5 +141,41 @@ export const markRead = mutation({
   handler: async (ctx, { threadKey }) => {
     // Intentionally empty: unread is derived, not stored, for admin threads.
     return true;
+  },
+});
+
+// AI-draft an admin message to a specific user via the writer LLM (NVIDIA chain).
+// `prompt` is Ben's short intent ("welcome them", "ask about their niche"); the
+// model expands it into a full message body. The signature is added client-side,
+// so the draft must NOT include a sign-off.
+export const draftMessage = action({
+  args: { recipientId: v.string(), prompt: v.optional(v.string()) },
+  handler: async (ctx, { recipientId, prompt }): Promise<string> => {
+    const p: any = await ctx.runQuery(api.profiles.getById, { id: recipientId });
+    const firstName = (p?.full_name || "there").split(" ")[0];
+
+    const who = [
+      p?.full_name && `Name: ${p.full_name}`,
+      p?.role && `Role: ${p.role}`,
+      [p?.city, p?.region].filter(Boolean).join(", ") && `Location: ${[p?.city, p?.region].filter(Boolean).join(", ")}`,
+      p?.tier && `Tier: ${p.tier}`,
+      Array.isArray(p?.niches) && p.niches.length && `Niches: ${p.niches.join(", ")}`,
+      p?.bio && `Bio: ${p.bio}`,
+      p?.clerk_registered === false && `Note: they signed up with email but haven't finished creating their login yet.`,
+    ].filter(Boolean).join("\n");
+
+    const intent = (prompt || "").trim() || "Warmly welcome them to Collabnb and invite them to reach out with any questions.";
+
+    const raw = await llmChat([
+      { role: "system", content: "You write short, warm in-app messages on behalf of the Collabnb team (collabnb.com) — a creator-first hospitality platform connecting boutique stays with vetted creators. Sound like a real, friendly person on the team: natural, specific, zero marketing-speak. Never use 'elevate', 'unlock', 'leverage', 'seamless', or back-to-back exclamation marks. Do NOT include any greeting line beyond the person's first name, and do NOT include a sign-off or signature (that is added separately). Output ONLY the message body text — no quotes, no preamble, no commentary." },
+      { role: "user", content: `Write ONE message (2-4 short sentences, at most one emoji) to send to this user. Base it on Ben's intent below and personalize only with the facts given — never invent details.\n\nBen's intent: ${intent}\n\nUser facts:\n${who || "(no extra details)"}\n\nStart with "Hi ${firstName}," on its own line.` },
+    ], 300);
+
+    let out = raw.trim();
+    const lines = out.split("\n");
+    if (lines.length > 1 && /^(here('s| is)|sure|below is)/i.test(lines[0]) && lines[0].length < 90) {
+      out = lines.slice(1).join("\n").trim();
+    }
+    return out.replace(/^["'“”]+|["'“”]+$/g, "").slice(0, 1200);
   },
 });

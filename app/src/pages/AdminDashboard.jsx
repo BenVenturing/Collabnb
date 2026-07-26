@@ -70,6 +70,7 @@ const ICONS = {
   'creator-algo-reference': IC(<><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></>),
   messages:     IC(<path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>),
   inbox:        IC(<><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z"/></>),
+  'admin-inbox': IC(<><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z"/></>),
   suggestions:  IC(<><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17" strokeWidth="3"/></>),
   moderation:   IC(<><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></>),
   audit:        IC(<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>),
@@ -81,7 +82,8 @@ const ICONS = {
 // ─── Sidebar nav items ────────────────────────────────────────────────────────
 // Flat items shown above the collapsible groups.
 const TOP_SECTIONS = [
-  { id: 'overview', label: 'Overview' },
+  { id: 'overview',    label: 'Overview' },
+  { id: 'admin-inbox', label: 'Inbox'    },
 ];
 
 // Pinned to the footer — always visible.
@@ -123,7 +125,6 @@ const GROUPS = [
 // the breadcrumb can still resolve their label.
 const HIDDEN_SECTIONS = [
   { id: 'analytics', label: 'Platform Analytics' },
-  { id: 'admin-inbox', label: 'Inbox' },
 ];
 
 // A group's tabs, flattened to include any nested children.
@@ -133,6 +134,14 @@ const groupContains = (group, id) => flatTabs(group).some(t => t.id === id);
 const ALL_LABELS = [
   ...TOP_SECTIONS, SETTINGS_SECTION, ...HIDDEN_SECTIONS,
   ...GROUPS.flatMap(flatTabs),
+];
+
+// Flat, searchable index of every navigable destination in the admin panel.
+const NAV_INDEX = [
+  ...TOP_SECTIONS.map(s => ({ id: s.id, label: s.label })),
+  ...GROUPS.flatMap(g => flatTabs(g).map(t => ({ id: t.id, label: t.label, group: g.label }))),
+  { id: SETTINGS_SECTION.id, label: SETTINGS_SECTION.label },
+  ...HIDDEN_SECTIONS.map(s => ({ id: s.id, label: s.label })),
 ];
 
 function UsersPanel()        { return <Users />;                }
@@ -190,6 +199,7 @@ export default function AdminDashboard() {
   const [openGroups, setOpenGroups] = useState({});
   const [openSubGroups, setOpenSubGroups] = useState({});
   const [usersInitialView, setUsersInitialView] = useState(null);
+  const [navSearch, setNavSearch] = useState('');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const unreadCount = useQuery(api.messages.getUnreadCount);
   const adminUnread = useQuery(api.adminThreads.unreadCount) ?? 0;
@@ -217,7 +227,11 @@ export default function AdminDashboard() {
   );
 
   const ActivePanel = PANEL_MAP[activeSection] || PANEL_MAP['overview'];
-  const badges = { messages: unreadCount || 0 };
+  const badges = { messages: unreadCount || 0, 'admin-inbox': adminUnread || 0 };
+  const q = navSearch.trim().toLowerCase();
+  const navResults = q
+    ? NAV_INDEX.filter(it => it.label.toLowerCase().includes(q) || (it.group || '').toLowerCase().includes(q))
+    : null;
   const activeGroup = GROUPS.find(g => groupContains(g, activeSection));
   const activeLabel = activeGroup
     ? `${activeGroup.label} › ${flatTabs(activeGroup).find(t => t.id === activeSection)?.label}`
@@ -389,13 +403,40 @@ export default function AdminDashboard() {
     );
   };
 
+  // Icon-only button for the collapsed rail.
+  const renderRailIcon = (iconKey, label, active, onClick, badge = 0) => (
+    <button
+      key={iconKey}
+      title={label}
+      aria-label={label}
+      onClick={onClick}
+      style={{
+        position: 'relative',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        width: '100%', height: 40, borderRadius: '0.625rem', marginBottom: '0.15rem',
+        background: active ? 'rgba(255,255,255,0.85)' : 'transparent',
+        color: active ? '#192524' : '#3C5759',
+        cursor: 'pointer', border: 'none',
+        boxShadow: active ? '0 1px 4px rgba(25,37,36,0.08)' : 'none',
+        transition: 'background 0.15s',
+      }}
+      onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'rgba(255,255,255,0.5)'; }}
+      onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent'; }}
+    >
+      <span style={{ display: 'flex', alignItems: 'center', opacity: active ? 1 : 0.75 }}>{ICONS[iconKey]}</span>
+      {badge > 0 && (
+        <span style={{ position: 'absolute', top: 6, right: 9, minWidth: 7, height: 7, borderRadius: '99px', background: '#166534' }} />
+      )}
+    </button>
+  );
+
   return (
     <>
       <div style={{ display: 'flex', minHeight: '100dvh', fontFamily: 'Satoshi, sans-serif', position: 'relative', zIndex: 10 }}>
 
         {/* ── Sidebar ─────────────────────────────────────────────────────────── */}
         <aside style={{
-          width: 232,
+          width: sidebarCollapsed ? 64 : 232,
           flexShrink: 0,
           background: 'rgba(255,255,255,0.60)',
           backdropFilter: 'blur(24px) saturate(160%)',
@@ -405,50 +446,138 @@ export default function AdminDashboard() {
           flexDirection: 'column',
           padding: '1.5rem 0',
           boxShadow: 'inset -1px 0 0 rgba(255,255,255,0.5), 2px 0 20px rgba(25,37,36,0.06)',
+          transition: 'width 0.2s ease',
         }}>
-          {/* Logo / wordmark */}
-          <div style={{ padding: '0 1.25rem 1.25rem', borderBottom: '1px solid rgba(25,37,36,0.07)' }}>
-            <div style={{ fontFamily: 'Cabinet Grotesk, sans-serif', fontWeight: 800, fontSize: '1.1rem', color: '#192524', letterSpacing: '-0.02em' }}>Collabnb</div>
-            <div style={{ fontSize: '0.7rem', color: '#959D90', marginTop: '0.1rem', letterSpacing: '0.04em', textTransform: 'uppercase' }}>Admin Panel</div>
-          </div>
-
-          {/* Back to account */}
-          <div style={{ padding: '0.75rem 0.75rem 0' }}>
-            <NavLink
-              to={backPath}
-              style={{
-                display: 'flex', alignItems: 'center', gap: '0.5rem',
-                padding: '0.5rem 0.75rem', borderRadius: '0.625rem',
-                background: 'rgba(209,235,219,0.35)',
-                color: '#166534', fontSize: '0.8rem', fontWeight: 600,
-                textDecoration: 'none', border: '1px solid rgba(209,235,219,0.7)',
-                transition: 'background 0.15s',
-              }}
-              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(209,235,219,0.6)'; }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(209,235,219,0.35)'; }}
+          {/* Logo / wordmark + collapse toggle */}
+          <div style={{ padding: sidebarCollapsed ? '0 0 1rem' : '0 1.25rem 1.25rem', borderBottom: '1px solid rgba(25,37,36,0.07)', display: 'flex', alignItems: 'center', justifyContent: sidebarCollapsed ? 'center' : 'space-between', gap: '0.5rem' }}>
+            {!sidebarCollapsed && (
+              <div>
+                <div style={{ fontFamily: 'Cabinet Grotesk, sans-serif', fontWeight: 800, fontSize: '1.1rem', color: '#192524', letterSpacing: '-0.02em' }}>Collabnb</div>
+                <div style={{ fontSize: '0.7rem', color: '#959D90', marginTop: '0.1rem', letterSpacing: '0.04em', textTransform: 'uppercase' }}>Admin Panel</div>
+              </div>
+            )}
+            <button
+              onClick={() => setSidebarCollapsed(c => !c)}
+              title={sidebarCollapsed ? 'Expand panel' : 'Collapse panel'}
+              aria-label={sidebarCollapsed ? 'Expand panel' : 'Collapse panel'}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 30, height: 30, flexShrink: 0, borderRadius: '0.5rem', border: '1px solid rgba(25,37,36,0.1)', background: 'rgba(255,255,255,0.6)', color: '#3C5759', cursor: 'pointer' }}
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M19 12H5M12 19l-7-7 7-7"/>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2"/>
+                <line x1="9" y1="3" x2="9" y2="21"/>
               </svg>
-              Back to my account
-            </NavLink>
+            </button>
           </div>
 
-          {/* Nav items */}
-          <nav style={{ padding: '0.75rem 0.75rem', flex: 1 }}>
-            {TOP_SECTIONS.map(renderSection)}
-            {GROUPS.map(renderGroup)}
-          </nav>
+          {sidebarCollapsed ? (
+            /* ── Collapsed icon rail ── */
+            <>
+              <nav style={{ padding: '0.75rem 0.5rem', flex: 1 }}>
+                {TOP_SECTIONS.map(s => renderRailIcon(s.id, s.label, activeSection === s.id, () => selectSection(s.id), badges[s.id]))}
+                {GROUPS.map(g => renderRailIcon(g.icon, g.label, groupContains(g, activeSection), () => selectSection(g.tabs[0].id)))}
+              </nav>
+              <div style={{ padding: '0.5rem', borderTop: '1px solid rgba(25,37,36,0.07)' }}>
+                {renderRailIcon('settings', 'Settings', activeSection === 'settings', () => selectSection('settings'))}
+              </div>
+            </>
+          ) : (
+            /* ── Expanded sidebar ── */
+            <>
+              {/* Back to account */}
+              <div style={{ padding: '0.75rem 0.75rem 0' }}>
+                <NavLink
+                  to={backPath}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '0.5rem',
+                    padding: '0.5rem 0.75rem', borderRadius: '0.625rem',
+                    background: 'rgba(209,235,219,0.35)',
+                    color: '#166534', fontSize: '0.8rem', fontWeight: 600,
+                    textDecoration: 'none', border: '1px solid rgba(209,235,219,0.7)',
+                    transition: 'background 0.15s',
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(209,235,219,0.6)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'rgba(209,235,219,0.35)'; }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M19 12H5M12 19l-7-7 7-7"/>
+                  </svg>
+                  Back to my account
+                </NavLink>
+              </div>
 
-          {/* Pinned Settings — always visible */}
-          <div style={{ padding: '0.5rem 0.75rem', borderTop: '1px solid rgba(25,37,36,0.07)' }}>
-            {renderSection(SETTINGS_SECTION)}
-          </div>
+              {/* Search */}
+              <div style={{ padding: '0.75rem 0.75rem 0' }}>
+                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#959D90" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ position: 'absolute', left: '0.6rem', pointerEvents: 'none' }}>
+                    <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                  </svg>
+                  <input
+                    value={navSearch}
+                    onChange={e => setNavSearch(e.target.value)}
+                    placeholder="Search admin…"
+                    style={{ width: '100%', padding: '0.5rem 1.6rem 0.5rem 2rem', borderRadius: '0.625rem', border: '1px solid rgba(25,37,36,0.12)', background: 'rgba(255,255,255,0.7)', fontSize: '0.82rem', color: '#192524', outline: 'none', fontFamily: 'inherit' }}
+                  />
+                  {navSearch && (
+                    <button
+                      onClick={() => setNavSearch('')}
+                      aria-label="Clear search"
+                      style={{ position: 'absolute', right: '0.4rem', width: 20, height: 20, borderRadius: '50%', border: 'none', background: 'transparent', color: '#959D90', cursor: 'pointer', fontSize: '1rem', lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
+              </div>
 
-          {/* Footer */}
-          <div style={{ padding: '0.75rem 1.25rem', fontSize: '0.75rem', color: '#959D90' }}>
-            Internal use only
-          </div>
+              {/* Nav items OR search results */}
+              <nav style={{ padding: '0.75rem 0.75rem', flex: 1, overflowY: 'auto' }}>
+                {navResults ? (
+                  navResults.length === 0 ? (
+                    <div style={{ padding: '0.6rem 0.75rem', fontSize: '0.8rem', color: '#959D90' }}>No matches.</div>
+                  ) : (
+                    navResults.map(it => {
+                      const active = activeSection === it.id;
+                      return (
+                        <button
+                          key={it.id}
+                          onClick={() => { selectSection(it.id); setNavSearch(''); }}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: '0.5rem',
+                            width: '100%', padding: '0.5rem 0.75rem', borderRadius: '0.625rem', marginBottom: '0.1rem',
+                            background: active ? 'rgba(255,255,255,0.75)' : 'transparent',
+                            color: active ? '#192524' : '#3C5759',
+                            fontSize: '0.82rem', textAlign: 'left', cursor: 'pointer', border: 'none',
+                            transition: 'background 0.15s',
+                          }}
+                          onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'rgba(255,255,255,0.45)'; }}
+                          onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent'; }}
+                        >
+                          <span style={{ display: 'flex', alignItems: 'center', opacity: 0.7 }}>{ICONS[it.id]}</span>
+                          <span style={{ flex: 1 }}>{it.label}</span>
+                          {it.group && <span style={{ fontSize: '0.66rem', color: '#959D90' }}>{it.group}</span>}
+                        </button>
+                      );
+                    })
+                  )
+                ) : (
+                  <>
+                    {TOP_SECTIONS.map(renderSection)}
+                    {GROUPS.map(renderGroup)}
+                  </>
+                )}
+              </nav>
+
+              {/* Pinned Settings — always visible */}
+              <div style={{ padding: '0.5rem 0.75rem', borderTop: '1px solid rgba(25,37,36,0.07)' }}>
+                {renderSection(SETTINGS_SECTION)}
+              </div>
+
+              {/* Footer */}
+              <div style={{ padding: '0.75rem 1.25rem', fontSize: '0.75rem', color: '#959D90' }}>
+                Internal use only
+              </div>
+            </>
+          )}
         </aside>
 
         {/* ── Main content ─────────────────────────────────────────────────────── */}

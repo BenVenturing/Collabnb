@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
 import { internal } from "./_generated/api";
+import { redactText } from "./lib/moderation";
 
 export const submitMessage = mutation({
   args: {
@@ -11,11 +12,12 @@ export const submitMessage = mutation({
     add_to_faq: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
+    const cleanMessage = redactText(args.message);
     await ctx.db.insert("messages", {
-      name: args.name,
+      name: redactText(args.name),
       email: args.email,
       category: args.category,
-      message: args.message,
+      message: cleanMessage,
       is_read: false,
       is_archived: false,
       add_to_faq: args.add_to_faq,
@@ -24,7 +26,7 @@ export const submitMessage = mutation({
     await ctx.scheduler.runAfter(0, internal.email.sendAdminNotification, {
       type: "message",
       subject: args.add_to_faq ? `New Help Center question from ${args.name}` : `New message from ${args.name}`,
-      body: `From: ${args.name} <${args.email}>\nCategory: ${args.category || "General"}\n${args.add_to_faq ? "This question is already live in the public FAQ awaiting your answer.\n" : ""}\n${args.message}\n\nView in admin: https://collabnb.com/#/admin`,
+      body: `From: ${args.name} <${args.email}>\nCategory: ${args.category || "General"}\n${args.add_to_faq ? "This question is already live in the public FAQ awaiting your answer.\n" : ""}\n${cleanMessage}\n\nView in admin: https://collabnb.com/#/admin`,
     });
   },
 });
@@ -103,7 +105,7 @@ export const addAdminReply = mutation({
   args: { messageId: v.string(), reply: v.string() },
   handler: async (ctx, args) => {
     await ctx.db.patch(args.messageId as any, {
-      admin_reply: args.reply.trim(),
+      admin_reply: redactText(args.reply.trim()),
       admin_reply_at: Date.now(),
       is_read: true,
     });

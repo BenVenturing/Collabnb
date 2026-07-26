@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
-import { useQuery, useMutation } from 'convex/react';
+import { useQuery, useMutation, useAction } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -82,15 +82,58 @@ function UserRow({ user, onClick }) {
   );
 }
 
+const SIGN = 'Cheers,\nThe Collabnb team';
+const SIGN_BLOCK = '\n\n' + SIGN;
+
+// Rotating "flickering" prompt ideas shown as the composer placeholder.
+const AI_SUGGESTIONS = [
+  'Welcome them warmly to Collabnb…',
+  'Ask what kind of collabs they’re after…',
+  'Nudge them to finish their profile…',
+  'Answer how collabs work on Collabnb…',
+  'Invite them to explore listings…',
+  'Check in and see how it’s going…',
+];
+
 function Conversation({ thread, persona }) {
-  const [draft, setDraft] = useState('');
+  const [draft, setDraft] = useState(SIGN_BLOCK);
   const [sending, setSending] = useState(false);
+  const [drafting, setDrafting] = useState(false);
+  const [focused, setFocused] = useState(false);
+  const [phIdx, setPhIdx] = useState(0);
   const bottomRef = useRef(null);
+  const taRef = useRef(null);
   const messages = useQuery(api.threadMessages.getByThread, { threadKey: thread.thread_key });
   const send = useMutation(api.threadMessages.sendMessage);
+  const draftMessage = useAction(api.adminThreads.draftMessage);
 
-  useEffect(() => { setDraft(''); }, [thread.thread_key]);
+  // The message body is everything before the trailing signature block.
+  const body = draft.endsWith(SIGN_BLOCK) ? draft.slice(0, draft.length - SIGN_BLOCK.length) : draft;
+  const hasBody = body.trim().length > 0;
+
+  const resetDraft = () => {
+    setDraft(SIGN_BLOCK);
+    requestAnimationFrame(() => { const el = taRef.current; if (el) { el.selectionStart = el.selectionEnd = 0; } });
+  };
+
+  // New thread → reset composer to just the signature, cursor at the top.
+  useEffect(() => { resetDraft(); /* eslint-disable-next-line */ }, [thread.thread_key]);
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
+
+  // Auto-grow the textarea with its content (up to ~6 lines, then scroll).
+  useEffect(() => {
+    const el = taRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 140) + 'px';
+  }, [draft]);
+
+  // Flicker through prompt ideas while the body is empty and unfocused.
+  useEffect(() => {
+    if (hasBody || focused) return;
+    const t = setInterval(() => setPhIdx(i => (i + 1) % AI_SUGGESTIONS.length), 2800);
+    return () => clearInterval(t);
+  }, [hasBody, focused]);
 
   const bubbles = (messages || []).map((m) => ({
     id: String(m._id),
@@ -101,9 +144,9 @@ function Conversation({ thread, persona }) {
 
   const sendNow = async () => {
     const text = draft.trim();
-    if (!text || sending || !persona) return;
+    if (!hasBody || sending || !persona) return;
     setSending(true);
-    setDraft('');
+    resetDraft();
     try {
       await send({
         threadKey: thread.thread_key,
@@ -119,10 +162,28 @@ function Conversation({ thread, persona }) {
     }
   };
 
+  // Draft a message via NVIDIA. Uses whatever's typed as the intent, else the
+  // currently-flickering suggestion; inserts the result above the signature.
+  const runDraft = async () => {
+    if (drafting || !thread.participant_id) return;
+    setDrafting(true);
+    try {
+      const seed = hasBody ? body.trim() : AI_SUGGESTIONS[phIdx];
+      const result = await draftMessage({ recipientId: thread.participant_id, prompt: seed });
+      const clean = (result || '').trim();
+      setDraft(clean + SIGN_BLOCK);
+      requestAnimationFrame(() => { const el = taRef.current; if (el) { el.focus(); el.selectionStart = el.selectionEnd = clean.length; } });
+    } catch { /* ignore */ } finally {
+      setDrafting(false);
+    }
+  };
+
   const onKey = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendNow(); } };
+  const showFlicker = !hasBody && !focused;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+      <style>{`@keyframes aiFlicker { 0%,100% { opacity: 0.35; } 12% { opacity: 0.9; } 80% { opacity: 0.9; } } @keyframes spin { to { transform: rotate(360deg); } }`}</style>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 20px', borderBottom: '1px solid rgba(25,37,36,0.08)', flexShrink: 0 }}>
         <Avatar name={thread.participant_name} src={thread.participant_avatar} size={40} />
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -145,7 +206,7 @@ function Conversation({ thread, persona }) {
                   maxWidth: '72%', padding: '8px 14px', borderRadius: 16,
                   background: b.mine ? 'var(--slate)' : 'rgba(255,255,255,0.9)',
                   color: b.mine ? 'var(--bone)' : 'var(--ink)',
-                  fontSize: 13, lineHeight: 1.5,
+                  fontSize: 13, lineHeight: 1.5, whiteSpace: 'pre-wrap',
                   borderBottomRightRadius: b.mine ? 4 : 16,
                   borderBottomLeftRadius: b.mine ? 16 : 4,
                   border: b.mine ? 'none' : '1px solid rgba(25,37,36,0.08)',
@@ -162,25 +223,53 @@ function Conversation({ thread, persona }) {
 
       <div style={{ padding: 12, borderTop: '1px solid rgba(25,37,36,0.08)', flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, background: 'var(--bone)', borderRadius: 16, padding: '8px 14px', border: '1px solid rgba(25,37,36,0.1)' }}>
-          <textarea
-            rows={1}
-            value={draft}
-            onChange={e => setDraft(e.target.value)}
-            onKeyDown={onKey}
-            placeholder="Message as Collabnb…"
-            style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', resize: 'none', fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--ink)', minHeight: '1.4rem', maxHeight: 120 }}
-          />
+          {/* AI draft (star) */}
+          <button
+            onClick={runDraft}
+            disabled={drafting}
+            title="Draft with AI"
+            aria-label="Draft with AI"
+            style={{ width: 32, height: 32, borderRadius: '50%', border: 'none', cursor: drafting ? 'default' : 'pointer', flexShrink: 0, background: 'rgba(209,235,219,0.6)', color: '#166534', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          >
+            {drafting ? (
+              <span style={{ width: 14, height: 14, border: '2px solid rgba(22,101,52,0.3)', borderTopColor: '#166534', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.7s linear infinite' }} />
+            ) : (
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 3l1.9 4.8L19 9.5l-4 3.4 1.2 5.1L12 15.6 7.8 18l1.2-5.1-4-3.4 5.1-1.7z"/>
+              </svg>
+            )}
+          </button>
+
+          <div style={{ position: 'relative', flex: 1 }}>
+            {showFlicker && (
+              <div key={phIdx} style={{ position: 'absolute', left: 0, top: 2, right: 0, pointerEvents: 'none', color: 'var(--sage)', fontFamily: 'var(--font-body)', fontSize: 13, animation: 'aiFlicker 2.8s ease-in-out', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                ✨ {AI_SUGGESTIONS[phIdx]}
+              </div>
+            )}
+            <textarea
+              ref={taRef}
+              rows={1}
+              value={draft}
+              onChange={e => setDraft(e.target.value)}
+              onKeyDown={onKey}
+              onFocus={() => setFocused(true)}
+              onBlur={() => setFocused(false)}
+              placeholder=""
+              style={{ width: '100%', display: 'block', boxSizing: 'border-box', background: 'transparent', border: 'none', outline: 'none', resize: 'none', fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--ink)', lineHeight: 1.5, minHeight: '1.4rem', maxHeight: 140, overflowY: 'auto' }}
+            />
+          </div>
+
           <button
             onClick={sendNow}
-            disabled={!draft.trim() || sending}
-            style={{ width: 32, height: 32, borderRadius: '50%', border: 'none', cursor: 'pointer', flexShrink: 0, background: draft.trim() ? 'var(--slate)' : 'rgba(60,87,89,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            disabled={!hasBody || sending}
+            style={{ width: 32, height: 32, borderRadius: '50%', border: 'none', cursor: 'pointer', flexShrink: 0, background: hasBody ? 'var(--slate)' : 'rgba(60,87,89,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
           >
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke={draft.trim() ? 'white' : 'var(--sage)'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke={hasBody ? 'white' : 'var(--sage)'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
             </svg>
           </button>
         </div>
-        <p style={{ textAlign: 'center', fontSize: 10, color: 'var(--sage)', opacity: 0.7, margin: '4px 0 0' }}>Sending as Collabnb · Enter to send</p>
+        <p style={{ textAlign: 'center', fontSize: 10, color: 'var(--sage)', opacity: 0.7, margin: '4px 0 0' }}>Signed “Cheers, The Collabnb team” · ✨ drafts with AI · Enter to send</p>
       </div>
     </div>
   );

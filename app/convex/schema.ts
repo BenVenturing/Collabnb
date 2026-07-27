@@ -457,6 +457,24 @@ export default defineSchema({
     .index("by_platform", ["platform"])
     .index("by_external", ["external_id"]),
 
+  // Instagram DMs + post comments, unified so the admin Social inbox can
+  // reply to either without leaving Collabnb.
+  social_inbox: defineTable({
+    platform: v.string(),                // 'instagram'
+    kind: v.union(v.literal("dm"), v.literal("comment")),
+    thread_id: v.string(),               // conversation id (dm) or media id (comment)
+    external_id: v.string(),             // message id or comment id
+    from_username: v.optional(v.string()),
+    text: v.optional(v.string()),
+    post_permalink: v.optional(v.string()), // for comments, link back to the post
+    created_at: v.number(),
+    replied: v.boolean(),
+    reply_text: v.optional(v.string()),
+    replied_at: v.optional(v.number()),
+  })
+    .index("by_external", ["external_id"])
+    .index("by_replied", ["replied"]),
+
   // Ambassador program (beta) — regional partners earning a share of the
   // platform fee on collabs completed in their region.
   ambassador_regions: defineTable({

@@ -1,6 +1,14 @@
 import { useState, useEffect } from 'react';
-import { useQuery, useAction } from 'convex/react';
+import { useQuery, useAction, useMutation, useConvex } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
+
+async function uploadRawFile(file, generateUploadUrl, getStorageUrl) {
+  const uploadUrl = await generateUploadUrl();
+  const res = await fetch(uploadUrl, { method: 'POST', headers: { 'Content-Type': file.type }, body: file });
+  const { storageId } = await res.json();
+  const url = await getStorageUrl({ storageId });
+  return url;
+}
 
 function fmt(n) {
   if (n === undefined || n === null) return '0';
@@ -16,7 +24,8 @@ const SETUP = {
     steps: [
       'Switch the Collabnb IG account to Business/Creator and link a Facebook Page.',
       'Create a Meta app at developers.facebook.com and add the Instagram Graph API product.',
-      'Generate a long-lived access token with instagram_basic + pages_read_engagement.',
+      'In Graph API Explorer, generate a token with: instagram_basic, instagram_manage_insights, instagram_content_publish, instagram_manage_messages, instagram_manage_comments, pages_show_list, pages_read_engagement.',
+      'Own-account use only — no App Review or Business Verification needed; Development Mode covers the app Admin.',
       'Find the IG business account id via the Graph Explorer (me/accounts, then ?fields=instagram_business_account).',
     ],
     envCmds: [
@@ -102,6 +111,188 @@ function ConnectorCard({ platform, account, configured, onSync, syncing, syncMsg
   );
 }
 
+function Composer({ configured }) {
+  const generateUploadUrl = useMutation(api.uploads.generateUploadUrl);
+  const convex = useConvex();
+  const getStorageUrl = (args) => convex.query(api.uploads.getStorageUrl, args);
+  const publishPost = useAction(api.social.publishPost);
+  const finishPublish = useAction(api.social.finishPublish);
+
+  const [caption, setCaption] = useState('');
+  const [file, setFile] = useState(null);
+  const [mediaType, setMediaType] = useState('IMAGE');
+  const [publishing, setPublishing] = useState(false);
+  const [result, setResult] = useState(null);
+
+  async function handlePublish() {
+    if (!file) { setResult({ message: 'Choose a photo or video first.' }); return; }
+    setPublishing(true);
+    setResult(null);
+    try {
+      const mediaUrl = await uploadRawFile(file, generateUploadUrl, getStorageUrl);
+      const r = await publishPost({ caption, mediaUrl, mediaType });
+      setResult(r);
+      if (r.published) { setCaption(''); setFile(null); }
+    } catch (e) {
+      setResult({ message: e.message?.replace(/^.*Error:\s*/, '') || 'Publish failed' });
+    } finally {
+      setPublishing(false);
+    }
+  }
+
+  async function handleFinish() {
+    if (!result?.creationId) return;
+    setPublishing(true);
+    try {
+      const r = await finishPublish({ creationId: result.creationId });
+      setResult(r);
+      if (r.published) { setCaption(''); setFile(null); }
+    } catch (e) {
+      setResult({ message: e.message?.replace(/^.*Error:\s*/, '') || 'Publish failed' });
+    } finally {
+      setPublishing(false);
+    }
+  }
+
+  return (
+    <div style={{ padding: '1.25rem', borderRadius: '1.25rem', background: 'rgba(255,255,255,0.72)', border: '1px solid rgba(255,255,255,0.8)', marginBottom: '1.5rem' }}>
+      <p style={{ fontFamily: 'Cabinet Grotesk, sans-serif', fontWeight: 700, fontSize: '0.95rem', color: '#192524', margin: '0 0 0.75rem' }}>New Instagram post</p>
+      {!configured && (
+        <p style={{ fontSize: '0.78rem', color: '#959D90', margin: '0 0 0.75rem' }}>Connect Instagram above first (needs the instagram_content_publish permission).</p>
+      )}
+      <textarea value={caption} onChange={(e) => setCaption(e.target.value)} placeholder="Write a caption..."
+        rows={3} disabled={!configured}
+        style={{ width: '100%', padding: '0.6rem 0.75rem', borderRadius: '0.6rem', border: '1.5px solid rgba(25,37,36,0.12)', fontSize: '0.82rem', fontFamily: 'inherit', resize: 'vertical', marginBottom: '0.6rem', boxSizing: 'border-box' }} />
+      <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
+        <select value={mediaType} onChange={(e) => setMediaType(e.target.value)} disabled={!configured}
+          style={{ padding: '0.4rem 0.6rem', border: '1.5px solid rgba(25,37,36,0.12)', borderRadius: '0.6rem', fontSize: '0.78rem', color: '#192524', background: '#fafafa' }}>
+          <option value="IMAGE">Photo</option>
+          <option value="REEL">Reel (video)</option>
+        </select>
+        <input type="file" accept={mediaType === 'REEL' ? 'video/*' : 'image/*'} disabled={!configured}
+          onChange={(e) => setFile(e.target.files?.[0] || null)} style={{ fontSize: '0.78rem' }} />
+        <button onClick={handlePublish} disabled={!configured || publishing || !file}
+          style={{ padding: '0.5rem 1.1rem', borderRadius: 9999, border: 'none', background: '#192524', color: '#fff', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', opacity: (!configured || publishing || !file) ? 0.5 : 1 }}>
+          {publishing ? 'Publishing...' : 'Publish'}
+        </button>
+      </div>
+      {result && (
+        <div style={{ fontSize: '0.78rem', lineHeight: 1.5 }}>
+          {result.published ? (
+            <p style={{ color: '#166534', margin: 0 }}>
+              Posted!{' '}
+              {result.permalink && <a href={result.permalink} target="_blank" rel="noopener noreferrer" style={{ color: '#166534' }}>View on Instagram</a>}
+            </p>
+          ) : result.creationId ? (
+            <p style={{ color: '#92400E', margin: 0, display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+              {result.message}
+              <button onClick={handleFinish} disabled={publishing}
+                style={{ padding: '0.3rem 0.75rem', borderRadius: 9999, border: '1.5px solid rgba(25,37,36,0.15)', background: 'transparent', color: '#3C5759', fontSize: '0.74rem', fontWeight: 600, cursor: 'pointer' }}>
+                Finish publishing
+              </button>
+            </p>
+          ) : (
+            <p style={{ color: '#9b2d2d', margin: 0 }}>{result.message}</p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function InboxPanel({ configured }) {
+  const [onlyUnreplied, setOnlyUnreplied] = useState(true);
+  const items = useQuery(api.social.getInboxItems, { onlyUnreplied }) || [];
+  const syncInbox = useAction(api.social.syncInbox);
+  const sendReply = useAction(api.social.sendReply);
+
+  const [syncing, setSyncing] = useState(false);
+  const [syncMsg, setSyncMsg] = useState('');
+  const [drafts, setDrafts] = useState({});
+  const [sending, setSending] = useState({});
+
+  async function handleSync() {
+    setSyncing(true);
+    setSyncMsg('');
+    try {
+      const r = await syncInbox({});
+      setSyncMsg(`${r.synced} new message${r.synced === 1 ? '' : 's'}.`);
+    } catch (e) {
+      setSyncMsg(e.message?.replace(/^.*Error:\s*/, '') || 'Sync failed');
+    } finally {
+      setSyncing(false);
+    }
+  }
+
+  async function handleReply(id) {
+    const text = (drafts[id] || '').trim();
+    if (!text) return;
+    setSending((s) => ({ ...s, [id]: true }));
+    try {
+      await sendReply({ id, replyText: text });
+      setDrafts((d) => ({ ...d, [id]: '' }));
+    } catch (e) {
+      alert(e.message?.replace(/^.*Error:\s*/, '') || 'Reply failed');
+    } finally {
+      setSending((s) => ({ ...s, [id]: false }));
+    }
+  }
+
+  return (
+    <div style={{ padding: '1.25rem', borderRadius: '1.25rem', background: 'rgba(255,255,255,0.72)', border: '1px solid rgba(255,255,255,0.8)', marginBottom: '1.5rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.6rem', marginBottom: '0.75rem' }}>
+        <p style={{ fontFamily: 'Cabinet Grotesk, sans-serif', fontWeight: 700, fontSize: '0.95rem', color: '#192524', margin: 0 }}>Instagram inbox</p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+          <label style={{ fontSize: '0.74rem', color: '#3C5759', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+            <input type="checkbox" checked={onlyUnreplied} onChange={(e) => setOnlyUnreplied(e.target.checked)} />
+            Unreplied only
+          </label>
+          <button onClick={handleSync} disabled={!configured || syncing}
+            style={{ padding: '0.4rem 0.9rem', borderRadius: 9999, border: 'none', background: '#192524', color: '#fff', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer', opacity: (!configured || syncing) ? 0.5 : 1 }}>
+            {syncing ? 'Syncing...' : 'Sync inbox'}
+          </button>
+        </div>
+      </div>
+      {!configured && <p style={{ fontSize: '0.78rem', color: '#959D90', margin: '0 0 0.5rem' }}>Connect Instagram above first.</p>}
+      {syncMsg && <p style={{ fontSize: '0.74rem', color: '#3C5759', margin: '0 0 0.5rem' }}>{syncMsg}</p>}
+
+      {items.length === 0 ? (
+        <p style={{ fontSize: '0.8rem', color: '#959D90', margin: 0 }}>Nothing here — hit Sync inbox to pull in DMs and comments.</p>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+          {items.map((item) => (
+            <div key={item._id} style={{ padding: '0.75rem 0.9rem', borderRadius: '0.85rem', background: 'rgba(255,255,255,0.6)', border: '1px solid rgba(25,37,36,0.07)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.3rem', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '0.62rem', fontWeight: 700, padding: '0.15rem 0.5rem', borderRadius: 9999, background: item.kind === 'dm' ? 'rgba(123,104,200,0.15)' : 'rgba(74,155,127,0.15)', color: item.kind === 'dm' ? '#7B68C8' : '#4A9B7F', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  {item.kind === 'dm' ? 'DM' : 'Comment'}
+                </span>
+                <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#192524' }}>@{item.from_username || 'unknown'}</span>
+                {item.post_permalink && (
+                  <a href={item.post_permalink} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.68rem', color: '#959D90' }}>view post</a>
+                )}
+                {item.replied && <span style={{ fontSize: '0.68rem', color: '#166534' }}>Replied</span>}
+              </div>
+              <p style={{ fontSize: '0.82rem', color: '#3C5759', margin: '0 0 0.5rem', lineHeight: 1.5 }}>{item.text}</p>
+              {item.replied ? (
+                <p style={{ fontSize: '0.76rem', color: '#959D90', margin: 0, fontStyle: 'italic' }}>You replied: "{item.reply_text}"</p>
+              ) : (
+                <div style={{ display: 'flex', gap: '0.4rem' }}>
+                  <input value={drafts[item._id] || ''} onChange={(e) => setDrafts((d) => ({ ...d, [item._id]: e.target.value }))}
+                    placeholder="Write a reply..." style={{ flex: 1, padding: '0.4rem 0.6rem', borderRadius: '0.5rem', border: '1.5px solid rgba(25,37,36,0.12)', fontSize: '0.78rem' }} />
+                  <button onClick={() => handleReply(item._id)} disabled={sending[item._id] || !(drafts[item._id] || '').trim()}
+                    style={{ padding: '0.4rem 0.9rem', borderRadius: 9999, border: 'none', background: '#192524', color: '#fff', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer', opacity: sending[item._id] ? 0.5 : 1 }}>
+                    {sending[item._id] ? '...' : 'Reply'}
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function SocialHub() {
   const accounts = useQuery(api.social.getAccounts) || [];
   const summary = useQuery(api.social.getSummary);
@@ -153,6 +344,9 @@ export default function SocialHub() {
         <ConnectorCard platform="tiktok" account={ttAccount} configured={integrations?.tiktok}
           onSync={() => handleSync('tiktok')} syncing={!!syncing.tiktok} syncMsg={syncMsg.tiktok} />
       </div>
+
+      <Composer configured={!!integrations?.instagram} />
+      <InboxPanel configured={!!integrations?.instagram} />
 
       {/* Totals */}
       {summary && (posts.length > 0) && (

@@ -398,6 +398,7 @@ export default function Explore() {
   const [mapCenter, setMapCenter] = useState(null);        // {lng,lat} → reverse-geocoded area label
   const [mapAreaLabel, setMapAreaLabel] = useState('');
   const [activePinId, setActivePinId] = useState(null);
+  const [visitedIds, setVisitedIds] = useState(() => new Set()); // pins viewed this session (reset on refresh)
   const [popupReady, setPopupReady] = useState(false);      // show the card only after the click's fly settles
   const [hoveredCardId, setHoveredCardId] = useState(null); // pin-driven: which card's pin is hovered
   const [fitKey, setFitKey] = useState(0);
@@ -416,6 +417,7 @@ export default function Explore() {
   const popupTimerRef = useRef(null);
   const handlePinClick = (id) => {
     setActivePinId(id);
+    setVisitedIds((prev) => { const next = new Set(prev); next.add(id); return next; }); // mark viewed (mint) for the session
     setPopupReady(false);
     clearTimeout(popupTimerRef.current);
     popupTimerRef.current = setTimeout(() => setPopupReady(true), 720);
@@ -742,6 +744,7 @@ export default function Explore() {
       points={mapPoints}
       activeId={activePinId}
       savedIds={savedIds}
+      visitedIds={visitedIds}
       onPinClick={(id) => { handlePinClick(id); const l = mapListings.find((x) => x.id === id); if (l?.location) setMapAreaDisplay(l.location); }}
       onPinHover={setHoveredCardId}
       onMoveEnd={handleMapMove}

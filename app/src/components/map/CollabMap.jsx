@@ -44,14 +44,16 @@ function clusterPoints(points, zoom) {
 // `transform` (translate) to position it. We must NEVER set transform on it, or
 // the pin snaps to the container origin (top-left). All hover/active scaling goes
 // on the INNER element instead.
-function pillEl({ label, active, saved, redacted }) {
+function pillEl({ label, active, saved, visited, redacted }) {
   const wrap = document.createElement('div');
   wrap.style.cursor = 'pointer';
   wrap.style.willChange = 'transform';
   const el = document.createElement('div');
   el.textContent = redacted ? '•••' : (label || '·');
 
-  function updateStyle(isActive, isSaved) {
+  // Pin colour: white (untouched) → black (active/viewing) → muted mint
+  // (already viewed this session, or saved).
+  function updateStyle(isActive, isMint) {
     Object.assign(el.style, {
       font: '700 0.72rem var(--font-body, system-ui)',
       padding: redacted ? '0.3rem 0.55rem' : '0.32rem 0.6rem',
@@ -62,7 +64,7 @@ function pillEl({ label, active, saved, redacted }) {
       letterSpacing: '0.01em',
       transition: 'transform 160ms cubic-bezier(0.16,1,0.3,1), background-color 160ms ease, color 160ms ease, border-color 160ms ease, box-shadow 160ms ease',
       color: isActive ? '#ffffff' : '#192524',
-      background: isActive ? '#192524' : (isSaved ? '#c6e6d2' : '#ffffff'),
+      background: isActive ? '#192524' : (isMint ? '#c6e6d2' : '#ffffff'),
       boxShadow: isActive
         ? '0 4px 14px rgba(25,37,36,0.45)'
         : '0 2px 10px rgba(25,37,36,0.30)',
@@ -70,18 +72,18 @@ function pillEl({ label, active, saved, redacted }) {
     });
   }
 
-  updateStyle(active, saved);
+  updateStyle(active, saved || visited);
 
   el.onmouseenter = () => { if (!wrap._isActive) el.style.transform = 'scale(1.08)'; };
   el.onmouseleave = () => { if (!wrap._isActive) el.style.transform = 'scale(1)'; };
 
   wrap.appendChild(el);
   wrap._isActive = active;
-  wrap._updateStyle = (newActiveId, savedSet) => {
+  wrap._updateStyle = (newActiveId, savedSet, visitedSet) => {
     const isAct = wrap._pointId === newActiveId;
-    const isSvg = savedSet?.has?.(wrap._pointId);
+    const isMint = savedSet?.has?.(wrap._pointId) || visitedSet?.has?.(wrap._pointId);
     wrap._isActive = isAct;
-    updateStyle(isAct, isSvg);
+    updateStyle(isAct, isMint);
   };
   return wrap;
 }
@@ -111,6 +113,7 @@ export default function CollabMap({
   points = [],
   activeId = null,
   savedIds,
+  visitedIds,
   onPinClick,
   onPinHover,
   onClusterClick,
@@ -205,6 +208,7 @@ export default function CollabMap({
             label: c.label,
             active: c.id === activeId,
             saved: savedIds?.has?.(c.id),
+            visited: visitedIds?.has?.(c.id),
             redacted: c.redacted,
           });
           wrap._pointId = c.id;
@@ -228,14 +232,14 @@ export default function CollabMap({
         markersRef.current.push(marker);
       }
     } else {
-      // Geometry unchanged: update active pin selection and saved state in-place
+      // Geometry unchanged: update active/saved/visited state in-place
       for (const mk of markersRef.current) {
         if (mk._wrap?._updateStyle) {
-          mk._wrap._updateStyle(activeId, savedIds);
+          mk._wrap._updateStyle(activeId, savedIds, visitedIds);
         }
       }
     }
-  }, [points, zoom, activeId, savedIds, onPinClick, onPinHover, onClusterClick]);
+  }, [points, zoom, activeId, savedIds, visitedIds, onPinClick, onPinHover, onClusterClick]);
 
   // Fit to points when asked. Prefer `fitPoints` (e.g. trending) so the initial
   // view opens zoomed into those rather than the whole globe.

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useQuery } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 
@@ -122,6 +122,7 @@ function FounderBar({ label, count, max = 100 }) {
 
 // ─── Main export ──────────────────────────────────────────────────────────────
 export default function PlatformAnalytics() {
+  const [view, setView] = useState('platform');
   const stats = useQuery(api.admin.getAnalytics);
   const pitchStats = useQuery(api.admin.getPitchAnalytics);
   const geo = useQuery(api.admin.getGeographicDistribution);
@@ -137,7 +138,18 @@ export default function PlatformAnalytics() {
         Live metrics from Convex.
       </p>
 
-      {stats === undefined ? (
+      {/* Platform vs. Web & Marketing toggle */}
+      <div style={{ display: 'inline-flex', gap: 4, background: BONE, padding: 4, borderRadius: 10, marginBottom: '1.25rem' }}>
+        {[['platform', 'Platform'], ['web', 'Web & Marketing']].map(([id, label]) => (
+          <button key={id} onClick={() => setView(id)} style={{
+            border: 0, cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.78rem', fontWeight: 600,
+            padding: '6px 14px', borderRadius: 7, background: view === id ? '#fff' : 'transparent',
+            color: view === id ? INK : SLATE, boxShadow: view === id ? '0 1px 2px rgba(25,37,36,0.08)' : 'none',
+          }}>{label}</button>
+        ))}
+      </div>
+
+      {view === 'web' ? <WebAnalytics /> : stats === undefined ? (
         <div style={{ color: SAGE, fontSize: '0.85rem', padding: '3rem 0', textAlign: 'center' }}>Loading…</div>
       ) : (
         <>
@@ -369,5 +381,132 @@ function Placeholder({ label, value }) {
       <div style={{ fontSize: '1.25rem', fontWeight: 700, fontFamily: 'Cabinet Grotesk, sans-serif', color: SAGE }}>{value}</div>
       <div style={{ fontSize: '0.75rem', color: SAGE, marginTop: '0.1rem' }}>{label}</div>
     </div>
+  );
+}
+
+// ─── Web & Marketing analytics ──────────────────────────────────────────────
+const LBL = { fontSize: '0.78rem', fontWeight: 600, color: SLATE, marginBottom: '1rem' };
+const CLAY = '#E8C1B4';
+
+function fmtDuration(sec) {
+  if (!sec) return '0s';
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return m ? `${m}m ${s}s` : `${s}s`;
+}
+
+function Card2({ title, data, color }) {
+  return (
+    <div style={CARD}>
+      <div style={LBL}>{title}</div>
+      <HBarChart data={data} color={color} />
+    </div>
+  );
+}
+
+function WebAnalytics() {
+  const [days, setDays] = useState(30);
+  const d = useQuery(api.analytics.getMarketingAnalytics, { days });
+
+  if (d === undefined) {
+    return <div style={{ color: SAGE, fontSize: '0.85rem', padding: '3rem 0', textAlign: 'center' }}>Loading…</div>;
+  }
+  const noData = d.totalSessions === 0;
+
+  return (
+    <>
+      {/* Date range */}
+      <div style={{ display: 'flex', gap: 6, marginBottom: '1.25rem' }}>
+        {[[7, '7 days'], [30, '30 days'], [90, '90 days']].map(([v, l]) => (
+          <button key={v} onClick={() => setDays(v)} style={{
+            border: '1px solid rgba(25,37,36,0.1)', cursor: 'pointer', fontFamily: 'inherit',
+            fontSize: '0.75rem', fontWeight: 600, padding: '5px 12px', borderRadius: 99,
+            background: days === v ? INK : '#fff', color: days === v ? BONE : SLATE,
+          }}>{l}</button>
+        ))}
+      </div>
+
+      {noData ? (
+        <div style={{ ...CARD, textAlign: 'center', color: SAGE, fontSize: '0.85rem', padding: '2.5rem 1.5rem' }}>
+          No web analytics captured in this window yet. Data appears here once visitors browse the
+          marketing site or the app with tracking live (after the next deploy).
+        </div>
+      ) : (
+        <>
+          <Section title="Traffic Overview">
+            <StatGrid>
+              <Stat label="Visitors" value={d.totalSessions} />
+              <Stat label="Pageviews" value={d.totalPageviews} />
+              <Stat label="Avg Pages / Visit" value={d.avgPagesPerSession} />
+              <Stat label="Avg Time on Site" value={fmtDuration(d.avgDurationSec)} />
+              <Stat label="Bounce Rate" value={`${d.bounceRate}%`} accent={d.bounceRate > 70 ? '#92400E' : undefined} />
+            </StatGrid>
+          </Section>
+
+          <Section title="Marketing → Signup Funnel">
+            <div style={{ ...CARD, padding: '1rem 1.25rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', flexWrap: 'wrap' }}>
+                {[
+                  { label: 'Visitors', count: d.funnel.visitors, color: INK },
+                  { label: 'Clicked Sign-Up', count: d.funnel.clickedSignup, color: '#92400E' },
+                  { label: 'Signed Up', count: d.funnel.signedUp, color: '#166534' },
+                  { label: 'Verified', count: d.funnel.verified, color: '#4A9B7F' },
+                ].map((s, i, arr) => (
+                  <React.Fragment key={s.label}>
+                    <div style={{ textAlign: 'center', padding: '0.5rem 0.75rem', flex: 1, minWidth: 70 }}>
+                      <div style={{ fontSize: '1.25rem', fontWeight: 700, color: s.color, fontFamily: 'Cabinet Grotesk, sans-serif' }}>{s.count}</div>
+                      <div style={{ fontSize: '0.65rem', color: SAGE }}>{s.label}</div>
+                    </div>
+                    {i < arr.length - 1 && <span style={{ color: SAGE, fontSize: '0.8rem' }}>{'→'}</span>}
+                  </React.Fragment>
+                ))}
+              </div>
+            </div>
+          </Section>
+
+          <Section title="Where Visitors Come From">
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+              <Card2 title="Traffic Source" data={d.sources} color={MINT} />
+              <Card2 title="Campaigns (UTM)" data={d.campaigns} color="#C7D9DC" />
+            </div>
+            {d.referrers.length > 0 && (
+              <div style={{ marginTop: '0.75rem' }}>
+                <Card2 title="Top Referrers" data={d.referrers} color={SLATE} />
+              </div>
+            )}
+          </Section>
+
+          <Section title="Pages">
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+              <Card2 title="Most Viewed" data={d.topPages} color={MINT} />
+              <Card2 title="Landing Pages (First Seen)" data={d.topLandingPages} color="#C7D9DC" />
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginTop: '0.75rem' }}>
+              <Card2 title="Exit Pages (Last Seen)" data={d.topExitPages} color={CLAY} />
+              <Card2 title="Avg Time on Page (sec)" data={d.avgDwell} color={SLATE} />
+            </div>
+          </Section>
+
+          <Section title="Clicks">
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+              <Card2 title="First Click in Visit" data={d.firstClicks} color={MINT} />
+              <Card2 title="Most Clicked" data={d.topClicks} color="#C7D9DC" />
+            </div>
+          </Section>
+
+          <Section title="Engagement">
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+              <Card2 title="Scroll Depth (Marketing)" data={d.scrollDepth} color={MINT} />
+              <Card2 title="Devices" data={d.devices} color="#C7D9DC" />
+            </div>
+          </Section>
+
+          <p style={{ fontSize: '0.72rem', color: SAGE, marginTop: '1.5rem' }}>
+            First-party data from Convex. Vercel Web Analytics (pageviews, geography) is also available
+            in your Vercel dashboard once enabled for the project.
+          </p>
+        </>
+      )}
+    </>
   );
 }

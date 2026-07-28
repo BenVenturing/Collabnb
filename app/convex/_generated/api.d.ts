@@ -11,6 +11,7 @@
 import type * as admin from "../admin.js";
 import type * as adminThreads from "../adminThreads.js";
 import type * as ambassadors from "../ambassadors.js";
+import type * as analytics from "../analytics.js";
 import type * as blog from "../blog.js";
 import type * as blogResearch from "../blogResearch.js";
 import type * as collaborations from "../collaborations.js";
@@ -58,6 +59,7 @@ declare const fullApi: ApiFromModules<{
   admin: typeof admin;
   adminThreads: typeof adminThreads;
   ambassadors: typeof ambassadors;
+  analytics: typeof analytics;
   blog: typeof blog;
   blogResearch: typeof blogResearch;
   collaborations: typeof collaborations;

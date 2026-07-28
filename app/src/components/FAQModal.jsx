@@ -188,6 +188,19 @@ const FAQ_SECTIONS = [
       },
     ],
   },
+  {
+    title: 'Privacy & Cookies',
+    items: [
+      {
+        q: 'Does Collabnb use cookies to track me?',
+        a: "Yes — but only first-party cookies, and only to make Collabnb better. We use a single cookie to remember your session and understand how the app is used: which pages you visit, what you click, how long you stay, and where you leave.\n\nWe do not use advertising cookies, we do not sell your data, and we do not share it with third-party ad networks. You can clear cookies any time in your browser settings and the app will still work normally.",
+      },
+      {
+        q: 'What activity data do you collect?',
+        a: "Usage signals: pages viewed, buttons and links clicked, time on each page, scroll depth, and the page you leave from — plus how you first arrived (e.g. a link from Instagram or a search). Once you're signed in, this activity is tied to your account so we can improve your experience. It is used only to run and improve Collabnb, never sold.",
+      },
+    ],
+  },
 ];
 
 // ─── Accordion item ────────────────────────────────────────────────────────────

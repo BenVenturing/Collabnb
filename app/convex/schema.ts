@@ -588,6 +588,52 @@ export default defineSchema({
     created_at: v.number(),
   }).index("by_reported", ["reported_user_id"]),
 
+  // ─── Web / marketing analytics ────────────────────────────────────────────
+  // One row per visitor session (cookie-scoped to .collabnb.com, so a visit
+  // that starts on the marketing site keeps the same session_id into the app).
+  analyticsSessions: defineTable({
+    session_id: v.string(),
+    first_seen: v.number(),
+    last_seen: v.number(),
+    surface: v.optional(v.string()),        // 'marketing' | 'app'
+    landing_page: v.optional(v.string()),   // first path seen (first-touch)
+    last_path: v.optional(v.string()),      // most recent path — the exit page
+    referrer: v.optional(v.string()),
+    source: v.optional(v.string()),         // derived channel: google/instagram/direct/…
+    utm_source: v.optional(v.string()),
+    utm_medium: v.optional(v.string()),
+    utm_campaign: v.optional(v.string()),
+    utm_term: v.optional(v.string()),
+    utm_content: v.optional(v.string()),
+    device: v.optional(v.string()),         // 'mobile' | 'tablet' | 'desktop'
+    user_id: v.optional(v.string()),        // profile _id once logged in (funnel stitch)
+    user_email: v.optional(v.string()),
+    first_click: v.optional(v.string()),    // label of the first thing they clicked
+    clicked_signup: v.optional(v.boolean()),
+    pageviews: v.optional(v.number()),
+    clicks: v.optional(v.number()),
+    max_scroll: v.optional(v.number()),     // deepest scroll %, 0–100
+    duration_ms: v.optional(v.number()),
+  })
+    .index("by_session", ["session_id"])
+    .index("by_first_seen", ["first_seen"])
+    .index("by_user", ["user_id"]),
+
+  analyticsEvents: defineTable({
+    session_id: v.string(),
+    type: v.string(),                       // 'pageview' | 'click' | 'scroll' | 'exit'
+    path: v.optional(v.string()),
+    target: v.optional(v.string()),         // click label / href
+    ts: v.number(),
+    dwell_ms: v.optional(v.number()),
+    scroll_pct: v.optional(v.number()),
+    surface: v.optional(v.string()),
+    user_id: v.optional(v.string()),
+  })
+    .index("by_session", ["session_id"])
+    .index("by_ts", ["ts"])
+    .index("by_type", ["type"]),
+
   fee_records: defineTable({
     collaboration_id: v.string(),
     contract_id: v.optional(v.string()),

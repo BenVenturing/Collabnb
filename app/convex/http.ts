@@ -270,4 +270,44 @@ http.route({
   }),
 });
 
+// Analytics ingestion — the marketing site (static HTML) and the app both POST
+// batched events here. Public + permissive CORS: this is fire-and-forget
+// first-party telemetry, no auth, served from *.convex.site (cross-origin to
+// collabnb.com), so a preflight/allow-origin header is required.
+const analyticsCors = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type",
+  "Access-Control-Max-Age": "86400",
+};
+
+http.route({
+  path: "/track",
+  method: "OPTIONS",
+  handler: httpAction(async () => new Response(null, { status: 204, headers: analyticsCors })),
+});
+
+http.route({
+  path: "/track",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    try {
+      const payload = JSON.parse(await request.text());
+      if (payload?.sessionId && Array.isArray(payload?.events)) {
+        await ctx.runMutation(internal.analytics.ingest, {
+          sessionId: String(payload.sessionId),
+          surface: payload.surface,
+          userId: payload.userId,
+          userEmail: payload.userEmail,
+          meta: payload.meta,
+          events: payload.events.slice(0, 50),
+        });
+      }
+    } catch {
+      // Never fail a beacon — telemetry must not surface errors to the client.
+    }
+    return new Response(null, { status: 204, headers: analyticsCors });
+  }),
+});
+
 export default http;

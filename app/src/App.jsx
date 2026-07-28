@@ -1,6 +1,9 @@
 import { Component, useRef, useState, useEffect, useCallback } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { Analytics } from '@vercel/analytics/react';
 import collabnbLogo from './assets/collabnb-logo.png';
+import AnalyticsTracker from './components/AnalyticsTracker';
+import CookieBanner from './components/CookieBanner';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { AppBarProvider } from './contexts/AppBarContext';
 import { CollabProvider } from './contexts/CollabContext';
@@ -330,7 +333,10 @@ export default function App() {
       <AppBarProvider>
         <AuthProvider>
           <BrowserRouter>
+            <AnalyticsTracker />
             <AppRoutes />
+            <CookieBanner />
+            <Analytics />
           </BrowserRouter>
         </AuthProvider>
       </AppBarProvider>

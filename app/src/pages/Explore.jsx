@@ -376,7 +376,7 @@ function Dropdown({ children, align = 'left', width }) {
 export default function Explore() {
   const navigate = useNavigate();
   const { profile } = useAuth();
-  const { compactSearch, setCompactSearch, mapDestination, setMapAreaDisplay } = useAppBar();
+  const { compactSearch, setCompactSearch, mapDestination, setMapAreaDisplay, setMapView } = useAppBar();
   const [activeField, setActiveField] = useState(null); // 'where' | 'what' | 'when'
   const [whereVal,    setWhereVal]    = useState('');
   const [whatVal,     setWhatVal]     = useState('');
@@ -576,6 +576,9 @@ export default function Explore() {
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => { window.removeEventListener('scroll', onScroll); setCompactSearch(false); };
   }, [mapOpen, setCompactSearch]);
+
+  // Tell the nav we're in map view (hides the bell → notifications move to the profile menu).
+  useEffect(() => { setMapView(mapOpen); return () => setMapView(false); }, [mapOpen, setMapView]);
 
   // ── Data source: real Convex listings + global sample listings ───────────────
   const convexRaw  = useQuery(api.listings.getAll, profile?._id ? { viewerId: String(profile._id) } : {}) ?? null;       // real (excludes is_sample)

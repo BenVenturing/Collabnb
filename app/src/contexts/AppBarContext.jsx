@@ -5,6 +5,7 @@ const AppBarContext = createContext({
   hideNav: false, setHideNav: () => {},
   mapDestination: '', setMapDestination: () => {},
   mapAreaDisplay: '', setMapAreaDisplay: () => {},
+  mapView: false, setMapView: () => {},
 });
 
 export function AppBarProvider({ children }) {
@@ -14,8 +15,10 @@ export function AppBarProvider({ children }) {
   const [mapDestination, setMapDestination] = useState('');
   // Current map area (from "Search this area" / clicking a listing) — shown in the nav search.
   const [mapAreaDisplay, setMapAreaDisplay] = useState('');
+  // True while the Explore map is the active view — nav hides the bell, profile menu carries notifications.
+  const [mapView, setMapView] = useState(false);
   return (
-    <AppBarContext.Provider value={{ compactSearch, setCompactSearch, hideNav, setHideNav, mapDestination, setMapDestination, mapAreaDisplay, setMapAreaDisplay }}>
+    <AppBarContext.Provider value={{ compactSearch, setCompactSearch, hideNav, setHideNav, mapDestination, setMapDestination, mapAreaDisplay, setMapAreaDisplay, mapView, setMapView }}>
       {children}
     </AppBarContext.Provider>
   );

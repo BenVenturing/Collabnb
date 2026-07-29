@@ -114,6 +114,90 @@ const BOTTOM_NAV_ITEMS = [
   },
 ];
 
+// Notifications dropdown panel. Rendered from the nav bell (normal views) and
+// from the profile menu (map view). Anchors bottom-right of its relative parent.
+function NotifPanel({ notifications, userId, markRead, clearAllNotifs, onClose, navigate }) {
+  return (
+    <div style={{
+      position: 'absolute', top: 'calc(100% + 8px)', right: 0,
+      width: 320, maxHeight: 420,
+      background: 'rgba(255,255,255,0.97)',
+      backdropFilter: 'blur(24px) saturate(140%)',
+      WebkitBackdropFilter: 'blur(24px) saturate(140%)',
+      border: '1px solid rgba(255,255,255,0.7)',
+      borderRadius: '1.25rem',
+      boxShadow: '0 12px 40px rgba(25,37,36,0.18)',
+      overflow: 'hidden', zIndex: 100,
+      animation: 'fadeUp 180ms cubic-bezier(0.16,1,0.3,1) forwards',
+    }}>
+      <div style={{ padding: '14px 18px 10px', borderBottom: '1px solid rgba(25,37,36,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 14, color: 'var(--ink)' }}>Notifications</span>
+        {notifications.length > 0 && (
+          <button
+            onClick={() => clearAllNotifs({ userId })}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font-body)', fontSize: 12, fontWeight: 600, color: 'var(--sage)', padding: '2px 0', transition: 'color 150ms' }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--ink)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--sage)'; }}
+          >
+            Clear all
+          </button>
+        )}
+      </div>
+      <div style={{ overflowY: 'auto', maxHeight: 360 }}>
+        {notifications.length === 0 ? (
+          <div style={{ padding: '32px 18px', textAlign: 'center', color: 'var(--sage)', fontSize: 13 }}>
+            No notifications yet
+          </div>
+        ) : notifications.map((n) => (
+          <div
+            key={n._id}
+            onClick={() => { markRead({ id: n._id }); if (n.link) { onClose(); navigate(n.link.replace('#', '')); } }}
+            style={{ padding: '12px 18px', borderBottom: '1px solid rgba(25,37,36,0.05)', cursor: n.link ? 'pointer' : 'default', background: n.read ? 'transparent' : 'rgba(60,87,89,0.04)', display: 'flex', gap: 10, alignItems: 'flex-start' }}
+          >
+            <span style={{
+              width: 28, height: 28, borderRadius: '0.5rem', flexShrink: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: n.type === 'pitch_approved' ? 'rgba(74,155,127,0.14)'
+                : n.type === 'pitch_declined' ? 'rgba(200,104,104,0.14)'
+                : (n.type === 'host_reply' || n.type === 'new_message') ? 'rgba(60,87,89,0.1)'
+                : n.type === 'new_application' ? 'rgba(212,168,67,0.14)'
+                : n.type === 'contract_reminder' ? 'rgba(60,87,89,0.12)'
+                : 'rgba(25,37,36,0.07)',
+            }}>
+              {n.type === 'pitch_approved' && (
+                <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="#4A9B7F" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="2.5 8 6 11.5 13.5 4"/></svg>
+              )}
+              {n.type === 'pitch_declined' && (
+                <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="#C86868" strokeWidth="2.5" strokeLinecap="round"><line x1="4" y1="4" x2="12" y2="12"/><line x1="12" y1="4" x2="4" y2="12"/></svg>
+              )}
+              {(n.type === 'host_reply' || n.type === 'new_message') && (
+                <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="#3C5759" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14 10a2 2 0 01-2 2H5l-3 2V4a2 2 0 012-2h8a2 2 0 012 2z"/></svg>
+              )}
+              {n.type === 'new_application' && (
+                <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="#D4A843" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="8" cy="5.5" r="2.5"/><path d="M2.5 13c0-2.485 2.462-4.5 5.5-4.5s5.5 2.015 5.5 4.5"/></svg>
+              )}
+              {n.type === 'contract_reminder' && (
+                <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="#3C5759" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M4 1.5h5l3 3V14a.5.5 0 01-.5.5h-7A.5.5 0 014 14z"/><path d="M9 1.5V4.5h3"/><line x1="6" y1="8" x2="10" y2="8"/><line x1="6" y1="10.5" x2="10" y2="10.5"/></svg>
+              )}
+              {!['pitch_approved','pitch_declined','host_reply','new_message','new_application','contract_reminder'].includes(n.type) && (
+                <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="#959D90" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="12" height="10" rx="1.5"/><polyline points="2 5 8 9.5 14 5"/></svg>
+              )}
+            </span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 13, color: 'var(--ink)', lineHeight: 1.3 }}>{n.title}</div>
+              {n.body && <div style={{ fontSize: 12, color: 'var(--slate)', marginTop: 2, lineHeight: 1.4 }}>{n.body}</div>}
+              <div style={{ fontSize: 10, color: 'var(--sage)', marginTop: 4 }}>
+                {new Date(n.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+              </div>
+            </div>
+            {!n.read && <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#3C5759', flexShrink: 0, marginTop: 6 }} />}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function AppNav() {
   const { profile, signOut, updateProfile } = useAuth();
   const isPending = profile?.tier === 'waitlist' && !profile?.is_verified;
@@ -121,7 +205,7 @@ export default function AppNav() {
   useEffect(() => onChecklistProgress(() => setChecklistTick(t => t + 1)), []);
   const checklistProgress = getChecklistProgress(profile, checklistTick);
   const checklistAllDone = checklistProgress.completed >= checklistProgress.total;
-  const { compactSearch, hideNav, setMapDestination, mapAreaDisplay } = useAppBar();
+  const { compactSearch, hideNav, setMapDestination, mapAreaDisplay, mapView } = useAppBar();
   const { savedIds } = useCollabs();
   const navigate = useNavigate();
   const savedCount = savedIds.size;
@@ -220,7 +304,9 @@ export default function AppNav() {
   useEffect(() => {
     if (!notifOpen) return;
     const handler = (e) => {
-      if (bellRef.current && !bellRef.current.contains(e.target)) setNotifOpen(false);
+      const inBell = bellRef.current?.contains(e.target);
+      const inProfile = profileRef.current?.contains(e.target);
+      if (!inBell && !inProfile) setNotifOpen(false);
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
@@ -645,8 +731,8 @@ export default function AppNav() {
             </button>
           </div>
 
-          {/* Bell notification icon — hidden when scrolled */}
-          {userId && !scrolled && (
+          {/* Bell notification icon — hidden when scrolled or in map view (moves to profile menu) */}
+          {userId && !scrolled && !mapView && (
             <div ref={bellRef} style={{ position: 'relative' }}>
               <button
                 onClick={() => { setNotifOpen(o => !o); if (!notifOpen && userId) markAllRead({ userId }); }}
@@ -832,6 +918,18 @@ export default function AppNav() {
               </button>
             </div>
 
+            {/* Notifications panel in map view — anchored under the profile pill */}
+            {mapView && notifOpen && userId && (
+              <NotifPanel
+                notifications={notifications}
+                userId={userId}
+                markRead={markRead}
+                clearAllNotifs={clearAllNotifs}
+                onClose={() => setNotifOpen(false)}
+                navigate={navigate}
+              />
+            )}
+
             {/* Profile dropdown */}
             {profileOpen && (
               <div
@@ -854,6 +952,19 @@ export default function AppNav() {
                   <p className="font-display font-bold text-ink text-sm">{profile?.full_name}</p>
                   <p className="text-sage text-xs mt-0.5">@{profile?.username}</p>
                 </NavLink>
+                {mapView && userId && (
+                  <button
+                    onClick={() => { setProfileOpen(false); setNotifOpen(true); markAllRead({ userId }); }}
+                    className="w-full text-left px-4 py-3 text-sm text-ink hover:bg-mint/30 transition-colors border-b border-stone/30"
+                    style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ width: 16, height: 16, flexShrink: 0 }}><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                    <span style={{ flex: 1 }}>Notifications</span>
+                    {unreadCount > 0 && (
+                      <span style={{ minWidth: 18, height: 18, background: '#ef4444', color: '#fff', borderRadius: 9999, fontSize: '0.6rem', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 5px' }}>{unreadCount}</span>
+                    )}
+                  </button>
+                )}
                 {isAdmin && (
                   <NavLink
                     to="/admin"

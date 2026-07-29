@@ -162,20 +162,25 @@
     var mount = function () {
       var style = document.createElement('style');
       style.textContent =
-        '.cnb-cookie{position:fixed;left:1rem;bottom:1rem;z-index:99998;max-width:320px;' +
-        'background:#F7F5F2;border:1px solid rgba(25,37,36,.1);border-radius:14px;' +
-        'box-shadow:0 8px 30px rgba(25,37,36,.14);padding:14px 16px;' +
+        '.cnb-cookie{position:fixed;left:.85rem;bottom:.85rem;z-index:99998;max-width:258px;' +
+        'background:#F7F5F2;border:1px solid rgba(25,37,36,.1);border-radius:12px;' +
+        'box-shadow:0 6px 22px rgba(25,37,36,.13);padding:11px 13px;' +
         "font-family:'Satoshi',-apple-system,system-ui,sans-serif;color:#192524;" +
         'animation:cnbCookieIn .5s cubic-bezier(.16,1,.3,1) both}' +
-        '@keyframes cnbCookieIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}' +
-        '.cnb-cookie__row{display:flex;gap:10px;align-items:flex-start}' +
-        '.cnb-cookie__ic{flex:0 0 auto;color:#3C5759;margin-top:1px}' +
-        '.cnb-cookie h4{margin:0 0 3px;font-size:.9rem;font-weight:700;letter-spacing:-.01em}' +
-        '.cnb-cookie p{margin:0;font-size:.78rem;line-height:1.45;color:#3C5759}' +
+        '@keyframes cnbCookieIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}' +
+        '.cnb-cookie__row{display:flex;gap:8px;align-items:center}' +
+        '.cnb-cookie__ic{flex:0 0 auto;color:#3C5759;display:flex}' +
+        '.cnb-cookie h4{margin:0;font-size:.82rem;font-weight:700;letter-spacing:-.01em}' +
+        '.cnb-cookie p{margin:5px 0 0;font-size:.72rem;line-height:1.4;color:#3C5759}' +
+        '.cnb-cookie__more{margin-top:7px;padding-top:7px;font-size:.7rem;line-height:1.45;' +
+        'border-top:1px solid rgba(25,37,36,.08);display:none}' +
+        '.cnb-cookie.is-open .cnb-cookie__more{display:block}' +
         '.cnb-cookie a{color:#192524;font-weight:600;text-decoration:underline;text-underline-offset:2px}' +
-        '.cnb-cookie__act{display:flex;gap:8px;align-items:center;margin-top:11px;justify-content:flex-end}' +
-        '.cnb-cookie__btn{border:0;cursor:pointer;font:inherit;font-size:.78rem;font-weight:700;' +
-        'padding:7px 16px;border-radius:99px;background:#192524;color:#F7F5F2;transition:transform .15s}' +
+        '.cnb-cookie__act{display:flex;gap:8px;align-items:center;margin-top:9px;justify-content:space-between}' +
+        '.cnb-cookie__link{border:0;background:none;cursor:pointer;font:inherit;font-size:.72rem;' +
+        'font-weight:600;color:#3C5759;padding:0;text-decoration:underline;text-underline-offset:2px}' +
+        '.cnb-cookie__btn{border:0;cursor:pointer;font:inherit;font-size:.72rem;font-weight:700;' +
+        'padding:5px 14px;border-radius:99px;background:#192524;color:#F7F5F2;transition:transform .15s}' +
         '.cnb-cookie__btn:hover{transform:translateY(-1px)}';
       document.head.appendChild(style);
       var box = document.createElement('div');
@@ -183,18 +188,36 @@
       box.setAttribute('role', 'dialog');
       box.setAttribute('aria-label', 'Cookie notice');
       box.innerHTML =
-        '<div class="cnb-cookie__row">' +
-          '<span class="cnb-cookie__ic">' + COOKIE_SVG + '</span>' +
-          '<div><h4>We use cookies</h4><p>We use first-party cookies to see how Collabnb is used ' +
-          'so we can make it better. No ads, no selling your data. ' +
-          '<a href="/faq.html#cookies">Learn more</a>.</p></div>' +
-        '</div>' +
-        '<div class="cnb-cookie__act"><button class="cnb-cookie__btn" type="button">Got it</button></div>';
-      box.querySelector('button').addEventListener('click', function () {
-        localStorage.setItem('cnb_cookie_ack', '1');
-        box.style.opacity = '0'; box.style.transform = 'translateY(14px)';
+        '<div class="cnb-cookie__row"><span class="cnb-cookie__ic">' + COOKIE_SVG + '</span>' +
+          '<h4>We use cookies</h4></div>' +
+        '<p>First-party cookies to understand how Collabnb is used — so we can make it better.</p>' +
+        '<div class="cnb-cookie__more">We use one cookie to remember your session and record which pages ' +
+          'you visit, what you click, how long you stay, and where you leave. <strong>No ads. No selling ' +
+          'your data. No third-party ad networks.</strong> Clear cookies anytime in your browser and ' +
+          'Collabnb still works. <a href="/faq.html#cookies">More in the FAQ</a>.</div>' +
+        '<div class="cnb-cookie__act">' +
+          '<button class="cnb-cookie__link" type="button" data-toggle>Review</button>' +
+          '<button class="cnb-cookie__btn" type="button" data-ack>Got it</button>' +
+        '</div>';
+      var autoTimer;
+      var closed = false;
+      function close() {
+        if (closed) return;
+        closed = true;
+        clearTimeout(autoTimer);
+        try { localStorage.setItem('cnb_cookie_ack', '1'); } catch (e) {}
+        box.style.opacity = '0'; box.style.transform = 'translateY(12px)';
         box.style.transition = 'all .3s'; setTimeout(function () { box.remove(); }, 320);
+      }
+      box.querySelector('[data-toggle]').addEventListener('click', function () {
+        clearTimeout(autoTimer); // engaged — cancel the auto-dismiss
+        var open = box.classList.toggle('is-open');
+        this.textContent = open ? 'Less' : 'Review';
       });
+      box.querySelector('[data-ack]').addEventListener('click', close);
+      // If it's just ignored (no interaction), fade it out after 10s.
+      box.addEventListener('mouseenter', function () { clearTimeout(autoTimer); });
+      autoTimer = setTimeout(close, 10000);
       document.body.appendChild(box);
     };
     if (document.body) mount(); else document.addEventListener('DOMContentLoaded', mount);

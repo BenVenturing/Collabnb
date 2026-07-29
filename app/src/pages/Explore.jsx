@@ -624,8 +624,16 @@ export default function Explore() {
   // showGhost: nothing real and no samples to show
   const showGhost = convexLoaded && realActive.length === 0 && sampleActive.length === 0;
 
-  // Everyone sees the sample listings alongside any real listings
-  const allListings = [...realActive, ...sampleActive];
+  // Access state must be known before assembling listings so limited (trial-ended)
+  // creators get a fully redacted set. Real listings are redacted server-side; the
+  // client-injected sample listings are redacted here so they blur to match.
+  const access = useAccessGate();
+  const isLimited = !access.loading && access.state === 'limited' && access.role === 'creator' && !access.isAdmin;
+
+  // Everyone sees the sample listings alongside any real listings.
+  const allListings = [...realActive, ...sampleActive].map((l) =>
+    isLimited ? { ...l, _redacted: true } : l
+  );
   const isLoading = convexRaw === null && samplesRaw === null && !cachedListings;
 
   function toISODate(v) {
@@ -696,7 +704,6 @@ export default function Explore() {
   const scored = scoreListings(searchFiltered, creatorCtx);
 
   // ── Access gate: show pending/limited screens for creators ─────────────
-  const access = useAccessGate();
   if (!access.loading) {
     if (!access.canAccess && access.role === 'creator' && !access.isAdmin) {
       if (access.state === 'pending') return <PendingApprovalScreen />;
@@ -705,7 +712,6 @@ export default function Explore() {
       // (drives FOMO) with the upgrade banner below — instead of a hard block.
     }
   }
-  const isLimited = !access.loading && access.state === 'limited' && access.role === 'creator' && !access.isAdmin;
 
   const trending    = byPropType(scored.filter((l) => l.is_featured));
   const forYou      = byPropType(
@@ -831,28 +837,37 @@ export default function Explore() {
   ) : null;
 
   return (
-    <div>
+    <div style={isLimited ? { '--banner-h': '3.5rem' } : undefined}>
 
       {/* ── Trial countdown banner ─────────── */}
       {!access.loading && access.state === 'trial' && access.daysLeft !== null && (
         <TrialBanner daysLeft={access.daysLeft} />
       )}
 
-      {/* ── Limited (trial expired): browse stays visible but redacted ─────── */}
+      {/* ── Limited (trial expired): prominent fixed paywall banner ─────────── */}
+      {/* Fixed + high z-index so it sits above the fixed map (zIndex 40) and stays
+          clickable; the map shifts down via the --banner-h var set on the wrapper. */}
       {isLimited && (
         <button
           onClick={() => navigate('/pricing')}
           style={{
-            width: '100%', border: 'none', cursor: 'pointer', textAlign: 'center',
-            padding: '0.6rem 1rem', fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: '0.82rem',
-            color: 'var(--ink)', background: 'rgba(209,235,219,0.95)',
-            backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
-            borderBottom: '1px solid rgba(25,37,36,0.06)',
+            position: 'fixed', top: '5.5rem', left: 0, right: 0, zIndex: 200,
+            width: '100%', border: 'none', cursor: 'pointer',
+            padding: '0.8rem 1.25rem',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.85rem', flexWrap: 'wrap',
+            fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: '0.9rem',
+            color: '#fff', background: 'linear-gradient(90deg, #192524, #2d4a3e)',
+            boxShadow: '0 6px 20px rgba(25,37,36,0.30)',
           }}
         >
-          Your trial has ended — listing details are hidden. Upgrade to Creator&nbsp;Plus to unlock the full map →
+          <span>🔒 Your trial has ended — listing details are hidden.</span>
+          <span style={{ background: '#D1EBDB', color: '#192524', borderRadius: 999, padding: '0.35rem 1rem', fontWeight: 800, fontSize: '0.82rem', whiteSpace: 'nowrap' }}>
+            Subscribe to unlock →
+          </span>
         </button>
       )}
+      {/* Reserve space in list view; map view shifts via --banner-h instead. */}
+      {isLimited && !mapOpen && <div style={{ height: '3.25rem' }} />}
 
       {/* ── Search header — hidden instantly once nav goes compact ─────────── */}
       <div style={{

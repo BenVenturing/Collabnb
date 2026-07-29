@@ -2,6 +2,7 @@ import { Component, useRef, useState, useEffect, useCallback } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { Analytics } from '@vercel/analytics/react';
 import collabnbLogo from './assets/collabnb-logo.png';
+import bgClouds from './assets/bg-clouds-hazy.png';
 import AnalyticsTracker from './components/AnalyticsTracker';
 import CookieBanner from './components/CookieBanner';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -136,6 +137,9 @@ function NewSignupCelebration({ onDone }) {
 }
 
 function AppRoutes() {
+  // TEMP loader preview — remove when done. Visit /loading-preview
+  if (window.location.pathname === '/loading-preview') return <LoadingScreen />;
+
   const { session, loading, profile } = useAuth();
   const navigate = useNavigate();
   const isAdmin = profile?.is_admin === true
@@ -226,44 +230,62 @@ function AppRoutes() {
   );
 }
 
-// ── Blob loader — two orbs that liquid-merge and separate ────────────────────
+// ── Blob loader — two speckled art-glass orbs that merge, swell, and float ────
 function BlobLoader({ size = 'md' }) {
-  const sm = size === 'sm';
-  // sm: stays tiny for inline use; md: lava-lamp scale
-  const r   = sm ? 3.5 : 11;
-  const w   = sm ? 30  : 88;
-  const pad = sm ? 1   : 2;
+  const sm  = size === 'sm';
+  const key = sm ? 's' : 'm';   // per-size ids/keyframes so both can coexist
+  // sm: stays tiny for inline use; md: full liquid-glass scale
+  const r   = sm ? 5   : 26;
+  const w   = sm ? 42  : 172;
+  const pad = sm ? 2   : 6;
   const h   = r * 2 + pad * 2;
   const cy  = h / 2;
   const x1  = r + pad;
   const x2  = w - r - pad;
   const travel = ((x2 - x1) / 2).toFixed(2);
-  const sd  = sm ? 1.8 : 5.5;
-  const dur = sm ? '2.2s' : '2.7s';
+  const sd    = sm ? 2.6  : 11;    // goo blur
+  const speck = sm ? 0.30 : 0.085; // turbulence frequency → blotch size
+  const bob   = sm ? 0.8  : 5;
+  const dur   = sm ? '2.2s' : '2.9s';
+  const half  = (parseFloat(dur) / 2).toFixed(2);
 
   return (
     <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`}
       style={{ overflow: 'visible', display: 'block', flexShrink: 0 }}
     >
       <defs>
-        {/* Goo / metaball filter */}
-        <filter id="cnb-goo" x="-55%" y="-55%" width="210%" height="210%">
+        {/* Goo / metaball filter — tighter edges read as coalescing liquid */}
+        <filter id={`cnb-goo-${key}`} x="-60%" y="-60%" width="220%" height="220%">
           <feGaussianBlur in="SourceGraphic" stdDeviation={sd} result="blur" />
           <feColorMatrix in="blur" type="matrix"
-            values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 20 -8"
+            values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 22 -9"
           />
         </filter>
-        {/* 3-D sphere gradient — off-centre highlight gives the lava-lamp depth */}
-        <radialGradient id="cnb-sphere" cx="37%" cy="30%" r="68%" fx="37%" fy="30%">
-          <stop offset="0%"   stopColor="#7DD4C8" />
-          <stop offset="38%"  stopColor="#4A9B7F" />
-          <stop offset="72%"  stopColor="#2E6B68" />
-          <stop offset="100%" stopColor="#152F2F" />
+        {/* Speckled art-glass texture — mottled teal blotches inside the shape */}
+        <filter id={`cnb-speck-${key}`} x="-15%" y="-15%" width="130%" height="130%">
+          <feTurbulence type="fractalNoise" baseFrequency={speck} numOctaves="2" seed="7" result="n" />
+          <feColorMatrix in="n" type="matrix"
+            values="0 0 0 0 0.04
+                    0 0 0 0 0.62
+                    0 0 0 0 0.42
+                    0 0 0 2.6 -1.0" result="tint" />
+          <feComposite in="tint" in2="SourceAlpha" operator="in" result="blotch" />
+          <feMerge>
+            <feMergeNode in="SourceGraphic" />
+            <feMergeNode in="blotch" />
+          </feMerge>
+        </filter>
+        {/* Light translucent mint-glass body with deeper jade toward the edge */}
+        <radialGradient id="cnb-glass" cx="40%" cy="30%" r="74%" fx="36%" fy="26%">
+          <stop offset="0%"   stopColor="#F1FBF4" />
+          <stop offset="34%"  stopColor="#C6EFD4" />
+          <stop offset="70%"  stopColor="#82D3AB" />
+          <stop offset="100%" stopColor="#3FA877" />
         </radialGradient>
-        {/* Specular highlight — painted on top of the goo layer, no filter */}
-        <radialGradient id="cnb-spec" cx="33%" cy="25%" r="50%" fx="33%" fy="25%">
-          <stop offset="0%"   stopColor="rgba(255,255,255,0.62)" />
-          <stop offset="50%"  stopColor="rgba(255,255,255,0.10)" />
+        {/* Big soft specular highlight — the glossy top hotspot */}
+        <radialGradient id="cnb-spec" cx="42%" cy="24%" r="54%" fx="40%" fy="20%">
+          <stop offset="0%"   stopColor="rgba(255,255,255,0.9)" />
+          <stop offset="42%"  stopColor="rgba(255,255,255,0.18)" />
           <stop offset="100%" stopColor="rgba(255,255,255,0)" />
         </radialGradient>
         {/* Soft ambient glow behind the orbs */}
@@ -274,39 +296,62 @@ function BlobLoader({ size = 'md' }) {
       </defs>
 
       <style>{`
-        @keyframes cnb-l {
-          0%,16%   { transform:translateX(0); }
-          46%,57%  { transform:translateX(${travel}px); }
-          87%,100% { transform:translateX(0); }
+        @keyframes cnb-l-${key} {
+          0%,14%   { transform:translateX(0); }
+          46%,56%  { transform:translateX(${travel}px); }
+          88%,100% { transform:translateX(0); }
         }
-        @keyframes cnb-r {
-          0%,16%   { transform:translateX(0); }
-          46%,57%  { transform:translateX(-${travel}px); }
-          87%,100% { transform:translateX(0); }
+        @keyframes cnb-r-${key} {
+          0%,14%   { transform:translateX(0); }
+          46%,56%  { transform:translateX(-${travel}px); }
+          88%,100% { transform:translateX(0); }
+        }
+        @keyframes cnb-swell-${key} {
+          0%,18%   { transform:scale(1); }
+          46%,56%  { transform:scale(1.2); }
+          86%,100% { transform:scale(1); }
+        }
+        @keyframes cnb-float-${key} {
+          0%,100%  { transform:translateY(0); }
+          50%      { transform:translateY(-${bob}px); }
         }
       `}</style>
 
-      {/* Ambient glow (md only) — subtle halo on the canvas */}
-      {!sm && (
-        <ellipse cx={w / 2} cy={cy + r * 0.6} rx={r * 2.4} ry={r * 0.9}
-          fill="url(#cnb-glow)"
-          style={{ animation: `cnb-l 2.7s ease-in-out infinite`, animationDelay: '-1.35s' }}
-        />
-      )}
+      {/* Vertical float wrapper — gentle lava-lamp drift */}
+      <g style={{ animation: `cnb-float-${key} ${dur} ease-in-out infinite` }}>
+        {/* Ambient glow (md only) — subtle halo on the canvas */}
+        {!sm && (
+          <ellipse cx={w / 2} cy={cy + r * 0.7} rx={r * 2.2} ry={r * 0.8}
+            fill="url(#cnb-glow)"
+            style={{ animation: `cnb-l-${key} ${dur} ease-in-out infinite`, animationDelay: `-${half}s` }}
+          />
+        )}
 
-      {/* Goo merge layer — gradient-filled so colour survives the filter */}
-      <g filter="url(#cnb-goo)">
-        <circle cx={x1} cy={cy} r={r} fill="url(#cnb-sphere)"
-          style={{ animation: `cnb-l ${dur} ease-in-out infinite` }} />
-        <circle cx={x2} cy={cy} r={r} fill="url(#cnb-sphere)"
-          style={{ animation: `cnb-r ${dur} ease-in-out infinite` }} />
+        {/* Swell wrapper — merged glass ball grows larger at the meeting point */}
+        <g style={{ transformBox: 'fill-box', transformOrigin: 'center', animation: `cnb-swell-${key} ${dur} ease-in-out infinite` }}>
+          {/* Speckled glass body over the goo-merged silhouette */}
+          <g filter={`url(#cnb-speck-${key})`}>
+            <g filter={`url(#cnb-goo-${key})`}>
+              <circle cx={x1} cy={cy} r={r} fill="url(#cnb-glass)"
+                style={{ animation: `cnb-l-${key} ${dur} ease-in-out infinite` }} />
+              <circle cx={x2} cy={cy} r={r} fill="url(#cnb-glass)"
+                style={{ animation: `cnb-r-${key} ${dur} ease-in-out infinite` }} />
+            </g>
+          </g>
+
+          {/* Specular highlight — one per orb, merges into a single hotspot */}
+          <circle cx={x1} cy={cy} r={r} fill="url(#cnb-spec)"
+            style={{ animation: `cnb-l-${key} ${dur} ease-in-out infinite` }} />
+          <circle cx={x2} cy={cy} r={r} fill="url(#cnb-spec)"
+            style={{ animation: `cnb-r-${key} ${dur} ease-in-out infinite` }} />
+
+          {/* Bright glint hotspot — sells the glossy glass surface */}
+          <circle cx={x1 - r * 0.28} cy={cy - r * 0.4} r={r * 0.11} fill="rgba(255,255,255,0.92)"
+            style={{ animation: `cnb-l-${key} ${dur} ease-in-out infinite` }} />
+          <circle cx={x2 - r * 0.28} cy={cy - r * 0.4} r={r * 0.11} fill="rgba(255,255,255,0.92)"
+            style={{ animation: `cnb-r-${key} ${dur} ease-in-out infinite` }} />
+        </g>
       </g>
-
-      {/* Specular highlight layer — crisp, no filter */}
-      <circle cx={x1} cy={cy} r={r} fill="url(#cnb-spec)"
-        style={{ animation: `cnb-l ${dur} ease-in-out infinite` }} />
-      <circle cx={x2} cy={cy} r={r} fill="url(#cnb-spec)"
-        style={{ animation: `cnb-r ${dur} ease-in-out infinite` }} />
     </svg>
   );
 }
@@ -314,15 +359,55 @@ function BlobLoader({ size = 'md' }) {
 function LoadingScreen() {
   return (
     <div style={{
+      position: 'relative', overflow: 'hidden',
       minHeight: '100dvh',
       background: 'radial-gradient(ellipse 80% 50% at 50% 0%, #D1EBDB 0%, #EFECE9 60%)',
       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
       gap: '1.5rem',
     }}>
-      <BlobLoader size="md" />
-      <p style={{ fontFamily: 'var(--font-body, sans-serif)', color: '#7A8A85', fontSize: '0.8rem', letterSpacing: '0.06em', margin: 0, textTransform: 'uppercase' }}>
-        Loading
-      </p>
+      <style>{`
+        @keyframes cnb-cloud-a {
+          0%,100% { transform:translate3d(-4%, 0, 0) scale(1.14); }
+          50%     { transform:translate3d(4%, -2.5%, 0) scale(1.18); }
+        }
+        @keyframes cnb-cloud-b {
+          0%,100% { transform:translate3d(3.5%, 1.5%, 0) scale(1.22); }
+          50%     { transform:translate3d(-4%, -1.5%, 0) scale(1.17); }
+        }
+        @keyframes cnb-flicker {
+          0%,100% { opacity:0.55; }
+          45%     { opacity:1; }
+          70%     { opacity:0.7; }
+        }
+        @keyframes cnb-ellipsis {
+          0%,20%  { content:''; }
+          40%     { content:'.'; }
+          60%     { content:'..'; }
+          80%,100%{ content:'...'; }
+        }
+        .cnb-loading::after { content:''; animation:cnb-ellipsis 1.8s steps(1) infinite; }
+      `}</style>
+
+      {/* Drifting cloud layers — two speeds for a parallax shift */}
+      <div aria-hidden="true" style={{
+        position: 'absolute', inset: '-10%',
+        backgroundImage: `url(${bgClouds})`, backgroundSize: 'cover', backgroundPosition: 'center',
+        opacity: 0.38, mixBlendMode: 'multiply', filter: 'saturate(0.6) brightness(1.05)',
+        animation: 'cnb-cloud-a 16s ease-in-out infinite', willChange: 'transform',
+      }} />
+      <div aria-hidden="true" style={{
+        position: 'absolute', inset: '-12%',
+        backgroundImage: `url(${bgClouds})`, backgroundSize: 'cover', backgroundPosition: '40% 60%',
+        opacity: 0.24, mixBlendMode: 'multiply', filter: 'saturate(0.5) brightness(1.1)',
+        animation: 'cnb-cloud-b 22s ease-in-out infinite', willChange: 'transform',
+      }} />
+
+      <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.5rem' }}>
+        <BlobLoader size="md" />
+        <p className="cnb-loading" style={{ fontFamily: 'var(--font-body, sans-serif)', fontWeight: 600, color: '#6E7F7A', fontSize: '1rem', letterSpacing: '0.08em', margin: 0, textTransform: 'uppercase', animation: 'cnb-flicker 2.4s ease-in-out infinite' }}>
+          Loading
+        </p>
+      </div>
     </div>
   );
 }

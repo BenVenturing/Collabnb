@@ -385,6 +385,7 @@ export const updateSubscriptionByCustomerId = internalMutation({
     stripeCustomerId: v.string(),
     subscriptionStatus: v.string(),
     subscriptionExpiresAt: v.optional(v.number()),
+    accessState: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const profile = await ctx.db
@@ -395,6 +396,8 @@ export const updateSubscriptionByCustomerId = internalMutation({
     const patch: Record<string, any> = { subscription_status: args.subscriptionStatus };
     if (args.subscriptionExpiresAt !== undefined) patch.subscription_expires_at = args.subscriptionExpiresAt;
     if (args.subscriptionStatus === "active") patch.access_state = "active";
+    // Explicit access_state (e.g. "limited" for a hard-cancel) always wins.
+    if (args.accessState !== undefined) patch.access_state = args.accessState;
     await ctx.db.patch(profile._id, patch);
   },
 });

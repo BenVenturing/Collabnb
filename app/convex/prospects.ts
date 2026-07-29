@@ -40,6 +40,58 @@ export const NICHE_SEARCH_TERMS: Record<string, string[]> = {
   'design': ['design', 'interior', 'architecture'],
 };
 
+// ─── Host outreach copy templates ──────────────────────────────────────────────
+// Five fixed angles for the daily host-outreach batch. The LLM adapts the
+// [Hotel Name] token + one true personalization detail per prospect — it does
+// not freely rewrite these, so the approved copy/tone stays intact.
+export const HOST_OUTREACH_TEMPLATES: { id: string; name: string; template: string }[] = [
+  {
+    id: "curiosity",
+    name: "Curiosity / Pain-Point",
+    template: `Hi! Quick question — how are you currently finding creators to collaborate with at [Hotel Name]? 👀
+
+I ask because we built Collabnb specifically to solve that — vetted creators who are actively looking for stays like yours, matched to you directly instead of hours of manual searching.
+
+We're inviting our first 100 properties in as Founding Hosts this July — free, lifetime access. Would love for you to take a look: https://www.collabnb.com/`,
+  },
+  {
+    id: "social_proof",
+    name: "Social Proof / Momentum",
+    template: `Hi! We've been onboarding some incredible boutique stays onto Collabnb lately, and [Hotel Name] immediately came to mind. 🌿
+
+We connect properties like yours with vetted content creators for paid collaborations — no more sifting through DMs hoping someone's a good fit. We're currently welcoming our first 100 Founding Hosts, completely free for life.
+
+Take a look: https://www.collabnb.com/`,
+  },
+  {
+    id: "compliment",
+    name: "Compliment-Led / Relationship",
+    template: `Hi! Just came across [Hotel Name] and had to reach out — the content coming out of your account is genuinely beautiful. ✨
+
+I'm Benjamin, founder of Collabnb — we help properties like yours connect with creators who'd love to collaborate and help tell that story even further. We're inviting our first 100 hosts in as founding members this July, completely free.
+
+Would love for you to check it out: https://www.collabnb.com/`,
+  },
+  {
+    id: "data_stat",
+    name: "Data / Stat-Led",
+    template: `Hi! Did you know 92% of travelers trust a creator's recommendation over a traditional ad? 📊
+
+That's exactly why we built Collabnb — connecting boutique stays like [Hotel Name] with vetted creators for paid collaborations, so you get authentic content without the guesswork. We're welcoming our first 100 Founding Hosts this July, free for life.
+
+Here's a look: https://www.collabnb.com/`,
+  },
+  {
+    id: "founder_story",
+    name: "Founder Story / Direct",
+    template: `Hi! I'm Benjamin — I've spent 8+ years living and traveling through Indonesia, and I built Collabnb after seeing how hard it is for amazing stays like [Hotel Name] to consistently find the right creators to work with.
+
+We're inviting our first 100 properties in as Founding Hosts this July — free, lifetime access, no fees, ever.
+
+Would love for you to take a look: https://www.collabnb.com/`,
+  },
+];
+
 // ─── Scraping providers: HikerAPI (primary) or Apify (fallback) ───────────────
 // HikerAPI: npx convex env set HIKERAPI_KEY <access key from hikerapi.com>
 // Apify:    npx convex env set APIFY_API_TOKEN apify_api_...
@@ -464,6 +516,138 @@ export const buildTodayQueue = mutation({
 export const getById = internalQuery({
   args: { id: v.id("prospects") },
   handler: async (ctx, { id }) => ctx.db.get(id),
+});
+
+// ─── Host outreach campaign (daily batch, template-driven, manual send) ───────
+
+// Today's host batch — whatever's queued_for today, regardless of status, so
+// the review UI keeps showing items after they're marked contacted.
+export const getTodayHostBatch = query({
+  args: {},
+  handler: async (ctx) => {
+    const today = todayKey();
+    const rows = await ctx.db
+      .query("prospects")
+      .withIndex("by_queued", (q) => q.eq("queued_for", today))
+      .collect();
+    return rows
+      .filter((r) => r.kind === "host")
+      .sort((a, b) => (a.dm_angle || "").localeCompare(b.dm_angle || "") || (b.score ?? 0) - (a.score ?? 0));
+  },
+});
+
+// Promote up to `count` top-scored 'new' hosts into today's queue (idempotent —
+// tops up rather than duplicating if some are already queued for today).
+export const queueHostBatch = mutation({
+  args: { count: v.optional(v.number()) },
+  handler: async (ctx, { count = 50 }) => {
+    const today = todayKey();
+    const all = await ctx.db.query("prospects").collect();
+    const alreadyQueued = all.filter(
+      (r) => r.kind === "host" && r.queued_for === today
+    ).length;
+    const need = Math.max(0, Math.min(count, 200) - alreadyQueued);
+    const candidates = all
+      .filter((r) => r.kind === "host" && r.status === "new")
+      .sort((a, b) => (b.score ?? 0) - (a.score ?? 0))
+      .slice(0, need);
+    for (const c of candidates) {
+      await ctx.db.patch(c._id, { status: "queued", queued_for: today });
+    }
+    return { queued: candidates.length, totalToday: alreadyQueued + candidates.length };
+  },
+});
+
+export const saveDraftAngle = internalMutation({
+  args: { id: v.id("prospects"), dmDraft: v.string(), dmAngle: v.string() },
+  handler: async (ctx, { id, dmDraft, dmAngle }) => {
+    await ctx.db.patch(id, { dm_draft: dmDraft, dm_angle: dmAngle });
+  },
+});
+
+// Draft (or re-draft) every undrafted host in today's queue, cycling evenly
+// through the 5 fixed angles so a 50-host batch lands at 10 per angle. The LLM
+// personalizes the template's [Hotel Name] token + one true fact — it does not
+// freely rewrite the copy. Drafts are saved only; sending stays 100% manual.
+export const generateHostOutreachDrafts = action({
+  args: {},
+  handler: async (ctx): Promise<{ drafted: number; total: number }> => {
+    const batch: any[] = await ctx.runQuery(api.prospects.getTodayHostBatch, {});
+    const angleCounts: Record<string, number> = {};
+    for (const p of batch) if (p.dm_angle) angleCounts[p.dm_angle] = (angleCounts[p.dm_angle] || 0) + 1;
+
+    const pickAngle = () => {
+      const sorted = [...HOST_OUTREACH_TEMPLATES].sort(
+        (a, b) => (angleCounts[a.id] || 0) - (angleCounts[b.id] || 0)
+      );
+      const angle = sorted[0];
+      angleCounts[angle.id] = (angleCounts[angle.id] || 0) + 1;
+      return angle;
+    };
+
+    let drafted = 0;
+    for (const p of batch) {
+      if (p.dm_draft) continue; // already drafted — don't overwrite an edited draft
+      const angle = pickAngle();
+      const who = [
+        `Listing name: ${p.display_name || `@${p.instagram_handle}`}`,
+        p.location && `Location: ${p.location}`,
+        p.niche && `Type/niche: ${p.niche}`,
+        p.bio && `Instagram bio: ${p.bio}`,
+      ].filter(Boolean).join("\n");
+
+      try {
+        const raw = await llmChat([
+          {
+            role: "system",
+            content:
+              "You adapt a fixed outreach template for Benjamin, founder of Collabnb (collabnb.com). You do NOT rewrite the message freely — you keep its structure, sentence order, tone, emoji, and call-to-action exactly as given. Your only job: replace every '[Hotel Name]' with the real listing name, and — only if a genuine matching fact is provided below (location, niche, bio) — lightly weave ONE of those facts into an existing sentence so it reads as personalized, without adding new sentences or inventing anything not given. Output ONLY the final message text, nothing else.",
+          },
+          {
+            role: "user",
+            content: `Template to adapt:\n"""\n${angle.template}\n"""\n\nListing facts (use ONLY what's given, never invent):\n${who || "(no extra facts — just swap in the listing name)"}`,
+          },
+        ], 300);
+
+        let dmDraft = raw.trim().replace(/^["'“”]+|["'“”]+$/g, "");
+        const lines = dmDraft.split("\n");
+        if (lines.length > 1 && /^(here('s| is)|sure|below is|adapted)/i.test(lines[0]) && lines[0].length < 90) {
+          dmDraft = lines.slice(1).join("\n").trim();
+        }
+        await ctx.runMutation(internal.prospects.saveDraftAngle, { id: p._id, dmDraft: dmDraft.slice(0, 900), dmAngle: angle.id });
+        drafted++;
+      } catch {
+        // Fallback: use the raw template with a simple name swap so the batch
+        // never silently stalls if the LLM provider hiccups on one item.
+        const name = p.display_name || `@${p.instagram_handle}`;
+        const dmDraft = angle.template.replace(/\[Hotel Name\]/g, name);
+        await ctx.runMutation(internal.prospects.saveDraftAngle, { id: p._id, dmDraft, dmAngle: angle.id });
+        drafted++;
+      }
+    }
+    return { drafted, total: batch.length };
+  },
+});
+
+// Bulk-approve today's drafted batch after Ben reviews it — no automated
+// sending happens here, this just flags the batch "ready" for the manual
+// copy → open Instagram → paste → send flow.
+export const publishTodayHostBatch = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const today = todayKey();
+    const rows = await ctx.db
+      .query("prospects")
+      .withIndex("by_queued", (q) => q.eq("queued_for", today))
+      .collect();
+    let published = 0;
+    for (const r of rows) {
+      if (r.kind !== "host" || !r.dm_draft || r.published) continue;
+      await ctx.db.patch(r._id, { published: true });
+      published++;
+    }
+    return { published };
+  },
 });
 
 // Draft a personalized outreach DM with the writer LLM (NVIDIA chain) and save

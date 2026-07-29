@@ -128,6 +128,81 @@ function Divider() {
   return <div style={{ borderTop: '1px solid rgba(25,37,36,0.08)', margin: '2rem 0' }} />;
 }
 
+// Teaser detail for trial-ended (limited) creators: the area + the offer
+// (compensation / deliverables / dates) stay visible to drive FOMO, while the
+// photos, name, and description are blurred behind a subscribe CTA.
+function RedactedListingDetail({ listing, onBack, onSubscribe }) {
+  const hero = listing.image || listing.gallery_images?.[0] || IMG_FALLBACK;
+  const area = listing.location
+    || [listing.location_city, listing.location_country].filter(Boolean).join(', ')
+    || 'Location hidden';
+  const comp = listing.compensation
+    || (listing.cash_amount ? `$${Number(listing.cash_amount).toLocaleString()}` : '');
+  const deliv = listing.deliverables
+    || (listing.deliverables_list?.length
+        ? listing.deliverables_list.map((d) => `${d.quantity}× ${d.type}`).join(', ')
+        : '')
+    || (listing.deliverable_count ? `${listing.deliverable_count} deliverables` : '');
+
+  const Stat = ({ label, value }) => (
+    <div style={{ flex: '1 1 150px', minWidth: 150, background: 'rgba(255,255,255,0.6)', border: '1px solid rgba(25,37,36,0.08)', borderRadius: '1rem', padding: '0.9rem 1rem' }}>
+      <p style={{ fontSize: '0.66rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--sage)', marginBottom: '0.3rem', fontWeight: 700 }}>{label}</p>
+      <p style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--ink)' }}>{value}</p>
+    </div>
+  );
+
+  return (
+    <div style={{ maxWidth: 760, margin: '0 auto', padding: '1.5rem 1.5rem 7rem' }}>
+      <button
+        onClick={onBack}
+        style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', margin: '0 0 1.25rem', fontFamily: 'var(--font-body)', fontSize: '0.9rem', fontWeight: 600, color: 'var(--slate)', background: 'rgba(255,255,255,0.65)', border: '1px solid rgba(25,37,36,0.1)', borderRadius: '999px', padding: '0.5rem 1rem', cursor: 'pointer' }}
+      >← Back</button>
+
+      {/* Blurred hero */}
+      <div style={{ position: 'relative', borderRadius: '1.25rem', overflow: 'hidden', height: 300, marginBottom: '1.5rem' }}>
+        <img src={hero} alt="" onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = IMG_FALLBACK; }}
+          style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'blur(26px) brightness(0.72)', transform: 'scale(1.15)' }} />
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', color: '#fff', background: 'rgba(25,37,36,0.22)' }}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" style={{ width: 30, height: 30, opacity: 0.85 }}>
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+          </svg>
+          <p style={{ fontWeight: 700, fontSize: '0.9rem' }}>Photos hidden — subscribe to view</p>
+        </div>
+      </div>
+
+      {/* Blurred title */}
+      <div aria-hidden style={{ filter: 'blur(7px)', userSelect: 'none', marginBottom: '0.5rem' }}>
+        <div style={{ height: 26, width: '58%', background: 'rgba(25,37,36,0.18)', borderRadius: 6 }} />
+      </div>
+
+      {/* Area — visible */}
+      <p style={{ fontSize: '0.95rem', color: 'var(--slate)', fontWeight: 600, marginBottom: '1.5rem' }}>📍 {area}</p>
+
+      {/* The offer — visible */}
+      <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1.75rem' }}>
+        {comp && <Stat label="Compensation" value={comp} />}
+        {deliv && <Stat label="Deliverables" value={deliv} />}
+        {listing.dates_available && <Stat label="Dates" value={listing.dates_available} />}
+      </div>
+
+      {/* Blurred description */}
+      <div aria-hidden style={{ filter: 'blur(6px)', userSelect: 'none', marginBottom: '2rem' }}>
+        {[92, 97, 85, 72, 60].map((w, i) => (
+          <div key={i} style={{ height: 12, width: `${w}%`, background: 'rgba(25,37,36,0.12)', borderRadius: 5, marginBottom: 10 }} />
+        ))}
+      </div>
+
+      {/* CTA */}
+      <button
+        onClick={onSubscribe}
+        style={{ width: '100%', maxWidth: 380, display: 'block', margin: '0 auto', padding: '0.95rem 1.25rem', borderRadius: '999px', border: 'none', cursor: 'pointer', background: 'var(--ink)', color: '#fff', fontFamily: 'var(--font-body)', fontWeight: 800, fontSize: '0.95rem', boxShadow: '0 8px 24px rgba(25,37,36,0.25)' }}
+      >
+        Subscribe to unlock full details →
+      </button>
+    </div>
+  );
+}
+
 function ArrowRight() {
   return (
     <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 16, height: 16 }}>
@@ -1118,8 +1193,22 @@ export default function ListingDetail({ previewListing = null, preview = false }
   // Server already redacted this listing for pending/limited creators — block the
   // full detail page instead of rendering a half-blank page (title/host/etc. are
   // undefined in the redacted payload). Sample/preview listings are exempt.
-  if (!isPreview && !sampleListing && convexListing?._redacted && !access.loading) {
-    return access.state === 'pending' ? <PendingApprovalScreen /> : <LimitedAccessScreen />;
+  // Pending creators are hard-blocked. Limited (trial-ended) creators instead get
+  // a blurred teaser — area + deliverables visible, photos/name/description hidden.
+  // Covers server-redacted real listings AND sample listings (redacted client-side).
+  const isLimitedCreator = !access.loading && access.role === 'creator' && access.state === 'limited' && !access.isAdmin;
+  if (!isPreview && !access.loading) {
+    if (access.state === 'pending' && convexListing?._redacted) return <PendingApprovalScreen />;
+    const redactThis = convexListing?._redacted || (isLimitedCreator && (isSampleListing || !!sampleListing));
+    if (redactThis) {
+      return (
+        <RedactedListingDetail
+          listing={listing}
+          onBack={() => navigate(-1)}
+          onSubscribe={() => (typeof openSubModal === 'function' ? openSubModal() : navigate('/pricing'))}
+        />
+      );
+    }
   }
 
   const applied     = hasApplied(listing.id);

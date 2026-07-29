@@ -155,19 +155,27 @@ export const verifySubscriptionSession = action({
 });
 
 // Opens the Stripe Customer Portal for an active subscriber to manage their plan.
-// Requires the stripe_customer_id stored on the profile after subscription checkout.
+// The customer ID is resolved server-side from the signed-in user's own profile —
+// never accepted from the client — so a caller can only ever open the portal for
+// their own billing account, not for any cus_… id they happen to obtain.
 export const createBillingPortalSession = action({
   args: {
-    customerId: v.string(),
     returnUrl: v.string(),
   },
-  handler: async (_ctx, args) => {
+  handler: async (ctx, args) => {
     const secretKey = process.env.STRIPE_SECRET_KEY;
     if (!secretKey) throw new Error('STRIPE_SECRET_KEY is not set in Convex environment variables');
 
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity?.email) throw new Error('You must be signed in to manage billing');
+
+    const profile = await ctx.runQuery(api.profiles.getByEmail, { email: identity.email });
+    const customerId = profile?.stripe_customer_id;
+    if (!customerId) throw new Error('No billing account found for your profile');
+
     const stripe = new Stripe(secretKey);
     const session = await stripe.billingPortal.sessions.create({
-      customer: args.customerId,
+      customer: customerId,
       return_url: args.returnUrl,
     });
 

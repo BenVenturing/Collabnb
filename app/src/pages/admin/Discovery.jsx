@@ -15,6 +15,13 @@ const STATUS_CFG = {
   declined:  { label: 'Declined',  bg: 'rgba(200,104,104,0.1)',  color: '#9b2d2d' },
 };
 const TIERS = ['nano', 'micro', 'mid', 'macro'];
+const ANGLE_LABELS = {
+  curiosity: 'Curiosity',
+  social_proof: 'Social proof',
+  compliment: 'Compliment',
+  data_stat: 'Data/stat',
+  founder_story: 'Founder story',
+};
 
 const input = {
   padding: '0.5rem 0.75rem', border: '1.5px solid rgba(25,37,36,0.12)', borderRadius: '0.6rem',
@@ -154,6 +161,16 @@ function ProspectCard({ prospect }) {
             </a>
             <StatusBadge status={prospect.status} />
             {prospect.tier && <span style={{ fontSize: '0.62rem', padding: '0.15rem 0.45rem', borderRadius: 9999, background: 'rgba(209,235,219,0.6)', color: '#166534', fontWeight: 600, textTransform: 'capitalize' }}>{prospect.tier}</span>}
+            {prospect.dm_angle && (
+              <span title="Outreach copy angle" style={{ fontSize: '0.62rem', padding: '0.15rem 0.45rem', borderRadius: 9999, background: 'rgba(123,104,200,0.12)', color: '#5b4aa8', fontWeight: 600 }}>
+                {ANGLE_LABELS[prospect.dm_angle] || prospect.dm_angle}
+              </span>
+            )}
+            {prospect.published && (
+              <span title="Reviewed and published — ready to send" style={{ fontSize: '0.62rem', padding: '0.15rem 0.45rem', borderRadius: 9999, background: 'rgba(209,235,219,0.8)', color: '#166534', fontWeight: 700 }}>
+                ✓ Published
+              </span>
+            )}
             <ScoreChip score={prospect.score} />
           </div>
           <div style={{ fontSize: '0.7rem', color: '#959D90', marginTop: '0.1rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -473,6 +490,73 @@ function FindCreators() {
   );
 }
 
+// ─── Host outreach campaign (daily template-driven batch, manual send) ────────
+function HostOutreachCampaign() {
+  const batch = useQuery(api.prospects.getTodayHostBatch) || [];
+  const queueBatch = useMutation(api.prospects.queueHostBatch);
+  const generateDrafts = useAction(api.prospects.generateHostOutreachDrafts);
+  const publishBatch = useMutation(api.prospects.publishTodayHostBatch);
+  const [count, setCount] = useState(50);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState('');
+  const [err, setErr] = useState('');
+
+  const drafted = batch.filter(p => p.dm_draft).length;
+  const published = batch.filter(p => p.published).length;
+
+  async function runBatch() {
+    setBusy(true); setErr(''); setMsg('');
+    try {
+      const q = await queueBatch({ count });
+      setMsg(`Queued ${q.queued} new hosts (${q.totalToday} in today's batch). Drafting with the NVIDIA model…`);
+      const d = await generateDrafts({});
+      setMsg(`Drafted ${d.drafted} of ${d.total} in today's batch — review below, then Publish.`);
+    } catch (e) {
+      setErr(e.message?.replace(/^.*Error:\s*/, '') || 'Batch generation failed');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function doPublish() {
+    setBusy(true); setErr('');
+    try {
+      const r = await publishBatch({});
+      setMsg(`Published ${r.published} drafts — copy + send each manually from the Hosts panel below (filter by "Queued").`);
+    } catch (e) {
+      setErr(e.message?.replace(/^.*Error:\s*/, '') || 'Publish failed');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div>
+      <p style={{ fontSize: '0.78rem', color: '#3C5759', margin: '0 0 0.6rem', lineHeight: 1.5 }}>
+        Pulls today's top-scored new host listings, drafts a personalized DM for each with the NVIDIA model — cycling evenly through 5 fixed copy angles (10 each at a batch of 50). Nothing sends automatically: Publish just marks the batch reviewed and ready. You copy each draft and send it yourself via Instagram.
+      </p>
+      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+        <input aria-label="Batch size" type="number" min="5" max="200" value={count}
+          onChange={e => setCount(Math.max(5, Math.min(200, parseInt(e.target.value, 10) || 50)))}
+          style={{ ...input, width: 80 }} />
+        <button onClick={runBatch} disabled={busy}
+          style={{ padding: '0.5rem 1.1rem', borderRadius: 9999, border: 'none', background: '#192524', color: '#fff', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', opacity: busy ? 0.5 : 1 }}>
+          {busy ? 'Working…' : "Queue + draft today's batch"}
+        </button>
+        <button onClick={doPublish} disabled={busy || drafted === 0 || drafted === published}
+          style={{ padding: '0.5rem 1.1rem', borderRadius: 9999, border: '1.5px solid rgba(25,37,36,0.2)', background: 'transparent', color: '#192524', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', opacity: (busy || drafted === 0 || drafted === published) ? 0.5 : 1 }}>
+          Publish batch {drafted > published ? `(${drafted - published} pending)` : ''}
+        </button>
+      </div>
+      <p style={{ fontSize: '0.74rem', color: '#959D90', margin: '0.6rem 0 0' }}>
+        Today: {batch.length} queued · {drafted} drafted · {published} published
+      </p>
+      {msg && <p style={{ fontSize: '0.74rem', color: '#166534', margin: '0.4rem 0 0' }}>{msg}</p>}
+      {err && <p style={{ fontSize: '0.74rem', color: '#9b2d2d', margin: '0.4rem 0 0' }}>{err}</p>}
+    </div>
+  );
+}
+
 // ─── Auto-discovery config (daily cron) ───────────────────────────────────────
 function AutoDiscoveryCard() {
   const settings = useQuery(api.admin.getSettings);
@@ -551,6 +635,7 @@ export default function Discovery() {
             Build today's queue
           </button>
           {[
+            { id: 'outreach', label: 'Host outreach' },
             { id: 'find',   label: 'Find creators' },
             { id: 'auto',   label: 'Auto-discovery' },
             { id: 'add',    label: 'Add manually' },
@@ -572,6 +657,7 @@ export default function Discovery() {
 
       {openPanel && (
         <div style={{ marginBottom: '1.25rem', padding: '1rem', borderRadius: '1rem', background: 'rgba(255,255,255,0.6)', border: '1px solid rgba(25,37,36,0.08)' }}>
+          {openPanel === 'outreach' && <HostOutreachCampaign />}
           {openPanel === 'find' && <FindCreators />}
           {openPanel === 'auto' && <AutoDiscoveryCard />}
           {openPanel === 'add' && <AddProspectForm onDone={() => setOpenPanel(null)} />}

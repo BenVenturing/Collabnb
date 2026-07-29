@@ -414,6 +414,8 @@ export default defineSchema({
     }))),                                // top 5 by engagement
     enriched_at: v.optional(v.number()),
     queued_for: v.optional(v.string()),  // 'YYYY-MM-DD' daily outreach date
+    dm_angle: v.optional(v.string()),    // template id used for dm_draft, see HOST_OUTREACH_TEMPLATES
+    published: v.optional(v.boolean()),  // admin reviewed + approved this draft to send
     contacted_at: v.optional(v.number()),
     replied_at: v.optional(v.number()),
     created_at: v.number(),

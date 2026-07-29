@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { useMutation, useConvex } from 'convex/react';
-import { useUser, useAuth as useClerkAuth } from '@clerk/clerk-react';
+import { useUser, useAuth as useClerkAuth, useClerk } from '@clerk/clerk-react';
 import { api } from '../../convex/_generated/api';
 import { MOCK_CREATOR } from '../lib/mockData';
 
@@ -61,7 +61,7 @@ export function MockAuthProvider({ children }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ session: MOCK_SESSION, profile, loading: false, signOut, updateProfile, toggleSavedCreator }}>
+    <AuthContext.Provider value={{ session: MOCK_SESSION, profile, loading: false, signOut, updateProfile, toggleSavedCreator, openUserProfile: () => {}, avatarUrl: null }}>
       {children}
     </AuthContext.Provider>
   );
@@ -75,6 +75,7 @@ export function ClerkAuthProvider({ children }) {
 function ClerkAuthInner({ children }) {
   const { user: clerkUser, isLoaded: clerkLoaded } = useUser();
   const { signOut: clerkSignOut } = useClerkAuth();
+  const { openUserProfile } = useClerk();
   const convex = useConvex();
   const updateProfileMutation = useMutation(api.profiles.updateProfile);
   const getOrCreateMutation = useMutation(api.profiles.getOrCreate);
@@ -284,7 +285,7 @@ function ClerkAuthInner({ children }) {
   }, [profile, toggleSavedCreatorMutation]);
 
   return (
-    <AuthContext.Provider value={{ session, profile, loading, signOut, updateProfile, toggleSavedCreator }}>
+    <AuthContext.Provider value={{ session, profile, loading, signOut, updateProfile, toggleSavedCreator, openUserProfile, avatarUrl: clerkUser?.imageUrl ?? null }}>
       {children}
     </AuthContext.Provider>
   );

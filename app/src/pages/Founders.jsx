@@ -233,7 +233,7 @@ function Lounge({ role }) {
       <div style={{ display: 'flex', gap: '0.55rem', alignItems: 'flex-start', padding: '0.7rem 1.15rem', background: GOLD_SOFT, borderBottom: `1px solid ${GOLD_LINE}` }}>
         <span style={{ color: GOLD, display: 'flex', marginTop: 1 }}><IconPin /></span>
         <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--slate)' }}>
-          <strong style={{ color: GOLD }}>Pinned by Ben</strong> — Welcome to the founders' space. New resources drop weekly, and early-access listings appear 3 days before they go public. This room is yours.
+          <strong style={{ color: GOLD }}>Pinned by Ben</strong> — Welcome to the founders' space. New resources are on the way, and early-access listings appear 3 days before they go public. This room is yours.
         </p>
       </div>
 

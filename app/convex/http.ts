@@ -229,25 +229,16 @@ http.route({
       const sub = event.data.object as Stripe.Subscription;
       const customerId = typeof sub.customer === "string" ? sub.customer : sub.customer.id;
       const endOfPaidPeriod = sub.current_period_end * 1000;
-      if (sub.status === "past_due" || sub.status === "incomplete_expired") {
-        const profile = await ctx.db
-          .query("profiles")
-          .withIndex("by_stripe_customer", (q) => q.eq("stripe_customer_id", customerId))
-          .unique();
-        if (profile) {
-          await ctx.db.patch(profile._id, {
-            subscription_status: "cancelled",
-            subscription_expires_at: endOfPaidPeriod,
-            access_state: "limited",
-          });
-        }
-      } else {
-        await ctx.runMutation(internal.profiles.updateSubscriptionByCustomerId, {
-          stripeCustomerId: customerId,
-          subscriptionStatus: "cancelled",
-          subscriptionExpiresAt: endOfPaidPeriod,
-        });
-      }
+      // httpActions have no ctx.db — all writes must go through a mutation.
+      // A hard-cancel (past_due / incomplete_expired) also drops access to "limited";
+      // a graceful cancel keeps access until the paid period ends.
+      const hardCancel = sub.status === "past_due" || sub.status === "incomplete_expired";
+      await ctx.runMutation(internal.profiles.updateSubscriptionByCustomerId, {
+        stripeCustomerId: customerId,
+        subscriptionStatus: "cancelled",
+        subscriptionExpiresAt: endOfPaidPeriod,
+        ...(hardCancel ? { accessState: "limited" } : {}),
+      });
     }
 
     if (event.type === "invoice.payment_failed") {

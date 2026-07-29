@@ -82,6 +82,38 @@ function UserRow({ user, onClick }) {
   );
 }
 
+// The sending identity (persona) photo — what users see when messaged. Clicking
+// opens the Clerk profile modal to change it; the new photo syncs to the persona.
+function SenderChip({ name, photo, onEdit }) {
+  const initials = (name || 'C').split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase();
+  return (
+    <button
+      onClick={onEdit}
+      title="Change your photo — this is what users see when you message them"
+      style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '6px 8px', borderRadius: 12, border: '1px solid rgba(25,37,36,0.08)', background: 'rgba(255,255,255,0.5)', cursor: 'pointer', textAlign: 'left' }}
+      onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.85)'}
+      onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.5)'}
+    >
+      <div style={{ position: 'relative', width: 36, height: 36, flexShrink: 0 }}>
+        <div style={{ width: 36, height: 36, borderRadius: '50%', overflow: 'hidden', background: 'var(--mint)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          {photo ? (
+            <img src={photo} alt={name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          ) : (
+            <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, color: 'var(--slate)', fontSize: 13 }}>{initials}</span>
+          )}
+        </div>
+        <span style={{ position: 'absolute', bottom: -2, right: -2, width: 16, height: 16, borderRadius: '50%', background: 'var(--ink)', color: 'var(--bone)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid var(--bone)' }}>
+          <svg viewBox="0 0 24 24" width="8" height="8" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        </span>
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink)', lineHeight: 1.25 }}>Sending as {name}</div>
+        <div style={{ fontSize: 10.5, color: 'var(--sage)' }}>Tap photo to change · what users see</div>
+      </div>
+    </button>
+  );
+}
+
 const SIGN = 'Cheers,\nThe Collabnb team';
 const SIGN_BLOCK = '\n\n' + SIGN;
 
@@ -329,9 +361,10 @@ function Conversation({ thread, persona }) {
 }
 
 export default function AdminInbox() {
-  const { profile } = useAuth();
+  const { profile, openUserProfile, avatarUrl } = useAuth();
   const persona = useQuery(api.profiles.getAdminPersona);
   const ensurePersona = useMutation(api.profiles.ensureAdminPersona);
+  const setPersonaPhoto = useMutation(api.profiles.updateProfile);
   const threads = useQuery(api.adminThreads.list) ?? [];
   const messagable = useQuery(api.profiles.listMessagable) ?? [];
   const startThread = useMutation(api.adminThreads.startWithUser);
@@ -342,6 +375,13 @@ export default function AdminInbox() {
 
   // Ensure the persona exists on first mount (idempotent server-side).
   useEffect(() => { if (persona === null) ensurePersona({}).catch(() => {}); }, [persona, ensurePersona]);
+
+  // Keep the sending persona's photo in sync with the admin's Clerk avatar, so
+  // what users see matches the photo shown here (and changing it via Clerk propagates).
+  useEffect(() => {
+    if (!persona?._id || !avatarUrl || persona.avatar_url === avatarUrl) return;
+    setPersonaPhoto({ profileId: persona._id, updates: { avatar_url: avatarUrl } }).catch(() => {});
+  }, [persona, avatarUrl, setPersonaPhoto]);
 
   const selected = threads.find(t => t.thread_key === selectedKey) || null;
 
@@ -393,7 +433,11 @@ export default function AdminInbox() {
                 style={{ width: '100%', boxSizing: 'border-box', padding: '8px 12px', borderRadius: 999, border: '1px solid rgba(25,37,36,0.12)', background: 'var(--bone)', fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--ink)', outline: 'none' }}
               />
             ) : (
-              <p style={{ fontSize: 11, color: 'var(--sage)', margin: 0 }}>Welcome users as the Collabnb team.</p>
+              <SenderChip
+                name={persona?.full_name || 'Collabnb'}
+                photo={avatarUrl || persona?.avatar_url}
+                onEdit={() => openUserProfile?.()}
+              />
             )}
           </div>
 

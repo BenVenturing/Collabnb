@@ -66,7 +66,6 @@ function PastDueBanner({ topOffset }) {
     setBusy(true);
     try {
       const { url } = await createBillingPortalSession({
-        customerId,
         returnUrl: `${window.location.origin}/profile`,
       });
       window.location.href = url;

@@ -1176,7 +1176,7 @@ export default function Explore() {
       {/* ── Map split (desktop) — primary Explore view ──────────────────────── */}
       {/* Fixed so the page itself never scrolls in map view; only the left list scrolls. */}
       {mapOpen && !isNarrow && (
-        <div style={{ position: 'fixed', top: 'calc(var(--banner-h, 0rem) + 5.5rem)', left: 0, right: 0, bottom: 0, padding: '0 1.5rem 1rem', zIndex: 40 }}>
+        <div style={{ position: 'fixed', top: 'calc(var(--banner-h, 0rem) + 7rem)', left: 0, right: 0, bottom: 0, padding: '0 1.5rem 1rem', zIndex: 40 }}>
           <div style={{ display: 'flex', gap: '1rem', height: '100%' }}>
             {!mapExpanded && (
               <div className="no-scrollbar" style={{ flex: '0 0 clamp(320px, 46%, 620px)', overflowY: 'auto', paddingRight: '0.25rem' }}>

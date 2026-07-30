@@ -490,69 +490,280 @@ function FindCreators() {
   );
 }
 
-// ─── Host outreach campaign (daily template-driven batch, manual send) ────────
-function HostOutreachCampaign() {
-  const batch = useQuery(api.prospects.getTodayHostBatch) || [];
-  const queueBatch = useMutation(api.prospects.queueHostBatch);
-  const generateDrafts = useAction(api.prospects.generateHostOutreachDrafts);
-  const publishBatch = useMutation(api.prospects.publishTodayHostBatch);
-  const [count, setCount] = useState(50);
+// ─── Host outreach campaign (search → select → confirm, manual send) ──────────
+
+function csvEscape(val) {
+  const s = String(val ?? '');
+  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
+
+function downloadHostsCsv(rows, filename) {
+  const header = ['Instagram handle', 'Name', 'Location', 'Niche', 'Followers', 'Email', 'Angle', 'Status', 'Message sent', 'Contacted date'];
+  const lines = [header.join(',')];
+  for (const r of rows) {
+    lines.push([
+      `@${r.instagram_handle}`,
+      r.display_name || '',
+      r.location || '',
+      r.niche || '',
+      r.follower_count ?? '',
+      r.email || '',
+      ANGLE_LABELS[r.dm_angle] || r.dm_angle || '',
+      r.status,
+      r.dm_draft || '',
+      r.contacted_at ? new Date(r.contacted_at).toISOString().slice(0, 10) : '',
+    ].map(csvEscape).join(','));
+  }
+  const blob = new Blob([lines.join('\n')], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+}
+
+// Search/import controls — swaps to instructions when Agent-Reach is the
+// selected provider (Social tab), since that runs locally, not server-side.
+function HostSearchImport() {
+  const settings = useQuery(api.admin.getSettings);
+  const provider = settings?.host_search_provider || 'hikerapi';
+  const importFromApify = useAction(api.prospects.importFromApify);
+  const [q, setQ] = useState('');
+  const [limit, setLimit] = useState(40);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
-  const [err, setErr] = useState('');
 
-  const drafted = batch.filter(p => p.dm_draft).length;
-  const published = batch.filter(p => p.published).length;
-
-  async function runBatch() {
-    setBusy(true); setErr(''); setMsg('');
+  async function run() {
+    if (!q.trim()) return;
+    setBusy(true); setMsg('');
     try {
-      const q = await queueBatch({ count });
-      setMsg(`Queued ${q.queued} new hosts (${q.totalToday} in today's batch). Drafting with the NVIDIA model…`);
-      const d = await generateDrafts({});
-      setMsg(`Drafted ${d.drafted} of ${d.total} in today's batch — review below, then Publish.`);
+      const r = await importFromApify({ kind: 'host', searchQuery: q.trim(), limit });
+      setMsg(`Imported ${r.inserted} new of ${r.fetched} found.`);
     } catch (e) {
-      setErr(e.message?.replace(/^.*Error:\s*/, '') || 'Batch generation failed');
+      setMsg(e.message?.replace(/^.*Error:\s*/, '') || 'Import failed');
     } finally {
       setBusy(false);
     }
   }
 
-  async function doPublish() {
-    setBusy(true); setErr('');
-    try {
-      const r = await publishBatch({});
-      setMsg(`Published ${r.published} drafts — copy + send each manually from the Hosts panel below (filter by "Queued").`);
-    } catch (e) {
-      setErr(e.message?.replace(/^.*Error:\s*/, '') || 'Publish failed');
-    } finally {
-      setBusy(false);
-    }
+  if (provider === 'agent_reach') {
+    return (
+      <div style={{ padding: '0.7rem 0.9rem', borderRadius: '0.75rem', background: 'rgba(123,104,200,0.06)', border: '1px solid rgba(123,104,200,0.2)' }}>
+        <p style={{ fontSize: '0.76rem', color: '#3C5759', margin: 0, lineHeight: 1.5 }}>
+          Search provider is set to <strong>Agent-Reach</strong> (Social tab). Its Instagram search needs a live local agent session with your own logged-in Chrome — it can't run from this hosted admin page. On your Mac, open a local Claude Code session and ask it to search Instagram via Agent-Reach for a region, then have it push the results in with the <code>prospects:importHostsLocal</code> mutation (secret in Convex env as <code>LOCAL_IMPORT_SECRET</code>). New listings appear in the pool below automatically once pushed.
+        </p>
+      </div>
+    );
   }
 
   return (
-    <div>
-      <p style={{ fontSize: '0.78rem', color: '#3C5759', margin: '0 0 0.6rem', lineHeight: 1.5 }}>
-        Pulls today's top-scored new host listings, drafts a personalized DM for each with the NVIDIA model — cycling evenly through 5 fixed copy angles (10 each at a batch of 50). Nothing sends automatically: Publish just marks the batch reviewed and ready. You copy each draft and send it yourself via Instagram.
-      </p>
-      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
-        <input aria-label="Batch size" type="number" min="5" max="200" value={count}
-          onChange={e => setCount(Math.max(5, Math.min(200, parseInt(e.target.value, 10) || 50)))}
-          style={{ ...input, width: 80 }} />
-        <button onClick={runBatch} disabled={busy}
-          style={{ padding: '0.5rem 1.1rem', borderRadius: 9999, border: 'none', background: '#192524', color: '#fff', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', opacity: busy ? 0.5 : 1 }}>
-          {busy ? 'Working…' : "Queue + draft today's batch"}
-        </button>
-        <button onClick={doPublish} disabled={busy || drafted === 0 || drafted === published}
-          style={{ padding: '0.5rem 1.1rem', borderRadius: 9999, border: '1.5px solid rgba(25,37,36,0.2)', background: 'transparent', color: '#192524', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', opacity: (busy || drafted === 0 || drafted === published) ? 0.5 : 1 }}>
-          Publish batch {drafted > published ? `(${drafted - published} pending)` : ''}
-        </button>
+    <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', alignItems: 'center' }}>
+      <input aria-label="Search hosts" value={q} onChange={e => setQ(e.target.value)} onKeyDown={e => e.key === 'Enter' && run()}
+        placeholder='Search hosts by region, e.g. "boutique hotel lisbon" or "airbnb tulum"'
+        style={{ ...input, flex: 1, minWidth: 240 }} />
+      <input aria-label="Pool size" type="number" min="5" max="100" value={limit}
+        onChange={e => setLimit(Math.max(5, Math.min(100, parseInt(e.target.value, 10) || 40)))}
+        style={{ ...input, width: 70 }} />
+      <button onClick={run} disabled={busy}
+        style={{ padding: '0.5rem 1.1rem', borderRadius: 9999, border: 'none', background: '#192524', color: '#fff', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', opacity: busy ? 0.5 : 1 }}>
+        {busy ? 'Searching…' : 'Search & import'}
+      </button>
+      {msg && <span style={{ fontSize: '0.72rem', color: '#959D90' }}>{msg}</span>}
+    </div>
+  );
+}
+
+function ConfirmedRow({ prospect, update, updateStatus }) {
+  const [draft, setDraft] = useState(prospect.dm_draft || '');
+  const [copied, setCopied] = useState(false);
+  const isContacted = prospect.status !== 'queued';
+
+  async function copyAndOpen() {
+    try { await navigator.clipboard.writeText(draft); } catch { /* clipboard unavailable */ }
+    window.open(`https://ig.me/m/${prospect.instagram_handle}`, '_blank', 'noopener');
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  }
+
+  return (
+    <div style={{ padding: '0.6rem 0.75rem', borderRadius: '0.75rem', background: 'rgba(255,255,255,0.72)', border: '1px solid rgba(25,37,36,0.07)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.35rem' }}>
+        <a href={`https://instagram.com/${prospect.instagram_handle}`} target="_blank" rel="noopener noreferrer" style={{ fontWeight: 700, color: '#192524', fontSize: '0.8rem', textDecoration: 'none' }}>@{prospect.instagram_handle}</a>
+        <span style={{ fontSize: '0.62rem', padding: '0.15rem 0.45rem', borderRadius: 9999, background: 'rgba(123,104,200,0.12)', color: '#5b4aa8', fontWeight: 600 }}>
+          {ANGLE_LABELS[prospect.dm_angle] || prospect.dm_angle}
+        </span>
+        <span style={{ fontSize: '0.62rem', padding: '0.15rem 0.45rem', borderRadius: 9999, background: isContacted ? 'rgba(209,235,219,0.8)' : 'rgba(212,168,67,0.15)', color: isContacted ? '#166534' : '#b45309', fontWeight: 700 }}>
+          {isContacted ? 'Contacted' : 'Ready'}
+        </span>
       </div>
-      <p style={{ fontSize: '0.74rem', color: '#959D90', margin: '0.6rem 0 0' }}>
-        Today: {batch.length} queued · {drafted} drafted · {published} published
+      <textarea value={draft} onChange={e => setDraft(e.target.value)}
+        onBlur={() => draft !== (prospect.dm_draft || '') && update({ id: prospect._id, dmDraft: draft })}
+        rows={2} style={{ ...input, width: '100%', resize: 'vertical' }} />
+      <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.35rem' }}>
+        <button onClick={copyAndOpen}
+          style={{ padding: '0.3rem 0.8rem', borderRadius: 9999, border: '1px solid rgba(123,104,200,0.35)', background: copied ? 'rgba(123,104,200,0.16)' : 'rgba(123,104,200,0.08)', color: '#5b4aa8', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer' }}>
+          {copied ? 'Copied — opening Instagram…' : 'Copy + open Instagram DM ↗'}
+        </button>
+        {!isContacted && (
+          <button onClick={() => updateStatus({ id: prospect._id, status: 'contacted' })}
+            style={{ padding: '0.3rem 0.8rem', borderRadius: 9999, border: 'none', background: '#192524', color: '#fff', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer' }}>
+            Mark contacted
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function HostOutreachCampaign() {
+  const pool = useQuery(api.prospects.getHostPool) || [];
+  const confirmed = useQuery(api.prospects.getConfirmedHosts) || [];
+  const confirmBatch = useAction(api.prospects.confirmHostBatch);
+  const update = useMutation(api.prospects.update);
+  const updateStatus = useMutation(api.prospects.updateStatus);
+
+  const [filterText, setFilterText] = useState('');
+  const [selected, setSelected] = useState(() => new Set());
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState('');
+  const [err, setErr] = useState('');
+  const [confirmedFilter, setConfirmedFilter] = useState('');
+
+  const filteredPool = pool.filter((p) => {
+    if (!filterText.trim()) return true;
+    const t = filterText.toLowerCase();
+    return p.instagram_handle.toLowerCase().includes(t)
+      || (p.display_name || '').toLowerCase().includes(t)
+      || (p.location || '').toLowerCase().includes(t)
+      || (p.niche || '').toLowerCase().includes(t)
+      || (p.bio || '').toLowerCase().includes(t);
+  });
+
+  function selectTop(n) {
+    setSelected(new Set(filteredPool.slice(0, n).map((p) => String(p._id))));
+  }
+
+  function toggle(id) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      const key = String(id);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  }
+
+  async function doConfirm() {
+    if (selected.size === 0) return;
+    setBusy(true); setErr(''); setMsg('');
+    try {
+      const r = await confirmBatch({ ids: [...selected] });
+      setMsg(`Confirmed ${r.confirmed} — drafted with the NVIDIA model. Copy + send each manually below.`);
+      setSelected(new Set());
+    } catch (e) {
+      setErr(e.message?.replace(/^.*Error:\s*/, '') || 'Confirm failed');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const filteredConfirmed = confirmed.filter((p) => {
+    if (confirmedFilter === 'contacted') return p.status !== 'queued';
+    if (confirmedFilter === 'pending') return p.status === 'queued';
+    return true;
+  });
+
+  return (
+    <div>
+      <p style={{ fontSize: '0.78rem', color: '#3C5759', margin: '0 0 0.7rem', lineHeight: 1.5 }}>
+        Search & import a pool of candidates (default 40/day), tick ~20 in the table below — top-scored are pre-selected, swap in others as backups — then Confirm to draft + lock those in. Nothing sends automatically: copy each draft and send it yourself via Instagram.
       </p>
-      {msg && <p style={{ fontSize: '0.74rem', color: '#166534', margin: '0.4rem 0 0' }}>{msg}</p>}
-      {err && <p style={{ fontSize: '0.74rem', color: '#9b2d2d', margin: '0.4rem 0 0' }}>{err}</p>}
+
+      <HostSearchImport />
+
+      <div style={{ marginTop: '1rem' }}>
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
+          <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#192524' }}>Candidate pool ({filteredPool.length})</span>
+          <input aria-label="Filter pool" value={filterText} onChange={(e) => setFilterText(e.target.value)}
+            placeholder="Filter by name, location, niche…" style={{ ...input, width: 220, padding: '0.35rem 0.6rem', fontSize: '0.74rem' }} />
+          <button onClick={() => selectTop(20)}
+            style={{ padding: '0.3rem 0.8rem', borderRadius: 9999, border: '1px solid rgba(25,37,36,0.15)', background: 'transparent', color: '#3C5759', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer' }}>
+            Select top 20
+          </button>
+          <button onClick={() => setSelected(new Set())} disabled={selected.size === 0}
+            style={{ padding: '0.3rem 0.8rem', borderRadius: 9999, border: '1px solid rgba(25,37,36,0.15)', background: 'transparent', color: '#3C5759', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer', opacity: selected.size === 0 ? 0.5 : 1 }}>
+            Clear
+          </button>
+          <button onClick={doConfirm} disabled={busy || selected.size === 0}
+            style={{ padding: '0.4rem 1rem', borderRadius: 9999, border: 'none', background: '#192524', color: '#fff', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', opacity: (busy || selected.size === 0) ? 0.5 : 1 }}>
+            {busy ? 'Confirming…' : `Confirm (${selected.size})`}
+          </button>
+        </div>
+        {msg && <p style={{ fontSize: '0.74rem', color: '#166534', margin: '0 0 0.5rem' }}>{msg}</p>}
+        {err && <p style={{ fontSize: '0.74rem', color: '#9b2d2d', margin: '0 0 0.5rem' }}>{err}</p>}
+
+        {filteredPool.length === 0 ? (
+          <p style={{ fontSize: '0.76rem', color: '#959D90' }}>No candidates yet — search above to import some.</p>
+        ) : (
+          <div style={{ maxHeight: '18rem', overflowY: 'auto', border: '1px solid rgba(25,37,36,0.08)', borderRadius: '0.75rem' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.74rem' }}>
+              <thead>
+                <tr style={{ textAlign: 'left', color: '#959D90', fontSize: '0.64rem', textTransform: 'uppercase', position: 'sticky', top: 0, background: '#fdfdfb' }}>
+                  <th style={{ padding: '0.4rem 0.5rem', width: 28 }}></th>
+                  <th style={{ padding: '0.4rem 0.5rem' }}>Handle</th>
+                  <th style={{ padding: '0.4rem 0.5rem' }}>Location</th>
+                  <th style={{ padding: '0.4rem 0.5rem' }}>Niche</th>
+                  <th style={{ padding: '0.4rem 0.5rem' }}>Followers</th>
+                  <th style={{ padding: '0.4rem 0.5rem' }}>Score</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredPool.map((p) => (
+                  <tr key={String(p._id)} style={{ borderTop: '1px solid rgba(25,37,36,0.06)' }}>
+                    <td style={{ padding: '0.35rem 0.5rem' }}>
+                      <input type="checkbox" aria-label={`Select @${p.instagram_handle}`} checked={selected.has(String(p._id))} onChange={() => toggle(p._id)} />
+                    </td>
+                    <td style={{ padding: '0.35rem 0.5rem' }}>
+                      <a href={`https://instagram.com/${p.instagram_handle}`} target="_blank" rel="noopener noreferrer" style={{ color: '#192524', fontWeight: 700, textDecoration: 'none' }}>@{p.instagram_handle}</a>
+                      {p.display_name && <span style={{ color: '#959D90' }}> · {p.display_name}</span>}
+                    </td>
+                    <td style={{ padding: '0.35rem 0.5rem', color: '#3C5759' }}>{p.location || '—'}</td>
+                    <td style={{ padding: '0.35rem 0.5rem', color: '#3C5759' }}>{p.niche || '—'}</td>
+                    <td style={{ padding: '0.35rem 0.5rem', color: '#3C5759' }}>{fmtFollowers(p.follower_count) || '—'}</td>
+                    <td style={{ padding: '0.35rem 0.5rem' }}><ScoreChip score={p.score} /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      <div style={{ marginTop: '1.25rem' }}>
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
+          <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#192524' }}>Confirmed ({filteredConfirmed.length})</span>
+          <select aria-label="Filter confirmed" value={confirmedFilter} onChange={(e) => setConfirmedFilter(e.target.value)}
+            style={{ ...input, padding: '0.35rem 0.6rem', fontSize: '0.74rem' }}>
+            <option value="">All confirmed</option>
+            <option value="pending">Not yet contacted</option>
+            <option value="contacted">Contacted</option>
+          </select>
+          <button onClick={() => downloadHostsCsv(filteredConfirmed, `collabnb-host-outreach-${new Date().toISOString().slice(0, 10)}.csv`)}
+            disabled={filteredConfirmed.length === 0}
+            style={{ padding: '0.35rem 0.9rem', borderRadius: 9999, border: '1.5px solid rgba(25,37,36,0.2)', background: 'transparent', color: '#192524', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer', opacity: filteredConfirmed.length === 0 ? 0.5 : 1 }}>
+            Download CSV
+          </button>
+        </div>
+
+        {filteredConfirmed.length === 0 ? (
+          <p style={{ fontSize: '0.76rem', color: '#959D90' }}>Nothing confirmed yet.</p>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '22rem', overflowY: 'auto', paddingRight: '0.25rem' }}>
+            {filteredConfirmed.map((p) => (
+              <ConfirmedRow key={String(p._id)} prospect={p} update={update} updateStatus={updateStatus} />
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

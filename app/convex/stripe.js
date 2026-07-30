@@ -137,7 +137,10 @@ export const verifySubscriptionSession = action({
 
     const tier = session.metadata?.tier || 'monthly';
     const sub = session.subscription;
-    const expiresAt = sub?.current_period_end ? sub.current_period_end * 1000 : null;
+    // current_period_end moved onto subscription items in recent Stripe API
+    // versions; read the item value and fall back to the legacy root field.
+    const periodEnd = sub?.items?.data?.[0]?.current_period_end ?? sub?.current_period_end;
+    const expiresAt = periodEnd ? periodEnd * 1000 : undefined;
     const stripeCustomerId = typeof session.customer === 'string'
       ? session.customer
       : session.customer?.id ?? null;

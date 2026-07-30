@@ -49,7 +49,9 @@ function pillEl({ label, active, saved, visited, redacted }) {
   wrap.style.cursor = 'pointer';
   wrap.style.willChange = 'transform';
   const el = document.createElement('div');
-  el.textContent = redacted ? '•••' : (label || '·');
+  // Redacted pins still show the cash value (the label) — only the listing
+  // contents behind them are locked, not the price.
+  el.textContent = label || '·';
 
   // Pin colour: white (untouched) → black (active/viewing) → muted mint
   // (already viewed this session, or saved).

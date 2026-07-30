@@ -22,9 +22,9 @@ const HIDDEN_SAMPLE_LISTINGS_KEY = '@collabnb_hidden_sample_listings_v1';
 
 const PROP_FILTERS = ['All', 'Cabin', 'Villa', 'Treehouse', 'Glamping', 'Lodge', 'Estate', 'Cottage'];
 
-// Short pin/price label from a listing's compensation.
+// Short pin/price label from a listing's compensation. Redacted (trial-ended)
+// listings still show the cash value — it's the hook that drives the upsell.
 function pinLabel(l) {
-  if (l._redacted) return '•••';
   const cash = l.cash_amount;
   if (typeof cash === 'number' && cash > 0) {
     return cash >= 1000 ? `$${(cash / 1000).toFixed(cash % 1000 ? 1 : 0)}k` : `$${cash}`;

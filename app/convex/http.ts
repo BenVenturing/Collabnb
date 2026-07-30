@@ -1,9 +1,16 @@
 import { httpRouter } from "convex/server";
 import { httpAction } from "./_generated/server";
 import Stripe from "stripe";
-import { internal } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 
 const http = httpRouter();
+
+// current_period_end moved from the Subscription root onto its items in recent
+// Stripe API versions. Read the item value, fall back to the (legacy) root.
+function subPeriodEndMs(sub: any): number | undefined {
+  const end = sub?.items?.data?.[0]?.current_period_end ?? sub?.current_period_end;
+  return end ? end * 1000 : undefined;
+}
 
 // Verifies a Svix (Clerk) webhook signature: HMAC-SHA256 over "id.timestamp.body"
 // keyed with the base64 payload of the whsec_ secret.
@@ -185,6 +192,38 @@ http.route({
           });
         }
       }
+
+      // Recurring subscription checkout completed — activate Creator Plus. The
+      // client-side redirect verify is best-effort; this webhook is the reliable
+      // activation path (fires server-side regardless of the browser redirect).
+      if (session.mode === "subscription" && session.metadata?.profileId) {
+        const stripeClient = new Stripe(process.env.STRIPE_SECRET_KEY!);
+        const subId = typeof session.subscription === "string"
+          ? session.subscription
+          : (session.subscription as any)?.id;
+        let customerId: string | undefined = typeof session.customer === "string"
+          ? session.customer
+          : (session.customer as any)?.id ?? undefined;
+        let expiresAt: number | undefined;
+        if (subId) {
+          try {
+            const sub = await stripeClient.subscriptions.retrieve(subId);
+            expiresAt = subPeriodEndMs(sub);
+            if (!customerId) {
+              customerId = typeof sub.customer === "string" ? sub.customer : (sub.customer as any)?.id ?? undefined;
+            }
+          } catch {
+            // customer.subscription.updated will backfill the period end.
+          }
+        }
+        await ctx.runMutation(api.profiles.updateSubscription, {
+          profileId: session.metadata.profileId,
+          subscriptionStatus: "active",
+          subscriptionTier: session.metadata.tier || "monthly",
+          subscriptionExpiresAt: expiresAt,
+          stripeCustomerId: customerId,
+        });
+      }
     }
 
     // Off-session platform-fee charge succeeded — backstop for chargeContractFee.
@@ -209,7 +248,7 @@ http.route({
     if (event.type === "customer.subscription.updated") {
       const sub = event.data.object as Stripe.Subscription;
       const customerId = typeof sub.customer === "string" ? sub.customer : sub.customer.id;
-      const expiresAt = sub.current_period_end * 1000;
+      const expiresAt = subPeriodEndMs(sub);
       let status: string;
       if (sub.status === "active" || sub.status === "trialing") {
         status = "active";
@@ -228,16 +267,16 @@ http.route({
     if (event.type === "customer.subscription.deleted") {
       const sub = event.data.object as Stripe.Subscription;
       const customerId = typeof sub.customer === "string" ? sub.customer : sub.customer.id;
-      const endOfPaidPeriod = sub.current_period_end * 1000;
+      const endOfPaidPeriod = subPeriodEndMs(sub);
       // httpActions have no ctx.db — all writes must go through a mutation.
-      // A hard-cancel (past_due / incomplete_expired) also drops access to "limited";
-      // a graceful cancel keeps access until the paid period ends.
-      const hardCancel = sub.status === "past_due" || sub.status === "incomplete_expired";
+      // Stripe only emits subscription.deleted when the subscription actually
+      // terminates — immediately, or at period end if it was set to cancel then —
+      // so the creator has lost Creator Plus either way. Drop them to "limited".
       await ctx.runMutation(internal.profiles.updateSubscriptionByCustomerId, {
         stripeCustomerId: customerId,
         subscriptionStatus: "cancelled",
         subscriptionExpiresAt: endOfPaidPeriod,
-        ...(hardCancel ? { accessState: "limited" } : {}),
+        accessState: "limited",
       });
     }
 

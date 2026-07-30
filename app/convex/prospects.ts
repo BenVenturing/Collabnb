@@ -518,77 +518,59 @@ export const getById = internalQuery({
   handler: async (ctx, { id }) => ctx.db.get(id),
 });
 
-// ─── Host outreach campaign (daily batch, template-driven, manual send) ───────
+// ─── Host outreach campaign (search → select → confirm, manual send) ──────────
+// Flow: import a pool of candidates (~40/day) via search → admin ticks ~20 in
+// a table (auto-select top-scored, can swap in from the rest as backups) →
+// Confirm drafts + locks in only the selected ones → copy/send manually →
+// mark contacted → export confirmed batch as CSV for the CRM.
 
-// Today's host batch — whatever's queued_for today, regardless of status, so
-// the review UI keeps showing items after they're marked contacted.
-export const getTodayHostBatch = query({
+// Candidate pool: imported hosts not yet confirmed for outreach.
+export const getHostPool = query({
   args: {},
   handler: async (ctx) => {
-    const today = todayKey();
     const rows = await ctx.db
       .query("prospects")
-      .withIndex("by_queued", (q) => q.eq("queued_for", today))
+      .withIndex("by_kind_status", (q) => q.eq("kind", "host").eq("status", "new"))
       .collect();
+    return rows.sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
+  },
+});
+
+// Confirmed hosts (published === true), across all days — the CRM export set.
+export const getConfirmedHosts = query({
+  args: {},
+  handler: async (ctx) => {
+    const rows = await ctx.db.query("prospects").collect();
     return rows
-      .filter((r) => r.kind === "host")
-      .sort((a, b) => (a.dm_angle || "").localeCompare(b.dm_angle || "") || (b.score ?? 0) - (a.score ?? 0));
+      .filter((r) => r.kind === "host" && r.published)
+      .sort((a, b) => (b.contacted_at ?? b.created_at) - (a.contacted_at ?? a.created_at));
   },
 });
 
-// Promote up to `count` top-scored 'new' hosts into today's queue (idempotent —
-// tops up rather than duplicating if some are already queued for today).
-export const queueHostBatch = mutation({
-  args: { count: v.optional(v.number()) },
-  handler: async (ctx, { count = 50 }) => {
-    const today = todayKey();
-    const all = await ctx.db.query("prospects").collect();
-    const alreadyQueued = all.filter(
-      (r) => r.kind === "host" && r.queued_for === today
-    ).length;
-    const need = Math.max(0, Math.min(count, 200) - alreadyQueued);
-    const candidates = all
-      .filter((r) => r.kind === "host" && r.status === "new")
-      .sort((a, b) => (b.score ?? 0) - (a.score ?? 0))
-      .slice(0, need);
-    for (const c of candidates) {
-      await ctx.db.patch(c._id, { status: "queued", queued_for: today });
-    }
-    return { queued: candidates.length, totalToday: alreadyQueued + candidates.length };
-  },
-});
-
-export const saveDraftAngle = internalMutation({
+export const confirmDraft = internalMutation({
   args: { id: v.id("prospects"), dmDraft: v.string(), dmAngle: v.string() },
   handler: async (ctx, { id, dmDraft, dmAngle }) => {
-    await ctx.db.patch(id, { dm_draft: dmDraft, dm_angle: dmAngle });
+    await ctx.db.patch(id, {
+      dm_draft: dmDraft,
+      dm_angle: dmAngle,
+      status: "queued",
+      queued_for: todayKey(),
+      published: true,
+    });
   },
 });
 
-// Draft (or re-draft) every undrafted host in today's queue, cycling evenly
-// through the 5 fixed angles so a 50-host batch lands at 10 per angle. The LLM
-// personalizes the template's [Hotel Name] token + one true fact — it does not
-// freely rewrite the copy. Drafts are saved only; sending stays 100% manual.
-export const generateHostOutreachDrafts = action({
-  args: {},
-  handler: async (ctx): Promise<{ drafted: number; total: number }> => {
-    const batch: any[] = await ctx.runQuery(api.prospects.getTodayHostBatch, {});
-    const angleCounts: Record<string, number> = {};
-    for (const p of batch) if (p.dm_angle) angleCounts[p.dm_angle] = (angleCounts[p.dm_angle] || 0) + 1;
-
-    const pickAngle = () => {
-      const sorted = [...HOST_OUTREACH_TEMPLATES].sort(
-        (a, b) => (angleCounts[a.id] || 0) - (angleCounts[b.id] || 0)
-      );
-      const angle = sorted[0];
-      angleCounts[angle.id] = (angleCounts[angle.id] || 0) + 1;
-      return angle;
-    };
-
-    let drafted = 0;
-    for (const p of batch) {
-      if (p.dm_draft) continue; // already drafted — don't overwrite an edited draft
-      const angle = pickAngle();
+// Confirm exactly the selected pool ids: drafts each (cycling evenly through
+// the 5 fixed angles), then locks them in as today's outreach batch. Anything
+// NOT selected stays in the pool untouched — the built-in "backup" list.
+export const confirmHostBatch = action({
+  args: { ids: v.array(v.id("prospects")) },
+  handler: async (ctx, { ids }): Promise<{ confirmed: number }> => {
+    let confirmed = 0;
+    for (let i = 0; i < ids.length; i++) {
+      const p: any = await ctx.runQuery(internal.prospects.getById, { id: ids[i] });
+      if (!p || p.kind !== "host" || p.published) continue; // don't re-draft an already-sent one
+      const angle = HOST_OUTREACH_TEMPLATES[i % HOST_OUTREACH_TEMPLATES.length];
       const who = [
         `Listing name: ${p.display_name || `@${p.instagram_handle}`}`,
         p.location && `Location: ${p.location}`,
@@ -596,6 +578,7 @@ export const generateHostOutreachDrafts = action({
         p.bio && `Instagram bio: ${p.bio}`,
       ].filter(Boolean).join("\n");
 
+      let dmDraft: string;
       try {
         const raw = await llmChat([
           {
@@ -608,45 +591,71 @@ export const generateHostOutreachDrafts = action({
             content: `Template to adapt:\n"""\n${angle.template}\n"""\n\nListing facts (use ONLY what's given, never invent):\n${who || "(no extra facts — just swap in the listing name)"}`,
           },
         ], 300);
-
-        let dmDraft = raw.trim().replace(/^["'“”]+|["'“”]+$/g, "");
+        dmDraft = raw.trim().replace(/^["'“”]+|["'“”]+$/g, "");
         const lines = dmDraft.split("\n");
         if (lines.length > 1 && /^(here('s| is)|sure|below is|adapted)/i.test(lines[0]) && lines[0].length < 90) {
           dmDraft = lines.slice(1).join("\n").trim();
         }
-        await ctx.runMutation(internal.prospects.saveDraftAngle, { id: p._id, dmDraft: dmDraft.slice(0, 900), dmAngle: angle.id });
-        drafted++;
+        dmDraft = dmDraft.slice(0, 900);
       } catch {
-        // Fallback: use the raw template with a simple name swap so the batch
-        // never silently stalls if the LLM provider hiccups on one item.
-        const name = p.display_name || `@${p.instagram_handle}`;
-        const dmDraft = angle.template.replace(/\[Hotel Name\]/g, name);
-        await ctx.runMutation(internal.prospects.saveDraftAngle, { id: p._id, dmDraft, dmAngle: angle.id });
-        drafted++;
+        // Fallback: raw template with a simple name swap so the batch never
+        // silently stalls if the LLM provider hiccups on one item.
+        dmDraft = angle.template.replace(/\[Hotel Name\]/g, p.display_name || `@${p.instagram_handle}`);
       }
+      await ctx.runMutation(internal.prospects.confirmDraft, { id: p._id, dmDraft, dmAngle: angle.id });
+      confirmed++;
     }
-    return { drafted, total: batch.length };
+    return { confirmed };
   },
 });
 
-// Bulk-approve today's drafted batch after Ben reviews it — no automated
-// sending happens here, this just flags the batch "ready" for the manual
-// copy → open Instagram → paste → send flow.
-export const publishTodayHostBatch = mutation({
-  args: {},
-  handler: async (ctx) => {
-    const today = todayKey();
-    const rows = await ctx.db
-      .query("prospects")
-      .withIndex("by_queued", (q) => q.eq("queued_for", today))
-      .collect();
-    let published = 0;
-    for (const r of rows) {
-      if (r.kind !== "host" || !r.dm_draft || r.published) continue;
-      await ctx.db.patch(r._id, { published: true });
-      published++;
+// Secret-guarded landing pad for local import scripts (e.g. Agent-Reach runs
+// driven by a local agent with your own logged-in Chrome session — that kind
+// of browser automation can't run inside the hosted Convex backend, so a
+// local script/session pushes its results here instead).
+// Set the shared secret: npx convex env set LOCAL_IMPORT_SECRET <random string>
+export const importHostsLocal = mutation({
+  args: {
+    secret: v.string(),
+    rows: v.array(
+      v.object({
+        instagram_handle: v.string(),
+        display_name: v.optional(v.string()),
+        avatar_url: v.optional(v.string()),
+        follower_count: v.optional(v.number()),
+        location: v.optional(v.string()),
+        country: v.optional(v.string()),
+        niche: v.optional(v.string()),
+        email: v.optional(v.string()),
+        bio: v.optional(v.string()),
+        website: v.optional(v.string()),
+      })
+    ),
+  },
+  handler: async (ctx, { secret, rows }) => {
+    const expected = process.env.LOCAL_IMPORT_SECRET;
+    if (!expected || secret !== expected) throw new Error("Invalid or missing import secret.");
+    let inserted = 0;
+    for (const row of rows) {
+      const handle = row.instagram_handle.replace(/^@/, "").trim().toLowerCase();
+      if (!handle) continue;
+      const existing = await ctx.db
+        .query("prospects")
+        .withIndex("by_handle", (q) => q.eq("instagram_handle", handle))
+        .first();
+      if (existing) continue;
+      await ctx.db.insert("prospects", {
+        ...row,
+        kind: "host",
+        instagram_handle: handle,
+        tier: tierFromFollowers(row.follower_count),
+        source: "agent-reach",
+        status: "new",
+        created_at: Date.now(),
+      });
+      inserted++;
     }
-    return { published };
+    return { inserted };
   },
 });
 

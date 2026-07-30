@@ -293,6 +293,33 @@ function InboxPanel({ configured }) {
   );
 }
 
+// Which source Discovery → Host outreach uses to search/import host listings.
+function SearchProviderToggle() {
+  const settings = useQuery(api.admin.getSettings);
+  const setSetting = useMutation(api.admin.setSetting);
+  const provider = settings?.host_search_provider || 'hikerapi';
+
+  return (
+    <div style={{ padding: '0.9rem 1rem', borderRadius: '1rem', background: 'rgba(255,255,255,0.65)', border: '1px solid rgba(25,37,36,0.07)', marginBottom: '1.5rem' }}>
+      <p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#192524', margin: '0 0 0.3rem' }}>Host outreach search provider</p>
+      <p style={{ fontSize: '0.72rem', color: '#959D90', margin: '0 0 0.6rem', lineHeight: 1.5 }}>
+        Which source Discovery → Host outreach uses to find host listings. HikerAPI runs in-app. Agent-Reach runs locally — a live agent session on your Mac with your own logged-in Chrome searches Instagram, then pushes results into the same pool (see the note in the Host outreach panel).
+      </p>
+      <div style={{ display: 'flex', gap: '0.4rem' }}>
+        {[
+          { id: 'hikerapi', label: 'HikerAPI (in-app)' },
+          { id: 'agent_reach', label: 'Agent-Reach (local)' },
+        ].map((opt) => (
+          <button key={opt.id} onClick={() => setSetting({ key: 'host_search_provider', value: opt.id })}
+            style={{ padding: '0.4rem 0.9rem', borderRadius: 9999, border: provider === opt.id ? 'none' : '1px solid rgba(25,37,36,0.15)', background: provider === opt.id ? '#192524' : 'transparent', color: provider === opt.id ? '#fff' : '#3C5759', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer' }}>
+            {opt.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function SocialHub() {
   const accounts = useQuery(api.social.getAccounts) || [];
   const summary = useQuery(api.social.getSummary);
@@ -337,6 +364,8 @@ export default function SocialHub() {
           Collabnb's own Instagram and TikTok performance in one place. Connect each platform with the setup guide, then sync.
         </p>
       </div>
+
+      <SearchProviderToggle />
 
       <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
         <ConnectorCard platform="instagram" account={igAccount} configured={integrations?.instagram}

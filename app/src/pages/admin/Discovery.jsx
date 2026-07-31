@@ -92,10 +92,11 @@ function bestPost(p) {
 }
 
 // ─── Single prospect card ─────────────────────────────────────────────────────
-function ProspectCard({ prospect }) {
+function ProspectCard({ prospect, selected, onToggleSelect }) {
   const updateStatus = useMutation(api.prospects.updateStatus);
   const update = useMutation(api.prospects.update);
   const remove = useMutation(api.prospects.remove);
+  const resetToPool = useMutation(api.prospects.resetToPool);
   const generateDm = useAction(api.prospects.generateDmDraft);
   const enrich = useAction(api.prospects.enrichProspect);
   const [open, setOpen] = useState(false);
@@ -105,15 +106,28 @@ function ProspectCard({ prospect }) {
   const [genBusy, setGenBusy] = useState(false);
   const [genErr, setGenErr] = useState('');
   const [enrichBusy, setEnrichBusy] = useState(false);
+  const [angle, setAngle] = useState('');
+  const [resetting, setResetting] = useState(false);
 
   async function genDm() {
     setGenBusy(true); setGenErr('');
     try {
-      setDmDraft(await generateDm({ id: prospect._id }));
+      setDmDraft(await generateDm({ id: prospect._id, angleId: angle || undefined }));
     } catch (e) {
       setGenErr(e.message?.replace(/^.*Error:\s*/, '') || 'Could not generate a draft');
     } finally {
       setGenBusy(false);
+    }
+  }
+
+  async function doReset() {
+    setResetting(true); setGenErr('');
+    try {
+      await resetToPool({ id: prospect._id });
+    } catch (e) {
+      setGenErr(e.message?.replace(/^.*Error:\s*/, '') || 'Reset failed');
+    } finally {
+      setResetting(false);
     }
   }
 
@@ -148,6 +162,10 @@ function ProspectCard({ prospect }) {
   return (
     <div style={{ padding: '0.8rem 0.9rem', borderRadius: '0.875rem', background: 'rgba(255,255,255,0.72)', border: '1px solid rgba(25,37,36,0.07)' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+        {onToggleSelect && (
+          <input type="checkbox" aria-label={`Select @${prospect.instagram_handle}`} checked={!!selected}
+            onChange={() => onToggleSelect(prospect._id)} style={{ flexShrink: 0 }} />
+        )}
         {prospect.avatar_url
           ? <img src={prospect.avatar_url} alt="" style={{ width: 34, height: 34, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
           : <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'rgba(149,157,144,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: 700, color: '#3C5759', flexShrink: 0 }}>
@@ -194,6 +212,13 @@ function ProspectCard({ prospect }) {
           <button onClick={() => updateStatus({ id: prospect._id, status: 'declined' })}
             style={{ padding: '0.32rem 0.7rem', borderRadius: 9999, border: '1px solid rgba(200,104,104,0.3)', background: 'transparent', color: '#9b2d2d', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer' }}>
             Declined
+          </button>
+        )}
+        {prospect.status !== 'new' && prospect.status !== 'signed' && (
+          <button onClick={doReset} disabled={resetting}
+            title="Back to a fresh pool candidate — keeps the draft, clears status/queue"
+            style={{ padding: '0.32rem 0.7rem', borderRadius: 9999, border: '1px solid rgba(25,37,36,0.15)', background: 'transparent', color: '#3C5759', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer', opacity: resetting ? 0.5 : 1 }}>
+            {resetting ? 'Resetting…' : 'Reset'}
           </button>
         )}
         {prospect.email && (
@@ -245,7 +270,15 @@ function ProspectCard({ prospect }) {
               onBlur={() => dmDraft !== (prospect.dm_draft || '') && update({ id: prospect._id, dmDraft })}
               rows={3} placeholder="Write the outreach message here, then copy it into Instagram."
               style={{ ...input, width: '100%', resize: 'vertical' }} />
-            <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.35rem', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.35rem', flexWrap: 'wrap', alignItems: 'center' }}>
+              {prospect.kind === 'host' && (
+                <select aria-label="Copy angle" value={angle} onChange={(e) => setAngle(e.target.value)}
+                  title="Pick a specific angle, or leave on Auto-rotate to balance across all 5"
+                  style={{ ...input, padding: '0.3rem 0.5rem', fontSize: '0.68rem', width: 132 }}>
+                  <option value="">Auto-rotate angle</option>
+                  {Object.entries(ANGLE_LABELS).map(([id, name]) => <option key={id} value={id}>{name}</option>)}
+                </select>
+              )}
               <button onClick={genDm} disabled={genBusy}
                 style={{ padding: '0.3rem 0.8rem', borderRadius: 9999, border: 'none', background: '#192524', color: '#fff', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer', opacity: genBusy ? 0.5 : 1 }}>
                 {genBusy ? 'Writing…' : dmDraft ? 'Rewrite DM' : 'Generate DM'}
@@ -283,6 +316,10 @@ function ProspectPanel({ kind, title }) {
   const [status, setStatus] = useState('');
   const [tier, setTier] = useState('');
   const [location, setLocation] = useState('');
+  const [selected, setSelected] = useState(() => new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkMsg, setBulkMsg] = useState('');
+  const generateDrafts = useAction(api.prospects.generateDraftsForSelected);
   const prospects = useQuery(api.prospects.getByKind, {
     kind,
     status: status || undefined,
@@ -292,12 +329,35 @@ function ProspectPanel({ kind, title }) {
 
   const select = { ...input, padding: '0.45rem 0.6rem', fontSize: '0.75rem' };
 
+  function toggleOne(id) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      const key = String(id);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  }
+
+  async function bulkGenerate() {
+    if (selected.size === 0) return;
+    setBulkBusy(true); setBulkMsg('');
+    try {
+      const r = await generateDrafts({ ids: [...selected] });
+      setBulkMsg(`Drafted ${r.drafted} of ${selected.size} selected.`);
+      setSelected(new Set());
+    } catch (e) {
+      setBulkMsg(e.message?.replace(/^.*Error:\s*/, '') || 'Bulk draft failed');
+    } finally {
+      setBulkBusy(false);
+    }
+  }
+
   return (
     <div style={{ flex: 1, minWidth: 0 }}>
       <p style={{ fontFamily: 'Cabinet Grotesk, sans-serif', fontWeight: 700, fontSize: '0.95rem', color: '#192524', margin: '0 0 0.6rem' }}>
         {title} <span style={{ color: '#959D90', fontWeight: 500, fontSize: '0.8rem' }}>({prospects.length})</span>
       </p>
-      <div style={{ display: 'flex', gap: '0.4rem', marginBottom: '0.7rem', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: '0.4rem', marginBottom: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
         <select aria-label={`Filter ${kind}s by status`} value={status} onChange={e => setStatus(e.target.value)} style={select}>
           <option value="">All statuses</option>
           {Object.keys(STATUS_CFG).map(s => <option key={s} value={s}>{STATUS_CFG[s].label}</option>)}
@@ -308,13 +368,35 @@ function ProspectPanel({ kind, title }) {
         </select>
         <input aria-label={`Filter ${kind}s by location`} value={location} onChange={e => setLocation(e.target.value)} placeholder="Location" style={{ ...select, width: 110 }} />
       </div>
+      {prospects.length > 0 && (
+        <div style={{ display: 'flex', gap: '0.4rem', marginBottom: '0.7rem', flexWrap: 'wrap', alignItems: 'center' }}>
+          <button onClick={() => setSelected(new Set(prospects.map(p => String(p._id))))}
+            style={{ padding: '0.25rem 0.6rem', borderRadius: 9999, border: '1px solid rgba(25,37,36,0.15)', background: 'transparent', color: '#3C5759', fontSize: '0.68rem', fontWeight: 600, cursor: 'pointer' }}>
+            Select all
+          </button>
+          <button onClick={() => setSelected(new Set())} disabled={selected.size === 0}
+            style={{ padding: '0.25rem 0.6rem', borderRadius: 9999, border: '1px solid rgba(25,37,36,0.15)', background: 'transparent', color: '#3C5759', fontSize: '0.68rem', fontWeight: 600, cursor: 'pointer', opacity: selected.size === 0 ? 0.5 : 1 }}>
+            Select none
+          </button>
+          {kind === 'host' && (
+            <button onClick={bulkGenerate} disabled={bulkBusy || selected.size === 0}
+              title="Drafts a message for each selected host, rotating through the 5 angle templates"
+              style={{ padding: '0.25rem 0.7rem', borderRadius: 9999, border: 'none', background: '#192524', color: '#fff', fontSize: '0.68rem', fontWeight: 700, cursor: 'pointer', opacity: (bulkBusy || selected.size === 0) ? 0.5 : 1 }}>
+              {bulkBusy ? 'Drafting…' : `Draft DMs for selected (${selected.size})`}
+            </button>
+          )}
+          {bulkMsg && <span style={{ fontSize: '0.68rem', color: '#166534' }}>{bulkMsg}</span>}
+        </div>
+      )}
       {prospects.length === 0 ? (
         <div style={{ padding: '1.75rem 1rem', textAlign: 'center', borderRadius: '0.875rem', background: 'rgba(255,255,255,0.5)', border: '1px dashed rgba(25,37,36,0.12)' }}>
           <p style={{ fontSize: '0.8rem', color: '#959D90', margin: 0 }}>No {kind}s yet. Add one manually or import from Apify above.</p>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '58vh', overflowY: 'auto', paddingRight: '0.25rem' }}>
-          {prospects.map(p => <ProspectCard key={p._id} prospect={p} />)}
+          {prospects.map(p => (
+            <ProspectCard key={p._id} prospect={p} selected={selected.has(String(p._id))} onToggleSelect={toggleOne} />
+          ))}
         </div>
       )}
     </div>
@@ -573,9 +655,10 @@ function HostSearchImport() {
   );
 }
 
-function ConfirmedRow({ prospect, update, updateStatus }) {
+function ConfirmedRow({ prospect, update, updateStatus, resetToPool }) {
   const [draft, setDraft] = useState(prospect.dm_draft || '');
   const [copied, setCopied] = useState(false);
+  const [resetting, setResetting] = useState(false);
   const isContacted = prospect.status !== 'queued';
 
   async function copyAndOpen() {
@@ -583,6 +666,12 @@ function ConfirmedRow({ prospect, update, updateStatus }) {
     window.open(`https://ig.me/m/${prospect.instagram_handle}`, '_blank', 'noopener');
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
+  }
+
+  async function doReset() {
+    setResetting(true);
+    try { await resetToPool({ id: prospect._id }); } catch { /* shown inline via panel-level error if needed */ }
+    finally { setResetting(false); }
   }
 
   return (
@@ -610,6 +699,13 @@ function ConfirmedRow({ prospect, update, updateStatus }) {
             Mark contacted
           </button>
         )}
+        {prospect.status !== 'signed' && (
+          <button onClick={doReset} disabled={resetting}
+            title="Back to a fresh pool candidate — keeps the draft, clears status/queue"
+            style={{ padding: '0.3rem 0.8rem', borderRadius: 9999, border: '1px solid rgba(25,37,36,0.15)', background: 'transparent', color: '#3C5759', fontSize: '0.7rem', fontWeight: 600, cursor: 'pointer', opacity: resetting ? 0.5 : 1 }}>
+            {resetting ? 'Resetting…' : 'Reset'}
+          </button>
+        )}
       </div>
     </div>
   );
@@ -621,6 +717,7 @@ function HostOutreachCampaign() {
   const confirmBatch = useAction(api.prospects.confirmHostBatch);
   const update = useMutation(api.prospects.update);
   const updateStatus = useMutation(api.prospects.updateStatus);
+  const resetToPool = useMutation(api.prospects.resetToPool);
 
   const [filterText, setFilterText] = useState('');
   const [selected, setSelected] = useState(() => new Set());
@@ -689,9 +786,13 @@ function HostOutreachCampaign() {
             style={{ padding: '0.3rem 0.8rem', borderRadius: 9999, border: '1px solid rgba(25,37,36,0.15)', background: 'transparent', color: '#3C5759', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer' }}>
             Select top 20
           </button>
+          <button onClick={() => setSelected(new Set(filteredPool.map((p) => String(p._id))))}
+            style={{ padding: '0.3rem 0.8rem', borderRadius: 9999, border: '1px solid rgba(25,37,36,0.15)', background: 'transparent', color: '#3C5759', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer' }}>
+            Select all
+          </button>
           <button onClick={() => setSelected(new Set())} disabled={selected.size === 0}
             style={{ padding: '0.3rem 0.8rem', borderRadius: 9999, border: '1px solid rgba(25,37,36,0.15)', background: 'transparent', color: '#3C5759', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer', opacity: selected.size === 0 ? 0.5 : 1 }}>
-            Clear
+            Select none
           </button>
           <button onClick={doConfirm} disabled={busy || selected.size === 0}
             style={{ padding: '0.4rem 1rem', borderRadius: 9999, border: 'none', background: '#192524', color: '#fff', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', opacity: (busy || selected.size === 0) ? 0.5 : 1 }}>
@@ -759,7 +860,7 @@ function HostOutreachCampaign() {
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '22rem', overflowY: 'auto', paddingRight: '0.25rem' }}>
             {filteredConfirmed.map((p) => (
-              <ConfirmedRow key={String(p._id)} prospect={p} update={update} updateStatus={updateStatus} />
+              <ConfirmedRow key={String(p._id)} prospect={p} update={update} updateStatus={updateStatus} resetToPool={resetToPool} />
             ))}
           </div>
         )}
@@ -815,15 +916,35 @@ function AutoDiscoveryCard() {
 }
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
+// Toggle-panel buttons, scoped per side so only relevant tools show — hosts
+// have their own dedicated search inside Host outreach, so the older
+// generic creator tools (Find/Auto/Import/Build queue) only apply to creators.
+const HOST_TOOLS = [
+  { id: 'outreach', label: 'Host outreach', title: 'Search, select, draft, and track your daily host outreach batch — this is the main host workflow.' },
+  { id: 'add', label: 'Add manually', title: 'Add one specific host you already know the handle for, without running a search.' },
+];
+const CREATOR_TOOLS = [
+  { id: 'find', label: 'Find creators', title: 'Search Instagram by niche/location, auto-imports and scores the top 10 creators.' },
+  { id: 'auto', label: 'Auto-discovery', title: 'Runs that same creator search automatically every morning at 7am.' },
+  { id: 'add', label: 'Add manually', title: 'Add one specific creator you already know the handle for.' },
+  { id: 'import', label: 'Import', title: 'Bulk-search Instagram by keyword and import all matches (creators or hosts).' },
+];
+
 export default function Discovery() {
   const stats = useQuery(api.prospects.getStats);
   const buildQueue = useMutation(api.prospects.buildTodayQueue);
-  const [openPanel, setOpenPanel] = useState('find'); // 'find' | 'add' | 'import' | 'auto' | null
+  const [side, setSide] = useState('hosts'); // 'hosts' | 'creators'
+  const [openPanel, setOpenPanel] = useState('outreach');
   const [queueMsg, setQueueMsg] = useState('');
   const togglePanel = (p) => setOpenPanel(cur => (cur === p ? null : p));
 
   const contactedCreators = stats?.contactedToday?.creators ?? 0;
   const contactedHosts = stats?.contactedToday?.hosts ?? 0;
+
+  function switchSide(next) {
+    setSide(next);
+    setOpenPanel(next === 'hosts' ? 'outreach' : 'find');
+  }
 
   async function handleBuildQueue() {
     const r = await buildQueue({ perKind: 20 });
@@ -831,33 +952,42 @@ export default function Discovery() {
     setTimeout(() => setQueueMsg(''), 4000);
   }
 
+  const tools = side === 'hosts' ? HOST_TOOLS : CREATOR_TOOLS;
+
   return (
     <div style={{ padding: '1.75rem 2rem 2rem' }}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap', marginBottom: '1.25rem' }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
         <div>
           <h2 style={{ fontFamily: 'Cabinet Grotesk, sans-serif', fontWeight: 700, fontSize: '1.25rem', color: '#192524', margin: '0 0 0.2rem' }}>Discovery</h2>
           <p style={{ fontSize: '0.78rem', color: '#959D90', margin: 0 }}>
-            Today's outreach: {contactedCreators}/20 creators · {contactedHosts}/20 hosts. Instagram DMs stay manual (20 a day is the safe limit); this board preps and tracks everything else.
+            {side === 'hosts'
+              ? 'Search, select ~20, draft, and track your daily host outreach batch. Instagram DMs stay manual — this board preps and tracks everything else.'
+              : `Today's outreach: ${contactedCreators}/20 creators contacted. Instagram DMs stay manual (20/day is the safe limit); this board preps and tracks everything else.`}
           </p>
         </div>
-        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-          <button onClick={handleBuildQueue}
-            style={{ padding: '0.5rem 1.1rem', borderRadius: 9999, border: 'none', background: '#192524', color: '#fff', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}>
-            Build today's queue
-          </button>
-          {[
-            { id: 'outreach', label: 'Host outreach' },
-            { id: 'find',   label: 'Find creators' },
-            { id: 'auto',   label: 'Auto-discovery' },
-            { id: 'add',    label: 'Add manually' },
-            { id: 'import', label: 'Import' },
-          ].map(({ id, label: l }) => (
-            <button key={id} onClick={() => togglePanel(id)}
-              style={{ padding: '0.5rem 1.1rem', borderRadius: 9999, border: '1.5px solid rgba(25,37,36,0.2)', background: openPanel === id ? 'rgba(25,37,36,0.06)' : 'transparent', color: '#192524', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}>
+        <div style={{ display: 'flex', borderRadius: 9999, border: '1.5px solid rgba(25,37,36,0.15)', overflow: 'hidden', flexShrink: 0 }}>
+          {[{ id: 'hosts', label: 'Hosts' }, { id: 'creators', label: 'Creators' }].map(({ id, label: l }) => (
+            <button key={id} onClick={() => switchSide(id)}
+              style={{ padding: '0.5rem 1.2rem', border: 'none', background: side === id ? '#192524' : 'transparent', color: side === id ? '#fff' : '#3C5759', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}>
               {l}
             </button>
           ))}
         </div>
+      </div>
+
+      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1.25rem' }}>
+        {side === 'creators' && (
+          <button onClick={handleBuildQueue} title="Promotes up to 20 new creators to 'queued' status, for manual follow-up tracking below"
+            style={{ padding: '0.5rem 1.1rem', borderRadius: 9999, border: 'none', background: '#192524', color: '#fff', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}>
+            Build today's queue
+          </button>
+        )}
+        {tools.map(({ id, label: l, title: t }) => (
+          <button key={id} onClick={() => togglePanel(id)} title={t}
+            style={{ padding: '0.5rem 1.1rem', borderRadius: 9999, border: '1.5px solid rgba(25,37,36,0.2)', background: openPanel === id ? 'rgba(25,37,36,0.06)' : 'transparent', color: '#192524', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}>
+            {l}
+          </button>
+        ))}
       </div>
 
       {queueMsg && (
@@ -876,12 +1006,9 @@ export default function Discovery() {
         </div>
       )}
 
-      {/* Two-panel layout: creators left, hosts right */}
-      <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
-        <ProspectPanel kind="creator" title="Creators" />
-        <div style={{ width: 1, background: 'rgba(25,37,36,0.08)', alignSelf: 'stretch' }} />
-        <ProspectPanel kind="host" title="Hosts" />
-      </div>
+      {side === 'hosts'
+        ? <ProspectPanel kind="host" title="Hosts" />
+        : <ProspectPanel kind="creator" title="Creators" />}
     </div>
   );
 }

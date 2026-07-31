@@ -532,7 +532,113 @@ export const getHostPool = query({
       .query("prospects")
       .withIndex("by_kind_status", (q) => q.eq("kind", "host").eq("status", "new"))
       .collect();
-    return rows.sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
+    return rows.filter((r) => !r.published).sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
+  },
+});
+
+// Angle usage across all hosts ever drafted — keeps the rotation balanced
+// regardless of which surface (single card, bulk select, pool confirm) wrote it.
+export const getHostAngleCounts = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    const rows = await ctx.db
+      .query("prospects")
+      .withIndex("by_kind_status", (q) => q.eq("kind", "host"))
+      .collect();
+    const counts: Record<string, number> = {};
+    for (const r of rows) if (r.dm_angle) counts[r.dm_angle] = (counts[r.dm_angle] || 0) + 1;
+    return counts;
+  },
+});
+
+function nextAngle(counts: Record<string, number>): (typeof HOST_OUTREACH_TEMPLATES)[number] {
+  const sorted = [...HOST_OUTREACH_TEMPLATES].sort((a, b) => (counts[a.id] || 0) - (counts[b.id] || 0));
+  const angle = sorted[0];
+  counts[angle.id] = (counts[angle.id] || 0) + 1;
+  return angle;
+}
+
+// Adapts a fixed angle template to one host's real facts via the writer LLM —
+// shared by the single-card generator, bulk-select generator, and pool Confirm.
+async function draftHostMessage(p: any, angle: (typeof HOST_OUTREACH_TEMPLATES)[number]): Promise<string> {
+  const who = [
+    `Listing name: ${p.display_name || `@${p.instagram_handle}`}`,
+    p.location && `Location: ${p.location}`,
+    p.niche && `Type/niche: ${p.niche}`,
+    p.bio && `Instagram bio: ${p.bio}`,
+  ].filter(Boolean).join("\n");
+
+  try {
+    const raw = await llmChat([
+      {
+        role: "system",
+        content:
+          "You adapt a fixed outreach template for Benjamin, founder of Collabnb (collabnb.com). You do NOT rewrite the message freely — you keep its structure, sentence order, tone, emoji, and call-to-action exactly as given. Your only job: replace every '[Hotel Name]' with the real listing name, and — only if a genuine matching fact is provided below (location, niche, bio) — lightly weave ONE of those facts into an existing sentence so it reads as personalized, without adding new sentences or inventing anything not given. Output ONLY the final message text, nothing else.",
+      },
+      {
+        role: "user",
+        content: `Template to adapt:\n"""\n${angle.template}\n"""\n\nListing facts (use ONLY what's given, never invent):\n${who || "(no extra facts — just swap in the listing name)"}`,
+      },
+    ], 300);
+    let dmDraft = raw.trim().replace(/^["'“”]+|["'“”]+$/g, "");
+    const lines = dmDraft.split("\n");
+    if (lines.length > 1 && /^(here('s| is)|sure|below is|adapted)/i.test(lines[0]) && lines[0].length < 90) {
+      dmDraft = lines.slice(1).join("\n").trim();
+    }
+    return dmDraft.slice(0, 900);
+  } catch {
+    // Fallback: raw template with a simple name swap so a batch never
+    // silently stalls if the LLM provider hiccups on one item.
+    return angle.template.replace(/\[Hotel Name\]/g, p.display_name || `@${p.instagram_handle}`);
+  }
+}
+
+// Draft-only save (no status change) — used by the single-card and
+// bulk-select generators, which leave status progression to explicit
+// Mark queued / Mark contacted clicks.
+export const saveHostDraft = internalMutation({
+  args: { id: v.id("prospects"), dmDraft: v.string(), dmAngle: v.string() },
+  handler: async (ctx, { id, dmDraft, dmAngle }) => {
+    await ctx.db.patch(id, { dm_draft: dmDraft, dm_angle: dmAngle, published: true });
+  },
+});
+
+// Bulk-draft exactly the selected ids (checkbox multi-select in the classic
+// Hosts panel) — same angle rotation + template adapter as the pool Confirm
+// flow, but doesn't touch status/queued_for, matching manual progression.
+export const generateDraftsForSelected = action({
+  args: { ids: v.array(v.id("prospects")) },
+  handler: async (ctx, { ids }): Promise<{ drafted: number }> => {
+    const counts: Record<string, number> = await ctx.runQuery(internal.prospects.getHostAngleCounts, {});
+    let drafted = 0;
+    for (const id of ids) {
+      const p: any = await ctx.runQuery(internal.prospects.getById, { id });
+      if (!p || p.kind !== "host") continue;
+      const angle = nextAngle(counts);
+      const dmDraft = await draftHostMessage(p, angle);
+      await ctx.runMutation(internal.prospects.saveHostDraft, { id: p._id, dmDraft, dmAngle: angle.id });
+      drafted++;
+    }
+    return { drafted };
+  },
+});
+
+// Reset a host back to a fresh pool candidate — for anything that stalled or
+// fell through, short of an actual signed deal. Keeps the drafted message
+// (no need to regenerate) but clears status/queue/confirmed state.
+export const resetToPool = mutation({
+  args: { id: v.id("prospects") },
+  handler: async (ctx, { id }) => {
+    const p = await ctx.db.get(id);
+    if (!p) throw new Error("Prospect not found");
+    if (p.status === "signed") throw new Error("Already signed — can't reset a completed deal.");
+    await ctx.db.patch(id, {
+      status: "new",
+      queued_for: undefined,
+      contacted_at: undefined,
+      replied_at: undefined,
+      published: false,
+    });
   },
 });
 
@@ -571,37 +677,7 @@ export const confirmHostBatch = action({
       const p: any = await ctx.runQuery(internal.prospects.getById, { id: ids[i] });
       if (!p || p.kind !== "host" || p.published) continue; // don't re-draft an already-sent one
       const angle = HOST_OUTREACH_TEMPLATES[i % HOST_OUTREACH_TEMPLATES.length];
-      const who = [
-        `Listing name: ${p.display_name || `@${p.instagram_handle}`}`,
-        p.location && `Location: ${p.location}`,
-        p.niche && `Type/niche: ${p.niche}`,
-        p.bio && `Instagram bio: ${p.bio}`,
-      ].filter(Boolean).join("\n");
-
-      let dmDraft: string;
-      try {
-        const raw = await llmChat([
-          {
-            role: "system",
-            content:
-              "You adapt a fixed outreach template for Benjamin, founder of Collabnb (collabnb.com). You do NOT rewrite the message freely — you keep its structure, sentence order, tone, emoji, and call-to-action exactly as given. Your only job: replace every '[Hotel Name]' with the real listing name, and — only if a genuine matching fact is provided below (location, niche, bio) — lightly weave ONE of those facts into an existing sentence so it reads as personalized, without adding new sentences or inventing anything not given. Output ONLY the final message text, nothing else.",
-          },
-          {
-            role: "user",
-            content: `Template to adapt:\n"""\n${angle.template}\n"""\n\nListing facts (use ONLY what's given, never invent):\n${who || "(no extra facts — just swap in the listing name)"}`,
-          },
-        ], 300);
-        dmDraft = raw.trim().replace(/^["'“”]+|["'“”]+$/g, "");
-        const lines = dmDraft.split("\n");
-        if (lines.length > 1 && /^(here('s| is)|sure|below is|adapted)/i.test(lines[0]) && lines[0].length < 90) {
-          dmDraft = lines.slice(1).join("\n").trim();
-        }
-        dmDraft = dmDraft.slice(0, 900);
-      } catch {
-        // Fallback: raw template with a simple name swap so the batch never
-        // silently stalls if the LLM provider hiccups on one item.
-        dmDraft = angle.template.replace(/\[Hotel Name\]/g, p.display_name || `@${p.instagram_handle}`);
-      }
+      const dmDraft = await draftHostMessage(p, angle);
       await ctx.runMutation(internal.prospects.confirmDraft, { id: p._id, dmDraft, dmAngle: angle.id });
       confirmed++;
     }
@@ -661,11 +737,25 @@ export const importHostsLocal = mutation({
 
 // Draft a personalized outreach DM with the writer LLM (NVIDIA chain) and save
 // it on the prospect. The DM itself is still sent manually — ToS safety.
+// Hosts always use the 5 fixed angle templates (angleId picks one explicitly,
+// otherwise the least-used angle is auto-selected); creators keep the older
+// freeform pitch below since there's no fixed-template ask for them.
 export const generateDmDraft = action({
-  args: { id: v.id("prospects") },
-  handler: async (ctx, { id }): Promise<string> => {
+  args: { id: v.id("prospects"), angleId: v.optional(v.string()) },
+  handler: async (ctx, { id, angleId }): Promise<string> => {
     const p: any = await ctx.runQuery(internal.prospects.getById, { id });
     if (!p) throw new Error("Prospect not found");
+
+    if (p.kind === "host") {
+      let angle = HOST_OUTREACH_TEMPLATES.find((a) => a.id === angleId);
+      if (!angle) {
+        const counts: Record<string, number> = await ctx.runQuery(internal.prospects.getHostAngleCounts, {});
+        angle = nextAngle(counts);
+      }
+      const dmDraft = await draftHostMessage(p, angle);
+      await ctx.runMutation(internal.prospects.saveHostDraft, { id, dmDraft, dmAngle: angle.id });
+      return dmDraft;
+    }
 
     // Best recent post (by views, then likes) — set by profile enrichment.
     const bestPost = (p.recent_posts || [])

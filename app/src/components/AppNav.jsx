@@ -246,6 +246,7 @@ export default function AppNav() {
   const profileRef   = useRef(null);
   const navSearchRef = useRef(null);
   const bellRef      = useRef(null);
+  const navRef       = useRef(null);
 
   const [notifOpen, setNotifOpen] = useState(false);
   const userId = profile?._id || profile?.id;
@@ -282,6 +283,10 @@ export default function AppNav() {
     const handler = (e) => {
       if (profileRef.current && !profileRef.current.contains(e.target)) {
         setProfileOpen(false);
+      }
+      // Only collapse the nav menu on a click truly outside the pill — otherwise
+      // clicking an inline nav link closes it (pointerEvents:none) before the link navigates.
+      if (navRef.current && !navRef.current.contains(e.target)) {
         setMenuOpen(false);
       }
     };
@@ -454,6 +459,7 @@ export default function AppNav() {
 
       {/* ── Floating pill nav ─────────────────────────────────────────────────── */}
       <nav
+        ref={navRef}
         className={`nav-pill glass ${(scrolled || compactSearch) ? 'scrolled' : ''}`}
         aria-label="Main navigation"
         style={{ top: isPending ? 'calc(var(--banner-h, 0rem) + 1.8rem + 0.5rem)' : 'calc(var(--banner-h, 0rem) + 1rem)' }}

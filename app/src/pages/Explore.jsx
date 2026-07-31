@@ -8,6 +8,7 @@ import { formatDateRange } from '../lib/dateUtils';
 import { useAppBar } from '../contexts/AppBarContext';
 import { useCollabs } from '../contexts/CollabContext';
 import { useAuth } from '../contexts/AuthContext';
+import { useSubscription } from '../contexts/SubscriptionContext';
 import { useAccessGate, PendingApprovalScreen, LimitedAccessScreen, TrialBanner } from '../components/AccessGate';
 import { WhereSearchContent, WhatSearchContent, WhenSearchContent, useAnimatedPlaceholder } from '../components/SearchDropdowns';
 import SkeletonCard from '../components/SkeletonCard';
@@ -32,6 +33,39 @@ function pinLabel(l) {
   const m = String(l.compensation || '').match(/\$([\d,]+)/);
   if (m) return `$${m[1]}`;
   return l.collab_type || '·';
+}
+
+// Blurred, non-interactive wrapper shown over the search dropdowns when a
+// trial-ended creator is locked out — real suggestions stay visible but obscured,
+// with a subscribe CTA. Drives the upsell without handing over the data.
+function LockedDropdown({ children, onSubscribe }) {
+  return (
+    <div style={{ position: 'relative', minHeight: 180 }}>
+      <div aria-hidden style={{ filter: 'blur(6px)', pointerEvents: 'none', userSelect: 'none', opacity: 0.85 }}>
+        {children}
+      </div>
+      <div style={{
+        position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center', gap: '0.55rem', padding: '1.5rem',
+        textAlign: 'center', background: 'rgba(247,246,242,0.5)',
+        backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)', borderRadius: '1rem',
+      }}>
+        <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(209,235,219,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="var(--slate)" strokeWidth="1.6" style={{ width: 18, height: 18 }}>
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+          </svg>
+        </div>
+        <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, color: 'var(--ink)', fontSize: '0.95rem', margin: 0 }}>Search is locked</p>
+        <p style={{ fontSize: '0.78rem', color: 'var(--sage)', margin: 0, maxWidth: 240, lineHeight: 1.4 }}>Your trial has ended — subscribe to search destinations and collabs.</p>
+        <button
+          onClick={onSubscribe}
+          style={{ marginTop: '0.25rem', padding: '0.55rem 1.1rem', borderRadius: 999, border: 'none', cursor: 'pointer', background: 'var(--ink)', color: '#fff', fontFamily: 'var(--font-body)', fontWeight: 800, fontSize: '0.82rem' }}
+        >
+          Subscribe to unlock →
+        </button>
+      </div>
+    </div>
+  );
 }
 
 // ─── Convex listing normalizer ────────────────────────────────────────────────
@@ -628,7 +662,8 @@ export default function Explore() {
   // creators get a fully redacted set. Real listings are redacted server-side; the
   // client-injected sample listings are redacted here so they blur to match.
   const access = useAccessGate();
-  const isLimited = !access.loading && access.state === 'limited' && access.role === 'creator' && !access.isAdmin;
+  const isLimited = !access.loading && access.state === 'limited' && access.role === 'creator' && !access.isAdmin && !access.isFounder;
+  const { openModal: openSubModal } = useSubscription();
 
   // Everyone sees the sample listings alongside any real listings.
   const allListings = [...realActive, ...sampleActive].map((l) =>
@@ -849,7 +884,7 @@ export default function Explore() {
           clickable; the map shifts down via the --banner-h var set on the wrapper. */}
       {isLimited && (
         <button
-          onClick={() => navigate('/pricing')}
+          onClick={() => openSubModal()}
           style={{
             position: 'fixed', top: '5.5rem', left: 0, right: 0, zIndex: 200,
             width: '100%', border: 'none', cursor: 'pointer',
@@ -990,35 +1025,53 @@ export default function Explore() {
 
           {activeField === 'where' && (
             <Dropdown width="380px">
-              <WhereSearchContent
-                whereVal={whereVal}
-                setWhereVal={setWhereVal}
-                onClose={() => setActiveField(null)}
-                listings={allListings}
-              />
+              {isLimited ? (
+                <LockedDropdown onSubscribe={openSubModal}>
+                  <WhereSearchContent whereVal={whereVal} setWhereVal={() => {}} onClose={() => {}} listings={allListings} />
+                </LockedDropdown>
+              ) : (
+                <WhereSearchContent
+                  whereVal={whereVal}
+                  setWhereVal={setWhereVal}
+                  onClose={() => setActiveField(null)}
+                  listings={allListings}
+                />
+              )}
             </Dropdown>
           )}
 
           {/* ── What dropdown (collab type + deliverables) ─────────────────────── */}
           {activeField === 'what' && (
             <Dropdown>
-              <WhatSearchContent
-                whatVal={whatVal}
-                setWhatVal={setWhatVal}
-                onClose={() => setActiveField(null)}
-                typeQuery={whatQuery}
-              />
+              {isLimited ? (
+                <LockedDropdown onSubscribe={openSubModal}>
+                  <WhatSearchContent whatVal={whatVal} setWhatVal={() => {}} onClose={() => {}} typeQuery={whatQuery} />
+                </LockedDropdown>
+              ) : (
+                <WhatSearchContent
+                  whatVal={whatVal}
+                  setWhatVal={setWhatVal}
+                  onClose={() => setActiveField(null)}
+                  typeQuery={whatQuery}
+                />
+              )}
             </Dropdown>
           )}
 
           {/* ── When dropdown (date range picker) ──────────────────────────────── */}
           {activeField === 'when' && (
             <Dropdown align="right" width="460px">
-              <WhenSearchContent
-                whenVal={whenVal}
-                setWhenVal={setWhenVal}
-                onClose={() => setActiveField(null)}
-              />
+              {isLimited ? (
+                <LockedDropdown onSubscribe={openSubModal}>
+                  <WhenSearchContent whenVal={whenVal} setWhenVal={() => {}} onClose={() => {}} />
+                </LockedDropdown>
+              ) : (
+                <WhenSearchContent
+                  whenVal={whenVal}
+                  setWhenVal={setWhenVal}
+                  onClose={() => setActiveField(null)}
+                />
+              )}
             </Dropdown>
           )}
         </div>

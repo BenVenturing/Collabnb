@@ -1196,7 +1196,7 @@ export default function ListingDetail({ previewListing = null, preview = false }
   // Pending creators are hard-blocked. Limited (trial-ended) creators instead get
   // a blurred teaser — area + deliverables visible, photos/name/description hidden.
   // Covers server-redacted real listings AND sample listings (redacted client-side).
-  const isLimitedCreator = !access.loading && access.role === 'creator' && access.state === 'limited' && !access.isAdmin;
+  const isLimitedCreator = !access.loading && access.role === 'creator' && access.state === 'limited' && !access.isAdmin && !access.isFounder;
   if (!isPreview && !access.loading) {
     if (access.state === 'pending' && convexListing?._redacted) return <PendingApprovalScreen />;
     const redactThis = convexListing?._redacted || (isLimitedCreator && (isSampleListing || !!sampleListing));

@@ -24,7 +24,17 @@ export function SubscriptionProvider({ children }) {
     profile?.subscription_status === 'active' &&
     (!expiresAt || Date.now() < expiresAt);
 
-  const isSubscribed = isFounder || isLifetime || !firstCollabCompleted || hasFreeMonths || isActive;
+  // A trial-ended (limited) creator loses the free-first-collab / free-months
+  // grants — they must subscribe to keep messaging and applying. Founders,
+  // lifetime members, and active subscribers are always allowed.
+  const isLimited =
+    profile?.access_state === 'limited' &&
+    profile?.role === 'creator' &&
+    profile?.is_admin !== true;
+
+  const isSubscribed =
+    isFounder || isLifetime || isActive ||
+    (!isLimited && (!firstCollabCompleted || hasFreeMonths));
 
   const openModal = useCallback(() => setIsModalOpen(true), []);
   const closeModal = useCallback(() => setIsModalOpen(false), []);

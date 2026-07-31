@@ -645,6 +645,7 @@ export default function Profile() {
   const [showPrivacy,       setShowPrivacy]       = useState(false);
   const [showVerification,  setShowVerification]  = useState(false);
   const [showLocation,      setShowLocation]      = useState(false);
+  const [showMetrics,       setShowMetrics]       = useState(false);
   const [toastMsg, setToastMsg]               = useState(null);
   const [exitConfirmDraft, setExitConfirmDraft] = useState(null);
   const [portalLoading, setPortalLoading]       = useState(false);
@@ -883,6 +884,7 @@ export default function Profile() {
     setPortalLoading(true);
     try {
       const { url } = await createBillingPortalSession({
+        profileId: dp._id ? String(dp._id) : (dp.id ? String(dp.id) : undefined),
         returnUrl: `${window.location.origin}/profile`,
       });
       window.location.href = url;
@@ -898,6 +900,7 @@ export default function Profile() {
   const SETTINGS = [
     { icon: <PencilIcon />,      label: 'Edit Profile',    sublabel: 'Update your photos, bio, and socials',           onClick: () => { setShowSettings(false); openEditProfile(); } },
     { icon: <FileTextIcon />,    label: 'Contracts',       sublabel: 'View and manage your saved contracts',           onClick: () => { setShowSettings(false); setShowContracts(true); } },
+    ...(dp.role === 'creator' ? [{ icon: (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="20" height="20"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>), label: 'My Metrics', sublabel: 'Update your follower & engagement stats', onClick: () => setShowMetrics(true) }] : []),
     ...(hasActiveSub ? [{ icon: <CreditCardIcon />, label: 'Manage Plan', sublabel: 'Cancel, upgrade, or update billing', onClick: () => { setShowSettings(false); handleManageSubscription(); } }] : []),
     ...(isAdmin
       ? [{ icon: <ChecklistIcon />, label: 'Admin Dashboard', sublabel: 'Open the Collabnb admin dashboard', onClick: () => { setShowSettings(false); navigate('/admin'); } }]
@@ -1545,8 +1548,8 @@ export default function Profile() {
                 </div>
               );
             })()}
-            {/* My Metrics — creator only */}
-            {dp.role === 'creator' && (() => {
+            {/* My Metrics — opens as its own sub-window from the Settings list */}
+            {dp.role === 'creator' && showMetrics && (() => {
               const updatedAt      = dp.metrics_updated_at;
               const daysSince      = updatedAt ? Math.floor((Date.now() - updatedAt) / (1000 * 60 * 60 * 24)) : null;
               const isStale        = daysSince !== null && daysSince > 60;
@@ -1561,7 +1564,15 @@ export default function Profile() {
               const inputStyle  = { width: '100%', boxSizing: 'border-box', padding: '0.45rem 0.5rem', border: '1px solid rgba(60,87,89,0.18)', borderRadius: '0.5rem', fontSize: '0.8rem', color: 'var(--ink)', background: 'rgba(247,245,242,0.7)', fontFamily: 'var(--font-body)', outline: 'none' };
               const labelStyle  = { fontSize: '0.66rem', color: 'var(--sage)', margin: '0 0 0.25rem', display: 'block', fontWeight: 600 };
               return (
-                <div style={{ padding: '0.875rem 1.5rem', borderBottom: '1px solid rgba(60,87,89,0.08)' }}>
+                <div
+                  style={{ position: 'fixed', inset: 0, zIndex: 10001, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', background: 'rgba(25,37,36,0.5)', backdropFilter: 'blur(6px)' }}
+                  onClick={() => setShowMetrics(false)}
+                >
+                <div
+                  onClick={(e) => e.stopPropagation()}
+                  style={{ position: 'relative', width: '100%', maxWidth: '460px', maxHeight: '85vh', overflowY: 'auto', padding: '3.25rem 1.5rem 1.5rem', background: 'rgba(255,255,255,0.98)', borderRadius: '1.5rem', border: '1px solid rgba(255,255,255,0.85)', boxShadow: '0 20px 60px rgba(25,37,36,0.18)' }}
+                >
+                  <button onClick={() => setShowMetrics(false)} style={{ position: 'absolute', top: 12, right: 12, width: 32, height: 32, borderRadius: '50%', background: 'rgba(209,235,219,0.5)', border: 'none', cursor: 'pointer', color: 'var(--slate)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1 }}>✕</button>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.625rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', position: 'relative' }}>
                       <p style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--slate)', margin: 0, textTransform: 'uppercase', letterSpacing: '0.06em' }}>My Metrics</p>
@@ -1650,6 +1661,7 @@ export default function Profile() {
                   >
                     {metricsSaving ? 'Saving…' : metricsSaved ? 'Saved' : !canUpdate ? `Locked until ${nextUpdateDate}` : 'Save Metrics'}
                   </button>
+                  </div>
                 </div>
               );
             })()}
@@ -1699,21 +1711,12 @@ export default function Profile() {
               if (isActive) {
                 const nextDate = expiresAt ? new Date(expiresAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : null;
                 return (
-                  <div style={{ padding: '0.875rem 1.5rem', borderBottom: '1px solid rgba(60,87,89,0.08)', background: 'rgba(74,155,127,0.05)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#4A9B7F', flexShrink: 0, display: 'inline-block' }} />
-                        <p style={{ fontSize: '0.82rem', fontWeight: 700, color: '#2D7A5F', margin: 0 }}>
-                          Creator Plus &middot; {isYearly ? 'Annual' : 'Monthly'}
-                        </p>
-                      </div>
-                      <button
-                        onClick={handleManageSubscription}
-                        disabled={portalLoading}
-                        style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--slate)', background: 'none', border: 'none', cursor: portalLoading ? 'wait' : 'pointer', padding: 0, textDecoration: 'underline', opacity: portalLoading ? 0.6 : 1 }}
-                      >
-                        {portalLoading ? 'Opening…' : 'Manage →'}
-                      </button>
+                  <div style={{ padding: '0.875rem 1.5rem', borderBottom: '1px solid rgba(60,87,89,0.08)', background: 'rgba(74,155,127,0.05)', textAlign: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
+                      <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#4A9B7F', flexShrink: 0, display: 'inline-block' }} />
+                      <p style={{ fontSize: '0.82rem', fontWeight: 700, color: '#2D7A5F', margin: 0 }}>
+                        Creator Plus &middot; {isYearly ? 'Annual' : 'Monthly'}
+                      </p>
                     </div>
                     <p style={{ fontSize: '0.72rem', color: 'var(--sage)', margin: 0 }}>
                       {isYearly ? '$60/year' : '$10/month'}{nextDate ? ` · Renews ${nextDate}` : ''}
@@ -1721,7 +1724,7 @@ export default function Profile() {
                     {!isYearly && (
                       <button
                         onClick={openSubModal}
-                        style={{ marginTop: '0.5rem', fontSize: '0.7rem', fontWeight: 600, color: '#A87820', background: 'rgba(212,168,67,0.1)', border: '1px solid rgba(212,168,67,0.25)', borderRadius: '999px', padding: '0.2rem 0.7rem', cursor: 'pointer' }}
+                        style={{ marginTop: '0.6rem', fontSize: '0.7rem', fontWeight: 600, color: '#A87820', background: 'rgba(212,168,67,0.1)', border: '1px solid rgba(212,168,67,0.25)', borderRadius: '999px', padding: '0.2rem 0.7rem', cursor: 'pointer' }}
                       >
                         Upgrade to Yearly — save 50%
                       </button>

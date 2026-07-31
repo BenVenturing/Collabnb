@@ -54,8 +54,9 @@ export default function SubscriptionModal() {
         position: 'fixed', inset: 0, zIndex: 250,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         padding: '1.5rem',
-        background: 'rgba(25,37,36,0.50)',
-        backdropFilter: 'blur(8px)',
+        background: 'radial-gradient(120% 100% at 50% 0%, rgba(60,87,89,0.42), rgba(25,37,36,0.62))',
+        backdropFilter: 'blur(14px) saturate(120%)',
+        WebkitBackdropFilter: 'blur(14px) saturate(120%)',
       }}
       onClick={closeModal}
     >
@@ -63,21 +64,24 @@ export default function SubscriptionModal() {
 
       <div
         style={{
-          width: '100%', maxWidth: '400px',
-          background: 'rgba(255,255,255,0.90)',
-          backdropFilter: 'blur(24px) saturate(140%)',
-          borderRadius: '1.75rem',
-          border: '1px solid rgba(255,255,255,0.75)',
-          boxShadow: '0 24px 64px rgba(25,37,36,0.20)',
-          padding: '2rem',
+          width: '100%', maxWidth: '408px',
+          background: 'linear-gradient(158deg, rgba(255,255,255,0.80) 0%, rgba(244,248,245,0.56) 55%, rgba(226,238,231,0.64) 100%)',
+          backdropFilter: 'blur(44px) saturate(190%)',
+          WebkitBackdropFilter: 'blur(44px) saturate(190%)',
+          borderRadius: '2rem',
+          border: '1px solid rgba(255,255,255,0.65)',
+          boxShadow: '0 40px 90px rgba(25,37,36,0.32), 0 4px 14px rgba(25,37,36,0.14), inset 0 1px 0 rgba(255,255,255,0.85), inset 0 -1px 0 rgba(255,255,255,0.18)',
+          padding: '2.25rem 2rem',
           fontFamily: 'var(--font-body)',
         }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Icon */}
         <div style={{
-          width: 52, height: 52, borderRadius: '50%',
-          background: 'rgba(209,235,219,0.65)',
+          width: 56, height: 56, borderRadius: '50%',
+          background: 'linear-gradient(145deg, rgba(209,235,219,0.95), rgba(180,220,196,0.75))',
+          border: '1px solid rgba(255,255,255,0.7)',
+          boxShadow: '0 6px 16px rgba(74,155,127,0.28), inset 0 1px 0 rgba(255,255,255,0.9)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           margin: '0 auto 1.25rem',
         }}>
@@ -97,11 +101,11 @@ export default function SubscriptionModal() {
 
         {/* Body */}
         <p style={{
-          color: 'var(--sage)', fontSize: '0.875rem',
+          color: 'var(--ink)', fontSize: '0.9rem', fontWeight: 500,
           textAlign: 'center', lineHeight: 1.6,
           margin: '0 0 1.625rem',
         }}>
-          You've completed your first collab — amazing! To continue messaging hosts and applying to listings, choose a plan.
+          Your 30-day free trial has ended. Subscribe to keep messaging hosts, applying to collabs, and exploring the full map.
         </p>
 
         {/* Error */}

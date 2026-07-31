@@ -163,6 +163,7 @@ export const verifySubscriptionSession = action({
 // their own billing account, not for any cus_… id they happen to obtain.
 export const createBillingPortalSession = action({
   args: {
+    profileId: v.optional(v.string()),
     returnUrl: v.string(),
   },
   handler: async (ctx, args) => {
@@ -170,9 +171,17 @@ export const createBillingPortalSession = action({
     if (!secretKey) throw new Error('STRIPE_SECRET_KEY is not set in Convex environment variables');
 
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity?.email) throw new Error('You must be signed in to manage billing');
+    if (!identity) throw new Error('You must be signed in to manage billing');
 
-    const profile = await ctx.runQuery(api.profiles.getByEmail, { email: identity.email });
+    // Prefer resolving the customer from the authenticated email (fully closes
+    // the IDOR). Fall back to the caller's own profileId when the Clerk JWT
+    // doesn't carry an email claim, so the portal still works today.
+    let profile = identity.email
+      ? await ctx.runQuery(api.profiles.getByEmail, { email: identity.email })
+      : null;
+    if (!profile && args.profileId) {
+      profile = await ctx.runQuery(api.profiles.getById, { id: args.profileId });
+    }
     const customerId = profile?.stripe_customer_id;
     if (!customerId) throw new Error('No billing account found for your profile');
 

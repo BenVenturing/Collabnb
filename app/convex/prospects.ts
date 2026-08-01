@@ -44,6 +44,14 @@ export const NICHE_SEARCH_TERMS: Record<string, string[]> = {
 // Five fixed angles for the daily host-outreach batch. The LLM adapts the
 // [Hotel Name] token + one true personalization detail per prospect — it does
 // not freely rewrite these, so the approved copy/tone stays intact.
+// Deterministic — never LLM-generated — so the stats can never drift or get
+// hallucinated per message. Only the first is a verified figure; the other
+// two are intentionally non-numeric until real data is supplied.
+const HOST_STATS_BLOCK = `Why creators matter for stays like yours:
+• 92% of travelers trust a creator's recommendation over a traditional ad
+• Creator content tends to drive more direct bookings than standard posts or ads
+• Instagram is often where travelers first discover and research where to stay`;
+
 export const HOST_OUTREACH_TEMPLATES: { id: string; name: string; template: string }[] = [
   {
     id: "curiosity",
@@ -52,25 +60,33 @@ export const HOST_OUTREACH_TEMPLATES: { id: string; name: string; template: stri
 
 I ask because we built Collabnb specifically to solve that — vetted creators who are actively looking for stays like yours, matched to you directly instead of hours of manual searching.
 
+{STATS}
+
 We're inviting our first 100 properties in as Founding Hosts this July — free, lifetime access. Would love for you to take a look: https://www.collabnb.com/`,
   },
   {
     id: "social_proof",
     name: "Social Proof / Momentum",
-    template: `Hi! We've been onboarding some incredible boutique stays onto Collabnb lately, and [Hotel Name] immediately came to mind. 🌿
+    template: `Hi!
 
-We connect properties like yours with vetted content creators for paid collaborations — no more sifting through DMs hoping someone's a good fit. We're currently welcoming our first 100 Founding Hosts, completely free for life.
+We've been searching for some incredible boutique stays to onboard onto our creator-host platform, Collabnb. [Hotel Name] seemed like an excellent option. 🌿
 
-Take a look: https://www.collabnb.com/`,
+We connect properties like yours with vetted content creators for paid collaborations — no more sifting through DMs hoping someone's a good fit.
+
+{STATS}
+
+We're currently welcoming our first 100 Founding Hosts, completely free for life. Take a look: https://www.collabnb.com/`,
   },
   {
     id: "compliment",
     name: "Compliment-Led / Relationship",
     template: `Hi! Just came across [Hotel Name] and had to reach out — the content coming out of your account is genuinely beautiful. ✨
 
-I'm Benjamin, founder of Collabnb — we help properties like yours connect with creators who'd love to collaborate and help tell that story even further. We're inviting our first 100 hosts in as founding members this July, completely free.
+I'm Benjamin, founder of Collabnb — we help properties like yours connect with creators who'd love to collaborate and help tell that story even further.
 
-Would love for you to check it out: https://www.collabnb.com/`,
+{STATS}
+
+We're inviting our first 100 hosts in as founding members this July, completely free. Would love for you to check it out: https://www.collabnb.com/`,
   },
   {
     id: "data_stat",
@@ -86,9 +102,9 @@ Here's a look: https://www.collabnb.com/`,
     name: "Founder Story / Direct",
     template: `Hi! I'm Benjamin — I've spent 8+ years living and traveling through Indonesia, and I built Collabnb after seeing how hard it is for amazing stays like [Hotel Name] to consistently find the right creators to work with.
 
-We're inviting our first 100 properties in as Founding Hosts this July — free, lifetime access, no fees, ever.
+{STATS}
 
-Would love for you to take a look: https://www.collabnb.com/`,
+We're inviting our first 100 properties in as Founding Hosts this July — free, lifetime access, no fees, ever. Would love for you to take a look: https://www.collabnb.com/`,
   },
 ];
 
@@ -573,23 +589,34 @@ async function draftHostMessage(p: any, angle: (typeof HOST_OUTREACH_TEMPLATES)[
       {
         role: "system",
         content:
-          "You adapt a fixed outreach template for Benjamin, founder of Collabnb (collabnb.com). You do NOT rewrite the message freely — you keep its structure, sentence order, tone, emoji, and call-to-action exactly as given. Your only job: replace every '[Hotel Name]' with the real listing name, and — only if a genuine matching fact is provided below (location, niche, bio) — lightly weave ONE of those facts into an existing sentence so it reads as personalized, without adding new sentences or inventing anything not given. Output ONLY the final message text, nothing else.",
+          "You adapt a fixed outreach template for Benjamin, founder of Collabnb (collabnb.com). You do NOT rewrite the message freely — you keep its structure, sentence order, tone, emoji, and call-to-action exactly as given. Your job: (1) replace every '[Hotel Name]' with the real listing name; (2) if the template contains the literal marker '{STATS}', leave it completely unchanged, on its own line — never translate, remove, or alter it; (3) only if a genuine matching fact is provided below (location, niche, bio), add ONE short new paragraph (1 sentence, separated by a blank line, placed right after the opening paragraph) stating that fact honestly — never invent anything not given, and skip this paragraph entirely if no real fact is available. Formatting rules, no exceptions: never use markdown or asterisks (no *bold* or bullet '*'), never use parentheses anywhere — rephrase instead, never include notes, brackets, or commentary about what you changed. Output ONLY the final message text a host would receive, nothing else.",
       },
       {
         role: "user",
-        content: `Template to adapt:\n"""\n${angle.template}\n"""\n\nListing facts (use ONLY what's given, never invent):\n${who || "(no extra facts — just swap in the listing name)"}`,
+        content: `Template to adapt:\n"""\n${angle.template}\n"""\n\nListing facts — use ONLY what's given, never invent:\n${who || "none given — just swap in the listing name"}`,
       },
-    ], 300);
+    ], 350);
     let dmDraft = raw.trim().replace(/^["'“”]+|["'“”]+$/g, "");
     const lines = dmDraft.split("\n");
     if (lines.length > 1 && /^(here('s| is)|sure|below is|adapted)/i.test(lines[0]) && lines[0].length < 90) {
       dmDraft = lines.slice(1).join("\n").trim();
     }
-    return dmDraft.slice(0, 900);
+    dmDraft = dmDraft.includes("{STATS}")
+      ? dmDraft.replace("{STATS}", HOST_STATS_BLOCK)
+      : dmDraft.replace(
+          /(https:\/\/www\.collabnb\.com\/)/,
+          `${HOST_STATS_BLOCK}\n\n$1`
+        );
+    // Safety net on top of the prompt rules — strip any markdown/parens that
+    // slipped through so a stray "*" or "(" never reaches a real DM.
+    dmDraft = dmDraft.replace(/\*/g, "").replace(/[()]/g, "");
+    return dmDraft.slice(0, 1100);
   } catch {
     // Fallback: raw template with a simple name swap so a batch never
     // silently stalls if the LLM provider hiccups on one item.
-    return angle.template.replace(/\[Hotel Name\]/g, p.display_name || `@${p.instagram_handle}`);
+    return angle.template
+      .replace(/\[Hotel Name\]/g, p.display_name || `@${p.instagram_handle}`)
+      .replace("{STATS}", HOST_STATS_BLOCK);
   }
 }
 
@@ -772,7 +799,7 @@ export const generateDmDraft = action({
       {
         role: "system",
         content:
-          "You write short Instagram DM bodies for Ben, founder of Collabnb (collabnb.com) — a creator-first hospitality marketing platform connecting boutique properties with vetted creators for professional campaigns. Sound like a real person typing on their phone: warm, zero marketing-speak. Never use 'elevate', 'unlock', 'leverage', 'seamless', 'game-changer', or exclamation marks back to back. Keep any compliment HONEST AND GENERAL — Ben has not personally reviewed this specific profile, so never claim to have watched a specific video or read a specific caption. Safe honest phrasing: \"you've done some incredible travel recently\", \"your recent content is really spot on\", \"love the vibe of your account\" — categories that read as true for any active travel/lifestyle creator, not invented specifics. It's fine to say something like \"our team came across your account\" rather than implying personal review. Output ONLY the DM body text — no link, no sign-off (those are added automatically after), no introduction line, no quotes, no commentary.",
+          "You write short Instagram DM bodies for Ben, founder of Collabnb (collabnb.com) — a creator-first hospitality marketing platform connecting boutique properties with vetted creators for professional campaigns. Sound like a real person typing on their phone: warm, zero marketing-speak. Never use 'elevate', 'unlock', 'leverage', 'seamless', 'game-changer', or exclamation marks back to back. Keep any compliment HONEST AND GENERAL — Ben has not personally reviewed this specific profile, so never claim to have watched a specific video or read a specific caption. Safe honest phrasing: \"you've done some incredible travel recently\", \"your recent content is really spot on\", \"love the vibe of your account\" — categories that read as true for any active travel/lifestyle creator, not invented specifics. It's fine to say something like \"our team came across your account\" rather than implying personal review. Formatting rules, no exceptions: never use markdown or asterisks, never use parentheses anywhere — rephrase instead, never include notes or commentary about what you changed. Output ONLY the DM body text — no link, no sign-off (those are added automatically after), no introduction line, no quotes, no commentary.",
       },
       {
         role: "user",
@@ -786,7 +813,7 @@ export const generateDmDraft = action({
     if (lines.length > 1 && /^(here('s| is)|sure|below is)/i.test(lines[0]) && lines[0].length < 90) {
       dmDraft = lines.slice(1).join("\n").trim();
     }
-    dmDraft = dmDraft.replace(/^["'“”]+|["'“”]+$/g, "");
+    dmDraft = dmDraft.replace(/^["'“”]+|["'“”]+$/g, "").replace(/\*/g, "").replace(/[()]/g, "");
     // Link + sign-off are appended in code, not left to the LLM, so they're
     // always correct and consistent — never a hallucinated URL or wording.
     dmDraft = `${dmDraft}\n\nhttps://www.collabnb.com/\n\nCheers,\nThe Collabnb team`.slice(0, 900);

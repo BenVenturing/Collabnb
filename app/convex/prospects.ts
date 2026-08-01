@@ -45,12 +45,13 @@ export const NICHE_SEARCH_TERMS: Record<string, string[]> = {
 // [Hotel Name] token + one true personalization detail per prospect — it does
 // not freely rewrite these, so the approved copy/tone stays intact.
 // Deterministic — never LLM-generated — so the stats can never drift or get
-// hallucinated per message. Only the first is a verified figure; the other
-// two are intentionally non-numeric until real data is supplied.
+// hallucinated per message. General consumer/industry behavior stats only —
+// deliberately not framed as Collabnb's own results, since the platform has
+// no host track record yet (still onboarding its first 100 Founding Hosts).
 const HOST_STATS_BLOCK = `Why creators matter for stays like yours:
 • 92% of travelers trust a creator's recommendation over a traditional ad
-• Creator content tends to drive more direct bookings than standard posts or ads
-• Instagram is often where travelers first discover and research where to stay`;
+• 61% of travelers have booked accommodation after seeing it on Instagram
+• 75% of travelers say social media inspired their destination choice`;
 
 export const HOST_OUTREACH_TEMPLATES: { id: string; name: string; template: string }[] = [
   {

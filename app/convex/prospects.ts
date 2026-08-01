@@ -757,11 +757,6 @@ export const generateDmDraft = action({
       return dmDraft;
     }
 
-    // Best recent post (by views, then likes) — set by profile enrichment.
-    const bestPost = (p.recent_posts || [])
-      .slice()
-      .sort((a: any, b: any) => ((b.views ?? b.likes ?? 0) - (a.views ?? a.likes ?? 0)))[0];
-
     const who = [
       `Instagram handle: @${p.instagram_handle}`,
       p.display_name && `Name: ${p.display_name}`,
@@ -769,20 +764,20 @@ export const generateDmDraft = action({
       p.niche && `Niche: ${p.niche}`,
       p.location && `Location: ${p.location}`,
       p.bio && `Bio: ${p.bio}`,
-      bestPost && `Their recent ${bestPost.type} post${bestPost.views ? ` (${bestPost.views.toLocaleString()} views)` : ""}: "${bestPost.caption.slice(0, 200)}"`,
     ].filter(Boolean).join("\n");
 
-    const pitch = p.kind === "creator"
-      ? "Invite them to join Collabnb as a travel creator — they pitch boutique stays and trade content for nights, with contracts and payments handled on the platform."
-      : "Invite them to list their boutique stay on Collabnb — vetted UGC creators trade content for nights, giving them a stream of marketing content without an agency.";
-
-    const postInstruction = bestPost
-      ? "Open with a specific, genuine reference to the recent post quoted below — react to it like a real follower would, then pivot to the invite."
-      : "If the facts are thin, keep the opener general (their niche, location, or vibe).";
+    const pitch = "Invite them to join Collabnb as a travel creator — they pitch boutique stays and trade content for nights, with contracts and payments handled on the platform.";
 
     const raw = await llmChat([
-      { role: "system", content: "You write short Instagram DMs for Ben, the founder of Collabnb (collabnb.com) — a creator-first hospitality marketing platform connecting boutique properties with vetted creators for professional campaigns. Sound like a real person typing on their phone: warm, specific, zero marketing-speak. Never use 'elevate', 'unlock', 'leverage', 'seamless', 'game-changer', or exclamation marks back to back. Output ONLY the DM text itself — no introduction line, no quotes around it, no commentary." },
-      { role: "user", content: `Write ONE Instagram DM (max 450 characters, 2-3 short paragraphs, no hashtags, at most one emoji). Personalize ONLY with the profile facts below — never invent posts, photos, or details they haven't shared. ${postInstruction} ${pitch} End with a soft ask and the link collabnb.com/join.\n\n${who}` },
+      {
+        role: "system",
+        content:
+          "You write short Instagram DM bodies for Ben, founder of Collabnb (collabnb.com) — a creator-first hospitality marketing platform connecting boutique properties with vetted creators for professional campaigns. Sound like a real person typing on their phone: warm, zero marketing-speak. Never use 'elevate', 'unlock', 'leverage', 'seamless', 'game-changer', or exclamation marks back to back. Keep any compliment HONEST AND GENERAL — Ben has not personally reviewed this specific profile, so never claim to have watched a specific video or read a specific caption. Safe honest phrasing: \"you've done some incredible travel recently\", \"your recent content is really spot on\", \"love the vibe of your account\" — categories that read as true for any active travel/lifestyle creator, not invented specifics. It's fine to say something like \"our team came across your account\" rather than implying personal review. Output ONLY the DM body text — no link, no sign-off (those are added automatically after), no introduction line, no quotes, no commentary.",
+      },
+      {
+        role: "user",
+        content: `Write ONE Instagram DM body (max 380 characters, 2-3 short paragraphs, no hashtags, at most one emoji, no link, no sign-off). Open with a general, honest compliment (see system instructions), then: ${pitch} End with a soft ask — no link or sign-off, those come after.\n\n${who}`,
+      },
     ], 250);
 
     // Strip a leaked "Here is..." preamble line and wrapping quotes.
@@ -791,7 +786,10 @@ export const generateDmDraft = action({
     if (lines.length > 1 && /^(here('s| is)|sure|below is)/i.test(lines[0]) && lines[0].length < 90) {
       dmDraft = lines.slice(1).join("\n").trim();
     }
-    dmDraft = dmDraft.replace(/^["'“”]+|["'“”]+$/g, "").slice(0, 900);
+    dmDraft = dmDraft.replace(/^["'“”]+|["'“”]+$/g, "");
+    // Link + sign-off are appended in code, not left to the LLM, so they're
+    // always correct and consistent — never a hallucinated URL or wording.
+    dmDraft = `${dmDraft}\n\nhttps://www.collabnb.com/\n\nCheers,\nThe Collabnb team`.slice(0, 900);
     await ctx.runMutation(api.prospects.update, { id, dmDraft });
     return dmDraft;
   },

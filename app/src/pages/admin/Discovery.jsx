@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useAction } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { NICHE_KEYWORDS } from '../../lib/matchScore';
@@ -143,9 +143,22 @@ function ProspectCard({ prospect, selected, onToggleSelect }) {
   }
 
   async function dmOnInstagram() {
-    if (dmDraft) {
-      try { await navigator.clipboard.writeText(dmDraft); } catch { /* clipboard unavailable */ }
+    let text = dmDraft;
+    if (!text) {
+      // No draft yet — generate one now (using analyzed data if available)
+      // instead of opening Instagram with nothing to send.
+      setGenBusy(true); setGenErr('');
+      try {
+        text = await generateDm({ id: prospect._id, angleId: angle || undefined });
+        setDmDraft(text);
+      } catch (e) {
+        setGenErr(e.message?.replace(/^.*Error:\s*/, '') || 'Could not generate a draft');
+        setGenBusy(false);
+        return;
+      }
+      setGenBusy(false);
     }
+    try { await navigator.clipboard.writeText(text); } catch { /* clipboard unavailable */ }
     window.open(`https://ig.me/m/${prospect.instagram_handle}`, '_blank', 'noopener');
   }
 
@@ -287,10 +300,10 @@ function ProspectCard({ prospect, selected, onToggleSelect }) {
                 style={{ padding: '0.3rem 0.8rem', borderRadius: 9999, border: '1px solid rgba(25,37,36,0.15)', background: copied ? 'rgba(209,235,219,0.6)' : 'transparent', color: copied ? '#166534' : '#3C5759', fontSize: '0.7rem', fontWeight: 600, cursor: 'pointer' }}>
                 {copied ? 'Copied' : 'Copy DM'}
               </button>
-              <button onClick={dmOnInstagram}
-                title="Copies the draft, then opens their Instagram DM thread"
-                style={{ padding: '0.3rem 0.8rem', borderRadius: 9999, border: '1px solid rgba(123,104,200,0.35)', background: 'rgba(123,104,200,0.08)', color: '#5b4aa8', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer' }}>
-                DM on Instagram ↗
+              <button onClick={dmOnInstagram} disabled={genBusy}
+                title={dmDraft ? 'Copies the draft, then opens their Instagram DM thread' : 'Generates a draft (using Analyze profile data if available), copies it, then opens their Instagram DM thread'}
+                style={{ padding: '0.3rem 0.8rem', borderRadius: 9999, border: '1px solid rgba(123,104,200,0.35)', background: 'rgba(123,104,200,0.08)', color: '#5b4aa8', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer', opacity: genBusy ? 0.5 : 1 }}>
+                {genBusy && !dmDraft ? 'Writing…' : 'DM on Instagram ↗'}
               </button>
               {genErr && <span style={{ fontSize: '0.68rem', color: '#9b2d2d', alignSelf: 'center' }}>{genErr}</span>}
             </div>
@@ -326,6 +339,25 @@ function ProspectPanel({ kind, title }) {
     tier: tier || undefined,
     location: location || undefined,
   }) || [];
+
+  // Freeze display order once loaded — analyzing a card changes its score,
+  // which would otherwise reshuffle the whole list (getByKind sorts by
+  // score) and yank the page back to the top mid-scroll. New matches still
+  // get appended; existing cards never jump position.
+  const [orderedIds, setOrderedIds] = useState([]);
+  const liveIdsKey = prospects.map((p) => String(p._id)).join(',');
+  useEffect(() => {
+    const liveIds = liveIdsKey ? liveIdsKey.split(',') : [];
+    setOrderedIds((prev) => {
+      const liveSet = new Set(liveIds);
+      const kept = prev.filter((id) => liveSet.has(id));
+      const keptSet = new Set(kept);
+      const added = liveIds.filter((id) => !keptSet.has(id));
+      return [...kept, ...added];
+    });
+  }, [liveIdsKey]);
+  const byId = new Map(prospects.map((p) => [String(p._id), p]));
+  const orderedProspects = orderedIds.map((id) => byId.get(id)).filter(Boolean);
 
   const select = { ...input, padding: '0.45rem 0.6rem', fontSize: '0.75rem' };
 
@@ -393,8 +425,8 @@ function ProspectPanel({ kind, title }) {
           <p style={{ fontSize: '0.8rem', color: '#959D90', margin: 0 }}>No {kind}s yet. Add one manually or import from Apify above.</p>
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '58vh', overflowY: 'auto', paddingRight: '0.25rem' }}>
-          {prospects.map(p => (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '75vh', overflowY: 'auto', paddingRight: '0.25rem' }}>
+          {orderedProspects.map(p => (
             <ProspectCard key={p._id} prospect={p} selected={selected.has(String(p._id))} onToggleSelect={toggleOne} />
           ))}
         </div>
@@ -943,7 +975,10 @@ export default function Discovery() {
 
   function switchSide(next) {
     setSide(next);
-    setOpenPanel(next === 'hosts' ? 'outreach' : 'find');
+    // Hosts opens straight into its main workflow panel; Creators starts
+    // collapsed so the search tool doesn't eat space above the list —
+    // click "Find creators" to open it when needed.
+    setOpenPanel(next === 'hosts' ? 'outreach' : null);
   }
 
   async function handleBuildQueue() {

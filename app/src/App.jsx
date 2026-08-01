@@ -137,9 +137,6 @@ function NewSignupCelebration({ onDone }) {
 }
 
 function AppRoutes() {
-  // TEMP loader preview — remove when done. Visit /loading-preview
-  if (window.location.pathname === '/loading-preview') return <LoadingScreen />;
-
   const { session, loading, profile } = useAuth();
   const navigate = useNavigate();
   const isAdmin = profile?.is_admin === true
@@ -265,22 +262,22 @@ function BlobLoader({ size = 'md' }) {
         <filter id={`cnb-speck-${key}`} x="-15%" y="-15%" width="130%" height="130%">
           <feTurbulence type="fractalNoise" baseFrequency={speck} numOctaves="2" seed="7" result="n" />
           <feColorMatrix in="n" type="matrix"
-            values="0 0 0 0 0.04
-                    0 0 0 0 0.62
-                    0 0 0 0 0.42
-                    0 0 0 2.6 -1.0" result="tint" />
+            values="0 0 0 0 0.29
+                    0 0 0 0 0.37
+                    0 0 0 0 0.25
+                    0 0 0 2.8 -1.05" result="tint" />
           <feComposite in="tint" in2="SourceAlpha" operator="in" result="blotch" />
           <feMerge>
             <feMergeNode in="SourceGraphic" />
             <feMergeNode in="blotch" />
           </feMerge>
         </filter>
-        {/* Light translucent mint-glass body with deeper jade toward the edge */}
+        {/* Near-clear glass body with a faint sage cast toward the edge */}
         <radialGradient id="cnb-glass" cx="40%" cy="30%" r="74%" fx="36%" fy="26%">
-          <stop offset="0%"   stopColor="#F1FBF4" />
-          <stop offset="34%"  stopColor="#C6EFD4" />
-          <stop offset="70%"  stopColor="#82D3AB" />
-          <stop offset="100%" stopColor="#3FA877" />
+          <stop offset="0%"   stopColor="#FAFCF9" />
+          <stop offset="36%"  stopColor="#E9EFE6" />
+          <stop offset="72%"  stopColor="#C2D0BA" />
+          <stop offset="100%" stopColor="#8CA083" />
         </radialGradient>
         {/* Big soft specular highlight — the glossy top hotspot */}
         <radialGradient id="cnb-spec" cx="42%" cy="24%" r="54%" fx="40%" fy="20%">
@@ -290,8 +287,8 @@ function BlobLoader({ size = 'md' }) {
         </radialGradient>
         {/* Soft ambient glow behind the orbs */}
         <radialGradient id="cnb-glow" cx="50%" cy="60%" r="50%">
-          <stop offset="0%"   stopColor="rgba(74,155,127,0.28)" />
-          <stop offset="100%" stopColor="rgba(74,155,127,0)" />
+          <stop offset="0%"   stopColor="rgba(108,128,94,0.26)" />
+          <stop offset="100%" stopColor="rgba(108,128,94,0)" />
         </radialGradient>
       </defs>
 

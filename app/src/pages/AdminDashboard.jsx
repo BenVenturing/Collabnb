@@ -159,7 +159,7 @@ function AuditPanel()        { return <AuditLog />;             }
 function BlogPanel()         { return <BlogManager />;          }
 function SocialPanel()       { return <SocialHub />;            }
 function OverviewPanel()     { return <AdminOverview />;        }
-function DiscoveryPanel()    { return <Discovery />;            }
+function DiscoveryPanel({ sidebarCollapsed, setSidebarCollapsed }) { return <Discovery sidebarCollapsed={sidebarCollapsed} setSidebarCollapsed={setSidebarCollapsed} />; }
 function AmbassadorsPanel()  { return <AmbassadorManager />;    }
 function AlgoSimulatorPanel() { return <AlgorithmLab view="simulator" />; }
 function AlgoReferencePanel() { return <AlgorithmLab view="reference" />; }
@@ -612,7 +612,7 @@ export default function AdminDashboard() {
             }}>
               {activeSection === 'users'
                 ? <Users initialTab={usersInitialView} />
-                : <ActivePanel />}
+                : <ActivePanel sidebarCollapsed={sidebarCollapsed} setSidebarCollapsed={setSidebarCollapsed} />}
             </div>
           </div>
         </main>

@@ -962,7 +962,7 @@ const CREATOR_TOOLS = [
   { id: 'import', label: 'Import', title: 'Bulk-search Instagram by keyword and import all matches (creators or hosts).' },
 ];
 
-export default function Discovery() {
+export default function Discovery({ sidebarCollapsed, setSidebarCollapsed }) {
   const stats = useQuery(api.prospects.getStats);
   const buildQueue = useMutation(api.prospects.buildTodayQueue);
   const [side, setSide] = useState('hosts'); // 'hosts' | 'creators'
@@ -1000,13 +1000,22 @@ export default function Discovery() {
               : `Today's outreach: ${contactedCreators}/20 creators contacted. Instagram DMs stay manual (20/day is the safe limit); this board preps and tracks everything else.`}
           </p>
         </div>
-        <div style={{ display: 'flex', borderRadius: 9999, border: '1.5px solid rgba(25,37,36,0.15)', overflow: 'hidden', flexShrink: 0 }}>
-          {[{ id: 'hosts', label: 'Hosts' }, { id: 'creators', label: 'Creators' }].map(({ id, label: l }) => (
-            <button key={id} onClick={() => switchSide(id)}
-              style={{ padding: '0.5rem 1.2rem', border: 'none', background: side === id ? '#192524' : 'transparent', color: side === id ? '#fff' : '#3C5759', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}>
-              {l}
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexShrink: 0 }}>
+          {typeof setSidebarCollapsed === 'function' && (
+            <button onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+              title={sidebarCollapsed ? 'Exit focus mode — show the sidebar again' : 'Focus mode — collapse the sidebar for more room'}
+              style={{ padding: '0.5rem 0.9rem', borderRadius: 9999, border: '1.5px solid rgba(25,37,36,0.15)', background: sidebarCollapsed ? '#192524' : 'transparent', color: sidebarCollapsed ? '#fff' : '#3C5759', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}>
+              {sidebarCollapsed ? 'Exit focus mode' : 'Focus mode ⤢'}
             </button>
-          ))}
+          )}
+          <div style={{ display: 'flex', borderRadius: 9999, border: '1.5px solid rgba(25,37,36,0.15)', overflow: 'hidden' }}>
+            {[{ id: 'hosts', label: 'Hosts' }, { id: 'creators', label: 'Creators' }].map(({ id, label: l }) => (
+              <button key={id} onClick={() => switchSide(id)}
+                style={{ padding: '0.5rem 1.2rem', border: 'none', background: side === id ? '#192524' : 'transparent', color: side === id ? '#fff' : '#3C5759', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}>
+                {l}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 

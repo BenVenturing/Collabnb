@@ -1,9 +1,11 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import { requireAuthedProfile } from "./lib/auth";
 
 export const generateUploadUrl = mutation({
   args: {},
   handler: async (ctx) => {
+    await requireAuthedProfile(ctx);
     return await ctx.storage.generateUploadUrl();
   },
 });

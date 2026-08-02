@@ -1,6 +1,8 @@
 import { v } from "convex/values";
 import { query, mutation, action, internalMutation } from "./_generated/server";
 import { internal, api } from "./_generated/api";
+import { requireAuthedProfile, requireOwnerOrAdmin, requireAdmin, isServerAdminEmail, canAccessAdmin, canAccessOwner } from "./lib/auth";
+import { cleanPlainText, cleanOptionalUrl } from "./lib/sanitize";
 
 export const countAll = query({
   args: {},
@@ -19,13 +21,23 @@ export const getOrCreate = mutation({
     role: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    // The caller's email must come from the verified Clerk identity, never
+    // the client-passed arg — otherwise anyone could create/claim a profile
+    // for someone else's email. is_admin is likewise re-derived server-side
+    // (isServerAdminEmail) rather than trusted from args.is_admin.
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity?.email || identity.email !== args.email) {
+      throw new Error("Sign in required.");
+    }
+    const isAdmin = isServerAdminEmail(identity.email);
+
     const existing = await ctx.db
       .query("profiles")
       .withIndex("by_email", (q) => q.eq("email", args.email))
       .unique();
     if (existing) {
       const adminPatch: Record<string, any> = { clerk_registered: true };
-      if (args.is_admin) {
+      if (isAdmin) {
         adminPatch.is_admin = true;
         adminPatch.is_verified = true;
         adminPatch.tier = 'UGC Pro';
@@ -35,10 +47,10 @@ export const getOrCreate = mutation({
       // Apply the signup-selected role when claiming a not-yet-registered
       // waitlist row. Established (already clerk_registered) accounts are never
       // touched here — deliberate role changes go through requestRoleSwitch.
-      if (!existing.clerk_registered && !args.is_admin && args.role && args.role !== existing.role) {
+      if (!existing.clerk_registered && !isAdmin && args.role && args.role !== existing.role) {
         adminPatch.role = args.role;
       }
-      if (!existing.clerk_registered || args.is_admin) {
+      if (!existing.clerk_registered || isAdmin) {
         await ctx.db.patch(existing._id, adminPatch);
       }
       return await ctx.db.get(existing._id);
@@ -58,15 +70,15 @@ export const getOrCreate = mutation({
 
     const profileId = await ctx.db.insert("profiles", {
       email: args.email,
-      full_name: args.full_name || args.email.split('@')[0],
+      full_name: cleanPlainText(args.full_name, 100) || args.email.split('@')[0],
       username,
       role: args.role || 'creator',
-      tier: args.is_admin ? 'UGC Pro' : 'waitlist',
-      is_verified: args.is_admin ? true : false,
-      is_founder: args.is_admin ? true : undefined,
-      is_admin: args.is_admin ? true : undefined,
-      beta: args.is_admin ? true : undefined,
-      avatar_url: args.avatar_url,
+      tier: isAdmin ? 'UGC Pro' : 'waitlist',
+      is_verified: isAdmin ? true : false,
+      is_founder: isAdmin ? true : undefined,
+      is_admin: isAdmin ? true : undefined,
+      beta: isAdmin ? true : undefined,
+      avatar_url: args.avatar_url ? cleanOptionalUrl(args.avatar_url, "Avatar URL") : undefined,
       referral_code: refCode || undefined,
       clerk_registered: true,
     });
@@ -139,6 +151,7 @@ export const getByUsername = query({
 export const setFounderStatus = mutation({
   args: { profileId: v.string(), isFounder: v.boolean() },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx);
     await ctx.db.patch(args.profileId as any, { is_founder: args.isFounder });
   },
 });
@@ -147,6 +160,7 @@ export const setFounderStatus = mutation({
 export const setPayoutMethod = mutation({
   args: { profileId: v.string(), payoutMethod: v.union(v.literal("stripe_connect"), v.literal("wise")) },
   handler: async (ctx, args) => {
+    await requireOwnerOrAdmin(ctx, args.profileId);
     await ctx.db.patch(args.profileId as any, { payout_method: args.payoutMethod });
   },
 });
@@ -191,6 +205,7 @@ export const setWiseRecipient = internalMutation({
 export const getUnverified = query({
   args: {},
   handler: async (ctx) => {
+    if (!(await canAccessAdmin(ctx))) return [];
     const all = await ctx.db.query("profiles").collect();
     return all.filter(p => p.is_verified !== true && p.is_rejected !== true);
   },
@@ -199,6 +214,7 @@ export const getUnverified = query({
 export const getRejected = query({
   args: {},
   handler: async (ctx) => {
+    if (!(await canAccessAdmin(ctx))) return [];
     const all = await ctx.db.query("profiles").collect();
     return all.filter(p => p.is_rejected === true);
   },
@@ -209,6 +225,7 @@ export const approveProfile = mutation({
     profileId: v.string(),
   },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx);
     const profile = await ctx.db.get(args.profileId as any);
     if (!profile) return;
 
@@ -246,6 +263,7 @@ export const rejectProfile = mutation({
     reason: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx);
     await ctx.db.patch(args.profileId as any, {
       is_rejected: true,
       rejection_reason: args.reason,
@@ -264,6 +282,7 @@ export const rejectProfile = mutation({
 export const requestTierChange = mutation({
   args: { profileId: v.string(), requestedTier: v.string() },
   handler: async (ctx, args) => {
+    await requireOwnerOrAdmin(ctx, args.profileId);
     const profile = await ctx.db.get(args.profileId as any);
     if (!profile) return;
     await ctx.db.patch(args.profileId as any, {
@@ -276,6 +295,7 @@ export const requestTierChange = mutation({
 export const approveTierChange = mutation({
   args: { profileId: v.string() },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx);
     const profile = await ctx.db.get(args.profileId as any);
     if (!profile?.pending_tier) return;
     await ctx.db.patch(args.profileId as any, {
@@ -289,6 +309,7 @@ export const approveTierChange = mutation({
 export const declineTierChange = mutation({
   args: { profileId: v.string() },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx);
     await ctx.db.patch(args.profileId as any, {
       pending_tier: undefined,
       tier_change_requested_at: undefined,
@@ -299,6 +320,7 @@ export const declineTierChange = mutation({
 export const getTierChangeRequests = query({
   args: {},
   handler: async (ctx) => {
+    if (!(await canAccessAdmin(ctx))) return [];
     const all = await ctx.db.query("profiles").collect();
     return all.filter(p => p.pending_tier != null);
   },
@@ -365,6 +387,7 @@ export const getDetailedProfile = query({
 export const checkGuaranteeEligibility = query({
   args: { profileId: v.id("profiles") },
   handler: async (ctx, args) => {
+    if (!(await canAccessAdmin(ctx))) return null;
     const profile = await ctx.db.get(args.profileId);
     if (!profile) return null;
 
@@ -421,7 +444,10 @@ export const checkGuaranteeEligibility = query({
   },
 });
 
-export const updateSubscription = mutation({
+// Server-only: called from the Stripe webhook (http.ts) and stripe.js, never
+// from the client — a client-callable version would let anyone grant
+// themselves an active subscription.
+export const updateSubscription = internalMutation({
   args: {
     profileId: v.string(),
     subscriptionStatus: v.string(),
@@ -562,6 +588,7 @@ export const decrementFreeMonth = internalMutation({
 export const markFirstCollabCompleted = mutation({
   args: { profileId: v.string() },
   handler: async (ctx, args) => {
+    await requireOwnerOrAdmin(ctx, args.profileId);
     await ctx.db.patch(args.profileId as any, { first_collab_completed: true });
   },
 });
@@ -587,6 +614,7 @@ export const requestRoleSwitch = mutation({
     portfolio: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireOwnerOrAdmin(ctx, args.profileId);
     const profile = await ctx.db.get(args.profileId as any);
     if (!profile) throw new Error("Profile not found.");
     if (profile.role === args.targetRole) throw new Error("You already have this role.");
@@ -598,12 +626,12 @@ export const requestRoleSwitch = mutation({
     if (args.contact_email && args.contact_email !== profile.email) {
       patch.role_switch_email = args.contact_email;
     }
-    if (args.city !== undefined) patch.city = args.city;
-    if (args.country !== undefined) patch.country = args.country;
+    if (args.city !== undefined) patch.city = cleanPlainText(args.city, 100);
+    if (args.country !== undefined) patch.country = cleanPlainText(args.country, 100);
     if (args.targetRole === "creator") {
-      if (args.instagram_handle !== undefined) patch.instagram_handle = args.instagram_handle;
-      if (args.tiktok_handle !== undefined) patch.tiktok_handle = args.tiktok_handle;
-      if (args.portfolio !== undefined) patch.portfolio = args.portfolio;
+      if (args.instagram_handle !== undefined) patch.instagram_handle = cleanPlainText(args.instagram_handle, 60);
+      if (args.tiktok_handle !== undefined) patch.tiktok_handle = cleanPlainText(args.tiktok_handle, 60);
+      if (args.portfolio !== undefined) patch.portfolio = cleanOptionalUrl(args.portfolio, "Portfolio URL");
     }
     await ctx.db.patch(args.profileId as any, patch);
 
@@ -642,11 +670,24 @@ export const updateProfile = mutation({
   },
   handler: async (ctx, args) => {
     const { profileId, updates } = args;
+    await requireOwnerOrAdmin(ctx, profileId);
     const exists = await ctx.db.get(profileId as any);
     if (!exists) return;
-    const cleanUpdates = Object.fromEntries(
+    const cleanUpdates: Record<string, any> = Object.fromEntries(
       Object.entries(updates).filter(([_, v]) => v !== undefined)
     );
+    if (cleanUpdates.full_name !== undefined) cleanUpdates.full_name = cleanPlainText(cleanUpdates.full_name, 100);
+    if (cleanUpdates.username !== undefined) cleanUpdates.username = cleanPlainText(cleanUpdates.username, 30);
+    if (cleanUpdates.bio !== undefined) cleanUpdates.bio = cleanPlainText(cleanUpdates.bio, 1000);
+    if (cleanUpdates.instagram_handle !== undefined) cleanUpdates.instagram_handle = cleanPlainText(cleanUpdates.instagram_handle, 60);
+    if (cleanUpdates.tiktok_handle !== undefined) cleanUpdates.tiktok_handle = cleanPlainText(cleanUpdates.tiktok_handle, 60);
+    if (cleanUpdates.youtube_handle !== undefined) cleanUpdates.youtube_handle = cleanPlainText(cleanUpdates.youtube_handle, 60);
+    if (cleanUpdates.city !== undefined) cleanUpdates.city = cleanPlainText(cleanUpdates.city, 100);
+    if (cleanUpdates.region !== undefined) cleanUpdates.region = cleanPlainText(cleanUpdates.region, 100);
+    if (cleanUpdates.country !== undefined) cleanUpdates.country = cleanPlainText(cleanUpdates.country, 100);
+    if (cleanUpdates.portfolio !== undefined) cleanUpdates.portfolio = cleanOptionalUrl(cleanUpdates.portfolio, "Portfolio URL");
+    if (cleanUpdates.avatar_url !== undefined) cleanUpdates.avatar_url = cleanOptionalUrl(cleanUpdates.avatar_url, "Avatar URL");
+    if (cleanUpdates.banner_url !== undefined) cleanUpdates.banner_url = cleanOptionalUrl(cleanUpdates.banner_url, "Banner URL");
     await ctx.db.patch(profileId as any, cleanUpdates);
   },
 });
@@ -655,6 +696,7 @@ export const updateProfile = mutation({
 export const deleteProfile = mutation({
   args: { profileId: v.id("profiles") },
   handler: async (ctx, args) => {
+    await requireOwnerOrAdmin(ctx, args.profileId);
     const profile = await ctx.db.get(args.profileId);
     if (!profile) return { deleted: false, reason: "Profile not found" };
 
@@ -758,6 +800,7 @@ export const updateMetrics = mutation({
     avg_comments: v.optional(v.number()),
   },
   handler: async (ctx, { profileId, instagram, tiktok, youtube, avg_views, avg_likes, avg_comments }) => {
+    await requireOwnerOrAdmin(ctx, profileId);
     const profile = await ctx.db.get(profileId as any);
     if (!profile) return;
     if (profile.metrics_updated_at && Date.now() - profile.metrics_updated_at < 30 * 24 * 60 * 60 * 1000) {
@@ -811,6 +854,7 @@ export const checkMetricsReminders = internalMutation({
 export const toggleSavedCreator = mutation({
   args: { profileId: v.id("profiles"), creatorId: v.string() },
   handler: async (ctx, { profileId, creatorId }) => {
+    await requireOwnerOrAdmin(ctx, profileId);
     const profile = await ctx.db.get(profileId);
     if (!profile) return [];
     const current = profile.saved_creator_ids ?? [];
@@ -826,6 +870,7 @@ export const toggleSavedCreator = mutation({
 export const setProfileVisibility = mutation({
   args: { profileId: v.id("profiles"), visible: v.boolean() },
   handler: async (ctx, { profileId, visible }) => {
+    await requireOwnerOrAdmin(ctx, profileId);
     await ctx.db.patch(profileId, { profile_visible: visible });
     return visible;
   },
@@ -922,6 +967,7 @@ export const listPublicCreators = query({
 export const ensureAdminPersona = mutation({
   args: {},
   handler: async (ctx) => {
+    await requireAdmin(ctx);
     const all = await ctx.db.query("profiles").collect();
     const existing = all.find((p) => p.username === "collabnb");
     if (existing) return String(existing._id);

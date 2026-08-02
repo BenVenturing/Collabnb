@@ -440,6 +440,18 @@ function TabContent({ tab, data, guarantee }) {
             <Stat label="Tier"        value={p.subscription_tier || '—'} />
             <Stat label="Expires At"  value={p.subscription_expires_at ? fmtDate(p.subscription_expires_at) : '—'} />
             <Stat label="Stripe Customer ID" value={p.stripe_customer_id ? `${p.stripe_customer_id.slice(0, 20)}…` : '—'} />
+            {p.stripe_customer_id && (
+              <div style={{ padding: '0.4rem 0' }}>
+                <a
+                  href={`https://dashboard.stripe.com/customers/${p.stripe_customer_id}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{ fontSize: '0.78rem', fontWeight: 600, color: SLATE, textDecoration: 'underline' }}
+                >
+                  View subscription in Stripe →
+                </a>
+              </div>
+            )}
           </Section>
           {guarantee && (
             <Section title="Guarantee Eligibility (Legacy Yearly Plan)">

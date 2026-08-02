@@ -1,6 +1,6 @@
-import { mutation } from "./_generated/server";
+import { internalMutation } from "./_generated/server";
 
-export const seed = mutation({
+export const seed = internalMutation({
   args: {},
   handler: async (ctx) => {
     // Check if data already exists
@@ -456,7 +456,7 @@ export const seed = mutation({
   },
 });
 
-export const patchAbouts = mutation({
+export const patchAbouts = internalMutation({
   args: {},
   handler: async (ctx) => {
     const abouts: Record<string, string> = {

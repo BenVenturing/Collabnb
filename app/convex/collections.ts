@@ -1,9 +1,11 @@
 import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
+import { requireOwnerOrAdmin, canAccessOwner } from "./lib/auth";
 
 export const getByUser = query({
   args: { creatorId: v.string() },
   handler: async (ctx, { creatorId }) => {
+    if (!(await canAccessOwner(ctx, creatorId))) return [];
     return await ctx.db
       .query("collections")
       .withIndex("by_creator", (q) => q.eq("creator_id", creatorId))
@@ -17,6 +19,7 @@ export const create = mutation({
     creatorId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    if (args.creatorId) await requireOwnerOrAdmin(ctx, args.creatorId);
     return await ctx.db.insert("collections", {
       name: args.name,
       listing_ids: [],
@@ -36,6 +39,7 @@ export const toggleSave = mutation({
       .filter((q) => q.eq(q.field("_id"), args.collectionId))
       .first();
     if (!collection) return;
+    await requireOwnerOrAdmin(ctx, collection.creator_id);
 
     const ids = collection.listing_ids;
     const idx = ids.indexOf(args.listingId);
@@ -53,6 +57,9 @@ export const rename = mutation({
     name: v.string(),
   },
   handler: async (ctx, args) => {
+    const collection = await ctx.db.get(args.id as any);
+    if (!collection) return;
+    await requireOwnerOrAdmin(ctx, (collection as any).creator_id);
     await ctx.db.patch(args.id as any, { name: args.name });
   },
 });
@@ -60,6 +67,9 @@ export const rename = mutation({
 export const deleteCollection = mutation({
   args: { id: v.string() },
   handler: async (ctx, args) => {
+    const collection = await ctx.db.get(args.id as any);
+    if (!collection) return;
+    await requireOwnerOrAdmin(ctx, (collection as any).creator_id);
     await ctx.db.delete(args.id as any);
   },
 });
@@ -70,9 +80,19 @@ export const moveToListing = mutation({
     targetCollectionId: v.string(),
   },
   handler: async (ctx, args) => {
-    // Remove from all collections
-    const all = await ctx.db.query("collections").collect();
-    for (const col of all) {
+    const targetCollection = await ctx.db
+      .query("collections")
+      .filter((q) => q.eq(q.field("_id"), args.targetCollectionId))
+      .first();
+    if (!targetCollection) return;
+    await requireOwnerOrAdmin(ctx, targetCollection.creator_id);
+
+    // Remove from this user's other collections only
+    const mine = await ctx.db
+      .query("collections")
+      .withIndex("by_creator", (q) => q.eq("creator_id", targetCollection.creator_id))
+      .collect();
+    for (const col of mine) {
       const idx = col.listing_ids.indexOf(args.listingId);
       if (idx >= 0) {
         await ctx.db.patch(col._id, {
@@ -81,14 +101,8 @@ export const moveToListing = mutation({
       }
     }
     // Add to target
-    const targetCollection = await ctx.db
-      .query("collections")
-      .filter((q) => q.eq(q.field("_id"), args.targetCollectionId))
-      .first();
-    if (targetCollection) {
-      await ctx.db.patch(targetCollection._id, {
-        listing_ids: [...targetCollection.listing_ids, args.listingId],
-      });
-    }
+    await ctx.db.patch(targetCollection._id, {
+      listing_ids: [...targetCollection.listing_ids, args.listingId],
+    });
   },
 });

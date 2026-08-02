@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
+import { requireOwnerOrAdmin, requireAdmin, canAccessAdmin } from "./lib/auth";
 
 const REPORT_REASONS = [
   "inaccurate_information",
@@ -18,6 +19,7 @@ export const submitReport = mutation({
     details: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireOwnerOrAdmin(ctx, args.reporterId);
     const id = await ctx.db.insert("reports", {
       reported_user_id: args.reportedUserId,
       reporter_id: args.reporterId,
@@ -34,6 +36,7 @@ export const submitReport = mutation({
 export const getReports = query({
   args: {},
   handler: async (ctx) => {
+    if (!(await canAccessAdmin(ctx))) return [];
     const reports = await ctx.db.query("reports").order("desc").take(200);
     const profiles = await ctx.db.query("profiles").collect();
     const profileMap = Object.fromEntries(profiles.map((p) => [String(p._id), p]));
@@ -56,6 +59,7 @@ export const updateReportStatus = mutation({
     adminNote: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx);
     const patch: Record<string, any> = { status: args.status };
     if (args.adminNote) patch.admin_note = args.adminNote;
     await ctx.db.patch(args.reportId, patch);
@@ -66,6 +70,7 @@ export const updateReportStatus = mutation({
 export const dismissAllForUser = mutation({
   args: { reportedUserId: v.string() },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx);
     const reports = await ctx.db.query("reports").collect();
     const pending = reports.filter(
       (r) => r.reported_user_id === args.reportedUserId && r.status === "pending"

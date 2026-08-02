@@ -1,8 +1,10 @@
 import { v } from "convex/values";
-import { query, mutation } from "./_generated/server";
+import { query, mutation, internalMutation } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { calcMidpoint, calcStayOffset, calcHardFloor, evaluateZone, normalizeTierId, totalPoints } from "./lib/compensationPoints";
 import { approxCoords } from "./lib/geo";
+import { requireOwnerOrAdmin } from "./lib/auth";
+import { cleanPlainText, cleanOptionalUrl } from "./lib/sanitize";
 
 const dateRangesValidator = v.array(v.object({
   startDate: v.string(),
@@ -68,6 +70,41 @@ function validateListingFields(
       if (r.endDate < r.startDate) throw new Error("A date range cannot end before it starts.");
     }
   }
+}
+
+// Server-side sanitization for every free-text field a host can submit —
+// never rely on the create/edit form alone, since these mutations can be
+// called directly. Only returns the fields that need cleaning; callers
+// spread the result over the original args.
+function sanitizeListingFields(fields: Record<string, any>) {
+  const clean: Record<string, any> = {};
+  if (fields.title !== undefined) clean.title = cleanPlainText(fields.title, 150);
+  if (fields.location !== undefined) clean.location = cleanPlainText(fields.location, 200);
+  if (fields.host_name !== undefined) clean.host_name = cleanPlainText(fields.host_name, 150);
+  if (fields.location_city !== undefined) clean.location_city = cleanPlainText(fields.location_city, 100);
+  if (fields.location_country !== undefined) clean.location_country = cleanPlainText(fields.location_country, 100);
+  if (fields.collaboration_brief !== undefined) clean.collaboration_brief = cleanPlainText(fields.collaboration_brief, 2000);
+  if (fields.affiliate_code !== undefined) clean.affiliate_code = cleanPlainText(fields.affiliate_code, 50);
+  if (fields.revision_policy !== undefined) clean.revision_policy = cleanPlainText(fields.revision_policy, 500);
+  if (fields.usage_rights !== undefined) clean.usage_rights = cleanPlainText(fields.usage_rights, 500);
+  if (fields.property_url !== undefined) clean.property_url = cleanOptionalUrl(fields.property_url, "Property URL");
+  if (fields.amenities !== undefined) {
+    clean.amenities = fields.amenities.map((a: any) => ({ icon: cleanPlainText(a.icon, 10), label: cleanPlainText(a.label, 60) }));
+  }
+  if (fields.perks !== undefined) {
+    clean.perks = fields.perks.map((p: string) => cleanPlainText(p, 100));
+  }
+  if (fields.vibe_tags !== undefined) {
+    clean.vibe_tags = fields.vibe_tags.map((t: string) => cleanPlainText(t, 40));
+  }
+  if (fields.deliverables_list !== undefined) {
+    clean.deliverables_list = fields.deliverables_list.map((d: any) => ({
+      ...d,
+      description: cleanPlainText(d.description, 500),
+      usage_rights: d.usage_rights !== undefined ? cleanPlainText(d.usage_rights, 500) : d.usage_rights,
+    }));
+  }
+  return clean;
 }
 
 async function resolveImages(ctx: any, ids: string[] | undefined): Promise<string[]> {
@@ -401,6 +438,7 @@ export const create = mutation({
     stay_value: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
+    if (args.host_id) await requireOwnerOrAdmin(ctx, args.host_id);
     validateListingFields(args, { requireCompensation: true });
     // Publishing requires a verified host — pending hosts can only save drafts
     if (args.status === "published" && args.host_id) {
@@ -413,7 +451,7 @@ export const create = mutation({
     if (floor?.zone === "red") {
       throw new Error(`Compensation is below the minimum for this workload. The minimum for this listing is $${Math.round(floor.hardFloor)}.`);
     }
-    const id = await ctx.db.insert("listings", { ...args, below_recommended_comp: floor?.zone === "amber" });
+    const id = await ctx.db.insert("listings", { ...args, ...sanitizeListingFields(args), below_recommended_comp: floor?.zone === "amber" });
     // Geocode city/country → coords for the Explore map (skipped for samples).
     if (args.location_city || args.location_country || args.location) {
       await ctx.scheduler.runAfter(0, internal.geocode.geocodeListing, { listingId: id });
@@ -466,9 +504,10 @@ export const update = mutation({
   },
   handler: async (ctx, args) => {
     const { id, ...fields } = args;
-    validateListingFields(fields);
     const existing = await ctx.db.get(id);
     if (!existing) throw new Error("Listing not found.");
+    await requireOwnerOrAdmin(ctx, (existing as any).host_id);
+    validateListingFields(fields);
     // Sample listings are permanently locked to draft — no UI path may publish them
     if ((existing as any).is_sample === true && fields.status && fields.status !== "draft") {
       throw new Error("Sample listings can't be published — they stay drafts. Create your own listing to go live.");
@@ -480,7 +519,7 @@ export const update = mutation({
         throw new Error("Your account is pending verification. You can save this listing as a draft — publishing unlocks once you're approved.");
       }
     }
-    const patch: any = { ...fields };
+    const patch: any = { ...fields, ...sanitizeListingFields(fields) };
     const nextType = fields.compensation_type ?? (existing as any).compensation_type;
     const nextCash = fields.cash_amount ?? (existing as any).cash_amount;
     if (
@@ -521,6 +560,9 @@ export const update = mutation({
 export const deleteListing = mutation({
   args: { id: v.id("listings") },
   handler: async (ctx, args) => {
+    const existing = await ctx.db.get(args.id);
+    if (!existing) return;
+    await requireOwnerOrAdmin(ctx, (existing as any).host_id);
     await ctx.db.delete(args.id);
   },
 });
@@ -804,7 +846,7 @@ const SAMPLE_LISTINGS = [
       },
 ];
 
-export const seedSampleListings = mutation({
+export const seedSampleListings = internalMutation({
   args: {
     host_id: v.string(),
     host_name: v.string(),
@@ -836,7 +878,7 @@ export const seedSampleListings = mutation({
 // - locks every sample to status "draft"
 // - resets each sample's gallery to the cleaned canonical photo set
 // Run with: npx convex run listings:syncSampleListings
-export const syncSampleListings = mutation({
+export const syncSampleListings = internalMutation({
   args: {},
   handler: async (ctx) => {
     const profiles = await ctx.db.query("profiles").collect();
@@ -895,7 +937,7 @@ const SAMPLE_CANONICAL: Record<string, string> = {
   "Desert Dome Glamping": "Paphos",
 };
 
-export const cleanupSampleListings = mutation({
+export const cleanupSampleListings = internalMutation({
   args: {},
   handler: async (ctx) => {
     const profiles = await ctx.db.query("profiles").collect();
@@ -945,7 +987,7 @@ export const cleanupSampleListings = mutation({
 //   host adds compensation.
 // - 'cash' is normalized to 'paid'.
 // Run with: npx convex run listings:migrateLegacyCompensation
-export const migrateLegacyCompensation = mutation({
+export const migrateLegacyCompensation = internalMutation({
   args: {},
   handler: async (ctx) => {
     const all = await ctx.db.query("listings").collect();

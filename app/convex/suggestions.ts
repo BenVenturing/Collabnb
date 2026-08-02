@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
+import { requireAdmin, requireOwnerOrAdmin, canAccessAdmin } from "./lib/auth";
 
 const SEED_SUGGESTIONS = [
   "Integrated payment processing between hosts and creators",
@@ -31,6 +32,7 @@ export const getSuggestions = query({
 export const getAdminSuggestions = query({
   args: {},
   handler: async (ctx) => {
+    if (!(await canAccessAdmin(ctx))) return [];
     const suggestions = await ctx.db.query("suggestions").collect();
     const allVotes = await ctx.db.query("suggestion_votes").collect();
     return suggestions
@@ -50,6 +52,7 @@ export const updateStatus = mutation({
     status: v.string(),
   },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx);
     await ctx.db.patch(args.suggestionId, { status: args.status });
   },
 });
@@ -68,6 +71,7 @@ export const seedSuggestions = mutation({
 export const submitSuggestion = mutation({
   args: { text: v.string(), userId: v.optional(v.string()) },
   handler: async (ctx, { text, userId }) => {
+    if (userId) await requireOwnerOrAdmin(ctx, userId);
     return await ctx.db.insert("suggestions", { text, submitted_by: userId });
   },
 });
@@ -79,6 +83,7 @@ export const vote = mutation({
     direction: v.literal("up"),
   },
   handler: async (ctx, { suggestionId, userId }) => {
+    await requireOwnerOrAdmin(ctx, userId);
     const existing = await ctx.db
       .query("suggestion_votes")
       .withIndex("by_user_suggestion", (q) =>

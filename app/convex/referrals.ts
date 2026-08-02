@@ -1,5 +1,6 @@
 import { v } from "convex/values";
-import { query, mutation } from "./_generated/server";
+import { query, mutation, internalMutation } from "./_generated/server";
+import { requireOwnerOrAdmin, canAccessOwner } from "./lib/auth";
 
 function makeCode(username: string): string {
   const prefix = username.replace(/[^a-z0-9]/gi, "").toUpperCase().slice(0, 4) || "USER";
@@ -10,6 +11,7 @@ function makeCode(username: string): string {
 export const getMyCode = query({
   args: { profileId: v.string() },
   handler: async (ctx, args) => {
+    if (!(await canAccessOwner(ctx, args.profileId))) return null;
     const codeDoc = await ctx.db
       .query("referral_codes")
       .withIndex("by_owner", (q) => q.eq("owner_id", args.profileId))
@@ -47,6 +49,7 @@ export const validateCode = query({
 export const ensureCode = mutation({
   args: { profileId: v.string(), username: v.string() },
   handler: async (ctx, args) => {
+    await requireOwnerOrAdmin(ctx, args.profileId);
     const existing = await ctx.db
       .query("referral_codes")
       .withIndex("by_owner", (q) => q.eq("owner_id", args.profileId))
@@ -81,6 +84,7 @@ export const ensureCode = mutation({
 export const applyReferralCode = mutation({
   args: { code: v.string(), newUserId: v.string() },
   handler: async (ctx, args) => {
+    await requireOwnerOrAdmin(ctx, args.newUserId);
     const upperCode = args.code.trim().toUpperCase();
 
     const codeDoc = await ctx.db
@@ -137,7 +141,7 @@ export const applyReferralCode = mutation({
   },
 });
 
-export const awardFirstCollabBonus = mutation({
+export const awardFirstCollabBonus = internalMutation({
   args: { creatorId: v.string() },
   handler: async (ctx, args) => {
     const uses = await ctx.db

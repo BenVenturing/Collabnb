@@ -1,10 +1,12 @@
 import { v } from "convex/values";
-import { query, mutation } from "./_generated/server";
+import { query, mutation, internalMutation } from "./_generated/server";
 import { internal } from "./_generated/api";
+import { requireOwnerOrAdmin, requireAuthedProfile, canAccessOwner, getAuthedProfile } from "./lib/auth";
 
 export const getByCreator = query({
   args: { creatorId: v.string() },
   handler: async (ctx, args) => {
+    if (!(await canAccessOwner(ctx, args.creatorId))) return [];
     return await ctx.db
       .query("collaborations")
       .withIndex("by_creator", (q) => q.eq("creator_id", args.creatorId))
@@ -15,6 +17,7 @@ export const getByCreator = query({
 export const getById = query({
   args: { id: v.string() },
   handler: async (ctx, args) => {
+    if (!(await getAuthedProfile(ctx))) return null;
     return await ctx.db
       .query("collaborations")
       .filter((q) => q.eq(q.field("_id"), args.id))
@@ -35,6 +38,7 @@ export const create = mutation({
     pitchMessage: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    if (args.creatorId) await requireOwnerOrAdmin(ctx, args.creatorId);
     const now = new Date().toLocaleDateString("en-US", {
       month: "short",
       day: "numeric",
@@ -81,6 +85,7 @@ export const markCompleted = mutation({
     contractId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    if (args.creatorId) await requireOwnerOrAdmin(ctx, args.creatorId);
     if (args.id) {
       await ctx.db.patch(args.id as any, {
         status: 'completed',
@@ -158,6 +163,7 @@ export const advanceStage = mutation({
     nextStage: v.string(),
   },
   handler: async (ctx, args) => {
+    await requireAuthedProfile(ctx);
     const collab = await ctx.db
       .query("collaborations")
       .filter((q) => q.eq(q.field("_id"), args.id))
@@ -202,7 +208,7 @@ const SAMPLE_COLLAB_PLAN: Record<
 
 // One-time cleanup: remove leftover non-sample collaborations (old test rows that
 // reference now-deleted listings). Leaves the seeded is_sample collaborations intact.
-export const deleteNonSampleCollaborations = mutation({
+export const deleteNonSampleCollaborations = internalMutation({
   args: {},
   handler: async (ctx) => {
     const all = await ctx.db.query("collaborations").collect();
@@ -217,7 +223,7 @@ export const deleteNonSampleCollaborations = mutation({
   },
 });
 
-export const seedSampleCollaborations = mutation({
+export const seedSampleCollaborations = internalMutation({
   args: {},
   handler: async (ctx) => {
     // Idempotency — clear existing sample collaborations

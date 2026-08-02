@@ -3,6 +3,7 @@ import { api, internal } from './_generated/api';
 import { v } from 'convex/values';
 import Stripe from 'stripe';
 import { computeFee } from './fees';
+import { requireAdminAction, requireOwnerOrAdminAction } from './lib/auth';
 
 // Tiered lifetime pricing — price rises as more spots are purchased.
 // First 50 buyers: $100, next 50: $125, next 50: $150, final 50: $200.
@@ -142,7 +143,7 @@ export const verifySubscriptionSession = action({
       ? session.customer
       : session.customer?.id ?? null;
 
-    await ctx.runMutation(api.profiles.updateSubscription, {
+    await ctx.runMutation(internal.profiles.updateSubscription, {
       profileId,
       subscriptionStatus: 'active',
       subscriptionTier: tier,
@@ -528,6 +529,7 @@ export const forwardCreatorPayout = internalAction({
 export const releasePayoutNow = action({
   args: { contractId: v.string() },
   handler: async (ctx, args) => {
+    await requireAdminAction(ctx, api.profiles.getByEmail);
     const contract = await ctx.runQuery(internal.contracts.getByIdInternal, { id: args.contractId });
     if (!contract) throw new Error('Contract not found');
     if (contract.creator_payout_status === 'paid') throw new Error('This contract has already been paid out');
@@ -557,6 +559,7 @@ export const releasePayoutNow = action({
 export const createConnectOnboardingLink = action({
   args: { profileId: v.string(), refreshUrl: v.string(), returnUrl: v.string() },
   handler: async (ctx, args) => {
+    await requireOwnerOrAdminAction(ctx, args.profileId, api.profiles.getByEmail);
     const secretKey = process.env.STRIPE_SECRET_KEY;
     if (!secretKey) throw new Error('STRIPE_SECRET_KEY is not set in Convex environment variables');
     const stripe = new Stripe(secretKey);
@@ -589,6 +592,23 @@ export const createConnectOnboardingLink = action({
 const wiseBaseUrl = () =>
   process.env.WISE_ENV === 'sandbox' ? 'https://api.sandbox.transferwise.tech' : 'https://api.wise.com';
 
+// One-off lookup: run via `npx convex run stripe:listWiseProfiles --prod`
+// once WISE_API_TOKEN is set, to find your WISE_PROFILE_ID (the business
+// profile id, distinct from the API token) without hunting through Wise's UI.
+export const listWiseProfiles = action({
+  args: {},
+  handler: async (ctx) => {
+    await requireAdminAction(ctx, api.profiles.getByEmail);
+    const token = process.env.WISE_API_TOKEN;
+    if (!token) throw new Error('WISE_API_TOKEN is not set in Convex environment variables');
+    const res = await fetch(`${wiseBaseUrl()}/v2/profiles`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error(`Wise profiles lookup failed: ${res.status} ${await res.text()}`);
+    return await res.json();
+  },
+});
+
 // Creator connects Wise — creates a recipient account to receive payouts.
 // `type`/`details` shape depends on currency/country per Wise's API; passed
 // through from the client form as-is. NOTE: verify the exact required fields
@@ -603,6 +623,7 @@ export const createWiseRecipient = action({
     details: v.any(),
   },
   handler: async (ctx, args) => {
+    await requireOwnerOrAdminAction(ctx, args.profileId, api.profiles.getByEmail);
     const token = process.env.WISE_API_TOKEN;
     const wiseProfileId = process.env.WISE_PROFILE_ID;
     if (!token || !wiseProfileId) throw new Error('WISE_API_TOKEN/WISE_PROFILE_ID are not set in Convex environment variables');
@@ -637,6 +658,7 @@ export const createWiseRecipient = action({
 export const sendWisePayout = action({
   args: { contractId: v.string() },
   handler: async (ctx, args) => {
+    await requireAdminAction(ctx, api.profiles.getByEmail);
     const token = process.env.WISE_API_TOKEN;
     const wiseProfileId = process.env.WISE_PROFILE_ID;
     if (!token || !wiseProfileId) throw new Error('WISE_API_TOKEN/WISE_PROFILE_ID are not set in Convex environment variables');

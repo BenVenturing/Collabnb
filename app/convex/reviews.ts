@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { internal } from "./_generated/api";
+import { requireOwnerOrAdmin } from "./lib/auth";
 
 // Mutual ratings collected while closing out a collaboration. One review per
 // party per collab; the first submission also triggers the Trustpilot invite.
@@ -18,6 +19,7 @@ export const submit = mutation({
     propertyName: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    if (args.reviewerId) await requireOwnerOrAdmin(ctx, args.reviewerId);
     if (args.reviewerRole !== "creator" && args.reviewerRole !== "host") {
       throw new Error("reviewerRole must be 'creator' or 'host'");
     }

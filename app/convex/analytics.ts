@@ -1,5 +1,6 @@
 import { internalMutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import { requireAdmin, canAccessAdmin } from "./lib/auth";
 
 // ─── Ingestion ──────────────────────────────────────────────────────────────
 // Called only from the /track HTTP action (see http.ts). One call carries a
@@ -151,6 +152,7 @@ function topN(map: Map<string, number>, n: number) {
 export const getMarketingAnalytics = query({
   args: { days: v.optional(v.number()) },
   handler: async (ctx, { days }) => {
+    if (!(await canAccessAdmin(ctx))) return {};
     const window = days ?? 30;
     const cutoff = Date.now() - window * 24 * 60 * 60 * 1000;
 

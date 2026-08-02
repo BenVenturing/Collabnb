@@ -3,10 +3,12 @@ import { query, mutation, internalMutation, internalQuery } from "./_generated/s
 import { internal } from "./_generated/api";
 import { recordEarningForContract } from "./ambassadors";
 import { mergedCopy, fill } from "./emailCopy";
+import { requireAdmin, requireOwnerOrAdmin, requireAuthedProfile, canAccessAdmin, canAccessOwner } from "./lib/auth";
 
 export const getAll = query({
   args: {},
   handler: async (ctx) => {
+    if (!(await canAccessAdmin(ctx))) return [];
     return await ctx.db.query("contracts").collect();
   },
 });
@@ -15,6 +17,7 @@ export const getAll = query({
 export const remove = mutation({
   args: { contractId: v.id("contracts") },
   handler: async (ctx, { contractId }) => {
+    await requireAdmin(ctx);
     const contract = await ctx.db.get(contractId);
     if (!contract) return { deleted: false, reason: "not_found" };
     await ctx.db.delete(contractId);
@@ -27,6 +30,7 @@ export const remove = mutation({
 export const setHandled = mutation({
   args: { contractId: v.id("contracts"), handled: v.boolean() },
   handler: async (ctx, { contractId, handled }) => {
+    await requireAdmin(ctx);
     await ctx.db.patch(contractId, {
       admin_dismissed: handled,
       admin_dismissed_at: handled ? Date.now() : undefined,
@@ -38,6 +42,7 @@ export const setHandled = mutation({
 export const getByOwner = query({
   args: { ownerId: v.string() },
   handler: async (ctx, args) => {
+    if (!(await canAccessOwner(ctx, args.ownerId))) return [];
     return await ctx.db
       .query("contracts")
       .withIndex("by_owner", (q) => q.eq("owner_id", args.ownerId))
@@ -49,6 +54,7 @@ export const getByOwner = query({
 export const getForParty = query({
   args: { userId: v.string() },
   handler: async (ctx, { userId }) => {
+    if (!(await canAccessOwner(ctx, userId))) return [];
     const [owned, asHost, asCreator] = await Promise.all([
       ctx.db.query("contracts").withIndex("by_owner", (q) => q.eq("owner_id", userId)).collect(),
       ctx.db.query("contracts").withIndex("by_host", (q) => q.eq("host_id", userId)).collect(),
@@ -81,6 +87,7 @@ export const save = mutation({
     summaryNote: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    if (args.ownerId) await requireOwnerOrAdmin(ctx, args.ownerId);
     return await ctx.db.insert("contracts", {
       owner_id: args.ownerId,
       host_id: args.hostId,
@@ -129,6 +136,15 @@ export const update = mutation({
   },
   handler: async (ctx, args) => {
     const before = await ctx.db.get(args.id as any);
+    if (before) {
+      const b = before as any;
+      const caller = await requireAuthedProfile(ctx);
+      const me = String(caller._id);
+      const isParty = [b.owner_id, b.host_id, b.creator_id].some((p) => p === me);
+      if (caller.is_admin !== true && !isParty) {
+        throw new Error("You don't have permission to do that.");
+      }
+    }
     const cleanUpdates: Record<string, any> = Object.fromEntries(
       Object.entries(args.updates).filter(([, val]) => val !== undefined)
     );
@@ -205,6 +221,16 @@ export const update = mutation({
 export const markSent = mutation({
   args: { id: v.string(), recipientParty: v.optional(v.string()) },
   handler: async (ctx, { id, recipientParty }) => {
+    const existing = await ctx.db.get(id as any);
+    if (existing) {
+      const b = existing as any;
+      const caller = await requireAuthedProfile(ctx);
+      const me = String(caller._id);
+      const isParty = [b.owner_id, b.host_id, b.creator_id].some((p) => p === me);
+      if (caller.is_admin !== true && !isParty) {
+        throw new Error("You don't have permission to do that.");
+      }
+    }
     await ctx.db.patch(id as any, { sent_at: Date.now() });
 
     const contract = await ctx.db.get(id as any);
@@ -374,6 +400,7 @@ function reminderCopy(party: string, propertyLabel: string) {
 export const promptParty = mutation({
   args: { contractId: v.string(), party: v.string() },
   handler: async (ctx, { contractId, party }) => {
+    await requireAdmin(ctx);
     const contract = await ctx.db.get(contractId as any);
     if (!contract) return { ok: false, reason: "not_found" };
     const recipientId = await resolvePartyId(ctx, contract, party);
@@ -601,7 +628,23 @@ export const schedulePayoutHold = internalMutation({
 export const setPayoutHold = mutation({
   args: { contractId: v.string(), held: v.boolean() },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx);
     await ctx.db.patch(args.contractId as any, { creator_payout_held: args.held });
+  },
+});
+
+// Called from the Wise webhook when a previously-"paid" transfer later
+// bounces/reverses — reality overriding the optimistic status set right
+// after sendWisePayout's synchronous quote→transfer→fund calls succeeded.
+export const markPayoutFailedByReference = internalMutation({
+  args: { reference: v.string() },
+  handler: async (ctx, args) => {
+    const contract = await ctx.db
+      .query("contracts")
+      .withIndex("by_payout_reference", (q) => q.eq("creator_payout_reference", args.reference))
+      .unique();
+    if (!contract) return;
+    await ctx.db.patch(contract._id, { creator_payout_status: "failed" });
   },
 });
 

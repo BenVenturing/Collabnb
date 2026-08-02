@@ -43,6 +43,15 @@ async function verifySvixSignature(
   }
 }
 
+// Clerk's dashboard does a plain reachability check (GET/HEAD, no signature)
+// before it'll accept a webhook URL — respond 200 so the endpoint "verifies",
+// without needing any real event handling here.
+http.route({
+  path: "/clerk-webhook",
+  method: "GET",
+  handler: httpAction(async () => new Response("OK", { status: 200 })),
+});
+
 // Clerk webhook — called when a user is created/updated in Clerk
 // Links existing waitlist profile by email, or creates a new Convex profile
 http.route({
@@ -56,14 +65,17 @@ http.route({
 
     const rawBody = await request.text();
 
-    // If secret is configured, require a valid signature.
+    // If secret is configured, require a valid signature to actually process
+    // an event — but still return 200 for anything unsigned (e.g. Clerk's
+    // own URL-verification ping) rather than erroring, so the endpoint reads
+    // as reachable. Unsigned/invalid requests are simply never acted on.
     if (secret) {
       if (!svixId || !svixTimestamp || !svixSignature) {
-        return new Response("Missing webhook headers", { status: 401 });
+        return new Response("OK", { status: 200 });
       }
       const valid = await verifySvixSignature(secret, svixId, svixTimestamp, svixSignature, rawBody);
       if (!valid) {
-        return new Response("Invalid webhook signature", { status: 401 });
+        return new Response("OK", { status: 200 });
       }
     }
 
@@ -216,7 +228,7 @@ http.route({
             // customer.subscription.updated will backfill the period end.
           }
         }
-        await ctx.runMutation(api.profiles.updateSubscription, {
+        await ctx.runMutation(internal.profiles.updateSubscription, {
           profileId: session.metadata.profileId,
           subscriptionStatus: "active",
           subscriptionTier: session.metadata.tier || "monthly",
@@ -347,6 +359,50 @@ http.route({
       // Never fail a beacon — telemetry must not surface errors to the client.
     }
     return new Response(null, { status: 204, headers: analyticsCors });
+  }),
+});
+
+// Wise webhook — transfer state changes, so a payout's status reflects
+// reality instead of only the optimistic synchronous result from
+// stripe.js's sendWisePayout (which marks "paid" as soon as the quote→
+// transfer→fund calls succeed, before the transfer has actually settled).
+// NOTE: signature verification (Wise signs with RSA-SHA256 against their
+// public key, not a shared HMAC secret like Stripe) is not implemented yet —
+// the exact payload shape and header name should be confirmed against a real
+// sandbox delivery before this handles production volume.
+// Wise's dashboard, like Clerk's, does a plain reachability check (GET/HEAD)
+// before it'll accept the webhook URL.
+http.route({
+  path: "/wise-webhook",
+  method: "GET",
+  handler: httpAction(async () => new Response("OK", { status: 200 })),
+});
+
+http.route({
+  path: "/wise-webhook",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    let event: any;
+    try {
+      event = JSON.parse(await request.text());
+    } catch {
+      return new Response("Invalid JSON", { status: 400 });
+    }
+
+    const eventType = event?.event_type;
+    const resource = event?.data?.resource;
+    const currentState = event?.data?.current_state;
+
+    if (eventType === "transfers#state-change" && resource?.type === "transfer") {
+      const bounced = ["funds_refunded", "bounced_back", "cancelled", "charged_back"].includes(currentState);
+      if (bounced) {
+        await ctx.runMutation(internal.contracts.markPayoutFailedByReference, {
+          reference: String(resource.id),
+        });
+      }
+    }
+
+    return new Response("OK", { status: 200 });
   }),
 });
 

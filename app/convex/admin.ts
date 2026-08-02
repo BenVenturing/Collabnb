@@ -1,11 +1,13 @@
 import { v } from "convex/values";
 import { query, mutation, action, internalMutation } from "./_generated/server";
 import { internal, api } from "./_generated/api";
+import { requireAdmin, requireAdminAction, canAccessAdmin } from "./lib/auth";
 
 // ─── Analytics ────────────────────────────────────────────────────────────────
 export const getAnalytics = query({
   args: {},
   handler: async (ctx) => {
+    if (!(await canAccessAdmin(ctx))) return {};
     const [profiles, listings, collabs, pitchCounts] = await Promise.all([
       ctx.db.query("profiles").collect(),
       ctx.db.query("listings").collect(),
@@ -97,6 +99,7 @@ export const getAnalytics = query({
 export const getSettings = query({
   args: {},
   handler: async (ctx) => {
+    if (!(await canAccessAdmin(ctx))) return {};
     const rows = await ctx.db.query("admin_settings").collect();
     return Object.fromEntries(rows.map((r) => [r.key, r.value]));
   },
@@ -105,6 +108,7 @@ export const getSettings = query({
 export const setSetting = mutation({
   args: { key: v.string(), value: v.string() },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx);
     const existing = await ctx.db
       .query("admin_settings")
       .withIndex("by_key", (q) => q.eq("key", args.key))
@@ -145,6 +149,7 @@ export const getFounderCounts = query({
 export const getFounders = query({
   args: {},
   handler: async (ctx) => {
+    if (!(await canAccessAdmin(ctx))) return [];
     const [profiles, collabs] = await Promise.all([
       ctx.db.query("profiles").collect(),
       ctx.db.query("collaborations").collect(),
@@ -183,6 +188,7 @@ export const getFounders = query({
 export const getEmailList = query({
   args: { audience: v.string() },
   handler: async (ctx, { audience }) => {
+    if (!(await canAccessAdmin(ctx))) return [];
     const profiles = await ctx.db.query("profiles").collect();
 
     let pool = profiles.filter((p) => p.is_verified === true);
@@ -200,6 +206,7 @@ export const getEmailList = query({
 export const getPitchAnalytics = query({
   args: {},
   handler: async (ctx) => {
+    if (!(await canAccessAdmin(ctx))) return {};
     const [pitchCounts, profiles] = await Promise.all([
       ctx.db.query("pitch_counts").collect(),
       ctx.db.query("profiles").collect(),
@@ -266,6 +273,7 @@ export const getPitchAnalytics = query({
 export const getGeographicDistribution = query({
   args: {},
   handler: async (ctx) => {
+    if (!(await canAccessAdmin(ctx))) return {};
     const profiles = await ctx.db.query("profiles").collect();
 
     const countries: Record<string, number> = {};
@@ -310,6 +318,7 @@ export const getGeographicDistribution = query({
 export const getAdminListings = query({
   args: {},
   handler: async (ctx) => {
+    if (!(await canAccessAdmin(ctx))) return [];
     const [listings, collabs] = await Promise.all([
       ctx.db.query("listings").collect(),
       ctx.db.query("collaborations").collect(),
@@ -351,6 +360,7 @@ export const getAdminListings = query({
 export const toggleFeatured = mutation({
   args: { listingId: v.id("listings"), featured: v.boolean() },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx);
     await ctx.db.patch(args.listingId, { is_featured: args.featured });
   },
 });
@@ -361,6 +371,7 @@ export const toggleFeatured = mutation({
 export const getFunnelAnalytics = query({
   args: {},
   handler: async (ctx) => {
+    if (!(await canAccessAdmin(ctx))) return {};
     const [profiles, collabs] = await Promise.all([
       ctx.db.query("profiles").collect(),
       ctx.db.query("collaborations").collect(),
@@ -404,6 +415,7 @@ export const getFunnelAnalytics = query({
 export const getReferralAnalytics = query({
   args: {},
   handler: async (ctx) => {
+    if (!(await canAccessAdmin(ctx))) return {};
     const [profiles, refCodes, refUses] = await Promise.all([
       ctx.db.query("profiles").collect(),
       ctx.db.query("referral_codes").collect(),
@@ -440,6 +452,7 @@ export const getReferralAnalytics = query({
 export const getAuditLog = query({
   args: {},
   handler: async (ctx) => {
+    if (!(await canAccessAdmin(ctx))) return [];
     return await ctx.db.query("admin_audit_log").order("desc").take(100);
   },
 });
@@ -447,6 +460,7 @@ export const getAuditLog = query({
 export const addAuditEntry = mutation({
   args: { action: v.string(), targetType: v.string(), targetId: v.string(), details: v.optional(v.string()) },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx);
     await ctx.db.insert("admin_audit_log", {
       action: args.action,
       target_type: args.targetType,
@@ -463,6 +477,7 @@ export const addAuditEntry = mutation({
 export const saveBroadcast = mutation({
   args: { audience: v.string(), subject: v.string(), recipientCount: v.number() },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx);
     await ctx.db.insert("broadcasts", {
       audience: args.audience,
       subject: args.subject,
@@ -475,6 +490,7 @@ export const saveBroadcast = mutation({
 export const getBroadcasts = query({
   args: {},
   handler: async (ctx) => {
+    if (!(await canAccessAdmin(ctx))) return [];
     return await ctx.db.query("broadcasts").order("desc").take(50);
   },
 });
@@ -495,6 +511,7 @@ export const saveBroadcastInternal = internalMutation({
 export const broadcastSend = action({
   args: { audience: v.string(), subject: v.string(), body: v.string() },
   handler: async (ctx, { audience, subject, body }) => {
+    await requireAdminAction(ctx, api.profiles.getByEmail);
     const recipients: { email: string; full_name: string; role: string }[] =
       await ctx.runQuery(api.admin.getEmailList, { audience });
     if (!recipients.length) return { sent: 0 };
@@ -557,6 +574,7 @@ export const broadcastSend = action({
 export const searchAllProfiles = query({
   args: { query: v.string(), role: v.optional(v.string()), limit: v.optional(v.number()) },
   handler: async (ctx, args) => {
+    if (!(await canAccessAdmin(ctx))) return [];
     let profiles = await ctx.db.query("profiles").collect();
     const q = args.query.toLowerCase();
     profiles = profiles.filter(
@@ -589,6 +607,7 @@ export const searchAllProfiles = query({
 export const bulkApproveProfiles = mutation({
   args: { profileIds: v.array(v.id("profiles")), isFounder: v.boolean() },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx);
     for (const profileId of args.profileIds) {
       const profile = await ctx.db.get(profileId);
       if (!profile) continue;
@@ -611,6 +630,7 @@ export const bulkApproveProfiles = mutation({
 export const bulkRejectProfiles = mutation({
   args: { profileIds: v.array(v.id("profiles")), reason: v.optional(v.string()) },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx);
     for (const profileId of args.profileIds) {
       const profile = await ctx.db.get(profileId);
       if (!profile) continue;
@@ -629,6 +649,7 @@ export const bulkRejectProfiles = mutation({
 export const getAllCollabs = query({
   args: {},
   handler: async (ctx) => {
+    if (!(await canAccessAdmin(ctx))) return [];
     const collabs = await ctx.db.query("collaborations").collect();
     return collabs.sort((a, b) => (b._creationTime ?? 0) - (a._creationTime ?? 0));
   },

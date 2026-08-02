@@ -2,6 +2,7 @@ import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { totalPoints, normalizeTierId, calcMidpoint, calcHardFloor, evaluateZone } from "./lib/compensationPoints";
+import { requireOwnerOrAdmin, canAccessOwner } from "./lib/auth";
 
 function currentMonthKey(): string {
   const now = new Date();
@@ -11,6 +12,7 @@ function currentMonthKey(): string {
 export const checkAndIncrement = mutation({
   args: { userId: v.string() },
   handler: async (ctx, { userId }) => {
+    await requireOwnerOrAdmin(ctx, userId);
     const monthKey = currentMonthKey();
     const existing = await ctx.db
       .query("pitch_counts")
@@ -40,6 +42,7 @@ export const checkAndIncrement = mutation({
 export const getCount = query({
   args: { userId: v.string() },
   handler: async (ctx, { userId }) => {
+    if (!(await canAccessOwner(ctx, userId))) return 0;
     const monthKey = currentMonthKey();
     const existing = await ctx.db
       .query("pitch_counts")
@@ -69,6 +72,7 @@ export const create = mutation({
     threadKey: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireOwnerOrAdmin(ctx, args.creatorId);
     // Server-side access gate — mirrors the canViewFull rule in listings.ts.
     // The UI hides Apply for locked-out creators, but that's bypassable via a
     // direct mutation call, so it must also be enforced here.
@@ -140,6 +144,7 @@ export const create = mutation({
 export const getByHost = query({
   args: { hostId: v.string() },
   handler: async (ctx, { hostId }) => {
+    if (!(await canAccessOwner(ctx, hostId))) return [];
     // Primary: pitches that already have host_id stamped
     const byHostId = await ctx.db
       .query("pitches")
@@ -177,6 +182,8 @@ export const getByHost = query({
 export const getByListing = query({
   args: { listingId: v.string() },
   handler: async (ctx, { listingId }) => {
+    const listing = await ctx.db.get(listingId as any);
+    if (!(await canAccessOwner(ctx, (listing as any)?.host_id))) return [];
     return ctx.db
       .query("pitches")
       .withIndex("by_listing", (q) => q.eq("listing_id", listingId))
@@ -188,6 +195,7 @@ export const getByListing = query({
 export const getByCreator = query({
   args: { creatorId: v.string() },
   handler: async (ctx, { creatorId }) => {
+    if (!(await canAccessOwner(ctx, creatorId))) return [];
     return ctx.db
       .query("pitches")
       .withIndex("by_creator", (q) => q.eq("creator_id", creatorId))
@@ -203,12 +211,13 @@ export const updateStatus = mutation({
     hostNote: v.optional(v.string()),
   },
   handler: async (ctx, { id, status, hostNote }) => {
+    const pitch = await ctx.db.get(id);
+    if (!pitch) return;
+    await requireOwnerOrAdmin(ctx, pitch.host_id);
+
     const updates: Record<string, unknown> = { status };
     if (hostNote !== undefined) updates.host_note = hostNote;
     await ctx.db.patch(id, updates);
-
-    const pitch = await ctx.db.get(id);
-    if (!pitch) return;
 
     if (status === "approved" || status === "declined") {
       const title = status === "approved"
@@ -285,6 +294,7 @@ export const sendCounter = mutation({
   handler: async (ctx, { id, fromParty, fields, note }) => {
     const pitch = await ctx.db.get(id);
     if (!pitch) return;
+    await requireOwnerOrAdmin(ctx, fromParty === "host" ? pitch.host_id : pitch.creator_id);
 
     // Three-zone floor — a negotiation can never settle below the hard floor
     // for whatever deliverable set it proposes. Server-side is the source of
@@ -361,6 +371,7 @@ export const signContract = mutation({
   handler: async (ctx, { id, party, signerName }) => {
     const pitch = await ctx.db.get(id);
     if (!pitch) return;
+    await requireOwnerOrAdmin(ctx, party === "host" ? pitch.host_id : pitch.creator_id);
 
     const history = parseJSON<any[]>(pitch.contract_history, []);
     const version = history.length;

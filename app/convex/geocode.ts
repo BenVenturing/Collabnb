@@ -1,4 +1,4 @@
-import { action, internalAction, internalMutation, internalQuery } from "./_generated/server";
+import { internalAction, internalMutation, internalQuery } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { v } from "convex/values";
 
@@ -83,7 +83,7 @@ export const geocodeListing = internalAction({
 
 // ── one-shot backfill for every real listing missing coordinates ───────────────
 // Run once after deploy:  npx convex run geocode:backfillListingCoords
-export const backfillListingCoords = action({
+export const backfillListingCoords = internalAction({
   args: {},
   handler: async (ctx) => {
     const rows: any[] = await ctx.runQuery(internal.geocode.listingsNeedingCoords, {});

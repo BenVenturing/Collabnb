@@ -1,6 +1,7 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import type { MutationCtx } from "./_generated/server";
+import { requireAdmin, canAccessAdmin } from "./lib/auth";
 
 // ─── Ambassador program (beta) ────────────────────────────────────────────────
 // Regional partners ("Collabnb Ambassadors") earn a share of the platform fee
@@ -193,6 +194,7 @@ export async function recordEarningForContract(ctx: MutationCtx, contract: any, 
 export const adminListApplications = query({
   args: {},
   handler: async (ctx) => {
+    if (!(await canAccessAdmin(ctx))) return [];
     const apps = await ctx.db.query("ambassador_applications").collect();
     return apps.sort((a, b) => b.created_at - a.created_at);
   },
@@ -205,6 +207,7 @@ export const adminReviewApplication = mutation({
     note: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx);
     const app = await ctx.db.get(args.id);
     if (!app) throw new Error("Application not found");
 
@@ -251,6 +254,7 @@ export const adminReviewApplication = mutation({
 export const adminListRegions = query({
   args: {},
   handler: async (ctx) => {
+    if (!(await canAccessAdmin(ctx))) return [];
     const regions = await mergedRegions(ctx);
     const earnings = await ctx.db.query("ambassador_earnings").collect();
     return regions.map((r: any) => {
@@ -286,6 +290,7 @@ export const adminUpsertRegion = mutation({
     tier2_threshold: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx);
     const existing = await ctx.db
       .query("ambassador_regions")
       .withIndex("by_slug", (q) => q.eq("slug", args.slug))
@@ -301,6 +306,7 @@ export const adminUpsertRegion = mutation({
 export const adminListEarnings = query({
   args: {},
   handler: async (ctx) => {
+    if (!(await canAccessAdmin(ctx))) return [];
     const earnings = await ctx.db.query("ambassador_earnings").collect();
     const now = Date.now();
     return earnings
@@ -315,6 +321,7 @@ export const adminListEarnings = query({
 export const adminMarkEarningsPaid = mutation({
   args: { ids: v.array(v.id("ambassador_earnings")), note: v.optional(v.string()) },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx);
     let total = 0;
     for (const id of args.ids) {
       const e = await ctx.db.get(id);
@@ -336,6 +343,7 @@ export const adminMarkEarningsPaid = mutation({
 export const adminReverseEarning = mutation({
   args: { id: v.id("ambassador_earnings") },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx);
     const e = await ctx.db.get(args.id);
     if (!e || e.status === "paid") throw new Error("Paid earnings can't be reversed — handle manually.");
     await ctx.db.patch(args.id, { status: "reversed" });

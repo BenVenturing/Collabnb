@@ -1,7 +1,8 @@
 import { v } from "convex/values";
 import { query, mutation, action, internalQuery } from "./_generated/server";
-import { internal } from "./_generated/api";
+import { internal, api } from "./_generated/api";
 import { TEMPLATE_DEFAULTS, SAMPLE_VARS, mergedCopy, renderTemplate, sendViaResend } from "./emailCopy";
+import { requireAdmin, requireAdminAction, canAccessAdmin } from "./lib/auth";
 
 const COPY_FIELDS = [
   "subject", "heading", "body",
@@ -26,6 +27,7 @@ const copyArgs = {
 export const list = query({
   args: {},
   handler: async (ctx) => {
+    if (!(await canAccessAdmin(ctx))) return [];
     const overrides = await ctx.db.query("email_templates").collect();
     const byId = new Map(overrides.map((o) => [o.template_id, o]));
     return Object.entries(TEMPLATE_DEFAULTS).map(([id, def]) => {
@@ -54,6 +56,7 @@ export const list = query({
 export const save = mutation({
   args: { templateId: v.string(), ...copyArgs },
   handler: async (ctx, { templateId, ...copy }) => {
+    await requireAdmin(ctx);
     if (!TEMPLATE_DEFAULTS[templateId]) throw new Error(`Unknown template: ${templateId}`);
     const existing = await ctx.db
       .query("email_templates")
@@ -73,6 +76,7 @@ export const save = mutation({
 export const reset = mutation({
   args: { templateId: v.string() },
   handler: async (ctx, { templateId }) => {
+    await requireAdmin(ctx);
     const existing = await ctx.db
       .query("email_templates")
       .withIndex("by_template", (q) => q.eq("template_id", templateId))
@@ -93,6 +97,7 @@ export const getCopy = internalQuery({
 export const sendTest = action({
   args: { templateId: v.string(), to: v.string() },
   handler: async (ctx, { templateId, to }) => {
+    await requireAdminAction(ctx, api.profiles.getByEmail);
     const apiKey = process.env.RESEND_API_KEY;
     if (!apiKey) throw new Error("RESEND_API_KEY is not set in Convex.");
     const t: any = await ctx.runQuery(internal.emailTemplates.getCopy, { templateId });

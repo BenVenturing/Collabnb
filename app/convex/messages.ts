@@ -2,6 +2,8 @@ import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { redactText } from "./lib/moderation";
+import { requireAdmin, canAccessAdmin, isSelfEmailOrAdmin } from "./lib/auth";
+import { cleanPlainText } from "./lib/sanitize";
 
 export const submitMessage = mutation({
   args: {
@@ -12,11 +14,11 @@ export const submitMessage = mutation({
     add_to_faq: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
-    const cleanMessage = redactText(args.message);
+    const cleanMessage = cleanPlainText(redactText(args.message), 5000);
     await ctx.db.insert("messages", {
-      name: redactText(args.name),
+      name: cleanPlainText(redactText(args.name), 100),
       email: args.email,
-      category: args.category,
+      category: args.category ? cleanPlainText(args.category, 50) : args.category,
       message: cleanMessage,
       is_read: false,
       is_archived: false,
@@ -53,6 +55,7 @@ export const getFaqQuestions = query({
 export const getMessages = query({
   args: {},
   handler: async (ctx) => {
+    if (!(await canAccessAdmin(ctx))) return [];
     const all = await ctx.db.query("messages").collect();
     return all
       .filter((m) => !m.is_archived)
@@ -63,6 +66,7 @@ export const getMessages = query({
 export const getArchivedMessages = query({
   args: {},
   handler: async (ctx) => {
+    if (!(await canAccessAdmin(ctx))) return [];
     const all = await ctx.db.query("messages").collect();
     return all
       .filter((m) => m.is_archived)
@@ -73,6 +77,7 @@ export const getArchivedMessages = query({
 export const getUnreadCount = query({
   args: {},
   handler: async (ctx) => {
+    if (!(await canAccessAdmin(ctx))) return 0;
     const all = await ctx.db.query("messages").collect();
     return all.filter((m) => !m.is_read && !m.is_archived).length;
   },
@@ -81,6 +86,7 @@ export const getUnreadCount = query({
 export const toggleRead = mutation({
   args: { messageId: v.string() },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx);
     const msg = await ctx.db.get(args.messageId as any);
     if (!msg) return;
     await ctx.db.patch(args.messageId as any, { is_read: !msg.is_read });
@@ -90,6 +96,7 @@ export const toggleRead = mutation({
 export const archiveMessage = mutation({
   args: { messageId: v.string() },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx);
     await ctx.db.patch(args.messageId as any, { is_archived: true, is_read: true });
   },
 });
@@ -97,6 +104,7 @@ export const archiveMessage = mutation({
 export const unarchiveMessage = mutation({
   args: { messageId: v.string() },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx);
     await ctx.db.patch(args.messageId as any, { is_archived: false });
   },
 });
@@ -104,6 +112,7 @@ export const unarchiveMessage = mutation({
 export const addAdminReply = mutation({
   args: { messageId: v.string(), reply: v.string() },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx);
     await ctx.db.patch(args.messageId as any, {
       admin_reply: redactText(args.reply.trim()),
       admin_reply_at: Date.now(),
@@ -115,6 +124,7 @@ export const addAdminReply = mutation({
 export const getMessagesByEmail = query({
   args: { email: v.string() },
   handler: async (ctx, args) => {
+    if (!(await isSelfEmailOrAdmin(ctx, args.email))) return [];
     const all = await ctx.db.query("messages").collect();
     return all
       .filter((m) => m.email.toLowerCase() === args.email.toLowerCase())

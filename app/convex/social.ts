@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { query, action, internalMutation, internalQuery } from "./_generated/server";
-import { internal } from "./_generated/api";
+import { internal, api } from "./_generated/api";
+import { requireAdmin, requireAdminAction, canAccessAdmin } from "./lib/auth";
 
 // ─── Social connectors ────────────────────────────────────────────────────────
 // Instagram requires a Business/Creator account linked to a Facebook Page and a
@@ -16,6 +17,7 @@ import { internal } from "./_generated/api";
 export const getAccounts = query({
   args: {},
   handler: async (ctx) => {
+    if (!(await canAccessAdmin(ctx))) return [];
     return await ctx.db.query("social_accounts").collect();
   },
 });
@@ -23,6 +25,7 @@ export const getAccounts = query({
 export const getPosts = query({
   args: { platform: v.optional(v.string()), limit: v.optional(v.number()) },
   handler: async (ctx, { platform, limit = 30 }) => {
+    if (!(await canAccessAdmin(ctx))) return [];
     let rows = platform
       ? await ctx.db
           .query("social_posts")
@@ -37,6 +40,7 @@ export const getPosts = query({
 export const getSummary = query({
   args: {},
   handler: async (ctx) => {
+    if (!(await canAccessAdmin(ctx))) return {};
     const posts = await ctx.db.query("social_posts").collect();
     const summarize = (platform: string) => {
       const list = posts.filter((p) => p.platform === platform);
@@ -130,6 +134,7 @@ export const upsertPosts = internalMutation({
 export const syncInstagram = action({
   args: {},
   handler: async (ctx): Promise<{ synced: number; followers?: number }> => {
+    await requireAdminAction(ctx, api.profiles.getByEmail);
     const token = process.env.META_ACCESS_TOKEN;
     const igId = process.env.IG_BUSINESS_ACCOUNT_ID;
     if (!token || !igId) {
@@ -192,6 +197,7 @@ export const syncInstagram = action({
 export const syncTikTok = action({
   args: {},
   handler: async (ctx): Promise<{ synced: number; followers?: number }> => {
+    await requireAdminAction(ctx, api.profiles.getByEmail);
     const token = process.env.TIKTOK_ACCESS_TOKEN;
     if (!token) {
       throw new Error(
@@ -264,6 +270,7 @@ export const syncTikTok = action({
 export const getInboxItems = query({
   args: { onlyUnreplied: v.optional(v.boolean()) },
   handler: async (ctx, { onlyUnreplied }) => {
+    if (!(await canAccessAdmin(ctx))) return [];
     const rows = onlyUnreplied
       ? await ctx.db.query("social_inbox").withIndex("by_replied", (q) => q.eq("replied", false)).collect()
       : await ctx.db.query("social_inbox").collect();
@@ -329,6 +336,7 @@ export const markReplied = internalMutation({
 export const syncInbox = action({
   args: {},
   handler: async (ctx): Promise<{ synced: number }> => {
+    await requireAdminAction(ctx, api.profiles.getByEmail);
     const token = process.env.META_ACCESS_TOKEN;
     const igId = process.env.IG_BUSINESS_ACCOUNT_ID;
     if (!token || !igId) {
@@ -404,6 +412,7 @@ export const syncInbox = action({
 export const sendReply = action({
   args: { id: v.id("social_inbox"), replyText: v.string() },
   handler: async (ctx, { id, replyText }): Promise<{ success: boolean }> => {
+    await requireAdminAction(ctx, api.profiles.getByEmail);
     const token = process.env.META_ACCESS_TOKEN;
     const igId = process.env.IG_BUSINESS_ACCOUNT_ID;
     if (!token || !igId) throw new Error("Instagram is not connected.");
@@ -470,6 +479,7 @@ export const publishPost = action({
     ctx,
     { caption, mediaUrl, mediaType }
   ): Promise<{ published: boolean; permalink?: string; creationId?: string; message?: string }> => {
+    await requireAdminAction(ctx, api.profiles.getByEmail);
     const token = process.env.META_ACCESS_TOKEN;
     const igId = process.env.IG_BUSINESS_ACCOUNT_ID;
     if (!token || !igId) throw new Error("Instagram is not connected.");
@@ -513,6 +523,7 @@ export const publishPost = action({
 export const finishPublish = action({
   args: { creationId: v.string() },
   handler: async (ctx, { creationId }): Promise<{ published: boolean; permalink?: string; message?: string }> => {
+    await requireAdminAction(ctx, api.profiles.getByEmail);
     const token = process.env.META_ACCESS_TOKEN;
     const igId = process.env.IG_BUSINESS_ACCOUNT_ID;
     if (!token || !igId) throw new Error("Instagram is not connected.");
@@ -529,7 +540,8 @@ export const finishPublish = action({
 
 export const getIntegrationStatus = action({
   args: {},
-  handler: async (): Promise<Record<string, boolean>> => {
+  handler: async (ctx): Promise<Record<string, boolean>> => {
+    await requireAdminAction(ctx, api.profiles.getByEmail);
     return {
       stripe: !!process.env.STRIPE_SECRET_KEY,
       stripeWebhook: !!process.env.STRIPE_WEBHOOK_SECRET,

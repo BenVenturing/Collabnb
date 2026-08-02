@@ -1,8 +1,9 @@
 import { v } from "convex/values";
-import { query, mutation, action } from "./_generated/server";
-import { api } from "./_generated/api";
+import { query, mutation, action, internalAction, internalMutation, internalQuery } from "./_generated/server";
+import { api, internal } from "./_generated/api";
 import { STYLE_GUIDE } from "./styleGuide";
 import { buildResearchBrief, fetchHeadlines } from "./blogResearch";
+import { requireAdmin, requireAdminAction, canAccessAdmin } from "./lib/auth";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -45,6 +46,7 @@ function toTitleCase(title: string): string {
 export const getAll = query({
   args: {},
   handler: async (ctx) => {
+    if (!(await canAccessAdmin(ctx))) return [];
     return await ctx.db
       .query("blog_posts")
       .withIndex("by_generated")
@@ -56,6 +58,7 @@ export const getAll = query({
 export const getDrafts = query({
   args: {},
   handler: async (ctx) => {
+    if (!(await canAccessAdmin(ctx))) return [];
     return await ctx.db
       .query("blog_posts")
       .withIndex("by_status", (q) => q.eq("status", "draft"))
@@ -89,7 +92,21 @@ export const getBySlug = query({
 export const getById = query({
   args: { id: v.id("blog_posts") },
   handler: async (ctx, { id }) => {
+    if (!(await canAccessAdmin(ctx))) return null;
     return await ctx.db.get(id);
+  },
+});
+
+// Unguarded — used only by the internal cron post-generation path, which has
+// no user identity to check against.
+export const getAllInternal = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db
+      .query("blog_posts")
+      .withIndex("by_generated")
+      .order("desc")
+      .collect();
   },
 });
 
@@ -122,6 +139,7 @@ export const updatePost = mutation({
     inline_image_3_credit: v.optional(v.string()),
   },
   handler: async (ctx, { id, ...fields }) => {
+    await requireAdmin(ctx);
     const updates: Record<string, unknown> = {};
     if (fields.title !== undefined) {
       updates.title = fields.title;
@@ -161,6 +179,7 @@ export const updateStatus = mutation({
     status: v.string(), // 'published' | 'rejected' | 'draft'
   },
   handler: async (ctx, { id, status }) => {
+    await requireAdmin(ctx);
     const updates: Record<string, unknown> = { status };
     if (status === "published") updates.published_at = Date.now();
     await ctx.db.patch(id, updates);
@@ -170,6 +189,7 @@ export const updateStatus = mutation({
 export const deletePost = mutation({
   args: { id: v.id("blog_posts") },
   handler: async (ctx, { id }) => {
+    await requireAdmin(ctx);
     await ctx.db.delete(id);
   },
 });
@@ -178,6 +198,7 @@ export const deletePost = mutation({
 export const createBlankPost = mutation({
   args: {},
   handler: async (ctx) => {
+    await requireAdmin(ctx);
     const title = "Untitled post";
     const id = await ctx.db.insert("blog_posts", {
       title,
@@ -211,7 +232,7 @@ export const createBlankPost = mutation({
 
 // ─── Internal: create post from generated data ────────────────────────────────
 
-export const createGeneratedPost = mutation({
+export const createGeneratedPost = internalMutation({
   args: {
     title: v.string(),
     slug: v.string(),
@@ -253,7 +274,7 @@ export const createGeneratedPost = mutation({
 
 // Overwrite a draft's written fields after regeneration. Images are untouched
 // on purpose — regenerate keeps the photos the editor already chose.
-export const applyRegenerated = mutation({
+export const applyRegenerated = internalMutation({
   args: {
     id: v.id("blog_posts"),
     title: v.string(),
@@ -546,7 +567,7 @@ const TOPIC_POOL = [
 ];
 
 async function pickFreshTopic(ctx: any, headlines: { title: string; source: string }[]): Promise<string> {
-  const recent: any[] = await ctx.runQuery(api.blog.getAll, {});
+  const recent: any[] = await ctx.runQuery(internal.blog.getAllInternal, {});
   const recentTitles = recent.slice(0, 12).map((p: any) => p.title).filter(Boolean).join("; ");
   const news = headlines.slice(0, 12).map((h) => `- [${h.source}] ${h.title}`).join("\n");
   try {
@@ -668,12 +689,10 @@ CONTENT:
   return { title, excerpt, seoDesc, tags, pullQuote, imgHero, img1, img2, img3, content, reviewNotes, reviewScore: review?.score };
 }
 
-export const generatePost = action({
-  args: {
-    isStatsPost: v.optional(v.boolean()),
-    topicHint: v.optional(v.string()),
-  },
-  handler: async (ctx, { isStatsPost = false, topicHint }) => {
+// Shared by the admin-triggered action and the cron-triggered internal
+// action below — the cron has no user identity to check an admin gate
+// against, so the actual work lives here and each entry point wraps it.
+async function runGeneratePost(ctx: any, { isStatsPost = false, topicHint }: { isStatsPost?: boolean; topicHint?: string }) {
     const unsplashKey = process.env.UNSPLASH_ACCESS_KEY;
     if (!unsplashKey) {
       throw new Error("Missing UNSPLASH_ACCESS_KEY in Convex env.");
@@ -747,7 +766,7 @@ export const generatePost = action({
 
     // ── 5. Store as draft ─────────────────────────────────────────────────────
     const slug = slugify(title);
-    const postId = await ctx.runMutation(api.blog.createGeneratedPost, {
+    const postId = await ctx.runMutation(internal.blog.createGeneratedPost, {
       title,
       slug,
       excerpt,
@@ -779,7 +798,26 @@ export const generatePost = action({
     });
 
     return { postId, title, slug };
+}
+
+export const generatePost = action({
+  args: {
+    isStatsPost: v.optional(v.boolean()),
+    topicHint: v.optional(v.string()),
   },
+  handler: async (ctx, args) => {
+    await requireAdminAction(ctx, api.profiles.getByEmail);
+    return runGeneratePost(ctx, args);
+  },
+});
+
+// Cron-only entry point — no admin identity exists in a scheduled run.
+export const generatePostInternal = internalAction({
+  args: {
+    isStatsPost: v.optional(v.boolean()),
+    topicHint: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => runGeneratePost(ctx, args),
 });
 
 // ─── Action: regenerate an existing draft in place ────────────────────────────
@@ -791,6 +829,7 @@ export const regeneratePost = action({
     direction: v.optional(v.string()),
   },
   handler: async (ctx, { id, direction }) => {
+    await requireAdminAction(ctx, api.profiles.getByEmail);
     const post: any = await ctx.runQuery(api.blog.getById, { id });
     if (!post) throw new Error("Post not found");
     if (post.status === "published") throw new Error("Unpublish the post before regenerating it.");
@@ -809,7 +848,7 @@ export const regeneratePost = action({
     const composed = await composePost(topic, research, brief.context, direction);
     console.log(`regeneratePost review ok — score ${composed.reviewScore ?? "n/a"}`);
 
-    await ctx.runMutation(api.blog.applyRegenerated, {
+    await ctx.runMutation(internal.blog.applyRegenerated, {
       id,
       title: composed.title,
       excerpt: composed.excerpt,
@@ -831,7 +870,8 @@ export const regeneratePost = action({
 
 export const suggestTopics = action({
   args: {},
-  handler: async (): Promise<string[]> => {
+  handler: async (ctx): Promise<string[]> => {
+    await requireAdminAction(ctx, api.profiles.getByEmail);
     let content = "";
     try {
       const headlines = await fetchHeadlines();

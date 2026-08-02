@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { query, mutation, action, internalAction, internalMutation, internalQuery } from "./_generated/server";
 import { internal, api } from "./_generated/api";
 import { llmChat } from "./blog";
+import { requireAdmin, requireAdminAction, canAccessAdmin } from "./lib/auth";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -348,6 +349,7 @@ export const getByKind = query({
     location: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    if (!(await canAccessAdmin(ctx))) return [];
     let rows = await ctx.db
       .query("prospects")
       .withIndex("by_kind_status", (q) =>
@@ -371,6 +373,7 @@ export const getByKind = query({
 export const getTodayQueue = query({
   args: {},
   handler: async (ctx) => {
+    if (!(await canAccessAdmin(ctx))) return [];
     const today = todayKey();
     const rows = await ctx.db.query("prospects").collect();
     return rows
@@ -382,6 +385,7 @@ export const getTodayQueue = query({
 export const getStats = query({
   args: {},
   handler: async (ctx) => {
+    if (!(await canAccessAdmin(ctx))) return {};
     const rows = await ctx.db.query("prospects").collect();
     const byKind = (kind: string) => rows.filter((r) => r.kind === kind);
     const count = (list: typeof rows, status: string) =>
@@ -429,6 +433,7 @@ export const add = mutation({
     notes: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx);
     const handle = args.instagramHandle.replace(/^@/, "").trim().toLowerCase();
     if (!handle) throw new Error("Instagram handle is required");
     const existing = await ctx.db
@@ -459,6 +464,7 @@ export const add = mutation({
 export const updateStatus = mutation({
   args: { id: v.id("prospects"), status: v.string() },
   handler: async (ctx, { id, status }) => {
+    await requireAdmin(ctx);
     const patch: Record<string, any> = { status };
     if (status === "contacted") patch.contacted_at = Date.now();
     if (status === "replied") patch.replied_at = Date.now();
@@ -480,6 +486,7 @@ export const update = mutation({
     score: v.optional(v.number()),
   },
   handler: async (ctx, { id, ...fields }) => {
+    await requireAdmin(ctx);
     const patch: Record<string, any> = {};
     if (fields.displayName !== undefined) patch.display_name = fields.displayName;
     if (fields.followerCount !== undefined) {
@@ -500,26 +507,27 @@ export const update = mutation({
 export const remove = mutation({
   args: { id: v.id("prospects") },
   handler: async (ctx, { id }) => {
+    await requireAdmin(ctx);
     await ctx.db.delete(id);
   },
 });
 
 // Fill today's queue: promote the top-scored 'new' prospects to 'queued' until
-// the daily target (default 20 creators + 20 hosts) is reached.
-export const buildTodayQueue = mutation({
-  args: { perKind: v.optional(v.number()) },
-  handler: async (ctx, { perKind = 20 }) => {
+// the daily target (default 20 creators + 20 hosts) is reached. Shared by the
+// admin-triggered mutation and the cron job below, which has no identity to
+// check an admin gate against.
+async function runBuildTodayQueue(ctx: any, perKind = 20) {
     const today = todayKey();
     const all = await ctx.db.query("prospects").collect();
     let promoted = 0;
     for (const kind of ["creator", "host"]) {
       const alreadyQueued = all.filter(
-        (r) => r.kind === kind && r.status === "queued" && (r.queued_for ?? today) <= today
+        (r: any) => r.kind === kind && r.status === "queued" && (r.queued_for ?? today) <= today
       ).length;
       const need = Math.max(0, perKind - alreadyQueued);
       const candidates = all
-        .filter((r) => r.kind === kind && r.status === "new")
-        .sort((a, b) => (b.score ?? 0) - (a.score ?? 0))
+        .filter((r: any) => r.kind === kind && r.status === "new")
+        .sort((a: any, b: any) => (b.score ?? 0) - (a.score ?? 0))
         .slice(0, need);
       for (const c of candidates) {
         await ctx.db.patch(c._id, { status: "queued", queued_for: today });
@@ -527,7 +535,20 @@ export const buildTodayQueue = mutation({
       }
     }
     return { promoted };
+}
+
+export const buildTodayQueue = mutation({
+  args: { perKind: v.optional(v.number()) },
+  handler: async (ctx, { perKind = 20 }) => {
+    await requireAdmin(ctx);
+    return runBuildTodayQueue(ctx, perKind);
   },
+});
+
+// Cron-only entry point — no admin identity exists in a scheduled run.
+export const buildTodayQueueInternal = internalMutation({
+  args: { perKind: v.optional(v.number()) },
+  handler: async (ctx, { perKind = 20 }) => runBuildTodayQueue(ctx, perKind),
 });
 
 export const getById = internalQuery({
@@ -545,6 +566,7 @@ export const getById = internalQuery({
 export const getHostPool = query({
   args: {},
   handler: async (ctx) => {
+    if (!(await canAccessAdmin(ctx))) return [];
     const rows = await ctx.db
       .query("prospects")
       .withIndex("by_kind_status", (q) => q.eq("kind", "host").eq("status", "new"))
@@ -637,6 +659,7 @@ export const saveHostDraft = internalMutation({
 export const generateDraftsForSelected = action({
   args: { ids: v.array(v.id("prospects")) },
   handler: async (ctx, { ids }): Promise<{ drafted: number }> => {
+    await requireAdminAction(ctx, api.profiles.getByEmail);
     const counts: Record<string, number> = await ctx.runQuery(internal.prospects.getHostAngleCounts, {});
     let drafted = 0;
     for (const id of ids) {
@@ -657,6 +680,7 @@ export const generateDraftsForSelected = action({
 export const resetToPool = mutation({
   args: { id: v.id("prospects") },
   handler: async (ctx, { id }) => {
+    await requireAdmin(ctx);
     const p = await ctx.db.get(id);
     if (!p) throw new Error("Prospect not found");
     if (p.status === "signed") throw new Error("Already signed — can't reset a completed deal.");
@@ -674,6 +698,7 @@ export const resetToPool = mutation({
 export const getConfirmedHosts = query({
   args: {},
   handler: async (ctx) => {
+    if (!(await canAccessAdmin(ctx))) return [];
     const rows = await ctx.db.query("prospects").collect();
     return rows
       .filter((r) => r.kind === "host" && r.published)
@@ -700,6 +725,7 @@ export const confirmDraft = internalMutation({
 export const confirmHostBatch = action({
   args: { ids: v.array(v.id("prospects")) },
   handler: async (ctx, { ids }): Promise<{ confirmed: number }> => {
+    await requireAdminAction(ctx, api.profiles.getByEmail);
     let confirmed = 0;
     for (let i = 0; i < ids.length; i++) {
       const p: any = await ctx.runQuery(internal.prospects.getById, { id: ids[i] });
@@ -771,6 +797,7 @@ export const importHostsLocal = mutation({
 export const generateDmDraft = action({
   args: { id: v.id("prospects"), angleId: v.optional(v.string()) },
   handler: async (ctx, { id, angleId }): Promise<string> => {
+    await requireAdminAction(ctx, api.profiles.getByEmail);
     const p: any = await ctx.runQuery(internal.prospects.getById, { id });
     if (!p) throw new Error("Prospect not found");
 
@@ -893,6 +920,7 @@ export const importFromApify = action({
     limit: v.optional(v.number()),
   },
   handler: async (ctx, args): Promise<{ inserted: number; fetched: number }> => {
+    await requireAdminAction(ctx, api.profiles.getByEmail);
     const limit = Math.min(args.limit ?? 50, 200);
     const accounts = await searchInstagramUsers(args.searchQuery, limit);
 
@@ -1046,6 +1074,7 @@ async function enrichBatch(ctx: any, prospects: any[]): Promise<number> {
 export const enrichProspect = action({
   args: { id: v.id("prospects") },
   handler: async (ctx, { id }): Promise<{ enriched: boolean }> => {
+    await requireAdminAction(ctx, api.profiles.getByEmail);
     const p: any = await ctx.runQuery(internal.prospects.getById, { id });
     if (!p) throw new Error("Prospect not found");
     const n = await enrichBatch(ctx, [p]);
@@ -1106,6 +1135,7 @@ export const searchCreators = action({
     limit: v.optional(v.number()),
   },
   handler: async (ctx, args): Promise<{ imported: number; fetched: number; ranked: any[] }> => {
+    await requireAdminAction(ctx, api.profiles.getByEmail);
     return await discoverAndScore(ctx, {
       niche: args.niche,
       location: args.location,

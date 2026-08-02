@@ -50,6 +50,7 @@ export function computeFee(input: FeeInput): FeeResult {
 import { v } from "convex/values";
 import { query, mutation, internalMutation } from "./_generated/server";
 import { internal } from "./_generated/api";
+import { canAccessOwner } from "./lib/auth";
 
 /**
  * Record a fee in the fee_records table.
@@ -58,7 +59,7 @@ import { internal } from "./_generated/api";
  *
  * Founding hosts get a $0 waived record for their billing ledger.
  */
-export const recordCompletionFee = mutation({
+export const recordCompletionFee = internalMutation({
   args: {
     collaborationId: v.id("collaborations"),
     contractId: v.optional(v.string()),
@@ -99,6 +100,7 @@ export const recordCompletionFee = mutation({
 export const getBilling = query({
   args: { hostId: v.string() },
   handler: async (ctx, { hostId }) => {
+    if (!(await canAccessOwner(ctx, hostId))) return [];
     const [listings, collabs, fees] = await Promise.all([
       ctx.db
         .query("listings")

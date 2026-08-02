@@ -103,6 +103,11 @@ const FAQ_SECTIONS = [
         keywords: ['pricing', 'price', 'plan', 'plans', 'subscription cost', 'creator pricing'],
       },
       {
+        q: 'What is the yearly plan money-back guarantee?',
+        a: "If you subscribe to Creator Plus on the yearly plan and don't secure a single confirmed collaboration by the end of your term, you can request a refund of your subscription fee. To qualify: you must have sent outreach/pitch messages to hosts through the platform, wait until your full term has ended before asking, keep your subscription active the whole term (no early cancel or downgrade), and only collaborations confirmed through Collabnb's contract system count — if you moved a conversation off-platform and never brought the outcome back to confirm it here, we can't verify what happened, so it won't qualify. Email hellocollabnb@gmail.com within 14 days of your term ending to claim. This guarantee applies only to the yearly Creator Plus plan — not monthly, not lifetime access, and not host fees.",
+        keywords: ['guarantee', 'refund', 'money back', 'money-back guarantee', 'yearly guarantee'],
+      },
+      {
         q: 'What is a Founding Member?',
         a: 'Founding Members are the first 100 verified creators and first 100 verified hosts on Collabnb. They receive permanent free access — no platform fees for hosts, no Creator Plus subscription for creators — as a thank-you for being early partners in building the community. Founding status is assigned at verification in approval order. Once all 100 spots per role are filled, founding is closed permanently.',
       },

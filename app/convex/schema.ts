@@ -263,7 +263,8 @@ export default defineSchema({
     .index("by_owner", ["owner_id"])
     .index("by_host", ["host_id"])
     .index("by_creator", ["creator_id"])
-    .index("by_payout_status", ["creator_payout_status"]),
+    .index("by_payout_status", ["creator_payout_status"])
+    .index("by_payout_reference", ["creator_payout_reference"]),
 
   collections: defineTable({
     name: v.string(),

@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { query, mutation, action } from "./_generated/server";
 import { api } from "./_generated/api";
 import { llmChat } from "./blog";
+import { requireAdmin, requireAdminAction, canAccessAdmin } from "./lib/auth";
 
 // Admin-brand inbox: threads owned by the "Collabnb" persona (username 'collabnb').
 // Each thread is a 1:1 conversation with a single user (participant_id), keyed
@@ -24,6 +25,7 @@ function threadKeyFor(participantId: string) {
 export const list = query({
   args: {},
   handler: async (ctx) => {
+    if (!(await canAccessAdmin(ctx))) return [];
     const personaId = await getPersonaId(ctx);
     if (!personaId) return [];
     const rows = await ctx.db
@@ -79,6 +81,7 @@ export const list = query({
 export const unreadCount = query({
   args: {},
   handler: async (ctx) => {
+    if (!(await canAccessAdmin(ctx))) return 0;
     const personaId = await getPersonaId(ctx);
     if (!personaId) return 0;
     const rows = await ctx.db
@@ -103,6 +106,7 @@ export const unreadCount = query({
 export const startWithUser = mutation({
   args: { participantId: v.string(), asPersonaId: v.string() },
   handler: async (ctx, { participantId, asPersonaId }) => {
+    await requireAdmin(ctx);
     // Only the verified persona may own admin threads.
     const persona = await ctx.db.get(asPersonaId as any);
     if (!persona || persona.username !== "collabnb") {
@@ -139,6 +143,7 @@ export const startWithUser = mutation({
 export const markRead = mutation({
   args: { threadKey: v.string() },
   handler: async (ctx, { threadKey }) => {
+    await requireAdmin(ctx);
     // Intentionally empty: unread is derived, not stored, for admin threads.
     return true;
   },
@@ -151,6 +156,7 @@ export const markRead = mutation({
 export const draftMessage = action({
   args: { recipientId: v.string(), prompt: v.optional(v.string()) },
   handler: async (ctx, { recipientId, prompt }): Promise<string> => {
+    await requireAdminAction(ctx, api.profiles.getByEmail);
     const p: any = await ctx.runQuery(api.profiles.getById, { id: recipientId });
     const firstName = (p?.full_name || "there").split(" ")[0];
 

@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { query, mutation, internalMutation, internalAction } from "./_generated/server";
 import { internal } from "./_generated/api";
+import { requireAdmin, requireOwnerOrAdmin, canAccessAdmin, canAccessOwner } from "./lib/auth";
 
 // ─── Shared Constants ───────────────────────────────────────────────────────────
 export const FOLLOWER_THRESHOLDS = {
@@ -32,6 +33,7 @@ function determineCreatorTier(followers: number, track: string): string {
 export const getVerificationQueue = query({
   args: {},
   handler: async (ctx) => {
+    if (!(await canAccessAdmin(ctx))) return [];
     const profiles = await ctx.db.query("profiles").collect();
     return profiles
       .filter((p) => (p.is_verified !== true || p.pending_role) && p.is_rejected !== true)
@@ -53,6 +55,7 @@ export const getVerificationQueue = query({
 export const getVerified = query({
   args: { role: v.optional(v.string()) },
   handler: async (ctx, { role }) => {
+    if (!(await canAccessAdmin(ctx))) return [];
     const profiles = await ctx.db.query("profiles").collect();
     return profiles
       .filter((p) => p.is_verified === true && (role ? p.role === role : true))
@@ -84,6 +87,7 @@ export const approveCreator = mutation({
     adminNote: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx);
     const profile = await ctx.db.get(args.profileId);
     if (!profile || (profile.role !== "creator" && profile.pending_role !== "creator")) return;
     const isRoleSwitch = profile.pending_role === "creator";
@@ -170,6 +174,7 @@ export const approveHost = mutation({
     adminNote: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx);
     const profile = await ctx.db.get(args.profileId);
     if (!profile || (profile.role !== "host" && profile.pending_role !== "host")) return;
     const isRoleSwitch = profile.pending_role === "host";
@@ -225,6 +230,7 @@ export const rejectProfile = mutation({
     reason: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx);
     const existing = await ctx.db.get(args.profileId);
     // Rejecting a role-switch request only cancels the request — the account
     // keeps its current role and access untouched
@@ -275,6 +281,7 @@ export const rejectProfile = mutation({
 export const nudgeFinishSignup = mutation({
   args: { profileId: v.id("profiles") },
   handler: async (ctx, { profileId }) => {
+    await requireAdmin(ctx);
     const profile = await ctx.db.get(profileId);
     if (!profile) return { ok: false, reason: "not_found" };
     if (!profile.email) return { ok: false, reason: "no_email" };
@@ -304,6 +311,7 @@ export const setAdminNote = mutation({
     requestInterview: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx);
     const patch: Record<string, any> = {};
     if (args.note !== undefined) patch.admin_verification_note = args.note;
     if (args.requestInterview !== undefined) patch.interview_requested = args.requestInterview;
@@ -319,6 +327,7 @@ export const bulkApprove = mutation({
     defaultTier: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx);
     for (const pid of args.profileIds) {
       const profile = await ctx.db.get(pid);
       if (!profile) continue;
@@ -339,6 +348,7 @@ export const bulkApprove = mutation({
 export const getMyAccess = query({
   args: { profileId: v.id("profiles") },
   handler: async (ctx, { profileId }) => {
+    if (!(await canAccessOwner(ctx, profileId))) return { state: "pending", canAccess: false };
     const profile = await ctx.db.get(profileId);
     if (!profile) return { state: "pending", canAccess: false };
     if (profile.is_verified !== true) return { state: "pending", canAccess: false };
@@ -372,6 +382,7 @@ export const canViewListing = query({
   args: { profileId: v.optional(v.id("profiles")) },
   handler: async (ctx, { profileId }) => {
     if (!profileId) return { allowed: false, state: "pending" };
+    if (!(await canAccessOwner(ctx, profileId))) return { allowed: false, state: "pending" };
     const profile = await ctx.db.get(profileId);
     if (!profile) return { allowed: false, state: "pending" };
     if (profile.is_admin) return { allowed: true, state: "active" };

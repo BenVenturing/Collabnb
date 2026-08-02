@@ -1,5 +1,5 @@
 import { cronJobs } from "convex/server";
-import { internal, api } from "./_generated/api";
+import { internal } from "./_generated/api";
 
 const crons = cronJobs();
 
@@ -26,7 +26,7 @@ crons.daily(
 crons.daily(
   "build daily prospect queue",
   { hourUTC: 8, minuteUTC: 0 },
-  api.prospects.buildTodayQueue,
+  internal.prospects.buildTodayQueueInternal,
   { perKind: 20 }
 );
 
@@ -34,7 +34,7 @@ crons.daily(
 crons.daily(
   "generate daily blog post",
   { hourUTC: 9, minuteUTC: 0 },
-  api.blog.generatePost,
+  internal.blog.generatePostInternal,
   { isStatsPost: false }
 );
 
@@ -42,7 +42,7 @@ crons.daily(
 crons.monthly(
   "generate monthly stats post",
   { day: 1, hourUTC: 10, minuteUTC: 0 },
-  api.blog.generatePost,
+  internal.blog.generatePostInternal,
   { isStatsPost: true }
 );
 

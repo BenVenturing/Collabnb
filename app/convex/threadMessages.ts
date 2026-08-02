@@ -1,10 +1,41 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { internal } from "./_generated/api";
+import { requireOwnerOrAdmin, getAuthedProfile } from "./lib/auth";
+
+// thread_key is a predictable string (thread_<listingId>_<creatorId>), so
+// reading a thread by key alone would let anyone guess their way into
+// someone else's private negotiation. Resolve the real two parties from the
+// pitch (or admin thread) that owns this key and check the caller is one of
+// them. Both pitches and admin threads use the same "thread_<listingId>_<id>"
+// / "admin_<userId>" convention, so a match in either table is authoritative.
+async function resolveThreadParties(ctx: any, threadKey: string): Promise<{ a?: string; b?: string } | null> {
+  const pitch = await ctx.db
+    .query("pitches")
+    .filter((q: any) => q.eq(q.field("thread_key"), threadKey))
+    .first();
+  if (pitch) return { a: pitch.host_id, b: pitch.creator_id };
+
+  const thread = await ctx.db
+    .query("threads")
+    .filter((q: any) => q.eq(q.field("thread_key"), threadKey))
+    .first();
+  if (thread) return { a: thread.owner_id, b: thread.participant_id };
+
+  return null;
+}
 
 export const getByThread = query({
   args: { threadKey: v.string() },
   handler: async (ctx, { threadKey }) => {
+    const profile = await getAuthedProfile(ctx);
+    if (!profile) return [];
+    if (profile.is_admin !== true) {
+      const parties = await resolveThreadParties(ctx, threadKey);
+      const me = String(profile._id);
+      const isParty = parties ? (parties.a === me || parties.b === me) : false;
+      if (!isParty) return [];
+    }
     return ctx.db
       .query("thread_messages")
       .withIndex("by_thread", (q) => q.eq("thread_key", threadKey))
@@ -18,6 +49,7 @@ export const getByThread = query({
 export const getHostUnreadCount = query({
   args: { threadKeys: v.array(v.string()) },
   handler: async (ctx, { threadKeys }) => {
+    if (!(await getAuthedProfile(ctx))) return 0;
     if (threadKeys.length === 0) return 0;
     const latestMessages = await Promise.all(
       threadKeys.map((key) =>
@@ -44,6 +76,7 @@ export const sendMessage = mutation({
     recipientId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireOwnerOrAdmin(ctx, args.senderId);
     // Unverified accounts (pending review) can't message anyone — enforced
     // server-side so hiding the UI isn't the only barrier
     let sender: any = null;

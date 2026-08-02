@@ -108,7 +108,12 @@ const FAQ_SECTIONS = [
       },
       {
         q: 'When is the host platform fee charged?',
-        a: "The platform fee is never charged up front. It is charged automatically only after the collaboration is marked complete — when both sides confirm the campaign wrapped successfully. If the host saved a payment method at contract signing, it happens automatically. Otherwise, the host completes a one-tap payment when the collab closes. Either way: you do not pay until you get value.",
+        a: "Nothing is charged up front. When the collaboration is marked complete, the host's saved card is charged once — for the agreed cash payment to the creator plus Collabnb's platform fee. If a card was saved at contract signing, this happens automatically; otherwise the host completes a one-tap payment when the collab closes. Either way: you do not pay until you get value.",
+      },
+      {
+        q: 'How do creators actually get paid?',
+        a: "Collabnb processes the payment for you, the same way Airbnb pays out hosts. When your collaboration is marked complete, the host's card is charged for the full agreed amount. That payment is held and processed through Stripe, then Collabnb forwards your share directly to whichever payout method you've connected in Profile → Settings → Payout Method — currently Stripe or Wise. Both you and the host get an email receipt once the payout is sent.\n\nA quick note on timing: payouts sent via a connected Stripe account arrive quickly. Payouts routed through Wise can take a few extra business days to settle, since Collabnb has to receive the funds before forwarding them on. Either way, you'll see the payout status (pending, processing, or paid) on the contract.",
+        keywords: ['payout', 'get paid', 'wise', 'stripe connect', 'bank account', 'paypal'],
       },
       {
         q: 'How does the referral code work, and how do I get free months?',

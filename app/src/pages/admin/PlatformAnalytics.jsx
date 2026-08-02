@@ -276,22 +276,6 @@ export default function PlatformAnalytics() {
             </Section>
           )}
 
-          {/* ── Revenue (placeholder) ── */}
-          <Section title="Revenue">
-            <div style={{ ...CARD, display: 'flex', alignItems: 'flex-start', gap: '0.875rem' }}>
-              <span style={{ fontSize: '1.5rem', marginTop: '0.1rem' }}>💳</span>
-              <div>
-                <div style={{ fontWeight: 600, fontSize: '0.875rem', color: INK, marginBottom: '0.25rem' }}>
-                  Revenue tracking will activate when Stripe is in production
-                </div>
-                <div style={{ display: 'flex', gap: '2rem', marginTop: '0.875rem' }}>
-                  <Placeholder label="Platform Fees Collected" value="$0" />
-                  <Placeholder label="Active Subscriptions"    value="0"  />
-                </div>
-              </div>
-            </div>
-          </Section>
-
           {/* ── Engagement ── */}
           <Section title="Engagement">
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
@@ -371,15 +355,6 @@ export default function PlatformAnalytics() {
           )}
         </>
       )}
-    </div>
-  );
-}
-
-function Placeholder({ label, value }) {
-  return (
-    <div>
-      <div style={{ fontSize: '1.25rem', fontWeight: 700, fontFamily: 'Cabinet Grotesk, sans-serif', color: SAGE }}>{value}</div>
-      <div style={{ fontSize: '0.75rem', color: SAGE, marginTop: '0.1rem' }}>{label}</div>
     </div>
   );
 }

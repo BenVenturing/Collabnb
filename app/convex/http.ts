@@ -245,6 +245,16 @@ http.route({
       }
     }
 
+    // Stripe Connect onboarding status — fires as the creator completes KYC
+    // and Stripe enables charges/payouts on their connected account.
+    if (event.type === "account.updated") {
+      const account = event.data.object as Stripe.Account;
+      await ctx.runMutation(internal.profiles.setStripeConnectPayoutsEnabled, {
+        accountId: account.id,
+        payoutsEnabled: Boolean(account.charges_enabled && account.payouts_enabled),
+      });
+    }
+
     if (event.type === "customer.subscription.updated") {
       const sub = event.data.object as Stripe.Subscription;
       const customerId = typeof sub.customer === "string" ? sub.customer : sub.customer.id;

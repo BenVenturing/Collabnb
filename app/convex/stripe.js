@@ -7,6 +7,10 @@ import { computeFee } from './fees';
 // Tiered lifetime pricing — price rises as more spots are purchased.
 // First 50 buyers: $100, next 50: $125, next 50: $150, final 50: $200.
 // After 200 lifetime purchases, redirect users to monthly/annual instead.
+// Dispute-resolution hold: how long between the host's charge succeeding and
+// the creator's payout actually being forwarded (mirrors Airbnb-style holds).
+const PAYOUT_HOLD_MS = 48 * 60 * 60 * 1000;
+
 function getLifetimeTier(count) {
   if (count < 50)  return { price: 100, label: 'Early Adopter' };
   if (count < 100) return { price: 125, label: 'Community' };
@@ -75,7 +79,9 @@ export const createCheckoutSession = action({
 });
 
 // Recurring Subscription Checkout for creator Pro access.
-// tier: "monthly" ($10/mo) or "yearly" ($60/yr, save 50%).
+// tier: "monthly" ($10/mo) or "yearly" ($60/yr, save 50%). Uses the persistent
+// Creator Plus Prices (see STRIPE_PRICE_MONTHLY_ID/STRIPE_PRICE_YEARLY_ID) so
+// the billing portal can offer switching between them.
 export const createSubscriptionSession = action({
   args: {
     profileId: v.string(),
@@ -89,22 +95,13 @@ export const createSubscriptionSession = action({
 
     const stripe = new Stripe(secretKey);
     const isYearly = args.tier === 'yearly';
+    const priceId = isYearly ? process.env.STRIPE_PRICE_YEARLY_ID : process.env.STRIPE_PRICE_MONTHLY_ID;
+    if (!priceId) throw new Error('STRIPE_PRICE_MONTHLY_ID/STRIPE_PRICE_YEARLY_ID are not set in Convex environment variables');
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       mode: 'subscription',
-      line_items: [{
-        price_data: {
-          currency: 'usd',
-          product_data: {
-            name: `Creator Plus — ${isYearly ? 'Annual' : 'Monthly'}`,
-            description: isYearly ? '$60/year — save 50% vs monthly' : '$10/month — cancel anytime',
-          },
-          unit_amount: isYearly ? 6000 : 1000,
-          recurring: { interval: isYearly ? 'year' : 'month' },
-        },
-        quantity: 1,
-      }],
+      line_items: [{ price: priceId, quantity: 1 }],
       success_url: args.successUrl,
       cancel_url: args.cancelUrl,
       metadata: { profileId: args.profileId, tier: args.tier },
@@ -361,6 +358,10 @@ export const verifyFeeSetupSession = action({
 
 // 3) Charge the saved card off-session when the collab completes. Called by the
 // scheduler from collaborations.markCompleted, and backstopped by the webhook.
+// Collect & forward: the host is charged fee + cash value in one PaymentIntent
+// (Collabnb collects), then the cash value is forwarded to the creator's
+// connected payout account (Collabnb forwards). Free-stay collabs have no
+// cash to forward, so they behave exactly as before — fee only.
 export const chargeContractFee = internalAction({
   args: { contractId: v.string() },
   handler: async (ctx, args) => {
@@ -372,10 +373,10 @@ export const chargeContractFee = internalAction({
     if (contract.paid) return { skipped: 'already_paid' };
 
     // Founding / lifetime hosts pay no platform fee.
-    if (contract.host_id) {
-      const host = await ctx.runQuery(api.profiles.getById, { id: String(contract.host_id) });
-      if (host?.is_founder || host?.is_lifetime) return { skipped: 'host_free' };
-    }
+    const host = contract.host_id
+      ? await ctx.runQuery(api.profiles.getById, { id: String(contract.host_id) })
+      : null;
+    if (host?.is_founder || host?.is_lifetime) return { skipped: 'host_free' };
 
     const customerId = contract.host_stripe_customer_id;
     const paymentMethodId = contract.host_payment_method_id;
@@ -384,10 +385,11 @@ export const chargeContractFee = internalAction({
 
     // Prefer the fee captured at signing; otherwise recompute from the contract.
     let fee = contract.fee_amount;
-    if (!fee || fee <= 0) {
-      fee = computeContractFee(contract).fee;
-    }
-    const amountInCents = Math.round(fee * 100);
+    const { cash, isFreeStay } = computeContractFee(contract);
+    if (!fee || fee <= 0) fee = computeContractFee(contract).fee;
+    const creatorPayout = isFreeStay ? 0 : cash;
+    const grossCharge = fee + creatorPayout;
+    const amountInCents = Math.round(grossCharge * 100);
 
     const stripe = new Stripe(secretKey);
     try {
@@ -398,16 +400,48 @@ export const chargeContractFee = internalAction({
         payment_method: paymentMethodId,
         off_session: true,
         confirm: true,
-        description: 'Collabnb platform fee — completed collaboration',
-        metadata: { contractId: args.contractId, type: 'platform_fee' },
+        description: creatorPayout > 0
+          ? 'Collabnb collaboration payment (platform fee + creator payout)'
+          : 'Collabnb platform fee — completed collaboration',
+        metadata: { contractId: args.contractId, type: 'collab_payment', feeAmount: String(fee), creatorPayout: String(creatorPayout) },
       });
 
       if (intent.status === 'succeeded') {
         await ctx.runMutation(internal.contracts.recordPaymentInternal, {
           id: args.contractId,
-          paymentAmount: fee,
+          paymentAmount: grossCharge,
           paymentIntentId: intent.id,
         });
+        await ctx.runMutation(internal.contracts.setGrossCharge, {
+          id: args.contractId,
+          grossChargeAmount: grossCharge,
+          creatorPayoutAmount: creatorPayout,
+        });
+
+        if (host?.email) {
+          await ctx.runAction(internal.email.sendPayoutReceiptEmail, {
+            to: host.email,
+            name: host.full_name || contract.host_name || 'there',
+            role: 'host',
+            amount: grossCharge,
+            counterpartyName: contract.creator_name || 'your creator',
+            propertyName: contract.property_name,
+          });
+          await ctx.runMutation(internal.contracts.markHostReceiptSent, { id: args.contractId });
+        }
+
+        if (creatorPayout > 0) {
+          const chargeId = typeof intent.latest_charge === 'string' ? intent.latest_charge : intent.latest_charge?.id;
+          // Dispute-resolution hold: don't forward immediately — schedule it
+          // for PAYOUT_HOLD_HOURS from now so admin has a window to pause it.
+          const releaseAt = Date.now() + PAYOUT_HOLD_MS;
+          await ctx.runMutation(internal.contracts.schedulePayoutHold, { id: args.contractId, releaseAt });
+          await ctx.scheduler.runAfter(PAYOUT_HOLD_MS, internal.stripe.forwardCreatorPayout, {
+            contractId: args.contractId,
+            amount: creatorPayout,
+            chargeId,
+          });
+        }
         return { success: true };
       }
 
@@ -419,6 +453,262 @@ export const chargeContractFee = internalAction({
       await ctx.runMutation(internal.contracts.markFeeChargeFailed, { id: args.contractId });
 	    await ctx.runMutation(internal.fees.markFeeFailed, { collaborationId: args.contractId });
       return { error: String(err?.message || err) };
+    }
+  },
+});
+
+// 4) Forward the creator's net payout after the host's charge has succeeded.
+// Stripe Connect: instant transfer, tied to the originating charge. Wise:
+// not instant (Stripe has to settle to Collabnb's bank first) — flagged
+// "pending" for an admin to send manually via sendWisePayout once funds land.
+export const forwardCreatorPayout = internalAction({
+  args: { contractId: v.string(), amount: v.number(), chargeId: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    const contract = await ctx.runQuery(internal.contracts.getByIdInternal, { id: args.contractId });
+    if (contract?.creator_payout_held) return { held: true };
+    const creatorId = contract?.creator_id;
+    if (!creatorId) {
+      await ctx.runMutation(internal.contracts.setPayoutStatus, { id: args.contractId, status: 'pending' });
+      return { skipped: 'no_creator' };
+    }
+    const creator = await ctx.runQuery(api.profiles.getById, { id: String(creatorId) });
+    if (!creator) {
+      await ctx.runMutation(internal.contracts.setPayoutStatus, { id: args.contractId, status: 'pending' });
+      return { skipped: 'creator_not_found' };
+    }
+
+    if (creator.payout_method === 'stripe_connect' && creator.stripe_connect_account_id) {
+      const secretKey = process.env.STRIPE_SECRET_KEY;
+      const stripe = new Stripe(secretKey);
+      try {
+        const transfer = await stripe.transfers.create({
+          amount: Math.round(args.amount * 100),
+          currency: 'usd',
+          destination: creator.stripe_connect_account_id,
+          source_transaction: args.chargeId,
+          metadata: { contractId: args.contractId },
+        });
+        await ctx.runMutation(internal.contracts.setPayoutStatus, {
+          id: args.contractId, status: 'paid', method: 'stripe_connect', reference: transfer.id,
+        });
+        if (creator.email) {
+          await ctx.runAction(internal.email.sendPayoutReceiptEmail, {
+            to: creator.email,
+            name: creator.full_name || contract.creator_name || 'there',
+            role: 'creator',
+            amount: args.amount,
+            counterpartyName: contract.host_name || 'your host',
+            propertyName: contract.property_name,
+          });
+          await ctx.runMutation(internal.contracts.markCreatorReceiptSent, { id: args.contractId });
+        }
+        return { success: true, transferId: transfer.id };
+      } catch (err) {
+        await ctx.runMutation(internal.contracts.setPayoutStatus, {
+          id: args.contractId, status: 'failed', method: 'stripe_connect',
+        });
+        return { error: String(err?.message || err) };
+      }
+    }
+
+    if (creator.payout_method === 'wise' && creator.wise_recipient_id) {
+      await ctx.runMutation(internal.contracts.setPayoutStatus, { id: args.contractId, status: 'pending', method: 'wise' });
+      return { pending: 'awaiting_manual_wise_payout' };
+    }
+
+    // Creator hasn't connected a payout method yet.
+    await ctx.runMutation(internal.contracts.setPayoutStatus, { id: args.contractId, status: 'pending' });
+    return { pending: 'no_payout_method' };
+  },
+});
+
+// Admin override: clears any dispute hold and forwards the creator's payout
+// immediately instead of waiting out the rest of the PAYOUT_HOLD_MS window.
+// Only meaningful for Stripe Connect — Wise payouts are already admin-manual.
+export const releasePayoutNow = action({
+  args: { contractId: v.string() },
+  handler: async (ctx, args) => {
+    const contract = await ctx.runQuery(internal.contracts.getByIdInternal, { id: args.contractId });
+    if (!contract) throw new Error('Contract not found');
+    if (contract.creator_payout_status === 'paid') throw new Error('This contract has already been paid out');
+    if (!contract.creator_payout_amount) throw new Error('No payout amount recorded on this contract');
+
+    await ctx.runMutation(internal.contracts.setPayoutHold, { contractId: args.contractId, held: false });
+
+    const secretKey = process.env.STRIPE_SECRET_KEY;
+    const stripe = new Stripe(secretKey);
+    let chargeId;
+    if (contract.payment_intent_id) {
+      const intent = await stripe.paymentIntents.retrieve(contract.payment_intent_id);
+      chargeId = typeof intent.latest_charge === 'string' ? intent.latest_charge : intent.latest_charge?.id;
+    }
+
+    return await ctx.runAction(internal.stripe.forwardCreatorPayout, {
+      contractId: args.contractId,
+      amount: contract.creator_payout_amount,
+      chargeId,
+    });
+  },
+});
+
+// Creator payout onboarding — creates (or reuses) a Stripe Express connected
+// account and returns a hosted onboarding link. Stripe handles KYC/AML,
+// identity verification, and bank account linking; we just store the account id.
+export const createConnectOnboardingLink = action({
+  args: { profileId: v.string(), refreshUrl: v.string(), returnUrl: v.string() },
+  handler: async (ctx, args) => {
+    const secretKey = process.env.STRIPE_SECRET_KEY;
+    if (!secretKey) throw new Error('STRIPE_SECRET_KEY is not set in Convex environment variables');
+    const stripe = new Stripe(secretKey);
+
+    const profile = await ctx.runQuery(api.profiles.getById, { id: args.profileId });
+    if (!profile) throw new Error('Profile not found');
+
+    let accountId = profile.stripe_connect_account_id;
+    if (!accountId) {
+      const account = await stripe.accounts.create({
+        type: 'express',
+        email: profile.email,
+        metadata: { profileId: args.profileId },
+      });
+      accountId = account.id;
+      await ctx.runMutation(internal.profiles.setStripeConnectAccount, { profileId: args.profileId, accountId });
+    }
+
+    const link = await stripe.accountLinks.create({
+      account: accountId,
+      refresh_url: args.refreshUrl,
+      return_url: args.returnUrl,
+      type: 'account_onboarding',
+    });
+
+    return { url: link.url };
+  },
+});
+
+const wiseBaseUrl = () =>
+  process.env.WISE_ENV === 'sandbox' ? 'https://api.sandbox.transferwise.tech' : 'https://api.wise.com';
+
+// Creator connects Wise — creates a recipient account to receive payouts.
+// `type`/`details` shape depends on currency/country per Wise's API; passed
+// through from the client form as-is. NOTE: verify the exact required fields
+// against Wise's own dashboard/API docs before the first real payout for a
+// new currency — https://docs.wise.com/api-docs/api-reference/recipient.
+export const createWiseRecipient = action({
+  args: {
+    profileId: v.string(),
+    currency: v.string(),
+    accountHolderName: v.string(),
+    type: v.string(),
+    details: v.any(),
+  },
+  handler: async (ctx, args) => {
+    const token = process.env.WISE_API_TOKEN;
+    const wiseProfileId = process.env.WISE_PROFILE_ID;
+    if (!token || !wiseProfileId) throw new Error('WISE_API_TOKEN/WISE_PROFILE_ID are not set in Convex environment variables');
+
+    const res = await fetch(`${wiseBaseUrl()}/v1/accounts`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        profile: wiseProfileId,
+        accountHolderName: args.accountHolderName,
+        currency: args.currency,
+        type: args.type,
+        details: args.details,
+      }),
+    });
+    if (!res.ok) throw new Error(`Wise recipient creation failed: ${res.status} ${await res.text()}`);
+    const recipient = await res.json();
+
+    await ctx.runMutation(internal.profiles.setWiseRecipient, {
+      profileId: args.profileId,
+      recipientId: String(recipient.id),
+      currency: args.currency,
+    });
+
+    return { recipientId: recipient.id };
+  },
+});
+
+// Admin-triggered Wise payout — for creators who chose Wise, since Stripe has
+// to settle funds to Collabnb's own bank before there's real cash to forward
+// (see forwardCreatorPayout). Flow: quote → transfer → fund from Wise balance.
+export const sendWisePayout = action({
+  args: { contractId: v.string() },
+  handler: async (ctx, args) => {
+    const token = process.env.WISE_API_TOKEN;
+    const wiseProfileId = process.env.WISE_PROFILE_ID;
+    if (!token || !wiseProfileId) throw new Error('WISE_API_TOKEN/WISE_PROFILE_ID are not set in Convex environment variables');
+
+    const contract = await ctx.runQuery(internal.contracts.getByIdInternal, { id: args.contractId });
+    if (!contract) throw new Error('Contract not found');
+    if (contract.creator_payout_status === 'paid') throw new Error('This contract has already been paid out');
+    if (!contract.creator_id) throw new Error('Contract has no linked creator');
+
+    const creator = await ctx.runQuery(api.profiles.getById, { id: String(contract.creator_id) });
+    if (!creator?.wise_recipient_id) throw new Error('Creator has no connected Wise recipient');
+
+    const amount = contract.creator_payout_amount;
+    if (!amount || amount <= 0) throw new Error('No payout amount recorded on this contract');
+
+    const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
+    const base = wiseBaseUrl();
+
+    await ctx.runMutation(internal.contracts.setPayoutStatus, { id: args.contractId, status: 'processing', method: 'wise' });
+
+    try {
+      const quoteRes = await fetch(`${base}/v3/profiles/${wiseProfileId}/quotes`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          sourceCurrency: 'USD',
+          targetCurrency: creator.wise_recipient_currency || 'USD',
+          sourceAmount: amount,
+          payOut: 'BANK_TRANSFER',
+        }),
+      });
+      if (!quoteRes.ok) throw new Error(`Wise quote failed: ${quoteRes.status} ${await quoteRes.text()}`);
+      const quote = await quoteRes.json();
+
+      const transferRes = await fetch(`${base}/v1/transfers`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          targetAccount: creator.wise_recipient_id,
+          quoteUuid: quote.id,
+          customerTransactionId: `${args.contractId}-${Date.now()}`,
+          details: { reference: 'Collabnb payout' },
+        }),
+      });
+      if (!transferRes.ok) throw new Error(`Wise transfer failed: ${transferRes.status} ${await transferRes.text()}`);
+      const transfer = await transferRes.json();
+
+      const fundRes = await fetch(`${base}/v3/profiles/${wiseProfileId}/transfers/${transfer.id}/payments`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ type: 'BALANCE' }),
+      });
+      if (!fundRes.ok) throw new Error(`Wise funding failed: ${fundRes.status} ${await fundRes.text()}`);
+
+      await ctx.runMutation(internal.contracts.setPayoutStatus, {
+        id: args.contractId, status: 'paid', method: 'wise', reference: String(transfer.id),
+      });
+      if (creator.email) {
+        await ctx.runAction(internal.email.sendPayoutReceiptEmail, {
+          to: creator.email,
+          name: creator.full_name || contract.creator_name || 'there',
+          role: 'creator',
+          amount,
+          counterpartyName: contract.host_name || 'your host',
+          propertyName: contract.property_name,
+        });
+        await ctx.runMutation(internal.contracts.markCreatorReceiptSent, { id: args.contractId });
+      }
+      return { success: true, transferId: transfer.id };
+    } catch (err) {
+      await ctx.runMutation(internal.contracts.setPayoutStatus, { id: args.contractId, status: 'failed', method: 'wise' });
+      throw err;
     }
   },
 });

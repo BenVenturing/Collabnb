@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
+import { PayoutBadge, PayoutHoldControls, SendWisePayoutButton } from '../../components/admin/PayoutControls';
 
 const INK   = '#192524';
 const SLATE = '#3C5759';
@@ -138,7 +139,7 @@ export default function ContractManager() {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid rgba(25,37,36,0.07)' }}>
-                {['Creator', 'Host', 'Property', 'Status', 'Dates', 'Payment', 'Signatures', 'Created', 'Actions'].map((h) => (
+                {['Creator', 'Host', 'Property', 'Status', 'Dates', 'Payment', 'Payout', 'Signatures', 'Created', 'Actions'].map((h) => (
                   <th key={h} style={{ padding: '0.75rem', textAlign: 'left', fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: SAGE, whiteSpace: 'nowrap', minWidth: h === 'Actions' ? 150 : undefined }}>
                     {h}
                   </th>
@@ -168,6 +169,13 @@ export default function ContractManager() {
                     {c.paid
                       ? <span style={{ color: '#166534', fontWeight: 600 }}>Paid{c.payment_amount ? ` $${c.payment_amount}` : ''}</span>
                       : <span style={{ color: SLATE }}>{c.payment || '—'}</span>}
+                  </td>
+                  <td style={{ padding: '0.75rem' }} onClick={(e) => e.stopPropagation()}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', alignItems: 'flex-start' }}>
+                      <PayoutBadge contract={c} />
+                      <SendWisePayoutButton contract={c} size="sm" />
+                      <PayoutHoldControls contract={c} size="sm" />
+                    </div>
                   </td>
                   <td style={{ padding: '0.75rem', whiteSpace: 'nowrap' }}>
                     <span style={{ color: c.creator_signed ? '#166534' : SAGE, marginRight: '0.5rem', fontSize: '0.8rem' }}>
@@ -391,6 +399,13 @@ function ContractDetailModal({ contract: c, onClose }) {
         <Row label="Dates" value={c.dates} />
         <Row label="Deliverables" value={c.deliverables} />
         <Row label="Payment" value={c.paid ? `Paid${c.payment_amount ? ` · $${c.payment_amount}` : ''}` : (c.payment || '—')} />
+        <Row label="Creator Payout" value={c.creator_payout_amount ? (
+          <span style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+            <PayoutBadge contract={c} />
+            <SendWisePayoutButton contract={c} />
+            <PayoutHoldControls contract={c} />
+          </span>
+        ) : undefined} />
         <Row label="Currency" value={c.currency} />
         <Row label="Usage Rights" value={c.usage_rights} />
         <Row label="Summary" value={c.summary_note} />

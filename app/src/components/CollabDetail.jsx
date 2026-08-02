@@ -799,6 +799,11 @@ function ClosedPanel({ collab, toggleCloseCollab }) {
               <p style={{ fontSize: '0.8rem', color: 'var(--slate)', margin: '0 0 0.875rem', lineHeight: 1.5 }}>
                 How did your Collabnb post perform? Your data stays private and helps us improve matches.
               </p>
+              <p style={{ fontSize: '0.75rem', color: 'var(--slate)', margin: '0 0 0.875rem', lineHeight: 1.5, background: 'rgba(209,235,219,0.3)', borderRadius: '0.75rem', padding: '0.625rem 0.75rem' }}>
+                <strong>Tag us when you post</strong> — it helps hosts spot your work on the platform.<br />
+                Instagram: tag <strong>@collabnb</strong> in the caption and add us as a collaborator.<br />
+                TikTok: tag <strong>@collabnbofficial</strong> in the caption.
+              </p>
               <div style={{ marginBottom: '0.625rem' }}>
                 <label style={LABEL_S}>Post URL (Instagram / TikTok / YouTube)</label>
                 <input type="url" placeholder="https://www.instagram.com/p/..." value={form.post_url} onChange={setField('post_url')} style={INPUT_S} />

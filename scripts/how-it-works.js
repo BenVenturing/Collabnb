@@ -68,4 +68,60 @@ async function init() {
   }
 }
 
+function animateStatCount(el, duration = 1600) {
+  const target = parseFloat(el.dataset.count);
+  if (Number.isNaN(target)) return;
+  const decimals = parseInt(el.dataset.decimals || '0', 10);
+  const prefix = el.dataset.prefix || '';
+  const suffix = el.dataset.suffix || '';
+  const render = (v) => `${prefix}${v.toFixed(decimals)}${suffix}`;
+
+  if (window.innerWidth <= 768) { el.textContent = render(target); return; }
+
+  const start = performance.now();
+  const step = (now) => {
+    const t = Math.min(1, (now - start) / duration);
+    const eased = 1 - Math.pow(1 - t, 4);
+    el.textContent = render(eased * target);
+    if (t < 1) requestAnimationFrame(step);
+    else el.textContent = render(target);
+  };
+  requestAnimationFrame(step);
+}
+
+function initStatsToggle() {
+  const wrap = document.getElementById('stats-toggle-wrap');
+  const btn = document.getElementById('stats-toggle');
+  if (!wrap || !btn) return;
+
+  let animated = false;
+  btn.addEventListener('click', () => {
+    const isOpen = wrap.classList.toggle('open');
+    btn.setAttribute('aria-expanded', String(isOpen));
+    if (isOpen && !animated) {
+      animated = true;
+      wrap.querySelectorAll('.stat-number [data-count]').forEach((el) => animateStatCount(el));
+    }
+  });
+}
+
+function initSideStats() {
+  const els = document.querySelectorAll('.side-stat');
+  if (!els.length) return;
+
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (!entry.isIntersecting) return;
+      entry.target.classList.add('in');
+      const numEl = entry.target.querySelector('[data-count]');
+      if (numEl) animateStatCount(numEl);
+      obs.unobserve(entry.target);
+    });
+  }, { threshold: 0.4 });
+
+  els.forEach((el) => obs.observe(el));
+}
+
 document.addEventListener('DOMContentLoaded', init);
+document.addEventListener('DOMContentLoaded', initStatsToggle);
+document.addEventListener('DOMContentLoaded', initSideStats);

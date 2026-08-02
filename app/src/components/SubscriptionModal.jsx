@@ -51,7 +51,7 @@ export default function SubscriptionModal() {
   return (
     <div
       style={{
-        position: 'fixed', inset: 0, zIndex: 250,
+        position: 'fixed', inset: 0, zIndex: 10500,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         padding: '1.5rem',
         background: 'radial-gradient(120% 100% at 50% 0%, rgba(60,87,89,0.42), rgba(25,37,36,0.62))',

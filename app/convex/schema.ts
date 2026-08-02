@@ -67,7 +67,15 @@ export default defineSchema({
     // Creator-controlled listing visibility. Undefined/true = discoverable by
     // hosts; false = hidden from the Creators page and not messageable.
     profile_visible: v.optional(v.boolean()),
-  }).index("by_email", ["email"]).index("by_stripe_customer", ["stripe_customer_id"]),
+    // Creator payout method — how they receive contract payouts (collect &
+    // forward: host pays Collabnb, Collabnb forwards the creator's net).
+    payout_method: v.optional(v.union(v.literal("stripe_connect"), v.literal("wise"))),
+    stripe_connect_account_id: v.optional(v.string()),
+    stripe_connect_payouts_enabled: v.optional(v.boolean()),
+    wise_recipient_id: v.optional(v.string()),
+    wise_recipient_currency: v.optional(v.string()),
+  }).index("by_email", ["email"]).index("by_stripe_customer", ["stripe_customer_id"])
+    .index("by_stripe_connect_account", ["stripe_connect_account_id"]),
 
   listings: defineTable({
     title: v.string(),
@@ -233,10 +241,29 @@ export default defineSchema({
     last_reminder_at: v.optional(v.number()),
     admin_dismissed: v.optional(v.boolean()),
     admin_dismissed_at: v.optional(v.number()),
+    // Collect & forward: host is charged cash_value + fee_amount in one PaymentIntent
+    // (gross_charge_amount); the creator's net (= cash_value) is then forwarded via
+    // Stripe Connect transfer (instant) or Wise (admin-triggered, see stripe.js).
+    gross_charge_amount: v.optional(v.number()),
+    creator_payout_amount: v.optional(v.number()),
+    creator_payout_method: v.optional(v.union(v.literal("stripe_connect"), v.literal("wise"))),
+    creator_payout_status: v.optional(v.union(
+      v.literal("pending"), v.literal("processing"), v.literal("paid"), v.literal("failed")
+    )),
+    creator_payout_reference: v.optional(v.string()),
+    creator_payout_paid_at: v.optional(v.number()),
+    // Dispute-resolution hold: the forward to the creator is scheduled for
+    // this time (see chargeContractFee), not fired immediately, so admin has
+    // a window to pause it if the host/creator raise a dispute first.
+    creator_payout_release_at: v.optional(v.number()),
+    creator_payout_held: v.optional(v.boolean()),
+    host_receipt_sent_at: v.optional(v.number()),
+    creator_receipt_sent_at: v.optional(v.number()),
   })
     .index("by_owner", ["owner_id"])
     .index("by_host", ["host_id"])
-    .index("by_creator", ["creator_id"]),
+    .index("by_creator", ["creator_id"])
+    .index("by_payout_status", ["creator_payout_status"]),
 
   collections: defineTable({
     name: v.string(),

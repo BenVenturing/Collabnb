@@ -547,6 +547,78 @@ export const markFeeChargeFailed = internalMutation({
   },
 });
 
+// Records the split of a successful collect-and-forward host charge.
+export const setGrossCharge = internalMutation({
+  args: {
+    id: v.string(),
+    grossChargeAmount: v.number(),
+    creatorPayoutAmount: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const exists = await ctx.db.get(args.id as any);
+    if (!exists) return;
+    await ctx.db.patch(args.id as any, {
+      gross_charge_amount: args.grossChargeAmount,
+      creator_payout_amount: args.creatorPayoutAmount,
+    });
+  },
+});
+
+// Tracks the state of forwarding the creator's net payout — set after the
+// host charge succeeds (stripe.js forwardCreatorPayout / admin Wise payout).
+export const setPayoutStatus = internalMutation({
+  args: {
+    id: v.string(),
+    status: v.union(v.literal("pending"), v.literal("processing"), v.literal("paid"), v.literal("failed")),
+    method: v.optional(v.union(v.literal("stripe_connect"), v.literal("wise"))),
+    reference: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const exists = await ctx.db.get(args.id as any);
+    if (!exists) return;
+    const patch: Record<string, any> = { creator_payout_status: args.status };
+    if (args.method !== undefined) patch.creator_payout_method = args.method;
+    if (args.reference !== undefined) patch.creator_payout_reference = args.reference;
+    if (args.status === "paid") patch.creator_payout_paid_at = Date.now();
+    await ctx.db.patch(args.id as any, patch);
+  },
+});
+
+// Records that the creator's forward has been scheduled (not yet sent) —
+// the dispute-resolution hold window before the payout actually fires.
+export const schedulePayoutHold = internalMutation({
+  args: { id: v.string(), releaseAt: v.number() },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.id as any, {
+      creator_payout_status: "pending",
+      creator_payout_release_at: args.releaseAt,
+    });
+  },
+});
+
+// Admin toggle: pause (or resume) a scheduled payout ahead of its release
+// time, e.g. because the host/creator raised a dispute.
+export const setPayoutHold = mutation({
+  args: { contractId: v.string(), held: v.boolean() },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.contractId as any, { creator_payout_held: args.held });
+  },
+});
+
+export const markHostReceiptSent = internalMutation({
+  args: { id: v.string() },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.id as any, { host_receipt_sent_at: Date.now() });
+  },
+});
+
+export const markCreatorReceiptSent = internalMutation({
+  args: { id: v.string() },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.id as any, { creator_receipt_sent_at: Date.now() });
+  },
+});
+
 // One-time backfill: fill host_id / creator_id from name matches.
 export const backfillContractParties = internalMutation({
   args: {},

@@ -143,6 +143,51 @@ export const setFounderStatus = mutation({
   },
 });
 
+// Creator picks which payout rail they want to connect (before onboarding).
+export const setPayoutMethod = mutation({
+  args: { profileId: v.string(), payoutMethod: v.union(v.literal("stripe_connect"), v.literal("wise")) },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.profileId as any, { payout_method: args.payoutMethod });
+  },
+});
+
+// Called from stripe.js after creating the creator's Express connected account.
+export const setStripeConnectAccount = internalMutation({
+  args: { profileId: v.string(), accountId: v.string() },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.profileId as any, {
+      payout_method: "stripe_connect",
+      stripe_connect_account_id: args.accountId,
+    });
+  },
+});
+
+// Called by the account.updated webhook once Stripe finishes verifying the
+// connected account and enables charges/payouts on it.
+export const setStripeConnectPayoutsEnabled = internalMutation({
+  args: { accountId: v.string(), payoutsEnabled: v.boolean() },
+  handler: async (ctx, args) => {
+    const profile = await ctx.db
+      .query("profiles")
+      .withIndex("by_stripe_connect_account", (q) => q.eq("stripe_connect_account_id", args.accountId))
+      .unique();
+    if (!profile) return;
+    await ctx.db.patch(profile._id, { stripe_connect_payouts_enabled: args.payoutsEnabled });
+  },
+});
+
+// Called once a Wise recipient account has been created for this creator.
+export const setWiseRecipient = internalMutation({
+  args: { profileId: v.string(), recipientId: v.string(), currency: v.string() },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.profileId as any, {
+      payout_method: "wise",
+      wise_recipient_id: args.recipientId,
+      wise_recipient_currency: args.currency,
+    });
+  },
+});
+
 export const getUnverified = query({
   args: {},
   handler: async (ctx) => {
@@ -308,6 +353,70 @@ export const getDetailedProfile = query({
       totalReferrals,
       referrerOwnerId: referrer?.owner_id ?? null,
       freeMonthsBalance: profile.free_months_balance ?? 0,
+    };
+  },
+});
+
+// Surfaces the facts an admin needs to judge a legacy yearly-plan money-back
+// guarantee claim (see Terms 3.7): outreach sent and collaborations confirmed
+// during the subscription term. This does not auto-approve/deny — it's a
+// verification aid; the admin makes the final call (mirrors "can be verified
+// by us" in the guarantee clause).
+export const checkGuaranteeEligibility = query({
+  args: { profileId: v.id("profiles") },
+  handler: async (ctx, args) => {
+    const profile = await ctx.db.get(args.profileId);
+    if (!profile) return null;
+
+    const pId = String(args.profileId);
+    const isYearly = profile.subscription_tier === "yearly";
+    const expiresAt = profile.subscription_expires_at ?? null;
+    const YEAR_MS = 365 * 24 * 60 * 60 * 1000;
+    // No explicit term-start field is stored — approximate it from the yearly
+    // period end, since Stripe only gives us subscription_expires_at.
+    const approxTermStart = expiresAt ? expiresAt - YEAR_MS : null;
+    const termEnded = expiresAt ? Date.now() > expiresAt : false;
+
+    const [pitches, contracts] = await Promise.all([
+      ctx.db.query("pitches").withIndex("by_creator", (q) => q.eq("creator_id", pId)).collect(),
+      ctx.db.query("contracts").withIndex("by_creator", (q) => q.eq("creator_id", pId)).collect(),
+    ]);
+
+    const inTerm = (ts) => approxTermStart != null && ts >= approxTermStart && ts <= (expiresAt ?? Infinity);
+
+    const outreach = pitches.filter((p) => inTerm(p.created_at));
+    const confirmed = contracts.filter((c) => c.creator_signed && c.host_signed && inTerm(c._creationTime));
+
+    const reasons = [];
+    if (!isYearly) reasons.push("Not on the yearly plan — guarantee only covers legacy yearly subscriptions.");
+    if (!expiresAt) reasons.push("No subscription term on record.");
+    else if (!termEnded) reasons.push("Subscription term hasn't ended yet — refund requests are only valid after the term ends.");
+    if (expiresAt && termEnded && outreach.length === 0) reasons.push("No outreach activity found during the term.");
+    if (confirmed.length > 0) reasons.push(`${confirmed.length} confirmed collaboration(s) found during the term — guarantee does not apply.`);
+    if (profile.subscription_status === "cancelled") reasons.push("Subscription shows status \"cancelled\" — verify it wasn't cancelled/downgraded before the term naturally ended.");
+
+    const eligible = isYearly && termEnded && outreach.length > 0 && confirmed.length === 0;
+
+    return {
+      subscriptionTier: profile.subscription_tier ?? null,
+      subscriptionStatus: profile.subscription_status ?? null,
+      subscriptionExpiresAt: expiresAt,
+      approxTermStart,
+      termEnded,
+      eligible,
+      reasons,
+      outreachCount: outreach.length,
+      confirmedCollabCount: confirmed.length,
+      recentOutreach: outreach
+        .sort((a, b) => b.created_at - a.created_at)
+        .slice(0, 10)
+        .map((p) => ({ listing_title: p.listing_title ?? null, created_at: p.created_at, status: p.status })),
+      recentConfirmed: confirmed.map((c) => ({
+        property_name: c.property_name ?? null,
+        host_name: c.host_name,
+        creator_signed_at: c.creator_signed_at ?? null,
+        host_signed_at: c.host_signed_at ?? null,
+      })),
     };
   },
 });

@@ -597,6 +597,9 @@ export default function Profile() {
   const verifySubscriptionSession = useAction(api.stripe.verifySubscriptionSession);
   const verifyLifetimeSession      = useAction(api.stripe.verifyLifetimeSession);
   const createBillingPortalSession = useAction(api.stripe.createBillingPortalSession);
+  const createConnectOnboardingLink = useAction(api.stripe.createConnectOnboardingLink);
+  const createWiseRecipient        = useAction(api.stripe.createWiseRecipient);
+  const setPayoutMethodMutation     = useMutation(api.profiles.setPayoutMethod);
   const generateUploadUrl          = useMutation(api.uploads.generateUploadUrl);
   const convex                     = useConvex();
   const getStorageUrl              = (args) => convex.query(api.uploads.getStorageUrl, args);
@@ -646,6 +649,7 @@ export default function Profile() {
   const [showVerification,  setShowVerification]  = useState(false);
   const [showLocation,      setShowLocation]      = useState(false);
   const [showMetrics,       setShowMetrics]       = useState(false);
+  const [showPayoutMethod,  setShowPayoutMethod]  = useState(false);
   const [toastMsg, setToastMsg]               = useState(null);
   const [exitConfirmDraft, setExitConfirmDraft] = useState(null);
   const [portalLoading, setPortalLoading]       = useState(false);
@@ -901,6 +905,7 @@ export default function Profile() {
     { icon: <PencilIcon />,      label: 'Edit Profile',    sublabel: 'Update your photos, bio, and socials',           onClick: () => { setShowSettings(false); openEditProfile(); } },
     { icon: <FileTextIcon />,    label: 'Contracts',       sublabel: 'View and manage your saved contracts',           onClick: () => { setShowSettings(false); setShowContracts(true); } },
     ...(dp.role === 'creator' ? [{ icon: (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="20" height="20"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>), label: 'My Metrics', sublabel: 'Update your follower & engagement stats', onClick: () => setShowMetrics(true) }] : []),
+    ...(dp.role === 'creator' ? [{ icon: <CreditCardIcon />, label: 'Payout Method', sublabel: 'Connect Stripe or Wise to receive payouts', onClick: () => { setShowSettings(false); setShowPayoutMethod(true); } }] : []),
     ...(hasActiveSub ? [{ icon: <CreditCardIcon />, label: 'Manage Plan', sublabel: 'Cancel, upgrade, or update billing', onClick: () => { setShowSettings(false); handleManageSubscription(); } }] : []),
     ...(isAdmin
       ? [{ icon: <ChecklistIcon />, label: 'Admin Dashboard', sublabel: 'Open the Collabnb admin dashboard', onClick: () => { setShowSettings(false); navigate('/admin'); } }]
@@ -1690,9 +1695,18 @@ export default function Profile() {
               const isPastDue = dp.subscription_status === 'past_due';
               const tier = dp.subscription_tier;
               const isYearly = tier === 'yearly';
-              const firstDone = dp.first_collab_completed === true;
+              const isTrialActive = dp.access_state !== 'limited';
+              const trialDaysLeft = dp.trial_ends_at
+                ? Math.max(0, Math.ceil((dp.trial_ends_at - Date.now()) / (24 * 60 * 60 * 1000)))
+                : null;
 
               if (isFounder) {
+                // Savings accrue from when a normal trial would have ended —
+                // that's the point a non-founder would've started paying $10/mo.
+                const monthsSincePaidStart = dp.trial_ends_at
+                  ? Math.max(0, (Date.now() - dp.trial_ends_at) / (30 * 24 * 60 * 60 * 1000))
+                  : 0;
+                const lifetimeSavings = Math.round(monthsSincePaidStart * 10);
                 return (
                   <div style={{ padding: '0.875rem 1.5rem', borderBottom: '1px solid rgba(60,87,89,0.08)', background: 'linear-gradient(135deg, rgba(212,168,67,0.08) 0%, rgba(212,168,67,0.04) 100%)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
@@ -1701,9 +1715,14 @@ export default function Profile() {
                       </div>
                       <div>
                         <p style={{ fontSize: '0.82rem', fontWeight: 700, color: '#A87820', margin: 0 }}>Founding Member</p>
-                        <p style={{ fontSize: '0.72rem', color: '#C4921A', margin: '0.1rem 0 0' }}>Free Forever — all features unlocked</p>
+                        <p style={{ fontSize: '0.72rem', color: '#C4921A', margin: '0.1rem 0 0' }}>Lifetime free access — all features unlocked</p>
                       </div>
                     </div>
+                    {lifetimeSavings > 0 && (
+                      <p style={{ fontSize: '0.72rem', color: '#A87820', fontWeight: 600, margin: '0.6rem 0 0', paddingTop: '0.6rem', borderTop: '1px solid rgba(212,168,67,0.2)' }}>
+                        You've saved ${lifetimeSavings} in subscription fees as a Founding Member
+                      </p>
+                    )}
                   </div>
                 );
               }
@@ -1723,7 +1742,7 @@ export default function Profile() {
                     </p>
                     {!isYearly && (
                       <button
-                        onClick={openSubModal}
+                        onClick={() => { setShowSettings(false); openSubModal(); }}
                         style={{ marginTop: '0.6rem', fontSize: '0.7rem', fontWeight: 600, color: '#A87820', background: 'rgba(212,168,67,0.1)', border: '1px solid rgba(212,168,67,0.25)', borderRadius: '999px', padding: '0.2rem 0.7rem', cursor: 'pointer' }}
                       >
                         Upgrade to Yearly — save 50%
@@ -1742,7 +1761,7 @@ export default function Profile() {
                         <p style={{ fontSize: '0.72rem', color: 'var(--sage)', margin: '0.1rem 0 0' }}>Renew to keep messaging and applying</p>
                       </div>
                       <button
-                        onClick={openSubModal}
+                        onClick={() => { setShowSettings(false); openSubModal(); }}
                         style={{ fontSize: '0.75rem', fontWeight: 700, color: 'white', background: '#dc2626', border: 'none', borderRadius: '999px', padding: '0.35rem 0.9rem', cursor: 'pointer' }}
                       >
                         Renew
@@ -1772,11 +1791,23 @@ export default function Profile() {
                 );
               }
 
-              if (!firstDone) {
+              if (isTrialActive) {
                 return (
                   <div style={{ padding: '0.875rem 1.5rem', borderBottom: '1px solid rgba(60,87,89,0.08)', background: 'rgba(209,235,219,0.15)' }}>
-                    <p style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--slate)', margin: '0 0 0.1rem' }}>Free — first collab included</p>
-                    <p style={{ fontSize: '0.72rem', color: 'var(--sage)', margin: 0 }}>Complete your first collaboration, then choose a plan to continue.</p>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem' }}>
+                      <div>
+                        <p style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--slate)', margin: '0 0 0.1rem' }}>
+                          Free trial{trialDaysLeft !== null ? ` · ${trialDaysLeft} day${trialDaysLeft === 1 ? '' : 's'} left` : ''}
+                        </p>
+                        <p style={{ fontSize: '0.72rem', color: 'var(--sage)', margin: 0 }}>Full access included — choose a plan before your trial ends.</p>
+                      </div>
+                      <button
+                        onClick={() => { setShowSettings(false); openSubModal(); }}
+                        style={{ flexShrink: 0, fontSize: '0.75rem', fontWeight: 700, color: 'var(--slate)', background: 'rgba(60,87,89,0.08)', border: 'none', borderRadius: '999px', padding: '0.35rem 0.9rem', cursor: 'pointer' }}
+                      >
+                        View plans
+                      </button>
+                    </div>
                   </div>
                 );
               }
@@ -1789,7 +1820,7 @@ export default function Profile() {
                       <p style={{ fontSize: '0.72rem', color: 'var(--sage)', margin: '0.1rem 0 0' }}>Subscribe to keep collaborating</p>
                     </div>
                     <button
-                      onClick={openSubModal}
+                      onClick={() => { setShowSettings(false); openSubModal(); }}
                       style={{ fontSize: '0.75rem', fontWeight: 700, color: 'white', background: 'var(--slate)', border: 'none', borderRadius: '999px', padding: '0.35rem 0.9rem', cursor: 'pointer' }}
                     >
                       Subscribe
@@ -2328,6 +2359,16 @@ export default function Profile() {
         </div>
       )}
 
+      {showPayoutMethod && (
+        <PayoutMethodPanel
+          profile={dp}
+          onClose={() => setShowPayoutMethod(false)}
+          createConnectOnboardingLink={createConnectOnboardingLink}
+          createWiseRecipient={createWiseRecipient}
+          setPayoutMethodMutation={setPayoutMethodMutation}
+        />
+      )}
+
       {/* ── Lifetime Access modal ────────────────────────────────────── */}
       <LifetimeAccessModal
         isOpen={lifetimeModalOpen}
@@ -2374,6 +2415,189 @@ export default function Profile() {
           {toastMsg}
         </div>
       )}
+    </div>
+  );
+}
+
+// Creator payout-method connection — Stripe Connect (hosted onboarding) or
+// Wise (manual recipient details, since there's no equivalent hosted flow).
+function PayoutMethodPanel({ profile, onClose, createConnectOnboardingLink, createWiseRecipient, setPayoutMethodMutation }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(null);
+  const [wiseCurrency, setWiseCurrency] = useState('USD');
+  const [wiseForm, setWiseForm] = useState({ accountHolderName: '', accountNumber: '', bankCode: '' });
+
+  const method = profile.payout_method;
+  const profileId = profile._id ? String(profile._id) : (profile.id ? String(profile.id) : '');
+
+  const connectStripe = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      const appBase = window.location.origin;
+      const { url } = await createConnectOnboardingLink({
+        profileId,
+        refreshUrl: `${appBase}/profile?payout=refresh`,
+        returnUrl: `${appBase}/profile?payout=return`,
+      });
+      if (url) window.location.href = url;
+    } catch {
+      setError('Could not start Stripe onboarding. Please try again.');
+      setBusy(false);
+    }
+  };
+
+  const chooseWise = async () => {
+    setError(null);
+    try { await setPayoutMethodMutation({ profileId, payoutMethod: 'wise' }); }
+    catch { setError('Could not save your choice. Please try again.'); }
+  };
+
+  const submitWiseRecipient = async () => {
+    if (!wiseForm.accountHolderName || !wiseForm.accountNumber) {
+      setError('Please fill in your account holder name and account number.');
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      // NOTE: Wise's required fields vary by currency — this covers USD (ABA
+      // routing) and IDR (Indonesian bank) as the two initial target markets.
+      const details = wiseCurrency === 'IDR'
+        ? { legalType: 'PRIVATE', accountNumber: wiseForm.accountNumber, bankCode: wiseForm.bankCode }
+        : { legalType: 'PRIVATE', accountNumber: wiseForm.accountNumber, abartn: wiseForm.bankCode, accountType: 'CHECKING' };
+      await createWiseRecipient({
+        profileId,
+        currency: wiseCurrency,
+        accountHolderName: wiseForm.accountHolderName,
+        type: wiseCurrency === 'IDR' ? 'indonesian' : 'aba',
+        details,
+      });
+    } catch (err) {
+      setError(err?.message?.includes('WISE_API_TOKEN')
+        ? 'Wise payouts are not fully configured yet — check back soon.'
+        : 'Could not connect your Wise account. Please double-check your details.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const stripeConnected = method === 'stripe_connect' && profile.stripe_connect_account_id;
+  const wiseConnected = method === 'wise' && profile.wise_recipient_id;
+
+  return (
+    <div
+      style={{ position: 'fixed', inset: 0, zIndex: 10000, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', padding: '1rem', background: 'rgba(25,37,36,0.5)', backdropFilter: 'blur(6px)' }}
+      onClick={onClose}
+    >
+      <div
+        style={{ width: '100%', maxWidth: '460px', borderRadius: '1.5rem', padding: 'clamp(1.25rem, 5vw, 2rem)', background: 'rgba(255,255,255,0.97)', border: '1px solid rgba(255,255,255,0.85)', boxShadow: '0 20px 60px rgba(25,37,36,0.18)' }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
+          <h4 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.15rem', color: 'var(--slate)', margin: 0 }}>Payout Method</h4>
+          <button onClick={onClose} style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'rgba(209,235,219,0.5)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--slate)' }}>✕</button>
+        </div>
+
+        <p style={{ fontSize: '0.8rem', color: 'var(--sage)', margin: '0 0 1.25rem', lineHeight: 1.5 }}>
+          When a host's payment for your collaboration is processed, Collabnb forwards your share here. Choose how you'd like to receive it.
+        </p>
+
+        {error && (
+          <p style={{ color: '#b91c1c', fontSize: '0.78rem', marginBottom: '1rem', padding: '0.625rem 0.875rem', background: 'rgba(185,28,28,0.06)', borderRadius: '0.75rem', lineHeight: 1.4 }}>
+            {error}
+          </p>
+        )}
+
+        {stripeConnected ? (
+          <div style={{ padding: '0.875rem 1rem', borderRadius: '0.875rem', background: profile.stripe_connect_payouts_enabled ? 'rgba(209,235,219,0.3)' : 'rgba(254,243,199,0.5)', marginBottom: '1rem' }}>
+            <p style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--ink)', margin: '0 0 0.2rem' }}>
+              {profile.stripe_connect_payouts_enabled ? '✓ Stripe connected' : 'Stripe connected — verification pending'}
+            </p>
+            <p style={{ fontSize: '0.72rem', color: 'var(--sage)', margin: 0 }}>
+              {profile.stripe_connect_payouts_enabled
+                ? "You're all set to receive payouts."
+                : 'Finish verifying your details with Stripe to start receiving payouts.'}
+            </p>
+            {!profile.stripe_connect_payouts_enabled && (
+              <button onClick={connectStripe} disabled={busy} className="btn-glass" style={{ marginTop: '0.75rem', fontSize: '0.78rem', padding: '0.4rem 0.9rem' }}>
+                {busy ? 'Opening…' : 'Continue verification'}
+              </button>
+            )}
+          </div>
+        ) : wiseConnected ? (
+          <div style={{ padding: '0.875rem 1rem', borderRadius: '0.875rem', background: 'rgba(209,235,219,0.3)', marginBottom: '1rem' }}>
+            <p style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--ink)', margin: '0 0 0.2rem' }}>✓ Wise connected</p>
+            <p style={{ fontSize: '0.72rem', color: 'var(--sage)', margin: 0 }}>Payouts will be sent in {profile.wise_recipient_currency}.</p>
+          </div>
+        ) : (
+          <>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem', marginBottom: '1rem' }}>
+              <button onClick={connectStripe} disabled={busy} className="btn-primary" style={{ fontSize: '0.85rem' }}>
+                {busy && method !== 'wise' ? 'Opening…' : 'Connect with Stripe'}
+              </button>
+              {method !== 'wise' && (
+                <button onClick={chooseWise} disabled={busy} className="btn-glass" style={{ fontSize: '0.85rem' }}>
+                  Connect with Wise instead
+                </button>
+              )}
+            </div>
+
+            {method === 'wise' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 700, color: 'var(--sage)', marginBottom: '0.375rem', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Currency</label>
+                  <select
+                    value={wiseCurrency}
+                    onChange={(e) => setWiseCurrency(e.target.value)}
+                    style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '0.875rem', background: 'rgba(255,255,255,0.75)', border: '1px solid rgba(25,37,36,0.12)', fontFamily: 'var(--font-body)', fontSize: '0.875rem', color: 'var(--ink)', outline: 'none', boxSizing: 'border-box' }}
+                  >
+                    <option value="USD">USD — United States</option>
+                    <option value="IDR">IDR — Indonesia</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 700, color: 'var(--sage)', marginBottom: '0.375rem', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Account Holder Name</label>
+                  <input
+                    type="text"
+                    value={wiseForm.accountHolderName}
+                    onChange={(e) => setWiseForm((f) => ({ ...f, accountHolderName: e.target.value }))}
+                    placeholder="Full name on the account"
+                    style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '0.875rem', background: 'rgba(255,255,255,0.75)', border: '1px solid rgba(25,37,36,0.12)', fontFamily: 'var(--font-body)', fontSize: '0.875rem', color: 'var(--ink)', outline: 'none', boxSizing: 'border-box' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 700, color: 'var(--sage)', marginBottom: '0.375rem', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Account Number</label>
+                  <input
+                    type="text"
+                    value={wiseForm.accountNumber}
+                    onChange={(e) => setWiseForm((f) => ({ ...f, accountNumber: e.target.value }))}
+                    style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '0.875rem', background: 'rgba(255,255,255,0.75)', border: '1px solid rgba(25,37,36,0.12)', fontFamily: 'var(--font-body)', fontSize: '0.875rem', color: 'var(--ink)', outline: 'none', boxSizing: 'border-box' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 700, color: 'var(--sage)', marginBottom: '0.375rem', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                    {wiseCurrency === 'IDR' ? 'Bank Code' : 'Routing Number (ABA)'}
+                  </label>
+                  <input
+                    type="text"
+                    value={wiseForm.bankCode}
+                    onChange={(e) => setWiseForm((f) => ({ ...f, bankCode: e.target.value }))}
+                    style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '0.875rem', background: 'rgba(255,255,255,0.75)', border: '1px solid rgba(25,37,36,0.12)', fontFamily: 'var(--font-body)', fontSize: '0.875rem', color: 'var(--ink)', outline: 'none', boxSizing: 'border-box' }}
+                  />
+                </div>
+                <button onClick={submitWiseRecipient} disabled={busy} className="btn-primary" style={{ fontSize: '0.85rem' }}>
+                  {busy ? 'Connecting…' : 'Connect Wise Account'}
+                </button>
+              </div>
+            )}
+          </>
+        )}
+
+        <p style={{ fontSize: '0.7rem', color: 'var(--sage)', margin: '1rem 0 0', lineHeight: 1.5 }}>
+          Stripe payouts typically arrive within a few days of a completed collaboration. Wise payouts can take a little longer to settle.
+        </p>
+      </div>
     </div>
   );
 }

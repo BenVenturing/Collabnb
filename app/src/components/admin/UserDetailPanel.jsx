@@ -80,6 +80,7 @@ export default function UserDetailPanel({ profileId, onClose }) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const data = useQuery(api.profiles.getDetailedProfile, profileId ? { profileId } : 'skip');
+  const guarantee = useQuery(api.profiles.checkGuaranteeEligibility, profileId ? { profileId } : 'skip');
   const deleteAccount = useAction(api.profiles.deleteAccount);
 
   const handleDelete = useCallback(async () => {
@@ -211,7 +212,7 @@ export default function UserDetailPanel({ profileId, onClose }) {
             </div>
           ) : (
             <>
-              <TabContent tab={activeTab} data={data} />
+              <TabContent tab={activeTab} data={data} guarantee={guarantee} />
 
               {/* ── Review actions (unverified or rejected users) ── */}
               {!data.profile.is_verified && (
@@ -288,7 +289,7 @@ export default function UserDetailPanel({ profileId, onClose }) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // Tab Content
 // ═══════════════════════════════════════════════════════════════════════════════
-function TabContent({ tab, data }) {
+function TabContent({ tab, data, guarantee }) {
   const p = data.profile;
 
   switch (tab) {
@@ -433,12 +434,69 @@ function TabContent({ tab, data }) {
     // ── Billing ───────────────────────────────────────────────────────────────
     case 'billing':
       return (
-        <Section title="Subscription">
-          <Stat label="Status"      value={p.subscription_status || '—'} accent={p.subscription_status === 'active' ? '#166534' : undefined} />
-          <Stat label="Tier"        value={p.subscription_tier || '—'} />
-          <Stat label="Expires At"  value={p.subscription_expires_at ? fmtDate(p.subscription_expires_at) : '—'} />
-          <Stat label="Stripe Customer ID" value={p.stripe_customer_id ? `${p.stripe_customer_id.slice(0, 20)}…` : '—'} />
-        </Section>
+        <>
+          <Section title="Subscription">
+            <Stat label="Status"      value={p.subscription_status || '—'} accent={p.subscription_status === 'active' ? '#166534' : undefined} />
+            <Stat label="Tier"        value={p.subscription_tier || '—'} />
+            <Stat label="Expires At"  value={p.subscription_expires_at ? fmtDate(p.subscription_expires_at) : '—'} />
+            <Stat label="Stripe Customer ID" value={p.stripe_customer_id ? `${p.stripe_customer_id.slice(0, 20)}…` : '—'} />
+          </Section>
+          {guarantee && (
+            <Section title="Guarantee Eligibility (Legacy Yearly Plan)">
+              <Stat
+                label="Verdict"
+                value={guarantee.eligible ? 'Eligible' : 'Not eligible'}
+                accent={guarantee.eligible ? '#166534' : '#92400E'}
+              />
+              <Stat label="Term Ended" value={guarantee.subscriptionExpiresAt ? fmtDate(guarantee.subscriptionExpiresAt) : '—'} />
+              <Stat label="Outreach Sent (in term)" value={guarantee.outreachCount} />
+              <Stat label="Confirmed Collabs (in term)" value={guarantee.confirmedCollabCount} />
+              {guarantee.reasons.length > 0 && (
+                <div style={{ marginTop: '0.5rem', padding: '0.625rem 0.75rem', background: '#FEF3C7', borderRadius: '0.5rem' }}>
+                  {guarantee.reasons.map((r, i) => (
+                    <p key={i} style={{ fontSize: '0.72rem', color: '#92400E', margin: i === 0 ? 0 : '0.25rem 0 0' }}>{r}</p>
+                  ))}
+                </div>
+              )}
+              {guarantee.recentOutreach.length > 0 && (
+                <div style={{ marginTop: '0.625rem' }}>
+                  <p style={{ fontSize: '0.68rem', fontWeight: 700, color: SAGE, textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 0.35rem' }}>Recent Outreach</p>
+                  {guarantee.recentOutreach.map((o, i) => (
+                    <div key={i} style={{ fontSize: '0.75rem', color: INK, padding: '0.3rem 0', borderBottom: '1px solid rgba(25,37,36,0.04)' }}>
+                      {o.listing_title || 'Untitled listing'} <span style={{ color: SAGE }}>· {fmtDate(o.created_at)} · {o.status}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {guarantee.recentConfirmed.length > 0 && (
+                <div style={{ marginTop: '0.625rem' }}>
+                  <p style={{ fontSize: '0.68rem', fontWeight: 700, color: SAGE, textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 0.35rem' }}>Confirmed Collaborations</p>
+                  {guarantee.recentConfirmed.map((c, i) => (
+                    <div key={i} style={{ fontSize: '0.75rem', color: INK, padding: '0.3rem 0', borderBottom: '1px solid rgba(25,37,36,0.04)' }}>
+                      {c.property_name || 'Untitled'} with {c.host_name}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Section>
+          )}
+
+          <Section title="Payout Method">
+            <Stat label="Method" value={p.payout_method === 'stripe_connect' ? 'Stripe Connect' : p.payout_method === 'wise' ? 'Wise' : 'Not connected'} />
+            {p.payout_method === 'stripe_connect' && (
+              <>
+                <Stat label="Connect Status" value={p.stripe_connect_payouts_enabled ? 'Verified' : 'Pending verification'} accent={p.stripe_connect_payouts_enabled ? '#166534' : '#92400E'} />
+                <Stat label="Connect Account ID" value={p.stripe_connect_account_id ? `${p.stripe_connect_account_id.slice(0, 20)}…` : '—'} />
+              </>
+            )}
+            {p.payout_method === 'wise' && (
+              <>
+                <Stat label="Wise Currency" value={p.wise_recipient_currency || '—'} />
+                <Stat label="Wise Recipient ID" value={p.wise_recipient_id || '—'} />
+              </>
+            )}
+          </Section>
+        </>
       );
 
     default:

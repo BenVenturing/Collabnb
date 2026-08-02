@@ -150,3 +150,75 @@ export const sendAdminNotification = internalAction({
     }
   },
 });
+
+// ─── Internal action — payout receipt, sent to host + creator on charge/payout ──
+// Fired from contracts.ts once a collab-completion charge succeeds (host receipt)
+// and once the creator payout status changes to "paid" (creator receipt).
+export const sendPayoutReceiptEmail = internalAction({
+  args: {
+    to: v.string(),
+    name: v.string(),
+    role: v.union(v.literal("host"), v.literal("creator")),
+    amount: v.number(),
+    counterpartyName: v.string(),
+    propertyName: v.optional(v.string()),
+  },
+  handler: async (_ctx, { to, name, role, amount, counterpartyName, propertyName }) => {
+    const apiKey = process.env.RESEND_API_KEY;
+    if (!apiKey) return;
+
+    const firstName = name.split(" ")[0];
+    const amountStr = `$${amount.toFixed(2)}`;
+    const subject = role === "host"
+      ? `Receipt: your Collabnb payment for ${propertyName || counterpartyName}`
+      : `You've been paid ${amountStr} on Collabnb`;
+    const headline = role === "host"
+      ? `Payment confirmed, ${firstName}`
+      : `${amountStr} is on its way, ${firstName}!`;
+    const bodyLine = role === "host"
+      ? `Your card was charged <strong>${amountStr}</strong> for the completed collaboration with <strong>${counterpartyName}</strong>. This covers the creator's payout plus Collabnb's platform fee.`
+      : `Collabnb has forwarded <strong>${amountStr}</strong> for your completed collaboration with <strong>${counterpartyName}</strong> to your connected payout account. Stripe payouts arrive quickly; Wise payouts can take a few extra business days to settle.`;
+
+    const html = `
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  body { margin:0; padding:0; background:#EFECE9; font-family:'Helvetica Neue',Helvetica,Arial,sans-serif; }
+  .wrap { max-width:520px; margin:0 auto; padding:40px 20px; }
+  .card { background:#fff; border-radius:20px; overflow:hidden; box-shadow:0 4px 24px rgba(25,37,36,0.07); }
+  .header { background:linear-gradient(135deg,#192524,#2d4a3e); padding:32px 40px 24px; text-align:center; }
+  .logo-text { color:#fff; font-size:1.35rem; font-weight:800; letter-spacing:-0.02em; }
+  .body { padding:32px 40px; }
+  h1 { font-size:1.35rem; font-weight:800; color:#192524; margin:0 0 12px; line-height:1.2; }
+  p { font-size:0.9375rem; color:#4a6670; line-height:1.65; margin:0 0 16px; }
+  .amount { font-size:2rem; font-weight:800; color:#192524; margin:0 0 4px; }
+  .footer { padding:16px 40px 28px; text-align:center; }
+  .footer p { font-size:0.78rem; color:#8faea6; margin:0; line-height:1.6; }
+</style>
+</head>
+<body>
+<div class="wrap"><div class="card">
+  <div class="header"><span class="logo-text">Collabnb</span></div>
+  <div class="body">
+    <p class="amount">${amountStr}</p>
+    <h1>${headline}</h1>
+    <p>${bodyLine}</p>
+  </div>
+  <div class="footer">
+    <p>Questions? Reply to this email or reach us at <a href="mailto:hello@collabnb.com" style="color:#3C5759;">hello@collabnb.com</a></p>
+  </div>
+</div></div>
+</body></html>`;
+
+    try {
+      await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ from: FROM, to: [to], subject, html }),
+      });
+    } catch (err) {
+      console.warn("Payout receipt email send failed:", err);
+    }
+  },
+});

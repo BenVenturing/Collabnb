@@ -980,6 +980,7 @@ h3 { font-weight: 700; }
   max-width: 700px;
 }
 .step-card {
+  position: relative;
   display: flex;
   gap: var(--space-6);
   padding: var(--space-6);
@@ -1007,6 +1008,137 @@ h3 { font-weight: 700; }
   color: var(--slate);
   font-size: var(--fs-body);
   line-height: 1.6;
+}
+
+/* --- STATS DROPDOWN (How it Works) --- */
+.stats-toggle-wrap { overflow: hidden; }
+.stats-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-6);
+  padding: var(--space-8);
+  text-align: left;
+  cursor: pointer;
+  transition: opacity 200ms;
+}
+.stats-toggle:hover { opacity: 0.85; }
+.stats-toggle:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+.stats-toggle-icon {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--mint);
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 350ms var(--ease-out-quart);
+}
+.stats-toggle-wrap.open .stats-toggle-icon { transform: rotate(180deg); }
+.stats-panel {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 450ms var(--ease-out-expo);
+}
+.stats-toggle-wrap.open .stats-panel { grid-template-rows: 1fr; }
+.stats-panel-inner { overflow: hidden; padding: 0 var(--space-8) var(--space-8); }
+.stats-panel-inner::before {
+  content: '';
+  display: block;
+  height: 1px;
+  background: var(--hairline);
+  margin-bottom: var(--space-6);
+}
+.stats-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-6);
+}
+.stat-card { text-align: center; }
+.stat-number {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: var(--fs-h2);
+  color: var(--ink);
+  line-height: 1;
+}
+.stat-label {
+  font-size: var(--fs-sm);
+  color: var(--slate);
+  line-height: 1.5;
+  margin-top: var(--space-2);
+  max-width: 28ch;
+  margin-inline: auto;
+}
+.stat-source {
+  display: block;
+  font-size: var(--fs-xs);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--sage);
+  margin-top: var(--space-3);
+}
+@media (min-width: 640px) {
+  .stats-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* --- SIDE-SCROLL STATS (float beside step-cards, desktop only) --- */
+.side-stat {
+  display: none;
+}
+@media (min-width: 1440px) {
+  .side-stat {
+    display: block;
+    position: absolute;
+    top: 50%;
+    width: 210px;
+    opacity: 0;
+    transition: opacity 700ms var(--ease-out-quart), transform 700ms var(--ease-out-quart);
+  }
+  .side-stat.side-left {
+    left: -230px;
+    transform: translateY(-50%) translateX(-24px);
+  }
+  .side-stat.side-right {
+    right: -230px;
+    transform: translateY(-50%) translateX(24px);
+  }
+  .side-stat.in {
+    opacity: 1;
+  }
+  .side-stat.side-left.in,
+  .side-stat.side-right.in {
+    transform: translateY(-50%) translateX(0);
+  }
+}
+.side-stat-number {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.75rem;
+  color: var(--ink);
+  line-height: 1;
+}
+.side-stat-label {
+  font-size: var(--fs-xs);
+  color: var(--slate);
+  line-height: 1.4;
+  margin-top: var(--space-2);
+}
+.side-stat-source {
+  display: block;
+  font-size: 0.65rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--sage);
+  margin-top: var(--space-2);
 }
 
 /* --- QUOTE BLOCK --- */

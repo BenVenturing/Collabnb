@@ -1249,7 +1249,7 @@ export default function Explore() {
             {!mapExpanded && (
               <div className="no-scrollbar" style={{ flex: '0 0 clamp(320px, 46%, 620px)', overflowY: 'auto', paddingRight: '0.25rem' }}>
                 <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.95rem', color: 'var(--ink)', margin: '0 0 0.9rem' }}>
-                  {mapListInBounds.length} {mapListInBounds.length === 1 ? 'collab' : 'collabs'}{mapAreaLabel ? ` in ${mapAreaLabel.split(',')[0]}` : ' in this area'}
+                  {mapListInBounds.length} {mapListInBounds.length === 1 ? 'collab' : 'collabs'} available
                 </p>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, 260px)', justifyContent: 'center', gap: '1rem' }}>
                   {mapListInBounds.map((l, i) => {

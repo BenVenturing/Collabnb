@@ -184,6 +184,38 @@ export const getFounders = query({
   },
 });
 
+// ─── Founder directory (founder-facing; excludes system + test accounts) ───────
+// Unlike getFounders (admin-only, returns emails), this is safe to show to any
+// founder in the Founders space: public profile fields only, no email.
+export const getFounderDirectory = query({
+  args: {},
+  handler: async (ctx) => {
+    const profiles = await ctx.db.query("profiles").collect();
+    return profiles
+      .filter((p) => p.is_founder === true)
+      .filter((p) => {
+        const email = (p.email || "").toLowerCase();
+        const name  = (p.full_name || "").trim().toLowerCase();
+        const uname = (p.username || "").toLowerCase();
+        if (email.endsWith("@collabnb.com")) return false;   // system admin account
+        if (name === "collabnb") return false;               // system accounts
+        if (uname === "strawberryandblonde00") return false; // test account
+        return true;
+      })
+      .map((p) => ({
+        _id: p._id,
+        full_name: p.full_name,
+        username: p.username,
+        // Ben is verified as both host and creator — surface him as the founding host
+        role: (p.email || "").toLowerCase() === "benventuring@gmail.com" ? "host" : p.role,
+        avatar_url: p.avatar_url,
+        city: p.city,
+        region: p.region,
+        niches: p.niches,
+      }));
+  },
+});
+
 // ─── Broadcast email list ─────────────────────────────────────────────────────
 export const getEmailList = query({
   args: { audience: v.string() },

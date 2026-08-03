@@ -1,18 +1,16 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { useAuth } from '../contexts/AuthContext';
 import CreatorAvatar from '../components/CreatorAvatar';
 import { ListingCard } from './Explore';
-import { SAMPLE_LISTINGS } from '../lib/mockData';
 
 /*
  * Founders — the lifetime founding-member space.
  * Access is founder-only (surfaced as a tab in their search); anyone who reaches
  * this page has already been accepted + verified, so there is no locked/claim state.
  *
- * Live: founder counts (api.admin.getFounderCounts) + directory (api.admin.getFounders).
+ * Live: founder counts (api.admin.getFounderCounts) + directory (api.admin.getFounderDirectory).
  * Seed (until the group-chat + resources backend is wired): lounge threads, resources,
  * and early-access listings (stand-in = SAMPLE_LISTINGS rendered through the real card).
  */
@@ -111,14 +109,19 @@ const RESOURCES = [
   ] },
 ];
 
-const SEED_DIRECTORY = [
-  { name: 'Maya Rivera', username: 'mayamakes', role: 'creator', tag: 'Travel · Lifestyle', avatar_url: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=200&q=80' },
-  { name: 'Priya Shah', username: 'priyawanders', role: 'creator', tag: 'Boutique hotels', avatar_url: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=200&q=80' },
-  { name: 'Jordan Tate', username: 'jtatevisuals', role: 'creator', tag: 'Cinematic reels', avatar_url: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&q=80' },
-  { name: 'The Olive House', username: 'Santorini, GR', role: 'host', tag: '2 listings', avatar_url: 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=200&q=80' },
-  { name: 'Casa Marea', username: 'Tulum, MX', role: 'host', tag: '1 listing', avatar_url: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=200&q=80' },
-  { name: 'Pine & Co Cabins', username: 'Aspen, CO', role: 'host', tag: '3 listings', avatar_url: 'https://images.unsplash.com/photo-1449158743715-0a90ebb6d2d8?w=200&q=80' },
-];
+// A single stand-in card that shows what an early-access listing looks like.
+// Remove this once real curated early-access listings exist.
+const EXAMPLE_EARLY_LISTING = {
+  id: 'example',
+  title: 'Cliffside Villa — Amalfi',
+  location: 'Positano, Italy',
+  image: 'https://images.unsplash.com/photo-1533105079780-92b9be482077?w=800&q=80',
+  compensation: '3-night stay + €400',
+  deliverables: '3 Reels · 5 Photos',
+  collab_type: 'UGC Video',
+  dates_available: 'Example listing',
+  is_featured: false, _isSample: false, _redacted: false,
+};
 
 const QUICK_REACTIONS = ['🔥', '🙌', '❤️', '👀', '💭'];
 
@@ -305,55 +308,46 @@ function Resources() {
   );
 }
 
-// ── Early access — real listing card + early-access overlay ───────────────────
+// ── Early access — one example card showing how early-access listings appear ──
 function EarlyAccess() {
-  const navigate = useNavigate();
-  const listings = useMemo(() => SAMPLE_LISTINGS.slice(0, 3).map((l, i) => ({
-    ...l, is_featured: false, _isSample: false, _redacted: false, _match: undefined, _days: i + 1,
-  })), []);
-
   return (
     <div>
       <div className="glass-card" style={{ padding: '0.9rem 1.15rem', marginBottom: '1.2rem', display: 'flex', gap: '0.6rem', alignItems: 'center' }}>
         <span style={{ color: GOLD, display: 'flex' }}><IconClock s={18} /></span>
         <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--slate)' }}>
-          <strong style={{ color: GOLD }}>3-day head-start.</strong> These listings are visible to founders only until they go public. Apply before anyone else sees them.
+          <strong style={{ color: GOLD }}>3-day head-start.</strong> Real early-access listings will appear here for founders only, 3 days before they go public. Here's an example of how they'll look.
         </p>
       </div>
 
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.1rem' }}>
-        {listings.map((l, i) => (
-          <div key={l.id} style={{ position: 'relative', width: 260, maxWidth: '100%' }}>
-            <ListingCard listing={l} saved={false} onSave={() => {}} delay={i * 60} onNavigate={() => navigate(`/listing/${l.id}`)} />
-            <span style={{ position: 'absolute', top: '0.75rem', left: '0.75rem', zIndex: 2, display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.04em', textTransform: 'uppercase', color: '#fff', background: 'rgba(184,146,42,0.94)', borderRadius: '999px', padding: '0.28rem 0.6rem', boxShadow: '0 2px 8px rgba(0,0,0,0.18)' }}>
-              <FounderStar size={12} ring={false} /> Early · public in {l._days}d
-            </span>
-          </div>
-        ))}
+      <div style={{ position: 'relative', width: 260, maxWidth: '100%' }}>
+        <ListingCard listing={EXAMPLE_EARLY_LISTING} saved={false} onSave={() => {}} delay={0} onNavigate={() => {}} />
+        <span style={{ position: 'absolute', top: '0.75rem', left: '0.75rem', zIndex: 2, display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.04em', textTransform: 'uppercase', color: '#fff', background: 'rgba(184,146,42,0.94)', borderRadius: '999px', padding: '0.28rem 0.6rem', boxShadow: '0 2px 8px rgba(0,0,0,0.18)' }}>
+          <FounderStar size={12} ring={false} /> Early · public in 3d
+        </span>
+        <span style={{ position: 'absolute', top: '0.75rem', right: '0.75rem', zIndex: 2, fontSize: '0.58rem', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--slate)', background: 'rgba(255,255,255,0.9)', borderRadius: '999px', padding: '0.24rem 0.55rem' }}>
+          Example
+        </span>
       </div>
     </div>
   );
 }
 
-// ── Directory — real founders (falls back to seed for a populated preview) ─────
+// ── Directory — real founders only (no placeholders) ──────────────────────────
 function Directory() {
   const [filter, setFilter] = useState('all');
-  const founders = useQuery(api.admin.getFounders);
+  const founders = useQuery(api.admin.getFounderDirectory);
 
-  const people = useMemo(() => {
-    const real = (founders || [])
-      .filter((f) => f.role === 'creator' || f.role === 'host')
-      .map((f) => ({
-        name: f.full_name || f.username || 'Founder',
-        username: f.username || [f.city, f.region].filter(Boolean).join(', '),
-        role: f.role,
-        tag: f.role === 'host'
-          ? `${f.collabCount || 0} listing${(f.collabCount || 0) === 1 ? '' : 's'}`
-          : (Array.isArray(f.niches) && f.niches.length ? f.niches.slice(0, 2).join(' · ') : 'Creator'),
-        avatar_url: f.avatar_url,
-      }));
-    return real.length >= 3 ? real : SEED_DIRECTORY;
-  }, [founders]);
+  const people = useMemo(() => (founders || [])
+    .filter((f) => f.role === 'creator' || f.role === 'host')
+    .map((f) => ({
+      name: f.full_name || f.username || 'Founder',
+      username: f.username || [f.city, f.region].filter(Boolean).join(', '),
+      role: f.role,
+      tag: f.role === 'host'
+        ? ([f.city, f.region].filter(Boolean).join(', ') || 'Founding host')
+        : (Array.isArray(f.niches) && f.niches.length ? f.niches.slice(0, 2).join(' · ') : 'Creator'),
+      avatar_url: f.avatar_url,
+    })), [founders]);
 
   const shown = filter === 'all' ? people : people.filter((d) => d.role === filter);
 
@@ -364,6 +358,9 @@ function Directory() {
           <button key={v} onClick={() => setFilter(v)} style={{ fontSize: '0.78rem', fontWeight: 700, padding: '0.4rem 0.9rem', borderRadius: '999px', background: filter === v ? GOLD : 'rgba(255,255,255,0.6)', color: filter === v ? '#fff' : 'var(--slate)', border: filter === v ? 'none' : '1px solid var(--hairline)' }}>{label}</button>
         ))}
       </div>
+      {founders !== undefined && shown.length === 0 && (
+        <p style={{ fontSize: '0.82rem', color: 'var(--sage)', padding: '1rem 0' }}>No founders here yet.</p>
+      )}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(230px,1fr))', gap: '0.85rem' }}>
         {shown.map((d, i) => (
           <div key={`${d.name}-${i}`} className="glass-card" style={{ padding: '1rem', display: 'flex', gap: '0.75rem', alignItems: 'center' }}>

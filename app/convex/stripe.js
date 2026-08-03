@@ -373,11 +373,12 @@ export const chargeContractFee = internalAction({
     if (!contract) return { skipped: 'no_contract' };
     if (contract.paid) return { skipped: 'already_paid' };
 
-    // Founding / lifetime hosts pay no platform fee.
+    // Founding / lifetime hosts pay no platform fee — but they still owe the
+    // creator their agreed cash payout, since that's not Collabnb's money.
     const host = contract.host_id
       ? await ctx.runQuery(api.profiles.getById, { id: String(contract.host_id) })
       : null;
-    if (host?.is_founder || host?.is_lifetime) return { skipped: 'host_free' };
+    const hostFeeWaived = host?.is_founder === true || host?.is_lifetime === true;
 
     const customerId = contract.host_stripe_customer_id;
     const paymentMethodId = contract.host_payment_method_id;
@@ -385,11 +386,12 @@ export const chargeContractFee = internalAction({
     if (!customerId || !paymentMethodId) return { skipped: 'no_saved_card' };
 
     // Prefer the fee captured at signing; otherwise recompute from the contract.
-    let fee = contract.fee_amount;
+    let fee = hostFeeWaived ? 0 : contract.fee_amount;
     const { cash, isFreeStay } = computeContractFee(contract);
-    if (!fee || fee <= 0) fee = computeContractFee(contract).fee;
+    if (!hostFeeWaived && (!fee || fee <= 0)) fee = computeContractFee(contract).fee;
     const creatorPayout = isFreeStay ? 0 : cash;
     const grossCharge = fee + creatorPayout;
+    if (grossCharge <= 0) return { skipped: 'nothing_to_charge' };
     const amountInCents = Math.round(grossCharge * 100);
 
     const stripe = new Stripe(secretKey);

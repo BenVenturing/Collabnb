@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useQuery, useAction, useMutation, useConvex } from 'convex/react';
+import { useQuery, useAction, useMutation } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 
 // Convex storage URL prefix; used to construct public URLs from storage IDs
@@ -600,9 +600,10 @@ export default function Profile() {
   const createConnectOnboardingLink = useAction(api.stripe.createConnectOnboardingLink);
   const createWiseRecipient        = useAction(api.stripe.createWiseRecipient);
   const setPayoutMethodMutation     = useMutation(api.profiles.setPayoutMethod);
+  const disconnectPayoutMethodMutation = useMutation(api.profiles.disconnectPayoutMethod);
   const generateUploadUrl          = useMutation(api.uploads.generateUploadUrl);
+  const finalizeUpload             = useMutation(api.uploads.finalizeUpload);
   const convex                     = useConvex();
-  const getStorageUrl              = (args) => convex.query(api.uploads.getStorageUrl, args);
   const updateMetricsMutation      = useMutation(api.profiles.updateMetrics);
   const requestTierChangeMutation  = useMutation(api.profiles.requestTierChange);
   const { openModal: openSubModal } = useSubscription();
@@ -957,7 +958,7 @@ export default function Profile() {
               fileInput.onchange = async (e) => {
                 const f = e.target.files?.[0];
                 if (f) {
-                  const url = await uploadResizedImage(f, 300, 300, generateUploadUrl, 0.85, getStorageUrl);
+                  const url = await uploadResizedImage(f, 300, 300, generateUploadUrl, 0.85, finalizeUpload);
                   const updated = { ...editDraft, avatar_url: url };
                   setEditDraft(updated);
                 }
@@ -1240,7 +1241,7 @@ export default function Profile() {
                     if (!f) return;
                     setAvatarUploading(true);
                     try {
-                      const url = await uploadResizedImage(f, 300, 300, generateUploadUrl, 0.85, getStorageUrl);
+                      const url = await uploadResizedImage(f, 300, 300, generateUploadUrl, 0.85, finalizeUpload);
                       setEditDraft(d => ({ ...d, avatar_url: url }));
                     } catch (err) { console.error('Avatar upload failed:', err); setToastMsg('Photo upload failed — try again'); }
                     finally { setAvatarUploading(false); }
@@ -1472,7 +1473,7 @@ export default function Profile() {
                 const upRes = await fetch(uploadUrl, { method: 'POST', headers: { 'Content-Type': 'image/jpeg' }, body: blob });
                 const { storageId } = await upRes.json();
                 if (storageId) {
-                  try { const url = await getStorageUrl({ storageId }); if (url) finalUrl = url; } catch {}
+                  try { const url = await finalizeUpload({ storageId }); if (url) finalUrl = url; } catch {}
                   if (finalUrl === dataUrl) finalUrl = `${CONVEX_URL}/api/storage/${storageId}`;
                 }
               } catch (err) { console.error('Banner upload failed:', err); setToastMsg('Banner upload failed — try again'); }
@@ -2366,6 +2367,7 @@ export default function Profile() {
           createConnectOnboardingLink={createConnectOnboardingLink}
           createWiseRecipient={createWiseRecipient}
           setPayoutMethodMutation={setPayoutMethodMutation}
+          disconnectPayoutMethodMutation={disconnectPayoutMethodMutation}
         />
       )}
 
@@ -2421,7 +2423,7 @@ export default function Profile() {
 
 // Creator payout-method connection — Stripe Connect (hosted onboarding) or
 // Wise (manual recipient details, since there's no equivalent hosted flow).
-function PayoutMethodPanel({ profile, onClose, createConnectOnboardingLink, createWiseRecipient, setPayoutMethodMutation }) {
+function PayoutMethodPanel({ profile, onClose, createConnectOnboardingLink, createWiseRecipient, setPayoutMethodMutation, disconnectPayoutMethodMutation }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const [wiseCurrency, setWiseCurrency] = useState('USD');
@@ -2485,6 +2487,15 @@ function PayoutMethodPanel({ profile, onClose, createConnectOnboardingLink, crea
   const stripeConnected = method === 'stripe_connect' && profile.stripe_connect_account_id;
   const wiseConnected = method === 'wise' && profile.wise_recipient_id;
 
+  const disconnect = async () => {
+    if (!window.confirm("Disconnect your payout method? You'll need to reconnect before your next payout can go through.")) return;
+    setBusy(true);
+    setError(null);
+    try { await disconnectPayoutMethodMutation({ profileId }); }
+    catch { setError('Could not disconnect. Please try again.'); }
+    finally { setBusy(false); }
+  };
+
   return (
     <div
       style={{ position: 'fixed', inset: 0, zIndex: 10000, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', padding: '1rem', background: 'rgba(25,37,36,0.5)', backdropFilter: 'blur(6px)' }}
@@ -2519,16 +2530,24 @@ function PayoutMethodPanel({ profile, onClose, createConnectOnboardingLink, crea
                 ? "You're all set to receive payouts."
                 : 'Finish verifying your details with Stripe to start receiving payouts.'}
             </p>
-            {!profile.stripe_connect_payouts_enabled && (
-              <button onClick={connectStripe} disabled={busy} className="btn-glass" style={{ marginTop: '0.75rem', fontSize: '0.78rem', padding: '0.4rem 0.9rem' }}>
-                {busy ? 'Opening…' : 'Continue verification'}
+            <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem' }}>
+              {!profile.stripe_connect_payouts_enabled && (
+                <button onClick={connectStripe} disabled={busy} className="btn-glass" style={{ fontSize: '0.78rem', padding: '0.4rem 0.9rem' }}>
+                  {busy ? 'Opening…' : 'Continue verification'}
+                </button>
+              )}
+              <button onClick={disconnect} disabled={busy} style={{ fontSize: '0.78rem', padding: '0.4rem 0.9rem', borderRadius: '999px', border: '1px solid rgba(153,27,27,0.3)', background: 'none', color: '#991B1B', cursor: 'pointer' }}>
+                Disconnect
               </button>
-            )}
+            </div>
           </div>
         ) : wiseConnected ? (
           <div style={{ padding: '0.875rem 1rem', borderRadius: '0.875rem', background: 'rgba(209,235,219,0.3)', marginBottom: '1rem' }}>
             <p style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--ink)', margin: '0 0 0.2rem' }}>✓ Wise connected</p>
-            <p style={{ fontSize: '0.72rem', color: 'var(--sage)', margin: 0 }}>Payouts will be sent in {profile.wise_recipient_currency}.</p>
+            <p style={{ fontSize: '0.72rem', color: 'var(--sage)', margin: '0 0 0.75rem' }}>Payouts will be sent in {profile.wise_recipient_currency}.</p>
+            <button onClick={disconnect} disabled={busy} style={{ fontSize: '0.78rem', padding: '0.4rem 0.9rem', borderRadius: '999px', border: '1px solid rgba(153,27,27,0.3)', background: 'none', color: '#991B1B', cursor: 'pointer' }}>
+              Disconnect
+            </button>
           </div>
         ) : (
           <>

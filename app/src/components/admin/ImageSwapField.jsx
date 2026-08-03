@@ -1,19 +1,13 @@
 import { useState, useRef } from 'react';
-import { useMutation, useAction, useConvex } from 'convex/react';
+import { useMutation, useAction } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
-
-// Resolve a Convex storage id → public URL (uploads.getImageUrl is a query; wrap for imperative use)
-function useQueryImageUrl() {
-  const convex = useConvex();
-  return (storageId) => convex.query(api.uploads.getImageUrl, { storageId });
-}
 
 // Swappable image field: Unsplash search · upload · paste URL.
 // `value`/`onChange` carry { url, alt, credit, creditUrl }.
 export default function ImageSwapField({ label, value, onChange, dragProps }) {
   const searchUnsplash    = useAction(api.blog.searchUnsplash);
   const generateUploadUrl = useMutation(api.uploads.generateUploadUrl);
-  const fetchImageUrl     = useQueryImageUrl();
+  const finalizeUpload    = useMutation(api.uploads.finalizeUpload);
 
   const [open,    setOpen]    = useState(false);
   const [mode,    setMode]    = useState('unsplash'); // 'unsplash' | 'upload' | 'url'
@@ -38,7 +32,7 @@ export default function ImageSwapField({ label, value, onChange, dragProps }) {
       const uploadUrl = await generateUploadUrl();
       const res = await fetch(uploadUrl, { method: 'POST', headers: { 'Content-Type': file.type }, body: file });
       const { storageId } = await res.json();
-      const url = await fetchImageUrl(storageId);
+      const url = await finalizeUpload({ storageId });
       if (!url) throw new Error('Upload failed');
       onChange({ url, alt: file.name.replace(/\.[^.]+$/, ''), credit: '', creditUrl: '' });
       setOpen(false);

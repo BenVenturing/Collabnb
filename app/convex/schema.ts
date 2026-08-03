@@ -88,6 +88,11 @@ export default defineSchema({
     compensation: v.optional(v.string()),
     // 'paid' | 'hybrid' — legacy string values are normalized by migrateLegacyCompensation
     compensation_type: v.optional(v.string()),
+    // 'platform' (default) — Collabnb collects + forwards the creator's cash
+    // payout. 'in_person' — host pays the creator directly; Collabnb still
+    // auto-charges its own platform fee on completion, but never touches or
+    // holds the creator's cash payout, so the 48h dispute window doesn't apply.
+    payout_handling: v.optional(v.union(v.literal("platform"), v.literal("in_person"))),
     cash_amount: v.optional(v.number()),
     needs_compensation_review: v.optional(v.boolean()),
     currency: v.optional(v.string()),
@@ -221,6 +226,8 @@ export default defineSchema({
     // Structured cash-only contract value backing fee calculation — the source
     // of truth over parsing `payment`'s free-text display string.
     cash_value: v.optional(v.number()),
+    // Snapshotted from the listing at contract creation — see listings.payout_handling.
+    payout_handling: v.optional(v.union(v.literal("platform"), v.literal("in_person"))),
     usage_rights: v.optional(v.string()),
     status: v.string(),
     creator_signed: v.optional(v.boolean()),
@@ -690,4 +697,13 @@ export default defineSchema({
     comment: v.optional(v.string()),
     created_at: v.number(),
   }).index("by_collab", ["collab_id"]),
+
+  // Sliding-window rate limiting for sensitive mutations. `key` encodes the
+  // action + actor, e.g. "message:<profileId>" or "signup:<email>" for
+  // pre-account flows where no verified identity exists yet. See lib/rateLimit.ts.
+  rateLimits: defineTable({
+    key: v.string(),
+    count: v.number(),
+    windowStart: v.number(),
+  }).index("by_key", ["key"]),
 });

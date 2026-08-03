@@ -54,8 +54,10 @@ export default function Step1Basics() {
   const navigate = useNavigate();
   const { draft, updateDraft } = useListingDraft();
   const generateUploadUrl = useMutation(api.uploads.generateUploadUrl);
+  const finalizeUpload = useMutation(api.uploads.finalizeUpload);
   const fileRef = useRef(null);
   const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
 
   const canProceed = draft.title.trim() && draft.location_city.trim() && draft.location_country.trim();
 
@@ -66,17 +68,22 @@ export default function Step1Basics() {
     const toUpload = files.slice(0, Math.max(0, remaining));
     if (!toUpload.length) { e.target.value = ""; return; }
     setUploading(true);
+    setUploadError("");
     try {
       const uploaded = [];
       for (const file of toUpload) {
         const uploadUrl = await generateUploadUrl();
         const res = await fetch(uploadUrl, { method: "POST", headers: { "Content-Type": file.type }, body: file });
         const { storageId } = await res.json();
+        // Validates the file Convex actually stored (type/size) and deletes
+        // it server-side if it fails — rejects before it ever reaches the draft.
+        await finalizeUpload({ storageId });
         uploaded.push(storageId);
       }
       updateDraft({ images: [...draft.images, ...uploaded] });
     } catch (err) {
       console.error("Upload failed", err);
+      setUploadError(err.message || "One of your photos couldn't be uploaded.");
     } finally {
       setUploading(false);
       e.target.value = "";
@@ -161,6 +168,9 @@ export default function Step1Basics() {
           )}
 
           <input ref={fileRef} type="file" accept="image/*" multiple style={{ display: "none" }} onChange={handleImageUpload} />
+          {uploadError && (
+            <div style={{ fontFamily: "Satoshi, sans-serif", fontSize: 12, color: "#c0392b", marginTop: 8 }}>{uploadError}</div>
+          )}
         </div>
 
         {/* Collaboration brief */}

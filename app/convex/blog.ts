@@ -4,6 +4,7 @@ import { api, internal } from "./_generated/api";
 import { STYLE_GUIDE } from "./styleGuide";
 import { buildResearchBrief, fetchHeadlines } from "./blogResearch";
 import { requireAdmin, requireAdminAction, canAccessAdmin } from "./lib/auth";
+import { sanitizeRichHtml, cleanPlainText } from "./lib/sanitize";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -142,7 +143,7 @@ export const updatePost = mutation({
     await requireAdmin(ctx);
     const updates: Record<string, unknown> = {};
     if (fields.title !== undefined) {
-      updates.title = fields.title;
+      updates.title = cleanPlainText(fields.title, 200);
       // Re-slugging a published post would break its live URL — drafts only.
       const existing = await ctx.db.get(id);
       if (existing && existing.status !== "published") {
@@ -150,15 +151,15 @@ export const updatePost = mutation({
       }
     }
     if (fields.content !== undefined) {
-      updates.content = fields.content;
+      updates.content = sanitizeRichHtml(fields.content, 100000);
       updates.reading_time = readingTime(fields.content);
     }
-    if (fields.excerpt !== undefined) updates.excerpt = fields.excerpt;
+    if (fields.excerpt !== undefined) updates.excerpt = cleanPlainText(fields.excerpt, 300);
     if (fields.tags !== undefined) updates.tags = fields.tags;
     if (fields.category !== undefined) updates.category = fields.category;
-    if (fields.pull_quote !== undefined) updates.pull_quote = fields.pull_quote;
+    if (fields.pull_quote !== undefined) updates.pull_quote = cleanPlainText(fields.pull_quote, 500);
     if (fields.instagram_embed_url !== undefined) updates.instagram_embed_url = fields.instagram_embed_url;
-    if (fields.seo_description !== undefined) updates.seo_description = fields.seo_description;
+    if (fields.seo_description !== undefined) updates.seo_description = cleanPlainText(fields.seo_description, 300);
     // Patch any image field that was provided
     const imageKeys = [
       "hero_image_url", "hero_image_alt", "hero_image_credit", "hero_image_credit_url",
@@ -266,6 +267,11 @@ export const createGeneratedPost = internalMutation({
   handler: async (ctx, args) => {
     return await ctx.db.insert("blog_posts", {
       ...args,
+      title: cleanPlainText(args.title, 200),
+      excerpt: cleanPlainText(args.excerpt, 300),
+      content: sanitizeRichHtml(args.content, 100000),
+      pull_quote: args.pull_quote !== undefined ? cleanPlainText(args.pull_quote, 500) : args.pull_quote,
+      seo_description: cleanPlainText(args.seo_description, 300),
       status: "draft",
       generated_at: Date.now(),
     });
@@ -294,6 +300,11 @@ export const applyRegenerated = internalMutation({
     if (post.status === "published") throw new Error("Unpublish the post before regenerating it.");
     await ctx.db.patch(id, {
       ...fields,
+      title: cleanPlainText(fields.title, 200),
+      excerpt: cleanPlainText(fields.excerpt, 300),
+      content: sanitizeRichHtml(fields.content, 100000),
+      pull_quote: fields.pull_quote !== undefined ? cleanPlainText(fields.pull_quote, 500) : fields.pull_quote,
+      seo_description: cleanPlainText(fields.seo_description, 300),
       slug: slugify(fields.title),
       reading_time: readingTime(fields.content),
       generated_at: Date.now(),

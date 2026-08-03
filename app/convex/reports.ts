@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
 import { requireOwnerOrAdmin, requireAdmin, canAccessAdmin } from "./lib/auth";
+import { cleanPlainText } from "./lib/sanitize";
 
 const REPORT_REASONS = [
   "inaccurate_information",
@@ -24,7 +25,7 @@ export const submitReport = mutation({
       reported_user_id: args.reportedUserId,
       reporter_id: args.reporterId,
       reason: args.reason,
-      details: args.details ?? "",
+      details: args.details ? cleanPlainText(args.details, 2000) : "",
       status: "pending",
       created_at: Date.now(),
     });
@@ -61,7 +62,7 @@ export const updateReportStatus = mutation({
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
     const patch: Record<string, any> = { status: args.status };
-    if (args.adminNote) patch.admin_note = args.adminNote;
+    if (args.adminNote) patch.admin_note = cleanPlainText(args.adminNote, 1000);
     await ctx.db.patch(args.reportId, patch);
   },
 });

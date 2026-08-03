@@ -294,6 +294,7 @@ export default function PricingTool({ mode = "sandbox", initialValue, onChange }
   const [stayValue, setStayValue] = useState(initialValue?.stayValue || 0);
   const [deliverables, setDeliverables] = useState(initialValue?.deliverables?.length ? initialValue.deliverables : []);
   const [cashAmount, setCashAmount] = useState(initialValue?.cashAmount || 0);
+  const [payoutHandling, setPayoutHandling] = useState(initialValue?.payoutHandling || "platform");
   const [budget, setBudget] = useState(250);
   const [selectedPreset, setSelectedPreset] = useState(null);
 
@@ -349,9 +350,10 @@ export default function PricingTool({ mode = "sandbox", initialValue, onChange }
       stay_value: compensationType === "hybrid" ? stayValue : undefined,
       cash_amount: cashAmount,
       deliverables,
+      payout_handling: payoutHandling,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, tierId, compensationType, complexity, stayValue, cashAmount, deliverables]);
+  }, [mode, tierId, compensationType, complexity, stayValue, cashAmount, deliverables, payoutHandling]);
 
   const relevantPresets = PRESET_PACKAGES.filter((p) => p.track === track || p.track === "custom");
 
@@ -409,6 +411,26 @@ export default function PricingTool({ mode = "sandbox", initialValue, onChange }
           )}
         </div>
       </div>
+
+      {/* Payout handling */}
+      {mode === "listing" && (
+        <div style={{ marginBottom: 18 }}>
+          <div style={{ fontSize: 11.5, fontWeight: 700, color: "var(--sage)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>How will the creator be paid?</div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <Pill active={payoutHandling === "platform"} onClick={() => setPayoutHandling("platform")}>Collabnb handles payment</Pill>
+            <Pill active={payoutHandling === "in_person"} onClick={() => setPayoutHandling("in_person")}>I'll pay in person</Pill>
+          </div>
+          {payoutHandling === "in_person" ? (
+            <p style={{ fontSize: 12, color: "#92400E", marginTop: 8, lineHeight: 1.5 }}>
+              You'll pay the creator directly when they arrive — Collabnb won't hold or verify that payment, and the 48-hour dispute window doesn't apply since no cash passes through the platform. You'll still be charged Collabnb's platform fee automatically once the collab is marked complete.
+            </p>
+          ) : (
+            <p style={{ fontSize: 12, color: "var(--sage)", marginTop: 8, lineHeight: 1.5 }}>
+              Your card is charged once, automatically, when the collab is marked complete — Collabnb forwards the creator's payment and holds it for 48 hours in case either side needs to raise a dispute first.
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Complexity */}
       <div style={{ marginBottom: 20 }}>

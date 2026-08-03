@@ -2,6 +2,8 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { requireOwnerOrAdmin, getAuthedProfile } from "./lib/auth";
+import { cleanPlainText } from "./lib/sanitize";
+import { enforceRateLimit, RATE_LIMITS } from "./lib/rateLimit";
 
 // thread_key is a predictable string (thread_<listingId>_<creatorId>), so
 // reading a thread by key alone would let anyone guess their way into
@@ -77,6 +79,7 @@ export const sendMessage = mutation({
   },
   handler: async (ctx, args) => {
     await requireOwnerOrAdmin(ctx, args.senderId);
+    await enforceRateLimit(ctx, `message:${args.senderId}`, RATE_LIMITS.THREAD_MESSAGE);
     // Unverified accounts (pending review) can't message anyone — enforced
     // server-side so hiding the UI isn't the only barrier
     let sender: any = null;
@@ -90,7 +93,7 @@ export const sendMessage = mutation({
       sender_name: args.senderName,
       sender_avatar: args.senderAvatar,
       sender_role: args.senderRole,
-      text: args.text,
+      text: cleanPlainText(args.text, 3000),
       created_at: Date.now(),
     });
 

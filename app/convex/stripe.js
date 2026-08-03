@@ -389,7 +389,10 @@ export const chargeContractFee = internalAction({
     let fee = hostFeeWaived ? 0 : contract.fee_amount;
     const { cash, isFreeStay } = computeContractFee(contract);
     if (!hostFeeWaived && (!fee || fee <= 0)) fee = computeContractFee(contract).fee;
-    const creatorPayout = isFreeStay ? 0 : cash;
+    // "Pay in person": host pays the creator directly, off-platform — Collabnb
+    // still auto-charges its own fee, but never collects or forwards the cash.
+    const isInPerson = contract.payout_handling === 'in_person';
+    const creatorPayout = (isFreeStay || isInPerson) ? 0 : cash;
     const grossCharge = fee + creatorPayout;
     if (grossCharge <= 0) return { skipped: 'nothing_to_charge' };
     const amountInCents = Math.round(grossCharge * 100);

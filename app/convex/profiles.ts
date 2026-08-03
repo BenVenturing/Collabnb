@@ -3,6 +3,7 @@ import { query, mutation, action, internalMutation } from "./_generated/server";
 import { internal, api } from "./_generated/api";
 import { requireAuthedProfile, requireOwnerOrAdmin, requireAdmin, isServerAdminEmail, canAccessAdmin, canAccessOwner } from "./lib/auth";
 import { cleanPlainText, cleanOptionalUrl } from "./lib/sanitize";
+import { enforceRateLimit, RATE_LIMITS } from "./lib/rateLimit";
 
 export const countAll = query({
   args: {},
@@ -55,6 +56,8 @@ export const getOrCreate = mutation({
       }
       return await ctx.db.get(existing._id);
     }
+
+    await enforceRateLimit(ctx, `signup:${args.email.toLowerCase()}`, RATE_LIMITS.SIGNUP);
 
     const username = args.email.split('@')[0].replace(/[^a-z0-9_]/gi, '').toLowerCase() || 'user';
 
@@ -198,6 +201,22 @@ export const setWiseRecipient = internalMutation({
       payout_method: "wise",
       wise_recipient_id: args.recipientId,
       wise_recipient_currency: args.currency,
+    });
+  },
+});
+
+// Creator removes their connected payout method entirely (switching methods,
+// or just no longer wanting Collabnb to hold their bank/Wise details).
+export const disconnectPayoutMethod = mutation({
+  args: { profileId: v.string() },
+  handler: async (ctx, args) => {
+    await requireOwnerOrAdmin(ctx, args.profileId);
+    await ctx.db.patch(args.profileId as any, {
+      payout_method: undefined,
+      stripe_connect_account_id: undefined,
+      stripe_connect_payouts_enabled: undefined,
+      wise_recipient_id: undefined,
+      wise_recipient_currency: undefined,
     });
   },
 });

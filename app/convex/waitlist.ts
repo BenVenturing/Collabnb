@@ -2,6 +2,8 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { requireAdmin, canAccessAdmin } from "./lib/auth";
+import { cleanPlainText, cleanOptionalUrl } from "./lib/sanitize";
+import { enforceRateLimit, RATE_LIMITS } from "./lib/rateLimit";
 
 export const signUp = mutation({
   args: {
@@ -34,19 +36,24 @@ export const signUp = mutation({
       return { alreadySignedUp: true, profileId: existing._id };
     }
 
+    await enforceRateLimit(ctx, `signup:${email.toLowerCase()}`, RATE_LIMITS.SIGNUP);
+
     // Create a waitlist profile
+    const rawUsername = (args.instagram_handle || args.tiktok_handle || email.split("@")[0] || "user")
+      .replace(/[^a-z0-9_]/gi, "")
+      .toLowerCase() || "user";
     const profileId = await ctx.db.insert("profiles", {
-      full_name: rest.full_name,
-      username: args.instagram_handle || args.tiktok_handle || email.split("@")[0],
+      full_name: cleanPlainText(rest.full_name, 100),
+      username: rawUsername,
       email: email,
       role: role,
       tier: rest.tier || "waitlist",
       bio: "",
-      instagram_handle: rest.instagram_handle,
-      tiktok_handle: rest.tiktok_handle,
-      portfolio: rest.portfolio,
-      city: rest.city,
-      region: rest.region,
+      instagram_handle: rest.instagram_handle ? cleanPlainText(rest.instagram_handle, 60) : rest.instagram_handle,
+      tiktok_handle: rest.tiktok_handle ? cleanPlainText(rest.tiktok_handle, 60) : rest.tiktok_handle,
+      portfolio: rest.portfolio ? cleanOptionalUrl(rest.portfolio, "Portfolio URL") : rest.portfolio,
+      city: rest.city ? cleanPlainText(rest.city, 100) : rest.city,
+      region: rest.region ? cleanPlainText(rest.region, 100) : rest.region,
       is_founder: false,
       beta: rest.beta || false,
     });

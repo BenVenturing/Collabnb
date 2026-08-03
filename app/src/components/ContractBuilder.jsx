@@ -86,6 +86,7 @@ export default function ContractBuilder() {
       currency: 'USD',
       paymentAmount: '',
       isFreeStay: false,
+      payoutHandling: prefill?.payout_handling || 'platform',
       usageRights: '',
     };
   });
@@ -230,6 +231,7 @@ export default function ContractBuilder() {
         currency: form.isFreeStay ? FREE_STAY_VALUE : form.currency,
         payment: form.isFreeStay ? 'Free Stay' : (form.currency && form.paymentAmount ? `${form.currency} ${form.paymentAmount}` : ''),
         cash_value: cashValue,
+        payout_handling: form.isFreeStay ? 'platform' : form.payoutHandling,
         usage_rights: USAGE_RIGHTS.find((u) => u.value === form.usageRights)?.label || form.usageRights,
         summary_note: summaryNote,
         status,
@@ -316,6 +318,7 @@ export default function ContractBuilder() {
     currency: form.isFreeStay ? FREE_STAY_VALUE : form.currency,
     payment: computePaymentDisplay(),
     cash_value: cashValue,
+    payout_handling: form.isFreeStay ? 'platform' : form.payoutHandling,
     usage_rights: computeUsageDisplay(),
     summary_note: summaryNote,
     status,
@@ -598,6 +601,16 @@ export default function ContractBuilder() {
                       </>
                     )}
                   </div>
+                  {!form.isFreeStay && (
+                    <label className="flex items-center gap-2 text-xs text-sage cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={form.payoutHandling === 'in_person'}
+                        onChange={(e) => updateField('payoutHandling', e.target.checked ? 'in_person' : 'platform')}
+                      />
+                      Host pays the creator in person (Collabnb still auto-charges its platform fee, but won't collect or hold the creator's payment — no 48h dispute window applies)
+                    </label>
+                  )}
                 </div>
 
                 {/* ── Usage Rights Dropdown ── */}

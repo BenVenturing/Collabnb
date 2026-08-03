@@ -5,6 +5,7 @@ import { calcMidpoint, calcStayOffset, calcHardFloor, evaluateZone, normalizeTie
 import { approxCoords } from "./lib/geo";
 import { requireOwnerOrAdmin } from "./lib/auth";
 import { cleanPlainText, cleanOptionalUrl } from "./lib/sanitize";
+import { enforceRateLimit, RATE_LIMITS } from "./lib/rateLimit";
 
 const dateRangesValidator = v.array(v.object({
   startDate: v.string(),
@@ -439,6 +440,7 @@ export const create = mutation({
   },
   handler: async (ctx, args) => {
     if (args.host_id) await requireOwnerOrAdmin(ctx, args.host_id);
+    if (args.host_id) await enforceRateLimit(ctx, `listing:${args.host_id}`, RATE_LIMITS.LISTING_WRITE);
     validateListingFields(args, { requireCompensation: true });
     // Publishing requires a verified host — pending hosts can only save drafts
     if (args.status === "published" && args.host_id) {
@@ -507,6 +509,7 @@ export const update = mutation({
     const existing = await ctx.db.get(id);
     if (!existing) throw new Error("Listing not found.");
     await requireOwnerOrAdmin(ctx, (existing as any).host_id);
+    if ((existing as any).host_id) await enforceRateLimit(ctx, `listing:${(existing as any).host_id}`, RATE_LIMITS.LISTING_WRITE);
     validateListingFields(fields);
     // Sample listings are permanently locked to draft — no UI path may publish them
     if ((existing as any).is_sample === true && fields.status && fields.status !== "draft") {

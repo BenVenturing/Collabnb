@@ -4,6 +4,7 @@ import { internal } from "./_generated/api";
 import { redactText } from "./lib/moderation";
 import { requireAdmin, canAccessAdmin, isSelfEmailOrAdmin } from "./lib/auth";
 import { cleanPlainText } from "./lib/sanitize";
+import { enforceRateLimit, RATE_LIMITS } from "./lib/rateLimit";
 
 export const submitMessage = mutation({
   args: {
@@ -14,6 +15,7 @@ export const submitMessage = mutation({
     add_to_faq: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
+    await enforceRateLimit(ctx, `contact:${args.email.toLowerCase()}`, RATE_LIMITS.CONTACT_MESSAGE);
     const cleanMessage = cleanPlainText(redactText(args.message), 5000);
     await ctx.db.insert("messages", {
       name: cleanPlainText(redactText(args.name), 100),
@@ -114,7 +116,7 @@ export const addAdminReply = mutation({
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
     await ctx.db.patch(args.messageId as any, {
-      admin_reply: redactText(args.reply.trim()),
+      admin_reply: cleanPlainText(redactText(args.reply.trim()), 5000),
       admin_reply_at: Date.now(),
       is_read: true,
     });

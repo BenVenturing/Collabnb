@@ -127,6 +127,7 @@ export default function Step4Review() {
     collaboration_brief: draft.collaboration_brief,
     compensation_type: draft.compensation_type,
     cash_amount: draft.cash_amount || undefined,
+    payout_handling: draft.payout_handling || undefined,
     currency: draft.currency || undefined,
     max_offers: draft.maxOffers === "" || draft.maxOffers == null ? undefined : Number(draft.maxOffers),
     nights: draft.nights,

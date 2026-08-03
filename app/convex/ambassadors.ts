@@ -2,6 +2,7 @@ import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import type { MutationCtx } from "./_generated/server";
 import { requireAdmin, canAccessAdmin } from "./lib/auth";
+import { cleanPlainText } from "./lib/sanitize";
 
 // ─── Ambassador program (beta) ────────────────────────────────────────────────
 // Regional partners ("Collabnb Ambassadors") earn a share of the platform fee
@@ -100,16 +101,16 @@ export const apply = mutation({
     await ctx.db.insert("ambassador_applications", {
       region_slug: args.region_slug,
       region_name: region.name,
-      full_name: args.full_name.trim(),
+      full_name: cleanPlainText(args.full_name, 150),
       email,
-      based_in: args.based_in?.trim(),
-      instagram_handle: args.instagram_handle?.trim(),
-      tiktok_handle: args.tiktok_handle?.trim(),
-      youtube_handle: args.youtube_handle?.trim(),
-      audience_size: args.audience_size?.trim(),
-      content_plan: args.content_plan.trim(),
-      connections: args.connections.trim(),
-      extra: args.extra?.trim(),
+      based_in: cleanPlainText(args.based_in, 150) || undefined,
+      instagram_handle: cleanPlainText(args.instagram_handle, 60) || undefined,
+      tiktok_handle: cleanPlainText(args.tiktok_handle, 60) || undefined,
+      youtube_handle: cleanPlainText(args.youtube_handle, 60) || undefined,
+      audience_size: cleanPlainText(args.audience_size, 100) || undefined,
+      content_plan: cleanPlainText(args.content_plan, 3000),
+      connections: cleanPlainText(args.connections, 3000),
+      extra: cleanPlainText(args.extra, 2000) || undefined,
       agreed_terms: true,
       status: "pending",
       created_at: Date.now(),

@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { requireOwnerOrAdmin } from "./lib/auth";
+import { cleanPlainText } from "./lib/sanitize";
 
 // Mutual ratings collected while closing out a collaboration. One review per
 // party per collab; the first submission also triggers the Trustpilot invite.
@@ -35,11 +36,11 @@ export const submit = mutation({
     const fields = {
       contract_id: args.contractId,
       reviewer_id: args.reviewerId,
-      reviewer_name: args.reviewerName,
-      reviewee_name: args.revieweeName,
-      property_name: args.propertyName,
+      reviewer_name: args.reviewerName ? cleanPlainText(args.reviewerName, 150) : args.reviewerName,
+      reviewee_name: args.revieweeName ? cleanPlainText(args.revieweeName, 150) : args.revieweeName,
+      property_name: args.propertyName ? cleanPlainText(args.propertyName, 150) : args.propertyName,
       rating,
-      comment: args.comment,
+      comment: args.comment !== undefined ? cleanPlainText(args.comment, 2000) : args.comment,
     };
 
     if (mine) {

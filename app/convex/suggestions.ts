@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
 import { requireAdmin, requireOwnerOrAdmin, canAccessAdmin } from "./lib/auth";
+import { cleanPlainText } from "./lib/sanitize";
 
 const SEED_SUGGESTIONS = [
   "Integrated payment processing between hosts and creators",
@@ -72,7 +73,7 @@ export const submitSuggestion = mutation({
   args: { text: v.string(), userId: v.optional(v.string()) },
   handler: async (ctx, { text, userId }) => {
     if (userId) await requireOwnerOrAdmin(ctx, userId);
-    return await ctx.db.insert("suggestions", { text, submitted_by: userId });
+    return await ctx.db.insert("suggestions", { text: cleanPlainText(text, 1000), submitted_by: userId });
   },
 });
 

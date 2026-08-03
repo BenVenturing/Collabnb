@@ -3,6 +3,7 @@ import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { totalPoints, normalizeTierId, calcMidpoint, calcHardFloor, evaluateZone } from "./lib/compensationPoints";
 import { requireOwnerOrAdmin, canAccessOwner } from "./lib/auth";
+import { cleanPlainText } from "./lib/sanitize";
 
 function currentMonthKey(): string {
   const now = new Date();
@@ -108,7 +109,7 @@ export const create = mutation({
       creator_followers: args.creatorFollowers,
       creator_engagement: args.creatorEngagement,
       creator_platforms: args.creatorPlatforms,
-      message: args.message,
+      message: cleanPlainText(args.message, 3000),
       status: "pending",
       type: args.type ?? "application",
       created_at: Date.now(),
@@ -216,7 +217,7 @@ export const updateStatus = mutation({
     await requireOwnerOrAdmin(ctx, pitch.host_id);
 
     const updates: Record<string, unknown> = { status };
-    if (hostNote !== undefined) updates.host_note = hostNote;
+    if (hostNote !== undefined) updates.host_note = cleanPlainText(hostNote, 1000);
     await ctx.db.patch(id, updates);
 
     if (status === "approved" || status === "declined") {

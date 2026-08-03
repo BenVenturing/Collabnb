@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useQuery, useAction, useMutation } from 'convex/react';
+import { useQuery, useAction, useMutation, useConvex } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 
 // Convex storage URL prefix; used to construct public URLs from storage IDs

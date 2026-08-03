@@ -18,6 +18,14 @@ type AuthCtx = {
 
 export async function getAuthedProfile(ctx: AuthCtx) {
   const identity = await ctx.auth.getUserIdentity();
+  // TEMP DIAGNOSTIC (2026-08-03) — server-side only, never reaches the
+  // client — tracking down a "Sign in required" false-positive for a
+  // signed-in user. Remove once resolved.
+  if (!identity) {
+    console.log("[auth-diag] getUserIdentity() returned null — no verified Clerk JWT reached Convex");
+  } else if (!identity.email) {
+    console.log("[auth-diag] identity present but no email claim. keys:", Object.keys(identity), "subject:", (identity as any).subject, "issuer:", (identity as any).issuer, "tokenIdentifier:", (identity as any).tokenIdentifier);
+  }
   // Clerk's JWT email claim isn't guaranteed to match the stored profile
   // email byte-for-byte (casing/whitespace) — normalize before the lookup so
   // a real signed-in session never bounces as "Sign in required" over a

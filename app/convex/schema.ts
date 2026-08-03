@@ -148,6 +148,7 @@ export default defineSchema({
     perks: v.optional(v.array(v.string())),
     vibe_tags: v.optional(v.array(v.string())),
     affiliate_code: v.optional(v.string()),
+    affiliate_percent: v.optional(v.number()),
     revision_policy: v.optional(v.string()),
     usage_rights: v.optional(v.string()),
     turnaround_days: v.optional(v.number()),
@@ -624,6 +625,20 @@ export default defineSchema({
     admin_note: v.optional(v.string()),
     created_at: v.number(),
   }).index("by_reported", ["reported_user_id"]),
+
+  // One row per client-side crash. Written by the ErrorBoundary's "Send to
+  // dev team" button so a crash gets triaged without the user having to
+  // manually copy/paste a stack trace.
+  crashReports: defineTable({
+    message: v.string(),
+    stack: v.optional(v.string()),
+    componentStack: v.optional(v.string()),
+    url: v.string(),
+    userAgent: v.string(),
+    userEmail: v.optional(v.string()),
+    status: v.union(v.literal("new"), v.literal("resolved")),
+    created_at: v.number(),
+  }).index("by_status", ["status"]),
 
   // ─── Web / marketing analytics ────────────────────────────────────────────
   // One row per visitor session (cookie-scoped to .collabnb.com, so a visit

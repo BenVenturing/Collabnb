@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, X, Sparkles, Search, Wand2 } from "lucide-react";
+import { Plus, X, Sparkles, Search, Wand2, RefreshCw } from "lucide-react";
 import WizardShell from "../../components/host/WizardShell";
 import { useListingDraft } from "../../contexts/ListingDraftContext";
 import { AMENITY_ICONS, ICON_PALETTE } from "../../lib/amenityIcons";
@@ -52,6 +52,94 @@ function PillList({ items, onRemove, color = "var(--mint)" }) {
   );
 }
 
+const VIBE_TAG_POOL = [
+  "Cozy", "Luxury", "Adventure", "Minimalist", "Romantic", "Rustic", "Modern",
+  "Tropical", "Boho", "Family-Friendly", "Pet-Friendly", "Remote Work", "Wellness",
+  "Beachfront", "Mountain View", "Secluded", "Urban", "Historic", "Eco-Friendly",
+  "Instagrammable", "Off-Grid", "Wine Country", "Desert", "Lakeside", "Treehouse",
+  "Glamping", "Chef's Kitchen", "Pool Access", "Ski-In/Ski-Out", "Artsy",
+];
+
+// Keyword → tag matches scanned against the title/brief/amenities to power
+// "Suggest from listing info" — intentionally simple substring matching, no
+// external AI call needed for a handful of vibe words.
+const VIBE_KEYWORDS = {
+  "Cozy": ["cozy", "fireplace", "cabin", "wood stove", "blanket", "hearth"],
+  "Luxury": ["luxury", "estate", "villa", "five-star", "5-star", "upscale", "chandelier"],
+  "Adventure": ["hike", "hiking", "trek", "kayak", "adventure", "trail", "climbing", "surf"],
+  "Romantic": ["romantic", "honeymoon", "couples", "candlelit", "intimate"],
+  "Rustic": ["rustic", "log cabin", "barn", "farmhouse", "reclaimed wood"],
+  "Modern": ["modern", "contemporary", "minimalist", "sleek", "architect"],
+  "Tropical": ["tropical", "palm", "jungle", "rainforest", "island"],
+  "Beachfront": ["beach", "ocean", "coastal", "seaside", "shore", "waterfront"],
+  "Mountain View": ["mountain", "alpine", "peak", "ridge", "summit"],
+  "Secluded": ["secluded", "private", "remote", "off-grid", "no neighbors", "acres"],
+  "Family-Friendly": ["family", "kids", "playground", "kid-friendly"],
+  "Pet-Friendly": ["pet-friendly", "dog-friendly", "pets welcome"],
+  "Wellness": ["yoga", "spa", "meditation", "wellness", "sauna", "hot tub"],
+  "Pool Access": ["pool", "infinity pool", "swimming"],
+  "Wine Country": ["vineyard", "winery", "wine tasting"],
+  "Desert": ["desert", "dune", "cactus"],
+  "Lakeside": ["lake", "lakefront", "lakeside"],
+  "Historic": ["historic", "heritage", "century-old", "restored"],
+  "Eco-Friendly": ["eco-friendly", "sustainable", "solar-powered"],
+  "Urban": ["downtown", "city center", "loft", "skyline"],
+};
+
+function suggestedVibeTagsFrom(draft, amenities) {
+  const text = [draft.title, draft.collaboration_brief, ...amenities.map((a) => a.label)]
+    .filter(Boolean).join(" ").toLowerCase();
+  return Object.entries(VIBE_KEYWORDS)
+    .filter(([, keywords]) => keywords.some((k) => text.includes(k)))
+    .map(([tag]) => tag);
+}
+
+// Rotating pool of ideas shown as dashed chips below the tag input, plus a
+// live filtered dropdown while typing — both draw from the same curated pool.
+function VibeTagInput({ existing, onAdd }) {
+  const [value, setValue] = useState("");
+  const [focused, setFocused] = useState(false);
+
+  function commit(raw) {
+    const trimmed = raw.trim();
+    if (trimmed) onAdd(trimmed);
+    setValue("");
+  }
+
+  const query = value.trim().toLowerCase();
+  const matches = query
+    ? VIBE_TAG_POOL.filter((t) => t.toLowerCase().includes(query) && !existing.includes(t)).slice(0, 6)
+    : [];
+
+  return (
+    <div style={{ position: "relative" }}>
+      <div style={{ display: "flex", gap: 10 }}>
+        <input
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && commit(value)}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setTimeout(() => setFocused(false), 120)}
+          placeholder="e.g., Cozy"
+          style={{ flex: 1, padding: "12px 16px", border: "1.5px solid rgba(25,37,36,0.15)", borderRadius: "0.875rem", fontFamily: "Satoshi, sans-serif", fontSize: 14, color: "var(--ink)", background: "#fff", outline: "none" }}
+        />
+        <button onClick={() => commit(value)} style={{ width: 44, height: 44, borderRadius: "0.875rem", background: "var(--ink)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <Plus size={18} color="#fff" />
+        </button>
+      </div>
+      {focused && matches.length > 0 && (
+        <div style={{ position: "absolute", top: "calc(100% + 6px)", left: 0, right: 54, background: "#fff", border: "1.5px solid rgba(25,37,36,0.12)", borderRadius: "0.75rem", boxShadow: "0 10px 28px rgba(25,37,36,0.14)", zIndex: 5, overflow: "hidden" }}>
+          {matches.map((m) => (
+            <button key={m} onMouseDown={() => commit(m)} style={{ display: "block", width: "100%", textAlign: "left", padding: "9px 14px", background: "none", border: "none", cursor: "pointer", fontFamily: "Satoshi, sans-serif", fontSize: 13, color: "var(--ink)" }}>
+              {m}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function generateCollabCode(title) {
   const initials = (title || "")
     .split(/\s+/)
@@ -72,11 +160,26 @@ export default function Step2Offer() {
   const [creatingAmenity, setCreatingAmenity] = useState(false);
   const [customLabel, setCustomLabel] = useState("");
   const [customIcon, setCustomIcon] = useState("");
+  const [tagSuggestionSeed, setTagSuggestionSeed] = useState(0);
 
   function addPerk(perk) { updateDraft({ perks: [...draft.perks, perk] }); }
   function removePerk(i) { updateDraft({ perks: draft.perks.filter((_, idx) => idx !== i) }); }
-  function addTag(tag) { updateDraft({ vibe_tags: [...draft.vibe_tags, tag] }); }
+  function addTag(tag) {
+    if (draft.vibe_tags.some((t) => t.toLowerCase() === tag.toLowerCase())) return;
+    updateDraft({ vibe_tags: [...draft.vibe_tags, tag] });
+  }
   function removeTag(i) { updateDraft({ vibe_tags: draft.vibe_tags.filter((_, idx) => idx !== i) }); }
+
+  const tagIdeas = useMemo(() => {
+    const pool = VIBE_TAG_POOL.filter((t) => !draft.vibe_tags.includes(t));
+    return [...pool].sort(() => Math.random() - 0.5).slice(0, 8);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tagSuggestionSeed, draft.vibe_tags.join("|")]);
+
+  function suggestVibeTagsFromListing() {
+    const matches = suggestedVibeTagsFrom(draft, amenities).filter((t) => !draft.vibe_tags.includes(t));
+    if (matches.length) updateDraft({ vibe_tags: [...draft.vibe_tags, ...matches] });
+  }
 
   const amenities = draft.amenities || [];
   function toggleAmenity(key, label) {
@@ -280,8 +383,14 @@ export default function Step2Offer() {
               max="50"
               value={draft.affiliate_percent}
               onChange={(e) => {
-                const v = e.target.value === "" ? 0 : Math.min(50, Math.max(0, parseInt(e.target.value, 10) || 0));
-                updateDraft({ affiliate_percent: v });
+                const raw = e.target.value;
+                if (raw === "") { updateDraft({ affiliate_percent: "" }); return; }
+                const parsed = parseInt(raw, 10);
+                if (Number.isNaN(parsed)) return;
+                updateDraft({ affiliate_percent: Math.min(50, Math.max(0, parsed)) });
+              }}
+              onBlur={() => {
+                if (draft.affiliate_percent === "") updateDraft({ affiliate_percent: 0 });
               }}
               placeholder="e.g., 10"
               style={{ width: "100%", padding: "12px 16px", border: "1.5px solid rgba(25,37,36,0.15)", borderRadius: "0.875rem", fontFamily: "Satoshi, sans-serif", fontSize: 14, color: "var(--ink)", background: "#fff", outline: "none", boxSizing: "border-box" }}
@@ -321,8 +430,37 @@ export default function Step2Offer() {
         <div>
           <SectionLabel>Vibe tags (optional)</SectionLabel>
           <SectionDesc>Add a few words that describe the vibe (Cozy, Luxury, Adventure, etc.)</SectionDesc>
-          <PillInput placeholder="e.g., Cozy" onAdd={addTag} />
+          <VibeTagInput existing={draft.vibe_tags} onAdd={addTag} />
           <PillList items={draft.vibe_tags} onRemove={removeTag} color="rgba(209,235,219,0.6)" />
+
+          {tagIdeas.length > 0 && (
+            <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 6, marginTop: 12 }}>
+              <span style={{ fontFamily: "Satoshi, sans-serif", fontSize: 11.5, color: "var(--sage)", marginRight: 2 }}>Ideas:</span>
+              {tagIdeas.map((t) => (
+                <button
+                  key={t}
+                  onClick={() => addTag(t)}
+                  style={{ padding: "5px 11px", borderRadius: 9999, border: "1.5px dashed rgba(25,37,36,0.22)", background: "transparent", cursor: "pointer", fontFamily: "Satoshi, sans-serif", fontSize: 12, fontWeight: 600, color: "var(--slate)" }}
+                >
+                  + {t}
+                </button>
+              ))}
+              <button
+                onClick={() => setTagSuggestionSeed((s) => s + 1)}
+                title="Show different ideas"
+                style={{ width: 26, height: 26, borderRadius: "50%", border: "1.5px solid rgba(25,37,36,0.15)", background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
+              >
+                <RefreshCw size={12} color="var(--slate)" />
+              </button>
+            </div>
+          )}
+
+          <button
+            onClick={suggestVibeTagsFromListing}
+            style={{ marginTop: 12, background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, fontFamily: "Satoshi, sans-serif", fontSize: 13, color: "var(--slate)", fontWeight: 600, padding: 0 }}
+          >
+            <Sparkles size={14} /> Suggest tags from listing info
+          </button>
         </div>
 
         {/* Max offers */}

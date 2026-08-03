@@ -79,7 +79,7 @@ function normalizeConvexListing(l) {
     else compensation = 'See listing';
   }
 
-  let deliverables = l.deliverables || '';
+  let deliverables = typeof l.deliverables === 'string' ? l.deliverables : '';
   if (!deliverables && l.deliverables_list?.length) {
     const parts = l.deliverables_list.slice(0, 2).map((d) => `${d.quantity}× ${d.type}`);
     deliverables = parts.join(', ');

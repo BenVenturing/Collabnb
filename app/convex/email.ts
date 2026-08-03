@@ -119,7 +119,7 @@ export const sendWelcomeEmail = internalAction({
 // Set it with: npx convex env set RESEND_API_KEY re_xxxxxxxxxxxx
 export const sendAdminNotification = internalAction({
   args: {
-    type: v.union(v.literal("signup"), v.literal("message"), v.literal("collab")),
+    type: v.union(v.literal("signup"), v.literal("message"), v.literal("collab"), v.literal("crash")),
     subject: v.string(),
     body: v.string(),
   },
@@ -127,9 +127,13 @@ export const sendAdminNotification = internalAction({
     const apiKey = process.env.RESEND_API_KEY;
     if (!apiKey) return; // silently skip until API key is configured
 
-    // Respect the admin notification toggles
-    const settings = await ctx.runQuery(api.admin.getSettings);
-    if (settings?.[`notify_${type}`] !== "true") return;
+    // Respect the admin notification toggles — except crash reports, which
+    // are a manual "send this to dev right now" click and should always go
+    // out regardless of the routine-notification settings.
+    if (type !== "crash") {
+      const settings = await ctx.runQuery(api.admin.getSettings);
+      if (settings?.[`notify_${type}`] !== "true") return;
+    }
 
     try {
       await fetch("https://api.resend.com/emails", {

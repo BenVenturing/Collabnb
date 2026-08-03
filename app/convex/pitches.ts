@@ -4,6 +4,7 @@ import { internal } from "./_generated/api";
 import { totalPoints, normalizeTierId, calcMidpoint, calcHardFloor, evaluateZone } from "./lib/compensationPoints";
 import { requireOwnerOrAdmin, canAccessOwner } from "./lib/auth";
 import { cleanPlainText } from "./lib/sanitize";
+import { enforceRateLimit, RATE_LIMITS } from "./lib/rateLimit";
 
 function currentMonthKey(): string {
   const now = new Date();
@@ -74,6 +75,10 @@ export const create = mutation({
   },
   handler: async (ctx, args) => {
     await requireOwnerOrAdmin(ctx, args.creatorId);
+    // Backstop only — the real 10/month limit is pitch_counts.checkAndIncrement,
+    // called by the frontend before this. This just caps the direct-mutation-call
+    // path that skips that check, so it's deliberately looser (20/day).
+    await enforceRateLimit(ctx, `pitch:${args.creatorId}`, RATE_LIMITS.PITCH);
     // Server-side access gate — mirrors the canViewFull rule in listings.ts.
     // The UI hides Apply for locked-out creators, but that's bypassable via a
     // direct mutation call, so it must also be enforced here.

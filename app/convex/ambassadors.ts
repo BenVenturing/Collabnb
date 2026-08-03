@@ -3,6 +3,7 @@ import { v } from "convex/values";
 import type { MutationCtx } from "./_generated/server";
 import { requireAdmin, canAccessAdmin } from "./lib/auth";
 import { cleanPlainText } from "./lib/sanitize";
+import { enforceRateLimit, RATE_LIMITS } from "./lib/rateLimit";
 
 // ─── Ambassador program (beta) ────────────────────────────────────────────────
 // Regional partners ("Collabnb Ambassadors") earn a share of the platform fee
@@ -82,6 +83,7 @@ export const apply = mutation({
   handler: async (ctx, args) => {
     const email = args.email.trim().toLowerCase();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error("Please enter a valid email address.");
+    await enforceRateLimit(ctx, `ambassador:${email}`, RATE_LIMITS.AMBASSADOR_APPLY);
     if (!args.agreed_terms) throw new Error("You must agree to the Ambassador Terms to apply.");
     if (args.full_name.trim().length < 2) throw new Error("Please enter your name.");
     if (args.content_plan.trim().length < 20) throw new Error("Tell us a bit more about how you'd promote Collabnb in your region.");

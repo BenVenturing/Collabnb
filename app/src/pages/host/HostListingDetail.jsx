@@ -165,7 +165,17 @@ function normalizeConvexListing(l) {
     else compensation = 'See listing';
   }
   const status = l.status === 'published' ? 'active' : (l.status || 'draft');
-  return { ...l, id: String(l._id), status, image: images[0] || '', gallery_images: images, compensation, about: l.collaboration_brief || l.about || '' };
+
+  let deliverables = typeof l.deliverables === 'string' ? l.deliverables : '';
+  if (!deliverables && l.deliverables_list?.length) {
+    const parts = l.deliverables_list.slice(0, 2).map((d) => `${d.quantity}× ${d.type}`);
+    deliverables = parts.join(', ');
+    if (l.deliverables_list.length > 2) deliverables += ` +${l.deliverables_list.length - 2} more`;
+  } else if (!deliverables && l.deliverable_count) {
+    deliverables = `${l.deliverable_count} deliverables`;
+  }
+
+  return { ...l, id: String(l._id), status, image: images[0] || '', gallery_images: images, compensation, deliverables, about: l.collaboration_brief || l.about || '' };
 }
 
 // ─── Photo zoom modal ─────────────────────────────────────────────────────────
@@ -524,18 +534,24 @@ export default function HostListingDetail() {
       title: listing.title || '',
       location_city: listing.location?.split(',')[0]?.trim() || '',
       location_country: listing.location?.split(',').slice(1).join(',').trim() || '',
+      lat: typeof listing.lat === 'number' ? listing.lat : undefined,
+      lng: typeof listing.lng === 'number' ? listing.lng : undefined,
       property_url: listing.property_url || '',
       collaboration_brief: listing.about || listing.collaboration_brief || '',
       compensation_type: listing.compensation_type || 'paid',
       nights: listing.nights || 2,
       cash_amount: listing.cash_amount || 0,
+      payout_handling: listing.payout_handling || 'platform',
       creator_tier: listing.creator_tier || '',
       deliverable_load: listing.deliverable_load || '',
+      deliverables: Array.isArray(listing.deliverables) ? listing.deliverables : [],
+      complexity: listing.complexity || 'standard',
+      stay_value: listing.stay_value || 0,
       images: listing.gallery_images || (listing.image ? [listing.image] : []),
       perks: listing.perks || [],
       vibe_tags: listing.vibe_tags || [],
       affiliate_code: affiliateCode || '',
-      affiliate_percent: 0,
+      affiliate_percent: listing.affiliate_percent || 0,
       maxOffers: '',
       collab_start: listing.collab_start || '',
       collab_end: listing.collab_end || '',

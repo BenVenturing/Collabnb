@@ -4,6 +4,12 @@
 // any UI-level checks. These helpers resolve the real caller from the Clerk
 // identity Convex verifies on every request (see auth.config.ts) and match it
 // to a profiles row by email (profiles has no stored Clerk user id).
+//
+// Errors here are thrown as ConvexError, not plain Error — Convex redacts
+// plain Error messages on the client (generic "Server Error") in production,
+// so a plain throw would silently swallow the real reason for a rejection.
+
+import { ConvexError } from "convex/values";
 
 type AuthCtx = {
   auth: { getUserIdentity: () => Promise<{ email?: string } | null> };
@@ -22,7 +28,7 @@ export async function getAuthedProfile(ctx: AuthCtx) {
 
 export async function requireAuthedProfile(ctx: AuthCtx) {
   const profile = await getAuthedProfile(ctx);
-  if (!profile) throw new Error("Sign in required.");
+  if (!profile) throw new ConvexError("Sign in required.");
   return profile;
 }
 
@@ -30,14 +36,14 @@ export async function requireOwnerOrAdmin(ctx: AuthCtx, ownerId: unknown) {
   const profile = await requireAuthedProfile(ctx);
   if (profile.is_admin === true) return profile;
   if (!ownerId || String(profile._id) !== String(ownerId)) {
-    throw new Error("You don't have permission to do that.");
+    throw new ConvexError("You don't have permission to do that.");
   }
   return profile;
 }
 
 export async function requireAdmin(ctx: AuthCtx) {
   const profile = await requireAuthedProfile(ctx);
-  if (profile.is_admin !== true) throw new Error("Admin access required.");
+  if (profile.is_admin !== true) throw new ConvexError("Admin access required.");
   return profile;
 }
 
@@ -48,7 +54,7 @@ export async function requireSelfEmailOrAdmin(ctx: AuthCtx, email: string) {
   if (identity?.email && identity.email === email) return;
   const profile = await getAuthedProfile(ctx);
   if (profile?.is_admin === true) return;
-  throw new Error("You don't have permission to do that.");
+  throw new ConvexError("You don't have permission to do that.");
 }
 
 // Convex actions have no ctx.db, so requireAdmin (which reads the profiles
@@ -64,9 +70,9 @@ export async function requireAdminAction(
   getByEmailRef: any
 ) {
   const identity = await ctx.auth.getUserIdentity();
-  if (!identity?.email) throw new Error("Sign in required.");
+  if (!identity?.email) throw new ConvexError("Sign in required.");
   const caller: any = await ctx.runQuery(getByEmailRef, { email: identity.email });
-  if (!caller || caller.is_admin !== true) throw new Error("Admin access required.");
+  if (!caller || caller.is_admin !== true) throw new ConvexError("Admin access required.");
 }
 
 // Action-context counterpart to requireOwnerOrAdmin — for actions (no ctx.db),
@@ -80,12 +86,12 @@ export async function requireOwnerOrAdminAction(
   getByEmailRef: any
 ) {
   const identity = await ctx.auth.getUserIdentity();
-  if (!identity?.email) throw new Error("Sign in required.");
+  if (!identity?.email) throw new ConvexError("Sign in required.");
   const caller: any = await ctx.runQuery(getByEmailRef, { email: identity.email });
-  if (!caller) throw new Error("Sign in required.");
+  if (!caller) throw new ConvexError("Sign in required.");
   if (caller.is_admin === true) return caller;
   if (!ownerId || String(caller._id) !== String(ownerId)) {
-    throw new Error("You don't have permission to do that.");
+    throw new ConvexError("You don't have permission to do that.");
   }
   return caller;
 }

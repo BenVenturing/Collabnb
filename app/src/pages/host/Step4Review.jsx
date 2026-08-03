@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronDown, ChevronUp, DollarSign, ArrowLeft, ArrowRight, Star, Eye, X } from "lucide-react";
 import { useMutation, useQuery } from "convex/react";
+import { ConvexError } from "convex/values";
 import { api } from "../../../convex/_generated/api";
 import WizardShell from "../../components/host/WizardShell";
 import { useListingDraft } from "../../contexts/ListingDraftContext";
@@ -84,7 +85,7 @@ function Confetti({ show }) {
 
 export default function Step4Review() {
   const navigate = useNavigate();
-  const { draft, updateDraft, clearDraft, fee, totalDeliverables, formatCount } = useListingDraft();
+  const { draft, updateDraft, clearDraft, fee, totalDeliverables, formatCount, combinedDeliverablesList } = useListingDraft();
   const { profile } = useAuth();
   const createListing = useMutation(api.listings.create);
   const updateListing = useMutation(api.listings.update);
@@ -121,6 +122,8 @@ export default function Step4Review() {
     location: `${draft.location_city}, ${draft.location_country}`,
     location_city: draft.location_city,
     location_country: draft.location_country,
+    lat: typeof draft.lat === "number" ? draft.lat : undefined,
+    lng: typeof draft.lng === "number" ? draft.lng : undefined,
     host_id: profile?._id || profile?.id,
     host_name: profile?.full_name,
     property_url: draft.property_url,
@@ -141,11 +144,12 @@ export default function Step4Review() {
     perks: draft.perks,
     vibe_tags: draft.vibe_tags,
     affiliate_code: draft.affiliate_code,
+    affiliate_percent: draft.affiliate_percent === "" ? undefined : draft.affiliate_percent,
     collab_start: dateRanges[0]?.startDate || draft.collab_start,
     collab_end: dateRanges[0]?.endDate || draft.collab_end,
     date_ranges: dateRanges.length ? dateRanges : undefined,
-    turnaround_days: draft.turnaround_days,
-    deliverables_list: draft.deliverables_list,
+    turnaround_days: draft.turnaround_days === "" ? 0 : draft.turnaround_days,
+    deliverables_list: combinedDeliverablesList,
     deliverable_count: totalDeliverables,
     revision_policy: draft.revision_policy,
     usage_rights: draft.usage_rights,
@@ -181,7 +185,8 @@ export default function Step4Review() {
       }
     } catch (err) {
       console.error(err);
-      setPublishError(err?.message || "Something went wrong publishing this listing.");
+      const message = err instanceof ConvexError ? err.data : err?.message;
+      setPublishError(typeof message === "string" && message ? message : "Something went wrong publishing this listing.");
       setPublishing(false);
     }
   }
@@ -287,14 +292,14 @@ export default function Step4Review() {
         </Section>
 
         <Section title="Deliverables">
-          {draft.deliverables_list.slice(0, 2).map((d, i) => (
+          {combinedDeliverablesList.slice(0, 2).map((d, i) => (
             <div key={i} style={{ background: "var(--bone)", borderRadius: "0.625rem", padding: "10px 14px" }}>
               <div style={{ fontFamily: "Satoshi, sans-serif", fontWeight: 700, fontSize: 13, color: "var(--ink)" }}>{d.quantity}x {d.type}</div>
               {d.description && <div style={{ fontFamily: "Satoshi, sans-serif", fontSize: 12, color: "var(--slate)", marginTop: 2 }}>{d.description}</div>}
             </div>
           ))}
-          {draft.deliverables_list.length > 2 && (
-            <div style={{ fontFamily: "Satoshi, sans-serif", fontSize: 13, color: "var(--sage)", textAlign: "center" }}>+{draft.deliverables_list.length - 2} more</div>
+          {combinedDeliverablesList.length > 2 && (
+            <div style={{ fontFamily: "Satoshi, sans-serif", fontSize: 13, color: "var(--sage)", textAlign: "center" }}>+{combinedDeliverablesList.length - 2} more</div>
           )}
         </Section>
 

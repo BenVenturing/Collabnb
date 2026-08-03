@@ -1,4 +1,4 @@
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { query, mutation, internalMutation } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { calcMidpoint, calcStayOffset, calcHardFloor, evaluateZone, normalizeTierId, totalPoints } from "./lib/compensationPoints";
@@ -54,21 +54,21 @@ function validateListingFields(
   const { compensation_type, cash_amount, date_ranges } = fields;
   if (requireCompensation || compensation_type !== undefined) {
     if (compensation_type !== "paid" && compensation_type !== "hybrid") {
-      throw new Error('Collaboration type must be "paid" or "hybrid" — a stay alone is not valid compensation.');
+      throw new ConvexError('Collaboration type must be "paid" or "hybrid" — a stay alone is not valid compensation.');
     }
   }
   if (requireCompensation || cash_amount !== undefined) {
     if (typeof cash_amount !== "number" || !(cash_amount > 0)) {
-      throw new Error("Compensation amount is required and must be greater than $0.");
+      throw new ConvexError("Compensation amount is required and must be greater than $0.");
     }
   }
   if (date_ranges !== undefined) {
     if (date_ranges.length < 1 || date_ranges.length > 3) {
-      throw new Error("A listing must have between 1 and 3 date ranges.");
+      throw new ConvexError("A listing must have between 1 and 3 date ranges.");
     }
     for (const r of date_ranges) {
-      if (!r.startDate || !r.endDate) throw new Error("Each date range needs a start and end date.");
-      if (r.endDate < r.startDate) throw new Error("A date range cannot end before it starts.");
+      if (!r.startDate || !r.endDate) throw new ConvexError("Each date range needs a start and end date.");
+      if (r.endDate < r.startDate) throw new ConvexError("A date range cannot end before it starts.");
     }
   }
 }
@@ -406,6 +406,8 @@ export const create = mutation({
     status: v.optional(v.string()),
     location_city: v.optional(v.string()),
     location_country: v.optional(v.string()),
+    lat: v.optional(v.number()),
+    lng: v.optional(v.number()),
     property_url: v.optional(v.string()),
     collaboration_brief: v.optional(v.string()),
     compensation_type: v.optional(v.string()),
@@ -421,6 +423,7 @@ export const create = mutation({
     perks: v.optional(v.array(v.string())),
     vibe_tags: v.optional(v.array(v.string())),
     affiliate_code: v.optional(v.string()),
+    affiliate_percent: v.optional(v.number()),
     collab_start: v.optional(v.string()),
     collab_end: v.optional(v.string()),
     date_ranges: v.optional(dateRangesValidator),
@@ -446,12 +449,12 @@ export const create = mutation({
     if (args.status === "published" && args.host_id) {
       const host: any = await ctx.db.get(args.host_id as any);
       if (host && host.is_verified !== true && host.is_admin !== true) {
-        throw new Error("Your account is pending verification. You can save this listing as a draft — publishing unlocks once you're approved.");
+        throw new ConvexError("Your account is pending verification. You can save this listing as a draft — publishing unlocks once you're approved.");
       }
     }
     const floor = evaluateCompensationFloor(args);
     if (floor?.zone === "red") {
-      throw new Error(`Compensation is below the minimum for this workload. The minimum for this listing is $${Math.round(floor.hardFloor)}.`);
+      throw new ConvexError(`Compensation is below the minimum for this workload. The minimum for this listing is $${Math.round(floor.hardFloor)}.`);
     }
     const id = await ctx.db.insert("listings", { ...args, ...sanitizeListingFields(args), below_recommended_comp: floor?.zone === "amber" });
     // Geocode city/country → coords for the Explore map (skipped for samples).
@@ -472,6 +475,8 @@ export const update = mutation({
     status: v.optional(v.string()),
     location_city: v.optional(v.string()),
     location_country: v.optional(v.string()),
+    lat: v.optional(v.number()),
+    lng: v.optional(v.number()),
     property_url: v.optional(v.string()),
     collaboration_brief: v.optional(v.string()),
     compensation_type: v.optional(v.string()),
@@ -487,6 +492,7 @@ export const update = mutation({
     perks: v.optional(v.array(v.string())),
     vibe_tags: v.optional(v.array(v.string())),
     affiliate_code: v.optional(v.string()),
+    affiliate_percent: v.optional(v.number()),
     collab_start: v.optional(v.string()),
     collab_end: v.optional(v.string()),
     date_ranges: v.optional(dateRangesValidator),
@@ -507,19 +513,19 @@ export const update = mutation({
   handler: async (ctx, args) => {
     const { id, ...fields } = args;
     const existing = await ctx.db.get(id);
-    if (!existing) throw new Error("Listing not found.");
+    if (!existing) throw new ConvexError("Listing not found.");
     await requireOwnerOrAdmin(ctx, (existing as any).host_id);
     if ((existing as any).host_id) await enforceRateLimit(ctx, `listing:${(existing as any).host_id}`, RATE_LIMITS.LISTING_WRITE);
     validateListingFields(fields);
     // Sample listings are permanently locked to draft — no UI path may publish them
     if ((existing as any).is_sample === true && fields.status && fields.status !== "draft") {
-      throw new Error("Sample listings can't be published — they stay drafts. Create your own listing to go live.");
+      throw new ConvexError("Sample listings can't be published — they stay drafts. Create your own listing to go live.");
     }
     if (fields.status === "published" && !(existing as any).is_sample) {
       const hostId = fields.host_id ?? (existing as any).host_id;
       const host: any = hostId ? await ctx.db.get(hostId as any) : null;
       if (host && host.is_verified !== true && host.is_admin !== true) {
-        throw new Error("Your account is pending verification. You can save this listing as a draft — publishing unlocks once you're approved.");
+        throw new ConvexError("Your account is pending verification. You can save this listing as a draft — publishing unlocks once you're approved.");
       }
     }
     const patch: any = { ...fields, ...sanitizeListingFields(fields) };
@@ -543,17 +549,21 @@ export const update = mutation({
     };
     const floor = evaluateCompensationFloor(merged);
     if (floor?.zone === "red") {
-      throw new Error(`Compensation is below the minimum for this workload. The minimum for this listing is $${Math.round(floor.hardFloor)}.`);
+      throw new ConvexError(`Compensation is below the minimum for this workload. The minimum for this listing is $${Math.round(floor.hardFloor)}.`);
     }
     if (floor) patch.below_recommended_comp = floor.zone === "amber";
 
     await ctx.db.patch(id, patch);
 
-    // Re-geocode when the host changes where the listing is.
+    // Re-geocode when the host changes where the listing is — but never
+    // when this same update already carries an explicit lat/lng (the host
+    // placed a pin via the map picker, which is the source of truth then).
     if (
-      fields.location_city !== undefined ||
-      fields.location_country !== undefined ||
-      fields.location !== undefined
+      fields.lat === undefined &&
+      fields.lng === undefined &&
+      (fields.location_city !== undefined ||
+        fields.location_country !== undefined ||
+        fields.location !== undefined)
     ) {
       await ctx.scheduler.runAfter(0, internal.geocode.geocodeListing, { listingId: id, force: true });
     }

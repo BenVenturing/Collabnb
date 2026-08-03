@@ -4,6 +4,7 @@ import { Camera, X, Plus } from "lucide-react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import WizardShell from "../../components/host/WizardShell";
+import LocationPicker from "../../components/host/LocationPicker";
 import { useListingDraft } from "../../contexts/ListingDraftContext";
 
 const MAX_IMAGES = 10;
@@ -117,10 +118,20 @@ export default function Step1Basics() {
         {/* Location */}
         <div>
           <Label required>Location</Label>
-          <div style={{ display: "flex", gap: 12 }}>
+          <div style={{ display: "flex", gap: 12, marginBottom: 12 }}>
             <Input placeholder="City" value={draft.location_city} onChange={(v) => updateDraft({ location_city: v })} />
             <Input placeholder="State / Country" value={draft.location_country} onChange={(v) => updateDraft({ location_country: v })} />
           </div>
+          <LocationPicker
+            lat={draft.lat}
+            lng={draft.lng}
+            onChange={({ lat, lng, city, country }) => {
+              const fields = { lat, lng };
+              if (city) fields.location_city = city;
+              if (country) fields.location_country = country;
+              updateDraft(fields);
+            }}
+          />
         </div>
 
         {/* Property URL */}

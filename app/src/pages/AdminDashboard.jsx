@@ -25,6 +25,7 @@ import AlgorithmLab from './admin/AlgorithmLab';
 import CreatorAlgorithmLab from './admin/CreatorAlgorithmLab';
 import ModerationQueue from './admin/ModerationQueue';
 import AdminInbox from './admin/AdminInbox';
+import CrashReports from './admin/CrashReports';
 
 const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL;
 
@@ -73,6 +74,7 @@ const ICONS = {
   messages:     IC(<path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>),
   inbox:        IC(<><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z"/></>),
   'admin-inbox': IC(<><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z"/></>),
+  crashes:      IC(<><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></>),
   suggestions:  IC(<><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17" strokeWidth="3"/></>),
   moderation:   IC(<><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></>),
   audit:        IC(<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>),
@@ -87,6 +89,7 @@ const ICONS = {
 const TOP_SECTIONS = [
   { id: 'overview',    label: 'Overview' },
   { id: 'admin-inbox', label: 'Inbox'    },
+  { id: 'crashes',     label: 'Crash Reports' },
 ];
 
 // Pinned to the footer — always visible.
@@ -175,6 +178,7 @@ function AlgoReferencePanel() { return <AlgorithmLab view="reference" />; }
 function CreatorAlgoSimulatorPanel() { return <CreatorAlgorithmLab view="simulator" />; }
 function CreatorAlgoReferencePanel() { return <CreatorAlgorithmLab view="reference" />; }
 function AdminInboxPanel()   { return <AdminInbox />; }
+function CrashReportsPanel() { return <CrashReports />; }
 
 const PANEL_MAP = {
   overview:     OverviewPanel,
@@ -201,6 +205,7 @@ const PANEL_MAP = {
   'creator-algo-simulator': CreatorAlgoSimulatorPanel,
   'creator-algo-reference': CreatorAlgoReferencePanel,
   'admin-inbox':    AdminInboxPanel,
+  crashes:          CrashReportsPanel,
 };
 
 // ─── AdminDashboard ───────────────────────────────────────────────────────────
@@ -214,6 +219,7 @@ export default function AdminDashboard() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const unreadCount = useQuery(api.messages.getUnreadCount);
   const adminUnread = useQuery(api.adminThreads.unreadCount) ?? 0;
+  const crashUnresolved = useQuery(api.crashReports.unresolvedCount) ?? 0;
 
   // Manual nav clears any deep-linked Users sub-view (e.g. Overview → pending).
   const selectSection = (id) => { setUsersInitialView(null); setActiveSection(id); };
@@ -238,7 +244,7 @@ export default function AdminDashboard() {
   );
 
   const ActivePanel = PANEL_MAP[activeSection] || PANEL_MAP['overview'];
-  const badges = { messages: unreadCount || 0, 'admin-inbox': adminUnread || 0 };
+  const badges = { messages: unreadCount || 0, 'admin-inbox': adminUnread || 0, crashes: crashUnresolved || 0 };
   const q = navSearch.trim().toLowerCase();
   const navResults = q
     ? NAV_INDEX.filter(it => it.label.toLowerCase().includes(q) || (it.group || '').toLowerCase().includes(q))

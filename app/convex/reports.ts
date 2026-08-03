@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
 import { requireOwnerOrAdmin, requireAdmin, canAccessAdmin } from "./lib/auth";
 import { cleanPlainText } from "./lib/sanitize";
+import { enforceRateLimit, RATE_LIMITS } from "./lib/rateLimit";
 
 const REPORT_REASONS = [
   "inaccurate_information",
@@ -21,6 +22,7 @@ export const submitReport = mutation({
   },
   handler: async (ctx, args) => {
     await requireOwnerOrAdmin(ctx, args.reporterId);
+    await enforceRateLimit(ctx, `report:${args.reporterId}`, RATE_LIMITS.REPORT);
     const id = await ctx.db.insert("reports", {
       reported_user_id: args.reportedUserId,
       reporter_id: args.reporterId,

@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from "react";
-import { computeLoadTier, totalPoints } from "../../convex/lib/compensationPoints";
+import { computeLoadTier, totalPoints, DELIVERABLE_LABELS } from "../../convex/lib/compensationPoints";
 
 const STORAGE_KEY = "collabnb_listing_draft_v1";
 
@@ -31,6 +31,8 @@ const EMPTY_DRAFT = {
   title: "",
   location_city: "",
   location_country: "",
+  lat: undefined,
+  lng: undefined,
   property_url: "",
   collaboration_brief: "",
   compensation_type: "paid",
@@ -115,12 +117,26 @@ export function ListingDraftProvider({ children }) {
 
   const fee = calculateFee(draft);
 
-  const totalDeliverables = draft.deliverables_list.reduce((sum, d) => sum + d.quantity, 0);
-  const formatCount = draft.deliverables_list.length;
+  // Cards auto-derived from the cost calculator's points-based `deliverables`
+  // array — kept separate from the user's hand-added `deliverables_list` cards
+  // so the two stay linked without ever overwriting a manual edit. Always
+  // placed first; `autoDeliverableCount` tells consumers where the editable
+  // (custom) cards start.
+  const autoDeliverables = (draft.deliverables || []).map((d) => ({
+    type: DELIVERABLE_LABELS[d.type] || d.type,
+    quantity: d.quantity,
+    description: "",
+    usage_rights: draft.usage_rights || DEFAULT_USAGE_RIGHTS,
+  }));
+  const autoDeliverableCount = autoDeliverables.length;
+  const combinedDeliverablesList = [...autoDeliverables, ...draft.deliverables_list];
+
+  const totalDeliverables = combinedDeliverablesList.reduce((sum, d) => sum + d.quantity, 0);
+  const formatCount = combinedDeliverablesList.length;
   const pricingPoints = totalPoints(draft.deliverables);
 
   return (
-    <ListingDraftContext.Provider value={{ draft, updateDraft, loadDraft, hydrateFromStorage, clearDraft, fee, totalDeliverables, formatCount, pricingPoints, DELIVERABLE_PRESETS, DEFAULT_USAGE_RIGHTS }}>
+    <ListingDraftContext.Provider value={{ draft, updateDraft, loadDraft, hydrateFromStorage, clearDraft, fee, totalDeliverables, formatCount, pricingPoints, combinedDeliverablesList, autoDeliverableCount, DELIVERABLE_PRESETS, DEFAULT_USAGE_RIGHTS }}>
       {children}
     </ListingDraftContext.Provider>
   );

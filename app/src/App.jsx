@@ -1,5 +1,7 @@
 import { Component, useRef, useState, useEffect, useCallback } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { useMutation } from 'convex/react';
+import { api } from '../convex/_generated/api';
 import { Analytics } from '@vercel/analytics/react';
 import collabnbLogo from './assets/collabnb-logo.png';
 import bgClouds from './assets/bg-clouds-hazy.png';
@@ -33,10 +35,56 @@ import AdminDashboard       from './pages/AdminDashboard';
 import Blog                 from './pages/Blog';
 import BlogPost             from './pages/BlogPost';
 
+// One-click "send this crash to the dev team" button shown in the crash
+// screen below. Lives outside the class ErrorBoundary since hooks need a
+// function component, but it's rendered from inside that boundary's fallback.
+function CrashReportButton({ error, componentStack }) {
+  const submitCrashReport = useMutation(api.crashReports.submitCrashReport);
+  const [status, setStatus] = useState('idle'); // idle | sending | sent | error
+
+  const send = async () => {
+    setStatus('sending');
+    try {
+      await submitCrashReport({
+        message: error?.message || String(error),
+        stack: error?.stack,
+        componentStack,
+        url: window.location.href,
+        userAgent: navigator.userAgent,
+      });
+      setStatus('sent');
+    } catch {
+      setStatus('error');
+    }
+  };
+
+  if (status === 'sent') {
+    return <p style={{ marginTop: '1.25rem', color: '#2a7', fontWeight: 'bold' }}>Sent to the dev team — thanks!</p>;
+  }
+
+  return (
+    <div style={{ marginTop: '1.25rem' }}>
+      <button
+        onClick={send}
+        disabled={status === 'sending'}
+        style={{
+          fontFamily: 'inherit', fontSize: '0.9rem', fontWeight: 'bold',
+          padding: '0.6rem 1.25rem', borderRadius: '0.5rem', border: 'none',
+          background: '#c00', color: '#fff', cursor: status === 'sending' ? 'not-allowed' : 'pointer',
+        }}
+      >
+        {status === 'sending' ? 'Sending…' : 'Send crash report to dev team'}
+      </button>
+      {status === 'error' && <p style={{ color: '#c00', marginTop: '0.5rem' }}>Send failed — copy the details below instead.</p>}
+    </div>
+  );
+}
+
 // Catch any render crash and show it instead of a blank page
 class ErrorBoundary extends Component {
-  constructor(props) { super(props); this.state = { error: null }; }
+  constructor(props) { super(props); this.state = { error: null, componentStack: null }; }
   static getDerivedStateFromError(e) { return { error: e }; }
+  componentDidCatch(error, info) { this.setState({ componentStack: info?.componentStack }); }
   render() {
     if (this.state.error) {
       return (
@@ -47,6 +95,7 @@ class ErrorBoundary extends Component {
             {'\n\n'}
             {this.state.error?.stack}
           </pre>
+          <CrashReportButton error={this.state.error} componentStack={this.state.componentStack} />
         </div>
       );
     }

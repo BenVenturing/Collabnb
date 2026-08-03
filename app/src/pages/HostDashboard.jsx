@@ -184,7 +184,7 @@ function normalizeConvexListing(l) {
     else compensation = 'See listing';
   }
 
-  let deliverables = l.deliverables || '';
+  let deliverables = typeof l.deliverables === 'string' ? l.deliverables : '';
   if (!deliverables && l.deliverables_list?.length) {
     const parts = l.deliverables_list.slice(0, 2).map((d) => `${d.quantity}× ${d.type}`);
     deliverables = parts.join(', ');
@@ -448,13 +448,19 @@ function HostListingCard({ listing, meta, delay, glowState, onToggleStatus, onDu
                   title: listing.title || '',
                   location_city: listing.location_city || listing.location?.split(',')[0]?.trim() || '',
                   location_country: listing.location_country || '',
+                  lat: typeof listing.lat === 'number' ? listing.lat : undefined,
+                  lng: typeof listing.lng === 'number' ? listing.lng : undefined,
                   property_url: listing.property_url || '',
                   collaboration_brief: listing.collaboration_brief || '',
                   compensation_type: listing.compensation_type || 'paid',
                   nights: listing.nights || 2,
                   cash_amount: listing.cash_amount || 0,
+                  payout_handling: listing.payout_handling || 'platform',
                   creator_tier: listing.creator_tier || '',
                   deliverable_load: listing.deliverable_load || '',
+                  deliverables: Array.isArray(listing.deliverables) ? listing.deliverables : [],
+                  complexity: listing.complexity || 'standard',
+                  stay_value: listing.stay_value || 0,
                   images: listing.gallery_images || [],
                   perks: listing.perks || [],
                   vibe_tags: listing.vibe_tags || [],

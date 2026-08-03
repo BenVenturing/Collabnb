@@ -18,7 +18,12 @@ type AuthCtx = {
 
 export async function getAuthedProfile(ctx: AuthCtx) {
   const identity = await ctx.auth.getUserIdentity();
-  const email = identity?.email;
+  // Clerk's JWT email claim isn't guaranteed to match the stored profile
+  // email byte-for-byte (casing/whitespace) — normalize before the lookup so
+  // a real signed-in session never bounces as "Sign in required" over a
+  // casing mismatch. Stored profile emails are lowercased at write time too
+  // (see profiles.getOrCreate).
+  const email = identity?.email?.toLowerCase().trim();
   if (!email) return null;
   return await ctx.db
     .query("profiles")
@@ -51,7 +56,7 @@ export async function requireAdmin(ctx: AuthCtx) {
 // contact-form thread) — caller must be that verified email, or admin.
 export async function requireSelfEmailOrAdmin(ctx: AuthCtx, email: string) {
   const identity = await ctx.auth.getUserIdentity();
-  if (identity?.email && identity.email === email) return;
+  if (identity?.email?.toLowerCase().trim() === email.toLowerCase().trim()) return;
   const profile = await getAuthedProfile(ctx);
   if (profile?.is_admin === true) return;
   throw new ConvexError("You don't have permission to do that.");
@@ -118,7 +123,7 @@ export async function canAccessAdmin(ctx: AuthCtx): Promise<boolean> {
 
 export async function isSelfEmailOrAdmin(ctx: AuthCtx, email: string): Promise<boolean> {
   const identity = await ctx.auth.getUserIdentity();
-  if (identity?.email && identity.email === email) return true;
+  if (identity?.email?.toLowerCase().trim() === email.toLowerCase().trim()) return true;
   const profile = await getAuthedProfile(ctx);
   return profile?.is_admin === true;
 }

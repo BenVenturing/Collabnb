@@ -1,4 +1,4 @@
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { query, mutation, action, internalMutation } from "./_generated/server";
 import { internal, api } from "./_generated/api";
 import { requireAuthedProfile, requireOwnerOrAdmin, requireAdmin, isServerAdminEmail, canAccessAdmin, canAccessOwner } from "./lib/auth";
@@ -25,16 +25,20 @@ export const getOrCreate = mutation({
     // The caller's email must come from the verified Clerk identity, never
     // the client-passed arg — otherwise anyone could create/claim a profile
     // for someone else's email. is_admin is likewise re-derived server-side
-    // (isServerAdminEmail) rather than trusted from args.is_admin.
+    // (isServerAdminEmail) rather than trusted from args.is_admin. Both sides
+    // are normalized before comparing/storing — Clerk's JWT claim and the
+    // client's own user object aren't guaranteed to match byte-for-byte.
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity?.email || identity.email !== args.email) {
-      throw new Error("Sign in required.");
+    const identityEmail = identity?.email?.toLowerCase().trim();
+    const email = args.email.toLowerCase().trim();
+    if (!identityEmail || identityEmail !== email) {
+      throw new ConvexError("Sign in required.");
     }
-    const isAdmin = isServerAdminEmail(identity.email);
+    const isAdmin = isServerAdminEmail(identityEmail);
 
     const existing = await ctx.db
       .query("profiles")
-      .withIndex("by_email", (q) => q.eq("email", args.email))
+      .withIndex("by_email", (q) => q.eq("email", email))
       .unique();
     if (existing) {
       const adminPatch: Record<string, any> = { clerk_registered: true };
@@ -57,9 +61,9 @@ export const getOrCreate = mutation({
       return await ctx.db.get(existing._id);
     }
 
-    await enforceRateLimit(ctx, `signup:${args.email.toLowerCase()}`, RATE_LIMITS.SIGNUP);
+    await enforceRateLimit(ctx, `signup:${email}`, RATE_LIMITS.SIGNUP);
 
-    const username = args.email.split('@')[0].replace(/[^a-z0-9_]/gi, '').toLowerCase() || 'user';
+    const username = email.split('@')[0].replace(/[^a-z0-9_]/gi, '') || 'user';
 
     // Generate a unique referral code
     const prefix = username.replace(/[^a-z0-9]/gi, '').toUpperCase().slice(0, 4) || 'USER';
@@ -72,8 +76,8 @@ export const getOrCreate = mutation({
     }
 
     const profileId = await ctx.db.insert("profiles", {
-      email: args.email,
-      full_name: cleanPlainText(args.full_name, 100) || args.email.split('@')[0],
+      email,
+      full_name: cleanPlainText(args.full_name, 100) || email.split('@')[0],
       username,
       role: args.role || 'creator',
       tier: isAdmin ? 'UGC Pro' : 'waitlist',

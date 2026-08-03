@@ -74,7 +74,13 @@ export default defineSchema({
     stripe_connect_payouts_enabled: v.optional(v.boolean()),
     wise_recipient_id: v.optional(v.string()),
     wise_recipient_currency: v.optional(v.string()),
-  }).index("by_email", ["email"]).index("by_stripe_customer", ["stripe_customer_id"])
+    // Clerk's stable per-user id (JWT `subject`) — the real identity anchor.
+    // Added because the deployed Clerk JWT template for this project
+    // currently omits the `email` claim, so email can no longer be trusted
+    // as the server-verified link between a request and its profile row.
+    clerk_user_id: v.optional(v.string()),
+  }).index("by_email", ["email"]).index("by_clerk_user_id", ["clerk_user_id"])
+    .index("by_stripe_customer", ["stripe_customer_id"])
     .index("by_stripe_connect_account", ["stripe_connect_account_id"]),
 
   listings: defineTable({

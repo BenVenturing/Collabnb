@@ -97,7 +97,7 @@ export const getCopy = internalQuery({
 export const sendTest = action({
   args: { templateId: v.string(), to: v.string() },
   handler: async (ctx, { templateId, to }) => {
-    await requireAdminAction(ctx, api.profiles.getByEmail);
+    await requireAdminAction(ctx, api.profiles.getByClerkUserId);
     const apiKey = process.env.RESEND_API_KEY;
     if (!apiKey) throw new Error("RESEND_API_KEY is not set in Convex.");
     const t: any = await ctx.runQuery(internal.emailTemplates.getCopy, { templateId });

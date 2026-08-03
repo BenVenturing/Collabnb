@@ -3,7 +3,15 @@
 // Convex client SDK can be called directly with arbitrary arguments, bypassing
 // any UI-level checks. These helpers resolve the real caller from the Clerk
 // identity Convex verifies on every request (see auth.config.ts) and match it
-// to a profiles row by email (profiles has no stored Clerk user id).
+// to a profiles row by Clerk's stable per-user `subject` (profiles.clerk_user_id).
+//
+// IMPORTANT: the deployed Clerk JWT template for this project ("convex")
+// currently does NOT include an `email` claim — confirmed live via prod logs
+// (identity keys are only tokenIdentifier/issuer/subject/sid/sts/v). Email
+// therefore can't be used as the verified identity anchor; `subject` always
+// is. If/when the Clerk dashboard's "convex" JWT template is fixed to add
+// `"email": "{{user.primary_email_address}}"`, this file keeps working as-is
+// (email-based fallbacks below simply stop being needed).
 //
 // Errors here are thrown as ConvexError, not plain Error — Convex redacts
 // plain Error messages on the client (generic "Server Error") in production,
@@ -12,26 +20,23 @@
 import { ConvexError } from "convex/values";
 
 type AuthCtx = {
-  auth: { getUserIdentity: () => Promise<{ email?: string } | null> };
+  auth: { getUserIdentity: () => Promise<{ subject?: string; email?: string } | null> };
   db: any;
 };
 
 export async function getAuthedProfile(ctx: AuthCtx) {
   const identity = await ctx.auth.getUserIdentity();
-  // TEMP DIAGNOSTIC (2026-08-03) — server-side only, never reaches the
-  // client — tracking down a "Sign in required" false-positive for a
-  // signed-in user. Remove once resolved.
-  if (!identity) {
-    console.log("[auth-diag] getUserIdentity() returned null — no verified Clerk JWT reached Convex");
-  } else if (!identity.email) {
-    console.log("[auth-diag] identity present but no email claim. keys:", Object.keys(identity), "subject:", (identity as any).subject, "issuer:", (identity as any).issuer, "tokenIdentifier:", (identity as any).tokenIdentifier);
-  }
-  // Clerk's JWT email claim isn't guaranteed to match the stored profile
-  // email byte-for-byte (casing/whitespace) — normalize before the lookup so
-  // a real signed-in session never bounces as "Sign in required" over a
-  // casing mismatch. Stored profile emails are lowercased at write time too
-  // (see profiles.getOrCreate).
-  const email = identity?.email?.toLowerCase().trim();
+  if (!identity?.subject) return null;
+  const byClerkId = await ctx.db
+    .query("profiles")
+    .withIndex("by_clerk_user_id", (q: any) => q.eq("clerk_user_id", identity.subject))
+    .unique();
+  if (byClerkId) return byClerkId;
+  // Falls back to email only for a session whose row hasn't been linked by
+  // clerk_user_id yet this deploy — normally profiles.getOrCreate links it
+  // on every app load, so this is a narrow transitional gap, not the primary
+  // path (see file-level note on the missing email claim).
+  const email = identity.email?.toLowerCase().trim();
   if (!email) return null;
   return await ctx.db
     .query("profiles")
@@ -62,29 +67,31 @@ export async function requireAdmin(ctx: AuthCtx) {
 
 // For endpoints keyed by email rather than profileId (e.g. looking up a
 // contact-form thread) — caller must be that verified email, or admin.
+// Resolves the caller via their own profile (subject-based) rather than
+// trusting the JWT email claim directly, since it's currently absent.
 export async function requireSelfEmailOrAdmin(ctx: AuthCtx, email: string) {
-  const identity = await ctx.auth.getUserIdentity();
-  if (identity?.email?.toLowerCase().trim() === email.toLowerCase().trim()) return;
   const profile = await getAuthedProfile(ctx);
   if (profile?.is_admin === true) return;
+  if (profile && (profile.email || "").toLowerCase().trim() === email.toLowerCase().trim()) return;
   throw new ConvexError("You don't have permission to do that.");
 }
 
 // Convex actions have no ctx.db, so requireAdmin (which reads the profiles
 // table directly) doesn't work inside one — resolve the caller via a query
 // instead. Use this in any `action` handler that needs an admin-only gate.
-// The caller passes its own imported `api.profiles.getByEmail` reference to
-// avoid a circular import between lib/auth.ts and _generated/api.ts.
+// The caller passes its own imported `api.profiles.getByClerkUserId`
+// reference to avoid a circular import between lib/auth.ts and
+// _generated/api.ts.
 export async function requireAdminAction(
   ctx: {
-    auth: { getUserIdentity: () => Promise<{ email?: string } | null> };
+    auth: { getUserIdentity: () => Promise<{ subject?: string; email?: string } | null> };
     runQuery: (ref: any, args: any) => Promise<any>;
   },
-  getByEmailRef: any
+  getByClerkUserIdRef: any
 ) {
   const identity = await ctx.auth.getUserIdentity();
-  if (!identity?.email) throw new ConvexError("Sign in required.");
-  const caller: any = await ctx.runQuery(getByEmailRef, { email: identity.email });
+  if (!identity?.subject) throw new ConvexError("Sign in required.");
+  const caller: any = await ctx.runQuery(getByClerkUserIdRef, { clerk_user_id: identity.subject });
   if (!caller || caller.is_admin !== true) throw new ConvexError("Admin access required.");
 }
 
@@ -92,15 +99,15 @@ export async function requireAdminAction(
 // resolving the caller via a query the same way requireAdminAction does.
 export async function requireOwnerOrAdminAction(
   ctx: {
-    auth: { getUserIdentity: () => Promise<{ email?: string } | null> };
+    auth: { getUserIdentity: () => Promise<{ subject?: string; email?: string } | null> };
     runQuery: (ref: any, args: any) => Promise<any>;
   },
   ownerId: unknown,
-  getByEmailRef: any
+  getByClerkUserIdRef: any
 ) {
   const identity = await ctx.auth.getUserIdentity();
-  if (!identity?.email) throw new ConvexError("Sign in required.");
-  const caller: any = await ctx.runQuery(getByEmailRef, { email: identity.email });
+  if (!identity?.subject) throw new ConvexError("Sign in required.");
+  const caller: any = await ctx.runQuery(getByClerkUserIdRef, { clerk_user_id: identity.subject });
   if (!caller) throw new ConvexError("Sign in required.");
   if (caller.is_admin === true) return caller;
   if (!ownerId || String(caller._id) !== String(ownerId)) {
@@ -130,10 +137,10 @@ export async function canAccessAdmin(ctx: AuthCtx): Promise<boolean> {
 }
 
 export async function isSelfEmailOrAdmin(ctx: AuthCtx, email: string): Promise<boolean> {
-  const identity = await ctx.auth.getUserIdentity();
-  if (identity?.email?.toLowerCase().trim() === email.toLowerCase().trim()) return true;
   const profile = await getAuthedProfile(ctx);
-  return profile?.is_admin === true;
+  if (!profile) return false;
+  if (profile.is_admin === true) return true;
+  return (profile.email || "").toLowerCase().trim() === email.toLowerCase().trim();
 }
 
 // Used only by profiles.getOrCreate to bootstrap/refresh the one admin

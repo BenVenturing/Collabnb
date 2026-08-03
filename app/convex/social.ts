@@ -134,7 +134,7 @@ export const upsertPosts = internalMutation({
 export const syncInstagram = action({
   args: {},
   handler: async (ctx): Promise<{ synced: number; followers?: number }> => {
-    await requireAdminAction(ctx, api.profiles.getByEmail);
+    await requireAdminAction(ctx, api.profiles.getByClerkUserId);
     const token = process.env.META_ACCESS_TOKEN;
     const igId = process.env.IG_BUSINESS_ACCOUNT_ID;
     if (!token || !igId) {
@@ -197,7 +197,7 @@ export const syncInstagram = action({
 export const syncTikTok = action({
   args: {},
   handler: async (ctx): Promise<{ synced: number; followers?: number }> => {
-    await requireAdminAction(ctx, api.profiles.getByEmail);
+    await requireAdminAction(ctx, api.profiles.getByClerkUserId);
     const token = process.env.TIKTOK_ACCESS_TOKEN;
     if (!token) {
       throw new Error(
@@ -336,7 +336,7 @@ export const markReplied = internalMutation({
 export const syncInbox = action({
   args: {},
   handler: async (ctx): Promise<{ synced: number }> => {
-    await requireAdminAction(ctx, api.profiles.getByEmail);
+    await requireAdminAction(ctx, api.profiles.getByClerkUserId);
     const token = process.env.META_ACCESS_TOKEN;
     const igId = process.env.IG_BUSINESS_ACCOUNT_ID;
     if (!token || !igId) {
@@ -412,7 +412,7 @@ export const syncInbox = action({
 export const sendReply = action({
   args: { id: v.id("social_inbox"), replyText: v.string() },
   handler: async (ctx, { id, replyText }): Promise<{ success: boolean }> => {
-    await requireAdminAction(ctx, api.profiles.getByEmail);
+    await requireAdminAction(ctx, api.profiles.getByClerkUserId);
     const token = process.env.META_ACCESS_TOKEN;
     const igId = process.env.IG_BUSINESS_ACCOUNT_ID;
     if (!token || !igId) throw new Error("Instagram is not connected.");
@@ -479,7 +479,7 @@ export const publishPost = action({
     ctx,
     { caption, mediaUrl, mediaType }
   ): Promise<{ published: boolean; permalink?: string; creationId?: string; message?: string }> => {
-    await requireAdminAction(ctx, api.profiles.getByEmail);
+    await requireAdminAction(ctx, api.profiles.getByClerkUserId);
     const token = process.env.META_ACCESS_TOKEN;
     const igId = process.env.IG_BUSINESS_ACCOUNT_ID;
     if (!token || !igId) throw new Error("Instagram is not connected.");
@@ -523,7 +523,7 @@ export const publishPost = action({
 export const finishPublish = action({
   args: { creationId: v.string() },
   handler: async (ctx, { creationId }): Promise<{ published: boolean; permalink?: string; message?: string }> => {
-    await requireAdminAction(ctx, api.profiles.getByEmail);
+    await requireAdminAction(ctx, api.profiles.getByClerkUserId);
     const token = process.env.META_ACCESS_TOKEN;
     const igId = process.env.IG_BUSINESS_ACCOUNT_ID;
     if (!token || !igId) throw new Error("Instagram is not connected.");
@@ -541,7 +541,7 @@ export const finishPublish = action({
 export const getIntegrationStatus = action({
   args: {},
   handler: async (ctx): Promise<Record<string, boolean>> => {
-    await requireAdminAction(ctx, api.profiles.getByEmail);
+    await requireAdminAction(ctx, api.profiles.getByClerkUserId);
     return {
       stripe: !!process.env.STRIPE_SECRET_KEY,
       stripeWebhook: !!process.env.STRIPE_WEBHOOK_SECRET,

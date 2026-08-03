@@ -659,7 +659,7 @@ export const saveHostDraft = internalMutation({
 export const generateDraftsForSelected = action({
   args: { ids: v.array(v.id("prospects")) },
   handler: async (ctx, { ids }): Promise<{ drafted: number }> => {
-    await requireAdminAction(ctx, api.profiles.getByEmail);
+    await requireAdminAction(ctx, api.profiles.getByClerkUserId);
     const counts: Record<string, number> = await ctx.runQuery(internal.prospects.getHostAngleCounts, {});
     let drafted = 0;
     for (const id of ids) {
@@ -725,7 +725,7 @@ export const confirmDraft = internalMutation({
 export const confirmHostBatch = action({
   args: { ids: v.array(v.id("prospects")) },
   handler: async (ctx, { ids }): Promise<{ confirmed: number }> => {
-    await requireAdminAction(ctx, api.profiles.getByEmail);
+    await requireAdminAction(ctx, api.profiles.getByClerkUserId);
     let confirmed = 0;
     for (let i = 0; i < ids.length; i++) {
       const p: any = await ctx.runQuery(internal.prospects.getById, { id: ids[i] });
@@ -797,7 +797,7 @@ export const importHostsLocal = mutation({
 export const generateDmDraft = action({
   args: { id: v.id("prospects"), angleId: v.optional(v.string()) },
   handler: async (ctx, { id, angleId }): Promise<string> => {
-    await requireAdminAction(ctx, api.profiles.getByEmail);
+    await requireAdminAction(ctx, api.profiles.getByClerkUserId);
     const p: any = await ctx.runQuery(internal.prospects.getById, { id });
     if (!p) throw new Error("Prospect not found");
 
@@ -920,7 +920,7 @@ export const importFromApify = action({
     limit: v.optional(v.number()),
   },
   handler: async (ctx, args): Promise<{ inserted: number; fetched: number }> => {
-    await requireAdminAction(ctx, api.profiles.getByEmail);
+    await requireAdminAction(ctx, api.profiles.getByClerkUserId);
     const limit = Math.min(args.limit ?? 50, 200);
     const accounts = await searchInstagramUsers(args.searchQuery, limit);
 
@@ -1074,7 +1074,7 @@ async function enrichBatch(ctx: any, prospects: any[]): Promise<number> {
 export const enrichProspect = action({
   args: { id: v.id("prospects") },
   handler: async (ctx, { id }): Promise<{ enriched: boolean }> => {
-    await requireAdminAction(ctx, api.profiles.getByEmail);
+    await requireAdminAction(ctx, api.profiles.getByClerkUserId);
     const p: any = await ctx.runQuery(internal.prospects.getById, { id });
     if (!p) throw new Error("Prospect not found");
     const n = await enrichBatch(ctx, [p]);
@@ -1135,7 +1135,7 @@ export const searchCreators = action({
     limit: v.optional(v.number()),
   },
   handler: async (ctx, args): Promise<{ imported: number; fetched: number; ranked: any[] }> => {
-    await requireAdminAction(ctx, api.profiles.getByEmail);
+    await requireAdminAction(ctx, api.profiles.getByClerkUserId);
     return await discoverAndScore(ctx, {
       niche: args.niche,
       location: args.location,

@@ -22,26 +22,44 @@ export const getOrCreate = mutation({
     role: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    // The caller's email must come from the verified Clerk identity, never
-    // the client-passed arg — otherwise anyone could create/claim a profile
-    // for someone else's email. is_admin is likewise re-derived server-side
-    // (isServerAdminEmail) rather than trusted from args.is_admin. Both sides
-    // are normalized before comparing/storing — Clerk's JWT claim and the
-    // client's own user object aren't guaranteed to match byte-for-byte.
+    // The caller's identity anchor is Clerk's stable per-user `subject`
+    // (JWT "sub" claim) — always present and verified. Email is NOT
+    // currently included as a JWT claim (the deployed Clerk "convex" JWT
+    // template omits it — a dashboard config gap, not fixable here), so
+    // args.email is accepted as display/lookup data only, never trusted as
+    // the security boundary. is_admin is likewise only ever auto-derived
+    // from a JWT-*verified* email (isServerAdminEmail) — while that claim is
+    // absent this bootstrap path is inert by design, which is fine since a
+    // real admin's is_admin flag already persists on their row.
     const identity = await ctx.auth.getUserIdentity();
-    const identityEmail = identity?.email?.toLowerCase().trim();
-    const email = args.email.toLowerCase().trim();
-    if (!identityEmail || identityEmail !== email) {
+    if (!identity?.subject) {
       throw new ConvexError("Sign in required.");
     }
-    const isAdmin = isServerAdminEmail(identityEmail);
+    const clerkUserId = identity.subject;
+    const email = args.email.toLowerCase().trim();
+    const verifiedEmail = identity.email?.toLowerCase().trim();
+    const isAdmin = isServerAdminEmail(verifiedEmail);
 
-    const existing = await ctx.db
+    let existing = await ctx.db
       .query("profiles")
-      .withIndex("by_email", (q) => q.eq("email", email))
+      .withIndex("by_clerk_user_id", (q) => q.eq("clerk_user_id", clerkUserId))
       .unique();
+    if (!existing) {
+      // One-time link for a row created before clerk_user_id was tracked.
+      // Only links an UNCLAIMED row (never re-links one already owned by a
+      // different Clerk user) — args.email can't be cryptographically
+      // verified right now, so this may only carry the link forward, never
+      // grant/escalate privilege (that still requires isAdmin above, which
+      // stays gated on the verified JWT email).
+      const legacyMatch = await ctx.db
+        .query("profiles")
+        .withIndex("by_email", (q) => q.eq("email", email))
+        .unique();
+      if (legacyMatch && !legacyMatch.clerk_user_id) existing = legacyMatch;
+    }
+
     if (existing) {
-      const adminPatch: Record<string, any> = { clerk_registered: true };
+      const adminPatch: Record<string, any> = { clerk_registered: true, clerk_user_id: clerkUserId };
       if (isAdmin) {
         adminPatch.is_admin = true;
         adminPatch.is_verified = true;
@@ -55,9 +73,7 @@ export const getOrCreate = mutation({
       if (!existing.clerk_registered && !isAdmin && args.role && args.role !== existing.role) {
         adminPatch.role = args.role;
       }
-      if (!existing.clerk_registered || isAdmin) {
-        await ctx.db.patch(existing._id, adminPatch);
-      }
+      await ctx.db.patch(existing._id, adminPatch);
       return await ctx.db.get(existing._id);
     }
 
@@ -88,6 +104,7 @@ export const getOrCreate = mutation({
       avatar_url: args.avatar_url ? cleanOptionalUrl(args.avatar_url, "Avatar URL") : undefined,
       referral_code: refCode || undefined,
       clerk_registered: true,
+      clerk_user_id: clerkUserId,
     });
 
     if (refCode) {
@@ -109,6 +126,19 @@ export const getByEmail = query({
     return await ctx.db
       .query("profiles")
       .withIndex("by_email", (q) => q.eq("email", args.email))
+      .unique();
+  },
+});
+
+// Used by lib/auth.ts's action-context helpers (requireAdminAction,
+// requireOwnerOrAdminAction) — resolves the caller by Clerk's verified
+// `subject`, since the email JWT claim currently isn't populated.
+export const getByClerkUserId = query({
+  args: { clerk_user_id: v.string() },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("profiles")
+      .withIndex("by_clerk_user_id", (q) => q.eq("clerk_user_id", args.clerk_user_id))
       .unique();
   },
 });

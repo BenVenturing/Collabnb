@@ -156,7 +156,7 @@ export const markRead = mutation({
 export const draftMessage = action({
   args: { recipientId: v.string(), prompt: v.optional(v.string()) },
   handler: async (ctx, { recipientId, prompt }): Promise<string> => {
-    await requireAdminAction(ctx, api.profiles.getByEmail);
+    await requireAdminAction(ctx, api.profiles.getByClerkUserId);
     const p: any = await ctx.runQuery(api.profiles.getById, { id: recipientId });
     const firstName = (p?.full_name || "there").split(" ")[0];
 

@@ -543,7 +543,7 @@ export const saveBroadcastInternal = internalMutation({
 export const broadcastSend = action({
   args: { audience: v.string(), subject: v.string(), body: v.string() },
   handler: async (ctx, { audience, subject, body }) => {
-    await requireAdminAction(ctx, api.profiles.getByEmail);
+    await requireAdminAction(ctx, api.profiles.getByClerkUserId);
     const recipients: { email: string; full_name: string; role: string }[] =
       await ctx.runQuery(api.admin.getEmailList, { audience });
     if (!recipients.length) return { sent: 0 };

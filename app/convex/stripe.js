@@ -169,17 +169,12 @@ export const createBillingPortalSession = action({
     if (!secretKey) throw new Error('STRIPE_SECRET_KEY is not set in Convex environment variables');
 
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error('You must be signed in to manage billing');
+    if (!identity?.subject) throw new Error('You must be signed in to manage billing');
 
-    // Prefer resolving the customer from the authenticated email (fully closes
-    // the IDOR). Fall back to the caller's own profileId when the Clerk JWT
-    // doesn't carry an email claim, so the portal still works today.
-    let profile = identity.email
-      ? await ctx.runQuery(api.profiles.getByEmail, { email: identity.email })
-      : null;
-    if (!profile && args.profileId) {
-      profile = await ctx.runQuery(api.profiles.getById, { id: args.profileId });
-    }
+    // Resolve strictly from the verified Clerk subject — never from a
+    // client-supplied profileId (that would let anyone open anyone else's
+    // billing portal by passing a different id — an IDOR).
+    const profile = await ctx.runQuery(api.profiles.getByClerkUserId, { clerk_user_id: identity.subject });
     const customerId = profile?.stripe_customer_id;
     if (!customerId) throw new Error('No billing account found for your profile');
 
@@ -534,7 +529,7 @@ export const forwardCreatorPayout = internalAction({
 export const releasePayoutNow = action({
   args: { contractId: v.string() },
   handler: async (ctx, args) => {
-    await requireAdminAction(ctx, api.profiles.getByEmail);
+    await requireAdminAction(ctx, api.profiles.getByClerkUserId);
     const contract = await ctx.runQuery(internal.contracts.getByIdInternal, { id: args.contractId });
     if (!contract) throw new Error('Contract not found');
     if (contract.creator_payout_status === 'paid') throw new Error('This contract has already been paid out');
@@ -564,7 +559,7 @@ export const releasePayoutNow = action({
 export const createConnectOnboardingLink = action({
   args: { profileId: v.string(), refreshUrl: v.string(), returnUrl: v.string() },
   handler: async (ctx, args) => {
-    await requireOwnerOrAdminAction(ctx, args.profileId, api.profiles.getByEmail);
+    await requireOwnerOrAdminAction(ctx, args.profileId, api.profiles.getByClerkUserId);
     const secretKey = process.env.STRIPE_SECRET_KEY;
     if (!secretKey) throw new Error('STRIPE_SECRET_KEY is not set in Convex environment variables');
     const stripe = new Stripe(secretKey);
@@ -603,7 +598,7 @@ const wiseBaseUrl = () =>
 export const listWiseProfiles = action({
   args: {},
   handler: async (ctx) => {
-    await requireAdminAction(ctx, api.profiles.getByEmail);
+    await requireAdminAction(ctx, api.profiles.getByClerkUserId);
     const token = process.env.WISE_API_TOKEN;
     if (!token) throw new Error('WISE_API_TOKEN is not set in Convex environment variables');
     const res = await fetch(`${wiseBaseUrl()}/v2/profiles`, {
@@ -628,7 +623,7 @@ export const createWiseRecipient = action({
     details: v.any(),
   },
   handler: async (ctx, args) => {
-    await requireOwnerOrAdminAction(ctx, args.profileId, api.profiles.getByEmail);
+    await requireOwnerOrAdminAction(ctx, args.profileId, api.profiles.getByClerkUserId);
     const token = process.env.WISE_API_TOKEN;
     const wiseProfileId = process.env.WISE_PROFILE_ID;
     if (!token || !wiseProfileId) throw new Error('WISE_API_TOKEN/WISE_PROFILE_ID are not set in Convex environment variables');
@@ -663,7 +658,7 @@ export const createWiseRecipient = action({
 export const sendWisePayout = action({
   args: { contractId: v.string() },
   handler: async (ctx, args) => {
-    await requireAdminAction(ctx, api.profiles.getByEmail);
+    await requireAdminAction(ctx, api.profiles.getByClerkUserId);
     const token = process.env.WISE_API_TOKEN;
     const wiseProfileId = process.env.WISE_PROFILE_ID;
     if (!token || !wiseProfileId) throw new Error('WISE_API_TOKEN/WISE_PROFILE_ID are not set in Convex environment variables');

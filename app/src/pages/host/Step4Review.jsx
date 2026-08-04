@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronDown, ChevronUp, DollarSign, ArrowLeft, ArrowRight, Star, Eye, X, CreditCard } from "lucide-react";
-import { useMutation, useQuery, useAction } from "convex/react";
+import { ArrowLeft, ArrowRight, Star, Eye, X } from "lucide-react";
+import { useMutation, useQuery } from "convex/react";
 import { ConvexError } from "convex/values";
 import { api } from "../../../convex/_generated/api";
 import WizardShell from "../../components/host/WizardShell";
@@ -36,109 +36,16 @@ function Row({ label, value }) {
   );
 }
 
-const CONFETTI_COLORS = [
-  "#FF3B30","#FF9500","#FFCC00","#34C759","#30D158",
-  "#00C7BE","#32ADE6","#007AFF","#5856D6","#AF52DE",
-  "#FF2D55","#FF6B35","#FFD60A","#30DB5B","#40CBE0",
-  "#BF5AF2","#FF375F","#FF8C00","#ACE608","#0A84FF",
-];
-
-const PARTICLES = Array.from({ length: 90 }, (_, i) => ({
-  id: i,
-  left: Math.random() * 100,
-  color: CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)],
-  size: 6 + Math.random() * 8,
-  isRect: Math.random() > 0.4,
-  duration: 2.8 + Math.random() * 1.6,
-  delay: Math.random() * 0.9,
-  spin: 360 + Math.floor(Math.random() * 4) * 180,
-  drift: (Math.random() - 0.5) * 120,
-}));
-
-function Confetti({ show }) {
-  if (!show) return null;
-  return (
-    <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 999, overflow: "hidden" }}>
-      {PARTICLES.map((p) => (
-        <div key={p.id} style={{
-          position: "absolute",
-          left: `${p.left}%`,
-          top: "-16px",
-          width: p.isRect ? p.size * 0.55 : p.size,
-          height: p.size,
-          borderRadius: p.isRect ? "2px" : "50%",
-          background: p.color,
-          animation: `confettiFall${p.id % 3} ${p.duration}s cubic-bezier(0.25,0.46,0.45,0.94) ${p.delay}s forwards`,
-          transformOrigin: "center center",
-          opacity: 1,
-          boxShadow: `0 0 2px ${p.color}66`,
-        }} />
-      ))}
-      <style>{`
-        @keyframes confettiFall0 { 0%{transform:translateY(0) rotate(0deg) translateX(0);opacity:1} 80%{opacity:1} 100%{transform:translateY(105vh) rotate(${PARTICLES[0]?.spin ?? 720}deg) translateX(40px);opacity:0} }
-        @keyframes confettiFall1 { 0%{transform:translateY(0) rotate(20deg) translateX(0);opacity:1} 80%{opacity:1} 100%{transform:translateY(105vh) rotate(-${PARTICLES[1]?.spin ?? 540}deg) translateX(-60px);opacity:0} }
-        @keyframes confettiFall2 { 0%{transform:translateY(0) rotate(-15deg) translateX(0);opacity:1} 80%{opacity:1} 100%{transform:translateY(105vh) rotate(${PARTICLES[2]?.spin ?? 900}deg) translateX(20px);opacity:0} }
-      `}</style>
-    </div>
-  );
-}
-
 export default function Step4Review() {
   const navigate = useNavigate();
-  const { draft, updateDraft, clearDraft, fee, totalDeliverables, formatCount, combinedDeliverablesList } = useListingDraft();
+  const { draft, updateDraft, clearDraft, totalDeliverables, formatCount, combinedDeliverablesList } = useListingDraft();
   const { profile } = useAuth();
   const createListing = useMutation(api.listings.create);
   const updateListing = useMutation(api.listings.update);
-  const createHostCardSetupSession = useAction(api.stripe.createHostCardSetupSession);
-  const verifyHostCardSetupSession = useAction(api.stripe.verifyHostCardSetupSession);
   const editingId = typeof window !== 'undefined' ? localStorage.getItem('collabnb_editing_listing_id_v1') : null;
-  const [feesOpen, setFeesOpen] = useState(false);
-  const [publishing, setPublishing] = useState(false);
-  const [confetti, setConfetti] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [creatorView, setCreatorView] = useState(false);
-  const [publishError, setPublishError] = useState("");
-  const [startingCardSetup, setStartingCardSetup] = useState(false);
-  const [cardJustSaved, setCardJustSaved] = useState(false);
-
-  // A draft can always be saved with no card — this only ever gates Publish
-  // (also enforced server-side in listings.create/update).
-  const needsCard = !!profile && profile.is_admin !== true && !profile.stripe_default_payment_method_id;
-
-  // Handle the return trip from the Stripe card-setup Checkout redirect.
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const cardSetup = params.get('card_setup');
-    const sessionId = params.get('session_id');
-    if (cardSetup === 'success' && sessionId) {
-      verifyHostCardSetupSession({ sessionId })
-        .then(() => setCardJustSaved(true))
-        .catch((err) => setPublishError(err?.message || "Couldn't confirm your card — please try again."));
-      navigate('/host/listings/create/review', { replace: true });
-    } else if (cardSetup === 'cancelled') {
-      navigate('/host/listings/create/review', { replace: true });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  async function handlePublishClick() {
-    if (needsCard) {
-      setStartingCardSetup(true);
-      setPublishError("");
-      try {
-        const base = `${window.location.origin}/host/listings/create/review`;
-        const result = await createHostCardSetupSession({
-          successUrl: `${base}?card_setup=success&session_id={CHECKOUT_SESSION_ID}`,
-          cancelUrl: `${base}?card_setup=cancelled`,
-        });
-        if (result?.url) window.location.href = result.url;
-      } catch (err) {
-        setPublishError(err?.message || "Couldn't start card setup — please try again.");
-        setStartingCardSetup(false);
-      }
-      return;
-    }
-    handlePublish("published");
-  }
+  const [saveError, setSaveError] = useState("");
 
   // Resolve uploaded photos (storageIds → URLs) for reordering + creator preview
   const imageUrls = useQuery(api.uploads.getImageUrls, draft.images.length ? { storageIds: draft.images } : "skip") || [];
@@ -210,28 +117,23 @@ export default function Step4Review() {
     collaboration_brief: draft.collaboration_brief,
   };
 
-  async function handlePublish(status) {
-    setPublishing(true);
-    setPublishError("");
+  async function handleSaveDraft() {
+    setSaving(true);
+    setSaveError("");
     try {
       if (editingId) {
-        await updateListing({ id: editingId, ...listingFields, status });
+        await updateListing({ id: editingId, ...listingFields, status: "draft" });
         localStorage.removeItem('collabnb_editing_listing_id_v1');
       } else {
-        await createListing({ ...listingFields, status });
+        await createListing({ ...listingFields, status: "draft" });
       }
-      if (status === "published") {
-        setConfetti(true);
-        setTimeout(() => { setConfetti(false); clearDraft(); navigate("/host"); }, 3800);
-      } else {
-        clearDraft();
-        navigate("/host");
-      }
+      clearDraft();
+      navigate("/host");
     } catch (err) {
       console.error(err);
       const message = err instanceof ConvexError ? err.data : err?.message;
-      setPublishError(typeof message === "string" && message ? message : "Something went wrong publishing this listing.");
-      setPublishing(false);
+      setSaveError(typeof message === "string" && message ? message : "Something went wrong saving this draft.");
+      setSaving(false);
     }
   }
 
@@ -249,18 +151,16 @@ export default function Step4Review() {
 
   return (
     <>
-      <Confetti show={confetti} />
       <WizardShell
         step={4}
-        nextLabel={publishing ? "Publishing..." : startingCardSetup ? "Redirecting to Stripe..." : needsCard ? "Add a card to publish" : "Publish listing"}
-        nextDisabled={publishing || startingCardSetup || !hasCompensation || compZone === "red"}
-        onNext={handlePublishClick}
+        nextDisabled={!hasCompensation || compZone === "red"}
+        onNext={() => navigate("/host/listings/create/payment")}
       >
         <h2 style={{ fontFamily: "Cabinet Grotesk, serif", fontWeight: 800, fontSize: 28, color: "var(--ink)", margin: "0 0 6px", display: "flex", alignItems: "center", gap: 10 }}>
-          {editingId ? "Edit & publish" : "Review & publish"}
+          {editingId ? "Edit listing" : "Review your listing"}
         </h2>
         <p style={{ fontFamily: "Satoshi, sans-serif", fontSize: 14, color: "var(--slate)", margin: "0 0 16px" }}>
-          {editingId ? "Review your changes before saving." : "Here's how your listing will appear to creators. Review everything before publishing."}
+          {editingId ? "Review your changes, then continue to payment." : "Here's how your listing will appear to creators. Review everything, then set up payment on the next step."}
         </p>
 
         {/* View as creator toggle */}
@@ -352,30 +252,6 @@ export default function Step4Review() {
           <Row label="Usage rights" value={draft.usage_rights} />
         </Section>
 
-        {/* Host-only fees */}
-        <div style={{ border: "1.5px solid rgba(25,37,36,0.12)", borderRadius: "1rem", overflow: "hidden", marginBottom: 24 }}>
-          <button
-            onClick={() => setFeesOpen(!feesOpen)}
-            style={{ width: "100%", padding: "16px 20px", background: "rgba(239,236,233,0.7)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between" }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: 8, fontFamily: "Satoshi, sans-serif", fontWeight: 700, fontSize: 15, color: "var(--ink)" }}>
-              <DollarSign size={16} color="var(--slate)" />
-              Host-only: Pricing & Fees
-            </div>
-            {feesOpen ? <ChevronUp size={16} color="var(--slate)" /> : <ChevronDown size={16} color="var(--slate)" />}
-          </button>
-          {feesOpen && (
-            <div style={{ padding: "16px 20px", background: "rgba(255,251,240,0.7)", borderTop: "1px solid rgba(25,37,36,0.08)" }}>
-              <div style={{ fontFamily: "Satoshi, sans-serif", fontSize: 13, color: "var(--slate)", marginBottom: 4 }}>Platform fee</div>
-              <div style={{ fontFamily: "Satoshi, sans-serif", fontWeight: 800, fontSize: 22, color: "var(--ink)", marginBottom: 2 }}>${fee.toFixed(0)}</div>
-              <div style={{ fontFamily: "Satoshi, sans-serif", fontSize: 12, color: "var(--slate)", marginBottom: 8, lineHeight: 1.5 }}>
-                {draft.compensation_type === "paid" || draft.compensation_type === "hybrid" ? "5% of cash payout (min $25)" : "Flat $25 platform fee"} — <strong>charged only once a collaboration is completed</strong>. You never pay anything upfront to publish a listing.
-              </div>
-              <div style={{ fontFamily: "Satoshi, sans-serif", fontSize: 12, color: "#b45309", fontWeight: 600 }}>⚠ Creators don't see these fees</div>
-            </div>
-          )}
-        </div>
-
         {/* Compensation zone warning */}
         {compZone === "amber" && compRange && (
           <div style={{ background: "rgba(212,168,67,0.14)", border: "1px solid rgba(212,168,67,0.35)", borderRadius: "0.875rem", padding: "12px 16px", marginBottom: 16 }}>
@@ -383,7 +259,7 @@ export default function Step4Review() {
               This compensation is below the recommended range for this workload
             </p>
             <p style={{ fontFamily: "Satoshi, sans-serif", fontSize: 12.5, color: "#7a5a10", margin: 0 }}>
-              Recommended range: ${Math.round(compRange.low)}–${Math.round(compRange.high)}. You can still publish — this is a guideline, not a requirement.
+              Recommended range: ${Math.round(compRange.low)}–${Math.round(compRange.high)}. You can still continue — this is a guideline, not a requirement.
             </p>
           </div>
         )}
@@ -392,40 +268,24 @@ export default function Step4Review() {
             This compensation is below the minimum for the selected deliverables and tier. Raise the amount, reduce the deliverables, or add a stay offset to continue.
           </p>
         )}
-        {publishError && (
+        {saveError && (
           <p style={{ fontFamily: "Satoshi, sans-serif", fontSize: 13, color: "#b45309", fontWeight: 600, marginBottom: 12 }}>
-            {publishError}
+            {saveError}
           </p>
-        )}
-        {cardJustSaved && (
-          <div style={{ display: "flex", alignItems: "center", gap: 8, background: "var(--mint)", borderRadius: "0.875rem", padding: "12px 16px", marginBottom: 12 }}>
-            <CreditCard size={16} color="var(--ink)" />
-            <p style={{ fontFamily: "Satoshi, sans-serif", fontSize: 13, color: "var(--ink)", fontWeight: 600, margin: 0 }}>
-              Card saved — you're all set. Click Publish to go live.
-            </p>
-          </div>
-        )}
-        {needsCard && !cardJustSaved && (
-          <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(212,168,67,0.14)", border: "1px solid rgba(212,168,67,0.35)", borderRadius: "0.875rem", padding: "12px 16px", marginBottom: 12 }}>
-            <CreditCard size={16} color="#7a5a10" />
-            <p style={{ fontFamily: "Satoshi, sans-serif", fontSize: 13, color: "#7a5a10", margin: 0 }}>
-              You'll need a card on file before publishing — it's only charged for Collabnb's platform fee once a collaboration completes. You can still save this as a draft with no card.
-            </p>
-          </div>
         )}
 
         {/* Save draft */}
         {!hasCompensation && (
           <p style={{ fontFamily: "Satoshi, sans-serif", fontSize: 13, color: "#b45309", fontWeight: 600, marginBottom: 12 }}>
-            Add a cash compensation amount in the pricing step before publishing — every collaboration must include payment.
+            Add a cash compensation amount in the pricing step before continuing — every collaboration must include payment.
           </p>
         )}
         <button
-          onClick={() => handlePublish("draft")}
-          disabled={publishing || !hasCompensation}
+          onClick={handleSaveDraft}
+          disabled={saving || !hasCompensation}
           style={{ width: "100%", padding: "14px 0", marginBottom: 16, background: "none", border: "none", cursor: "pointer", fontFamily: "Satoshi, sans-serif", fontSize: 15, fontWeight: 600, color: "var(--slate)", textDecoration: "underline" }}
         >
-          Save draft
+          {saving ? "Saving..." : "Save draft"}
         </button>
       </WizardShell>
 

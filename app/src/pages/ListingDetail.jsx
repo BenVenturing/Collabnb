@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { SAMPLE_LISTINGS, SAMPLE_HOST, IMG_FALLBACK } from '../lib/mockData';
@@ -839,7 +839,7 @@ function SaveCollectionModal({ listing, collections, onMoveToCollection, onRemov
 }
 
 // ─── Sample listing hover tooltip ────────────────────────────────────────────
-function SampleTooltip({ active, children }) {
+function SampleTooltip({ active, label = 'Sample listing · interactions disabled', children }) {
   const [visible, setVisible] = useState(false);
   if (!active) return children;
   return (
@@ -860,7 +860,7 @@ function SampleTooltip({ active, children }) {
           fontFamily: 'var(--font-body)', letterSpacing: '0.01em',
           boxShadow: '0 4px 16px rgba(25,37,36,0.2)',
         }}>
-          Sample listing · interactions disabled
+          {label}
           <div style={{
             position: 'absolute', top: '100%', left: '50%',
             transform: 'translateX(-50%)',
@@ -874,7 +874,8 @@ function SampleTooltip({ active, children }) {
 }
 
 // ─── Host Profile Modal ───────────────────────────────────────────────────────
-function HostProfileModal({ host, listing, onClose, onMessage, isSample }) {
+function HostProfileModal({ host, listing, onClose, onMessage, isSample, hostView }) {
+  const blocked = isSample || hostView;
   const [imgError, setImgError]   = useState(false);
   const [flipped, setFlipped]     = useState(false);
   const avatar = imgError ? host.avatar_fallback : host.avatar_url;
@@ -1040,21 +1041,21 @@ function HostProfileModal({ host, listing, onClose, onMessage, isSample }) {
               </p>
             )}
 
-            <SampleTooltip active={isSample}>
+            <SampleTooltip active={blocked} label={isSample ? undefined : "Hosts can't message other hosts"}>
               <button
-                onClick={isSample ? undefined : onMessage}
-                disabled={isSample}
+                onClick={blocked ? undefined : onMessage}
+                disabled={blocked}
                 style={{
                   width: '100%', padding: '13px 0',
                   background: 'var(--ink)', color: 'var(--bone)',
                   borderRadius: '999px', fontFamily: 'var(--font-body)',
                   fontSize: '0.9rem', fontWeight: 700,
-                  border: 'none', cursor: isSample ? 'not-allowed' : 'pointer',
+                  border: 'none', cursor: blocked ? 'not-allowed' : 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem',
-                  transition: 'opacity 150ms', opacity: isSample ? 0.5 : 1,
+                  transition: 'opacity 150ms', opacity: blocked ? 0.5 : 1,
                 }}
-                onMouseEnter={(e) => { if (!isSample) e.currentTarget.style.opacity = '0.88'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.opacity = isSample ? '0.5' : '1'; }}
+                onMouseEnter={(e) => { if (!blocked) e.currentTarget.style.opacity = '0.88'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.opacity = blocked ? '0.5' : '1'; }}
               >
                 Message {host.name.split(' ')[0]} <ArrowRight />
               </button>
@@ -1070,6 +1071,11 @@ function HostProfileModal({ host, listing, onClose, onMessage, isSample }) {
 export default function ListingDetail({ previewListing = null, preview = false }) {
   const { id: routeId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  // A host browsing the marketplace lands here via BrowseMarketplace with
+  // { state: { hostView: true } } — real listing, real fetch, just no way
+  // to apply/message (hosts don't apply to other hosts' listings).
+  const hostView = location.state?.hostView === true;
 
   const isPreview = preview || !!previewListing;
   const id = previewListing ? String(previewListing.id || previewListing._id || 'preview') : routeId;
@@ -1092,6 +1098,9 @@ export default function ListingDetail({ previewListing = null, preview = false }
   // Sample listings are demo content — messaging/applying is disabled on them.
   const isSampleListing = !!sampleListing || convexListing?.is_sample === true || listing?.is_sample === true || listing?._isSample === true;
   const SAMPLE_TOOLTIP = 'This is a sample listing — for reference only. Please delete.';
+  // Sample listings AND host-view both disable Apply/Message — same visual
+  // treatment (grayed button + tooltip), different reason.
+  const blockActions = isSampleListing || hostView;
 
   const { applyToListing, hasApplied, threads, createThread, toggleSave, isSaved, collections, createCollection, moveToCollection } = useCollabs();
   const { profile } = useAuth();
@@ -1145,13 +1154,13 @@ export default function ListingDetail({ previewListing = null, preview = false }
   }, []);
 
   const handleMessageHost = useCallback(() => {
-    if (isPreview) return;
+    if (isPreview || hostView) return;
     if (!isVerified) { openModal(); setShowHostModal(false); return; }
     if (!isSubscribed) { openSubModal(); setShowHostModal(false); return; }
     const existing = threads.find((t) => !t.archived && t.host_name === SAMPLE_HOST.name);
     const threadId = existing ? existing.id : createThread(listing.title, SAMPLE_HOST.name, 'Application');
     navigate('/inbox', { state: { selectedThreadId: threadId } });
-  }, [isPreview, isVerified, openModal, threads, createThread, listing, navigate]);
+  }, [isPreview, hostView, isVerified, openModal, threads, createThread, listing, navigate]);
 
   const showToast = useCallback((msg) => {
     setToast(msg);
@@ -1667,20 +1676,20 @@ export default function ListingDetail({ previewListing = null, preview = false }
                   <p style={{ fontSize: '0.9rem', color: 'var(--slate)', lineHeight: 1.7, marginBottom: '1.25rem' }}>{SAMPLE_HOST.bio}</p>
                   <p style={{ fontSize: '0.85rem', color: 'var(--slate)', marginBottom: '0.35rem' }}><strong>Response rate:</strong> {SAMPLE_HOST.response_rate}%</p>
                   <p style={{ fontSize: '0.85rem', color: 'var(--slate)', marginBottom: '1.25rem' }}><strong>Responds</strong> {SAMPLE_HOST.response_time}</p>
-                  <SampleTooltip active={isSampleListing}>
+                  <SampleTooltip active={blockActions} label={isSampleListing ? undefined : "Hosts can't message other hosts"}>
                     <button
-                      onClick={isSampleListing ? undefined : handleMessageHost}
-                      disabled={isSampleListing}
+                      onClick={blockActions ? undefined : handleMessageHost}
+                      disabled={blockActions}
                       style={{
                         padding: '0.65rem 1.5rem',
                         background: 'var(--bone)', border: '1.5px solid rgba(25,37,36,0.15)',
                         borderRadius: '999px', fontFamily: 'var(--font-body)',
                         fontSize: '0.875rem', fontWeight: 600, color: 'var(--ink)',
-                        cursor: isSampleListing ? 'not-allowed' : 'pointer',
-                        opacity: isSampleListing ? 0.5 : 1,
+                        cursor: blockActions ? 'not-allowed' : 'pointer',
+                        opacity: blockActions ? 0.5 : 1,
                       }}
-                      onMouseEnter={(e) => { if (!isSampleListing) e.currentTarget.style.background = 'rgba(25,37,36,0.07)'; }}
-                      onMouseLeave={(e) => { if (!isSampleListing) e.currentTarget.style.background = 'var(--bone)'; }}
+                      onMouseEnter={(e) => { if (!blockActions) e.currentTarget.style.background = 'rgba(25,37,36,0.07)'; }}
+                      onMouseLeave={(e) => { if (!blockActions) e.currentTarget.style.background = 'var(--bone)'; }}
                     >
                       Message host
                     </button>
@@ -1734,31 +1743,31 @@ export default function ListingDetail({ previewListing = null, preview = false }
                   ))}
                 </div>
 
-                <SampleTooltip active={isSampleListing}>
+                <SampleTooltip active={blockActions} label={isSampleListing ? undefined : "Hosts can't apply to other listings"}>
                   <button
-                    onClick={(applied || isSampleListing) ? undefined : (!isVerified ? openModal : !isSubscribed ? openSubModal : () => setShowApplyModal(true))}
-                    disabled={applied || isSampleListing}
+                    onClick={(applied || blockActions) ? undefined : (!isVerified ? openModal : !isSubscribed ? openSubModal : () => setShowApplyModal(true))}
+                    disabled={applied || blockActions}
                     style={{
                       width: '100%', padding: '1rem',
-                      opacity: isSampleListing ? 0.5 : 1,
+                      opacity: blockActions ? 0.5 : 1,
                       background: applied ? 'rgba(25,37,36,0.1)' : 'var(--ink)',
                       color: applied ? 'var(--sage)' : 'var(--bone)',
                       borderRadius: '999px', fontFamily: 'var(--font-body)',
                       fontSize: '1rem', fontWeight: 700,
-                      cursor: (applied || isSampleListing) ? 'default' : 'pointer',
+                      cursor: (applied || blockActions) ? 'default' : 'pointer',
                       border: 'none', marginBottom: '0.75rem',
                       display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
                       transition: 'opacity 150ms',
                     }}
-                    onMouseEnter={(e) => { if (!applied && !isSampleListing) e.currentTarget.style.opacity = '0.88'; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.opacity = isSampleListing ? '0.5' : '1'; }}
+                    onMouseEnter={(e) => { if (!applied && !blockActions) e.currentTarget.style.opacity = '0.88'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.opacity = blockActions ? '0.5' : '1'; }}
                   >
                     {applied ? '✓ Applied' : (!isVerified || !isSubscribed) ? <><LockIcon /><span>Apply Now</span></> : <><span>Apply Now</span><ArrowRight /></>}
                   </button>
                 </SampleTooltip>
 
                 <p style={{ fontSize: '0.75rem', color: 'var(--sage)', textAlign: 'center' }}>
-                  Collabnb is free for creators.
+                  {hostView ? 'Viewing as host — read-only.' : 'Collabnb is free for creators.'}
                 </p>
               </div>
             </div>
@@ -1788,18 +1797,18 @@ export default function ListingDetail({ previewListing = null, preview = false }
             </p>
             <p style={{ fontSize: '0.75rem', color: 'var(--sage)' }}>{listing.deliverable_count} deliverables</p>
           </div>
-          <SampleTooltip active={isSampleListing}>
+          <SampleTooltip active={blockActions} label={isSampleListing ? undefined : "Hosts can't apply to other listings"}>
             <button
-              onClick={(applied || isSampleListing) ? undefined : (!isVerified ? openModal : !isSubscribed ? openSubModal : () => setShowApplyModal(true))}
-              disabled={applied || isSampleListing}
+              onClick={(applied || blockActions) ? undefined : (!isVerified ? openModal : !isSubscribed ? openSubModal : () => setShowApplyModal(true))}
+              disabled={applied || blockActions}
               style={{
                 padding: '0.875rem 2rem',
-                opacity: isSampleListing ? 0.5 : 1,
+                opacity: blockActions ? 0.5 : 1,
                 background: applied ? 'rgba(25,37,36,0.1)' : 'var(--ink)',
                 color: applied ? 'var(--sage)' : 'var(--bone)',
                 borderRadius: '999px', fontFamily: 'var(--font-body)',
                 fontSize: '0.95rem', fontWeight: 700,
-                cursor: (applied || isSampleListing) ? 'default' : 'pointer',
+                cursor: (applied || blockActions) ? 'default' : 'pointer',
                 border: 'none', flexShrink: 0,
                 display: 'flex', alignItems: 'center', gap: '0.4rem',
               }}
@@ -1844,6 +1853,7 @@ export default function ListingDetail({ previewListing = null, preview = false }
           onClose={() => setShowHostModal(false)}
           onMessage={() => { setShowHostModal(false); handleMessageHost(); }}
           isSample={isSampleListing}
+          hostView={hostView}
         />
       )}
 

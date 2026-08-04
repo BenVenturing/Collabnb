@@ -671,6 +671,43 @@ export const createConnectOnboardingLink = action({
   },
 });
 
+// Live status check — the DB's stripe_connect_payouts_enabled flag is only as
+// fresh as the last account.updated webhook delivery, which can lag or (if a
+// dashboard event isn't configured) never arrive. This asks Stripe directly
+// and self-heals the cached flag, so the UI can reflect Stripe's real state
+// even if a webhook was missed.
+export const getConnectAccountStatus = action({
+  args: { profileId: v.string() },
+  handler: async (ctx, args) => {
+    await requireOwnerOrAdminAction(ctx, args.profileId, api.profiles.getByClerkUserId);
+    const secretKey = process.env.STRIPE_SECRET_KEY;
+    if (!secretKey) throw new Error('STRIPE_SECRET_KEY is not set in Convex environment variables');
+    const stripe = new Stripe(secretKey);
+
+    const profile = await ctx.runQuery(api.profiles.getById, { id: args.profileId });
+    if (!profile?.stripe_connect_account_id) return null;
+
+    const account = await stripe.accounts.retrieve(profile.stripe_connect_account_id);
+    const payoutsEnabled = Boolean(account.charges_enabled && account.payouts_enabled);
+
+    if (payoutsEnabled !== Boolean(profile.stripe_connect_payouts_enabled)) {
+      await ctx.runMutation(internal.profiles.setStripeConnectPayoutsEnabled, {
+        accountId: profile.stripe_connect_account_id,
+        payoutsEnabled,
+      });
+    }
+
+    return {
+      chargesEnabled: Boolean(account.charges_enabled),
+      payoutsEnabled,
+      detailsSubmitted: Boolean(account.details_submitted),
+      currentlyDue: account.requirements?.currently_due ?? [],
+      pastDue: account.requirements?.past_due ?? [],
+      disabledReason: account.requirements?.disabled_reason ?? null,
+    };
+  },
+});
+
 const wiseBaseUrl = () =>
   process.env.WISE_ENV === 'sandbox' ? 'https://api.sandbox.transferwise.tech' : 'https://api.wise.com';
 

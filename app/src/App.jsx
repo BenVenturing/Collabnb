@@ -31,6 +31,7 @@ import Step1Basics          from './pages/host/Step1Basics';
 import Step2Offer           from './pages/host/Step2Offer';
 import Step3Deliverables    from './pages/host/Step3Deliverables';
 import Step4Review          from './pages/host/Step4Review';
+import Step5Payment         from './pages/host/Step5Payment';
 import AdminDashboard       from './pages/AdminDashboard';
 import Blog                 from './pages/Blog';
 import BlogPost             from './pages/BlogPost';
@@ -237,6 +238,7 @@ function AppRoutes() {
           <Route path="/host/listings/create/offer"        element={hostOnly(<Step2Offer />)} />
           <Route path="/host/listings/create/deliverables" element={hostOnly(<Step3Deliverables />)} />
           <Route path="/host/listings/create/review"       element={hostOnly(<Step4Review />)} />
+          <Route path="/host/listings/create/payment"      element={hostOnly(<Step5Payment />)} />
 
           {/* Admin panel — full-screen, no nav chrome */}
           <Route path="/admin" element={<AdminDashboard />} />

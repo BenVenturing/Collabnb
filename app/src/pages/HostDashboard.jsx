@@ -9,7 +9,8 @@ import { IMG_FALLBACK } from '../lib/mockData';
 import SkeletonCard from '../components/SkeletonCard';
 import SampleWatermark from '../components/SampleWatermark';
 import { ListingCard } from './Explore';
-import CollabMap from '../components/map/CollabMap';
+import CollabMap, { MapPopup } from '../components/map/CollabMap';
+import { DESTINATIONS, COUNTRIES } from '../lib/searchData';
 import PricingTool, { PointsHelpButton } from '../components/PricingTool';
 import { cache } from '../lib/cache';
 
@@ -524,7 +525,51 @@ function browsePinLabel(l) {
   return m ? `$${m[1]}` : (l.collab_type || '·');
 }
 
+// Cycles through place names in the search input's placeholder — types a
+// word in, holds, clears, then moves to the next. Kept local (rather than
+// reusing Explore's useAnimatedPlaceholder) since that hook is hardcoded to
+// collab-type words, not locations.
+const BROWSE_LOCATION_WORDS = [
+  ...DESTINATIONS.map((d) => d.label),
+  ...COUNTRIES.slice(0, 8).map((c) => c.name),
+];
+
+function useLocationPlaceholder() {
+  const [display, setDisplay] = useState('');
+  const idxRef = useRef(0);
+  const charRef = useRef(0);
+  const phaseRef = useRef('typing');
+
+  useEffect(() => {
+    let timer;
+    const tick = () => {
+      const text = BROWSE_LOCATION_WORDS[idxRef.current];
+      if (phaseRef.current === 'typing') {
+        charRef.current++;
+        setDisplay(text.slice(0, charRef.current));
+        if (charRef.current >= text.length) {
+          phaseRef.current = 'holding';
+          timer = setTimeout(tick, 1400);
+        } else {
+          timer = setTimeout(tick, 65);
+        }
+      } else {
+        idxRef.current = (idxRef.current + 1) % BROWSE_LOCATION_WORDS.length;
+        charRef.current = 0;
+        phaseRef.current = 'typing';
+        setDisplay('');
+        timer = setTimeout(tick, 250);
+      }
+    };
+    timer = setTimeout(tick, 300);
+    return () => clearTimeout(timer);
+  }, []);
+
+  return display;
+}
+
 function BrowseMarketplace({ onBack }) {
+  const navigate = useNavigate();
   const real    = useQuery(api.listings.getAll, {});
   const samples = useQuery(api.listings.getSamples);
   const loading = real === undefined && samples === undefined;
@@ -534,23 +579,38 @@ function BrowseMarketplace({ onBack }) {
   ].map((l) => ({ ...normalizeConvexListing(l), _isSample: l.is_sample === true }));
 
   const [query, setQuery] = useState('');
-  const [mapOpen, setMapOpen] = useState(false);
+  const [mapOpen, setMapOpen] = useState(true);
   const [activePinId, setActivePinId] = useState(null);
+  const [mapInstance, setMapInstance] = useState(null);
+  const [mapBounds, setMapBounds] = useState(null);
   const [fitKey, setFitKey] = useState(0);
+  const animatedPlaceholder = useLocationPlaceholder();
 
+  // Host-only read-only detail view — real listing, no apply/message.
+  const goToListing = (id) => navigate(`/listing/${id}`, { state: { hostView: true } });
+
+  // Search is location-first, matching what the map is already framing.
   const q = query.trim().toLowerCase();
-  const filtered = q
-    ? listings.filter((l) => [l.title, l.location, l.collab_type].some((v) => String(v || '').toLowerCase().includes(q)))
+  const searchFiltered = q
+    ? listings.filter((l) => String(l.location || '').toLowerCase().includes(q))
     : listings;
 
-  const mapPoints = filtered
-    .filter((l) => typeof l.lat === 'number' && typeof l.lng === 'number')
-    .map((l) => ({ id: l.id, lat: l.lat, lng: l.lng, label: browsePinLabel(l) }));
+  const geoListings = searchFiltered.filter((l) => typeof l.lat === 'number' && typeof l.lng === 'number');
+  const mapPoints = geoListings.map((l) => ({ id: l.id, lat: l.lat, lng: l.lng, label: browsePinLabel(l) }));
+
+  // While the map is open, the list mirrors whatever's in view — same
+  // "browse by moving the map" behavior as the creator Explore page.
+  const inBounds = (l) => !mapBounds
+    || (l.lat >= mapBounds.south && l.lat <= mapBounds.north && l.lng >= mapBounds.west && l.lng <= mapBounds.east);
+  const listed = mapOpen ? geoListings.filter(inBounds) : searchFiltered;
+
+  const activeListing = activePinId ? geoListings.find((l) => l.id === activePinId) : null;
 
   useEffect(() => { if (mapOpen) setFitKey((k) => k + 1); }, [mapOpen]);
+  useEffect(() => { setActivePinId(null); }, [query]);
 
   return (
-    <div style={{ maxWidth: 1100, margin: '0 auto', padding: '2rem 1.5rem 5rem' }}>
+    <div style={{ maxWidth: 1400, margin: '0 auto', padding: '2rem 1.5rem 5rem' }}>
       <button
         onClick={onBack}
         style={{
@@ -578,14 +638,14 @@ function BrowseMarketplace({ onBack }) {
         </p>
       </div>
 
-      {/* ── Minimal search + map toggle ── */}
+      {/* ── Location search + map toggle ── */}
       <div style={{ display: 'flex', gap: '0.6rem', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
         <div style={{ ...GC, flex: '1 1 240px', display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.55rem 0.9rem' }}>
           <Search size={15} color="var(--sage)" />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search by title or location"
+            placeholder={animatedPlaceholder}
             style={{
               border: 'none', outline: 'none', background: 'transparent', flex: 1,
               fontSize: '0.85rem', color: 'var(--ink)', fontFamily: 'var(--font-body)',
@@ -610,34 +670,66 @@ function BrowseMarketplace({ onBack }) {
         </button>
       </div>
 
-      {mapOpen && (
-        <div style={{ height: 320, borderRadius: '1.25rem', overflow: 'hidden', marginBottom: '1.25rem', boxShadow: '0 8px 32px rgba(25,37,36,0.12)', position: 'relative' }}>
-          <CollabMap
-            points={mapPoints}
-            activeId={activePinId}
-            onPinClick={setActivePinId}
-            fitKey={fitKey}
-          />
+      {/* ── Listings (left) + map (right) ── */}
+      <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+        <div style={{ flex: mapOpen ? '1 1 460px' : '1 1 100%', minWidth: 0 }}>
+          {loading ? (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '1rem', justifyItems: 'center' }}>
+              {Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)}
+            </div>
+          ) : listed.length === 0 ? (
+            <div style={{ ...GC, padding: '3rem', textAlign: 'center' }}>
+              <p style={{ fontSize: '0.85rem', color: 'var(--sage)', margin: 0 }}>
+                {mapOpen && mapBounds ? 'No listings in this area — try moving the map.'
+                  : listings.length === 0 ? 'No listings to browse yet.' : 'No listings match your search.'}
+              </p>
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '1rem', justifyItems: 'center' }}>
+              {listed.map((l, i) => (
+                <ListingCard key={l.id} listing={l} browseOnly saved={false} delay={i * 45} onNavigate={() => goToListing(l.id)} />
+              ))}
+            </div>
+          )}
         </div>
-      )}
 
-      {loading ? (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '1rem', justifyItems: 'center' }}>
-          {Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)}
-        </div>
-      ) : filtered.length === 0 ? (
-        <div style={{ ...GC, padding: '3rem', textAlign: 'center' }}>
-          <p style={{ fontSize: '0.85rem', color: 'var(--sage)', margin: 0 }}>
-            {listings.length === 0 ? 'No listings to browse yet.' : 'No listings match your search.'}
-          </p>
-        </div>
-      ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '1rem', justifyItems: 'center' }}>
-          {filtered.map((l, i) => (
-            <ListingCard key={l.id} listing={l} browseOnly saved={false} delay={i * 45} />
-          ))}
-        </div>
-      )}
+        {mapOpen && (
+          <div style={{
+            flex: '1 1 380px', minWidth: 300, position: 'sticky', top: '5.5rem',
+            height: 'calc(100vh - 9rem)', minHeight: 420,
+            borderRadius: '1.25rem', overflow: 'hidden', boxShadow: '0 8px 32px rgba(25,37,36,0.12)',
+          }}>
+            <CollabMap
+              points={mapPoints}
+              activeId={activePinId}
+              onPinClick={setActivePinId}
+              onMoveEnd={setMapBounds}
+              onReady={setMapInstance}
+              fitKey={fitKey}
+              fitPoints={mapPoints}
+            >
+              {activeListing && (
+                <MapPopup map={mapInstance} lng={activeListing.lng} lat={activeListing.lat} onOffscreen={() => setActivePinId(null)}>
+                  <div style={{ position: 'relative', width: 260, background: '#fff', borderRadius: '1.25rem', filter: 'drop-shadow(0 12px 28px rgba(25,37,36,0.28))' }}>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setActivePinId(null); }}
+                      aria-label="Close"
+                      style={{
+                        position: 'absolute', top: -10, left: -10, zIndex: 2,
+                        width: 26, height: 26, borderRadius: '50%', border: '1px solid rgba(255,255,255,0.6)',
+                        background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(8px)', cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        boxShadow: '0 2px 8px rgba(25,37,36,0.2)', fontSize: 16, lineHeight: 1, color: 'var(--ink)',
+                      }}
+                    >×</button>
+                    <ListingCard listing={activeListing} browseOnly saved={false} delay={0} onNavigate={() => goToListing(activeListing.id)} />
+                  </div>
+                </MapPopup>
+              )}
+            </CollabMap>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

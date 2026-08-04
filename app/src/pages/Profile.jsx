@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useQuery, useAction, useMutation, useConvex } from 'convex/react';
 import { api } from '../../convex/_generated/api';
+import Confetti from '../components/Confetti';
 
 // Convex storage URL prefix; used to construct public URLs from storage IDs
 const CONVEX_URL = import.meta.env.VITE_CONVEX_URL;
@@ -598,6 +599,7 @@ export default function Profile() {
   const verifyLifetimeSession      = useAction(api.stripe.verifyLifetimeSession);
   const createBillingPortalSession = useAction(api.stripe.createBillingPortalSession);
   const createConnectOnboardingLink = useAction(api.stripe.createConnectOnboardingLink);
+  const getConnectAccountStatus    = useAction(api.stripe.getConnectAccountStatus);
   const createWiseRecipient        = useAction(api.stripe.createWiseRecipient);
   const setPayoutMethodMutation     = useMutation(api.profiles.setPayoutMethod);
   const disconnectPayoutMethodMutation = useMutation(api.profiles.disconnectPayoutMethod);
@@ -2365,6 +2367,7 @@ export default function Profile() {
           profile={dp}
           onClose={() => setShowPayoutMethod(false)}
           createConnectOnboardingLink={createConnectOnboardingLink}
+          getConnectAccountStatus={getConnectAccountStatus}
           createWiseRecipient={createWiseRecipient}
           setPayoutMethodMutation={setPayoutMethodMutation}
           disconnectPayoutMethodMutation={disconnectPayoutMethodMutation}
@@ -2423,14 +2426,38 @@ export default function Profile() {
 
 // Creator payout-method connection — Stripe Connect (hosted onboarding) or
 // Wise (manual recipient details, since there's no equivalent hosted flow).
-function PayoutMethodPanel({ profile, onClose, createConnectOnboardingLink, createWiseRecipient, setPayoutMethodMutation, disconnectPayoutMethodMutation }) {
+function PayoutMethodPanel({ profile, onClose, createConnectOnboardingLink, getConnectAccountStatus, createWiseRecipient, setPayoutMethodMutation, disconnectPayoutMethodMutation }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const [wiseCurrency, setWiseCurrency] = useState('USD');
   const [wiseForm, setWiseForm] = useState({ accountHolderName: '', accountNumber: '', bankCode: '' });
+  const [liveStatus, setLiveStatus] = useState(null);
+  const [showConfetti, setShowConfetti] = useState(false);
 
   const method = profile.payout_method;
   const profileId = profile._id ? String(profile._id) : (profile.id ? String(profile.id) : '');
+  const stripeConnected = method === 'stripe_connect' && profile.stripe_connect_account_id;
+
+  // The cached profile.stripe_connect_payouts_enabled flag only updates when
+  // Stripe's account.updated webhook lands — it can lag behind (or, if a
+  // webhook delivery is ever missed, never catch up). Ask Stripe directly
+  // whenever this panel opens so the badge always reflects real account
+  // status, and self-heal the cached flag in the same call.
+  useEffect(() => {
+    if (!stripeConnected) return;
+    const wasEnabled = profile.stripe_connect_payouts_enabled === true;
+    getConnectAccountStatus({ profileId })
+      .then((status) => {
+        if (!status) return;
+        setLiveStatus(status);
+        if (status.payoutsEnabled && !wasEnabled) {
+          setShowConfetti(true);
+          setTimeout(() => setShowConfetti(false), 3200);
+        }
+      })
+      .catch(() => { /* fall back to cached profile fields below */ });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stripeConnected, profileId]);
 
   const connectStripe = async () => {
     setBusy(true);
@@ -2484,8 +2511,9 @@ function PayoutMethodPanel({ profile, onClose, createConnectOnboardingLink, crea
     }
   };
 
-  const stripeConnected = method === 'stripe_connect' && profile.stripe_connect_account_id;
   const wiseConnected = method === 'wise' && profile.wise_recipient_id;
+  const payoutsEnabled = liveStatus ? liveStatus.payoutsEnabled : profile.stripe_connect_payouts_enabled === true;
+  const detailsSubmitted = liveStatus ? liveStatus.detailsSubmitted : undefined;
 
   const disconnect = async () => {
     if (!window.confirm("Disconnect your payout method? You'll need to reconnect before your next payout can go through.")) return;
@@ -2498,9 +2526,10 @@ function PayoutMethodPanel({ profile, onClose, createConnectOnboardingLink, crea
 
   return (
     <div
-      style={{ position: 'fixed', inset: 0, zIndex: 10000, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', padding: '1rem', background: 'rgba(25,37,36,0.5)', backdropFilter: 'blur(6px)' }}
+      style={{ position: 'fixed', inset: 0, zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', background: 'rgba(25,37,36,0.5)', backdropFilter: 'blur(6px)' }}
       onClick={onClose}
     >
+      <Confetti show={showConfetti} />
       <div
         style={{ width: '100%', maxWidth: '460px', borderRadius: '1.5rem', padding: 'clamp(1.25rem, 5vw, 2rem)', background: 'rgba(255,255,255,0.97)', border: '1px solid rgba(255,255,255,0.85)', boxShadow: '0 20px 60px rgba(25,37,36,0.18)' }}
         onClick={(e) => e.stopPropagation()}
@@ -2510,9 +2539,15 @@ function PayoutMethodPanel({ profile, onClose, createConnectOnboardingLink, crea
           <button onClick={onClose} style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'rgba(209,235,219,0.5)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--slate)' }}>✕</button>
         </div>
 
-        <p style={{ fontSize: '0.8rem', color: 'var(--sage)', margin: '0 0 1.25rem', lineHeight: 1.5 }}>
-          When a host's payment for your collaboration is processed, Collabnb forwards your share here. Choose how you'd like to receive it.
-        </p>
+        <div style={{ display: 'flex', gap: '0.7rem', alignItems: 'flex-start', padding: '0.75rem 0.875rem', borderRadius: '0.875rem', background: 'rgba(25,37,36,0.04)', border: '1px solid rgba(25,37,36,0.07)', marginBottom: '1.25rem' }}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="var(--slate)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" width="18" height="18" style={{ flexShrink: 0, marginTop: '0.1rem' }}>
+            <rect x="3" y="11" width="18" height="10" rx="2" />
+            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+          </svg>
+          <p style={{ fontSize: '0.78rem', color: 'var(--slate)', margin: 0, lineHeight: 1.55, fontWeight: 500 }}>
+            When a host's payment for your collaboration is processed, Collabnb forwards your share to the payout method below. Bank-level encryption handled directly by Stripe or Wise — Collabnb never stores your account details.
+          </p>
+        </div>
 
         {error && (
           <p style={{ color: '#b91c1c', fontSize: '0.78rem', marginBottom: '1rem', padding: '0.625rem 0.875rem', background: 'rgba(185,28,28,0.06)', borderRadius: '0.75rem', lineHeight: 1.4 }}>
@@ -2521,31 +2556,49 @@ function PayoutMethodPanel({ profile, onClose, createConnectOnboardingLink, crea
         )}
 
         {stripeConnected ? (
-          <div style={{ padding: '0.875rem 1rem', borderRadius: '0.875rem', background: profile.stripe_connect_payouts_enabled ? 'rgba(209,235,219,0.3)' : 'rgba(254,243,199,0.5)', marginBottom: '1rem' }}>
+          <div style={{ padding: '1rem 1.1rem', borderRadius: '0.875rem', background: payoutsEnabled ? 'rgba(209,235,219,0.35)' : 'rgba(254,243,199,0.5)', border: `1px solid ${payoutsEnabled ? 'rgba(52,150,90,0.25)' : 'rgba(180,130,20,0.2)'}`, marginBottom: '1rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.35rem' }}>
+              <span style={{
+                width: '8px', height: '8px', borderRadius: '50%', flexShrink: 0,
+                background: payoutsEnabled ? '#2FA35C' : '#C08A1E',
+                boxShadow: payoutsEnabled ? '0 0 0 3px rgba(47,163,92,0.18)' : '0 0 0 3px rgba(192,138,30,0.15)',
+                animation: payoutsEnabled ? 'payoutPulse 2s ease-in-out infinite' : 'none',
+              }} />
+              <span style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: payoutsEnabled ? '#2FA35C' : '#A87415' }}>
+                {payoutsEnabled ? 'Connected' : detailsSubmitted ? 'Under review' : 'Verification pending'}
+              </span>
+            </div>
             <p style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--ink)', margin: '0 0 0.2rem' }}>
-              {profile.stripe_connect_payouts_enabled ? '✓ Stripe connected' : 'Stripe connected — verification pending'}
+              {payoutsEnabled ? '✓ Stripe connected' : detailsSubmitted ? 'Stripe is reviewing your details' : 'Finish connecting with Stripe'}
             </p>
-            <p style={{ fontSize: '0.72rem', color: 'var(--sage)', margin: 0 }}>
-              {profile.stripe_connect_payouts_enabled
+            <p style={{ fontSize: '0.72rem', color: 'var(--sage)', margin: 0, lineHeight: 1.5 }}>
+              {payoutsEnabled
                 ? "You're all set to receive payouts."
+                : detailsSubmitted
+                ? "Stripe is verifying the details you submitted — this usually takes a few days. You can update your information anytime."
                 : 'Finish verifying your details with Stripe to start receiving payouts.'}
             </p>
             <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem' }}>
-              {!profile.stripe_connect_payouts_enabled && (
+              {!payoutsEnabled && (
                 <button onClick={connectStripe} disabled={busy} className="btn-glass" style={{ fontSize: '0.78rem', padding: '0.4rem 0.9rem' }}>
-                  {busy ? 'Opening…' : 'Continue verification'}
+                  {busy ? 'Opening…' : detailsSubmitted ? 'Update verification details' : 'Continue verification'}
                 </button>
               )}
-              <button onClick={disconnect} disabled={busy} style={{ fontSize: '0.78rem', padding: '0.4rem 0.9rem', borderRadius: '999px', border: '1px solid rgba(153,27,27,0.3)', background: 'none', color: '#991B1B', cursor: 'pointer' }}>
+              <button onClick={disconnect} disabled={busy} className="btn-danger-outline" style={{ fontSize: '0.78rem' }}>
                 Disconnect
               </button>
             </div>
+            <style>{`@keyframes payoutPulse { 0%,100%{opacity:1} 50%{opacity:0.45} }`}</style>
           </div>
         ) : wiseConnected ? (
-          <div style={{ padding: '0.875rem 1rem', borderRadius: '0.875rem', background: 'rgba(209,235,219,0.3)', marginBottom: '1rem' }}>
+          <div style={{ padding: '1rem 1.1rem', borderRadius: '0.875rem', background: 'rgba(209,235,219,0.35)', border: '1px solid rgba(52,150,90,0.25)', marginBottom: '1rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.35rem' }}>
+              <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#2FA35C', boxShadow: '0 0 0 3px rgba(47,163,92,0.18)' }} />
+              <span style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#2FA35C' }}>Connected</span>
+            </div>
             <p style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--ink)', margin: '0 0 0.2rem' }}>✓ Wise connected</p>
             <p style={{ fontSize: '0.72rem', color: 'var(--sage)', margin: '0 0 0.75rem' }}>Payouts will be sent in {profile.wise_recipient_currency}.</p>
-            <button onClick={disconnect} disabled={busy} style={{ fontSize: '0.78rem', padding: '0.4rem 0.9rem', borderRadius: '999px', border: '1px solid rgba(153,27,27,0.3)', background: 'none', color: '#991B1B', cursor: 'pointer' }}>
+            <button onClick={disconnect} disabled={busy} className="btn-danger-outline" style={{ fontSize: '0.78rem' }}>
               Disconnect
             </button>
           </div>

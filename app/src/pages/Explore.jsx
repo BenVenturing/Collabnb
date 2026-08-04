@@ -110,7 +110,8 @@ function normalizeConvexListing(l) {
 
 // ─── Listing Card ─────────────────────────────────────────────────────────────
 // Also reused by the host dashboard's in-place browse view (browseOnly hides
-// the creator-only save action and click-through)
+// the creator-only save action; click-through still works whenever onNavigate
+// is passed, so a host can open the read-only listing detail page)
 export function ListingCard({ listing, saved, onSave, delay, onNavigate, onHostClick, browseOnly = false }) {
   const { profile } = useAuth();
   const [rippling, setRippling] = useState(false);
@@ -130,8 +131,8 @@ export function ListingCard({ listing, saved, onSave, delay, onNavigate, onHostC
   return (
     <div
       className="listing-card reveal-up"
-      onClick={browseOnly ? undefined : onNavigate}
-      style={{ width: 260, maxWidth: '100%', animationDelay: `${delay}ms`, opacity: 0, cursor: browseOnly ? 'default' : 'pointer' }}
+      onClick={onNavigate}
+      style={{ width: 260, maxWidth: '100%', animationDelay: `${delay}ms`, opacity: 0, cursor: onNavigate ? 'pointer' : 'default' }}
     >
       {/* Photo */}
       <div style={{ position: 'relative', height: 176, overflow: 'hidden' }}>

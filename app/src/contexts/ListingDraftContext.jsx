@@ -36,6 +36,7 @@ const EMPTY_DRAFT = {
   property_url: "",
   collaboration_brief: "",
   compensation_type: "paid",
+  payout_handling: "platform",
   nights: 2,
   cash_amount: 0,
   currency: "USD",

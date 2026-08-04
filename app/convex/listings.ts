@@ -537,6 +537,15 @@ export const update = mutation({
         throw new ConvexError("Add a card before publishing — it's only used for Collabnb's platform fee once a collaboration completes. You can save this listing as a draft in the meantime.");
       }
     }
+    // Payment method is locked once a listing has ever gone live — changing
+    // who pays the creator mid-collaboration is what causes real disputes.
+    if (
+      (existing as any).status === "published" &&
+      fields.payout_handling !== undefined &&
+      fields.payout_handling !== (existing as any).payout_handling
+    ) {
+      throw new ConvexError("Payment method is locked once a listing is published — it can't be changed while collaborations may be active.");
+    }
     const patch: any = { ...fields, ...sanitizeListingFields(fields) };
     const nextType = fields.compensation_type ?? (existing as any).compensation_type;
     const nextCash = fields.cash_amount ?? (existing as any).cash_amount;

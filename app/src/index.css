@@ -295,6 +295,26 @@ button { font: inherit; cursor: pointer; border: none; background: none; }
 .btn-glass:hover  { background: rgba(255,255,255,0.75); }
 .btn-glass:active { transform: scale(0.97); }
 
+.btn-danger-outline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background: rgba(255,255,255,0.5);
+  color: #991B1B;
+  font-weight: 500;
+  padding: 0.4rem 0.9rem;
+  border-radius: 9999px;
+  border: 1px solid rgba(153,27,27,0.35);
+  cursor: pointer;
+  transition: transform 200ms var(--ease-out-quart), background 200ms, border-color 200ms;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.6), 0 1px 2px rgba(153,27,27,0.08);
+  white-space: nowrap;
+  font-family: var(--font-body);
+}
+.btn-danger-outline:hover  { background: rgba(185,28,28,0.08); border-color: rgba(153,27,27,0.55); }
+.btn-danger-outline:active { transform: scale(0.96); }
+
 /* ── TAGS & CHIPS ───────────────────────────────────────────────────────────── */
 .eyebrow-tag {
   display: inline-flex;

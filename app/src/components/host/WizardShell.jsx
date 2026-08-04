@@ -13,6 +13,7 @@ const STEPS = [
   { label: "The Offer", path: "/host/listings/create/offer" },
   { label: "Deliverables", path: "/host/listings/create/deliverables" },
   { label: "Review", path: "/host/listings/create/review" },
+  { label: "Payment", path: "/host/listings/create/payment" },
 ];
 
 export default function WizardShell({ step, children, onBack, onNext, nextLabel = "Next", nextDisabled = false, nextHint = "" }) {
@@ -112,7 +113,7 @@ export default function WizardShell({ step, children, onBack, onNext, nextLabel 
             <ArrowLeft size={18} />
           </button>
           <span style={{ fontFamily: "Satoshi, sans-serif", fontSize: 14, fontWeight: 600, color: "var(--ink)" }}>
-            Step {step} of 4
+            Step {step} of {STEPS.length}
           </span>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <button onClick={handleSaveExit} disabled={saving} style={{ background: "none", border: "none", cursor: saving ? "default" : "pointer", fontFamily: "Satoshi, sans-serif", fontSize: 13, color: "var(--slate)", textDecoration: "underline", padding: 0, opacity: saving ? 0.6 : 1 }}>

@@ -1,5 +1,5 @@
 import { mutation, query } from "./_generated/server";
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { internal } from "./_generated/api";
 import { totalPoints, normalizeTierId, calcMidpoint, calcHardFloor, evaluateZone } from "./lib/compensationPoints";
 import { requireOwnerOrAdmin, canAccessOwner } from "./lib/auth";
@@ -79,18 +79,25 @@ export const create = mutation({
     // called by the frontend before this. This just caps the direct-mutation-call
     // path that skips that check, so it's deliberately looser (20/day).
     await enforceRateLimit(ctx, `pitch:${args.creatorId}`, RATE_LIMITS.PITCH);
+    // A listing must actually be live before anyone can apply to it — the UI
+    // only shows "Apply" on published listings, but that's bypassable via a
+    // direct mutation call (or a host testing their own not-yet-published draft).
+    const listing = await ctx.db.get(args.listingId as any);
+    if (!listing || (listing as any).status !== "published") {
+      throw new ConvexError("This listing isn't published yet — applications open once the host publishes it.");
+    }
     // Server-side access gate — mirrors the canViewFull rule in listings.ts.
     // The UI hides Apply for locked-out creators, but that's bypassable via a
     // direct mutation call, so it must also be enforced here.
     const creator = await ctx.db.get(args.creatorId as any);
     if (creator && (creator as any).role === "creator" && !(creator as any).is_admin) {
       if ((creator as any).is_verified !== true) {
-        throw new Error("Your account must be verified before you can apply to listings.");
+        throw new ConvexError("Your account must be verified before you can apply to listings.");
       }
       const isFounder = (creator as any).is_founder === true;
       const state = (creator as any).access_state ?? "active";
       if (!(isFounder || state === "trial" || state === "active")) {
-        throw new Error("Your trial has ended — subscribe to Creator Plus to keep applying to listings.");
+        throw new ConvexError("Your trial has ended — subscribe to Creator Plus to keep applying to listings.");
       }
     }
 

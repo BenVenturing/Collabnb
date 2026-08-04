@@ -145,14 +145,17 @@ function ClerkAuthInner({ children }) {
           } catch {
             // getOrCreate not yet deployed — profile remains null
           }
-        } else if (isAdminUser) {
-          // Profile exists — still call getOrCreate so it upgrades tier/verified if needed
+        } else if (isAdminUser || !result.clerk_user_id) {
+          // Profile exists — still call getOrCreate so it upgrades tier/verified
+          // (admin) and/or backfills clerk_user_id (every existing user needs
+          // this linked at least once — it's the server's identity anchor,
+          // since the Clerk session token carries no email claim).
           try {
             result = await getOrCreateMutation({
               email,
               full_name: result.full_name,
               avatar_url: result.avatar_url,
-              is_admin: true,
+              is_admin: isAdminUser,
             });
           } catch {
             // If not deployed yet, use the existing result as-is

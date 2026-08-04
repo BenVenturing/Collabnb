@@ -55,10 +55,20 @@ export default function Step3Deliverables() {
   }
 
   const hasCompensation = (draft.compensation_type === "paid" || draft.compensation_type === "hybrid") && draft.cash_amount > 0;
-  const canProceed = completeRanges.length > 0
-    && (draft.deliverables?.length > 0 || draft.deliverables_list.length > 0)
-    && draft.creator_tier
-    && hasCompensation;
+  const hasDeliverables = draft.deliverables?.length > 0 || draft.deliverables_list.length > 0;
+  const canProceed = completeRanges.length > 0 && hasDeliverables && draft.creator_tier && hasCompensation;
+
+  // Tells the host exactly what's missing when Next is disabled, instead of
+  // the button silently doing nothing.
+  const nextHint = !draft.creator_tier
+    ? "Pick a creator tier in the cost calculator above."
+    : !hasCompensation
+      ? "Enter a cash compensation amount in the cost calculator above."
+      : !hasDeliverables
+        ? "Pick at least one deliverable in the cost calculator, or add a custom one below."
+        : completeRanges.length === 0
+          ? "Add a collaboration window with both a start and end date."
+          : "";
 
   function resetForm() {
     setCustomQty(1); setCustomType(""); setCustomDesc(""); setCustomUsage(draft.usage_rights || DEFAULT_USAGE_RIGHTS);
@@ -121,6 +131,7 @@ export default function Step3Deliverables() {
     <WizardShell
       step={3}
       nextDisabled={!canProceed}
+      nextHint={nextHint}
       onNext={() => navigate("/host/listings/create/review")}
     >
       <h2 style={{ fontFamily: "Cabinet Grotesk, serif", fontWeight: 800, fontSize: 28, color: "var(--ink)", margin: "0 0 6px" }}>

@@ -336,7 +336,7 @@ function PhotoGallery({ images, title, onClose }) {
 }
 
 // ─── Apply Now Modal ──────────────────────────────────────────────────────────
-function ApplyModal({ listing, userId, creatorProfile, onClose, onApply, navigate, isVerified, onVerificationRequired, isSubscribed, onSubscriptionRequired }) {
+function ApplyModal({ listing, userId, creatorProfile, onClose, onApply, isPreview, navigate, isVerified, onVerificationRequired, isSubscribed, onSubscriptionRequired }) {
   const checkAndIncrementCvx = useMutation(api.pitches.checkAndIncrement);
 
   const handle = creatorProfile?.instagram_handle || creatorProfile?.tiktok_handle || creatorProfile?.username;
@@ -361,10 +361,15 @@ Let's make something great together.`;
   const [pitch, setPitch] = useState(defaultPitch);
   const [submitted, setSubmitted] = useState(false);
   const [pitchBlocked, setPitchBlocked] = useState(false);
+  const [previewBlocked, setPreviewBlocked] = useState(false);
 
   const isPitch = pitch.trim() !== defaultPitch.trim();
 
   const handleSubmit = async () => {
+    // Preview mode (host viewing their own not-yet-published listing) must
+    // never fire a real application — no rate-limit increment, no pitch
+    // saved, and no fake "sent" confirmation implying it went somewhere.
+    if (isPreview) { setPreviewBlocked(true); return; }
     if (!isVerified) { onVerificationRequired(); return; }
     if (!isSubscribed) { onSubscriptionRequired(); return; }
     if (isPitch) {
@@ -406,7 +411,31 @@ Let's make something great together.`;
         animation: 'detailSlideUp 300ms cubic-bezier(0.32,0.72,0,1) forwards',
         maxHeight: '90dvh', overflowY: 'auto',
       }}>
-        {pitchBlocked ? (
+        {previewBlocked ? (
+          <div style={{ textAlign: 'center', padding: '1.5rem 0' }}>
+            <div style={{
+              width: 64, height: 64, borderRadius: '50%',
+              background: 'rgba(255,220,210,0.8)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              margin: '0 auto 1.25rem', fontSize: '1.6rem', color: '#8b2500',
+            }}>
+              ✕
+            </div>
+            <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.4rem', color: 'var(--ink)', marginBottom: '0.75rem' }}>
+              This is a preview
+            </h2>
+            <p style={{ color: 'var(--slate)', fontSize: '0.9rem', lineHeight: 1.65, marginBottom: '2rem' }}>
+              Applications can't be sent until this listing is actually published — creators won't be able to see or apply to it until then either.
+            </p>
+            <button onClick={onClose} style={{
+              width: '100%', padding: '0.875rem',
+              background: 'var(--ink)', color: 'var(--bone)',
+              borderRadius: '999px', fontWeight: 700,
+              fontSize: '0.9rem', fontFamily: 'var(--font-body)',
+              border: 'none', cursor: 'pointer',
+            }}>Close</button>
+          </div>
+        ) : pitchBlocked ? (
           <div style={{ textAlign: 'center', padding: '1.5rem 0' }}>
             <div style={{
               width: 64, height: 64, borderRadius: '50%',
@@ -1788,7 +1817,8 @@ export default function ListingDetail({ previewListing = null, preview = false }
           userId={profile?._id || profile?.id}
           creatorProfile={profile}
           onClose={() => setShowApplyModal(false)}
-          onApply={isPreview ? (() => {}) : applyToListing}
+          onApply={applyToListing}
+          isPreview={isPreview}
           navigate={navigate}
           isVerified={isVerified}
           onVerificationRequired={() => { setShowApplyModal(false); openModal(); }}

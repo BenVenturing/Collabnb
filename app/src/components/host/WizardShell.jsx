@@ -1,6 +1,11 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, X, HelpCircle } from "lucide-react";
+import { useMutation } from "convex/react";
+import { ConvexError } from "convex/values";
+import { ArrowLeft, HelpCircle } from "lucide-react";
+import { api } from "../../../convex/_generated/api";
+import { useListingDraft } from "../../contexts/ListingDraftContext";
+import { useAuth } from "../../contexts/AuthContext";
 import InspirationRail from "./InspirationRail";
 
 const STEPS = [
@@ -10,14 +15,87 @@ const STEPS = [
   { label: "Review", path: "/host/listings/create/review" },
 ];
 
-export default function WizardShell({ step, children, onBack, onNext, nextLabel = "Next", nextDisabled = false }) {
+export default function WizardShell({ step, children, onBack, onNext, nextLabel = "Next", nextDisabled = false, nextHint = "" }) {
   const navigate = useNavigate();
   const [showHelp, setShowHelp] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
+  const { draft, combinedDeliverablesList, totalDeliverables } = useListingDraft();
+  const { profile } = useAuth();
+  const createListing = useMutation(api.listings.create);
+  const updateListing = useMutation(api.listings.update);
 
   function handleBack() {
     if (onBack) { onBack(); return; }
     if (step > 1) navigate(STEPS[step - 2].path);
     else navigate("/host/listings/create");
+  }
+
+  // "Every change is saved to this browser" (localStorage) is not the same as
+  // a real draft listing the host can find again on their dashboard — this
+  // actually persists the current draft to Convex (status: "draft") before
+  // leaving. Mirrors the field mapping Step4Review uses to publish.
+  async function handleSaveExit() {
+    setSaving(true);
+    setSaveError("");
+    try {
+      const editingId = localStorage.getItem("collabnb_editing_listing_id_v1");
+      const dateRanges = (draft.date_ranges?.length
+        ? draft.date_ranges
+        : [{ startDate: draft.collab_start || "", endDate: draft.collab_end || "" }]
+      ).filter((r) => r.startDate && r.endDate).slice(0, 3);
+
+      const fields = {
+        title: draft.title,
+        location: `${draft.location_city}, ${draft.location_country}`,
+        location_city: draft.location_city,
+        location_country: draft.location_country,
+        lat: typeof draft.lat === "number" ? draft.lat : undefined,
+        lng: typeof draft.lng === "number" ? draft.lng : undefined,
+        host_id: profile?._id || profile?.id,
+        host_name: profile?.full_name,
+        property_url: draft.property_url,
+        collaboration_brief: draft.collaboration_brief,
+        compensation_type: draft.compensation_type,
+        cash_amount: draft.cash_amount || undefined,
+        payout_handling: draft.payout_handling || undefined,
+        currency: draft.currency || undefined,
+        max_offers: draft.maxOffers === "" || draft.maxOffers == null ? undefined : Number(draft.maxOffers),
+        nights: draft.nights,
+        creator_tier: draft.creator_tier,
+        deliverable_load: draft.deliverable_load,
+        complexity: draft.complexity,
+        stay_value: draft.compensation_type === "hybrid" ? draft.stay_value : undefined,
+        deliverables: draft.deliverables?.length ? draft.deliverables : undefined,
+        gallery_images: draft.images,
+        amenities: draft.amenities?.length ? draft.amenities : undefined,
+        perks: draft.perks,
+        vibe_tags: draft.vibe_tags,
+        affiliate_code: draft.affiliate_code,
+        affiliate_percent: draft.affiliate_percent === "" ? undefined : draft.affiliate_percent,
+        collab_start: dateRanges[0]?.startDate || draft.collab_start,
+        collab_end: dateRanges[0]?.endDate || draft.collab_end,
+        date_ranges: dateRanges.length ? dateRanges : undefined,
+        turnaround_days: draft.turnaround_days === "" ? 0 : draft.turnaround_days,
+        deliverables_list: combinedDeliverablesList,
+        deliverable_count: totalDeliverables,
+        revision_policy: draft.revision_policy,
+        usage_rights: draft.usage_rights,
+        status: "draft",
+      };
+
+      if (editingId) {
+        await updateListing({ id: editingId, ...fields });
+      } else {
+        const newId = await createListing(fields);
+        localStorage.setItem("collabnb_editing_listing_id_v1", String(newId));
+      }
+      navigate("/host");
+    } catch (err) {
+      const message = err instanceof ConvexError ? err.data : err?.message;
+      setSaveError(typeof message === "string" && message ? message : "Couldn't save your draft — try again.");
+      setSaving(false);
+    }
   }
 
   return (
@@ -37,8 +115,8 @@ export default function WizardShell({ step, children, onBack, onNext, nextLabel 
             Step {step} of 4
           </span>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <button onClick={() => navigate("/host")} style={{ background: "none", border: "none", cursor: "pointer", fontFamily: "Satoshi, sans-serif", fontSize: 13, color: "var(--slate)", textDecoration: "underline", padding: 0 }}>
-              Save & exit
+            <button onClick={handleSaveExit} disabled={saving} style={{ background: "none", border: "none", cursor: saving ? "default" : "pointer", fontFamily: "Satoshi, sans-serif", fontSize: 13, color: "var(--slate)", textDecoration: "underline", padding: 0, opacity: saving ? 0.6 : 1 }}>
+              {saving ? "Saving..." : "Save & exit"}
             </button>
             <div
               style={{ position: "relative", display: "flex" }}
@@ -70,6 +148,17 @@ export default function WizardShell({ step, children, onBack, onNext, nextLabel 
             <div key={i} style={{ flex: 1, height: 3, borderRadius: 9999, background: i < step ? "var(--ink)" : "rgba(25,37,36,0.15)", transition: "background 0.3s" }} />
           ))}
         </div>
+
+        {saveError && (
+          <div style={{ maxWidth: 680, margin: "0 auto 12px", padding: "10px 14px", borderRadius: "0.75rem", background: "rgba(212,168,67,0.14)", border: "1px solid rgba(212,168,67,0.35)" }}>
+            <p style={{ fontFamily: "Satoshi, sans-serif", fontSize: 12.5, color: "#7a5a10", margin: 0, lineHeight: 1.5 }}>
+              {saveError} Your progress is still kept in this browser — come back and finish filling it in, or exit anyway from here.
+            </p>
+            <button onClick={() => navigate("/host")} style={{ marginTop: 6, background: "none", border: "none", cursor: "pointer", padding: 0, fontFamily: "Satoshi, sans-serif", fontSize: 12.5, fontWeight: 700, color: "#7a5a10", textDecoration: "underline" }}>
+              Exit without saving as a draft
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Scrollable content — two-panel on desktop (rail left, form right) */}
@@ -99,6 +188,11 @@ export default function WizardShell({ step, children, onBack, onNext, nextLabel 
         borderTop: "1px solid rgba(255,255,255,0.6)",
         padding: "16px 24px",
       }}>
+        {nextDisabled && nextHint && (
+          <div style={{ maxWidth: 680, margin: "0 auto 10px", fontFamily: "Satoshi, sans-serif", fontSize: 12.5, fontWeight: 600, color: "#b45309", textAlign: "center" }}>
+            {nextHint}
+          </div>
+        )}
         <div style={{ maxWidth: 680, margin: "0 auto", display: "flex", gap: 12 }}>
           <button
             onClick={handleBack}

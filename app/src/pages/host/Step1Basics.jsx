@@ -61,6 +61,11 @@ export default function Step1Basics() {
   const [uploadError, setUploadError] = useState("");
 
   const canProceed = draft.title.trim() && draft.location_city.trim() && draft.location_country.trim();
+  const nextHint = !draft.title.trim()
+    ? "Give your listing a title."
+    : (!draft.location_city.trim() || !draft.location_country.trim())
+      ? "Fill in the city and state/country."
+      : "";
 
   async function handleImageUpload(e) {
     const files = Array.from(e.target.files || []);
@@ -99,6 +104,7 @@ export default function Step1Basics() {
     <WizardShell
       step={1}
       nextDisabled={!canProceed}
+      nextHint={nextHint}
       onNext={() => navigate("/host/listings/create/offer")}
     >
       <h2 style={{ fontFamily: "Cabinet Grotesk, serif", fontWeight: 800, fontSize: 28, color: "var(--ink)", margin: "0 0 6px" }}>

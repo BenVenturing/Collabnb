@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, MapPin, Users, Calendar, MessageSquare, MoreVertical, X, Trash2, ArrowLeft } from 'lucide-react';
+import { Plus, MapPin, Users, Calendar, MessageSquare, MoreVertical, X, Trash2, ArrowLeft, Compass, Search } from 'lucide-react';
 import { useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { useAuth } from '../contexts/AuthContext';
@@ -9,6 +9,7 @@ import { IMG_FALLBACK } from '../lib/mockData';
 import SkeletonCard from '../components/SkeletonCard';
 import SampleWatermark from '../components/SampleWatermark';
 import { ListingCard } from './Explore';
+import CollabMap from '../components/map/CollabMap';
 import PricingTool, { PointsHelpButton } from '../components/PricingTool';
 import { cache } from '../lib/cache';
 
@@ -518,6 +519,11 @@ function HostListingCard({ listing, meta, delay, glowState, onToggleStatus, onDu
 // ─── In-place marketplace browse ──────────────────────────────────────────────
 // Reuses Explore's data + card component but keeps the host inside their own
 // dashboard shell — no creator navigation, actions, or account state
+function browsePinLabel(l) {
+  const m = String(l.compensation || '').match(/\$([\d,]+)/);
+  return m ? `$${m[1]}` : (l.collab_type || '·');
+}
+
 function BrowseMarketplace({ onBack }) {
   const real    = useQuery(api.listings.getAll, {});
   const samples = useQuery(api.listings.getSamples);
@@ -526,6 +532,22 @@ function BrowseMarketplace({ onBack }) {
     ...(real || []).filter((l) => l.status === 'published' || l.status === 'active'),
     ...(samples || []),
   ].map((l) => ({ ...normalizeConvexListing(l), _isSample: l.is_sample === true }));
+
+  const [query, setQuery] = useState('');
+  const [mapOpen, setMapOpen] = useState(false);
+  const [activePinId, setActivePinId] = useState(null);
+  const [fitKey, setFitKey] = useState(0);
+
+  const q = query.trim().toLowerCase();
+  const filtered = q
+    ? listings.filter((l) => [l.title, l.location, l.collab_type].some((v) => String(v || '').toLowerCase().includes(q)))
+    : listings;
+
+  const mapPoints = filtered
+    .filter((l) => typeof l.lat === 'number' && typeof l.lng === 'number')
+    .map((l) => ({ id: l.id, lat: l.lat, lng: l.lng, label: browsePinLabel(l) }));
+
+  useEffect(() => { if (mapOpen) setFitKey((k) => k + 1); }, [mapOpen]);
 
   return (
     <div style={{ maxWidth: 1100, margin: '0 auto', padding: '2rem 1.5rem 5rem' }}>
@@ -547,7 +569,7 @@ function BrowseMarketplace({ onBack }) {
         Back to dashboard
       </button>
 
-      <div style={{ marginBottom: '1.5rem' }}>
+      <div style={{ marginBottom: '1.25rem' }}>
         <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 'clamp(1.5rem, 4vw, 2rem)', color: 'var(--ink)', margin: 0, lineHeight: 1.1 }}>
           The marketplace
         </h1>
@@ -556,17 +578,62 @@ function BrowseMarketplace({ onBack }) {
         </p>
       </div>
 
+      {/* ── Minimal search + map toggle ── */}
+      <div style={{ display: 'flex', gap: '0.6rem', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
+        <div style={{ ...GC, flex: '1 1 240px', display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.55rem 0.9rem' }}>
+          <Search size={15} color="var(--sage)" />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search by title or location"
+            style={{
+              border: 'none', outline: 'none', background: 'transparent', flex: 1,
+              fontSize: '0.85rem', color: 'var(--ink)', fontFamily: 'var(--font-body)',
+            }}
+          />
+        </div>
+        <button
+          onClick={() => setMapOpen((v) => !v)}
+          style={{
+            display: 'flex', alignItems: 'center', gap: '0.4rem',
+            padding: '0.55rem 1rem', borderRadius: 9999,
+            background: mapOpen ? 'var(--ink)' : 'rgba(255,255,255,0.65)',
+            color: mapOpen ? 'var(--bone)' : 'var(--slate)',
+            border: '1px solid', borderColor: mapOpen ? 'var(--ink)' : 'rgba(25,37,36,0.12)',
+            backdropFilter: 'blur(12px)', cursor: 'pointer', flexShrink: 0,
+            fontSize: '0.8rem', fontWeight: 600, fontFamily: 'var(--font-body)',
+            transition: 'all 180ms var(--ease-out-quart)',
+          }}
+        >
+          <MapPin size={14} />
+          {mapOpen ? 'Hide map' : 'Show map'}
+        </button>
+      </div>
+
+      {mapOpen && (
+        <div style={{ height: 320, borderRadius: '1.25rem', overflow: 'hidden', marginBottom: '1.25rem', boxShadow: '0 8px 32px rgba(25,37,36,0.12)', position: 'relative' }}>
+          <CollabMap
+            points={mapPoints}
+            activeId={activePinId}
+            onPinClick={setActivePinId}
+            fitKey={fitKey}
+          />
+        </div>
+      )}
+
       {loading ? (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '1rem', justifyItems: 'center' }}>
           {Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)}
         </div>
-      ) : listings.length === 0 ? (
+      ) : filtered.length === 0 ? (
         <div style={{ ...GC, padding: '3rem', textAlign: 'center' }}>
-          <p style={{ fontSize: '0.85rem', color: 'var(--sage)', margin: 0 }}>No listings to browse yet.</p>
+          <p style={{ fontSize: '0.85rem', color: 'var(--sage)', margin: 0 }}>
+            {listings.length === 0 ? 'No listings to browse yet.' : 'No listings match your search.'}
+          </p>
         </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '1rem', justifyItems: 'center' }}>
-          {listings.map((l, i) => (
+          {filtered.map((l, i) => (
             <ListingCard key={l.id} listing={l} browseOnly saved={false} delay={i * 45} />
           ))}
         </div>
@@ -932,25 +999,44 @@ export default function HostDashboard() {
               <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.25rem', color: 'var(--ink)', margin: 0 }}>My Listings</h2>
               <p style={{ fontSize: '0.75rem', color: 'var(--sage)', marginTop: '0.15rem' }}>{hostListings.length} total</p>
             </div>
-            <div style={{ display: 'flex', gap: '0.4rem' }}>
-              {['all', 'active', 'paused', 'draft'].map((f) => (
-                <button
-                  key={f}
-                  onClick={() => setFilter(f)}
-                  style={{
-                    padding: '0.35rem 0.875rem', borderRadius: 9999,
-                    fontSize: '0.78rem', fontWeight: 600,
-                    background: filter === f ? 'var(--ink)' : 'rgba(255,255,255,0.65)',
-                    color: filter === f ? 'var(--bone)' : 'var(--slate)',
-                    border: '1px solid', borderColor: filter === f ? 'var(--ink)' : 'rgba(25,37,36,0.12)',
-                    backdropFilter: 'blur(12px)', cursor: 'pointer',
-                    transition: 'all 180ms var(--ease-out-quart)',
-                    fontFamily: 'var(--font-body)',
-                  }}
-                >
-                  {f === 'all' ? 'All' : f.charAt(0).toUpperCase() + f.slice(1)}
-                </button>
-              ))}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: '0.4rem' }}>
+                {['all', 'active', 'paused', 'draft'].map((f) => (
+                  <button
+                    key={f}
+                    onClick={() => setFilter(f)}
+                    style={{
+                      padding: '0.35rem 0.875rem', borderRadius: 9999,
+                      fontSize: '0.78rem', fontWeight: 600,
+                      background: filter === f ? 'var(--ink)' : 'rgba(255,255,255,0.65)',
+                      color: filter === f ? 'var(--bone)' : 'var(--slate)',
+                      border: '1px solid', borderColor: filter === f ? 'var(--ink)' : 'rgba(25,37,36,0.12)',
+                      backdropFilter: 'blur(12px)', cursor: 'pointer',
+                      transition: 'all 180ms var(--ease-out-quart)',
+                      fontFamily: 'var(--font-body)',
+                    }}
+                  >
+                    {f === 'all' ? 'All' : f.charAt(0).toUpperCase() + f.slice(1)}
+                  </button>
+                ))}
+              </div>
+              <div style={{ width: 1, alignSelf: 'stretch', background: 'rgba(25,37,36,0.12)' }} />
+              <button
+                onClick={() => { window.scrollTo({ top: 0 }); setBrowseMode(true); }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '0.35rem',
+                  padding: '0.35rem 0.875rem', borderRadius: 9999,
+                  fontSize: '0.78rem', fontWeight: 600,
+                  background: 'rgba(255,255,255,0.65)', color: 'var(--slate)',
+                  border: '1px solid rgba(25,37,36,0.12)',
+                  backdropFilter: 'blur(12px)', cursor: 'pointer',
+                  transition: 'all 180ms var(--ease-out-quart)',
+                  fontFamily: 'var(--font-body)',
+                }}
+              >
+                <Compass size={13} />
+                Browse marketplace
+              </button>
             </div>
           </div>
 
@@ -976,29 +1062,6 @@ export default function HostDashboard() {
               ))}
             </div>
           )}
-        </div>
-
-        {/* ── Explore marketplace banner ── */}
-        <div style={{ ...GC, padding: '1.5rem', marginBottom: '2.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
-          <div>
-            <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.1rem', color: 'var(--ink)', margin: '0 0 0.25rem' }}>Explore the marketplace</h2>
-            <p style={{ fontSize: '0.78rem', color: 'var(--sage)', margin: 0 }}>Browse other properties for inspiration and see what creators are looking for.</p>
-          </div>
-          <button
-            onClick={() => { window.scrollTo({ top: 0 }); setBrowseMode(true); }}
-            style={{
-              display: 'flex', alignItems: 'center', gap: '0.4rem',
-              padding: '0.6rem 1.25rem', borderRadius: 9999,
-              background: 'var(--ink)', color: 'var(--bone)',
-              border: 'none', cursor: 'pointer', flexShrink: 0,
-              fontSize: '0.82rem', fontWeight: 600, fontFamily: 'var(--font-body)',
-              transition: 'opacity 150ms',
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.opacity = '0.85'}
-            onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
-          >
-            Browse listings →
-          </button>
         </div>
 
         {/* ── Activity Feed ── */}

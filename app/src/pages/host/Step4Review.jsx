@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronDown, ChevronUp, DollarSign, ArrowLeft, ArrowRight, Star, Eye, X } from "lucide-react";
-import { useMutation, useQuery } from "convex/react";
+import { ChevronDown, ChevronUp, DollarSign, ArrowLeft, ArrowRight, Star, Eye, X, CreditCard } from "lucide-react";
+import { useMutation, useQuery, useAction } from "convex/react";
 import { ConvexError } from "convex/values";
 import { api } from "../../../convex/_generated/api";
 import WizardShell from "../../components/host/WizardShell";
@@ -89,12 +89,56 @@ export default function Step4Review() {
   const { profile } = useAuth();
   const createListing = useMutation(api.listings.create);
   const updateListing = useMutation(api.listings.update);
+  const createHostCardSetupSession = useAction(api.stripe.createHostCardSetupSession);
+  const verifyHostCardSetupSession = useAction(api.stripe.verifyHostCardSetupSession);
   const editingId = typeof window !== 'undefined' ? localStorage.getItem('collabnb_editing_listing_id_v1') : null;
   const [feesOpen, setFeesOpen] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [confetti, setConfetti] = useState(false);
   const [creatorView, setCreatorView] = useState(false);
   const [publishError, setPublishError] = useState("");
+  const [startingCardSetup, setStartingCardSetup] = useState(false);
+  const [cardJustSaved, setCardJustSaved] = useState(false);
+
+  // A draft can always be saved with no card — this only ever gates Publish
+  // (also enforced server-side in listings.create/update).
+  const needsCard = !!profile && profile.is_admin !== true && !profile.stripe_default_payment_method_id;
+
+  // Handle the return trip from the Stripe card-setup Checkout redirect.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const cardSetup = params.get('card_setup');
+    const sessionId = params.get('session_id');
+    if (cardSetup === 'success' && sessionId) {
+      verifyHostCardSetupSession({ sessionId })
+        .then(() => setCardJustSaved(true))
+        .catch((err) => setPublishError(err?.message || "Couldn't confirm your card — please try again."));
+      navigate('/host/listings/create/review', { replace: true });
+    } else if (cardSetup === 'cancelled') {
+      navigate('/host/listings/create/review', { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function handlePublishClick() {
+    if (needsCard) {
+      setStartingCardSetup(true);
+      setPublishError("");
+      try {
+        const base = `${window.location.origin}/host/listings/create/review`;
+        const result = await createHostCardSetupSession({
+          successUrl: `${base}?card_setup=success&session_id={CHECKOUT_SESSION_ID}`,
+          cancelUrl: `${base}?card_setup=cancelled`,
+        });
+        if (result?.url) window.location.href = result.url;
+      } catch (err) {
+        setPublishError(err?.message || "Couldn't start card setup — please try again.");
+        setStartingCardSetup(false);
+      }
+      return;
+    }
+    handlePublish("published");
+  }
 
   // Resolve uploaded photos (storageIds → URLs) for reordering + creator preview
   const imageUrls = useQuery(api.uploads.getImageUrls, draft.images.length ? { storageIds: draft.images } : "skip") || [];
@@ -208,9 +252,9 @@ export default function Step4Review() {
       <Confetti show={confetti} />
       <WizardShell
         step={4}
-        nextLabel={publishing ? "Publishing..." : "Publish listing"}
-        nextDisabled={publishing || !hasCompensation || compZone === "red"}
-        onNext={() => handlePublish("published")}
+        nextLabel={publishing ? "Publishing..." : startingCardSetup ? "Redirecting to Stripe..." : needsCard ? "Add a card to publish" : "Publish listing"}
+        nextDisabled={publishing || startingCardSetup || !hasCompensation || compZone === "red"}
+        onNext={handlePublishClick}
       >
         <h2 style={{ fontFamily: "Cabinet Grotesk, serif", fontWeight: 800, fontSize: 28, color: "var(--ink)", margin: "0 0 6px", display: "flex", alignItems: "center", gap: 10 }}>
           {editingId ? "Edit & publish" : "Review & publish"}
@@ -352,6 +396,22 @@ export default function Step4Review() {
           <p style={{ fontFamily: "Satoshi, sans-serif", fontSize: 13, color: "#b45309", fontWeight: 600, marginBottom: 12 }}>
             {publishError}
           </p>
+        )}
+        {cardJustSaved && (
+          <div style={{ display: "flex", alignItems: "center", gap: 8, background: "var(--mint)", borderRadius: "0.875rem", padding: "12px 16px", marginBottom: 12 }}>
+            <CreditCard size={16} color="var(--ink)" />
+            <p style={{ fontFamily: "Satoshi, sans-serif", fontSize: 13, color: "var(--ink)", fontWeight: 600, margin: 0 }}>
+              Card saved — you're all set. Click Publish to go live.
+            </p>
+          </div>
+        )}
+        {needsCard && !cardJustSaved && (
+          <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(212,168,67,0.14)", border: "1px solid rgba(212,168,67,0.35)", borderRadius: "0.875rem", padding: "12px 16px", marginBottom: 12 }}>
+            <CreditCard size={16} color="#7a5a10" />
+            <p style={{ fontFamily: "Satoshi, sans-serif", fontSize: 13, color: "#7a5a10", margin: 0 }}>
+              You'll need a card on file before publishing — it's only charged for Collabnb's platform fee once a collaboration completes. You can still save this as a draft with no card.
+            </p>
+          </div>
         )}
 
         {/* Save draft */}

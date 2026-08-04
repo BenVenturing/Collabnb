@@ -143,6 +143,24 @@ export const getByClerkUserId = query({
   },
 });
 
+// Persists the host's saved card after a Stripe SetupIntent Checkout session
+// completes — see stripe.js createHostCardSetupSession/verifyHostCardSetupSession.
+export const setHostCard = internalMutation({
+  args: {
+    profileId: v.string(),
+    customerId: v.string(),
+    paymentMethodId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const exists = await ctx.db.get(args.profileId as any);
+    if (!exists) return;
+    await ctx.db.patch(args.profileId as any, {
+      stripe_customer_id: args.customerId,
+      stripe_default_payment_method_id: args.paymentMethodId,
+    });
+  },
+});
+
 export const getById = query({
   args: { id: v.string() },
   handler: async (ctx, args) => {

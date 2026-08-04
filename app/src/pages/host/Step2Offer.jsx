@@ -430,6 +430,14 @@ export default function Step2Offer() {
         <div>
           <SectionLabel>Vibe tags (optional)</SectionLabel>
           <SectionDesc>Add a few words that describe the vibe (Cozy, Luxury, Adventure, etc.)</SectionDesc>
+
+          <button
+            onClick={suggestVibeTagsFromListing}
+            style={{ display: "inline-flex", alignItems: "center", gap: 7, marginBottom: 10, padding: "9px 16px", borderRadius: 9999, border: "none", background: "var(--mint)", cursor: "pointer", fontFamily: "Satoshi, sans-serif", fontSize: 13, color: "var(--ink)", fontWeight: 700 }}
+          >
+            <Sparkles size={14} /> Suggest tags from listing info
+          </button>
+
           <VibeTagInput existing={draft.vibe_tags} onAdd={addTag} />
           <PillList items={draft.vibe_tags} onRemove={removeTag} color="rgba(209,235,219,0.6)" />
 
@@ -448,19 +456,12 @@ export default function Step2Offer() {
               <button
                 onClick={() => setTagSuggestionSeed((s) => s + 1)}
                 title="Show different ideas"
-                style={{ width: 26, height: 26, borderRadius: "50%", border: "1.5px solid rgba(25,37,36,0.15)", background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
+                style={{ width: 26, height: 26, borderRadius: "50%", border: "none", background: "var(--mint)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
               >
-                <RefreshCw size={12} color="var(--slate)" />
+                <RefreshCw size={12} color="var(--ink)" />
               </button>
             </div>
           )}
-
-          <button
-            onClick={suggestVibeTagsFromListing}
-            style={{ marginTop: 12, background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, fontFamily: "Satoshi, sans-serif", fontSize: 13, color: "var(--slate)", fontWeight: 600, padding: 0 }}
-          >
-            <Sparkles size={14} /> Suggest tags from listing info
-          </button>
         </div>
 
         {/* Max offers */}

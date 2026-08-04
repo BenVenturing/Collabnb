@@ -17,6 +17,14 @@ import {
   Image, Film, Smartphone, PlayCircle, Camera, FileText, Package,
 } from 'lucide-react';
 import { AmenityIcon } from '../lib/amenityIcons';
+import ListingLocationMap from '../components/map/ListingLocationMap';
+import { TIERS, normalizeTierId } from '../../convex/lib/compensationPoints';
+
+// listing.creator_tier is stored as an id ("ugc_pro") — resolve to the
+// clean display label ("UGC Pro") wherever it's shown to a creator.
+function tierLabel(tier) {
+  return TIERS[normalizeTierId(tier)]?.label || tier;
+}
 
 function normalizeConvexListingDetail(l) {
   const images = l.gallery_images?.length ? l.gallery_images : (l.image ? [l.image] : []);
@@ -63,10 +71,11 @@ const SECTIONS = ['Photos', 'The Offer', 'Requirements', 'Location'];
 // ── Tier / Comp / Deliverable icon helpers ────────────────────────────────────
 function TierIcon({ tier, size = 18 }) {
   const props = { size, strokeWidth: 1.75 };
-  if (tier === 'UGC Beginner')     return <Sprout     {...props} color="var(--sage)" />;
-  if (tier === 'UGC Pro')          return <BadgeCheck {...props} color="#3C5759" />;
-  if (tier === 'Micro Influencer') return <Radio      {...props} color="#7b68c8" />;
-  if (tier === 'Influencer')       return <Zap        {...props} color="#b45309" />;
+  const id = normalizeTierId(tier);
+  if (id === 'ugc_beginner') return <Sprout     {...props} color="var(--sage)" />;
+  if (id === 'ugc_pro')      return <BadgeCheck {...props} color="#3C5759" />;
+  if (id === 'micro')        return <Radio      {...props} color="#7b68c8" />;
+  if (id === 'mid')          return <Zap        {...props} color="#b45309" />;
   return <Sprout {...props} color="var(--sage)" />;
 }
 
@@ -1393,14 +1402,14 @@ export default function ListingDetail({ previewListing = null, preview = false }
             {/* Location */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '0.875rem' }}>
               <span style={{ fontSize: '0.85rem', color: 'var(--sage)' }}>
-                ✦ {listing.property_type} · {listing.location}
+                ✦ {listing.property_type ? `${listing.property_type} · ` : ''}{listing.location}
               </span>
             </div>
 
             {/* Tag pills */}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginBottom: '1rem' }}>
               {[
-                { label: listing.creator_tier, bg: 'rgba(25,37,36,0.07)', color: 'var(--slate)' },
+                { label: tierLabel(listing.creator_tier), bg: 'rgba(25,37,36,0.07)', color: 'var(--slate)' },
                 { label: listing.compensation, bg: listing.compensation_type === 'paid' ? 'rgba(209,235,219,0.8)' : 'rgba(25,37,36,0.07)', color: listing.compensation_type === 'paid' ? '#2d6a4f' : 'var(--slate)' },
                 { label: `${listing.deliverable_load} Load`, bg: loadStyle.bg, color: loadStyle.text },
                 { label: `Due in ${listing.due_days} days`, bg: 'rgba(255,220,210,0.7)', color: '#8b3a00' },
@@ -1449,7 +1458,7 @@ export default function ListingDetail({ previewListing = null, preview = false }
                 {
                   icon: <TierIcon tier={listing.creator_tier} size={20} />,
                   label: 'Creator Tier',
-                  value: listing.creator_tier,
+                  value: tierLabel(listing.creator_tier),
                 },
                 {
                   icon: <CompIcon type={listing.compensation_type} size={20} />,
@@ -1560,7 +1569,7 @@ export default function ListingDetail({ previewListing = null, preview = false }
                   background: 'rgba(25,37,36,0.06)', border: '1px solid rgba(25,37,36,0.1)',
                 }}>
                   <TierIcon tier={listing.creator_tier} size={13} />
-                  <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--slate)' }}>{listing.creator_tier}</span>
+                  <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--slate)' }}>{tierLabel(listing.creator_tier)}</span>
                 </span>
               </div>
               <ul style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
@@ -1579,13 +1588,8 @@ export default function ListingDetail({ previewListing = null, preview = false }
             <div ref={locationRef} style={{ marginBottom: '2rem', scrollMarginTop: '80px' }}>
               <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.2rem', color: 'var(--ink)', marginBottom: '0.4rem' }}>Location</h2>
               <p style={{ fontSize: '0.85rem', color: 'var(--sage)', marginBottom: '1.25rem' }}>{listing.location_full}</p>
-              <div style={{ borderRadius: '1.25rem', overflow: 'hidden', height: 320, border: '1px solid rgba(25,37,36,0.08)' }}>
-                <iframe
-                  title="map"
-                  src={`https://www.openstreetmap.org/export/embed.html?bbox=${listing.lng - 0.15}%2C${listing.lat - 0.1}%2C${listing.lng + 0.15}%2C${listing.lat + 0.1}&layer=mapnik&marker=${listing.lat}%2C${listing.lng}`}
-                  style={{ width: '100%', height: '100%', border: 'none', filter: 'saturate(0.6) brightness(1.04)' }}
-                  loading="lazy"
-                />
+              <div style={{ position: 'relative', borderRadius: '1.25rem', overflow: 'hidden', height: 320, border: '1px solid rgba(25,37,36,0.08)' }}>
+                <ListingLocationMap lat={listing.lat} lng={listing.lng} />
               </div>
             </div>
 
@@ -1690,7 +1694,7 @@ export default function ListingDetail({ previewListing = null, preview = false }
                 <div style={{ border: '1.5px solid rgba(25,37,36,0.1)', borderRadius: '1rem', overflow: 'hidden', marginBottom: '1rem' }}>
                   {[
                     { label: 'Availability', value: listing.dates_available },
-                    { label: 'Creator tier', value: listing.creator_tier },
+                    { label: 'Creator tier', value: tierLabel(listing.creator_tier) },
                     { label: 'Deliverables', value: listing.deliverables },
                     { label: 'Due in',        value: `${listing.due_days} days of checkout` },
                   ].map(({ label, value }, i, arr) => (

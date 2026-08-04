@@ -24,6 +24,10 @@ export default function Step3Deliverables() {
   const [customDesc, setCustomDesc] = useState("");
   const [customUsage, setCustomUsage] = useState(draft.usage_rights || DEFAULT_USAGE_RIGHTS);
   const [editIdx, setEditIdx] = useState(null);
+  // Set instead of editIdx when editing an auto (cost-calculator) card — only
+  // its usage rights are editable, stored as a per-type override rather than
+  // turning it into a separate custom deliverable.
+  const [editingAutoType, setEditingAutoType] = useState(null);
 
   const MAX_DATE_RANGES = 3;
   const dateRanges = draft.date_ranges?.length
@@ -56,18 +60,29 @@ export default function Step3Deliverables() {
     && draft.creator_tier
     && hasCompensation;
 
+  function resetForm() {
+    setCustomQty(1); setCustomType(""); setCustomDesc(""); setCustomUsage(draft.usage_rights || DEFAULT_USAGE_RIGHTS);
+    setEditIdx(null); setEditingAutoType(null);
+  }
+
   function addDeliverable() {
+    if (editingAutoType) {
+      updateDraft({
+        deliverable_usage_overrides: { ...draft.deliverable_usage_overrides, [editingAutoType]: customUsage.trim() },
+      });
+      resetForm();
+      return;
+    }
     if (!customType.trim()) return;
     const item = { type: customType.trim(), quantity: customQty, description: customDesc.trim(), usage_rights: customUsage.trim() };
     if (editIdx !== null) {
       const updated = [...draft.deliverables_list];
       updated[editIdx] = item;
       updateDraft({ deliverables_list: updated });
-      setEditIdx(null);
     } else {
       updateDraft({ deliverables_list: [...draft.deliverables_list, item] });
     }
-    setCustomQty(1); setCustomType(""); setCustomDesc(""); setCustomUsage(draft.usage_rights || DEFAULT_USAGE_RIGHTS);
+    resetForm();
   }
 
   function removeDeliverable(i) {
@@ -76,12 +91,19 @@ export default function Step3Deliverables() {
 
   function startEdit(i) {
     const d = draft.deliverables_list[i];
+    setEditingAutoType(null);
     setEditIdx(i); setCustomQty(d.quantity); setCustomType(d.type); setCustomDesc(d.description); setCustomUsage(d.usage_rights || draft.usage_rights || DEFAULT_USAGE_RIGHTS);
+  }
+
+  function startEditAuto(d) {
+    setEditIdx(null);
+    setEditingAutoType(d.type);
+    setCustomQty(d.quantity); setCustomType(d.type); setCustomDesc(""); setCustomUsage(d.usage_rights || draft.usage_rights || DEFAULT_USAGE_RIGHTS);
   }
 
   // combinedDeliverablesList = auto (cost calculator) cards + custom cards, in
   // that order — only the custom slice maps back to editable deliverables_list
-  // indices, since the auto cards are derived and edited via the calculator.
+  // indices, since the auto cards' type/quantity are derived from the calculator.
   const isAutoCard = (i) => i < autoDeliverableCount;
   const toCustomIdx = (i) => i - autoDeliverableCount;
 
@@ -150,12 +172,12 @@ export default function Step3Deliverables() {
                   <div key={i} style={{ width: 200, background: "rgba(255,255,255,0.82)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", borderRadius: "0.875rem", border: "1px solid rgba(255,255,255,0.85)", padding: "14px 16px", boxShadow: "0 1px 8px rgba(25,37,36,0.05)" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 }}>
                       <div style={{ fontFamily: "Satoshi, sans-serif", fontWeight: 700, fontSize: 14, color: "var(--ink)" }}>{d.quantity}x {d.type}</div>
-                      {!auto && (
-                        <div style={{ display: "flex", gap: 6 }}>
-                          <button onClick={() => startEdit(toCustomIdx(i))} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--sage)" }}><Pencil size={13} /></button>
+                      <div style={{ display: "flex", gap: 6 }}>
+                        <button onClick={() => (auto ? startEditAuto(d) : startEdit(toCustomIdx(i)))} title="Edit usage rights" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--sage)" }}><Pencil size={13} /></button>
+                        {!auto && (
                           <button onClick={() => removeDeliverable(toCustomIdx(i))} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--sage)" }}><X size={13} /></button>
-                        </div>
-                      )}
+                        )}
+                      </div>
                     </div>
                     {auto ? (
                       <div style={{ fontFamily: "Satoshi, sans-serif", fontSize: 11, color: "var(--sage)", fontStyle: "italic" }}>From the cost calculator above</div>
@@ -178,30 +200,41 @@ export default function Step3Deliverables() {
         {/* Add custom deliverable */}
         <div style={{ background: "rgba(255,255,255,0.85)", backdropFilter: "blur(14px) saturate(130%)", WebkitBackdropFilter: "blur(14px) saturate(130%)", borderRadius: "0.875rem", border: "1px solid rgba(255,255,255,0.88)", padding: "20px", boxShadow: "0 2px 12px rgba(25,37,36,0.05)" }}>
           <div style={{ fontFamily: "Satoshi, sans-serif", fontWeight: 700, fontSize: 14, color: "var(--ink)", marginBottom: 14 }}>
-            {editIdx !== null ? "Edit deliverable" : "Add custom deliverable"}
+            {editingAutoType ? `Edit usage rights — ${editingAutoType}` : editIdx !== null ? "Edit deliverable" : "Add custom deliverable"}
           </div>
-          <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
-            {/* Qty stepper */}
-            <div style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--bone)", borderRadius: "0.625rem", padding: "8px 12px", flexShrink: 0 }}>
-              <button onClick={() => setCustomQty(Math.max(1, customQty - 1))} style={{ background: "none", border: "none", cursor: "pointer" }}><Minus size={13} color="var(--ink)" /></button>
-              <span style={{ fontFamily: "Satoshi, sans-serif", fontWeight: 700, fontSize: 15, color: "var(--ink)", minWidth: 20, textAlign: "center" }}>{customQty}</span>
-              <button onClick={() => setCustomQty(customQty + 1)} style={{ background: "none", border: "none", cursor: "pointer" }}><Plus size={13} color="var(--ink)" /></button>
+          {!editingAutoType && (
+            <>
+              <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
+                {/* Qty stepper */}
+                <div style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--bone)", borderRadius: "0.625rem", padding: "8px 12px", flexShrink: 0 }}>
+                  <button onClick={() => setCustomQty(Math.max(1, customQty - 1))} style={{ background: "none", border: "none", cursor: "pointer" }}><Minus size={13} color="var(--ink)" /></button>
+                  <span style={{ fontFamily: "Satoshi, sans-serif", fontWeight: 700, fontSize: 15, color: "var(--ink)", minWidth: 20, textAlign: "center" }}>{customQty}</span>
+                  <button onClick={() => setCustomQty(customQty + 1)} style={{ background: "none", border: "none", cursor: "pointer" }}><Plus size={13} color="var(--ink)" /></button>
+                </div>
+                <input value={customType} onChange={(e) => setCustomType(e.target.value)} placeholder="Platform/Type (e.g., Instagram Reels)" style={{ flex: 1, padding: "10px 14px", border: "1.5px solid rgba(25,37,36,0.15)", borderRadius: "0.625rem", fontFamily: "Satoshi, sans-serif", fontSize: 13, color: "var(--ink)", background: "var(--bone)", outline: "none" }} />
+              </div>
+              <input value={customDesc} onChange={(e) => setCustomDesc(e.target.value)} placeholder="Description" style={{ width: "100%", padding: "10px 14px", border: "1.5px solid rgba(25,37,36,0.15)", borderRadius: "0.625rem", fontFamily: "Satoshi, sans-serif", fontSize: 13, color: "var(--ink)", background: "var(--bone)", outline: "none", boxSizing: "border-box", marginBottom: 12 }} />
+            </>
+          )}
+          {editingAutoType && (
+            <div style={{ fontFamily: "Satoshi, sans-serif", fontSize: 12, color: "var(--sage)", marginBottom: 12 }}>
+              {customQty}x {editingAutoType} — type and quantity come from the cost calculator above.
             </div>
-            <input value={customType} onChange={(e) => setCustomType(e.target.value)} placeholder="Platform/Type (e.g., Instagram Reels)" style={{ flex: 1, padding: "10px 14px", border: "1.5px solid rgba(25,37,36,0.15)", borderRadius: "0.625rem", fontFamily: "Satoshi, sans-serif", fontSize: 13, color: "var(--ink)", background: "var(--bone)", outline: "none" }} />
-          </div>
-          <input value={customDesc} onChange={(e) => setCustomDesc(e.target.value)} placeholder="Description" style={{ width: "100%", padding: "10px 14px", border: "1.5px solid rgba(25,37,36,0.15)", borderRadius: "0.625rem", fontFamily: "Satoshi, sans-serif", fontSize: 13, color: "var(--ink)", background: "var(--bone)", outline: "none", boxSizing: "border-box", marginBottom: 12 }} />
+          )}
 
           {/* Usage rights for this deliverable */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
             <div style={{ fontFamily: "Satoshi, sans-serif", fontWeight: 700, fontSize: 12, color: "var(--ink)" }}>Usage rights for this deliverable</div>
-            <button
-              onClick={copyUsageToAll}
-              disabled={draft.deliverables_list.length === 0}
-              title="Apply these usage rights to every deliverable"
-              style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "none", border: "none", cursor: draft.deliverables_list.length === 0 ? "not-allowed" : "pointer", fontFamily: "Satoshi, sans-serif", fontSize: 12, fontWeight: 600, color: draft.deliverables_list.length === 0 ? "var(--sage)" : "var(--slate)", padding: 0 }}
-            >
-              <Copy size={13} /> Copy to all
-            </button>
+            {!editingAutoType && (
+              <button
+                onClick={copyUsageToAll}
+                disabled={draft.deliverables_list.length === 0}
+                title="Apply these usage rights to every deliverable"
+                style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "none", border: "none", cursor: draft.deliverables_list.length === 0 ? "not-allowed" : "pointer", fontFamily: "Satoshi, sans-serif", fontSize: 12, fontWeight: 600, color: draft.deliverables_list.length === 0 ? "var(--sage)" : "var(--slate)", padding: 0 }}
+              >
+                <Copy size={13} /> Copy to all
+              </button>
+            )}
           </div>
           <textarea
             value={customUsage}
@@ -211,13 +244,23 @@ export default function Step3Deliverables() {
             style={{ width: "100%", padding: "10px 14px", border: "1.5px solid rgba(25,37,36,0.15)", borderRadius: "0.625rem", fontFamily: "Satoshi, sans-serif", fontSize: 13, color: "var(--ink)", background: "var(--bone)", outline: "none", resize: "vertical", boxSizing: "border-box", marginBottom: 12 }}
           />
 
-          <button
-            onClick={addDeliverable}
-            disabled={!customType.trim()}
-            style={{ width: "100%", padding: "12px 0", borderRadius: 9999, border: "none", background: customType.trim() ? "var(--ink)" : "rgba(25,37,36,0.14)", fontFamily: "Satoshi, sans-serif", fontSize: 14, fontWeight: 700, color: customType.trim() ? "#fff" : "var(--slate)", cursor: customType.trim() ? "pointer" : "not-allowed", transition: "background 150ms" }}
-          >
-            + {editIdx !== null ? "Save changes" : "Add deliverable"}
-          </button>
+          <div style={{ display: "flex", gap: 10 }}>
+            {(editIdx !== null || editingAutoType) && (
+              <button
+                onClick={resetForm}
+                style={{ flex: 1, padding: "12px 0", borderRadius: 9999, border: "1.5px solid rgba(25,37,36,0.15)", background: "transparent", fontFamily: "Satoshi, sans-serif", fontSize: 14, fontWeight: 700, color: "var(--ink)", cursor: "pointer" }}
+              >
+                Cancel
+              </button>
+            )}
+            <button
+              onClick={addDeliverable}
+              disabled={!editingAutoType && !customType.trim()}
+              style={{ flex: 2, padding: "12px 0", borderRadius: 9999, border: "none", background: (editingAutoType || customType.trim()) ? "var(--ink)" : "rgba(25,37,36,0.14)", fontFamily: "Satoshi, sans-serif", fontSize: 14, fontWeight: 700, color: (editingAutoType || customType.trim()) ? "#fff" : "var(--slate)", cursor: (editingAutoType || customType.trim()) ? "pointer" : "not-allowed", transition: "background 150ms" }}
+            >
+              + {editingAutoType || editIdx !== null ? "Save changes" : "Add deliverable"}
+            </button>
+          </div>
         </div>
 
         {/* Deliverables due */}

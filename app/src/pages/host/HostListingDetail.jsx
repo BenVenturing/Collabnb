@@ -5,6 +5,13 @@ import { api } from '../../../convex/_generated/api';
 import { SAMPLE_LISTINGS } from '../../lib/mockData';
 import { useListingDraft } from '../../contexts/ListingDraftContext';
 import { ArrowLeft, MapPin, Copy, Check, ChevronDown, ChevronUp, MessageSquare, ExternalLink, X, AlertTriangle } from 'lucide-react';
+import { TIERS, normalizeTierId } from '../../../convex/lib/compensationPoints';
+
+// listing.creator_tier is stored as an id ("ugc_pro") — resolve to the
+// clean display label ("UGC Pro") wherever it's shown.
+function tierLabel(tier) {
+  return TIERS[normalizeTierId(tier)]?.label || tier;
+}
 
 // ─── Glass card token ─────────────────────────────────────────────────────────
 const GC = {
@@ -753,7 +760,7 @@ export default function HostListingDetail() {
               {[
                 { icon: '💰', label: 'Compensation', value: listing.compensation },
                 { icon: '📦', label: 'Deliverables', value: listing.deliverables },
-                { icon: '🎯', label: 'Creator tier', value: listing.creator_tier },
+                { icon: '🎯', label: 'Creator tier', value: tierLabel(listing.creator_tier) },
                 { icon: '📅', label: 'Available', value: listing.dates_available },
                 { icon: '⏱️', label: 'Deliverable load', value: listing.deliverable_load },
                 { icon: '📋', label: 'Due in', value: `${listing.due_days} days` },

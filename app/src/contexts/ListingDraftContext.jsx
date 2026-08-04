@@ -55,6 +55,11 @@ const EMPTY_DRAFT = {
   date_ranges: [],
   turnaround_days: 14,
   deliverables_list: [],
+  // Per-type usage-rights override for the auto (cost-calculator) deliverable
+  // cards, keyed by the deliverable's display type label — lets a host
+  // customize one of those cards without turning it into a separate custom
+  // deliverable (which would double-count it and drop it from the pricing points).
+  deliverable_usage_overrides: {},
   revision_policy: "1 round of minor revisions included. Major changes require mutual agreement.",
   usage_rights: DEFAULT_USAGE_RIGHTS,
   maxOffers: "",
@@ -122,12 +127,15 @@ export function ListingDraftProvider({ children }) {
   // so the two stay linked without ever overwriting a manual edit. Always
   // placed first; `autoDeliverableCount` tells consumers where the editable
   // (custom) cards start.
-  const autoDeliverables = (draft.deliverables || []).map((d) => ({
-    type: DELIVERABLE_LABELS[d.type] || d.type,
-    quantity: d.quantity,
-    description: "",
-    usage_rights: draft.usage_rights || DEFAULT_USAGE_RIGHTS,
-  }));
+  const autoDeliverables = (draft.deliverables || []).map((d) => {
+    const type = DELIVERABLE_LABELS[d.type] || d.type;
+    return {
+      type,
+      quantity: d.quantity,
+      description: "",
+      usage_rights: draft.deliverable_usage_overrides?.[type] || draft.usage_rights || DEFAULT_USAGE_RIGHTS,
+    };
+  });
   const autoDeliverableCount = autoDeliverables.length;
   const combinedDeliverablesList = [...autoDeliverables, ...draft.deliverables_list];
 

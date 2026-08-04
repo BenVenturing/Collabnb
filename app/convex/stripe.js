@@ -352,6 +352,88 @@ export const verifyFeeSetupSession = action({
   },
 });
 
+// ─── Host card-on-file gate: required before publishing a listing ─────────────
+// A host can build and save a listing as a draft with no card at all — this
+// only gates the "Publish" action (enforced again server-side in
+// listings.create/update). Reuses the host's existing Stripe customer if one
+// already exists (e.g. from a subscription) rather than creating a duplicate.
+
+// 1) Save a card for the signed-in host (no charge). Returns a hosted Checkout URL.
+export const createHostCardSetupSession = action({
+  args: {
+    successUrl: v.string(),
+    cancelUrl: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const secretKey = process.env.STRIPE_SECRET_KEY;
+    if (!secretKey) throw new Error('STRIPE_SECRET_KEY is not set in Convex environment variables');
+
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity?.subject) throw new Error('You must be signed in to add a card');
+    const profile = await ctx.runQuery(api.profiles.getByClerkUserId, { clerk_user_id: identity.subject });
+    if (!profile) throw new Error('Profile not found');
+
+    const stripe = new Stripe(secretKey);
+    const customerId = profile.stripe_customer_id
+      || (await stripe.customers.create({ email: profile.email, metadata: { profileId: String(profile._id) } })).id;
+
+    const session = await stripe.checkout.sessions.create({
+      mode: 'setup',
+      payment_method_types: ['card'],
+      customer: customerId,
+      success_url: args.successUrl,
+      cancel_url: args.cancelUrl,
+      metadata: { profileId: String(profile._id), type: 'host_card_setup' },
+      custom_text: {
+        submit: { message: "You won't be charged now — this card is used for Collabnb's platform fee once a collaboration is completed." },
+      },
+    });
+
+    return { url: session.url, sessionId: session.id };
+  },
+});
+
+// 2) After the SetupIntent redirect, save the card on the host's profile.
+export const verifyHostCardSetupSession = action({
+  args: { sessionId: v.string() },
+  handler: async (ctx, args) => {
+    const secretKey = process.env.STRIPE_SECRET_KEY;
+    if (!secretKey) throw new Error('STRIPE_SECRET_KEY is not set in Convex environment variables');
+
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity?.subject) throw new Error('You must be signed in to add a card');
+
+    const stripe = new Stripe(secretKey);
+    const session = await stripe.checkout.sessions.retrieve(args.sessionId, { expand: ['setup_intent'] });
+    if (session.status !== 'complete') throw new Error('Setup session is not complete');
+    if (session.metadata?.type !== 'host_card_setup') throw new Error('Invalid setup session');
+
+    const profileId = session.metadata?.profileId;
+    if (!profileId) throw new Error('No profileId in setup session metadata');
+    // The caller must be the same profile the session was created for.
+    const caller = await ctx.runQuery(api.profiles.getByClerkUserId, { clerk_user_id: identity.subject });
+    if (!caller || String(caller._id) !== profileId) throw new Error('You do not have permission to do that.');
+
+    const customerId = typeof session.customer === 'string' ? session.customer : session.customer?.id;
+    const setupIntent = session.setup_intent;
+    const paymentMethodId =
+      setupIntent && typeof setupIntent === 'object'
+        ? (typeof setupIntent.payment_method === 'string'
+            ? setupIntent.payment_method
+            : setupIntent.payment_method?.id ?? null)
+        : null;
+    if (!customerId || !paymentMethodId) throw new Error('Card was not saved');
+
+    await stripe.customers.update(customerId, {
+      invoice_settings: { default_payment_method: paymentMethodId },
+    });
+
+    await ctx.runMutation(internal.profiles.setHostCard, { profileId, customerId, paymentMethodId });
+
+    return { success: true };
+  },
+});
+
 // 3) Charge the saved card off-session when the collab completes. Called by the
 // scheduler from collaborations.markCompleted, and backstopped by the webhook.
 // Collect & forward: the host is charged fee + cash value in one PaymentIntent

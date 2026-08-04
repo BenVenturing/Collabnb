@@ -445,11 +445,15 @@ export const create = mutation({
     if (args.host_id) await requireOwnerOrAdmin(ctx, args.host_id);
     if (args.host_id) await enforceRateLimit(ctx, `listing:${args.host_id}`, RATE_LIMITS.LISTING_WRITE);
     validateListingFields(args, { requireCompensation: true });
-    // Publishing requires a verified host — pending hosts can only save drafts
+    // Publishing requires a verified host with a card on file — pending hosts,
+    // and hosts who haven't added a card yet, can still save drafts.
     if (args.status === "published" && args.host_id) {
       const host: any = await ctx.db.get(args.host_id as any);
       if (host && host.is_verified !== true && host.is_admin !== true) {
         throw new ConvexError("Your account is pending verification. You can save this listing as a draft — publishing unlocks once you're approved.");
+      }
+      if (host && !host.stripe_default_payment_method_id && host.is_admin !== true) {
+        throw new ConvexError("Add a card before publishing — it's only used for Collabnb's platform fee once a collaboration completes. You can save this listing as a draft in the meantime.");
       }
     }
     const floor = evaluateCompensationFloor(args);
@@ -526,6 +530,9 @@ export const update = mutation({
       const host: any = hostId ? await ctx.db.get(hostId as any) : null;
       if (host && host.is_verified !== true && host.is_admin !== true) {
         throw new ConvexError("Your account is pending verification. You can save this listing as a draft — publishing unlocks once you're approved.");
+      }
+      if (host && !host.stripe_default_payment_method_id && host.is_admin !== true) {
+        throw new ConvexError("Add a card before publishing — it's only used for Collabnb's platform fee once a collaboration completes. You can save this listing as a draft in the meantime.");
       }
     }
     const patch: any = { ...fields, ...sanitizeListingFields(fields) };

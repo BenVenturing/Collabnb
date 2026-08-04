@@ -31,6 +31,10 @@ export default defineSchema({
     subscription_tier: v.optional(v.string()),
     subscription_expires_at: v.optional(v.number()),
     stripe_customer_id: v.optional(v.string()),
+    // Card on file, required before a host can publish a listing (drafts
+    // don't need one) — the same card the platform fee auto-charges when a
+    // collab completes (see stripe.js chargeContractFee / PricingTool copy).
+    stripe_default_payment_method_id: v.optional(v.string()),
     referral_code: v.optional(v.string()),
     referred_by: v.optional(v.string()),
     free_months_balance: v.optional(v.number()),

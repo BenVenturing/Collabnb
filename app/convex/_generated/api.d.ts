@@ -10,6 +10,7 @@
 
 import type * as admin from "../admin.js";
 import type * as adminThreads from "../adminThreads.js";
+import type * as aiAssistant from "../aiAssistant.js";
 import type * as ambassadors from "../ambassadors.js";
 import type * as analytics from "../analytics.js";
 import type * as blog from "../blog.js";
@@ -29,6 +30,7 @@ import type * as geocode from "../geocode.js";
 import type * as http from "../http.js";
 import type * as lib_auth from "../lib/auth.js";
 import type * as lib_compensationPoints from "../lib/compensationPoints.js";
+import type * as lib_crypto from "../lib/crypto.js";
 import type * as lib_geo from "../lib/geo.js";
 import type * as lib_moderation from "../lib/moderation.js";
 import type * as lib_rateLimit from "../lib/rateLimit.js";
@@ -62,6 +64,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   admin: typeof admin;
   adminThreads: typeof adminThreads;
+  aiAssistant: typeof aiAssistant;
   ambassadors: typeof ambassadors;
   analytics: typeof analytics;
   blog: typeof blog;
@@ -81,6 +84,7 @@ declare const fullApi: ApiFromModules<{
   http: typeof http;
   "lib/auth": typeof lib_auth;
   "lib/compensationPoints": typeof lib_compensationPoints;
+  "lib/crypto": typeof lib_crypto;
   "lib/geo": typeof lib_geo;
   "lib/moderation": typeof lib_moderation;
   "lib/rateLimit": typeof lib_rateLimit;

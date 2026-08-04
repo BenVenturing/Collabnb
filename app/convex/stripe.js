@@ -428,8 +428,42 @@ export const verifyHostCardSetupSession = action({
       invoice_settings: { default_payment_method: paymentMethodId },
     });
 
-    await ctx.runMutation(internal.profiles.setHostCard, { profileId, customerId, paymentMethodId });
+    let cardBrand, cardLast4;
+    try {
+      const pm = await stripe.paymentMethods.retrieve(paymentMethodId);
+      cardBrand = pm.card?.brand;
+      cardLast4 = pm.card?.last4;
+    } catch { /* display-only — card save already succeeded above */ }
 
+    await ctx.runMutation(internal.profiles.setHostCard, { profileId, customerId, paymentMethodId, cardBrand, cardLast4 });
+
+    return { success: true };
+  },
+});
+
+// Detach the saved card from Stripe and clear it from the profile — used by
+// Settings > Payments & tax > Remove card.
+export const removeSavedCard = action({
+  args: { profileId: v.string() },
+  handler: async (ctx, args) => {
+    const secretKey = process.env.STRIPE_SECRET_KEY;
+    if (!secretKey) throw new Error('STRIPE_SECRET_KEY is not set in Convex environment variables');
+
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity?.subject) throw new Error('You must be signed in to do that');
+    const caller = await ctx.runQuery(api.profiles.getByClerkUserId, { clerk_user_id: identity.subject });
+    if (!caller || (String(caller._id) !== args.profileId && caller.is_admin !== true)) {
+      throw new Error('You do not have permission to do that.');
+    }
+
+    const profile = await ctx.runQuery(api.profiles.getById, { id: args.profileId });
+    const paymentMethodId = profile?.stripe_default_payment_method_id;
+    if (paymentMethodId) {
+      const stripe = new Stripe(secretKey);
+      try { await stripe.paymentMethods.detach(paymentMethodId); } catch { /* already detached/gone — still clear locally */ }
+    }
+
+    await ctx.runMutation(internal.profiles.clearHostCard, { profileId: args.profileId });
     return { success: true };
   },
 });

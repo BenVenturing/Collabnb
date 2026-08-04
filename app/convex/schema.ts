@@ -35,6 +35,8 @@ export default defineSchema({
     // don't need one) — the same card the platform fee auto-charges when a
     // collab completes (see stripe.js chargeContractFee / PricingTool copy).
     stripe_default_payment_method_id: v.optional(v.string()),
+    stripe_card_brand: v.optional(v.string()),
+    stripe_card_last4: v.optional(v.string()),
     referral_code: v.optional(v.string()),
     referred_by: v.optional(v.string()),
     free_months_balance: v.optional(v.number()),
@@ -71,6 +73,24 @@ export default defineSchema({
     // Creator-controlled listing visibility. Undefined/true = discoverable by
     // hosts; false = hidden from the Creators page and not messageable.
     profile_visible: v.optional(v.boolean()),
+    // Undefined/true = show applications/response-time/recent activity on
+    // this profile to hosts browsing the Creators page.
+    show_activity_to_hosts: v.optional(v.boolean()),
+    // Settings > Privacy > Blocked people. Blocking is symmetric — enforced
+    // in threadMessages.sendMessage against both directions.
+    blocked_user_ids: v.optional(v.array(v.string())),
+    // Settings > Notifications — per-category email/push preference toggles.
+    notification_prefs: v.optional(v.object({
+      messages: v.optional(v.boolean()),
+      contractUpdates: v.optional(v.boolean()),
+      newListings: v.optional(v.boolean()),
+      collabReminders: v.optional(v.boolean()),
+      marketing: v.optional(v.boolean()),
+    })),
+    // Settings > Language & region.
+    preferred_language: v.optional(v.string()),
+    preferred_currency: v.optional(v.string()),
+    timezone: v.optional(v.string()),
     // Creator payout method — how they receive contract payouts (collect &
     // forward: host pays Collabnb, Collabnb forwards the creator's net).
     payout_method: v.optional(v.union(v.literal("stripe_connect"), v.literal("wise"))),
@@ -731,4 +751,17 @@ export default defineSchema({
     count: v.number(),
     windowStart: v.number(),
   }).index("by_key", ["key"]),
+
+  // A host/creator's own AI provider key (BYO), used to draft (never
+  // auto-send) reply suggestions in Inbox. encrypted_key/iv are AES-GCM
+  // ciphertext — the raw key is decrypted only inside aiAssistant.draftReply
+  // and is never returned to the client. See lib/crypto.ts and aiAssistant.ts.
+  ai_assistant_keys: defineTable({
+    owner_id: v.string(),
+    provider: v.union(v.literal("openai"), v.literal("anthropic")),
+    encrypted_key: v.string(),
+    iv: v.string(),
+    created_at: v.number(),
+    last_used_at: v.optional(v.number()),
+  }).index("by_owner", ["owner_id"]),
 });

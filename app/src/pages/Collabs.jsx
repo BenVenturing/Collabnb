@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useCollabs } from '../contexts/CollabContext';
 import { DEMO_COLLAB } from '../lib/mockData';
 import CollabDetail from '../components/CollabDetail';
+import ProposalsOverview from '../components/dashboard/ProposalsOverview';
 import { useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { useAuth } from '../contexts/AuthContext';
@@ -181,6 +182,9 @@ export default function Collabs() {
   const [filter, setFilter] = useState('active');
   const [selectedCollab, setSelectedCollab] = useState(null);
   const [statusFilter, setStatusFilter] = useState('all');
+  const [search, setSearch] = useState('');
+  const [listingFilter, setListingFilter] = useState('all');
+  const [dueFilter, setDueFilter] = useState('all');
 
   const { profile } = useAuth();
   const creatorId = profile?._id ? String(profile._id) : (profile?.id ? String(profile.id) : null);
@@ -275,86 +279,120 @@ export default function Collabs() {
   const baseList = filter === 'active' ? active : archived;
 
   // Status filter for active collabs
-  const shown = filter === 'active' && statusFilter !== 'all'
+  const stageFiltered = filter === 'active' && statusFilter !== 'all'
     ? baseList.filter((c) => c.current_stage === statusFilter || c.status === statusFilter)
     : baseList;
+
+  const listingOptions = useMemo(() => {
+    const names = new Set(allCollabs.map((c) => c.property_name).filter(Boolean));
+    return ['all', ...Array.from(names)];
+  }, [allCollabs]);
+
+  const shown = stageFiltered
+    .filter((c) => listingFilter === 'all' || c.property_name === listingFilter)
+    .filter((c) => {
+      if (dueFilter === 'all') return true;
+      if (dueFilter === 'none') return !c.days_left;
+      if (!c.days_left) return false;
+      if (dueFilter === 'week') return c.days_left <= 7;
+      if (dueFilter === 'month') return c.days_left <= 30;
+      return true;
+    })
+    .filter((c) => !search.trim() || c.property_name?.toLowerCase().includes(search.trim().toLowerCase()));
+
+  const handleStatClick = (presetKey) => {
+    switch (presetKey) {
+      case 'active':               setFilter('active'); setStatusFilter('all'); break;
+      case 'pending_applications': setFilter('active'); setStatusFilter('pending'); break;
+      case 'earned':                setFilter('active'); setStatusFilter('closed'); break;
+      case 'content_due':          setFilter('active'); setStatusFilter('pending'); break;
+      default: break;
+    }
+  };
 
   return (
     <div>
 
-      {/* Header */}
-      <div className="bg-white/70 backdrop-blur-md border-b border-stone/50 px-4 pt-6 pb-4 lg:px-8">
-        <h1 className="font-display font-bold text-ink text-2xl mb-3">Collaborations</h1>
+      {/* CRM-style overview: stats, chart, calendar, upcoming, search/filter, activity list */}
+      <ProposalsOverview
+        role="creator"
+        search={search}
+        onSearchChange={setSearch}
+        onStatClick={handleStatClick}
+        filters={[
+          {
+            key: 'status', value: statusFilter, onChange: setStatusFilter,
+            options: [
+              { value: 'all', label: 'All statuses' },
+              { value: 'pending', label: 'Pending' },
+              { value: 'uploaded_tagged', label: 'Uploaded' },
+              { value: 'closed', label: 'Closed' },
+            ],
+          },
+          {
+            key: 'listing', value: listingFilter, onChange: setListingFilter,
+            options: listingOptions.map((name) => ({ value: name, label: name === 'all' ? 'All listings' : name })),
+          },
+          {
+            key: 'due', value: dueFilter, onChange: setDueFilter,
+            options: [
+              { value: 'all', label: 'Any due date' },
+              { value: 'week', label: 'Due this week' },
+              { value: 'month', label: 'Due this month' },
+              { value: 'none', label: 'No deadline' },
+            ],
+          },
+        ]}
+      >
         {/* Active / Archived toggle */}
-        <div className="flex bg-bone rounded-xl p-1 gap-1 max-w-xs mb-3">
-          {['active', 'archived'].map((f) => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-colors capitalize ${
-                filter === f ? 'bg-white text-ink shadow-sm' : 'text-slate hover:text-ink'
-              }`}
-            >
-              {f}
-            </button>
-          ))}
-        </div>
-
-        {/* Status filter chips (active only) */}
-        {filter === 'active' && (
-          <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
-            {[
-              { key: 'all',      label: 'All' },
-              { key: 'pending',  label: 'Pending' },
-              { key: 'uploaded_tagged', label: 'Uploaded' },
-              { key: 'closed',   label: 'Closed' },
-            ].map(({ key, label }) => (
+        <div style={{ paddingBottom: '0.5rem' }}>
+          <div className="flex bg-bone rounded-xl p-1 gap-1 max-w-xs">
+            {['active', 'archived'].map((f) => (
               <button
-                key={key}
-                onClick={() => setStatusFilter(key)}
-                style={{
-                  display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
-                  padding: '0.3rem 0.7rem', borderRadius: '9999px',
-                  fontSize: '0.74rem', fontWeight: 600, whiteSpace: 'nowrap',
-                  background: statusFilter === key ? 'var(--ink)' : 'rgba(255,255,255,0.65)',
-                  color: statusFilter === key ? 'var(--bone)' : 'var(--slate)',
-                  border: statusFilter === key ? 'none' : '1px solid rgba(25,37,36,0.08)',
-                  cursor: 'pointer', fontFamily: 'var(--font-body)',
-                  transition: 'all 150ms',
-                }}
+                key={f}
+                onClick={() => setFilter(f)}
+                className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-colors capitalize ${
+                  filter === f ? 'bg-white text-ink shadow-sm' : 'text-slate hover:text-ink'
+                }`}
               >
-                {label}
+                {f}
               </button>
             ))}
           </div>
-        )}
-      </div>
+        </div>
 
-      <div className="max-w-2xl mx-auto px-4 py-6 space-y-4">
-        {shown.length === 0 ? (
-          <div className="text-center pt-16">
-            <p className="text-4xl mb-4">✦</p>
-            <h3 className="font-display font-bold text-ink text-lg mb-2">No collabs yet</h3>
-            <p className="text-sage text-sm mb-6">Apply to a stay to get started</p>
-            <button
-              onClick={() => navigate('/explore')}
-              className="btn-ink"
-            >
-              Discover Stays
-            </button>
-          </div>
-        ) : (
-          shown.map((c) => (
-            <CollabCard
-              key={c.id}
-              collab={c}
-              onClick={setSelectedCollab}
-              onDismissDemo={dismissDemo}
-              onDismissSample={() => dismissSample(c.id)}
-            />
-          ))
-        )}
-      </div>
+        <div className="max-w-2xl space-y-4">
+          {shown.length === 0 ? (
+            <div className="text-center pt-16">
+              <p className="text-4xl mb-4">✦</p>
+              <h3 className="font-display font-bold text-ink text-lg mb-2">
+                {baseList.length === 0 ? 'No collabs yet' : 'No matches'}
+              </h3>
+              <p className="text-sage text-sm mb-6">
+                {baseList.length === 0 ? 'Apply to a stay to get started' : 'Try adjusting your search or filters'}
+              </p>
+              {baseList.length === 0 && (
+                <button
+                  onClick={() => navigate('/explore')}
+                  className="btn-ink"
+                >
+                  Discover Stays
+                </button>
+              )}
+            </div>
+          ) : (
+            shown.map((c) => (
+              <CollabCard
+                key={c.id}
+                collab={c}
+                onClick={setSelectedCollab}
+                onDismissDemo={dismissDemo}
+                onDismissSample={() => dismissSample(c.id)}
+              />
+            ))
+          )}
+        </div>
+      </ProposalsOverview>
 
       {selectedCollab && (
         <CollabDetail

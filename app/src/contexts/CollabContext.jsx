@@ -88,6 +88,11 @@ export function CollabProvider({ children }) {
     api.contracts.getForParty,
     ownerId ? { userId: ownerId } : 'skip'
   );
+
+  // The user's own conversation with the "Collabnb" admin persona (if any) —
+  // stored server-side by AdminInbox, but never otherwise loaded into this
+  // context's local `threads` state, so it wouldn't reach the user's Inbox.
+  const myAdminThread = useQuery(api.adminThreads.getMineAsUser, ownerId ? {} : 'skip');
   const convexContracts = useMemo(() => {
     if (!convexContractsRaw?.length) return null;
     return convexContractsRaw.map((c) => ({
@@ -577,8 +582,14 @@ export function CollabProvider({ children }) {
   // When authenticated, Convex is the source of truth; fall back to localStorage
   const effectiveContracts = convexContracts ?? contracts;
 
+  const threadsWithAdmin = useMemo(() => {
+    if (!myAdminThread) return threads;
+    if (threads.some((t) => t.thread_key === myAdminThread.thread_key)) return threads;
+    return [myAdminThread, ...threads];
+  }, [threads, myAdminThread]);
+
   return (
-    <CollabContext.Provider value={{ collabs, threads, contracts: effectiveContracts, ownerId, applyCount, savedIds, collections, activeCollectionId, toggleSave, isSaved, createCollection, setActiveCollection, moveToCollection, renameCollection, deleteCollection, applyToListing, hasApplied, saveContract, updateContract, markContractSent, getContracts, sendContractMessage, getCollabById, advanceStage, updateStageData, toggleCloseCollab, removeCollab, submitContentMetrics, createThread, archiveThread, deleteThread, updateThreadTag }}>
+    <CollabContext.Provider value={{ collabs, threads: threadsWithAdmin, contracts: effectiveContracts, ownerId, applyCount, savedIds, collections, activeCollectionId, toggleSave, isSaved, createCollection, setActiveCollection, moveToCollection, renameCollection, deleteCollection, applyToListing, hasApplied, saveContract, updateContract, markContractSent, getContracts, sendContractMessage, getCollabById, advanceStage, updateStageData, toggleCloseCollab, removeCollab, submitContentMetrics, createThread, archiveThread, deleteThread, updateThreadTag }}>
       {children}
     </CollabContext.Provider>
   );

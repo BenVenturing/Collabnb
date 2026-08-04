@@ -22,6 +22,7 @@ export const RATE_LIMITS = {
   REPORT: { max: 10, windowMs: 24 * 60 * 60 * 1000 },         // reports.submitReport — 10/day per user
   PITCH: { max: 20, windowMs: 24 * 60 * 60 * 1000 },          // pitches.create backstop — 20/day per user (pitch_counts already caps at 10/month; this only guards the direct-mutation-call path that skips it)
   CRASH_REPORT: { max: 20, windowMs: 60 * 60 * 1000 },        // crashReports.submitCrashReport — 20/hour per caller, mainly to cap a crash-loop rather than deter abuse
+  AI_DRAFT: { max: 20, windowMs: 60 * 60 * 1000 },            // aiAssistant.draftReply — 20/hour per user, caps Collabnb's NVIDIA spend per user and guards a runaway loop burning a connected personal key
 } as const;
 
 type Limit = { max: number; windowMs: number };

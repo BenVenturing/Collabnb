@@ -241,6 +241,11 @@ function ClerkAuthInner({ children }) {
             role: updates.role,
             niches: updates.niches,
             profile_visible: updates.profile_visible,
+            show_activity_to_hosts: updates.show_activity_to_hosts,
+            notification_prefs: updates.notification_prefs,
+            preferred_language: updates.preferred_language,
+            preferred_currency: updates.preferred_currency,
+            timezone: updates.timezone,
           },
         });
       } catch (err) {

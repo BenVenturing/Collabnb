@@ -93,6 +93,24 @@ export async function requireAdminAction(
   if (!identity?.subject) throw new ConvexError("Sign in required.");
   const caller: any = await ctx.runQuery(getByClerkUserIdRef, { clerk_user_id: identity.subject });
   if (!caller || caller.is_admin !== true) throw new ConvexError("Admin access required.");
+  return caller;
+}
+
+// Action-context counterpart to requireAuthedProfile — for actions (no
+// ctx.db) that need any signed-in caller (not admin-only, not owner-scoped).
+// Resolves the caller via a query the same way requireAdminAction does.
+export async function requireAuthedProfileAction(
+  ctx: {
+    auth: { getUserIdentity: () => Promise<{ subject?: string; email?: string } | null> };
+    runQuery: (ref: any, args: any) => Promise<any>;
+  },
+  getByClerkUserIdRef: any
+) {
+  const identity = await ctx.auth.getUserIdentity();
+  if (!identity?.subject) throw new ConvexError("Sign in required.");
+  const caller: any = await ctx.runQuery(getByClerkUserIdRef, { clerk_user_id: identity.subject });
+  if (!caller) throw new ConvexError("Sign in required.");
+  return caller;
 }
 
 // Action-context counterpart to requireOwnerOrAdmin — for actions (no ctx.db),

@@ -7,7 +7,7 @@ import ProfilePopupCard from '../components/ProfilePopupCard';
 import { useAuth } from '../contexts/AuthContext';
 import { useVerification } from '../contexts/VerificationContext';
 import { useSubscription } from '../contexts/SubscriptionContext';
-import { useQuery, useMutation } from 'convex/react';
+import { useQuery, useMutation, useAction } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import SkeletonCard from '../components/SkeletonCard';
 
@@ -17,6 +17,7 @@ const TAG_STYLES = {
   Pitch:       'bg-red-100 text-red-500',
   Contract:    'bg-amber-100 text-amber-700',
   Archived:    'bg-stone/40 text-sage',
+  Collabnb:    'bg-ink text-bone',
 };
 
 const FILTERS = ['All', 'Applications', 'Collabs', 'Pitches'];
@@ -218,10 +219,14 @@ function ConversationPanel({ thread, onViewCollab, onArchive, onUpdateTag }) {
   const { openModal } = useVerification();
   const { isSubscribed, openModal: openSubModal } = useSubscription();
   const isVerified = profile?.is_verified === true;
+  const isAdmin = profile?.is_admin === true;
 
   const threadKey = thread.thread_key || thread.id;
   const convexMessages = useQuery(api.threadMessages.getByThread, { threadKey });
   const sendMutation = useMutation(api.threadMessages.sendMessage);
+  const draftAiReply = useAction(api.aiAssistant.draftReply);
+  const [drafting, setDrafting] = useState(false);
+  const [aiDraftError, setAiDraftError] = useState('');
 
   // Use sample messages for the demo thread
   const sampleMessages = thread.is_sample && THREAD_MESSAGES[thread.id]
@@ -254,6 +259,7 @@ function ConversationPanel({ thread, onViewCollab, onArchive, onUpdateTag }) {
   useEffect(() => {
     setDraft('');
     setAttachments([]);
+    setAiDraftError('');
   }, [thread.id]);
 
   useEffect(() => {
@@ -310,6 +316,20 @@ function ConversationPanel({ thread, onViewCollab, onArchive, onUpdateTag }) {
       // silently ignore send errors
     } finally {
       setSending(false);
+    }
+  };
+
+  const handleDraftWithAi = async () => {
+    if (drafting) return;
+    setDrafting(true);
+    setAiDraftError('');
+    try {
+      const { draft: suggested } = await draftAiReply({ threadKey });
+      setDraft(suggested);
+    } catch (err) {
+      setAiDraftError(err?.data || err?.message || 'Could not draft a reply — try again.');
+    } finally {
+      setDrafting(false);
     }
   };
 
@@ -395,7 +415,27 @@ function ConversationPanel({ thread, onViewCollab, onArchive, onUpdateTag }) {
 
       {/* Compose bar */}
       <div className="px-4 py-3 border-t border-stone/30 bg-white/60 backdrop-blur-sm flex-shrink-0">
+        {aiDraftError && (
+          <p className="text-xs text-red-600 mb-1.5 px-1">{aiDraftError}</p>
+        )}
         <div className="flex items-end gap-2 bg-bone rounded-2xl px-4 py-2.5 border border-stone/40">
+          <button
+            onClick={handleDraftWithAi}
+            disabled={drafting}
+            className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-colors hover:bg-stone/30 disabled:opacity-50"
+            title="Draft a reply with AI (review before sending)"
+            style={{ background: 'rgba(60,87,89,0.12)' }}
+          >
+            {drafting ? (
+              <svg viewBox="0 0 24 24" fill="none" stroke="var(--slate)" strokeWidth="1.8" strokeLinecap="round" className="w-4 h-4 animate-spin">
+                <path d="M21 12a9 9 0 1 1-9-9" />
+              </svg>
+            ) : (
+              <svg viewBox="0 0 24 24" fill="none" stroke="var(--slate)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+                <path d="M12 3l1.9 5.6a3 3 0 0 0 1.9 1.9L21.4 12l-5.6 1.9a3 3 0 0 0-1.9 1.9L12 21.4l-1.9-5.6a3 3 0 0 0-1.9-1.9L2.6 12l5.6-1.9a3 3 0 0 0 1.9-1.9L12 3z" />
+              </svg>
+            )}
+          </button>
           <textarea
             rows={1}
             value={draft}

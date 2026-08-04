@@ -147,80 +147,16 @@ const ArrowOut = () => (
     <path d="M184,136v72a8,8,0,0,1-8,8H48a8,8,0,0,1-8-8V80a8,8,0,0,1,8-8h72"/>
   </svg>
 );
-const ChecklistIcon = () => (
-  <svg viewBox="0 0 256 256" fill="none" stroke="currentColor" strokeWidth="14" strokeLinecap="round" strokeLinejoin="round" width="18" height="18">
-    <line x1="40" y1="60" x2="136" y2="60"/><line x1="40" y1="96" x2="184" y2="96"/><line x1="40" y1="132" x2="136" y2="132"/>
-    <circle cx="192" cy="128" r="40"/>
-    <polyline points="184 128 192 136 206 120" strokeWidth="16"/>
-    <line x1="40" y1="168" x2="96" y2="168"/>
-  </svg>
-);
-const ChevronR = () => (
-  <svg viewBox="0 0 256 256" fill="none" stroke="currentColor" strokeWidth="14" strokeLinecap="round" strokeLinejoin="round" width="14" height="14">
-    <polyline points="96 48 176 128 96 208"/>
-  </svg>
-);
-const FileTextIcon = () => (
-  <svg viewBox="0 0 256 256" fill="none" stroke="currentColor" strokeWidth="14" strokeLinecap="round" strokeLinejoin="round" width="18" height="18">
-    <path d="M200,224H56a8,8,0,0,1-8-8V40a8,8,0,0,1,8-8h96l56,56V216A8,8,0,0,1,200,224Z"/>
-    <polyline points="152 32 152 88 208 88"/>
-    <line x1="96" y1="128" x2="160" y2="128"/><line x1="96" y1="160" x2="160" y2="160"/><line x1="96" y1="192" x2="136" y2="192"/>
-  </svg>
-);
-const LockIcon = () => (
-  <svg viewBox="0 0 256 256" fill="none" stroke="currentColor" strokeWidth="14" strokeLinecap="round" strokeLinejoin="round" width="18" height="18">
-    <rect x="40" y="112" width="176" height="128" rx="8"/>
-    <path d="M88,112V80a40,40,0,0,1,80,0v32"/>
-  </svg>
-);
-const BellIcon = () => (
-  <svg viewBox="0 0 256 256" fill="none" stroke="currentColor" strokeWidth="14" strokeLinecap="round" strokeLinejoin="round" width="18" height="18">
-    <path d="M96,192a32,32,0,0,0,64,0"/>
-    <path d="M56,104a72,72,0,0,1,144,0c0,35.82,8.3,56.6,14.9,68A8,8,0,0,1,208,184H48a8,8,0,0,1-6.88-12C47.71,160.6,56,139.81,56,104Z"/>
-  </svg>
-);
 const SealCheck = () => (
   <svg viewBox="0 0 256 256" fill="none" stroke="currentColor" strokeWidth="14" strokeLinecap="round" strokeLinejoin="round" width="18" height="18">
     <path d="M54.46,201.54C40,195.2,28,182,28,160c0-13.35-8.27-25.37-14.16-36.77A22.07,22.07,0,0,1,28,96c0-22,15.89-37.48,28-48.16A22.07,22.07,0,0,1,76,32c13.35,0,25.37-8.27,36.77-14.16a22.07,22.07,0,0,1,26.46,0C150.63,23.73,162.65,32,176,32a22.07,22.07,0,0,1,20,15.84C208.11,58.52,224,74,224,96a22.07,22.07,0,0,1,14.16,27.23C232.27,134.63,224,146.65,224,160c0,22-15.89,37.48-28,48.16A22.07,22.07,0,0,1,176,224c-13.35,0-25.37,8.27-36.77,14.16a22.07,22.07,0,0,1-26.46,0C101.37,232.27,89.35,224,76,224a22.07,22.07,0,0,1-21.54-22.46Z"/>
     <polyline points="88 136 112 160 168 104"/>
   </svg>
 );
-const SwitchIcon = () => (
-  <svg viewBox="0 0 256 256" fill="none" stroke="currentColor" strokeWidth="14" strokeLinecap="round" strokeLinejoin="round" width="18" height="18">
-    <polyline points="160 48 208 96 160 144"/><line x1="48" y1="96" x2="208" y2="96"/>
-    <polyline points="96 112 48 160 96 208"/><line x1="208" y1="160" x2="48" y2="160"/>
-  </svg>
-);
-const SignOutIcon = () => (
-  <svg viewBox="0 0 256 256" fill="none" stroke="currentColor" strokeWidth="14" strokeLinecap="round" strokeLinejoin="round" width="18" height="18">
-    <path d="M112,216H48a8,8,0,0,1-8-8V48a8,8,0,0,1,8-8h64"/>
-    <polyline points="168 160 216 128 168 96"/><line x1="104" y1="128" x2="216" y2="128"/>
-  </svg>
-);
 const GearIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" width="20" height="20">
     <circle cx="12" cy="12" r="3"/>
     <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-  </svg>
-);
-const PencilIcon = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" width="14" height="14">
-    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-  </svg>
-);
-const PlayIcon = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="18" height="18">
-    <polygon points="5 3 19 12 5 21 5 3" fill="currentColor" stroke="none" opacity="0.5"/>
-    <polygon points="5 3 19 12 5 21 5 3"/>
-  </svg>
-);
-const CreditCardIcon = () => (
-  <svg viewBox="0 0 256 256" fill="none" stroke="currentColor" strokeWidth="14" strokeLinecap="round" strokeLinejoin="round" width="18" height="18">
-    <rect x="24" y="56" width="208" height="144" rx="16"/>
-    <line x1="24" y1="104" x2="232" y2="104"/>
-    <line x1="64" y1="152" x2="96" y2="152"/>
-    <line x1="120" y1="152" x2="136" y2="152"/>
   </svg>
 );
 
@@ -494,37 +430,6 @@ function SocialRow({ icon, label, value, href }) {
   );
 }
 
-// ─── Settings row ─────────────────────────────────────────────────────────────
-function SettingsRow({ icon, label, sublabel, isLast, onClick, danger }) {
-  return (
-    <button
-      onClick={onClick}
-      style={{
-        width: '100%', display: 'flex', alignItems: 'center', gap: '1rem',
-        padding: '1rem 1.25rem', borderBottom: isLast ? 'none' : '1px solid rgba(25,37,36,0.06)',
-        background: 'transparent', transition: 'background 150ms',
-        textAlign: 'left', cursor: 'pointer', fontFamily: 'var(--font-body)',
-      }}
-      onMouseEnter={(e) => e.currentTarget.style.background = danger ? 'rgba(239,68,68,0.05)' : 'rgba(209,235,219,0.25)'}
-      onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-    >
-      <div style={{
-        width: '36px', height: '36px', borderRadius: '50%',
-        background: danger ? 'rgba(239,68,68,0.08)' : 'rgba(209,235,219,0.6)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-        color: danger ? '#ef4444' : 'var(--slate)',
-      }}>
-        {icon}
-      </div>
-      <div style={{ flex: 1 }}>
-        <p style={{ fontSize: '0.875rem', fontWeight: 500, color: danger ? '#ef4444' : 'var(--slate)', margin: 0 }}>{label}</p>
-        {sublabel && <p style={{ fontSize: '0.72rem', color: 'var(--sage)', margin: '0.15rem 0 0' }}>{sublabel}</p>}
-      </div>
-      {!danger && <span style={{ color: 'var(--stone)' }}><ChevronR /></span>}
-    </button>
-  );
-}
-
 // ─── Past collab card ─────────────────────────────────────────────────────────
 function PastCollabCard({ collab, showSampleBadge = false }) {
   const statusColors = {
@@ -601,8 +506,10 @@ export default function Profile() {
   const createConnectOnboardingLink = useAction(api.stripe.createConnectOnboardingLink);
   const getConnectAccountStatus    = useAction(api.stripe.getConnectAccountStatus);
   const createWiseRecipient        = useAction(api.stripe.createWiseRecipient);
-  const setPayoutMethodMutation     = useMutation(api.profiles.setPayoutMethod);
+  const setActivePayoutMethodMutation = useMutation(api.profiles.setActivePayoutMethod);
   const disconnectPayoutMethodMutation = useMutation(api.profiles.disconnectPayoutMethod);
+  const saveAiApiKey               = useAction(api.aiAssistant.saveApiKey);
+  const disconnectAiApiKey         = useMutation(api.aiAssistant.disconnectApiKey);
   const generateUploadUrl          = useMutation(api.uploads.generateUploadUrl);
   const finalizeUpload             = useMutation(api.uploads.finalizeUpload);
   const convex                     = useConvex();
@@ -612,6 +519,7 @@ export default function Profile() {
   const userId = profile?._id || profile?.id || 'mock-user-001';
   const serverPitchCount = useQuery(api.pitches.getCount, { userId });
   const referralStats = useQuery(api.referrals.getMyCode, userId && userId !== 'mock-user-001' ? { profileId: userId } : 'skip');
+  const aiConnectionStatus = useQuery(api.aiAssistant.getConnectionStatus, {});
   const hostListings = useQuery(
     api.listings.getByHost,
     userId && userId !== 'mock-user-001' ? { host_id: String(userId) } : 'skip'
@@ -642,7 +550,6 @@ export default function Profile() {
   const [editDraft, setEditDraft]             = useState(null); // null = closed
 
   // Modal visibility
-  const [showSettings,      setShowSettings]      = useState(false);
   const [showSwitchConfirm, setShowSwitchConfirm] = useState(false);
   const [showContracts,     setShowContracts]     = useState(false);
   const [roleSwitchTarget,  setRoleSwitchTarget]  = useState(null); // null | 'host' | 'creator'
@@ -653,6 +560,11 @@ export default function Profile() {
   const [showLocation,      setShowLocation]      = useState(false);
   const [showMetrics,       setShowMetrics]       = useState(false);
   const [showPayoutMethod,  setShowPayoutMethod]  = useState(false);
+  const [showAiAssistant,   setShowAiAssistant]   = useState(false);
+  const [aiProviderDraft,   setAiProviderDraft]   = useState('openai');
+  const [aiKeyDraft,        setAiKeyDraft]        = useState('');
+  const [aiSaving,          setAiSaving]          = useState(false);
+  const [aiError,           setAiError]           = useState('');
   const [toastMsg, setToastMsg]               = useState(null);
   const [exitConfirmDraft, setExitConfirmDraft] = useState(null);
   const [portalLoading, setPortalLoading]       = useState(false);
@@ -741,7 +653,8 @@ export default function Profile() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ── Auto-open edit sheet when ?edit=true or settings sheet when ?settings=true ──
+  // ── Auto-open edit sheet when ?edit=true, or a specific sub-modal when
+  // ?open=<name> (deep-linked from the /settings page) ──────────────────────
   useEffect(() => {
     if (loading || !profile) return;
     const params = new URLSearchParams(location.search);
@@ -749,7 +662,17 @@ export default function Profile() {
       setEditDraft({ ...profile });
       navigate('/profile', { replace: true });
     } else if (params.get('settings') === 'true') {
-      setShowSettings(true);
+      // Old gear-sheet deep link — settings now lives on its own page.
+      navigate('/settings', { replace: true });
+    } else if (params.get('open')) {
+      const target = params.get('open');
+      if (target === 'contracts') setShowContracts(true);
+      else if (target === 'payout') setShowPayoutMethod(true);
+      else if (target === 'location') setShowLocation(true);
+      else if (target === 'verification') setShowVerification(true);
+      else if (target === 'metrics') setShowMetrics(true);
+      else if (target === 'switchrole') setShowSwitchConfirm(true);
+      else if (target === 'aiassistant') setShowAiAssistant(true);
       navigate('/profile', { replace: true });
     }
   }, [location.search]);
@@ -902,34 +825,6 @@ export default function Profile() {
   }
 
   const editMode = editDraft !== null;
-
-  const hasActiveSub = dp.stripe_customer_id && dp.subscription_status === 'active';
-  const SETTINGS = [
-    { icon: <PencilIcon />,      label: 'Edit Profile',    sublabel: 'Update your photos, bio, and socials',           onClick: () => { setShowSettings(false); openEditProfile(); } },
-    { icon: <FileTextIcon />,    label: 'Contracts',       sublabel: 'View and manage your saved contracts',           onClick: () => { setShowSettings(false); setShowContracts(true); } },
-    ...(dp.role === 'creator' ? [{ icon: (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="20" height="20"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>), label: 'My Metrics', sublabel: 'Update your follower & engagement stats', onClick: () => setShowMetrics(true) }] : []),
-    ...(dp.role === 'creator' ? [{ icon: <CreditCardIcon />, label: 'Payout Method', sublabel: 'Connect Stripe or Wise to receive payouts', onClick: () => { setShowSettings(false); setShowPayoutMethod(true); } }] : []),
-    ...(hasActiveSub ? [{ icon: <CreditCardIcon />, label: 'Manage Plan', sublabel: 'Cancel, upgrade, or update billing', onClick: () => { setShowSettings(false); handleManageSubscription(); } }] : []),
-    ...(isAdmin
-      ? [{ icon: <ChecklistIcon />, label: 'Admin Dashboard', sublabel: 'Open the Collabnb admin dashboard', onClick: () => { setShowSettings(false); navigate('/admin'); } }]
-      : [{ icon: <ChecklistIcon />, label: 'Setup Checklist', sublabel: 'Finish setting up your account', onClick: () => { setShowSettings(false); reopenChecklist(); } }]
-    ),
-    { icon: <GlobeIcon />,       label: 'Location Settings', sublabel: 'Set your city & country for the globe map',    onClick: () => { setShowSettings(false); setShowLocation(true); } },
-    { icon: <PlayIcon />,        label: 'Demo Collab Tour', sublabel: 'Replay the guided collaboration walkthrough',    onClick: () => { setShowSettings(false); localStorage.removeItem('collabnb_demo_dismissed'); navigate('/collabs'); } },
-    { icon: <BellIcon />,        label: 'Notifications',   sublabel: 'Manage email & push preferences',               onClick: () => { setShowSettings(false); setShowNotifications(true); } },
-    { icon: <LockIcon />,        label: 'Privacy Policy',  sublabel: 'Review how your data is used',                  onClick: () => { setShowSettings(false); setShowPrivacy(true); } },
-    { icon: <SealCheck />,       label: 'Verification',    sublabel: 'Submit a re-verification request',              onClick: () => { setShowSettings(false); setShowVerification(true); } },
-    ...(pendingRole
-      ? [{ icon: <SwitchIcon />, label: `${pendingRole === 'host' ? 'Host' : 'Creator'} access pending review`, sublabel: "We'll email you once your request is approved", onClick: () => setShowSettings(false) }]
-      : profile?.role === 'host'
-        ? ((isAdmin || isCreatorVerified)
-          ? [{ icon: <SwitchIcon />, label: 'Switch to Creator View', sublabel: 'Browse and apply to listings as a creator', onClick: async () => { setShowSettings(false); await updateProfile({ role: 'creator' }); navigate('/explore'); } }]
-          : [{ icon: <SwitchIcon />, label: 'Sign up as Creator', sublabel: 'Apply to collabs — goes through creator verification', onClick: () => { setShowSettings(false); setShowSwitchConfirm(true); } }])
-        : (isAdmin || isHostVerified)
-          ? [{ icon: <SwitchIcon />, label: 'Switch to Host View', sublabel: 'Go to your host dashboard and listings', onClick: async () => { setShowSettings(false); await updateProfile({ role: 'host' }); navigate('/host'); } }]
-          : [{ icon: <SwitchIcon />, label: 'Sign up as Host', sublabel: 'Create listings — goes through host verification', onClick: () => { setShowSettings(false); setShowSwitchConfirm(true); } }]
-    ),
-  ];
 
   return (
     <div style={{ minHeight: '100dvh', paddingBottom: '6rem' }}>
@@ -1487,473 +1382,6 @@ export default function Profile() {
         />
       )}
 
-      {/* ── Settings gear sheet ───────────────────────────────────────────── */}
-      {showSettings && (
-        <div
-          style={{ position: 'fixed', inset: 0, zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', background: 'rgba(25,37,36,0.5)', backdropFilter: 'blur(6px)' }}
-          onClick={() => setShowSettings(false)}
-        >
-          <div
-            style={{ width: '100%', maxWidth: '480px', maxHeight: '88dvh', borderRadius: '1.5rem', overflow: 'hidden', padding: 0, background: 'rgba(255,255,255,0.97)', border: '1px solid rgba(255,255,255,0.85)', boxShadow: '0 20px 60px rgba(25,37,36,0.18), inset 0 1px 0 rgba(255,255,255,0.9)', display: 'flex', flexDirection: 'column' }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid rgba(60,87,89,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
-              <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1rem', color: 'var(--slate)', margin: 0, letterSpacing: '-0.01em' }}>Settings</p>
-              <button onClick={() => setShowSettings(false)} style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'rgba(209,235,219,0.5)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--slate)' }}>✕</button>
-            </div>
-            {/* Scrollable body */}
-            <div style={{ flex: 1, overflowY: 'auto' }}>
-            {/* Profile visibility — creator only */}
-            {dp.role === 'creator' && (() => {
-              const isVisible = dp.profile_visible !== false;
-              return (
-                <div style={{ padding: '0.875rem 1.5rem', borderBottom: '1px solid rgba(60,87,89,0.08)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
-                    <div style={{ minWidth: 0 }}>
-                      <p style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--slate)', margin: '0 0 0.15rem' }}>
-                        {isVisible ? 'Profile is visible to hosts' : 'Profile is hidden'}
-                      </p>
-                      <p style={{ fontSize: '0.7rem', color: 'var(--sage)', margin: 0, lineHeight: 1.5 }}>
-                        {isVisible
-                          ? 'Hosts can find you on the Creators page and message you.'
-                          : "You won't appear in host search and hosts can't message you. Existing conversations stay open."}
-                      </p>
-                    </div>
-                    <button
-                      role="switch"
-                      aria-checked={isVisible}
-                      aria-label="Toggle profile visibility"
-                      onClick={() => updateProfile({ profile_visible: !isVisible })}
-                      style={{
-                        flexShrink: 0, position: 'relative', width: '44px', height: '26px',
-                        borderRadius: '999px', border: 'none', cursor: 'pointer', padding: 0,
-                        background: isVisible ? '#4A9B7F' : 'rgba(25,37,36,0.15)',
-                        transition: 'background 250ms ease',
-                      }}
-                    >
-                      <span style={{
-                        position: 'absolute', top: '2px', left: isVisible ? '20px' : '2px',
-                        width: '22px', height: '22px', borderRadius: '50%', background: '#fff',
-                        boxShadow: '0 1px 4px rgba(0,0,0,0.2)', transition: 'left 250ms ease',
-                      }} />
-                    </button>
-                  </div>
-                </div>
-              );
-            })()}
-            {dp.role === 'creator' && (() => {
-              const count = serverPitchCount ?? getPitchCount().count;
-              return (
-                <div style={{ padding: '0.875rem 1.5rem', borderBottom: '1px solid rgba(60,87,89,0.08)', background: 'rgba(209,235,219,0.1)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                    <p style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--slate)', margin: 0 }}>Pitches used this month</p>
-                    <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.9rem', color: count >= 10 ? '#ef4444' : 'var(--ink)', margin: 0 }}>{count} / 10</p>
-                  </div>
-                  <div style={{ height: '4px', borderRadius: '999px', background: 'rgba(25,37,36,0.08)', overflow: 'hidden' }}>
-                    <div style={{ height: '100%', borderRadius: '999px', width: `${Math.min((count / 10) * 100, 100)}%`, background: count >= 10 ? '#ef4444' : count >= 7 ? '#D4A843' : '#4A9B7F', transition: 'width 400ms ease' }} />
-                  </div>
-                  <p style={{ fontSize: '0.68rem', color: 'var(--sage)', margin: '0.35rem 0 0' }}>Resets on the 1st of each month. Standard applications are unlimited.</p>
-                </div>
-              );
-            })()}
-            {/* My Metrics — opens as its own sub-window from the Settings list */}
-            {dp.role === 'creator' && showMetrics && (() => {
-              const updatedAt      = dp.metrics_updated_at;
-              const daysSince      = updatedAt ? Math.floor((Date.now() - updatedAt) / (1000 * 60 * 60 * 24)) : null;
-              const isStale        = daysSince !== null && daysSince > 60;
-              const canUpdate      = !updatedAt || (Date.now() - updatedAt) >= 30 * 24 * 60 * 60 * 1000;
-              const nextUpdateDate = updatedAt && !canUpdate
-                ? new Date(updatedAt + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-                : null;
-              const avgViews    = parseFloat(metricsDraft.avg_views)    || 0;
-              const avgLikes    = parseFloat(metricsDraft.avg_likes)    || 0;
-              const avgComments = parseFloat(metricsDraft.avg_comments) || 0;
-              const calcER      = avgViews > 0 ? ((avgLikes + avgComments) / avgViews * 100).toFixed(1) : null;
-              const inputStyle  = { width: '100%', boxSizing: 'border-box', padding: '0.45rem 0.5rem', border: '1px solid rgba(60,87,89,0.18)', borderRadius: '0.5rem', fontSize: '0.8rem', color: 'var(--ink)', background: 'rgba(247,245,242,0.7)', fontFamily: 'var(--font-body)', outline: 'none' };
-              const labelStyle  = { fontSize: '0.66rem', color: 'var(--sage)', margin: '0 0 0.25rem', display: 'block', fontWeight: 600 };
-              return (
-                <div
-                  style={{ position: 'fixed', inset: 0, zIndex: 10001, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', background: 'rgba(25,37,36,0.5)', backdropFilter: 'blur(6px)' }}
-                  onClick={() => setShowMetrics(false)}
-                >
-                <div
-                  onClick={(e) => e.stopPropagation()}
-                  style={{ position: 'relative', width: '100%', maxWidth: '460px', maxHeight: '85vh', overflowY: 'auto', padding: '3.25rem 1.5rem 1.5rem', background: 'rgba(255,255,255,0.98)', borderRadius: '1.5rem', border: '1px solid rgba(255,255,255,0.85)', boxShadow: '0 20px 60px rgba(25,37,36,0.18)' }}
-                >
-                  <button onClick={() => setShowMetrics(false)} style={{ position: 'absolute', top: 12, right: 12, width: 32, height: 32, borderRadius: '50%', background: 'rgba(209,235,219,0.5)', border: 'none', cursor: 'pointer', color: 'var(--slate)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1 }}>✕</button>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.625rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', position: 'relative' }}>
-                      <p style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--slate)', margin: 0, textTransform: 'uppercase', letterSpacing: '0.06em' }}>My Metrics</p>
-                      <button
-                        onClick={() => setShowMetricsHelp(h => !h)}
-                        style={{ width: 16, height: 16, borderRadius: '50%', border: '1.5px solid var(--sage)', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, flexShrink: 0 }}
-                        title="How to find your metrics"
-                      >
-                        <span style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--sage)', lineHeight: 1 }}>?</span>
-                      </button>
-                      {showMetricsHelp && (
-                        <div style={{ position: 'absolute', top: '120%', left: 0, zIndex: 50, background: '#fff', border: '1px solid rgba(60,87,89,0.15)', borderRadius: '0.625rem', boxShadow: '0 4px 16px rgba(0,0,0,0.10)', padding: '0.75rem 0.875rem', width: 260 }}>
-                          <p style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--slate)', margin: '0 0 0.4rem' }}>How to find your numbers</p>
-                          <p style={{ fontSize: '0.68rem', color: 'var(--sage)', margin: '0 0 0.3rem', lineHeight: 1.5 }}><strong>Avg Views:</strong> Instagram → Insights → last 10–15 posts → average reach. TikTok → Analytics → Content tab.</p>
-                          <p style={{ fontSize: '0.68rem', color: 'var(--sage)', margin: '0 0 0.3rem', lineHeight: 1.5 }}><strong>Avg Likes / Comments:</strong> Same dashboards — average across your recent posts.</p>
-                          <p style={{ fontSize: '0.68rem', color: 'var(--sage)', margin: '0 0 0.3rem', lineHeight: 1.5 }}><strong>Engagement Rate</strong> is calculated automatically from your views, likes, and comments — you don't need to enter it.</p>
-                          <p style={{ fontSize: '0.67rem', color: 'var(--sage)', margin: 0, lineHeight: 1.5 }}>Update once a month for accurate matching. You'll get a reminder notification.</p>
-                          <button onClick={() => setShowMetricsHelp(false)} style={{ marginTop: '0.5rem', fontSize: '0.65rem', color: 'var(--sage)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>Close</button>
-                        </div>
-                      )}
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
-                      {daysSince !== null && (
-                        <p style={{ fontSize: '0.68rem', color: isStale ? '#ef4444' : 'var(--sage)', margin: 0 }}>
-                          {daysSince === 0 ? 'Updated today' : `Updated ${daysSince}d ago`}{isStale ? ' — stale' : ''}
-                        </p>
-                      )}
-                      {!canUpdate && (
-                        <span style={{ fontSize: '0.65rem', color: 'var(--sage)', background: 'rgba(60,87,89,0.08)', borderRadius: 999, padding: '2px 7px', whiteSpace: 'nowrap' }}>
-                          🔒 Next update {nextUpdateDate}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  {isStale && (
-                    <div style={{ background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '0.5rem', padding: '0.5rem 0.625rem', marginBottom: '0.75rem' }}>
-                      <p style={{ fontSize: '0.72rem', color: '#dc2626', margin: 0 }}>Stats are over 60 days old — hosts may see outdated numbers.</p>
-                    </div>
-                  )}
-                  <p style={{ fontSize: '0.7rem', color: 'var(--sage)', margin: '0 0 0.375rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Platform followers</p>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.5rem', marginBottom: '0.875rem' }}>
-                    {[['instagram', 'Instagram'], ['tiktok', 'TikTok'], ['youtube', 'YouTube']].map(([key, lbl]) => (
-                      <div key={key}>
-                        <label style={labelStyle}>{lbl}</label>
-                        <input
-                          type="number"
-                          min="0"
-                          inputMode="numeric"
-                          value={metricsDraft[key]}
-                          onChange={e => setMetricsDraft(d => ({ ...d, [key]: e.target.value }))}
-                          placeholder="0"
-                          disabled={!canUpdate}
-                          style={{ ...inputStyle, opacity: canUpdate ? 1 : 0.5 }}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                  <p style={{ fontSize: '0.7rem', color: 'var(--sage)', margin: '0 0 0.375rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>30-day averages per post</p>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.5rem', marginBottom: '0.875rem' }}>
-                    {[['avg_views', 'Views'], ['avg_likes', 'Likes'], ['avg_comments', 'Comments']].map(([key, lbl]) => (
-                      <div key={key}>
-                        <label style={labelStyle}>{lbl}</label>
-                        <input
-                          type="number"
-                          min="0"
-                          inputMode="numeric"
-                          value={metricsDraft[key]}
-                          onChange={e => setMetricsDraft(d => ({ ...d, [key]: e.target.value }))}
-                          placeholder="0"
-                          disabled={!canUpdate}
-                          style={{ ...inputStyle, opacity: canUpdate ? 1 : 0.5 }}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.875rem' }}>
-                    <p style={{ fontSize: '0.78rem', color: 'var(--slate)', margin: 0 }}>Engagement Rate</p>
-                    <p style={{ fontFamily: 'var(--font-display)', fontSize: '0.95rem', fontWeight: 700, color: calcER ? '#4A9B7F' : 'var(--sage)', margin: 0 }}>
-                      {calcER ? `${calcER}%` : '—'}
-                    </p>
-                  </div>
-                  <button
-                    onClick={saveMetrics}
-                    disabled={metricsSaving || !canUpdate}
-                    style={{ width: '100%', padding: '0.6rem', borderRadius: '999px', border: 'none', cursor: (metricsSaving || !canUpdate) ? 'default' : 'pointer', background: !canUpdate ? 'rgba(60,87,89,0.18)' : metricsSaved ? '#4A9B7F' : 'var(--slate)', color: !canUpdate ? 'var(--sage)' : '#fff', fontSize: '0.82rem', fontWeight: 600, fontFamily: 'var(--font-body)', transition: 'background 300ms' }}
-                  >
-                    {metricsSaving ? 'Saving…' : metricsSaved ? 'Saved' : !canUpdate ? `Locked until ${nextUpdateDate}` : 'Save Metrics'}
-                  </button>
-                  </div>
-                </div>
-              );
-            })()}
-
-            {/* Referral collab bonus pending notice */}
-            {dp.referral_bonus_pending && !dp.first_collab_completed && (
-              <div style={{ padding: '0.75rem 1.5rem', borderBottom: '1px solid rgba(60,87,89,0.08)', background: 'rgba(139,92,246,0.06)', display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
-                <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(139,92,246,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <svg viewBox="0 0 16 16" fill="none" stroke="#7C3AED" strokeWidth="1.5" strokeLinecap="round" width="13" height="13">
-                    <path d="M8 2a2 2 0 100 4 2 2 0 000-4zM4 9c0-1.1.9-2 2-2h4a2 2 0 012 2v3H4V9z"/>
-                  </svg>
-                </div>
-                <div>
-                  <p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#5B21B6', margin: 0 }}>Referral bonus ready</p>
-                  <p style={{ fontSize: '0.7rem', color: '#7C3AED', margin: '0.1rem 0 0' }}>Complete your first collab to unlock 1 free month</p>
-                </div>
-              </div>
-            )}
-
-            {/* Membership status — 4-state subscription section */}
-            {(() => {
-              const isFounder = dp.is_founder === true;
-              const expiresAt = dp.subscription_expires_at;
-              const isActive = dp.subscription_status === 'active' && (!expiresAt || Date.now() < expiresAt);
-              const isExpired = dp.subscription_status === 'active' && expiresAt && Date.now() >= expiresAt;
-              const isPastDue = dp.subscription_status === 'past_due';
-              const tier = dp.subscription_tier;
-              const isYearly = tier === 'yearly';
-              const isTrialActive = dp.access_state !== 'limited';
-              const trialDaysLeft = dp.trial_ends_at
-                ? Math.max(0, Math.ceil((dp.trial_ends_at - Date.now()) / (24 * 60 * 60 * 1000)))
-                : null;
-
-              if (isFounder) {
-                // Savings accrue from when a normal trial would have ended —
-                // that's the point a non-founder would've started paying $10/mo.
-                const monthsSincePaidStart = dp.trial_ends_at
-                  ? Math.max(0, (Date.now() - dp.trial_ends_at) / (30 * 24 * 60 * 60 * 1000))
-                  : 0;
-                const lifetimeSavings = Math.round(monthsSincePaidStart * 10);
-                return (
-                  <div style={{ padding: '0.875rem 1.5rem', borderBottom: '1px solid rgba(60,87,89,0.08)', background: 'linear-gradient(135deg, rgba(212,168,67,0.08) 0%, rgba(212,168,67,0.04) 100%)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                      <div style={{ width: 36, height: 36, borderRadius: '50%', flexShrink: 0, background: 'rgba(212,168,67,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <svg viewBox="0 0 16 16" width="15" height="15" fill="#D4A843"><path d="M8 1.5l1.67 3.38 3.73.54-2.7 2.63.64 3.72L8 9.77l-3.34 1.76.64-3.72L2.6 5.42l3.73-.54z"/></svg>
-                      </div>
-                      <div>
-                        <p style={{ fontSize: '0.82rem', fontWeight: 700, color: '#A87820', margin: 0 }}>Founding Member</p>
-                        <p style={{ fontSize: '0.72rem', color: '#C4921A', margin: '0.1rem 0 0' }}>Lifetime free access — all features unlocked</p>
-                      </div>
-                    </div>
-                    {lifetimeSavings > 0 && (
-                      <p style={{ fontSize: '0.72rem', color: '#A87820', fontWeight: 600, margin: '0.6rem 0 0', paddingTop: '0.6rem', borderTop: '1px solid rgba(212,168,67,0.2)' }}>
-                        You've saved ${lifetimeSavings} in subscription fees as a Founding Member
-                      </p>
-                    )}
-                  </div>
-                );
-              }
-
-              if (isActive) {
-                const nextDate = expiresAt ? new Date(expiresAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : null;
-                return (
-                  <div style={{ padding: '0.875rem 1.5rem', borderBottom: '1px solid rgba(60,87,89,0.08)', background: 'rgba(74,155,127,0.05)', textAlign: 'center' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
-                      <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#4A9B7F', flexShrink: 0, display: 'inline-block' }} />
-                      <p style={{ fontSize: '0.82rem', fontWeight: 700, color: '#2D7A5F', margin: 0 }}>
-                        Creator Plus &middot; {isYearly ? 'Annual' : 'Monthly'}
-                      </p>
-                    </div>
-                    <p style={{ fontSize: '0.72rem', color: 'var(--sage)', margin: 0 }}>
-                      {isYearly ? '$60/year' : '$10/month'}{nextDate ? ` · Renews ${nextDate}` : ''}
-                    </p>
-                    {!isYearly && (
-                      <button
-                        onClick={() => { setShowSettings(false); openSubModal(); }}
-                        style={{ marginTop: '0.6rem', fontSize: '0.7rem', fontWeight: 600, color: '#A87820', background: 'rgba(212,168,67,0.1)', border: '1px solid rgba(212,168,67,0.25)', borderRadius: '999px', padding: '0.2rem 0.7rem', cursor: 'pointer' }}
-                      >
-                        Upgrade to Yearly — save 50%
-                      </button>
-                    )}
-                  </div>
-                );
-              }
-
-              if (isExpired) {
-                return (
-                  <div style={{ padding: '0.875rem 1.5rem', borderBottom: '1px solid rgba(60,87,89,0.08)', background: 'rgba(239,68,68,0.04)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <div>
-                        <p style={{ fontSize: '0.82rem', fontWeight: 700, color: '#dc2626', margin: 0 }}>Plan expired</p>
-                        <p style={{ fontSize: '0.72rem', color: 'var(--sage)', margin: '0.1rem 0 0' }}>Renew to keep messaging and applying</p>
-                      </div>
-                      <button
-                        onClick={() => { setShowSettings(false); openSubModal(); }}
-                        style={{ fontSize: '0.75rem', fontWeight: 700, color: 'white', background: '#dc2626', border: 'none', borderRadius: '999px', padding: '0.35rem 0.9rem', cursor: 'pointer' }}
-                      >
-                        Renew
-                      </button>
-                    </div>
-                  </div>
-                );
-              }
-
-              if (isPastDue) {
-                return (
-                  <div style={{ padding: '0.875rem 1.5rem', borderBottom: '1px solid rgba(60,87,89,0.08)', background: 'rgba(239,68,68,0.06)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem' }}>
-                      <div>
-                        <p style={{ fontSize: '0.82rem', fontWeight: 700, color: '#dc2626', margin: 0 }}>Payment past due</p>
-                        <p style={{ fontSize: '0.72rem', color: 'var(--sage)', margin: '0.1rem 0 0' }}>Your last payment failed — update your card to keep your plan active.</p>
-                      </div>
-                      <button
-                        onClick={handleManageSubscription}
-                        disabled={portalLoading}
-                        style={{ flexShrink: 0, fontSize: '0.75rem', fontWeight: 700, color: 'white', background: '#dc2626', border: 'none', borderRadius: '999px', padding: '0.35rem 0.9rem', cursor: portalLoading ? 'wait' : 'pointer', opacity: portalLoading ? 0.6 : 1 }}
-                      >
-                        {portalLoading ? 'Opening…' : 'Update payment'}
-                      </button>
-                    </div>
-                  </div>
-                );
-              }
-
-              if (isTrialActive) {
-                return (
-                  <div style={{ padding: '0.875rem 1.5rem', borderBottom: '1px solid rgba(60,87,89,0.08)', background: 'rgba(209,235,219,0.15)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem' }}>
-                      <div>
-                        <p style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--slate)', margin: '0 0 0.1rem' }}>
-                          Free trial{trialDaysLeft !== null ? ` · ${trialDaysLeft} day${trialDaysLeft === 1 ? '' : 's'} left` : ''}
-                        </p>
-                        <p style={{ fontSize: '0.72rem', color: 'var(--sage)', margin: 0 }}>Full access included — choose a plan before your trial ends.</p>
-                      </div>
-                      <button
-                        onClick={() => { setShowSettings(false); openSubModal(); }}
-                        style={{ flexShrink: 0, fontSize: '0.75rem', fontWeight: 700, color: 'var(--slate)', background: 'rgba(60,87,89,0.08)', border: 'none', borderRadius: '999px', padding: '0.35rem 0.9rem', cursor: 'pointer' }}
-                      >
-                        View plans
-                      </button>
-                    </div>
-                  </div>
-                );
-              }
-
-              return (
-                <div style={{ padding: '0.875rem 1.5rem', borderBottom: '1px solid rgba(60,87,89,0.08)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <div>
-                      <p style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--slate)', margin: 0 }}>No active plan</p>
-                      <p style={{ fontSize: '0.72rem', color: 'var(--sage)', margin: '0.1rem 0 0' }}>Subscribe to keep collaborating</p>
-                    </div>
-                    <button
-                      onClick={() => { setShowSettings(false); openSubModal(); }}
-                      style={{ fontSize: '0.75rem', fontWeight: 700, color: 'white', background: 'var(--slate)', border: 'none', borderRadius: '999px', padding: '0.35rem 0.9rem', cursor: 'pointer' }}
-                    >
-                      Subscribe
-                    </button>
-                  </div>
-                </div>
-              );
-            })()}
-
-            {/* Referral code — creators only */}
-            {dp.role !== 'host' && (() => {
-              const code = dp.referral_code || referralStats?.code;
-              const freeMonths = dp.free_months_balance || 0;
-              const signups = referralStats?.signups_rewarded || 0;
-              const collabBonuses = referralStats?.collab_bonuses_earned || 0;
-              if (!code) return null;
-              return (
-                <div style={{ padding: '0.875rem 1.5rem', borderBottom: '1px solid rgba(60,87,89,0.08)', background: 'rgba(209,235,219,0.08)' }}>
-                  <p style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--slate)', margin: '0 0 0.625rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Referral Code</p>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                    <span style={{ fontFamily: 'monospace', fontSize: '1rem', fontWeight: 700, color: 'var(--ink)', letterSpacing: '0.08em', background: 'rgba(25,37,36,0.05)', padding: '0.3rem 0.75rem', borderRadius: '0.5rem' }}>{code}</span>
-                    <button
-                      onClick={() => { navigator.clipboard?.writeText(code); }}
-                      title="Copy code"
-                      style={{ background: 'none', border: '1.5px solid rgba(25,37,36,0.15)', borderRadius: '0.5rem', cursor: 'pointer', padding: '0.3rem 0.6rem', fontSize: '0.72rem', color: 'var(--slate)', fontWeight: 600, fontFamily: 'var(--font-body)' }}
-                    >
-                      Copy
-                    </button>
-                  </div>
-                  <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-                    <div style={{ fontSize: '0.72rem', color: 'var(--sage)' }}>
-                      <span style={{ fontWeight: 700, color: 'var(--ink)' }}>{signups}</span> / {referralStats?.max_uses || 12} signups used
-                    </div>
-                    {collabBonuses > 0 && (
-                      <div style={{ fontSize: '0.72rem', color: 'var(--sage)' }}>
-                        <span style={{ fontWeight: 700, color: '#4A9B7F' }}>{collabBonuses}</span> collab bonus{collabBonuses !== 1 ? 'es' : ''} earned
-                      </div>
-                    )}
-                    {freeMonths > 0 && (
-                      <div style={{ fontSize: '0.72rem', fontWeight: 600, color: '#4A9B7F' }}>
-                        +{freeMonths} free month{freeMonths !== 1 ? 's' : ''} balance
-                      </div>
-                    )}
-                  </div>
-                  <p style={{ fontSize: '0.68rem', color: 'var(--sage)', margin: '0.35rem 0 0', lineHeight: 1.5 }}>Share your code. Both you and new members get 1 free month on signup, +1 more when they complete their first collab.</p>
-                </div>
-              );
-            })()}
-
-            {SETTINGS.map((row, i) => (
-              <SettingsRow key={row.label} {...row} isLast={i === SETTINGS.length - 1} />
-            ))}
-
-            {/* Host billing — platform fee ledger (fees.getBilling) */}
-            {dp.role === 'host' && (() => {
-              const ledger = hostBilling || [];
-              if (ledger.length === 0) return null;
-              const STATUS = {
-                paid:    { label: 'Paid',    color: '#2D7A5F', bg: 'rgba(74,155,127,0.14)' },
-                pending: { label: 'Pending', color: '#A87820', bg: 'rgba(212,168,67,0.16)' },
-                failed:  { label: 'Failed',  color: '#dc2626', bg: 'rgba(239,68,68,0.12)' },
-                waived:  { label: 'Waived',  color: 'var(--sage)', bg: 'rgba(60,87,89,0.1)' },
-              };
-              const outstanding = ledger
-                .filter((f) => f.status === 'pending' || f.status === 'failed')
-                .reduce((sum, f) => sum + (f.amount || 0), 0);
-              return (
-                <div style={{ borderTop: '1px solid rgba(60,87,89,0.1)', padding: '0.875rem 1.5rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', margin: '0 0 0.625rem' }}>
-                    <p style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--slate)', margin: 0, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Billing</p>
-                    {outstanding > 0 && (
-                      <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#dc2626' }}>${outstanding.toFixed(2)} outstanding</span>
-                    )}
-                  </div>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.75rem' }}>
-                    <thead>
-                      <tr style={{ borderBottom: '1px solid rgba(60,87,89,0.1)' }}>
-                        <th style={{ textAlign: 'left', padding: '0.25rem 0', fontWeight: 600, color: 'var(--sage)', paddingRight: '1rem' }}>Collab</th>
-                        <th style={{ textAlign: 'right', padding: '0.25rem 0', fontWeight: 600, color: 'var(--sage)', paddingRight: '1rem' }}>Fee</th>
-                        <th style={{ textAlign: 'right', padding: '0.25rem 0', fontWeight: 600, color: 'var(--sage)' }}>Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {ledger.map((f, i) => {
-                        const s = STATUS[f.status] || STATUS.pending;
-                        const when = f.paid_at || f.created_at;
-                        return (
-                          <tr key={f._id} style={{ borderBottom: i < ledger.length - 1 ? '1px solid rgba(60,87,89,0.06)' : 'none' }}>
-                            <td style={{ padding: '0.4rem 0', color: 'var(--ink)', paddingRight: '1rem', maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                              {f.collabTitle || '—'}
-                              {when && <span style={{ display: 'block', fontSize: '0.62rem', color: 'var(--sage)' }}>{new Date(when).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>}
-                            </td>
-                            <td style={{ padding: '0.4rem 0', color: 'var(--slate)', fontWeight: 600, textAlign: 'right', paddingRight: '1rem' }}>
-                              {f.method === 'waived' ? '—' : `$${(f.amount || 0).toFixed(2)}`}
-                            </td>
-                            <td style={{ padding: '0.4rem 0', textAlign: 'right' }}>
-                              <span style={{ fontSize: '0.65rem', fontWeight: 700, color: s.color, background: s.bg, borderRadius: '999px', padding: '0.12rem 0.5rem' }}>{s.label}</span>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              );
-            })()}
-
-            </div>{/* end scrollable body */}
-            <div style={{ borderTop: '1px solid rgba(60,87,89,0.1)', flexShrink: 0 }}>
-              <button
-                onClick={signOut}
-                style={{
-                  width: '100%', padding: '1rem 1.25rem', display: 'flex', alignItems: 'center', gap: '1rem',
-                  color: '#ef4444', fontSize: '0.875rem', fontWeight: 600,
-                  background: 'transparent', border: 'none', cursor: 'pointer',
-                  fontFamily: 'var(--font-body)', transition: 'background 150ms',
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(239,68,68,0.05)'}
-                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-              >
-                <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'rgba(239,68,68,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: '#ef4444' }}>
-                  <SignOutIcon />
-                </div>
-                Log Out
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* ── Sign up as Host / Creator sheet ──────────────────────────────── */}
       {showSwitchConfirm && (
         <div
@@ -2362,6 +1790,102 @@ export default function Profile() {
         </div>
       )}
 
+      {/* ── AI Assistant modal ────────────────────────────────────────── */}
+      {showAiAssistant && (
+        <div
+          style={{ position: 'fixed', inset: 0, zIndex: 10000, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', padding: '1rem', background: 'rgba(25,37,36,0.5)', backdropFilter: 'blur(6px)' }}
+          onClick={() => setShowAiAssistant(false)}
+        >
+          <div
+            style={{ width: '100%', maxWidth: '460px', borderRadius: '1.5rem', padding: 'clamp(1.25rem, 5vw, 2rem)', background: 'rgba(255,255,255,0.97)', border: '1px solid rgba(255,255,255,0.85)', boxShadow: '0 20px 60px rgba(25,37,36,0.18)' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
+              <h4 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.15rem', color: 'var(--slate)', margin: 0 }}>AI Assistant</h4>
+              <button onClick={() => setShowAiAssistant(false)} style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'rgba(209,235,219,0.5)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--slate)' }}>✕</button>
+            </div>
+
+            <p style={{ fontSize: '0.8rem', color: 'var(--sage)', margin: '0 0 1.25rem', lineHeight: 1.5 }}>
+              "Draft with AI" in Inbox already works for everyone, powered by Collabnb. Connect your own OpenAI or Anthropic API key here only if you want your drafts to use your own model/budget instead. Drafts always require you to review and hit Send — nothing sends automatically.
+            </p>
+
+            {aiConnectionStatus?.connected ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                <div style={{ padding: '0.875rem 1rem', borderRadius: '0.875rem', background: 'rgba(209,235,219,0.35)', fontSize: '0.85rem', color: 'var(--slate)', fontWeight: 600 }}>
+                  Connected — {aiConnectionStatus.provider === 'anthropic' ? 'Anthropic' : 'OpenAI'}
+                </div>
+                <button
+                  className="btn-glass"
+                  style={{ fontSize: '0.85rem' }}
+                  onClick={async () => { await disconnectAiApiKey(); }}
+                >
+                  Disconnect
+                </button>
+              </div>
+            ) : (
+              <>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem', marginBottom: '1.5rem' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 700, color: 'var(--sage)', marginBottom: '0.375rem', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Provider</label>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      {['openai', 'anthropic'].map((p) => (
+                        <button
+                          key={p}
+                          type="button"
+                          onClick={() => setAiProviderDraft(p)}
+                          style={{
+                            flex: 1, padding: '0.6rem 0.75rem', borderRadius: '0.75rem',
+                            border: aiProviderDraft === p ? '1.5px solid var(--slate)' : '1px solid rgba(25,37,36,0.12)',
+                            background: aiProviderDraft === p ? 'rgba(209,235,219,0.4)' : 'rgba(255,255,255,0.6)',
+                            fontFamily: 'var(--font-body)', fontSize: '0.85rem', fontWeight: 600, color: 'var(--ink)', cursor: 'pointer',
+                          }}
+                        >
+                          {p === 'openai' ? 'OpenAI' : 'Anthropic'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 700, color: 'var(--sage)', marginBottom: '0.375rem', textTransform: 'uppercase', letterSpacing: '0.08em' }}>API Key</label>
+                    <input
+                      type="password"
+                      value={aiKeyDraft}
+                      onChange={(e) => setAiKeyDraft(e.target.value)}
+                      placeholder={aiProviderDraft === 'openai' ? 'sk-...' : 'sk-ant-...'}
+                      style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '0.875rem', background: 'rgba(255,255,255,0.75)', border: '1px solid rgba(25,37,36,0.12)', fontFamily: 'var(--font-body)', fontSize: '0.875rem', color: 'var(--ink)', outline: 'none', boxSizing: 'border-box' }}
+                    />
+                  </div>
+                  {aiError && <p style={{ fontSize: '0.78rem', color: '#b3261e', margin: 0 }}>{aiError}</p>}
+                </div>
+
+                <div style={{ display: 'flex', gap: '0.75rem' }}>
+                  <button className="btn-glass" style={{ flex: 1, fontSize: '0.85rem' }} onClick={() => setShowAiAssistant(false)}>Cancel</button>
+                  <button
+                    className="btn-primary"
+                    style={{ flex: 1, fontSize: '0.85rem' }}
+                    disabled={aiSaving || !aiKeyDraft.trim()}
+                    onClick={async () => {
+                      setAiSaving(true);
+                      setAiError('');
+                      try {
+                        await saveAiApiKey({ provider: aiProviderDraft, apiKey: aiKeyDraft.trim() });
+                        setAiKeyDraft('');
+                      } catch (err) {
+                        setAiError(err?.data || err?.message || 'Could not save key — try again.');
+                      } finally {
+                        setAiSaving(false);
+                      }
+                    }}
+                  >
+                    {aiSaving ? 'Saving…' : 'Connect'}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
       {showPayoutMethod && (
         <PayoutMethodPanel
           profile={dp}
@@ -2369,7 +1893,7 @@ export default function Profile() {
           createConnectOnboardingLink={createConnectOnboardingLink}
           getConnectAccountStatus={getConnectAccountStatus}
           createWiseRecipient={createWiseRecipient}
-          setPayoutMethodMutation={setPayoutMethodMutation}
+          setActivePayoutMethodMutation={setActivePayoutMethodMutation}
           disconnectPayoutMethodMutation={disconnectPayoutMethodMutation}
         />
       )}
@@ -2426,17 +1950,40 @@ export default function Profile() {
 
 // Creator payout-method connection — Stripe Connect (hosted onboarding) or
 // Wise (manual recipient details, since there's no equivalent hosted flow).
-function PayoutMethodPanel({ profile, onClose, createConnectOnboardingLink, getConnectAccountStatus, createWiseRecipient, setPayoutMethodMutation, disconnectPayoutMethodMutation }) {
+function PayoutMethodPanel({ profile: profileProp, onClose, createConnectOnboardingLink, getConnectAccountStatus, createWiseRecipient, setActivePayoutMethodMutation, disconnectPayoutMethodMutation }) {
+  const convex = useConvex();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
+  const [wiseFormOpen, setWiseFormOpen] = useState(false);
   const [wiseCurrency, setWiseCurrency] = useState('USD');
   const [wiseForm, setWiseForm] = useState({ accountHolderName: '', accountNumber: '', bankCode: '' });
   const [liveStatus, setLiveStatus] = useState(null);
   const [showConfetti, setShowConfetti] = useState(false);
+  const [switchTarget, setSwitchTarget] = useState(null); // 'stripe_connect' | 'wise' | null
+  const [switchInput, setSwitchInput] = useState('');
+  const [fieldsOverride, setFieldsOverride] = useState({});
+
+  // Payout-related fields change here via mutations that don't flow back
+  // through AuthContext's profile state, so this panel's own copy would go
+  // stale (e.g. the Active badge wouldn't move after a switch). Re-fetch
+  // just these fields after any mutation that changes them.
+  const profile = { ...profileProp, ...fieldsOverride };
+  const refreshProfile = async () => {
+    try {
+      const fresh = await convex.query(api.profiles.getById, { id: profileId });
+      if (fresh) setFieldsOverride({
+        payout_method: fresh.payout_method,
+        stripe_connect_account_id: fresh.stripe_connect_account_id,
+        stripe_connect_payouts_enabled: fresh.stripe_connect_payouts_enabled,
+        wise_recipient_id: fresh.wise_recipient_id,
+        wise_recipient_currency: fresh.wise_recipient_currency,
+      });
+    } catch { /* keep previous state */ }
+  };
 
   const method = profile.payout_method;
-  const profileId = profile._id ? String(profile._id) : (profile.id ? String(profile.id) : '');
-  const stripeConnected = method === 'stripe_connect' && profile.stripe_connect_account_id;
+  const profileId = profileProp._id ? String(profileProp._id) : (profileProp.id ? String(profileProp.id) : '');
+  const stripeConnected = !!profile.stripe_connect_account_id;
 
   // The cached profile.stripe_connect_payouts_enabled flag only updates when
   // Stripe's account.updated webhook lands — it can lag behind (or, if a
@@ -2476,10 +2023,9 @@ function PayoutMethodPanel({ profile, onClose, createConnectOnboardingLink, getC
     }
   };
 
-  const chooseWise = async () => {
+  const chooseWise = () => {
     setError(null);
-    try { await setPayoutMethodMutation({ profileId, payoutMethod: 'wise' }); }
-    catch { setError('Could not save your choice. Please try again.'); }
+    setWiseFormOpen(true);
   };
 
   const submitWiseRecipient = async () => {
@@ -2502,6 +2048,7 @@ function PayoutMethodPanel({ profile, onClose, createConnectOnboardingLink, getC
         type: wiseCurrency === 'IDR' ? 'indonesian' : 'aba',
         details,
       });
+      await refreshProfile();
     } catch (err) {
       setError(err?.message?.includes('WISE_API_TOKEN')
         ? 'Wise payouts are not fully configured yet — check back soon.'
@@ -2511,17 +2058,38 @@ function PayoutMethodPanel({ profile, onClose, createConnectOnboardingLink, getC
     }
   };
 
-  const wiseConnected = method === 'wise' && profile.wise_recipient_id;
+  const wiseConnected = !!profile.wise_recipient_id;
+  const bothConnected = stripeConnected && wiseConnected;
   const payoutsEnabled = liveStatus ? liveStatus.payoutsEnabled : profile.stripe_connect_payouts_enabled === true;
   const detailsSubmitted = liveStatus ? liveStatus.detailsSubmitted : undefined;
 
-  const disconnect = async () => {
-    if (!window.confirm("Disconnect your payout method? You'll need to reconnect before your next payout can go through.")) return;
+  const disconnect = async (rail) => {
+    if (!window.confirm("Disconnect this payout method? You'll need to reconnect before it can receive a payout again.")) return;
     setBusy(true);
     setError(null);
-    try { await disconnectPayoutMethodMutation({ profileId }); }
+    try { await disconnectPayoutMethodMutation({ profileId, method: rail }); await refreshProfile(); }
     catch { setError('Could not disconnect. Please try again.'); }
     finally { setBusy(false); }
+  };
+
+  // Switching where real payouts go requires typing SWITCH to confirm — this
+  // only matters once both rails are connected, so a slip of the mouse can't
+  // silently reroute money mid-collaboration.
+  const openSwitchConfirm = (rail) => { setSwitchTarget(rail); setSwitchInput(''); setError(null); };
+  const confirmSwitch = async () => {
+    if (switchInput.trim().toUpperCase() !== 'SWITCH') return;
+    setBusy(true);
+    setError(null);
+    try {
+      await setActivePayoutMethodMutation({ profileId, payoutMethod: switchTarget });
+      await refreshProfile();
+      setSwitchTarget(null);
+      setSwitchInput('');
+    } catch {
+      setError('Could not switch your payout method. Please try again.');
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -2555,18 +2123,55 @@ function PayoutMethodPanel({ profile, onClose, createConnectOnboardingLink, getC
           </p>
         )}
 
-        {stripeConnected ? (
-          <div style={{ padding: '1rem 1.1rem', borderRadius: '0.875rem', background: payoutsEnabled ? 'rgba(209,235,219,0.35)' : 'rgba(254,243,199,0.5)', border: `1px solid ${payoutsEnabled ? 'rgba(52,150,90,0.25)' : 'rgba(180,130,20,0.2)'}`, marginBottom: '1rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.35rem' }}>
-              <span style={{
-                width: '8px', height: '8px', borderRadius: '50%', flexShrink: 0,
-                background: payoutsEnabled ? '#2FA35C' : '#C08A1E',
-                boxShadow: payoutsEnabled ? '0 0 0 3px rgba(47,163,92,0.18)' : '0 0 0 3px rgba(192,138,30,0.15)',
-                animation: payoutsEnabled ? 'payoutPulse 2s ease-in-out infinite' : 'none',
-              }} />
-              <span style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: payoutsEnabled ? '#2FA35C' : '#A87415' }}>
-                {payoutsEnabled ? 'Connected' : detailsSubmitted ? 'Under review' : 'Verification pending'}
-              </span>
+        {switchTarget ? (
+          <div style={{ padding: '1.1rem 1.1rem', borderRadius: '0.875rem', background: 'rgba(254,243,199,0.55)', border: '1px solid rgba(180,130,20,0.3)', marginBottom: '1rem' }}>
+            <p style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--ink)', margin: '0 0 0.35rem' }}>
+              Switch payouts to {switchTarget === 'stripe_connect' ? 'Stripe' : 'Wise'}?
+            </p>
+            <p style={{ fontSize: '0.75rem', color: 'var(--slate)', margin: '0 0 0.75rem', lineHeight: 1.5 }}>
+              Your next payout will go to {switchTarget === 'stripe_connect' ? 'Stripe' : 'Wise'} instead of {switchTarget === 'stripe_connect' ? 'Wise' : 'Stripe'}. Type <strong>SWITCH</strong> to confirm.
+            </p>
+            <input
+              type="text"
+              value={switchInput}
+              onChange={(e) => setSwitchInput(e.target.value)}
+              placeholder="Type SWITCH"
+              autoFocus
+              style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '0.875rem', background: 'rgba(255,255,255,0.85)', border: '1px solid rgba(180,130,20,0.35)', fontFamily: 'var(--font-body)', fontSize: '0.875rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--ink)', outline: 'none', boxSizing: 'border-box', marginBottom: '0.75rem', textTransform: 'uppercase' }}
+            />
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <button
+                onClick={confirmSwitch}
+                disabled={busy || switchInput.trim().toUpperCase() !== 'SWITCH'}
+                className="btn-primary"
+                style={{ fontSize: '0.78rem', padding: '0.4rem 0.9rem', opacity: switchInput.trim().toUpperCase() !== 'SWITCH' ? 0.5 : 1 }}
+              >
+                {busy ? 'Switching…' : 'Confirm switch'}
+              </button>
+              <button onClick={() => { setSwitchTarget(null); setSwitchInput(''); }} disabled={busy} className="btn-glass" style={{ fontSize: '0.78rem', padding: '0.4rem 0.9rem' }}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+        <>
+        {stripeConnected && (
+          <div style={{ padding: '1rem 1.1rem', borderRadius: '0.875rem', background: payoutsEnabled ? 'rgba(209,235,219,0.35)' : 'rgba(254,243,199,0.5)', border: `1px solid ${payoutsEnabled ? 'rgba(52,150,90,0.25)' : 'rgba(180,130,20,0.2)'}`, marginBottom: '0.75rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <span style={{
+                  width: '8px', height: '8px', borderRadius: '50%', flexShrink: 0,
+                  background: payoutsEnabled ? '#2FA35C' : '#C08A1E',
+                  boxShadow: payoutsEnabled ? '0 0 0 3px rgba(47,163,92,0.18)' : '0 0 0 3px rgba(192,138,30,0.15)',
+                  animation: payoutsEnabled ? 'payoutPulse 2s ease-in-out infinite' : 'none',
+                }} />
+                <span style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: payoutsEnabled ? '#2FA35C' : '#A87415' }}>
+                  {payoutsEnabled ? 'Connected' : detailsSubmitted ? 'Under review' : 'Verification pending'}
+                </span>
+              </div>
+              {bothConnected && method === 'stripe_connect' && (
+                <span style={{ fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--ink)', background: 'rgba(25,37,36,0.08)', padding: '0.15rem 0.5rem', borderRadius: '999px' }}>Active</span>
+              )}
             </div>
             <p style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--ink)', margin: '0 0 0.2rem' }}>
               {payoutsEnabled ? '✓ Stripe connected' : detailsSubmitted ? 'Stripe is reviewing your details' : 'Finish connecting with Stripe'}
@@ -2578,45 +2183,77 @@ function PayoutMethodPanel({ profile, onClose, createConnectOnboardingLink, getC
                 ? "Stripe is verifying the details you submitted — this usually takes a few days. You can update your information anytime."
                 : 'Finish verifying your details with Stripe to start receiving payouts.'}
             </p>
-            <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem' }}>
+            <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem', flexWrap: 'wrap' }}>
               {!payoutsEnabled && (
                 <button onClick={connectStripe} disabled={busy} className="btn-glass" style={{ fontSize: '0.78rem', padding: '0.4rem 0.9rem' }}>
                   {busy ? 'Opening…' : detailsSubmitted ? 'Update verification details' : 'Continue verification'}
                 </button>
               )}
-              <button onClick={disconnect} disabled={busy} className="btn-danger-outline" style={{ fontSize: '0.78rem' }}>
+              {bothConnected && payoutsEnabled && method !== 'stripe_connect' && (
+                <button onClick={() => openSwitchConfirm('stripe_connect')} disabled={busy} className="btn-glass" style={{ fontSize: '0.78rem', padding: '0.4rem 0.9rem' }}>
+                  Use Stripe instead
+                </button>
+              )}
+              <button onClick={() => disconnect('stripe_connect')} disabled={busy} className="btn-danger-outline" style={{ fontSize: '0.78rem' }}>
                 Disconnect
               </button>
             </div>
             <style>{`@keyframes payoutPulse { 0%,100%{opacity:1} 50%{opacity:0.45} }`}</style>
           </div>
-        ) : wiseConnected ? (
-          <div style={{ padding: '1rem 1.1rem', borderRadius: '0.875rem', background: 'rgba(209,235,219,0.35)', border: '1px solid rgba(52,150,90,0.25)', marginBottom: '1rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.35rem' }}>
-              <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#2FA35C', boxShadow: '0 0 0 3px rgba(47,163,92,0.18)' }} />
-              <span style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#2FA35C' }}>Connected</span>
+        )}
+
+        {wiseConnected && (
+          <div style={{ padding: '1rem 1.1rem', borderRadius: '0.875rem', background: 'rgba(209,235,219,0.35)', border: '1px solid rgba(52,150,90,0.25)', marginBottom: '0.75rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#2FA35C', boxShadow: '0 0 0 3px rgba(47,163,92,0.18)' }} />
+                <span style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#2FA35C' }}>Connected</span>
+              </div>
+              {bothConnected && method === 'wise' && (
+                <span style={{ fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--ink)', background: 'rgba(25,37,36,0.08)', padding: '0.15rem 0.5rem', borderRadius: '999px' }}>Active</span>
+              )}
             </div>
             <p style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--ink)', margin: '0 0 0.2rem' }}>✓ Wise connected</p>
             <p style={{ fontSize: '0.72rem', color: 'var(--sage)', margin: '0 0 0.75rem' }}>Payouts will be sent in {profile.wise_recipient_currency}.</p>
-            <button onClick={disconnect} disabled={busy} className="btn-danger-outline" style={{ fontSize: '0.78rem' }}>
-              Disconnect
-            </button>
-          </div>
-        ) : (
-          <>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem', marginBottom: '1rem' }}>
-              <button onClick={connectStripe} disabled={busy} className="btn-primary" style={{ fontSize: '0.85rem' }}>
-                {busy && method !== 'wise' ? 'Opening…' : 'Connect with Stripe'}
-              </button>
-              {method !== 'wise' && (
-                <button onClick={chooseWise} disabled={busy} className="btn-glass" style={{ fontSize: '0.85rem' }}>
-                  Connect with Wise instead
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+              {bothConnected && method !== 'wise' && (
+                <button onClick={() => openSwitchConfirm('wise')} disabled={busy} className="btn-glass" style={{ fontSize: '0.78rem', padding: '0.4rem 0.9rem' }}>
+                  Use Wise instead
                 </button>
               )}
+              <button onClick={() => disconnect('wise')} disabled={busy} className="btn-danger-outline" style={{ fontSize: '0.78rem' }}>
+                Disconnect
+              </button>
             </div>
+          </div>
+        )}
 
-            {method === 'wise' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+        {stripeConnected && !wiseConnected && !wiseFormOpen && (
+          <button onClick={chooseWise} disabled={busy} className="btn-glass" style={{ fontSize: '0.8rem', width: '100%', marginBottom: '1rem' }}>
+            + Also connect Wise as a backup
+          </button>
+        )}
+        {wiseConnected && !stripeConnected && (
+          <button onClick={connectStripe} disabled={busy} className="btn-glass" style={{ fontSize: '0.8rem', width: '100%', marginBottom: '1rem' }}>
+            {busy ? 'Opening…' : '+ Also connect Stripe as a backup'}
+          </button>
+        )}
+
+        {!stripeConnected && !wiseConnected && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem', marginBottom: '1rem' }}>
+            <button onClick={connectStripe} disabled={busy} className="btn-primary" style={{ fontSize: '0.85rem' }}>
+              {busy ? 'Opening…' : 'Connect with Stripe'}
+            </button>
+            {!wiseFormOpen && (
+              <button onClick={chooseWise} disabled={busy} className="btn-glass" style={{ fontSize: '0.85rem' }}>
+                Connect with Wise instead
+              </button>
+            )}
+          </div>
+        )}
+
+        {wiseFormOpen && !wiseConnected && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1rem' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 700, color: 'var(--sage)', marginBottom: '0.375rem', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Currency</label>
                   <select
@@ -2662,8 +2299,8 @@ function PayoutMethodPanel({ profile, onClose, createConnectOnboardingLink, getC
                   {busy ? 'Connecting…' : 'Connect Wise Account'}
                 </button>
               </div>
-            )}
-          </>
+        )}
+        </>
         )}
 
         <p style={{ fontSize: '0.7rem', color: 'var(--sage)', margin: '1rem 0 0', lineHeight: 1.5 }}>

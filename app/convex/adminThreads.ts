@@ -2,7 +2,7 @@ import { v } from "convex/values";
 import { query, mutation, action } from "./_generated/server";
 import { api } from "./_generated/api";
 import { llmChat } from "./blog";
-import { requireAdmin, requireAdminAction, canAccessAdmin } from "./lib/auth";
+import { requireAdmin, requireAdminAction, canAccessAdmin, getAuthedProfile } from "./lib/auth";
 
 // Admin-brand inbox: threads owned by the "Collabnb" persona (username 'collabnb').
 // Each thread is a 1:1 conversation with a single user (participant_id), keyed
@@ -74,6 +74,51 @@ export const list = query({
     );
 
     return enriched.sort((a, b) => (b.last_at ?? 0) - (a.last_at ?? 0));
+  },
+});
+
+// The current signed-in user's own conversation with the Collabnb persona, if
+// one exists — merged into their regular Inbox so admin messages actually
+// reach the recipient instead of only showing up in the admin's own inbox view.
+export const getMineAsUser = query({
+  args: {},
+  handler: async (ctx) => {
+    const profile = await getAuthedProfile(ctx);
+    if (!profile) return null;
+    const personaId = await getPersonaId(ctx);
+    if (!personaId) return null;
+    const myId = String(profile._id);
+
+    const thread = await ctx.db
+      .query("threads")
+      .withIndex("by_participant", (q) => q.eq("participant_id", myId))
+      .filter((q: any) => q.eq(q.field("owner_id"), personaId))
+      .first();
+    if (!thread) return null;
+
+    const key = thread.thread_key || threadKeyFor(myId);
+    const persona: any = await ctx.db.get(personaId as any);
+    const msgs = await ctx.db
+      .query("thread_messages")
+      .withIndex("by_thread", (q) => q.eq("thread_key", key))
+      .order("desc")
+      .take(1);
+    const last = msgs[0];
+
+    return {
+      id: key,
+      thread_key: key,
+      listing_title: "Collabnb",
+      host_name: persona?.full_name ?? "Collabnb",
+      host_avatar: persona?.avatar_url ?? null,
+      tag: "Collabnb",
+      last_message: last?.text ?? thread.last_message ?? "",
+      timestamp: last?.created_at
+        ? new Date(last.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+        : "New",
+      unread: last && last.sender_id === personaId ? 1 : 0,
+      is_founder: false,
+    };
   },
 });
 

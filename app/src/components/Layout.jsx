@@ -62,7 +62,7 @@ function PastDueBanner({ topOffset }) {
 
   const handleFix = async () => {
     const customerId = profile?.stripe_customer_id;
-    if (!customerId) { window.location.href = '/profile?settings=true'; return; }
+    if (!customerId) { window.location.href = '/settings?tab=billing'; return; }
     setBusy(true);
     try {
       const { url } = await createBillingPortalSession({
@@ -72,7 +72,7 @@ function PastDueBanner({ topOffset }) {
       window.location.href = url;
     } catch {
       setBusy(false);
-      window.location.href = '/profile?settings=true';
+      window.location.href = '/settings?tab=billing';
     }
   };
 
@@ -120,6 +120,8 @@ export default function Layout({ children }) {
     location.pathname !== '/contract' &&
     location.pathname !== '/inbox' &&
     location.pathname !== '/explore' &&
+    location.pathname !== '/collabs' &&
+    location.pathname !== '/host/proposals' &&
     (!location.pathname.startsWith('/host') || location.pathname === '/host/proposals');
 
   // ── Welcome toast (shown once after Clerk/Google signup redirect) ──────────

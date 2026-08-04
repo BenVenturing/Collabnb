@@ -7,6 +7,37 @@ import { useAuth } from '../../contexts/AuthContext';
 // Two-pane: thread list (left) + conversation (right), mirroring Inbox.jsx's
 // visual language but reading/writing Convex directly — no CollabContext.
 
+// Convex storage URL prefix; used to construct public URLs from storage IDs
+const CONVEX_URL = import.meta.env.VITE_CONVEX_URL;
+
+// Resize an image file via canvas, upload the resulting JPEG blob to Convex
+// storage, and return the public URL. The Collabnb persona's photo is its
+// own — not tied to whichever admin happens to be signed in.
+async function uploadResizedImage(file, maxW, maxH, uploadFn, quality, getUrlFn) {
+  const img = await new Promise((resolve, reject) => {
+    const i = new Image();
+    i.onload = () => { URL.revokeObjectURL(i.src); resolve(i); };
+    i.onerror = reject;
+    i.src = URL.createObjectURL(file);
+  });
+  const ratio = Math.min(maxW / img.width, maxH / img.height, 1);
+  const w = Math.round(img.width * ratio);
+  const h = Math.round(img.height * ratio);
+  const canvas = document.createElement('canvas');
+  canvas.width = w; canvas.height = h;
+  canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+  const uploadUrl = await uploadFn();
+  const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', quality));
+  const res = await fetch(uploadUrl, { method: 'POST', headers: { 'Content-Type': 'image/jpeg' }, body: blob });
+  const { storageId } = await res.json();
+  if (storageId) {
+    const url = await getUrlFn({ storageId });
+    if (url) return url;
+    return `${CONVEX_URL}/api/storage/${storageId}`;
+  }
+  throw new Error('Upload failed');
+}
+
 function fmtTime(ts) {
   if (!ts) return '';
   const d = new Date(ts);
@@ -82,21 +113,30 @@ function UserRow({ user, onClick }) {
   );
 }
 
-// The sending identity (persona) photo — what users see when messaged. Clicking
-// opens the Clerk profile modal to change it; the new photo syncs to the persona.
-function SenderChip({ name, photo, onEdit }) {
+// The sending identity (persona) photo — what users see when messaged. This
+// is the Collabnb persona's own photo (stored on its Convex profile), never
+// the signed-in admin's personal photo — tapping it uploads a new one directly.
+function SenderChip({ name, photo, uploading, onFileSelected }) {
   const initials = (name || 'C').split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase();
   return (
-    <button
-      onClick={onEdit}
+    <label
       title="Change your photo — this is what users see when you message them"
-      style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '6px 8px', borderRadius: 12, border: '1px solid rgba(25,37,36,0.08)', background: 'rgba(255,255,255,0.5)', cursor: 'pointer', textAlign: 'left' }}
+      style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '6px 8px', borderRadius: 12, border: '1px solid rgba(25,37,36,0.08)', background: 'rgba(255,255,255,0.5)', cursor: uploading ? 'default' : 'pointer', textAlign: 'left' }}
       onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.85)'}
       onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.5)'}
     >
+      <input
+        type="file"
+        accept="image/*"
+        disabled={uploading}
+        style={{ display: 'none' }}
+        onChange={e => { const f = e.target.files?.[0]; if (f) onFileSelected(f); e.target.value = ''; }}
+      />
       <div style={{ position: 'relative', width: 36, height: 36, flexShrink: 0 }}>
         <div style={{ width: 36, height: 36, borderRadius: '50%', overflow: 'hidden', background: 'var(--mint)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          {photo ? (
+          {uploading ? (
+            <span style={{ width: 14, height: 14, border: '2px solid rgba(60,87,89,0.25)', borderTopColor: 'var(--slate)', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.7s linear infinite' }} />
+          ) : photo ? (
             <img src={photo} alt={name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           ) : (
             <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, color: 'var(--slate)', fontSize: 13 }}>{initials}</span>
@@ -108,9 +148,9 @@ function SenderChip({ name, photo, onEdit }) {
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink)', lineHeight: 1.25 }}>Sending as {name}</div>
-        <div style={{ fontSize: 10.5, color: 'var(--sage)' }}>Tap photo to change · what users see</div>
+        <div style={{ fontSize: 10.5, color: 'var(--sage)' }}>{uploading ? 'Uploading…' : 'Tap photo to change · what users see'}</div>
       </div>
-    </button>
+    </label>
   );
 }
 
@@ -317,7 +357,7 @@ function Conversation({ thread, persona }) {
           </div>
         ) : (
           /* ── Message mode ── */
-          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, background: 'var(--bone)', borderRadius: 16, padding: '8px 14px', border: '1px solid rgba(25,37,36,0.1)' }}>
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, background: 'rgba(255,255,255,0.55)', borderRadius: 16, padding: '8px 14px', border: '1px solid rgba(25,37,36,0.1)' }}>
             <textarea
               ref={taRef}
               rows={1}
@@ -361,10 +401,11 @@ function Conversation({ thread, persona }) {
 }
 
 export default function AdminInbox() {
-  const { profile, openUserProfile, avatarUrl } = useAuth();
   const persona = useQuery(api.profiles.getAdminPersona);
   const ensurePersona = useMutation(api.profiles.ensureAdminPersona);
   const setPersonaPhoto = useMutation(api.profiles.updateProfile);
+  const generateUploadUrl = useMutation(api.uploads.generateUploadUrl);
+  const finalizeUpload = useMutation(api.uploads.finalizeUpload);
   const threads = useQuery(api.adminThreads.list) ?? [];
   const messagable = useQuery(api.profiles.listMessagable) ?? [];
   const startThread = useMutation(api.adminThreads.startWithUser);
@@ -372,16 +413,26 @@ export default function AdminInbox() {
   const [selectedKey, setSelectedKey] = useState(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [query, setQuery] = useState('');
+  const [photoUploading, setPhotoUploading] = useState(false);
 
   // Ensure the persona exists on first mount (idempotent server-side).
   useEffect(() => { if (persona === null) ensurePersona({}).catch(() => {}); }, [persona, ensurePersona]);
 
-  // Keep the sending persona's photo in sync with the admin's Clerk avatar, so
-  // what users see matches the photo shown here (and changing it via Clerk propagates).
-  useEffect(() => {
-    if (!persona?._id || !avatarUrl || persona.avatar_url === avatarUrl) return;
-    setPersonaPhoto({ profileId: persona._id, updates: { avatar_url: avatarUrl } }).catch(() => {});
-  }, [persona, avatarUrl, setPersonaPhoto]);
+  // Uploads a new photo directly to the Collabnb persona's own Convex profile —
+  // independent of whichever admin is signed in, since this is a shared brand
+  // identity, not any one admin's personal account.
+  const uploadPersonaPhoto = async (file) => {
+    if (!persona?._id || photoUploading) return;
+    setPhotoUploading(true);
+    try {
+      const url = await uploadResizedImage(file, 300, 300, generateUploadUrl, 0.85, finalizeUpload);
+      await setPersonaPhoto({ profileId: persona._id, updates: { avatar_url: url } });
+    } catch (err) {
+      console.error('Persona photo upload failed:', err);
+    } finally {
+      setPhotoUploading(false);
+    }
+  };
 
   const selected = threads.find(t => t.thread_key === selectedKey) || null;
 
@@ -409,6 +460,7 @@ export default function AdminInbox() {
 
   return (
     <div style={{ padding: '1.5rem', height: 'calc(100dvh - 52px)', boxSizing: 'border-box' }}>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       <div style={{ display: 'flex', height: '100%', background: 'rgba(255,255,255,0.58)', borderRadius: '1.25rem', border: '1px solid rgba(255,255,255,0.72)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.9), 0 8px 32px rgba(25,37,36,0.08)', overflow: 'hidden' }}>
 
         {/* Left: thread list */}
@@ -435,8 +487,9 @@ export default function AdminInbox() {
             ) : (
               <SenderChip
                 name={persona?.full_name || 'Collabnb'}
-                photo={avatarUrl || persona?.avatar_url}
-                onEdit={() => openUserProfile?.()}
+                photo={persona?.avatar_url}
+                uploading={photoUploading}
+                onFileSelected={uploadPersonaPhoto}
               />
             )}
           </div>

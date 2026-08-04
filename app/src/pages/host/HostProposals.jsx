@@ -6,6 +6,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import ProfilePopupCard from '../../components/ProfilePopupCard';
 import CreatorAvatar from '../../components/CreatorAvatar';
 import SkeletonCard from '../../components/SkeletonCard';
+import ProposalsOverview from '../../components/dashboard/ProposalsOverview';
 import {
   MessageSquare, ChevronDown, ChevronUp, ExternalLink, Check, Sparkles,
   GripVertical, Lock, Download, Pen, CheckCircle2, Trash2,
@@ -942,6 +943,7 @@ export default function HostProposals() {
   const [signModal, setSignModal]       = useState(null);
   const [showClearDeclined, setShowClearDeclined] = useState(false);
   const [popupCreator, setPopupCreator] = useState(null);
+  const [search, setSearch] = useState('');
 
   const [proposals, setProposals] = useState(() => {
     const saved = loadApplications();
@@ -1119,7 +1121,13 @@ export default function HostProposals() {
   const visible    = allProposals.filter((p) => !p.hidden);
   const byListing  = visible.filter((p) => listingFilter === 'All Listings' || p.listing === listingFilter);
   const byStage    = tab === 'all'        ? byListing : byListing.filter((p) => p.status === tab);
-  const filtered   = typeFilter === 'all' ? byStage   : byStage.filter((p) => p.type === typeFilter);
+  const byType     = typeFilter === 'all' ? byStage   : byStage.filter((p) => p.type === typeFilter);
+  const filtered   = search.trim()
+    ? byType.filter((p) => {
+        const q = search.trim().toLowerCase();
+        return p.creator?.name?.toLowerCase().includes(q) || p.listing?.toLowerCase().includes(q);
+      })
+    : byType;
 
   const stageCounts = STAGE_TABS.reduce((acc, t) => {
     acc[t.key] = t.key === 'all' ? byListing.length : byListing.filter((p) => p.status === t.key).length;
@@ -1132,12 +1140,28 @@ export default function HostProposals() {
 
   function resetTypeOnTabChange(newTab) { setTab(newTab); setExpanded(null); }
 
+  function handleStatClick(presetKey) {
+    const stageByPreset = {
+      new_applications: 'pending',
+      pending_review:   'under_review',
+      active_collabs:   'approved',
+      completed:        'completed',
+    };
+    const stage = stageByPreset[presetKey];
+    if (stage) setTab(stage);
+    setTypeFilter('all');
+    setListingFilter('All Listings');
+    setExpanded(null);
+  }
+
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       <div style={{ minHeight: '100dvh' }}>
         <style>{`
           @keyframes tab-flash { 0%{box-shadow:0 0 0 3px rgba(25,37,36,0.18)} 60%{box-shadow:0 0 0 5px rgba(25,37,36,0.1)} 100%{box-shadow:none} }
         `}</style>
+
+        <ProposalsOverview role="host" search={search} onSearchChange={setSearch} onStatClick={handleStatClick}>
 
         <div style={{ maxWidth: 860, margin: '0 auto', padding: '2rem 1.5rem 5rem' }}>
 
@@ -1236,6 +1260,8 @@ export default function HostProposals() {
             ))
           )}
         </div>
+
+        </ProposalsOverview>
 
         {/* Drag overlay */}
         <DragOverlay dropAnimation={{ duration: 220, easing: 'cubic-bezier(0.18,0.67,0.6,1.22)' }}>

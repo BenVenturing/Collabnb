@@ -983,7 +983,7 @@ export default function AppNav() {
                     Admin Panel
                   </NavLink>
                 )}
-                <NavLink to="/profile?settings=true" onClick={() => setProfileOpen(false)} className="block px-4 py-3 text-sm text-ink hover:bg-mint/30 transition-colors">
+                <NavLink to="/settings" onClick={() => setProfileOpen(false)} className="block px-4 py-3 text-sm text-ink hover:bg-mint/30 transition-colors">
                   Settings
                 </NavLink>
                 {!isAdmin && !checklistAllDone && (

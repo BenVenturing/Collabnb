@@ -21,6 +21,7 @@ import Saved         from './pages/Saved';
 import Inbox         from './pages/Inbox';
 import Founders      from './pages/Founders';
 import Profile       from './pages/Profile';
+import Settings      from './pages/Settings';
 import ListingDetail from './pages/ListingDetail';
 import HostDashboard        from './pages/HostDashboard';
 import HostListingDetail    from './pages/host/HostListingDetail';
@@ -265,6 +266,7 @@ function AppRoutes() {
                 <Route path="/inbox"             element={<Inbox />} />
                 <Route path="/founders"          element={founderOnly(<Founders />)} />
                 <Route path="/profile"           element={<Profile />} />
+                <Route path="/settings"          element={<Settings />} />
                 <Route path="/contract"          element={<ContractBuilder />} />
                 <Route path="*"                  element={<Navigate to="/explore" replace />} />
               </Routes>

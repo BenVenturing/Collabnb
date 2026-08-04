@@ -150,6 +150,8 @@ export const setHostCard = internalMutation({
     profileId: v.string(),
     customerId: v.string(),
     paymentMethodId: v.string(),
+    cardBrand: v.optional(v.string()),
+    cardLast4: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const exists = await ctx.db.get(args.profileId as any);
@@ -157,6 +159,23 @@ export const setHostCard = internalMutation({
     await ctx.db.patch(args.profileId as any, {
       stripe_customer_id: args.customerId,
       stripe_default_payment_method_id: args.paymentMethodId,
+      stripe_card_brand: args.cardBrand,
+      stripe_card_last4: args.cardLast4,
+    });
+  },
+});
+
+// Clears the saved-card fields after Settings > Payments & tax > Remove card
+// detaches the payment method on Stripe's side (see stripe.js removeSavedCard).
+export const clearHostCard = internalMutation({
+  args: { profileId: v.string() },
+  handler: async (ctx, args) => {
+    const exists = await ctx.db.get(args.profileId as any);
+    if (!exists) return;
+    await ctx.db.patch(args.profileId as any, {
+      stripe_default_payment_method_id: undefined,
+      stripe_card_brand: undefined,
+      stripe_card_last4: undefined,
     });
   },
 });
@@ -221,13 +240,16 @@ export const setPayoutMethod = mutation({
 });
 
 // Called from stripe.js after creating the creator's Express connected account.
+// Only defaults the active rail to Stripe if nothing is active yet — a
+// creator who already has Wise active and is now also connecting Stripe as a
+// second option shouldn't have their payouts silently redirected.
 export const setStripeConnectAccount = internalMutation({
   args: { profileId: v.string(), accountId: v.string() },
   handler: async (ctx, args) => {
-    await ctx.db.patch(args.profileId as any, {
-      payout_method: "stripe_connect",
-      stripe_connect_account_id: args.accountId,
-    });
+    const profile = await ctx.db.get(args.profileId as any);
+    const patch: Record<string, unknown> = { stripe_connect_account_id: args.accountId };
+    if (!profile?.payout_method) patch.payout_method = "stripe_connect";
+    await ctx.db.patch(args.profileId as any, patch);
   },
 });
 
@@ -246,30 +268,62 @@ export const setStripeConnectPayoutsEnabled = internalMutation({
 });
 
 // Called once a Wise recipient account has been created for this creator.
+// Same non-clobbering rule as setStripeConnectAccount — see comment there.
 export const setWiseRecipient = internalMutation({
   args: { profileId: v.string(), recipientId: v.string(), currency: v.string() },
   handler: async (ctx, args) => {
-    await ctx.db.patch(args.profileId as any, {
-      payout_method: "wise",
-      wise_recipient_id: args.recipientId,
-      wise_recipient_currency: args.currency,
-    });
+    const profile = await ctx.db.get(args.profileId as any);
+    const patch: Record<string, unknown> = { wise_recipient_id: args.recipientId, wise_recipient_currency: args.currency };
+    if (!profile?.payout_method) patch.payout_method = "wise";
+    await ctx.db.patch(args.profileId as any, patch);
   },
 });
 
-// Creator removes their connected payout method entirely (switching methods,
-// or just no longer wanting Collabnb to hold their bank/Wise details).
+// Creator removes ONE connected payout rail — the other, if also connected,
+// is left untouched. If the disconnected rail was the active one, the active
+// method falls back to whichever rail is still connected, or clears entirely
+// if neither is left.
 export const disconnectPayoutMethod = mutation({
-  args: { profileId: v.string() },
+  args: { profileId: v.string(), method: v.optional(v.union(v.literal("stripe_connect"), v.literal("wise"))) },
   handler: async (ctx, args) => {
-    await requireOwnerOrAdmin(ctx, args.profileId);
-    await ctx.db.patch(args.profileId as any, {
-      payout_method: undefined,
-      stripe_connect_account_id: undefined,
-      stripe_connect_payouts_enabled: undefined,
-      wise_recipient_id: undefined,
-      wise_recipient_currency: undefined,
-    });
+    const profile = await requireOwnerOrAdmin(ctx, args.profileId);
+    // method omitted = legacy "disconnect everything" behavior, still used
+    // by any caller that hasn't been updated to the dual-rail model.
+    const target = args.method ?? profile.payout_method;
+
+    const patch: Record<string, unknown> = {};
+    if (target === "stripe_connect") {
+      patch.stripe_connect_account_id = undefined;
+      patch.stripe_connect_payouts_enabled = undefined;
+    } else if (target === "wise") {
+      patch.wise_recipient_id = undefined;
+      patch.wise_recipient_currency = undefined;
+    }
+
+    if (profile.payout_method === target) {
+      const otherStillConnected = target === "stripe_connect"
+        ? !!profile.wise_recipient_id
+        : !!profile.stripe_connect_account_id;
+      patch.payout_method = otherStillConnected ? (target === "stripe_connect" ? "wise" : "stripe_connect") : undefined;
+    }
+
+    await ctx.db.patch(args.profileId as any, patch);
+  },
+});
+
+// Switches which connected rail actually receives payouts. Requires the
+// target rail to already be connected — this never starts a new onboarding,
+// it only flips the pointer. Gated behind a client-side typed confirmation
+// (see PayoutMethodPanel) since it changes where real money goes next.
+export const setActivePayoutMethod = mutation({
+  args: { profileId: v.string(), payoutMethod: v.union(v.literal("stripe_connect"), v.literal("wise")) },
+  handler: async (ctx, args) => {
+    const profile = await requireOwnerOrAdmin(ctx, args.profileId);
+    const isConnected = args.payoutMethod === "stripe_connect"
+      ? !!profile.stripe_connect_account_id
+      : !!profile.wise_recipient_id;
+    if (!isConnected) throw new ConvexError("Connect that payout method first.");
+    await ctx.db.patch(args.profileId as any, { payout_method: args.payoutMethod });
   },
 });
 
@@ -737,6 +791,17 @@ export const updateProfile = mutation({
       role: v.optional(v.string()),
       niches: v.optional(v.array(v.string())),
       profile_visible: v.optional(v.boolean()),
+      show_activity_to_hosts: v.optional(v.boolean()),
+      notification_prefs: v.optional(v.object({
+        messages: v.optional(v.boolean()),
+        contractUpdates: v.optional(v.boolean()),
+        newListings: v.optional(v.boolean()),
+        collabReminders: v.optional(v.boolean()),
+        marketing: v.optional(v.boolean()),
+      })),
+      preferred_language: v.optional(v.string()),
+      preferred_currency: v.optional(v.string()),
+      timezone: v.optional(v.string()),
     }),
   },
   handler: async (ctx, args) => {
@@ -759,7 +824,40 @@ export const updateProfile = mutation({
     if (cleanUpdates.portfolio !== undefined) cleanUpdates.portfolio = cleanOptionalUrl(cleanUpdates.portfolio, "Portfolio URL");
     if (cleanUpdates.avatar_url !== undefined) cleanUpdates.avatar_url = cleanOptionalUrl(cleanUpdates.avatar_url, "Avatar URL");
     if (cleanUpdates.banner_url !== undefined) cleanUpdates.banner_url = cleanOptionalUrl(cleanUpdates.banner_url, "Banner URL");
+    if (cleanUpdates.preferred_language !== undefined) cleanUpdates.preferred_language = cleanPlainText(cleanUpdates.preferred_language, 40);
+    if (cleanUpdates.preferred_currency !== undefined) cleanUpdates.preferred_currency = cleanPlainText(cleanUpdates.preferred_currency, 10);
+    if (cleanUpdates.timezone !== undefined) cleanUpdates.timezone = cleanPlainText(cleanUpdates.timezone, 60);
     await ctx.db.patch(profileId as any, cleanUpdates);
+  },
+});
+
+// ─── Settings > Privacy > Blocked people ─────────────────────────────────────
+// Blocking is symmetric: sendMessage checks both directions, so it doesn't
+// matter which party's list holds the entry.
+export const blockUser = mutation({
+  args: { profileId: v.string(), targetId: v.string() },
+  handler: async (ctx, args) => {
+    await requireOwnerOrAdmin(ctx, args.profileId);
+    if (args.targetId === args.profileId) throw new ConvexError("You can't block yourself.");
+    const target = await ctx.db.get(args.targetId as any);
+    if (!target) throw new ConvexError("That user doesn't exist.");
+    const profile = await ctx.db.get(args.profileId as any);
+    if (!profile) return;
+    const current: string[] = (profile as any).blocked_user_ids ?? [];
+    if (!current.includes(args.targetId)) {
+      await ctx.db.patch(args.profileId as any, { blocked_user_ids: [...current, args.targetId] });
+    }
+  },
+});
+
+export const unblockUser = mutation({
+  args: { profileId: v.string(), targetId: v.string() },
+  handler: async (ctx, args) => {
+    await requireOwnerOrAdmin(ctx, args.profileId);
+    const profile = await ctx.db.get(args.profileId as any);
+    if (!profile) return;
+    const current: string[] = (profile as any).blocked_user_ids ?? [];
+    await ctx.db.patch(args.profileId as any, { blocked_user_ids: current.filter((id) => id !== args.targetId) });
   },
 });
 

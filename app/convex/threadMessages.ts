@@ -87,6 +87,17 @@ export const sendMessage = mutation({
     if (sender && sender.is_verified !== true && sender.is_admin !== true) {
       throw new Error("Your account is pending verification. Messaging unlocks once you're approved.");
     }
+    // Blocking is symmetric (Settings > Privacy > Blocked people) — either
+    // party having blocked the other is enough to stop new messages both ways.
+    if (args.recipientId && args.recipientId !== args.senderId) {
+      let recipient: any = null;
+      try { recipient = await ctx.db.get(args.recipientId as any); } catch { recipient = null; }
+      const blockedBySender = (sender?.blocked_user_ids ?? []).includes(args.recipientId);
+      const blockedByRecipient = (recipient?.blocked_user_ids ?? []).includes(args.senderId);
+      if (blockedBySender || blockedByRecipient) {
+        throw new Error("You can't message this user.");
+      }
+    }
     const id = await ctx.db.insert("thread_messages", {
       thread_key: args.threadKey,
       sender_id: args.senderId,

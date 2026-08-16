@@ -15,12 +15,14 @@ import { encryptSecret, decryptSecret } from "./lib/crypto";
 import { enforceRateLimit, RATE_LIMITS } from "./lib/rateLimit";
 import { llmChat } from "./blog";
 
-const PROVIDER = v.union(v.literal("openai"), v.literal("anthropic"));
-type Provider = "openai" | "anthropic";
+const PROVIDER = v.union(v.literal("openai"), v.literal("anthropic"), v.literal("openrouter"));
+type Provider = "openai" | "anthropic" | "openrouter";
 
 const DEFAULT_MODEL: Record<Provider, string> = {
   openai: "gpt-4o-mini",
   anthropic: "claude-sonnet-5",
+  // Matches the OpenRouter fallback model already used in blog.ts's llmChat.
+  openrouter: "meta-llama/llama-3.3-70b-instruct",
 };
 
 // ─── Connect / disconnect a personal override key ──────────────────────────
@@ -162,12 +164,20 @@ async function draftWithAnthropic(apiKey: string, prompt: string): Promise<strin
   return cleanDraftText(textBlock.text);
 }
 
-async function draftWithOpenAI(apiKey: string, prompt: string): Promise<string> {
-  const res = await fetch("https://api.openai.com/v1/chat/completions", {
+// OpenAI and OpenRouter both speak the same OpenAI-compatible chat-completions
+// wire format — only the base URL, model, and provider label differ.
+async function draftWithOpenAiCompatible(
+  label: string,
+  url: string,
+  apiKey: string,
+  model: string,
+  prompt: string
+): Promise<string> {
+  const res = await fetch(url, {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "content-type": "application/json" },
     body: JSON.stringify({
-      model: DEFAULT_MODEL.openai,
+      model,
       max_tokens: 1024,
       messages: [
         { role: "system", content: DRAFT_SYSTEM_PROMPT },
@@ -176,7 +186,7 @@ async function draftWithOpenAI(apiKey: string, prompt: string): Promise<string> 
     }),
   });
   if (!res.ok) {
-    throw new ConvexError(`OpenAI request failed (${res.status}): ${(await res.text()).slice(0, 200)}`);
+    throw new ConvexError(`${label} request failed (${res.status}): ${(await res.text()).slice(0, 200)}`);
   }
   const data: any = await res.json();
   const text = data.choices?.[0]?.message?.content;
@@ -202,7 +212,12 @@ export const draftReply = action({
     if (keyRow) {
       const apiKey = await decryptSecret(keyRow.encrypted_key, keyRow.iv);
       const provider: Provider = keyRow.provider;
-      const draft = provider === "anthropic" ? await draftWithAnthropic(apiKey, prompt) : await draftWithOpenAI(apiKey, prompt);
+      const draft =
+        provider === "anthropic"
+          ? await draftWithAnthropic(apiKey, prompt)
+          : provider === "openrouter"
+            ? await draftWithOpenAiCompatible("OpenRouter", "https://openrouter.ai/api/v1/chat/completions", apiKey, DEFAULT_MODEL.openrouter, prompt)
+            : await draftWithOpenAiCompatible("OpenAI", "https://api.openai.com/v1/chat/completions", apiKey, DEFAULT_MODEL.openai, prompt);
       await ctx.runMutation(internal.aiAssistant.touchLastUsed, { id: keyRow._id });
       return { draft, provider };
     }

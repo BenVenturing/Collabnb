@@ -8,6 +8,9 @@ import Confetti from '../components/Confetti';
 const CONVEX_URL = import.meta.env.VITE_CONVEX_URL;
 const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL;
 
+const AI_PROVIDER_LABELS = { openai: 'OpenAI', anthropic: 'Anthropic', openrouter: 'OpenRouter' };
+const AI_PROVIDER_KEY_PLACEHOLDER = { openai: 'sk-...', anthropic: 'sk-ant-...', openrouter: 'sk-or-...' };
+
 /**
  * Resize an image file via canvas, upload the resulting JPEG blob to Convex
  * storage, and return the public URL. Falls back to a base64 data URL when
@@ -1812,7 +1815,7 @@ export default function Profile() {
             {aiConnectionStatus?.connected ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                 <div style={{ padding: '0.875rem 1rem', borderRadius: '0.875rem', background: 'rgba(209,235,219,0.35)', fontSize: '0.85rem', color: 'var(--slate)', fontWeight: 600 }}>
-                  Connected — {aiConnectionStatus.provider === 'anthropic' ? 'Anthropic' : 'OpenAI'}
+                  Connected — {AI_PROVIDER_LABELS[aiConnectionStatus.provider] || aiConnectionStatus.provider}
                 </div>
                 <button
                   className="btn-glass"
@@ -1828,7 +1831,7 @@ export default function Profile() {
                   <div>
                     <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 700, color: 'var(--sage)', marginBottom: '0.375rem', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Provider</label>
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
-                      {['openai', 'anthropic'].map((p) => (
+                      {['openai', 'anthropic', 'openrouter'].map((p) => (
                         <button
                           key={p}
                           type="button"
@@ -1840,7 +1843,7 @@ export default function Profile() {
                             fontFamily: 'var(--font-body)', fontSize: '0.85rem', fontWeight: 600, color: 'var(--ink)', cursor: 'pointer',
                           }}
                         >
-                          {p === 'openai' ? 'OpenAI' : 'Anthropic'}
+                          {AI_PROVIDER_LABELS[p]}
                         </button>
                       ))}
                     </div>
@@ -1851,7 +1854,7 @@ export default function Profile() {
                       type="password"
                       value={aiKeyDraft}
                       onChange={(e) => setAiKeyDraft(e.target.value)}
-                      placeholder={aiProviderDraft === 'openai' ? 'sk-...' : 'sk-ant-...'}
+                      placeholder={AI_PROVIDER_KEY_PLACEHOLDER[aiProviderDraft]}
                       style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '0.875rem', background: 'rgba(255,255,255,0.75)', border: '1px solid rgba(25,37,36,0.12)', fontFamily: 'var(--font-body)', fontSize: '0.875rem', color: 'var(--ink)', outline: 'none', boxSizing: 'border-box' }}
                     />
                   </div>

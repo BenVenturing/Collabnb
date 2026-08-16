@@ -1,0 +1,19 @@
+{
+  "heading": "Keep collaborating",
+  "body": "Your 30-day free trial has ended. Subscribe to keep messaging hosts, applying to collabs, and exploring the full map.",
+  "plans": {
+    "monthly": "$10 / month",
+    "yearly": "$60 / year",
+    "yearlySavings": "save 50%"
+  },
+  "finePrint": "Cancel anytime. Founding members are always free.",
+  "errors": {
+    "profileNotFound": "Profile not found. Please ensure you are logged in.",
+    "stripeNotConfigured": "Stripe not configured. Run: npx convex env set STRIPE_SECRET_KEY sk_test_...",
+    "checkoutFailed": "Could not start checkout. Please try again."
+  },
+  "cta": {
+    "redirecting": "Redirecting…",
+    "later": "Maybe later"
+  }
+}

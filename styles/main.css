@@ -1694,16 +1694,22 @@ h3 { font-weight: 700; }
   transform: translateY(0);
 }
 
-/* Login modal card */
+/* Login modal card — no chrome of its own; the mounted Clerk widget is the
+   only visible "window", sitting directly on the shaded backdrop. */
 .login-modal-card {
-  padding: 2.5rem 2rem;
+  padding: 3.5rem 0.5rem 0;
   max-height: calc(92dvh - 2rem);
   overflow-y: auto;
   overflow-x: hidden;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 @media (max-width: 480px) {
   .login-modal-card {
-    padding: 1.5rem 1rem !important;
+    padding: 3.25rem 0.25rem 0 !important;
   }
 }
 

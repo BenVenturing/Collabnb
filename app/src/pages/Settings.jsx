@@ -187,6 +187,7 @@ export default function Settings() {
   const blockUserMutation = useMutation(api.profiles.blockUser);
   const unblockUserMutation = useMutation(api.profiles.unblockUser);
   const [portalLoading, setPortalLoading] = useState(false);
+  const [policyExpanded, setPolicyExpanded] = useState(false);
   const [cardBusy, setCardBusy] = useState(false);
   const [cardError, setCardError] = useState('');
   const [connectStatus, setConnectStatus] = useState(null);
@@ -456,6 +457,15 @@ export default function Settings() {
                 {profile?.role === 'creator' && (
                   <FieldRow label="My metrics" value="Update your follower & engagement stats" action="Open" onAction={() => goProfile('metrics')} />
                 )}
+                {profile?.role === 'creator' && (
+                  <FieldRow
+                    label="Creator tier"
+                    value={profile?.pending_tier ? `${profile.pending_tier} — pending admin review` : `Currently ${profile?.tier || 'unset'} — request a change if you've grown`}
+                    action={profile?.pending_tier ? undefined : 'Request change'}
+                    onAction={() => goProfile()}
+                    comingSoon={!!profile?.pending_tier}
+                  />
+                )}
                 <FieldRow label="Location settings" value="Set your city & country for the globe map" action="Edit" onAction={() => goProfile('location')} />
               </>
             )}
@@ -528,18 +538,40 @@ export default function Settings() {
                   ))
                 )}
                 <SectionLabel>Privacy Policy</SectionLabel>
-                <div style={{ fontSize: '0.83rem', color: 'var(--slate)', lineHeight: 1.7 }}>
-                  <p><strong>Effective Date:</strong> July 15, 2026</p>
-                  <p>Collabnb ("we," "our," "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our platform.</p>
-                  <h5 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.9rem', color: 'var(--ink)', margin: '1.1rem 0 0.4rem' }}>Information We Collect</h5>
-                  <p>We collect personal information you provide directly, such as your name, email address, profile details, and social media handles. We also automatically collect usage data, cookies, and device information when you interact with our platform.</p>
-                  <h5 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.9rem', color: 'var(--ink)', margin: '1.1rem 0 0.4rem' }}>How We Use Your Information</h5>
-                  <p>Your information is used to operate and improve Collabnb, facilitate collaborations between creators and hosts, send notifications and updates, and ensure platform safety. We never sell your personal data to third parties.</p>
-                  <h5 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.9rem', color: 'var(--ink)', margin: '1.1rem 0 0.4rem' }}>Data Sharing</h5>
-                  <p>We may share your information with service providers who help us operate the platform (e.g., hosting, analytics), as required by law, or with your explicit consent.</p>
-                  <h5 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.9rem', color: 'var(--ink)', margin: '1.1rem 0 0.4rem' }}>Your Rights</h5>
-                  <p>You may access, update, or delete your personal information at any time through these settings. Contact us at support@collabnb.com for assistance.</p>
-                  <p style={{ marginTop: '0.9rem' }}>For the full Privacy Policy, visit <a href="https://collabnb.com/privacy" style={{ color: 'var(--slate)', fontWeight: 600, textDecoration: 'underline' }} target="_blank" rel="noopener noreferrer">collabnb.com/privacy</a>.</p>
+                <button
+                  onClick={() => setPolicyExpanded((e) => !e)}
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(60,87,89,0.06)', border: '1px solid rgba(60,87,89,0.12)', borderRadius: '999px', padding: '0.3rem 0.75rem 0.3rem 0.6rem', margin: '0 0 0.75rem', cursor: 'pointer', fontFamily: 'var(--font-body)' }}
+                >
+                  <span style={{ fontSize: '0.7rem', color: 'var(--slate)', transform: policyExpanded ? 'rotate(90deg)' : 'none', transition: 'transform 200ms ease', display: 'inline-flex' }}><ChevronR /></span>
+                  <span style={{ fontSize: '0.76rem', fontWeight: 700, color: 'var(--slate)' }}>{policyExpanded ? 'Collapse policy' : 'Read privacy policy'}</span>
+                </button>
+                <div style={{ position: 'relative' }}>
+                  <div
+                    style={{
+                      fontSize: '0.83rem', color: 'var(--slate)', lineHeight: 1.7,
+                      maxHeight: policyExpanded ? '3000px' : '92px',
+                      overflow: 'hidden',
+                      transition: 'max-height 420ms var(--ease-out-quart, ease)',
+                    }}
+                  >
+                    <p><strong>Effective Date:</strong> July 15, 2026</p>
+                    <p>Collabnb ("we," "our," "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our platform.</p>
+                    <h5 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.9rem', color: 'var(--ink)', margin: '1.1rem 0 0.4rem' }}>Information We Collect</h5>
+                    <p>We collect personal information you provide directly, such as your name, email address, profile details, and social media handles. We also automatically collect usage data, cookies, and device information when you interact with our platform.</p>
+                    <h5 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.9rem', color: 'var(--ink)', margin: '1.1rem 0 0.4rem' }}>How We Use Your Information</h5>
+                    <p>Your information is used to operate and improve Collabnb, facilitate collaborations between creators and hosts, send notifications and updates, and ensure platform safety. We never sell your personal data to third parties.</p>
+                    <h5 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.9rem', color: 'var(--ink)', margin: '1.1rem 0 0.4rem' }}>Data Sharing</h5>
+                    <p>We may share your information with service providers who help us operate the platform (e.g., hosting, analytics), as required by law, or with your explicit consent.</p>
+                    <h5 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.9rem', color: 'var(--ink)', margin: '1.1rem 0 0.4rem' }}>Your Rights</h5>
+                    <p>You may access, update, or delete your personal information at any time through these settings. Contact us at support@collabnb.com for assistance.</p>
+                    <p style={{ marginTop: '0.9rem' }}>For the full Privacy Policy, visit <a href="https://collabnb.com/privacy" style={{ color: 'var(--slate)', fontWeight: 600, textDecoration: 'underline' }} target="_blank" rel="noopener noreferrer">collabnb.com/privacy</a>.</p>
+                  </div>
+                  {!policyExpanded && (
+                    <div
+                      onClick={() => setPolicyExpanded(true)}
+                      style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '60px', cursor: 'pointer', background: 'linear-gradient(to bottom, rgba(255,255,255,0) 0%, rgba(255,255,255,0.94) 75%)' }}
+                    />
+                  )}
                 </div>
               </>
             )}

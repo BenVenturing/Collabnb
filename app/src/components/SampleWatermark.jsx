@@ -1,9 +1,11 @@
 // Subtle on-brand watermark overlaid on sample-listing hero images —
 // tiled diagonal rows of light text, like a stock-photo watermark.
-const ROW_TEXT = new Array(4).fill('SAMPLE LISTING').join('   ·   ');
-const ROWS = new Array(10).fill(ROW_TEXT);
+import { useTranslation } from 'react-i18next';
 
 export default function SampleWatermark() {
+  const { t } = useTranslation('sampleWatermark');
+  const ROW_TEXT = new Array(4).fill(t('label')).join('   ·   ');
+  const ROWS = new Array(10).fill(ROW_TEXT);
   return (
     <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden' }}>
       <div style={{

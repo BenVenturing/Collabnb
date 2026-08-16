@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
+import { useTranslation } from 'react-i18next';
 
 // Single-pin, read-only map for a listing's location — the ListingDetail
 // "Location" section counterpart to CollabMap (Explore) and LocationPicker
@@ -12,6 +13,7 @@ if (TOKEN) mapboxgl.accessToken = TOKEN;
 const STYLE_URL = import.meta.env.VITE_MAPBOX_STYLE || 'mapbox://styles/mapbox/outdoors-v12';
 
 export default function ListingLocationMap({ lat, lng, zoom = 10 }) {
+  const { t } = useTranslation('listingLocationMap');
   const containerRef = useRef(null);
   const mapRef = useRef(null);
 
@@ -35,7 +37,7 @@ export default function ListingLocationMap({ lat, lng, zoom = 10 }) {
   if (!TOKEN || typeof lat !== 'number' || typeof lng !== 'number') {
     return (
       <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bone, #efece9)', color: 'var(--sage, #6b7a70)', fontSize: '0.8rem' }}>
-        Map unavailable
+        {t('mapUnavailable')}
       </div>
     );
   }

@@ -1,9 +1,10 @@
 import { NavLink } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 const TABS = [
   {
     to: '/explore',
-    label: 'Explore',
+    label: 'nav.explore',
     icon: (active) => (
       <svg viewBox="0 0 256 256" fill="none" stroke="currentColor" strokeWidth={active ? 16 : 13} strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
         <circle cx="128" cy="128" r="96"/>
@@ -13,7 +14,7 @@ const TABS = [
   },
   {
     to: '/collabs',
-    label: 'Collabs',
+    label: 'nav.collabs',
     icon: (active) => (
       <svg viewBox="0 0 256 256" fill="none" stroke="currentColor" strokeWidth={active ? 16 : 13} strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
         <rect x="32" y="80" width="192" height="144" rx="12"/>
@@ -23,7 +24,7 @@ const TABS = [
   },
   {
     to: '/saved',
-    label: 'Saved',
+    label: 'nav.saved',
     icon: (active) => (
       <svg viewBox="0 0 256 256" fill={active ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth={active ? 16 : 13} strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
         <path d="M128,216S28,160,28,92A52,52,0,0,1,128,72h0A52,52,0,0,1,228,92C228,160,128,216,128,216Z"/>
@@ -32,7 +33,7 @@ const TABS = [
   },
   {
     to: '/inbox',
-    label: 'Inbox',
+    label: 'nav.inbox',
     icon: (active) => (
       <svg viewBox="0 0 256 256" fill="none" stroke="currentColor" strokeWidth={active ? 16 : 13} strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
         <path d="M45.15,230.11A8,8,0,0,1,36,222V104a8,8,0,0,1,8-8H212a8,8,0,0,1,8,8V192a16,16,0,0,1-16,16H75.13A8,8,0,0,0,70,209.65Z"/>
@@ -43,7 +44,7 @@ const TABS = [
   },
   {
     to: '/profile',
-    label: 'Profile',
+    label: 'nav.profile',
     icon: (active) => (
       <svg viewBox="0 0 256 256" fill="none" stroke="currentColor" strokeWidth={active ? 16 : 13} strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
         <circle cx="128" cy="96" r="64"/>
@@ -54,6 +55,7 @@ const TABS = [
 ];
 
 export default function BottomNav() {
+  const { t } = useTranslation('bottomNav');
   return (
     <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-white/85 backdrop-blur-xl border-t border-stone/60 safe-area-bottom">
       <div className="flex items-stretch h-16">
@@ -70,7 +72,7 @@ export default function BottomNav() {
             {({ isActive }) => (
               <>
                 {icon(isActive)}
-                <span className="text-[10px] font-medium tracking-wide">{label}</span>
+                <span className="text-[10px] font-medium tracking-wide">{t(label)}</span>
               </>
             )}
           </NavLink>

@@ -228,6 +228,12 @@ export const getEmailList = query({
     else if (audience === "hosts")    pool = pool.filter((p) => p.role === "host");
     else if (audience === "founders") pool = pool.filter((p) => p.is_founder === true);
 
+    // Settings > Notifications > Marketing — respect the opt-out (default is
+    // opted in; only an explicit false excludes someone). This is the one
+    // place every broadcast audience passes through, so it's enough to
+    // protect all of them.
+    pool = pool.filter((p) => p.notification_prefs?.marketing !== false);
+
     return pool
       .filter((p) => !!p.email)
       .map((p) => ({ email: p.email as string, full_name: p.full_name, role: p.role }));

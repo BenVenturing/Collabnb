@@ -1,0 +1,40 @@
+{
+  "pendingApproval": {
+    "heading": "Your application is under review",
+    "thanksCreator": "Thanks for applying to join Collabnb as a creator.",
+    "thanksHost": "Thanks for applying to list your property.",
+    "reviewing": "The Collabnb team is reviewing your profile, portfolio, and social accounts. You'll get an email once you're approved — usually within 1–2 business days.",
+    "checklist": {
+      "heading": "What happens next:",
+      "socialReview": "Your social accounts and portfolio are reviewed",
+      "followerVerify": "Your follower count and engagement are verified",
+      "experienceAssess": "Your experience and professionalism are assessed",
+      "interview": "You may receive a request for a brief interview",
+      "trackTier": "You'll be assigned a track (UGC or Influencer) and tier",
+      "fullAccess": "If approved, you get full marketplace access"
+    },
+    "receivedTitle": "Application received",
+    "receivedDetail": "— we'll notify you at your email on file.",
+    "backHome": "Back to Home"
+  },
+  "limitedAccess": {
+    "heading": "Marketplace access has ended",
+    "body": "Your trial period has expired. Upgrade to Creator Plus to continue exploring listings, applying to campaigns, and pitching hosts.",
+    "stillCanHeading": "You can still:",
+    "stillCan": {
+      "dashboard": "View your dashboard and profile",
+      "contracts": "Access existing contracts and messages",
+      "settings": "Update your settings and portfolio"
+    },
+    "viewPricing": "View Pricing"
+  },
+  "trialBanner": {
+    "expired": "Your trial has ended. Subscribe to continue accessing the marketplace.",
+    "daysLeft_one": "{{count}} day left in your trial.",
+    "daysLeft_other": "{{count}} days left in your trial.",
+    "daysRemaining": "{{count}}d remaining",
+    "subscribeNow": "Subscribe Now",
+    "upgrade": "Upgrade",
+    "dismissAriaLabel": "Dismiss"
+  }
+}

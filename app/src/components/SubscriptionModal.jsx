@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { useAction } from 'convex/react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../../convex/_generated/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useSubscription } from '../contexts/SubscriptionContext';
 
 export default function SubscriptionModal() {
+  const { t } = useTranslation('subscriptionModal');
   const { isModalOpen, closeModal } = useSubscription();
   const { profile } = useAuth();
   const [loading, setLoading] = useState(null); // "monthly" | "yearly" | null
@@ -17,7 +19,7 @@ export default function SubscriptionModal() {
 
   const handleSubscribe = async (tier) => {
     if (!profileId) {
-      setError('Profile not found. Please ensure you are logged in.');
+      setError(t('errors.profileNotFound'));
       return;
     }
     setLoading(tier);
@@ -41,8 +43,8 @@ export default function SubscriptionModal() {
       console.error('Subscription checkout error:', err);
       setError(
         err?.message?.includes('STRIPE_SECRET_KEY')
-          ? 'Stripe not configured. Run: npx convex env set STRIPE_SECRET_KEY sk_test_...'
-          : 'Could not start checkout. Please try again.'
+          ? t('errors.stripeNotConfigured')
+          : t('errors.checkoutFailed')
       );
       setLoading(null);
     }
@@ -96,7 +98,7 @@ export default function SubscriptionModal() {
           fontSize: '1.25rem', color: 'var(--ink)',
           textAlign: 'center', margin: '0 0 0.5rem',
         }}>
-          Keep collaborating
+          {t('heading')}
         </h3>
 
         {/* Body */}
@@ -105,7 +107,7 @@ export default function SubscriptionModal() {
           textAlign: 'center', lineHeight: 1.6,
           margin: '0 0 1.625rem',
         }}>
-          Your 30-day free trial has ended. Subscribe to keep messaging hosts, applying to collabs, and exploring the full map.
+          {t('body')}
         </p>
 
         {/* Error */}
@@ -148,9 +150,9 @@ export default function SubscriptionModal() {
                 borderTopColor: '#fff', borderRadius: '50%',
                 animation: 'collabnb-sub-spin 0.7s linear infinite',
               }} />
-              Redirecting…
+              {t('cta.redirecting')}
             </>
-          ) : '$10 / month'}
+          ) : t('plans.monthly')}
         </button>
 
         {/* Yearly plan */}
@@ -179,13 +181,13 @@ export default function SubscriptionModal() {
                 borderTopColor: '#fff', borderRadius: '50%',
                 animation: 'collabnb-sub-spin 0.7s linear infinite',
               }} />
-              Redirecting…
+              {t('cta.redirecting')}
             </>
           ) : (
             <span>
-              $60 / year{' '}
+              {t('plans.yearly')}{' '}
               <span style={{ fontSize: '0.78rem', opacity: 0.8, fontWeight: 500 }}>
-                (save 50%)
+                ({t('plans.yearlySavings')})
               </span>
             </span>
           )}
@@ -197,7 +199,7 @@ export default function SubscriptionModal() {
           fontSize: '0.72rem', lineHeight: 1.5,
           margin: '0 0 1rem',
         }}>
-          Cancel anytime. Founding members are always free.
+          {t('finePrint')}
         </p>
 
         {/* Dismiss */}
@@ -210,7 +212,7 @@ export default function SubscriptionModal() {
             cursor: 'pointer', fontFamily: 'var(--font-body)',
           }}
         >
-          Maybe later
+          {t('cta.later')}
         </button>
       </div>
     </div>

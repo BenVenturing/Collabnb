@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useAction, useQuery } from 'convex/react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../../convex/_generated/api';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function LifetimeAccessModal({ isOpen, onClose, role = 'creator' }) {
+  const { t } = useTranslation('lifetimeAccessModal');
   const { profile } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -15,10 +17,10 @@ export default function LifetimeAccessModal({ isOpen, onClose, role = 'creator' 
 
   // Mirror the tier ladder from stripe.js
   function getTier(count) {
-    if (count < 50)  return { price: 100, label: 'Early Adopter',    spotsLeft: 50 - count };
-    if (count < 100) return { price: 125, label: 'Community',         spotsLeft: 100 - count };
-    if (count < 150) return { price: 150, label: 'Community',         spotsLeft: 150 - count };
-    if (count < 200) return { price: 200, label: 'Standard Lifetime', spotsLeft: 200 - count };
+    if (count < 50)  return { price: 100, label: t('tiers.earlyAdopter'), spotsLeft: 50 - count };
+    if (count < 100) return { price: 125, label: t('tiers.community'),    spotsLeft: 100 - count };
+    if (count < 150) return { price: 150, label: t('tiers.community'),    spotsLeft: 150 - count };
+    if (count < 200) return { price: 200, label: t('tiers.standardLifetime'), spotsLeft: 200 - count };
     return null;
   }
 
@@ -26,7 +28,7 @@ export default function LifetimeAccessModal({ isOpen, onClose, role = 'creator' 
   const profileId = profile?._id ?? profile?.id ?? '';
 
   const handleClaim = async () => {
-    if (!profileId) { setError('Please log in to continue.'); return; }
+    if (!profileId) { setError(t('errors.loginRequired')); return; }
     setLoading(true);
     setError(null);
     try {
@@ -39,7 +41,7 @@ export default function LifetimeAccessModal({ isOpen, onClose, role = 'creator' 
       });
       if (result?.url) window.location.href = result.url;
     } catch (err) {
-      setError(err?.message || 'Could not start checkout. Please try again.');
+      setError(err?.message || t('errors.checkoutFailed'));
       setLoading(false);
     }
   };
@@ -89,7 +91,7 @@ export default function LifetimeAccessModal({ isOpen, onClose, role = 'creator' 
           fontSize: '1.25rem', color: 'var(--ink)',
           textAlign: 'center', margin: '0 0 0.5rem',
         }}>
-          {tier ? 'Lifetime Access Available' : 'Lifetime Spots Sold Out'}
+          {tier ? t('heading.available') : t('heading.soldOut')}
         </h3>
 
         <p style={{
@@ -98,8 +100,8 @@ export default function LifetimeAccessModal({ isOpen, onClose, role = 'creator' 
           margin: '0 0 1.5rem',
         }}>
           {tier
-            ? `The free founding round is full. You can still get permanent access with a one-time payment.`
-            : `All lifetime spots are gone. Choose a monthly or annual plan to get started.`}
+            ? t('body.available')
+            : t('body.soldOut')}
         </p>
 
         {tier && (
@@ -120,7 +122,7 @@ export default function LifetimeAccessModal({ isOpen, onClose, role = 'creator' 
                   {tier.label}
                 </p>
                 <p style={{ color: 'var(--sage)', fontSize: '0.73rem', margin: '0.15rem 0 0' }}>
-                  {tier.spotsLeft} spot{tier.spotsLeft !== 1 ? 's' : ''} at this price — then it goes up
+                  {t('spotsLeft', { count: tier.spotsLeft })}
                 </p>
               </div>
               <span style={{ fontWeight: 700, color: 'var(--ink)', fontSize: '1.3rem' }}>
@@ -161,9 +163,9 @@ export default function LifetimeAccessModal({ isOpen, onClose, role = 'creator' 
               {loading ? (
                 <>
                   <div style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,0.35)', borderTopColor: '#fff', borderRadius: '50%', ...spin }} />
-                  Redirecting…
+                  {t('cta.redirecting')}
                 </>
-              ) : `Get Lifetime Access — $${tier.price}`}
+              ) : t('cta.claim', { price: tier.price })}
             </button>
           </>
         )}
@@ -177,7 +179,7 @@ export default function LifetimeAccessModal({ isOpen, onClose, role = 'creator' 
             cursor: 'pointer', fontFamily: 'var(--font-body)',
           }}
         >
-          {tier ? 'Maybe later' : 'Close'}
+          {tier ? t('cta.later') : t('cta.close')}
         </button>
       </div>
     </div>

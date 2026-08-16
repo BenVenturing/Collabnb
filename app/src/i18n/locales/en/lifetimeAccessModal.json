@@ -1,0 +1,27 @@
+{
+  "heading": {
+    "available": "Lifetime Access Available",
+    "soldOut": "Lifetime Spots Sold Out"
+  },
+  "body": {
+    "available": "The free founding round is full. You can still get permanent access with a one-time payment.",
+    "soldOut": "All lifetime spots are gone. Choose a monthly or annual plan to get started."
+  },
+  "tiers": {
+    "earlyAdopter": "Early Adopter",
+    "community": "Community",
+    "standardLifetime": "Standard Lifetime"
+  },
+  "spotsLeft_one": "{{count}} spot at this price — then it goes up",
+  "spotsLeft_other": "{{count}} spots at this price — then it goes up",
+  "errors": {
+    "loginRequired": "Please log in to continue.",
+    "checkoutFailed": "Could not start checkout. Please try again."
+  },
+  "cta": {
+    "redirecting": "Redirecting…",
+    "claim": "Get Lifetime Access — ${{price}}",
+    "later": "Maybe later",
+    "close": "Close"
+  }
+}

@@ -1,6 +1,8 @@
 import { X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 export default function DashboardModal({ title, onClose, children, maxWidth = 480 }) {
+  const { t } = useTranslation('dashboardModal');
   return (
     <div
       onClick={onClose}
@@ -19,7 +21,7 @@ export default function DashboardModal({ title, onClose, children, maxWidth = 48
           <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.15rem', color: 'var(--ink)', margin: 0 }}>{title}</h3>
           <button
             onClick={onClose}
-            aria-label="Close"
+            aria-label={t('close')}
             style={{ width: 32, height: 32, borderRadius: '50%', border: 'none', background: 'rgba(25,37,36,0.06)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--ink)', flexShrink: 0 }}
           >
             <X size={16} />

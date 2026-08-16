@@ -1,10 +1,11 @@
 import { NavLink } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import collabnbLogo from '../../assets/collabnb-logo.png';
 
 const NAV_ITEMS = [
   {
     to: '/explore',
-    label: 'Explore',
+    label: 'nav.explore',
     icon: (
       <svg viewBox="0 0 256 256" fill="none" stroke="currentColor" strokeWidth="14" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
         <circle cx="128" cy="128" r="96"/>
@@ -19,7 +20,7 @@ const NAV_ITEMS = [
   },
   {
     to: '/collabs',
-    label: 'Collabs',
+    label: 'nav.collabs',
     icon: (
       <svg viewBox="0 0 256 256" fill="none" stroke="currentColor" strokeWidth="14" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
         <rect x="32" y="80" width="192" height="144" rx="12"/>
@@ -31,7 +32,7 @@ const NAV_ITEMS = [
   },
   {
     to: '/saved',
-    label: 'Saved',
+    label: 'nav.saved',
     icon: (
       <svg viewBox="0 0 256 256" fill="none" stroke="currentColor" strokeWidth="14" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
         <path d="M128,216S28,160,28,92A52,52,0,0,1,128,72h0A52,52,0,0,1,228,92C228,160,128,216,128,216Z"/>
@@ -40,7 +41,7 @@ const NAV_ITEMS = [
   },
   {
     to: '/inbox',
-    label: 'Inbox',
+    label: 'nav.inbox',
     icon: (
       <svg viewBox="0 0 256 256" fill="none" stroke="currentColor" strokeWidth="14" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
         <path d="M45.15,230.11A8,8,0,0,1,36,222V104a8,8,0,0,1,8-8H212a8,8,0,0,1,8,8V192a16,16,0,0,1-16,16H75.13A8,8,0,0,0,70,209.65Z"/>
@@ -51,7 +52,7 @@ const NAV_ITEMS = [
   },
   {
     to: '/profile',
-    label: 'Profile',
+    label: 'nav.profile',
     icon: (
       <svg viewBox="0 0 256 256" fill="none" stroke="currentColor" strokeWidth="14" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
         <circle cx="128" cy="96" r="64"/>
@@ -62,6 +63,7 @@ const NAV_ITEMS = [
 ];
 
 export default function SideNav() {
+  const { t } = useTranslation('sideNav');
   return (
     <aside className="hidden lg:flex flex-col w-60 min-h-dvh bg-white/70 backdrop-blur-xl border-r border-stone/60 fixed left-0 top-0 z-30">
       {/* Logo */}
@@ -94,7 +96,7 @@ export default function SideNav() {
             }
           >
             {icon}
-            {label}
+            {t(label)}
           </NavLink>
         ))}
       </nav>
@@ -109,7 +111,7 @@ export default function SideNav() {
             <line x1="224" y1="128" x2="32" y2="128"/>
             <polyline points="104 56 32 128 104 200"/>
           </svg>
-          Back to site
+          {t('backToSite')}
         </a>
       </div>
     </aside>

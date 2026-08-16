@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useQuery } from 'convex/react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../../convex/_generated/api';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -30,6 +31,7 @@ export function useAccessGate() {
 
 // ─── Pending Approval Screen ────────────────────────────────────────────────────
 export function PendingApprovalScreen({ role = 'creator' }) {
+  const { t } = useTranslation('accessGate');
   const label = role === 'creator' ? 'Creator' : 'Host';
 
   return (
@@ -55,13 +57,13 @@ export function PendingApprovalScreen({ role = 'creator' }) {
         </div>
 
         <h1 style={{ fontFamily: 'Cabinet Grotesk, sans-serif', fontSize: '1.5rem', fontWeight: 700, color: '#192524', margin: '0 0 0.625rem', letterSpacing: '-0.02em' }}>
-          Your application is under review
+          {t('pendingApproval.heading')}
         </h1>
         <p style={{ color: '#3C5759', fontSize: '0.875rem', lineHeight: 1.6, margin: '0 0 0.25rem' }}>
-          Thanks for applying{role === 'creator' ? ' to join Collabnb as a creator.' : ' to list your property.'}
+          {role === 'creator' ? t('pendingApproval.thanksCreator') : t('pendingApproval.thanksHost')}
         </p>
         <p style={{ color: '#959D90', fontSize: '0.8125rem', lineHeight: 1.55, margin: '0 0 1.5rem' }}>
-          The Collabnb team is reviewing your profile, portfolio, and social accounts. You'll get an email once you're approved — usually within 1–2 business days.
+          {t('pendingApproval.reviewing')}
         </p>
 
         {/* Checklist */}
@@ -70,14 +72,14 @@ export function PendingApprovalScreen({ role = 'creator' }) {
             background: '#F7F5F2', borderRadius: '0.75rem', padding: '1rem 1.25rem',
             textAlign: 'left', marginBottom: '1.5rem',
           }}>
-            <p style={{ fontSize: '0.78rem', fontWeight: 600, color: '#192524', margin: '0 0 0.5rem' }}>What happens next:</p>
+            <p style={{ fontSize: '0.78rem', fontWeight: 600, color: '#192524', margin: '0 0 0.5rem' }}>{t('pendingApproval.checklist.heading')}</p>
             <ul style={{ margin: 0, padding: '0 0 0 1.25rem', fontSize: '0.78rem', color: '#3C5759', lineHeight: 1.8 }}>
-              <li>Your social accounts and portfolio are reviewed</li>
-              <li>Your follower count and engagement are verified</li>
-              <li>Your experience and professionalism are assessed</li>
-              <li>You may receive a request for a brief interview</li>
-              <li>You'll be assigned a track (UGC or Influencer) and tier</li>
-              <li>If approved, you get full marketplace access</li>
+              <li>{t('pendingApproval.checklist.socialReview')}</li>
+              <li>{t('pendingApproval.checklist.followerVerify')}</li>
+              <li>{t('pendingApproval.checklist.experienceAssess')}</li>
+              <li>{t('pendingApproval.checklist.interview')}</li>
+              <li>{t('pendingApproval.checklist.trackTier')}</li>
+              <li>{t('pendingApproval.checklist.fullAccess')}</li>
             </ul>
           </div>
         )}
@@ -87,8 +89,8 @@ export function PendingApprovalScreen({ role = 'creator' }) {
           border: '1px solid rgba(209,235,219,0.4)', borderRadius: '0.75rem', marginBottom: '1.5rem',
         }}>
           <p style={{ fontSize: '0.78rem', color: '#3C5759', margin: 0 }}>
-            <span style={{ fontWeight: 600 }}>Application received</span>
-            <span style={{ color: '#959D90' }}> — we'll notify you at your email on file.</span>
+            <span style={{ fontWeight: 600 }}>{t('pendingApproval.receivedTitle')}</span>
+            <span style={{ color: '#959D90' }}> {t('pendingApproval.receivedDetail')}</span>
           </p>
         </div>
 
@@ -97,7 +99,7 @@ export function PendingApprovalScreen({ role = 'creator' }) {
           background: '#192524', color: '#fff', borderRadius: '0.5rem',
           fontSize: '0.82rem', fontWeight: 600, textDecoration: 'none', fontFamily: 'inherit',
         }}>
-          Back to Home
+          {t('pendingApproval.backHome')}
         </a>
       </div>
     </div>
@@ -106,6 +108,7 @@ export function PendingApprovalScreen({ role = 'creator' }) {
 
 // ─── Limited Access Screen ──────────────────────────────────────────────────────
 export function LimitedAccessScreen() {
+  const { t } = useTranslation('accessGate');
   return (
     <div style={{
       minHeight: '80dvh',
@@ -128,10 +131,10 @@ export function LimitedAccessScreen() {
         </div>
 
         <h1 style={{ fontFamily: 'Cabinet Grotesk, sans-serif', fontSize: '1.5rem', fontWeight: 700, color: '#192524', margin: '0 0 0.625rem', letterSpacing: '-0.02em' }}>
-          Marketplace access has ended
+          {t('limitedAccess.heading')}
         </h1>
         <p style={{ color: '#3C5759', fontSize: '0.875rem', lineHeight: 1.6, margin: '0 0 1.25rem' }}>
-          Your trial period has expired. Upgrade to Creator Plus to continue exploring listings, applying to campaigns, and pitching hosts.
+          {t('limitedAccess.body')}
         </p>
 
         <div style={{
@@ -139,11 +142,11 @@ export function LimitedAccessScreen() {
           borderRadius: '0.75rem', marginBottom: '1.5rem',
           fontSize: '0.78rem', color: '#3C5759', lineHeight: 1.55, textAlign: 'left',
         }}>
-          <p style={{ margin: '0 0 0.375rem', fontWeight: 600 }}>You can still:</p>
+          <p style={{ margin: '0 0 0.375rem', fontWeight: 600 }}>{t('limitedAccess.stillCanHeading')}</p>
           <ul style={{ margin: '0 0 0 1.25rem', padding: 0 }}>
-            <li>View your dashboard and profile</li>
-            <li>Access existing contracts and messages</li>
-            <li>Update your settings and portfolio</li>
+            <li>{t('limitedAccess.stillCan.dashboard')}</li>
+            <li>{t('limitedAccess.stillCan.contracts')}</li>
+            <li>{t('limitedAccess.stillCan.settings')}</li>
           </ul>
         </div>
 
@@ -152,7 +155,7 @@ export function LimitedAccessScreen() {
           background: '#192524', color: '#fff', borderRadius: '0.5rem',
           fontSize: '0.82rem', fontWeight: 600, textDecoration: 'none', fontFamily: 'inherit',
         }}>
-          View Pricing
+          {t('limitedAccess.viewPricing')}
         </a>
       </div>
     </div>
@@ -161,6 +164,7 @@ export function LimitedAccessScreen() {
 
 // ─── Trial Countdown Banner ────────────────────────────────────────────────────
 export function TrialBanner({ daysLeft, onDismiss, dismissible = true }) {
+  const { t } = useTranslation('accessGate');
   const [hidden, setHidden] = useState(() => {
     try { return sessionStorage.getItem('collabnb_trial_banner_hidden') === '1'; }
     catch { return false; }
@@ -191,13 +195,13 @@ export function TrialBanner({ daysLeft, onDismiss, dismissible = true }) {
     }}>
       <span style={{ color: isExpired ? '#991B1B' : '#3C5759', fontWeight: 500 }}>
         {isExpired
-          ? 'Your trial has ended. Subscribe to continue accessing the marketplace.'
-          : `${daysLeft} day${daysLeft === 1 ? '' : 's'} left in your trial.`
+          ? t('trialBanner.expired')
+          : t('trialBanner.daysLeft', { count: daysLeft })
         }
       </span>
       {!isExpired && daysLeft <= 3 && (
         <span style={{ fontWeight: 700, color: '#991B1B' }}>
-          {daysLeft}d remaining
+          {t('trialBanner.daysRemaining', { count: daysLeft })}
         </span>
       )}
       <a href="/pricing"
@@ -208,12 +212,12 @@ export function TrialBanner({ daysLeft, onDismiss, dismissible = true }) {
           textDecoration: 'none', fontFamily: 'inherit',
         }}
       >
-        {isExpired ? 'Subscribe Now' : 'Upgrade'}
+        {isExpired ? t('trialBanner.subscribeNow') : t('trialBanner.upgrade')}
       </a>
       {dismissible && (
         <button
           onClick={handleDismiss}
-          aria-label="Dismiss"
+          aria-label={t('trialBanner.dismissAriaLabel')}
           style={{
             background: 'none', border: 'none', cursor: 'pointer',
             color: '#959D90', fontSize: '1.1rem', padding: '0.1rem 0.25rem',

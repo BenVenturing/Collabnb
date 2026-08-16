@@ -1,0 +1,10 @@
+{
+  "nav": {
+    "explore": "Explore",
+    "collabs": "Collabs",
+    "saved": "Saved",
+    "inbox": "Inbox",
+    "profile": "Profile"
+  },
+  "backToSite": "Back to site"
+}

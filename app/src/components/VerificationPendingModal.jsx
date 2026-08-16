@@ -1,6 +1,8 @@
+import { useTranslation } from 'react-i18next';
 import { useVerification } from '../contexts/VerificationContext';
 
 export default function VerificationPendingModal() {
+  const { t } = useTranslation('verificationPendingModal');
   const { isOpen, closeModal } = useVerification();
   if (!isOpen) return null;
 
@@ -46,14 +48,14 @@ export default function VerificationPendingModal() {
           fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.35rem',
           color: 'var(--ink)', marginBottom: '0.75rem', lineHeight: 1.2,
         }}>
-          Verification Pending
+          {t('heading')}
         </h2>
 
         <p style={{
           fontSize: '0.9rem', color: 'var(--slate)', lineHeight: 1.75,
           marginBottom: '2rem',
         }}>
-          Your account is being reviewed by our team. Once verified, you'll be able to message hosts and apply to collaborations. This usually takes 1–2 business days.
+          {t('body')}
         </p>
 
         <button
@@ -69,7 +71,7 @@ export default function VerificationPendingModal() {
           onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.88'; }}
           onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; }}
         >
-          Got it
+          {t('cta.gotIt')}
         </button>
       </div>
     </div>

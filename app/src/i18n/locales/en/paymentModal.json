@@ -1,0 +1,21 @@
+{
+  "heading": "Add a card to finish",
+  "body": "Both parties have signed. Save a card now — you won't be charged yet. The platform fee is charged automatically only once the collaboration is completed.",
+  "feeExplain": {
+    "flatFee": "Flat fee for free-stay collaboration",
+    "percentage": "5% of ${{amount}} collaboration value (min. $20)"
+  },
+  "feeCard": {
+    "title": "Collabnb Platform Fee · charged at completion"
+  },
+  "errors": {
+    "saveContractFirst": "Please save the contract before adding a card.",
+    "stripeNotConfigured": "Stripe not configured. Run: npx convex env set STRIPE_SECRET_KEY sk_test_...",
+    "checkoutFailed": "Could not start checkout. Please try again."
+  },
+  "cta": {
+    "redirecting": "Redirecting to Stripe…",
+    "payButton": "Save card · {{fee}} at completion",
+    "later": "I'll complete this later"
+  }
+}

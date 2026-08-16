@@ -68,6 +68,10 @@ export default defineSchema({
     pending_role: v.optional(v.string()),
     role_switch_requested_at: v.optional(v.number()),
     role_switch_email: v.optional(v.string()),
+    // Settings > Personal info > Verification > Submit Request. Purely a
+    // "please take another look" flag for admin's queue — current verified
+    // status is untouched while it's pending.
+    reverification_requested_at: v.optional(v.number()),
     host_verified: v.optional(v.boolean()),
     creator_verified: v.optional(v.boolean()),
     // Creator-controlled listing visibility. Undefined/true = discoverable by

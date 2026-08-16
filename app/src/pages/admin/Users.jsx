@@ -389,11 +389,14 @@ export default function Users({ initialTab } = {}) {
                   <td style={TD_STYLE}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', alignItems: 'flex-start' }}>
                       {p.is_verified !== true && !p.is_rejected && <Badge bg="#FEF3C7" color="#92400E">Pending</Badge>}
+                      {p.pending_role && <Badge bg="#DBEAFE" color="#1D4ED8">Wants {p.pending_role}</Badge>}
+                      {p.reverification_requested_at != null && <Badge bg="#FEF3C7" color="#92400E">Re-verify</Badge>}
                       {p.is_founder && !p.is_rejected && <Badge bg={MINT} color="#166534">Founder</Badge>}
                       {p.beta && <Badge bg="#F3E8FF" color="#7E22CE">Beta</Badge>}
                       {p.referred_by && <Badge bg="#EDE9FE" color="#5B21B6">Referred</Badge>}
                       {p.interview_requested && !p.is_rejected && <Badge bg="#DBEAFE" color="#1D4ED8">Interview</Badge>}
                       {p.is_rejected && <Badge bg="#FEE2E2" color="#991B1B">Rejected</Badge>}
+                      {p.notification_prefs?.marketing === false && <Badge bg="rgba(25,37,36,0.06)" color={SAGE}>No marketing</Badge>}
                     </div>
                   </td>
                   <td style={{ ...TD_STYLE, paddingRight: '1.5rem' }}>

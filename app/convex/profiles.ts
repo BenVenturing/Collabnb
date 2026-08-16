@@ -772,6 +772,21 @@ export const requestRoleSwitch = mutation({
   },
 });
 
+// Settings > Personal info > Verification > Submit Request.
+export const requestReverification = mutation({
+  args: { profileId: v.string() },
+  handler: async (ctx, args) => {
+    const profile = await requireOwnerOrAdmin(ctx, args.profileId);
+    await ctx.db.patch(args.profileId as any, { reverification_requested_at: Date.now() });
+    await ctx.scheduler.runAfter(0, internal.email.sendAdminNotification, {
+      type: "signup",
+      subject: `Re-verification request: ${profile.full_name}`,
+      body: `Name: ${profile.full_name}\nEmail: ${profile.email}\nRole: ${profile.role}\n\nExisting ${profile.is_verified ? "verified" : "unverified"} account asked for another review — check in Admin → Users.`,
+    });
+    return { requested: true };
+  },
+});
+
 export const updateProfile = mutation({
   args: {
     profileId: v.string(),

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useQuery, useAction, useMutation } from 'convex/react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../../convex/_generated/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useSubscription } from '../contexts/SubscriptionContext';
@@ -174,6 +175,7 @@ function SectionLabel({ children }) {
 export default function Settings() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { i18n } = useTranslation();
   const { profile, updateProfile, signOut, openUserProfile } = useAuth();
   const { openModal: openSubModal } = useSubscription();
   const createBillingPortalSession = useAction(api.stripe.createBillingPortalSession);
@@ -656,7 +658,7 @@ export default function Settings() {
                   label="Preferred language"
                   value={profile?.preferred_language || 'en'}
                   options={[['en', 'English'], ['es', 'Español'], ['fr', 'Français'], ['de', 'Deutsch'], ['pt', 'Português']]}
-                  onChange={(v) => updateProfile({ preferred_language: v })}
+                  onChange={(v) => { i18n.changeLanguage(v); updateProfile({ preferred_language: v }); }}
                 />
                 <SelectRow
                   label="Currency"

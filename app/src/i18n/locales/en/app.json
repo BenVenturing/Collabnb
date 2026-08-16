@@ -1,0 +1,14 @@
+{
+  "crash": {
+    "title": "App crash — copy this and send to dev:",
+    "sendButton": "Send crash report to dev team",
+    "sending": "Sending…",
+    "sent": "Sent to the dev team — thanks!",
+    "sendFailed": "Send failed — copy the details below instead."
+  },
+  "loading": "Loading",
+  "celebration": {
+    "quote": "Where creators and boutique stays collab.",
+    "buildingProfile": "Building your profile…"
+  }
+}

@@ -143,7 +143,7 @@ export const sendAdminNotification = internalAction({
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          from: "Collabnb <onboarding@resend.dev>",
+          from: FROM,
           to: [ADMIN_TO],
           subject: `[Collabnb] ${subject}`,
           text: body,

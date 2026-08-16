@@ -518,6 +518,7 @@ export default function Profile() {
   const convex                     = useConvex();
   const updateMetricsMutation      = useMutation(api.profiles.updateMetrics);
   const requestTierChangeMutation  = useMutation(api.profiles.requestTierChange);
+  const requestReverificationMutation = useMutation(api.profiles.requestReverification);
   const { openModal: openSubModal } = useSubscription();
   const userId = profile?._id || profile?.id || 'mock-user-001';
   const serverPitchCount = useQuery(api.pitches.getCount, { userId });
@@ -560,6 +561,7 @@ export default function Profile() {
   const [showAllCollabs,    setShowAllCollabs]    = useState(false);
   const [showPrivacy,       setShowPrivacy]       = useState(false);
   const [showVerification,  setShowVerification]  = useState(false);
+  const [reverifSending, setReverifSending] = useState(false);
   const [showLocation,      setShowLocation]      = useState(false);
   const [showMetrics,       setShowMetrics]       = useState(false);
   const [showPayoutMethod,  setShowPayoutMethod]  = useState(false);
@@ -1681,16 +1683,25 @@ export default function Profile() {
               Submit a request for the Collabnb team to review and re-verify your account. Your current verified status will remain active during review.
             </p>
             <div style={{ display: 'flex', gap: '0.75rem' }}>
-              <button className="btn-glass" style={{ flex: 1, fontSize: '0.85rem' }} onClick={() => setShowVerification(false)}>Cancel</button>
+              <button className="btn-glass" style={{ flex: 1, fontSize: '0.85rem' }} onClick={() => setShowVerification(false)} disabled={reverifSending}>Cancel</button>
               <button
                 className="btn-primary"
                 style={{ flex: 1, fontSize: '0.85rem' }}
+                disabled={reverifSending}
                 onClick={async () => {
-                  alert('Re-verification request submitted. The Collabnb team will review your account.');
-                  setShowVerification(false);
+                  setReverifSending(true);
+                  try {
+                    await requestReverificationMutation({ profileId: userId });
+                    setToastMsg('Re-verification request sent — the Collabnb team will review your account.');
+                  } catch {
+                    setToastMsg("Couldn't send that request — please try again.");
+                  } finally {
+                    setReverifSending(false);
+                    setShowVerification(false);
+                  }
                 }}
               >
-                Submit Request
+                {reverifSending ? 'Sending…' : 'Submit Request'}
               </button>
             </div>
           </div>

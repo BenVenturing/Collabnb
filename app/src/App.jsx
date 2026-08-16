@@ -1,8 +1,10 @@
 import { Component, useRef, useState, useEffect, useCallback } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { useMutation } from 'convex/react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../convex/_generated/api';
 import { Analytics } from '@vercel/analytics/react';
+import i18nInstance, { SUPPORTED_LANGUAGES } from './i18n';
 import collabnbLogo from './assets/collabnb-logo.png';
 import bgClouds from './assets/bg-clouds-hazy.png';
 import AnalyticsTracker from './components/AnalyticsTracker';
@@ -42,6 +44,7 @@ import BlogPost             from './pages/BlogPost';
 // function component, but it's rendered from inside that boundary's fallback.
 function CrashReportButton({ error, componentStack }) {
   const submitCrashReport = useMutation(api.crashReports.submitCrashReport);
+  const { t } = useTranslation('app');
   const [status, setStatus] = useState('idle'); // idle | sending | sent | error
 
   const send = async () => {
@@ -61,7 +64,7 @@ function CrashReportButton({ error, componentStack }) {
   };
 
   if (status === 'sent') {
-    return <p style={{ marginTop: '1.25rem', color: '#2a7', fontWeight: 'bold' }}>Sent to the dev team — thanks!</p>;
+    return <p style={{ marginTop: '1.25rem', color: '#2a7', fontWeight: 'bold' }}>{t('crash.sent')}</p>;
   }
 
   return (
@@ -75,9 +78,9 @@ function CrashReportButton({ error, componentStack }) {
           background: '#c00', color: '#fff', cursor: status === 'sending' ? 'not-allowed' : 'pointer',
         }}
       >
-        {status === 'sending' ? 'Sending…' : 'Send crash report to dev team'}
+        {status === 'sending' ? t('crash.sending') : t('crash.sendButton')}
       </button>
-      {status === 'error' && <p style={{ color: '#c00', marginTop: '0.5rem' }}>Send failed — copy the details below instead.</p>}
+      {status === 'error' && <p style={{ color: '#c00', marginTop: '0.5rem' }}>{t('crash.sendFailed')}</p>}
     </div>
   );
 }
@@ -91,7 +94,7 @@ class ErrorBoundary extends Component {
     if (this.state.error) {
       return (
         <div style={{ fontFamily: 'monospace', padding: '2rem', background: '#fff', color: '#c00' }}>
-          <strong>App crash — copy this and send to dev:</strong>
+          <strong>{i18nInstance.t('app:crash.title')}</strong>
           <pre style={{ marginTop: '1rem', fontSize: '0.8rem', whiteSpace: 'pre-wrap' }}>
             {this.state.error?.message}
             {'\n\n'}
@@ -109,10 +112,11 @@ const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL;
 
 // ── Post-signup celebration overlay ──────────────────────────────────────────
 function NewSignupCelebration({ onDone }) {
+  const { t } = useTranslation('app');
   const canvasRef = useRef(null);
   const [quote, setQuote] = useState('');
   const [showSpinner, setShowSpinner] = useState(false);
-  const QUOTE = 'Where creators and boutique stays collab.';
+  const QUOTE = t('celebration.quote');
 
   // Confetti
   useEffect(() => {
@@ -181,7 +185,7 @@ function NewSignupCelebration({ onDone }) {
       </p>
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', color: 'var(--slate)', fontSize: '0.82rem', opacity: showSpinner ? 1 : 0, transition: 'opacity 600ms', marginTop: '0.5rem', position: 'relative' }}>
         <BlobLoader size="sm" />
-        <span>Building your profile…</span>
+        <span>{t('celebration.buildingProfile')}</span>
       </div>
     </div>
   );
@@ -190,9 +194,21 @@ function NewSignupCelebration({ onDone }) {
 function AppRoutes() {
   const { session, loading, profile } = useAuth();
   const navigate = useNavigate();
+  const { i18n } = useTranslation();
   const isAdmin = profile?.is_admin === true
     || profile?.email?.toLowerCase() === 'benventuring@gmail.com'
     || (!!ADMIN_EMAIL && profile?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase());
+
+  // Drives the whole app's language from the user's saved preference — the
+  // Settings page just writes preferred_language, this is the only place
+  // that reacts to it.
+  useEffect(() => {
+    const lang = profile?.preferred_language;
+    if (lang && SUPPORTED_LANGUAGES.includes(lang) && i18n.language !== lang) {
+      i18n.changeLanguage(lang);
+    }
+    document.documentElement.lang = (lang && SUPPORTED_LANGUAGES.includes(lang)) ? lang : 'en';
+  }, [profile?.preferred_language, i18n]);
 
   const [showCelebration, setShowCelebration] = useState(() => {
     const flag = localStorage.getItem('collabnb_new_signup') === '1';
@@ -407,6 +423,7 @@ function BlobLoader({ size = 'md' }) {
 }
 
 function LoadingScreen() {
+  const { t } = useTranslation('app');
   return (
     <div style={{
       position: 'relative', overflow: 'hidden',
@@ -455,7 +472,7 @@ function LoadingScreen() {
       <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.5rem' }}>
         <BlobLoader size="md" />
         <p className="cnb-loading" style={{ fontFamily: 'var(--font-body, sans-serif)', fontWeight: 600, color: '#6E7F7A', fontSize: '1rem', letterSpacing: '0.08em', margin: 0, textTransform: 'uppercase', animation: 'cnb-flicker 2.4s ease-in-out infinite' }}>
-          Loading
+          {t('loading')}
         </p>
       </div>
     </div>

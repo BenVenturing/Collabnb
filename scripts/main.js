@@ -969,7 +969,7 @@ function openLoginModal() {
         appearance: {
           variables: {
             colorPrimary: '#3C5759',
-            colorBackground: 'transparent',
+            colorBackground: 'rgba(255,255,255,0.12)',
             colorText: '#192524',
             colorTextSecondary: '#3C5759',
             colorInputBackground: '#ffffff',
@@ -1006,6 +1006,18 @@ function closeLoginModal() {
   overlay.setAttribute('aria-hidden', 'true');
   document.body.style.overflow = '';
   if (_signInUnsubscribe) { _signInUnsubscribe(); _signInUnsubscribe = null; }
+
+  // Properly tear down the mounted Clerk widget. Clearing the container's
+  // innerHTML on next open isn't enough — Clerk keeps its own internal
+  // record of what's mounted where, so without this the widget silently
+  // fails to reappear the second time the modal is opened.
+  if (_clerkLoginMounted) {
+    const mountEl = document.getElementById('clerk-login-mount');
+    _clerkLoginMounted = false;
+    getClerk().then((clerk) => {
+      if (clerk && mountEl) clerk.unmountSignIn(mountEl);
+    }).catch(() => {});
+  }
 
   // Show the nav pill again
   const nav = document.querySelector('.nav-pill');

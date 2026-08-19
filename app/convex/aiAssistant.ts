@@ -25,11 +25,28 @@ const DEFAULT_MODEL: Record<Provider, string> = {
   openrouter: "meta-llama/llama-3.3-70b-instruct",
 };
 
+// Convex redacts plain (non-ConvexError) thrown errors on the client down to
+// a generic "Server Error" in production, which hid the real cause of a
+// saveApiKey failure. Re-throw anything unexpected as a ConvexError so the
+// actual message reaches the client instead of being silently swallowed.
+function withSurfacedErrors<Args extends any[], Ret>(
+  fn: (...args: Args) => Promise<Ret>
+): (...args: Args) => Promise<Ret> {
+  return async (...args: Args) => {
+    try {
+      return await fn(...args);
+    } catch (err: any) {
+      if (err instanceof ConvexError) throw err;
+      throw new ConvexError(`${err?.name || "Error"}: ${err?.message || String(err)}`);
+    }
+  };
+}
+
 // ─── Connect / disconnect a personal override key ──────────────────────────
 
 export const saveApiKey = action({
   args: { provider: PROVIDER, apiKey: v.string() },
-  handler: async (ctx, { provider, apiKey }) => {
+  handler: withSurfacedErrors(async (ctx, { provider, apiKey }) => {
     const caller = await requireAuthedProfileAction(ctx, api.profiles.getByClerkUserId);
     const trimmed = apiKey.trim();
     if (!trimmed) throw new ConvexError("API key is required.");
@@ -40,7 +57,7 @@ export const saveApiKey = action({
       encryptedKey: ciphertext,
       iv,
     });
-  },
+  }),
 });
 
 export const upsertKey = internalMutation({
@@ -196,7 +213,7 @@ async function draftWithOpenAiCompatible(
 
 export const draftReply = action({
   args: { threadKey: v.string() },
-  handler: async (ctx, { threadKey }): Promise<{ draft: string; provider: Provider | "collabnb" }> => {
+  handler: withSurfacedErrors(async (ctx, { threadKey }): Promise<{ draft: string; provider: Provider | "collabnb" }> => {
     const caller = await requireAuthedProfileAction(ctx, api.profiles.getByClerkUserId);
     if (caller.is_verified !== true && caller.is_admin !== true) {
       throw new ConvexError("Your account is pending verification. AI drafting unlocks once you're approved.");
@@ -228,5 +245,5 @@ export const draftReply = action({
       { role: "user", content: prompt },
     ], 400);
     return { draft: cleanDraftText(raw), provider: "collabnb" };
-  },
+  }),
 });

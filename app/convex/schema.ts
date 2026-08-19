@@ -762,7 +762,7 @@ export default defineSchema({
   // and is never returned to the client. See lib/crypto.ts and aiAssistant.ts.
   ai_assistant_keys: defineTable({
     owner_id: v.string(),
-    provider: v.union(v.literal("openai"), v.literal("anthropic")),
+    provider: v.union(v.literal("openai"), v.literal("anthropic"), v.literal("openrouter")),
     encrypted_key: v.string(),
     iv: v.string(),
     created_at: v.number(),

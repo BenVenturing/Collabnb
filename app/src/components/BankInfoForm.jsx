@@ -43,9 +43,27 @@ const COUNTRIES = [
   { code: 'ES', label: 'Spain', group: 'EU' },
   { code: 'IT', label: 'Italy', group: 'EU' },
   { code: 'NL', label: 'Netherlands', group: 'EU' },
+  { code: 'AT', label: 'Austria', group: 'EU' },
+  { code: 'BE', label: 'Belgium', group: 'EU' },
+  { code: 'IE', label: 'Ireland', group: 'EU' },
+  { code: 'PT', label: 'Portugal', group: 'EU' },
+  { code: 'FI', label: 'Finland', group: 'EU' },
+  { code: 'LU', label: 'Luxembourg', group: 'EU' },
+  { code: 'GR', label: 'Greece', group: 'EU' },
+  { code: 'SK', label: 'Slovakia', group: 'EU' },
   { code: 'GB', label: 'United Kingdom', group: 'UK' },
   { code: 'ID', label: 'Indonesia', group: 'ID' },
   { code: 'AU', label: 'Australia', group: 'AU' },
+];
+
+// Every account needs a residential address regardless of country — Wise's
+// account creation API rejects PRIVATE-legalType recipients missing any of
+// these (confirmed via a live 422: "Please select a country" / "enter a
+// residential address" / "enter a city" / "enter a post code").
+const ADDRESS_FIELDS = [
+  { key: 'firstLine', label: 'Street Address', placeholder: '123 Main St', validate: (v) => (v.trim().length > 0 ? null : 'Enter your street address.') },
+  { key: 'city', label: 'City', placeholder: 'Berlin', validate: (v) => (v.trim().length > 0 ? null : 'Enter your city.') },
+  { key: 'postCode', label: 'Postal Code', placeholder: '10115', validate: (v) => (v.trim().length > 0 ? null : 'Enter your postal code.') },
 ];
 
 const GROUP_CONFIG = {
@@ -87,8 +105,13 @@ const GROUP_CONFIG = {
         normalize: alnumUpper,
         validate: (v) => (!v || isValidBic(v) ? null : 'Enter a valid 8 or 11-character BIC/SWIFT code.'),
       },
+      {
+        key: 'bankName', label: 'Bank Name', placeholder: 'Deutsche Bank', optional: true,
+        help: 'Optional — helps confirm the right account if your IBAN is ever unclear.',
+        validate: () => null,
+      },
     ],
-    buildDetails: (v) => ({ legalType: 'PRIVATE', IBAN: v.iban, ...(v.bic ? { BIC: v.bic } : {}) }),
+    buildDetails: (v) => ({ legalType: 'PRIVATE', IBAN: v.iban, ...(v.bic ? { BIC: v.bic } : {}), ...(v.bankName ? { bankName: v.bankName } : {}) }),
   },
   UK: {
     currency: 'GBP',
@@ -207,12 +230,16 @@ export default function BankInfoForm({ onChange, disabled }) {
 
   const countryMeta = COUNTRIES.find((c) => c.code === country);
   const config = countryMeta ? GROUP_CONFIG[countryMeta.group] : null;
+  // Every country needs the same residential-address fields on top of its
+  // own banking fields — concatenating means one validation/render pass
+  // handles both without duplicating logic per group.
+  const allFieldDefs = config ? [...ADDRESS_FIELDS, ...config.fields] : [];
 
   const errors = useMemo(() => {
-    if (!config) return {};
     const out = {};
-    for (const f of config.fields) out[f.key] = f.validate(fields[f.key] || '');
+    for (const f of allFieldDefs) out[f.key] = f.validate(fields[f.key] || '');
     return out;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [config, fields]);
 
   const isValid = !!config
@@ -223,7 +250,7 @@ export default function BankInfoForm({ onChange, disabled }) {
     if (!config) { onChange?.({ isValid: false }); return; }
     const name = nextName ?? accountHolderName;
     const f = nextFields ?? fields;
-    const fieldErrors = config.fields.map((def) => def.validate(f[def.key] || ''));
+    const fieldErrors = allFieldDefs.map((def) => def.validate(f[def.key] || ''));
     const valid = name.trim().length > 0 && fieldErrors.every((e) => e === null);
     onChange?.({
       isValid: valid,
@@ -231,7 +258,10 @@ export default function BankInfoForm({ onChange, disabled }) {
       currency: config.currency,
       wiseType: config.wiseType,
       accountHolderName: name,
-      details: config.buildDetails(f),
+      details: {
+        ...config.buildDetails(f),
+        address: { country, firstLine: f.firstLine || '', city: f.city || '', postCode: f.postCode || '' },
+      },
     });
   }
 
@@ -293,7 +323,7 @@ export default function BankInfoForm({ onChange, disabled }) {
               style={inputStyle}
             />
           </div>
-          {config.fields.map((def) => (
+          {allFieldDefs.map((def) => (
             <fieldset key={def.key} disabled={disabled} style={{ border: 'none', padding: 0, margin: 0 }}>
               <Field
                 def={def}

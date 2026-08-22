@@ -2,7 +2,10 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useQuery, useAction, useMutation, useConvex } from 'convex/react';
 import { api } from '../../convex/_generated/api';
+import { ConvexError } from 'convex/values';
 import Confetti from '../components/Confetti';
+import BankInfoForm from '../components/BankInfoForm';
+import { useTranslation, Trans } from 'react-i18next';
 
 // Convex storage URL prefix; used to construct public URLs from storage IDs
 const CONVEX_URL = import.meta.env.VITE_CONVEX_URL;
@@ -55,10 +58,10 @@ import RoleSwitchSheet from '../components/RoleSwitchSheet';
 
 // ─── Creator tier + niche options ────────────────────────────────────────────
 const CREATOR_TIERS = [
-  { value: 'UGC Beginner',     label: 'UGC Beginner',     range: '0–5K followers',     desc: 'New creators building their portfolio' },
-  { value: 'UGC Pro',          label: 'UGC Pro',           range: '5K–10K followers',   desc: 'Content creators, not influencer reach' },
-  { value: 'Micro Influencer', label: 'Micro Influencer',  range: '10K–50K followers',  desc: 'Influencer-style, engaged audience' },
-  { value: 'Influencer',       label: 'Influencer',        range: '50K+ followers',     desc: 'Broad reach, established audience' },
+  { value: 'UGC Beginner',     key: 'ugcBeginner' },
+  { value: 'UGC Pro',          key: 'ugcPro' },
+  { value: 'Micro Influencer', key: 'microInfluencer' },
+  { value: 'Influencer',       key: 'influencer' },
 ];
 
 function suggestTier(followerCount) {
@@ -200,8 +203,9 @@ function Tooltip({ text, children }) {
 
 // ─── Polished badges ─────────────────────────────────────────────────────────
 function VerifiedBadge() {
+  const { t } = useTranslation('profile');
   return (
-    <Tooltip text="Verified Creator — personally audited and checked by the Collabnb team.">
+    <Tooltip text={t('verifiedTooltip')}>
       <span
         style={{
           display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
@@ -219,8 +223,9 @@ function VerifiedBadge() {
 }
 
 function FoundingMemberBadge() {
+  const { t } = useTranslation('profile');
   return (
-    <Tooltip text="Founding Member — one of the first hundred to sign up for the program.">
+    <Tooltip text={t('foundingMemberTooltip')}>
       <span
         style={{
           display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
@@ -234,7 +239,7 @@ function FoundingMemberBadge() {
           <path d="M8 1.5l1.67 3.38 3.73.54-2.7 2.63.64 3.72L8 9.77l-3.34 1.76.64-3.72L2.6 5.42l3.73-.54z"/>
         </svg>
         <span style={{ fontSize: '0.67rem', fontWeight: 700, color: '#3C5759', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-          Founding Member
+          {t('foundingMember')}
         </span>
       </span>
     </Tooltip>
@@ -243,6 +248,7 @@ function FoundingMemberBadge() {
 
 // ─── Banner crop editor ───────────────────────────────────────────────────────
 function BannerCropEditor({ file, onApply, onCancel }) {
+  const { t } = useTranslation('profile');
   const imgRef   = useRef(null);
   const dragRef  = useRef(null);
   const [src, setSrc]           = useState(null);
@@ -314,8 +320,8 @@ function BannerCropEditor({ file, onApply, onCancel }) {
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 10300, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(25,37,36,0.88)', backdropFilter: 'blur(8px)', padding: '1.5rem' }}>
       <div style={{ background: 'white', borderRadius: '1.25rem', padding: '1.5rem', maxWidth: PW + 48, width: '100%', boxShadow: '0 24px 64px rgba(0,0,0,0.4)' }}>
-        <h3 style={{ margin: '0 0 0.25rem', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.1rem', color: 'var(--ink)' }}>Position Banner Image</h3>
-        <p style={{ fontSize: '0.78rem', color: 'var(--sage)', margin: '0 0 1rem' }}>Drag to reposition · scroll or slider to zoom</p>
+        <h3 style={{ margin: '0 0 0.25rem', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.1rem', color: 'var(--ink)' }}>{t('bannerCrop.title')}</h3>
+        <p style={{ fontSize: '0.78rem', color: 'var(--sage)', margin: '0 0 1rem' }}>{t('bannerCrop.dragHint')}</p>
         <div
           style={{ width: PW, height: PH, overflow: 'hidden', borderRadius: '0.75rem', cursor: 'grab', userSelect: 'none', position: 'relative', background: '#1a2322', touchAction: 'none' }}
           onMouseDown={(e) => { e.preventDefault(); startDrag(e.clientX, e.clientY); }}
@@ -325,12 +331,12 @@ function BannerCropEditor({ file, onApply, onCancel }) {
           {src && <img ref={imgRef} src={src} onLoad={(e) => { setNat({ w: e.target.naturalWidth, h: e.target.naturalHeight }); }} style={{ position: 'absolute', left: imgLeft, top: imgTop, width: dw, height: dh, maxWidth: 'none', pointerEvents: 'none', display: 'block' }} />}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', margin: '1rem 0 1.25rem' }}>
-          <span style={{ fontSize: '0.72rem', color: 'var(--sage)', fontWeight: 600, flexShrink: 0 }}>Zoom</span>
+          <span style={{ fontSize: '0.72rem', color: 'var(--sage)', fontWeight: 600, flexShrink: 0 }}>{t('bannerCrop.zoom')}</span>
           <input type="range" min="1" max="4" step="0.05" value={zoom} onChange={(e) => { const z = Number(e.target.value); setZoom(z); setOffset(o => clamp(o.x, o.y, z)); }} style={{ flex: 1 }} />
         </div>
         <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
-          <button className="btn-glass" onClick={onCancel}>Cancel</button>
-          <button className="btn-primary" onClick={handleApply}>Apply</button>
+          <button className="btn-glass" onClick={onCancel}>{t('bannerCrop.cancel')}</button>
+          <button className="btn-primary" onClick={handleApply}>{t('bannerCrop.apply')}</button>
         </div>
       </div>
     </div>
@@ -339,6 +345,7 @@ function BannerCropEditor({ file, onApply, onCancel }) {
 
 // ─── Static avatar circle (no flip, no listing photo) ──────────────────────────
 function AvatarCircle({ src, editMode, onEdit, initials = '?' }) {
+  const { t } = useTranslation('profile');
   return (
     <div
       style={{ position: 'relative', width: '76px', height: '76px', cursor: editMode ? 'pointer' : 'default' }}
@@ -359,7 +366,7 @@ function AvatarCircle({ src, editMode, onEdit, initials = '?' }) {
         {src && (
           <img
             src={src}
-            alt="Profile"
+            alt={t('avatarAlt')}
             style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center' }}
             onError={(e) => { e.currentTarget.style.display = 'none'; }}
           />
@@ -373,7 +380,7 @@ function AvatarCircle({ src, editMode, onEdit, initials = '?' }) {
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
           <span style={{ color: 'white', fontSize: '0.58rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', textAlign: 'center', lineHeight: 1.2 }}>
-            Change
+            {t('avatarChange')}
           </span>
         </div>
       )}
@@ -435,6 +442,7 @@ function SocialRow({ icon, label, value, href }) {
 
 // ─── Past collab card ─────────────────────────────────────────────────────────
 function PastCollabCard({ collab, showSampleBadge = false }) {
+  const { t } = useTranslation('profile');
   const statusColors = {
     pending:   { bg: 'rgba(212,168,67,0.15)',  text: '#D4A843' },
     uploaded:  { bg: 'rgba(74,155,210,0.15)',   text: '#4A9BD2' },
@@ -449,7 +457,7 @@ function PastCollabCard({ collab, showSampleBadge = false }) {
         <img src={collab.image} alt={collab.property_name} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} loading="lazy" />
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(25,37,36,0.45) 0%, transparent 55%)' }} />
         {showSampleBadge && (
-          <span style={{ position: 'absolute', top: '0.625rem', left: '0.625rem', background: 'rgba(25,37,36,0.65)', color: 'var(--bone)', fontSize: '0.55rem', fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', padding: '0.2rem 0.5rem', borderRadius: '4px' }}>SAMPLE</span>
+          <span style={{ position: 'absolute', top: '0.625rem', left: '0.625rem', background: 'rgba(25,37,36,0.65)', color: 'var(--bone)', fontSize: '0.55rem', fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', padding: '0.2rem 0.5rem', borderRadius: '4px' }}>{t('sample')}</span>
         )}
         <span style={{ position: 'absolute', bottom: '0.625rem', left: '0.625rem', color: 'rgba(239,236,233,0.9)', fontSize: '0.7rem', fontWeight: 500 }}>📍 {collab.location}</span>
       </div>
@@ -494,6 +502,7 @@ function useIsMobile(query = '(max-width: 480px)') {
 
 // ─── Main Profile page ────────────────────────────────────────────────────────
 export default function Profile() {
+  const { t } = useTranslation('profile');
   const { profile, loading, signOut, updateProfile } = useAuth();
   const isMobile = useIsMobile();
   const { contracts, collabs } = useCollabs();
@@ -629,9 +638,9 @@ export default function Profile() {
             subscription_tier: tier,
             subscription_expires_at: expiresAt ?? undefined,
           }));
-          setToastMsg('Subscription activated! Welcome to Creator Plus.');
+          setToastMsg(t('toast.subscriptionActivated'));
         })
-        .catch(() => setToastMsg('Could not verify payment — contact support@collabnb.com'));
+        .catch(() => setToastMsg(t('toast.paymentVerifyFailed')));
     } else if (subStatus === 'cancelled') {
       navigate('/profile', { replace: true });
     } else if (subscribePlan === 'monthly' || subscribePlan === 'yearly') {
@@ -649,9 +658,9 @@ export default function Profile() {
       verifyLifetimeSession({ sessionId: lifetimeSessionId })
         .then(() => {
           setProfileOverride((prev) => ({ ...prev, is_lifetime: true }));
-          setToastMsg('Lifetime access activated! Welcome to Collabnb — forever.');
+          setToastMsg(t('toast.lifetimeActivated'));
         })
-        .catch(() => setToastMsg('Could not verify payment — contact support@collabnb.com'));
+        .catch(() => setToastMsg(t('toast.paymentVerifyFailed')));
     } else if (lifetimeStatus === 'cancelled') {
       navigate('/profile', { replace: true });
     }
@@ -723,7 +732,7 @@ export default function Profile() {
             animation: 'spin 0.8s linear infinite',
             margin: '0 auto 1rem',
           }} />
-          <p style={{ fontSize: '0.85rem', color: 'var(--sage)' }}>Loading profile...</p>
+          <p style={{ fontSize: '0.85rem', color: 'var(--sage)' }}>{t('loadingProfile')}</p>
         </div>
       </div>
     );
@@ -779,7 +788,7 @@ export default function Profile() {
     updateProfile(editDraft);
     setProfileOverride({ ...profileOverride, ...editDraft });
     setEditDraft(null);
-    setToastMsg('All changes saved');
+    setToastMsg(t('toast.allChangesSaved'));
     // Invalidate creator search cache so updated profile surfaces in host search
     cache.clearAll();
   }
@@ -807,7 +816,7 @@ export default function Profile() {
 
   function handleShare() {
     if (navigator.share) {
-      navigator.share({ title: `${dp.full_name} on Collabnb`, url: window.location.href }).catch(() => {});
+      navigator.share({ title: t('shareTitle', { name: dp.full_name }), url: window.location.href }).catch(() => {});
     } else {
       navigator.clipboard?.writeText(window.location.href);
     }
@@ -815,7 +824,7 @@ export default function Profile() {
 
   async function handleManageSubscription() {
     const customerId = dp.stripe_customer_id;
-    if (!customerId) { setToastMsg('No billing account found — contact support@collabnb.com'); return; }
+    if (!customerId) { setToastMsg(t('toast.noBillingAccount')); return; }
     setPortalLoading(true);
     try {
       const { url } = await createBillingPortalSession({
@@ -824,7 +833,7 @@ export default function Profile() {
       });
       window.location.href = url;
     } catch {
-      setToastMsg('Could not open billing portal — try again shortly');
+      setToastMsg(t('toast.portalFailed'));
       setPortalLoading(false);
     }
   }
@@ -871,7 +880,7 @@ export default function Profile() {
           />
           {editMode && (
             <p style={{ fontSize: '0.58rem', color: 'var(--sage)', textAlign: 'center', marginTop: '0.375rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              Tap to change
+              {t('tapToChange')}
             </p>
           )}
         </div>
@@ -915,7 +924,7 @@ export default function Profile() {
                 style={{ fontSize: '0.8rem', padding: '0.6rem 1.1rem' }}
                 onClick={() => navigate('/host')}
               >
-                My Listings
+                {t('myListings')}
               </button>
             )}
             <button
@@ -923,7 +932,7 @@ export default function Profile() {
               style={{ fontSize: '0.8rem', padding: '0.6rem 1.1rem' }}
               onClick={handleShare}
             >
-              Share Profile
+              {t('shareProfile')}
             </button>
           </div>
         </section>
@@ -935,14 +944,14 @@ export default function Profile() {
             const contentER = collabERs.length > 0 ? parseFloat((collabERs.reduce((a, b) => a + b, 0) / collabERs.length).toFixed(2)) : null;
             const isCreator = dp.role === 'creator';
             const stats = isCreator ? [
-              { value: dp.collab_count ?? 0,                                    label: 'Collabs',    tooltip: null },
-              { value: fmtFollowers(dp.follower_count),                          label: 'Followers',  tooltip: null },
-              { value: dp.engagement_rate ? `${dp.engagement_rate}%` : '—',     label: 'Profile ER', tooltip: null },
-              { value: contentER != null ? `${contentER}%` : '—',               label: 'Content ER', tooltip: 'Based on content created through Collabnb collaborations' },
+              { value: dp.collab_count ?? 0,                                    label: t('stats.collabs'),    tooltip: null },
+              { value: fmtFollowers(dp.follower_count),                          label: t('stats.followers'),  tooltip: null },
+              { value: dp.engagement_rate ? `${dp.engagement_rate}%` : '—',     label: t('stats.profileEr'), tooltip: null },
+              { value: contentER != null ? `${contentER}%` : '—',               label: t('stats.contentEr'), tooltip: t('stats.contentErTooltip') },
             ] : [
-              { value: dp.collab_count ?? 0,                                    label: 'Collabs',    tooltip: null },
-              { value: fmtFollowers(dp.follower_count),                          label: 'Followers',  tooltip: null },
-              { value: dp.engagement_rate ? `${dp.engagement_rate}%` : '—',     label: 'Engagement', tooltip: null },
+              { value: dp.collab_count ?? 0,                                    label: t('stats.collabs'),    tooltip: null },
+              { value: fmtFollowers(dp.follower_count),                          label: t('stats.followers'),  tooltip: null },
+              { value: dp.engagement_rate ? `${dp.engagement_rate}%` : '—',     label: t('stats.engagement'), tooltip: null },
             ];
             const cols = isMobile && stats.length === 4 ? 2 : stats.length;
             return (
@@ -970,8 +979,10 @@ export default function Profile() {
           )}
           <p style={{ textAlign: 'center', fontSize: '0.7rem', color: 'var(--sage)', marginTop: '0.625rem' }}>
             {dp.metrics_updated_at
-              ? `↻ Updated ${Math.floor((Date.now() - dp.metrics_updated_at) / (1000 * 60 * 60 * 24)) === 0 ? 'today' : `${Math.floor((Date.now() - dp.metrics_updated_at) / (1000 * 60 * 60 * 24))}d ago`}`
-              : '↻ Updated just now'}
+              ? (Math.floor((Date.now() - dp.metrics_updated_at) / (1000 * 60 * 60 * 24)) === 0
+                  ? t('updated.today')
+                  : t('updated.daysAgo', { count: Math.floor((Date.now() - dp.metrics_updated_at) / (1000 * 60 * 60 * 24)) }))
+              : t('updated.justNow')}
           </p>
         </div>
 
@@ -983,7 +994,7 @@ export default function Profile() {
             </p>
             {(dp.bio?.length ?? 0) > BIO_LIMIT && (
               <button onClick={() => setBioExpanded(!bioExpanded)} style={{ color: 'var(--ink)', fontSize: '0.875rem', fontWeight: 600, marginTop: '0.375rem', fontFamily: 'var(--font-body)', textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
-                {bioExpanded ? 'Show less' : 'Show more'}
+                {bioExpanded ? t('showLess') : t('showMore')}
               </button>
             )}
           </div>
@@ -991,21 +1002,21 @@ export default function Profile() {
 
         {/* ── Links & Socials ───────────────────────────────────────────────── */}
         <section className="section-reveal" ref={(el) => sectionsRef.current[2] = el} style={{ marginBottom: '1.75rem' }}>
-          <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.125rem', color: 'var(--ink)', marginBottom: '1rem' }}>Links &amp; Socials</h3>
+          <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.125rem', color: 'var(--ink)', marginBottom: '1rem' }}>{t('linksAndSocials')}</h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
-            {portfolioHref && <SocialRow icon={<GlobeIcon />} label="My Link-in-Bio" value={dp.portfolio} href={portfolioHref} />}
-            {dp.instagram_handle && <SocialRow icon={<InstagramIcon />} label="Instagram" value={`@${dp.instagram_handle.replace(/^@/, '')}`} href={`https://instagram.com/${dp.instagram_handle.replace(/^@/, '')}`} />}
-            {dp.tiktok_handle    && <SocialRow icon={<TikTokIcon />}    label="TikTok"    value={`@${dp.tiktok_handle.replace(/^@/, '')}`}    href={`https://tiktok.com/@${dp.tiktok_handle.replace(/^@/, '')}`} />}
-            {dp.youtube_handle   && <SocialRow icon={<YouTubeIcon />}   label="YouTube"   value={`@${dp.youtube_handle.replace(/^@/, '')}`}   href={`https://youtube.com/@${dp.youtube_handle.replace(/^@/, '')}`} />}
+            {portfolioHref && <SocialRow icon={<GlobeIcon />} label={t('social.linkInBio')} value={dp.portfolio} href={portfolioHref} />}
+            {dp.instagram_handle && <SocialRow icon={<InstagramIcon />} label={t('social.instagram')} value={`@${dp.instagram_handle.replace(/^@/, '')}`} href={`https://instagram.com/${dp.instagram_handle.replace(/^@/, '')}`} />}
+            {dp.tiktok_handle    && <SocialRow icon={<TikTokIcon />}    label={t('social.tiktok')}    value={`@${dp.tiktok_handle.replace(/^@/, '')}`}    href={`https://tiktok.com/@${dp.tiktok_handle.replace(/^@/, '')}`} />}
+            {dp.youtube_handle   && <SocialRow icon={<YouTubeIcon />}   label={t('social.youtube')}   value={`@${dp.youtube_handle.replace(/^@/, '')}`}   href={`https://youtube.com/@${dp.youtube_handle.replace(/^@/, '')}`} />}
           </div>
         </section>
 
         {/* ── Past Collabs ─────────────────────────────────────────────────── */}
         <section className="section-reveal" ref={(el) => sectionsRef.current[3] = el} style={{ marginBottom: '1.75rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-            <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.125rem', color: 'var(--ink)', margin: 0 }}>Past Collabs</h3>
+            <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.125rem', color: 'var(--ink)', margin: 0 }}>{t('pastCollabs')}</h3>
             {hasCollabs && (
-              <button onClick={() => setShowAllCollabs(true)} style={{ color: 'var(--slate)', fontSize: '0.875rem', fontWeight: 500, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font-body)' }}>View all →</button>
+              <button onClick={() => setShowAllCollabs(true)} style={{ color: 'var(--slate)', fontSize: '0.875rem', fontWeight: 500, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font-body)' }}>{t('viewAll')}</button>
             )}
           </div>
           {hasCollabs ? (
@@ -1027,10 +1038,10 @@ export default function Profile() {
                 background: 'linear-gradient(to bottom, rgba(246,244,241,0.35) 0%, rgba(246,244,241,0.75) 100%)',
               }}>
                 <p style={{ fontSize: '0.9rem', color: 'var(--ink)', fontWeight: 600, textAlign: 'center', margin: 0, textShadow: '0 1px 6px rgba(246,244,241,0.95)' }}>
-                  Your completed collabs will appear here
+                  {t('collabsEmpty.title')}
                 </p>
                 <p style={{ fontSize: '0.75rem', color: 'var(--slate)', textAlign: 'center', margin: 0, textShadow: '0 1px 4px rgba(246,244,241,0.9)' }}>
-                  Complete your first collab to unlock this section
+                  {t('collabsEmpty.subtitle')}
                 </p>
               </div>
             </div>
@@ -1051,15 +1062,15 @@ export default function Profile() {
               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', filter: unlocked ? 'none' : 'blur(6px)', userSelect: unlocked ? 'auto' : 'none', pointerEvents: unlocked ? 'auto' : 'none' }}>
                 <div style={{ width: '44px', height: '44px', borderRadius: '0.875rem', background: 'linear-gradient(135deg, rgba(74,155,127,0.2), rgba(209,235,221,0.3))', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: '1.25rem' }}>💰</div>
                 <div style={{ flex: 1 }}>
-                  <p style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--sage)', margin: 0, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Total Payout Received</p>
+                  <p style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--sage)', margin: 0, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{t('payout.totalReceived')}</p>
                   <p style={{ fontFamily: 'var(--font-display)', fontSize: '1.75rem', fontWeight: 800, color: 'var(--ink)', margin: '0.1rem 0 0' }}>${totalPayout.toLocaleString()}</p>
-                  <p style={{ fontSize: '0.68rem', color: 'var(--stone)', margin: '0.1rem 0 0' }}>Across {SAMPLE_COLLABORATIONS.filter((c) => c.payment).length} completed collaborations</p>
+                  <p style={{ fontSize: '0.68rem', color: 'var(--stone)', margin: '0.1rem 0 0' }}>{t('payout.acrossCollabs', { count: SAMPLE_COLLABORATIONS.filter((c) => c.payment).length })}</p>
                 </div>
               </div>
               {!unlocked && (
                 <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
                   <span style={{ fontSize: '0.875rem' }}>🔒</span>
-                  <p style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--slate)', margin: 0 }}>Unlocks after your first completed collab</p>
+                  <p style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--slate)', margin: 0 }}>{t('payout.unlockHint')}</p>
                 </div>
               )}
             </div>
@@ -1073,21 +1084,21 @@ export default function Profile() {
 
         {/* ── Globe ────────────────────────────────────────────────────────── */}
         <section className="section-reveal" ref={(el) => sectionsRef.current[4] = el} style={{ textAlign: 'center', paddingBottom: '2rem' }}>
-          <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.25rem', color: 'var(--ink)', marginBottom: '0.375rem' }}>Our Global Community</h3>
-          <p style={{ color: 'var(--sage)', fontSize: '0.9rem', marginBottom: '0.875rem' }}>Creators and hosts connecting across the world</p>
+          <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.25rem', color: 'var(--ink)', marginBottom: '0.375rem' }}>{t('globalCommunity.title')}</h3>
+          <p style={{ color: 'var(--sage)', fontSize: '0.9rem', marginBottom: '0.875rem' }}>{t('globalCommunity.subtitle')}</p>
           <GlobeCanvas profiles={allProfiles} />
           <div style={{ display: 'flex', justifyContent: 'center', gap: '0.75rem', marginTop: '1.5rem', flexWrap: 'wrap' }}>
             <span className="eyebrow-tag" style={{ gap: '0.5rem' }}>
               <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#22c55e', display: 'inline-block', flexShrink: 0 }} />
-              <strong>{globeStats.creators || '—'}</strong>&nbsp;Creators
+              <strong>{globeStats.creators || '—'}</strong>&nbsp;{t('globalCommunity.creators')}
             </span>
             <span className="eyebrow-tag" style={{ gap: '0.5rem' }}>
               <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#ef4444', display: 'inline-block', flexShrink: 0 }} />
-              <strong>{globeStats.hosts || '—'}</strong>&nbsp;Hosts
+              <strong>{globeStats.hosts || '—'}</strong>&nbsp;{t('globalCommunity.hosts')}
             </span>
             <span className="eyebrow-tag" style={{ gap: '0.5rem' }}>
               <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#D0D5CE', display: 'inline-block', flexShrink: 0 }} />
-              <strong>{allProfiles === undefined ? '—' : globeStats.countries > 0 ? `${globeStats.countries}` : '—'}</strong>&nbsp;Countries
+              <strong>{allProfiles === undefined ? '—' : globeStats.countries > 0 ? `${globeStats.countries}` : '—'}</strong>&nbsp;{t('globalCommunity.countries')}
             </span>
           </div>
         </section>
@@ -1113,8 +1124,8 @@ export default function Profile() {
                   )}
                   <div style={{ position: 'absolute', inset: 0, background: bannerUploading ? 'rgba(0,0,0,0.55)' : 'rgba(0,0,0,0.28)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}>
                     {bannerUploading
-                      ? <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg><span style={{ color: 'white', fontSize: '0.75rem', fontWeight: 600 }}>Uploading…</span></>
-                      : <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg><span style={{ color: 'white', fontSize: '0.75rem', fontWeight: 600 }}>{editDraft.banner_url ? 'Change banner' : 'Add banner'}</span></>
+                      ? <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg><span style={{ color: 'white', fontSize: '0.75rem', fontWeight: 600 }}>{t('uploading')}</span></>
+                      : <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg><span style={{ color: 'white', fontSize: '0.75rem', fontWeight: 600 }}>{editDraft.banner_url ? t('changeBanner') : t('addBanner')}</span></>
                     }
                   </div>
                 </div>
@@ -1145,7 +1156,7 @@ export default function Profile() {
                     try {
                       const url = await uploadResizedImage(f, 300, 300, generateUploadUrl, 0.85, finalizeUpload);
                       setEditDraft(d => ({ ...d, avatar_url: url }));
-                    } catch (err) { console.error('Avatar upload failed:', err); setToastMsg('Photo upload failed — try again'); }
+                    } catch (err) { console.error('Avatar upload failed:', err); setToastMsg(t('toast.photoUploadFailed')); }
                     finally { setAvatarUploading(false); }
                   }} />
                 </label>
@@ -1154,25 +1165,25 @@ export default function Profile() {
 
             {/* Header */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
-              <h4 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.25rem', color: 'var(--ink)', margin: 0 }}>Edit Profile</h4>
+              <h4 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.25rem', color: 'var(--ink)', margin: 0 }}>{t('editProfile')}</h4>
             </div>
 
             {/* Fields */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.125rem' }}>
-              <EditField label="Name" value={editDraft.full_name} onChange={(v) => setEditDraft({ ...editDraft, full_name: v })} />
-              <EditField label="Bio" value={editDraft.bio} onChange={(v) => setEditDraft({ ...editDraft, bio: v })} multiline />
-              <EditField label="City" value={editDraft.city} onChange={(v) => setEditDraft({ ...editDraft, city: v })} />
+              <EditField label={t('edit.name')} value={editDraft.full_name} onChange={(v) => setEditDraft({ ...editDraft, full_name: v })} />
+              <EditField label={t('edit.bio')} value={editDraft.bio} onChange={(v) => setEditDraft({ ...editDraft, bio: v })} multiline />
+              <EditField label={t('edit.city')} value={editDraft.city} onChange={(v) => setEditDraft({ ...editDraft, city: v })} />
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-                <EditField label="State / Region" value={editDraft.region} onChange={(v) => setEditDraft({ ...editDraft, region: v })} />
-                <EditField label="Country" value={editDraft.country || ''} onChange={(v) => setEditDraft({ ...editDraft, country: v })} />
+                <EditField label={t('edit.stateRegion')} value={editDraft.region} onChange={(v) => setEditDraft({ ...editDraft, region: v })} />
+                <EditField label={t('edit.country')} value={editDraft.country || ''} onChange={(v) => setEditDraft({ ...editDraft, country: v })} />
               </div>
               <div style={{ borderTop: '1px solid rgba(25,37,36,0.06)', paddingTop: '1rem' }}>
-                <p style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--sage)', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 0.875rem' }}>Social Handles</p>
+                <p style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--sage)', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 0.875rem' }}>{t('edit.socialHandles')}</p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                  <EditField label="Instagram" value={editDraft.instagram_handle} onChange={(v) => setEditDraft({ ...editDraft, instagram_handle: v })} prefix="@" />
-                  <EditField label="TikTok"    value={editDraft.tiktok_handle}    onChange={(v) => setEditDraft({ ...editDraft, tiktok_handle: v })}    prefix="@" />
-                  <EditField label="YouTube"   value={editDraft.youtube_handle}   onChange={(v) => setEditDraft({ ...editDraft, youtube_handle: v })}   prefix="@" />
-                  <EditField label="Portfolio URL" value={editDraft.portfolio}    onChange={(v) => setEditDraft({ ...editDraft, portfolio: v })} />
+                  <EditField label={t('edit.instagram')} value={editDraft.instagram_handle} onChange={(v) => setEditDraft({ ...editDraft, instagram_handle: v })} prefix="@" />
+                  <EditField label={t('edit.tiktok')}    value={editDraft.tiktok_handle}    onChange={(v) => setEditDraft({ ...editDraft, tiktok_handle: v })}    prefix="@" />
+                  <EditField label={t('edit.youtube')}   value={editDraft.youtube_handle}   onChange={(v) => setEditDraft({ ...editDraft, youtube_handle: v })}   prefix="@" />
+                  <EditField label={t('edit.portfolioUrl')} value={editDraft.portfolio}    onChange={(v) => setEditDraft({ ...editDraft, portfolio: v })} />
                 </div>
               </div>
             </div>
@@ -1184,21 +1195,23 @@ export default function Profile() {
                 {/* Creator Type — changes require admin review */}
                 <div style={{ background: 'rgba(255,255,255,0.6)', borderRadius: '1rem', border: '1px solid rgba(255,255,255,0.85)', padding: '1rem' }}>
                   <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 10 }}>
-                    <p style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--sage)', margin: 0, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Creator Type</p>
-                    <span style={{ fontSize: '0.65rem', color: 'var(--sage)' }}>Changes require admin review</span>
+                    <p style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--sage)', margin: 0, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('creatorType.title')}</p>
+                    <span style={{ fontSize: '0.65rem', color: 'var(--sage)' }}>{t('creatorType.reviewHint')}</span>
                   </div>
                   {dp.pending_tier && !tierRequested && (
                     <div style={{ background: 'rgba(234,179,8,0.08)', border: '1px solid rgba(234,179,8,0.25)', borderRadius: '0.5rem', padding: '0.5rem 0.625rem', marginBottom: '0.625rem' }}>
-                      <p style={{ fontSize: '0.7rem', color: '#92400e', margin: 0 }}>Tier change to <strong>{dp.pending_tier}</strong> is pending admin approval.</p>
+                      <p style={{ fontSize: '0.7rem', color: '#92400e', margin: 0 }}>
+                        <Trans i18nKey="creatorType.pendingApproval" t={t} values={{ tier: dp.pending_tier }}>Tier change to <strong>{{tier}}</strong> is pending admin approval.</Trans>
+                      </p>
                     </div>
                   )}
                   {tierRequested && (
                     <div style={{ background: 'rgba(74,155,127,0.08)', border: '1px solid rgba(74,155,127,0.25)', borderRadius: '0.5rem', padding: '0.5rem 0.625rem', marginBottom: '0.625rem' }}>
-                      <p style={{ fontSize: '0.7rem', color: '#166534', margin: 0 }}>Request submitted — you'll be notified once approved.</p>
+                      <p style={{ fontSize: '0.7rem', color: '#166534', margin: 0 }}>{t('creatorType.requestSubmitted')}</p>
                     </div>
                   )}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    {CREATOR_TIERS.map(({ value, label, range, desc }) => {
+                    {CREATOR_TIERS.map(({ value, key: tierKey }) => {
                       const isCurrent = value === dp.tier;
                       const isPending = value === (dp.pending_tier || (tierRequested ? requestedTier : null));
                       const isExpanded = value === requestedTier && !tierRequested;
@@ -1222,18 +1235,20 @@ export default function Profile() {
                           >
                             <div>
                               <span style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: isCurrent ? 'var(--bone)' : 'var(--ink)' }}>
-                                {label}
-                                {isCurrent && <span style={{ marginLeft: 6, fontSize: 9, fontWeight: 700, color: 'rgba(255,255,255,0.7)', background: 'rgba(255,255,255,0.15)', padding: '2px 6px', borderRadius: 9999, verticalAlign: 'middle' }}>Current</span>}
-                                {isPending && !isCurrent && <span style={{ marginLeft: 6, fontSize: 9, fontWeight: 700, color: '#92400e', background: 'rgba(234,179,8,0.15)', padding: '2px 6px', borderRadius: 9999, verticalAlign: 'middle' }}>Pending</span>}
-                                {suggested && !isCurrent && !isPending && <span style={{ marginLeft: 6, fontSize: 9, fontWeight: 700, color: '#3C8C6A', background: 'rgba(60,140,106,0.12)', padding: '2px 6px', borderRadius: 9999, verticalAlign: 'middle' }}>Suggested</span>}
+                                {t(`tiers.${tierKey}.label`)}
+                                {isCurrent && <span style={{ marginLeft: 6, fontSize: 9, fontWeight: 700, color: 'rgba(255,255,255,0.7)', background: 'rgba(255,255,255,0.15)', padding: '2px 6px', borderRadius: 9999, verticalAlign: 'middle' }}>{t('creatorType.current')}</span>}
+                                {isPending && !isCurrent && <span style={{ marginLeft: 6, fontSize: 9, fontWeight: 700, color: '#92400e', background: 'rgba(234,179,8,0.15)', padding: '2px 6px', borderRadius: 9999, verticalAlign: 'middle' }}>{t('creatorType.pending')}</span>}
+                                {suggested && !isCurrent && !isPending && <span style={{ marginLeft: 6, fontSize: 9, fontWeight: 700, color: '#3C8C6A', background: 'rgba(60,140,106,0.12)', padding: '2px 6px', borderRadius: 9999, verticalAlign: 'middle' }}>{t('creatorType.suggested')}</span>}
                               </span>
-                              <span style={{ display: 'block', fontSize: 10, color: isCurrent ? 'rgba(255,255,255,0.65)' : 'var(--sage)', marginTop: 2 }}>{range} · {desc}</span>
+                              <span style={{ display: 'block', fontSize: 10, color: isCurrent ? 'rgba(255,255,255,0.65)' : 'var(--sage)', marginTop: 2 }}>{t(`tiers.${tierKey}.range`)} · {t(`tiers.${tierKey}.desc`)}</span>
                             </div>
                             {isCurrent && <div style={{ width: 18, height: 18, borderRadius: '50%', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><span style={{ color: 'var(--bone)', fontSize: 10 }}>✓</span></div>}
                           </button>
                           {isExpanded && (
                             <div style={{ padding: '8px 10px', background: 'rgba(60,87,89,0.04)', borderRadius: '0 0 0.75rem 0.75rem', border: '1px solid var(--slate)', borderTop: 'none' }}>
-                              <p style={{ fontSize: '0.68rem', color: 'var(--slate)', margin: '0 0 6px' }}>Request a change to <strong>{label}</strong>? Admin will review before it takes effect.</p>
+                              <p style={{ fontSize: '0.68rem', color: 'var(--slate)', margin: '0 0 6px' }}>
+                                <Trans i18nKey="creatorType.requestChange" t={t} values={{ label: t(`tiers.${tierKey}.label`) }}>Request a change to <strong>{{label}}</strong>? Admin will review before it takes effect.</Trans>
+                              </p>
                               <div style={{ display: 'flex', gap: 6 }}>
                                 <button
                                   disabled={tierRequesting}
@@ -1243,15 +1258,15 @@ export default function Profile() {
                                     try {
                                       await requestTierChangeMutation({ profileId: userId, requestedTier: value });
                                       setTierRequested(true);
-                                    } catch { setToastMsg('Request failed — try again'); }
+                                    } catch { setToastMsg(t('toast.requestFailed')); }
                                     finally { setTierRequesting(false); }
                                   }}
                                   style={{ padding: '4px 12px', borderRadius: 999, border: 'none', background: 'var(--ink)', color: 'white', fontSize: '0.7rem', fontWeight: 600, cursor: tierRequesting ? 'default' : 'pointer', fontFamily: 'var(--font-body)' }}
                                 >
-                                  {tierRequesting ? 'Sending…' : 'Send Request'}
+                                  {tierRequesting ? t('sending') : t('creatorType.sendRequest')}
                                 </button>
                                 <button onClick={() => setRequestedTier(null)} style={{ padding: '4px 10px', borderRadius: 999, border: '1px solid rgba(60,87,89,0.2)', background: 'none', color: 'var(--sage)', fontSize: '0.7rem', cursor: 'pointer', fontFamily: 'var(--font-body)' }}>
-                                  Cancel
+                                  {t('cancel')}
                                 </button>
                               </div>
                             </div>
@@ -1266,10 +1281,10 @@ export default function Profile() {
                 <div style={{ background: 'rgba(255,255,255,0.6)', borderRadius: '1rem', border: '1px solid rgba(255,255,255,0.85)', padding: '1rem' }}>
                   <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 10 }}>
                     <p style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--sage)', margin: 0, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                      Content Niches
+                      {t('contentNiches')}
                     </p>
                     <span style={{ fontSize: 10, color: (editDraft.niches?.length ?? 0) >= 5 ? '#ef4444' : 'var(--sage)' }}>
-                      {editDraft.niches?.length ?? 0} / 5
+                      {t('niches.count', { count: editDraft.niches?.length ?? 0 })}
                     </span>
                   </div>
                   {(() => {
@@ -1299,7 +1314,7 @@ export default function Profile() {
                           type="text"
                           value={nicheQuery}
                           onChange={e => setNicheQuery(e.target.value)}
-                          placeholder={`Search ${NICHE_OPTIONS_MORE.length}+ more tags or create your own…`}
+                          placeholder={t('nicheSearchPlaceholder', { count: NICHE_OPTIONS_MORE.length })}
                           style={{
                             width: '100%', marginTop: 10, padding: '7px 12px',
                             borderRadius: 10, border: '1px solid rgba(25,37,36,0.1)',
@@ -1332,11 +1347,11 @@ export default function Profile() {
                                   transition: 'all 150ms', fontFamily: 'var(--font-body)',
                                 }}
                               >
-                                + Add “{customTag}”
+                                {t('addTag', { tag: customTag })}
                               </button>
                             )}
                             {results.length === 0 && selectedNiches.some(t => t.toLowerCase() === q) && (
-                              <span style={{ fontSize: '0.7rem', color: 'var(--sage)', padding: '5px 2px' }}>Already added</span>
+                              <span style={{ fontSize: '0.7rem', color: 'var(--sage)', padding: '5px 2px' }}>{t('alreadyAdded')}</span>
                             )}
                           </div>
                         )}
@@ -1344,7 +1359,7 @@ export default function Profile() {
                     );
                   })()}
                   <p style={{ fontSize: 10, color: 'var(--sage)', margin: '8px 0 0' }}>
-                    Hosts filter by these when searching for creators.
+                    {t('nichesHostHint')}
                   </p>
                 </div>
               </div>
@@ -1352,8 +1367,8 @@ export default function Profile() {
 
             {/* Actions */}
             <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.5rem' }}>
-              <button className="btn-glass" style={{ flex: 1 }} onClick={() => { if (hasUnsavedChanges()) setExitConfirmDraft(editDraft); else setEditDraft(null); }}>Cancel</button>
-              <button className="btn-primary" style={{ flex: 1 }} onClick={saveEditProfile}>Save Changes</button>
+              <button className="btn-glass" style={{ flex: 1 }} onClick={() => { if (hasUnsavedChanges()) setExitConfirmDraft(editDraft); else setEditDraft(null); }}>{t('cancel')}</button>
+              <button className="btn-primary" style={{ flex: 1 }} onClick={saveEditProfile}>{t('saveChanges')}</button>
             </div>
           </div>
         </div>
@@ -1378,7 +1393,7 @@ export default function Profile() {
                   try { const url = await finalizeUpload({ storageId }); if (url) finalUrl = url; } catch {}
                   if (finalUrl === dataUrl) finalUrl = `${CONVEX_URL}/api/storage/${storageId}`;
                 }
-              } catch (err) { console.error('Banner upload failed:', err); setToastMsg('Banner upload failed — try again'); }
+              } catch (err) { console.error('Banner upload failed:', err); setToastMsg(t('toast.bannerUploadFailed')); }
             }
             setEditDraft(d => ({ ...d, banner_url: finalUrl }));
             setBannerUploading(false);
@@ -1400,16 +1415,16 @@ export default function Profile() {
                 <img src={profile.avatar_url} alt="" style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: '2px solid rgba(255,255,255,0.8)' }} />
               )}
               <div>
-                <p style={{ fontSize: '0.75rem', color: 'var(--sage)', margin: 0, fontWeight: 500 }}>Signing up as</p>
+                <p style={{ fontSize: '0.75rem', color: 'var(--sage)', margin: 0, fontWeight: 500 }}>{t('signingUpAs')}</p>
                 <h4 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.15rem', color: 'var(--ink)', margin: 0 }}>
-                  {profile?.role === 'host' ? 'Creator' : 'Host'}
+                  {profile?.role === 'host' ? t('creator') : t('host')}
                 </h4>
               </div>
             </div>
 
             {/* Account card */}
             <div style={{ background: 'rgba(255,255,255,0.5)', border: '1px solid rgba(208,213,206,0.7)', borderRadius: '1rem', padding: '0.875rem 1rem', marginBottom: '0.875rem' }}>
-              <p style={{ fontSize: '0.72rem', color: 'var(--sage)', margin: '0 0 0.25rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Your account</p>
+              <p style={{ fontSize: '0.72rem', color: 'var(--sage)', margin: '0 0 0.25rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('yourAccount')}</p>
               <p style={{ fontWeight: 600, color: 'var(--ink)', margin: 0, fontSize: '0.9375rem' }}>{profile?.full_name}</p>
               <p style={{ color: 'var(--slate)', fontSize: '0.8125rem', margin: '0.125rem 0 0' }}>{profile?.email}</p>
             </div>
@@ -1419,16 +1434,23 @@ export default function Profile() {
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.625rem', background: 'rgba(209,235,219,0.35)', border: '1px solid rgba(74,155,127,0.25)', borderRadius: '0.875rem', padding: '0.75rem 0.875rem', marginBottom: '1rem' }}>
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#4A9B7F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 2 }}><path d="M13 3L6 10l-3-3"/></svg>
                 <p style={{ fontSize: '0.8rem', color: 'var(--slate)', margin: 0, lineHeight: 1.5 }}>
-                  Your referral code <strong style={{ color: 'var(--ink)', fontFamily: 'monospace', letterSpacing: '0.04em' }}>{referralStats.code}</strong>
-                  {referralStats.use_count > 0 ? ` and ${referralStats.use_count} referral${referralStats.use_count !== 1 ? 's' : ''}` : ''} will carry over.
+                  {referralStats.use_count > 0 ? (
+                    <Trans i18nKey="switchConfirm.referralNote" t={t} count={referralStats.use_count} values={{ code: referralStats.code }}>
+                      Your referral code <strong style={{ color: 'var(--ink)', fontFamily: 'monospace', letterSpacing: '0.04em' }}>{{code}}</strong> and {{count}} referral will carry over.
+                    </Trans>
+                  ) : (
+                    <Trans i18nKey="switchConfirm.referralNoteZero" t={t} values={{ code: referralStats.code }}>
+                      Your referral code <strong style={{ color: 'var(--ink)', fontFamily: 'monospace', letterSpacing: '0.04em' }}>{{code}}</strong> will carry over.
+                    </Trans>
+                  )}
                 </p>
               </div>
             )}
 
             <p style={{ color: 'var(--slate)', fontSize: '0.875rem', lineHeight: 1.6, marginBottom: '1.5rem' }}>
               {profile?.role === 'host'
-                ? 'You\'ll join as a creator using the same account. Your details go through the same quick review as any new creator before creator access unlocks.'
-                : 'You\'ll join as a host using the same account. Your details go through the same quick review as any new host before host tools unlock.'}
+                ? t('switchConfirm.creatorBody')
+                : t('switchConfirm.hostBody')}
             </p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
@@ -1436,13 +1458,13 @@ export default function Profile() {
                 setShowSwitchConfirm(false);
                 setRoleSwitchTarget(profile?.role === 'host' ? 'creator' : 'host');
               }}>
-                {profile?.role === 'host' ? 'Sign up as Creator' : 'Sign up as Host'}
+                {profile?.role === 'host' ? t('switchConfirm.signUpAsCreator') : t('switchConfirm.signUpAsHost')}
               </button>
               <button
                 onClick={() => { setShowSwitchConfirm(false); window.open('/join.html', '_blank'); }}
                 style={{ background: 'none', border: 'none', color: 'var(--sage)', fontSize: '0.8125rem', cursor: 'pointer', padding: '0.375rem 0', textDecoration: 'underline', textUnderlineOffset: '2px', fontFamily: 'var(--font-body)' }}
               >
-                Use a different account →
+                {t('switchConfirm.differentAccount')}
               </button>
             </div>
           </div>
@@ -1461,11 +1483,11 @@ export default function Profile() {
             onClick={(e) => e.stopPropagation()}
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
-              <h4 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.25rem', color: 'var(--ink)', margin: 0 }}>Saved Contracts</h4>
-              <button onClick={() => navigate('/contract')} className="btn-primary" style={{ padding: '0.5rem 1rem', fontSize: '0.8rem' }}>+ New</button>
+              <h4 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.25rem', color: 'var(--ink)', margin: 0 }}>{t('contracts.title')}</h4>
+              <button onClick={() => navigate('/contract')} className="btn-primary" style={{ padding: '0.5rem 1rem', fontSize: '0.8rem' }}>{t('contracts.new')}</button>
             </div>
             {(!contracts || contracts.length === 0) ? (
-              <p style={{ color: 'var(--sage)', fontSize: '0.9rem', textAlign: 'center', padding: '2rem 0' }}>No contracts yet. Create your first one.</p>
+              <p style={{ color: 'var(--sage)', fontSize: '0.9rem', textAlign: 'center', padding: '2rem 0' }}>{t('contracts.empty')}</p>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                 {contracts.map((c) => {
@@ -1487,11 +1509,11 @@ export default function Profile() {
                         </svg>
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <p style={{ fontWeight: 600, fontSize: '0.875rem', color: 'var(--ink)', margin: 0 }}>{c.property_name || c.creator_name || 'Untitled Contract'}</p>
-                        <p style={{ fontSize: '0.72rem', color: 'var(--sage)', margin: '0.15rem 0 0' }}>{c.dates || c.location || 'No details'}</p>
+                        <p style={{ fontWeight: 600, fontSize: '0.875rem', color: 'var(--ink)', margin: 0 }}>{c.property_name || c.creator_name || t('contracts.untitled')}</p>
+                        <p style={{ fontSize: '0.72rem', color: 'var(--sage)', margin: '0.15rem 0 0' }}>{c.dates || c.location || t('contracts.noDetails')}</p>
                       </div>
                       <span style={{ padding: '0.2rem 0.7rem', borderRadius: '999px', background: s2.bg, color: s2.text, fontSize: '0.7rem', fontWeight: 600, flexShrink: 0 }}>
-                        {c.status === 'draft' ? 'Draft' : c.status === 'pending' ? 'Pending' : 'Accepted'}
+                        {c.status === 'draft' ? t('contracts.status.draft') : c.status === 'pending' ? t('contracts.status.pending') : t('contracts.status.accepted')}
                       </span>
                     </button>
                   );
@@ -1516,7 +1538,7 @@ export default function Profile() {
             onClick={(e) => e.stopPropagation()}
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
-              <h4 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.15rem', color: 'var(--slate)', margin: 0 }}>All Collaborations</h4>
+              <h4 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.15rem', color: 'var(--slate)', margin: 0 }}>{t('allCollabs.title')}</h4>
               <button onClick={() => setShowAllCollabs(false)} style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'rgba(209,235,219,0.5)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--slate)' }}>✕</button>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
@@ -1575,17 +1597,17 @@ export default function Profile() {
             onClick={(e) => e.stopPropagation()}
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
-              <h4 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.15rem', color: 'var(--slate)', margin: 0 }}>Notification Preferences</h4>
+              <h4 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.15rem', color: 'var(--slate)', margin: 0 }}>{t('notifications.title')}</h4>
               {/* 44px touch target wrapping the visual button */}
               <button onClick={() => setShowNotifications(false)} style={{ minWidth: '44px', minHeight: '44px', borderRadius: '50%', background: 'rgba(209,235,219,0.5)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--slate)' }}>✕</button>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.125rem' }}>
               {[
-                { key: 'messages',        label: 'Messages',         desc: 'New messages and replies in your inbox' },
-                { key: 'contractUpdates', label: 'Contract Updates',  desc: 'When a contract is signed, updated, or needs action' },
-                { key: 'newListings',     label: 'New Listings',      desc: 'Properties that match your preferences' },
-                { key: 'collabReminders', label: 'Collab Reminders',  desc: 'Upcoming deadlines and pending deliverables' },
-                { key: 'marketing',       label: 'Marketing',         desc: 'Product updates, tips, and Collabnb news' },
+                { key: 'messages',        label: t('notifications.messages.label'),        desc: t('notifications.messages.desc') },
+                { key: 'contractUpdates', label: t('notifications.contractUpdates.label'),  desc: t('notifications.contractUpdates.desc') },
+                { key: 'newListings',     label: t('notifications.newListings.label'),      desc: t('notifications.newListings.desc') },
+                { key: 'collabReminders', label: t('notifications.collabReminders.label'),  desc: t('notifications.collabReminders.desc') },
+                { key: 'marketing',       label: t('notifications.marketing.label'),        desc: t('notifications.marketing.desc') },
               ].map((item) => (
                 <div key={item.key} style={{
                   display: 'flex', alignItems: 'center', gap: '0.75rem',
@@ -1607,7 +1629,7 @@ export default function Profile() {
                       background: 'transparent', border: 'none', cursor: 'pointer',
                       display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0,
                     }}
-                    aria-label={`Toggle ${item.label}`}
+                    aria-label={t('notifications.toggleAria', { label: item.label })}
                   >
                     <span style={{
                       width: '38px', height: '22px', borderRadius: '999px', position: 'relative', display: 'block',
@@ -1626,7 +1648,7 @@ export default function Profile() {
               ))}
             </div>
             <div style={{ marginTop: '1.25rem', textAlign: 'center' }}>
-              <button onClick={() => setShowNotifications(false)} className="btn-primary" style={{ padding: '0.6rem 2rem', fontSize: '0.85rem', minHeight: '44px' }}>Save Preferences</button>
+              <button onClick={() => setShowNotifications(false)} className="btn-primary" style={{ padding: '0.6rem 2rem', fontSize: '0.85rem', minHeight: '44px' }}>{t('notifications.save')}</button>
             </div>
           </div>
         </div>
@@ -1643,21 +1665,21 @@ export default function Profile() {
             onClick={(e) => e.stopPropagation()}
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
-              <h4 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.15rem', color: 'var(--slate)', margin: 0 }}>Privacy Policy</h4>
+              <h4 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.15rem', color: 'var(--slate)', margin: 0 }}>{t('privacy.title')}</h4>
               <button onClick={() => setShowPrivacy(false)} style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'rgba(209,235,219,0.5)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--slate)' }}>✕</button>
             </div>
             <div style={{ fontSize: '0.85rem', color: 'var(--slate)', lineHeight: 1.7 }}>
-              <p><strong>Effective Date:</strong> July 15, 2026</p>
-              <p>Collabnb ("we," "our," "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our platform.</p>
-              <h5 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.95rem', color: 'var(--ink)', margin: '1.25rem 0 0.5rem' }}>Information We Collect</h5>
-              <p>We collect personal information you provide directly, such as your name, email address, profile details, and social media handles. We also automatically collect usage data, cookies, and device information when you interact with our platform.</p>
-              <h5 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.95rem', color: 'var(--ink)', margin: '1.25rem 0 0.5rem' }}>How We Use Your Information</h5>
-              <p>Your information is used to operate and improve Collabnb, facilitate collaborations between creators and hosts, send notifications and updates, and ensure platform safety. We never sell your personal data to third parties.</p>
-              <h5 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.95rem', color: 'var(--ink)', margin: '1.25rem 0 0.5rem' }}>Data Sharing</h5>
-              <p>We may share your information with service providers who help us operate the platform (e.g., hosting, analytics), as required by law, or with your explicit consent.</p>
-              <h5 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.95rem', color: 'var(--ink)', margin: '1.25rem 0 0.5rem' }}>Your Rights</h5>
-              <p>You may access, update, or delete your personal information at any time through your profile settings. Contact us at support@collabnb.com for assistance.</p>
-              <p style={{ marginTop: '1rem' }}>For the full Privacy Policy, visit <a href="https://collabnb.com/privacy" style={{ color: 'var(--slate)', fontWeight: 600, textDecoration: 'underline' }} target="_blank" rel="noopener noreferrer">collabnb.com/privacy</a>.</p>
+              <p><strong>{t('privacy.effectiveDate')}</strong></p>
+              <p>{t('privacy.intro')}</p>
+              <h5 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.95rem', color: 'var(--ink)', margin: '1.25rem 0 0.5rem' }}>{t('privacy.collectTitle')}</h5>
+              <p>{t('privacy.collectBody')}</p>
+              <h5 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.95rem', color: 'var(--ink)', margin: '1.25rem 0 0.5rem' }}>{t('privacy.useTitle')}</h5>
+              <p>{t('privacy.useBody')}</p>
+              <h5 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.95rem', color: 'var(--ink)', margin: '1.25rem 0 0.5rem' }}>{t('privacy.shareTitle')}</h5>
+              <p>{t('privacy.shareBody')}</p>
+              <h5 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.95rem', color: 'var(--ink)', margin: '1.25rem 0 0.5rem' }}>{t('privacy.rightsTitle')}</h5>
+              <p>{t('privacy.rightsBody')}</p>
+              <p style={{ marginTop: '1rem' }}>{t('privacy.fullLink')} <a href="https://collabnb.com/privacy" style={{ color: 'var(--slate)', fontWeight: 600, textDecoration: 'underline' }} target="_blank" rel="noopener noreferrer">collabnb.com/privacy</a>.</p>
             </div>
           </div>
         </div>
@@ -1677,13 +1699,13 @@ export default function Profile() {
               <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'rgba(209,235,219,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: 'var(--slate)' }}>
                 <SealCheck />
               </div>
-              <h4 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.1rem', color: 'var(--slate)', margin: 0 }}>Re-Verification</h4>
+              <h4 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.1rem', color: 'var(--slate)', margin: 0 }}>{t('reverif.title')}</h4>
             </div>
             <p style={{ color: 'var(--sage)', fontSize: '0.875rem', lineHeight: 1.6, margin: '0 0 1.25rem' }}>
-              Submit a request for the Collabnb team to review and re-verify your account. Your current verified status will remain active during review.
+              {t('reverif.body')}
             </p>
             <div style={{ display: 'flex', gap: '0.75rem' }}>
-              <button className="btn-glass" style={{ flex: 1, fontSize: '0.85rem' }} onClick={() => setShowVerification(false)} disabled={reverifSending}>Cancel</button>
+              <button className="btn-glass" style={{ flex: 1, fontSize: '0.85rem' }} onClick={() => setShowVerification(false)} disabled={reverifSending}>{t('cancel')}</button>
               <button
                 className="btn-primary"
                 style={{ flex: 1, fontSize: '0.85rem' }}
@@ -1692,16 +1714,16 @@ export default function Profile() {
                   setReverifSending(true);
                   try {
                     await requestReverificationMutation({ profileId: userId });
-                    setToastMsg('Re-verification request sent — the Collabnb team will review your account.');
+                    setToastMsg(t('toast.reverifSent'));
                   } catch {
-                    setToastMsg("Couldn't send that request — please try again.");
+                    setToastMsg(t('toast.reverifFailed'));
                   } finally {
                     setReverifSending(false);
                     setShowVerification(false);
                   }
                 }}
               >
-                {reverifSending ? 'Sending…' : 'Submit Request'}
+                {reverifSending ? t('sending') : t('reverif.submit')}
               </button>
             </div>
           </div>
@@ -1718,45 +1740,45 @@ export default function Profile() {
             onClick={(e) => e.stopPropagation()}
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
-              <h4 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.15rem', color: 'var(--slate)', margin: 0 }}>Location Settings</h4>
+              <h4 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.15rem', color: 'var(--slate)', margin: 0 }}>{t('location.title')}</h4>
               <button onClick={() => setShowLocation(false)} style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'rgba(209,235,219,0.5)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--slate)' }}>✕</button>
             </div>
 
             <p style={{ fontSize: '0.8rem', color: 'var(--sage)', margin: '0 0 1.25rem', lineHeight: 1.5 }}>
-              Your location appears as a pin on the Collabnb globe map so hosts and creators can see where the community is. You can update it anytime.
+              {t('location.body')}
             </p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem', marginBottom: '1.5rem' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 700, color: 'var(--sage)', marginBottom: '0.375rem', textTransform: 'uppercase', letterSpacing: '0.08em' }}>City</label>
+                <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 700, color: 'var(--sage)', marginBottom: '0.375rem', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{t('location.city')}</label>
                 <input
                   type="text"
                   value={dp.city || ''}
                   onChange={(e) => setProfileOverride(prev => ({ ...prev, city: e.target.value }))}
                   onBlur={(e) => updateProfile({ city: e.target.value })}
-                  placeholder="e.g., Asheville"
+                  placeholder={t('location.cityPlaceholder')}
                   style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '0.875rem', background: 'rgba(255,255,255,0.75)', border: '1px solid rgba(25,37,36,0.12)', fontFamily: 'var(--font-body)', fontSize: '0.875rem', color: 'var(--ink)', outline: 'none', boxSizing: 'border-box' }}
                 />
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 700, color: 'var(--sage)', marginBottom: '0.375rem', textTransform: 'uppercase', letterSpacing: '0.08em' }}>State / Region</label>
+                <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 700, color: 'var(--sage)', marginBottom: '0.375rem', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{t('location.stateRegion')}</label>
                 <input
                   type="text"
                   value={dp.region || ''}
                   onChange={(e) => setProfileOverride(prev => ({ ...prev, region: e.target.value }))}
                   onBlur={(e) => updateProfile({ region: e.target.value })}
-                  placeholder="e.g., North Carolina"
+                  placeholder={t('location.stateRegionPlaceholder')}
                   style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '0.875rem', background: 'rgba(255,255,255,0.75)', border: '1px solid rgba(25,37,36,0.12)', fontFamily: 'var(--font-body)', fontSize: '0.875rem', color: 'var(--ink)', outline: 'none', boxSizing: 'border-box' }}
                 />
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 700, color: 'var(--sage)', marginBottom: '0.375rem', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Country</label>
+                <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 700, color: 'var(--sage)', marginBottom: '0.375rem', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{t('location.country')}</label>
                 <input
                   type="text"
                   value={dp.country || ''}
                   onChange={(e) => setProfileOverride(prev => ({ ...prev, country: e.target.value }))}
                   onBlur={(e) => updateProfile({ country: e.target.value })}
-                  placeholder="e.g., United States"
+                  placeholder={t('location.countryPlaceholder')}
                   style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '0.875rem', background: 'rgba(255,255,255,0.75)', border: '1px solid rgba(25,37,36,0.12)', fontFamily: 'var(--font-body)', fontSize: '0.875rem', color: 'var(--ink)', outline: 'none', boxSizing: 'border-box' }}
                 />
               </div>
@@ -1793,12 +1815,12 @@ export default function Profile() {
                 onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(209,235,219,0.3)'; e.currentTarget.style.borderColor = 'rgba(60,87,89,0.5)'; }}
                 onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(209,235,219,0.15)'; e.currentTarget.style.borderColor = 'rgba(60,87,89,0.3)'; }}
               >
-                📍 Use current location
+                {t('location.useCurrent')}
               </button>
             )}
 
             <div style={{ display: 'flex', gap: '0.75rem' }}>
-              <button className="btn-glass" style={{ flex: 1, fontSize: '0.85rem' }} onClick={() => setShowLocation(false)}>Done</button>
+              <button className="btn-glass" style={{ flex: 1, fontSize: '0.85rem' }} onClick={() => setShowLocation(false)}>{t('location.done')}</button>
             </div>
           </div>
         </div>
@@ -1815,32 +1837,32 @@ export default function Profile() {
             onClick={(e) => e.stopPropagation()}
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
-              <h4 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.15rem', color: 'var(--slate)', margin: 0 }}>AI Assistant</h4>
+              <h4 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.15rem', color: 'var(--slate)', margin: 0 }}>{t('ai.title')}</h4>
               <button onClick={() => setShowAiAssistant(false)} style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'rgba(209,235,219,0.5)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--slate)' }}>✕</button>
             </div>
 
             <p style={{ fontSize: '0.8rem', color: 'var(--sage)', margin: '0 0 1.25rem', lineHeight: 1.5 }}>
-              "Draft with AI" in Inbox already works for everyone, powered by Collabnb. Connect your own OpenAI or Anthropic API key here only if you want your drafts to use your own model/budget instead. Drafts always require you to review and hit Send — nothing sends automatically.
+              {t('ai.body')}
             </p>
 
             {aiConnectionStatus?.connected ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                 <div style={{ padding: '0.875rem 1rem', borderRadius: '0.875rem', background: 'rgba(209,235,219,0.35)', fontSize: '0.85rem', color: 'var(--slate)', fontWeight: 600 }}>
-                  Connected — {AI_PROVIDER_LABELS[aiConnectionStatus.provider] || aiConnectionStatus.provider}
+                  {t('ai.connected', { provider: AI_PROVIDER_LABELS[aiConnectionStatus.provider] || aiConnectionStatus.provider })}
                 </div>
                 <button
                   className="btn-glass"
                   style={{ fontSize: '0.85rem' }}
                   onClick={async () => { await disconnectAiApiKey(); }}
                 >
-                  Disconnect
+                  {t('ai.disconnect')}
                 </button>
               </div>
             ) : (
               <>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem', marginBottom: '1.5rem' }}>
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 700, color: 'var(--sage)', marginBottom: '0.375rem', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Provider</label>
+                    <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 700, color: 'var(--sage)', marginBottom: '0.375rem', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{t('ai.provider')}</label>
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
                       {['openai', 'anthropic', 'openrouter'].map((p) => (
                         <button
@@ -1860,7 +1882,7 @@ export default function Profile() {
                     </div>
                   </div>
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 700, color: 'var(--sage)', marginBottom: '0.375rem', textTransform: 'uppercase', letterSpacing: '0.08em' }}>API Key</label>
+                    <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 700, color: 'var(--sage)', marginBottom: '0.375rem', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{t('ai.apiKey')}</label>
                     <input
                       type="password"
                       value={aiKeyDraft}
@@ -1873,7 +1895,7 @@ export default function Profile() {
                 </div>
 
                 <div style={{ display: 'flex', gap: '0.75rem' }}>
-                  <button className="btn-glass" style={{ flex: 1, fontSize: '0.85rem' }} onClick={() => setShowAiAssistant(false)}>Cancel</button>
+                  <button className="btn-glass" style={{ flex: 1, fontSize: '0.85rem' }} onClick={() => setShowAiAssistant(false)}>{t('cancel')}</button>
                   <button
                     className="btn-primary"
                     style={{ flex: 1, fontSize: '0.85rem' }}
@@ -1885,13 +1907,13 @@ export default function Profile() {
                         await saveAiApiKey({ provider: aiProviderDraft, apiKey: aiKeyDraft.trim() });
                         setAiKeyDraft('');
                       } catch (err) {
-                        setAiError(err?.data || err?.message || 'Could not save key — try again.');
+                        setAiError(err?.data || err?.message || t('ai.errorSave'));
                       } finally {
                         setAiSaving(false);
                       }
                     }}
                   >
-                    {aiSaving ? 'Saving…' : 'Connect'}
+                    {aiSaving ? t('saving') : t('ai.connect')}
                   </button>
                 </div>
               </>
@@ -1929,13 +1951,13 @@ export default function Profile() {
             style={{ width: '100%', maxWidth: '380px', borderRadius: '1.5rem', padding: '2rem', background: 'rgba(255,255,255,0.97)', border: '1px solid rgba(255,255,255,0.85)', boxShadow: '0 20px 60px rgba(25,37,36,0.18)' }}
             onClick={(e) => e.stopPropagation()}
           >
-            <h4 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.1rem', color: 'var(--slate)', margin: '0 0 0.75rem' }}>Unsaved Changes</h4>
+            <h4 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.1rem', color: 'var(--slate)', margin: '0 0 0.75rem' }}>{t('exitConfirm.title')}</h4>
             <p style={{ color: 'var(--sage)', fontSize: '0.875rem', lineHeight: 1.6, margin: '0 0 1.25rem' }}>
-              You have unsaved changes. Are you sure you want to exit without saving?
+              {t('exitConfirm.body')}
             </p>
             <div style={{ display: 'flex', gap: '0.75rem' }}>
-              <button className="btn-primary" style={{ flex: 1, fontSize: '0.85rem' }} onClick={() => setExitConfirmDraft(null)}>Stay Editing</button>
-              <button className="btn-glass" style={{ flex: 1, fontSize: '0.85rem' }} onClick={() => { setEditDraft(null); setExitConfirmDraft(null); }}>Discard Changes</button>
+              <button className="btn-primary" style={{ flex: 1, fontSize: '0.85rem' }} onClick={() => setExitConfirmDraft(null)}>{t('exitConfirm.stay')}</button>
+              <button className="btn-glass" style={{ flex: 1, fontSize: '0.85rem' }} onClick={() => { setEditDraft(null); setExitConfirmDraft(null); }}>{t('exitConfirm.discard')}</button>
             </div>
           </div>
         </div>
@@ -1965,12 +1987,12 @@ export default function Profile() {
 // Creator payout-method connection — Stripe Connect (hosted onboarding) or
 // Wise (manual recipient details, since there's no equivalent hosted flow).
 function PayoutMethodPanel({ profile: profileProp, onClose, createConnectOnboardingLink, getConnectAccountStatus, createWiseRecipient, setActivePayoutMethodMutation, disconnectPayoutMethodMutation }) {
+  const { t } = useTranslation('profile');
   const convex = useConvex();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const [wiseFormOpen, setWiseFormOpen] = useState(false);
-  const [wiseCurrency, setWiseCurrency] = useState('USD');
-  const [wiseForm, setWiseForm] = useState({ accountHolderName: '', accountNumber: '', bankCode: '' });
+  const [wiseFormData, setWiseFormData] = useState({ isValid: false });
   const [liveStatus, setLiveStatus] = useState(null);
   const [showConfetti, setShowConfetti] = useState(false);
   const [switchTarget, setSwitchTarget] = useState(null); // 'stripe_connect' | 'wise' | null
@@ -2032,41 +2054,42 @@ function PayoutMethodPanel({ profile: profileProp, onClose, createConnectOnboard
       });
       if (url) window.location.href = url;
     } catch {
-      setError('Could not start Stripe onboarding. Please try again.');
+      setError(t('payout.connectStripeError'));
       setBusy(false);
     }
   };
 
   const chooseWise = () => {
     setError(null);
+    setWiseFormData({ isValid: false });
     setWiseFormOpen(true);
   };
 
   const submitWiseRecipient = async () => {
-    if (!wiseForm.accountHolderName || !wiseForm.accountNumber) {
-      setError('Please fill in your account holder name and account number.');
+    if (!wiseFormData.isValid) {
+      setError(t('payout.fixFields'));
       return;
     }
     setBusy(true);
     setError(null);
     try {
-      // NOTE: Wise's required fields vary by currency — this covers USD (ABA
-      // routing) and IDR (Indonesian bank) as the two initial target markets.
-      const details = wiseCurrency === 'IDR'
-        ? { legalType: 'PRIVATE', accountNumber: wiseForm.accountNumber, bankCode: wiseForm.bankCode }
-        : { legalType: 'PRIVATE', accountNumber: wiseForm.accountNumber, abartn: wiseForm.bankCode, accountType: 'CHECKING' };
       await createWiseRecipient({
         profileId,
-        currency: wiseCurrency,
-        accountHolderName: wiseForm.accountHolderName,
-        type: wiseCurrency === 'IDR' ? 'indonesian' : 'aba',
-        details,
+        currency: wiseFormData.currency,
+        accountHolderName: wiseFormData.accountHolderName,
+        type: wiseFormData.wiseType,
+        details: wiseFormData.details,
       });
       await refreshProfile();
     } catch (err) {
-      setError(err?.message?.includes('WISE_API_TOKEN')
-        ? 'Wise payouts are not fully configured yet — check back soon.'
-        : 'Could not connect your Wise account. Please double-check your details.');
+      const reason = err instanceof ConvexError ? err.data : err?.message;
+      if (typeof reason === 'string' && reason.includes('WISE_API_TOKEN')) {
+        setError(t('payout.wiseNotConfigured'));
+      } else if (typeof reason === 'string' && reason.trim()) {
+        setError(t('payout.wiseConnectErrorDetail', { reason }));
+      } else {
+        setError(t('payout.wiseConnectError'));
+      }
     } finally {
       setBusy(false);
     }
@@ -2078,11 +2101,11 @@ function PayoutMethodPanel({ profile: profileProp, onClose, createConnectOnboard
   const detailsSubmitted = liveStatus ? liveStatus.detailsSubmitted : undefined;
 
   const disconnect = async (rail) => {
-    if (!window.confirm("Disconnect this payout method? You'll need to reconnect before it can receive a payout again.")) return;
+    if (!window.confirm(t('payout.disconnectConfirm'))) return;
     setBusy(true);
     setError(null);
     try { await disconnectPayoutMethodMutation({ profileId, method: rail }); await refreshProfile(); }
-    catch { setError('Could not disconnect. Please try again.'); }
+    catch { setError(t('payout.disconnectError')); }
     finally { setBusy(false); }
   };
 
@@ -2100,7 +2123,7 @@ function PayoutMethodPanel({ profile: profileProp, onClose, createConnectOnboard
       setSwitchTarget(null);
       setSwitchInput('');
     } catch {
-      setError('Could not switch your payout method. Please try again.');
+      setError(t('payout.switchError'));
     } finally {
       setBusy(false);
     }
@@ -2117,7 +2140,7 @@ function PayoutMethodPanel({ profile: profileProp, onClose, createConnectOnboard
         onClick={(e) => e.stopPropagation()}
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
-          <h4 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.15rem', color: 'var(--slate)', margin: 0 }}>Payout Method</h4>
+          <h4 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.15rem', color: 'var(--slate)', margin: 0 }}>{t('payout.title')}</h4>
           <button onClick={onClose} style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'rgba(209,235,219,0.5)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--slate)' }}>✕</button>
         </div>
 
@@ -2127,7 +2150,7 @@ function PayoutMethodPanel({ profile: profileProp, onClose, createConnectOnboard
             <path d="M7 11V7a5 5 0 0 1 10 0v4" />
           </svg>
           <p style={{ fontSize: '0.78rem', color: 'var(--slate)', margin: 0, lineHeight: 1.55, fontWeight: 500 }}>
-            When a host's payment for your collaboration is processed, Collabnb forwards your share to the payout method below. Bank-level encryption handled directly by Stripe or Wise — Collabnb never stores your account details.
+            {t('payout.info')}
           </p>
         </div>
 
@@ -2140,16 +2163,18 @@ function PayoutMethodPanel({ profile: profileProp, onClose, createConnectOnboard
         {switchTarget ? (
           <div style={{ padding: '1.1rem 1.1rem', borderRadius: '0.875rem', background: 'rgba(254,243,199,0.55)', border: '1px solid rgba(180,130,20,0.3)', marginBottom: '1rem' }}>
             <p style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--ink)', margin: '0 0 0.35rem' }}>
-              Switch payouts to {switchTarget === 'stripe_connect' ? 'Stripe' : 'Wise'}?
+              {t('payout.switchConfirmTitle', { to: switchTarget === 'stripe_connect' ? 'Stripe' : 'Wise' })}
             </p>
             <p style={{ fontSize: '0.75rem', color: 'var(--slate)', margin: '0 0 0.75rem', lineHeight: 1.5 }}>
-              Your next payout will go to {switchTarget === 'stripe_connect' ? 'Stripe' : 'Wise'} instead of {switchTarget === 'stripe_connect' ? 'Wise' : 'Stripe'}. Type <strong>SWITCH</strong> to confirm.
+              <Trans i18nKey="payout.switchConfirmBody" t={t} values={{ to: switchTarget === 'stripe_connect' ? 'Stripe' : 'Wise', from: switchTarget === 'stripe_connect' ? 'Wise' : 'Stripe' }}>
+                Your next payout will go to {{to}} instead of {{from}}. Type <strong>SWITCH</strong> to confirm.
+              </Trans>
             </p>
             <input
               type="text"
               value={switchInput}
               onChange={(e) => setSwitchInput(e.target.value)}
-              placeholder="Type SWITCH"
+              placeholder={t('payout.typeSwitch')}
               autoFocus
               style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '0.875rem', background: 'rgba(255,255,255,0.85)', border: '1px solid rgba(180,130,20,0.35)', fontFamily: 'var(--font-body)', fontSize: '0.875rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--ink)', outline: 'none', boxSizing: 'border-box', marginBottom: '0.75rem', textTransform: 'uppercase' }}
             />
@@ -2160,10 +2185,10 @@ function PayoutMethodPanel({ profile: profileProp, onClose, createConnectOnboard
                 className="btn-primary"
                 style={{ fontSize: '0.78rem', padding: '0.4rem 0.9rem', opacity: switchInput.trim().toUpperCase() !== 'SWITCH' ? 0.5 : 1 }}
               >
-                {busy ? 'Switching…' : 'Confirm switch'}
+                {busy ? t('payout.switching') : t('payout.confirmSwitch')}
               </button>
               <button onClick={() => { setSwitchTarget(null); setSwitchInput(''); }} disabled={busy} className="btn-glass" style={{ fontSize: '0.78rem', padding: '0.4rem 0.9rem' }}>
-                Cancel
+                {t('cancel')}
               </button>
             </div>
           </div>
@@ -2180,36 +2205,36 @@ function PayoutMethodPanel({ profile: profileProp, onClose, createConnectOnboard
                   animation: payoutsEnabled ? 'payoutPulse 2s ease-in-out infinite' : 'none',
                 }} />
                 <span style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: payoutsEnabled ? '#2FA35C' : '#A87415' }}>
-                  {payoutsEnabled ? 'Connected' : detailsSubmitted ? 'Under review' : 'Verification pending'}
+                  {payoutsEnabled ? t('payout.connected') : detailsSubmitted ? t('payout.underReview') : t('payout.verificationPending')}
                 </span>
               </div>
               {bothConnected && method === 'stripe_connect' && (
-                <span style={{ fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--ink)', background: 'rgba(25,37,36,0.08)', padding: '0.15rem 0.5rem', borderRadius: '999px' }}>Active</span>
+                <span style={{ fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--ink)', background: 'rgba(25,37,36,0.08)', padding: '0.15rem 0.5rem', borderRadius: '999px' }}>{t('payout.active')}</span>
               )}
             </div>
             <p style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--ink)', margin: '0 0 0.2rem' }}>
-              {payoutsEnabled ? '✓ Stripe connected' : detailsSubmitted ? 'Stripe is reviewing your details' : 'Finish connecting with Stripe'}
+              {payoutsEnabled ? t('payout.stripeConnected') : detailsSubmitted ? t('payout.stripeReviewing') : t('payout.finishStripe')}
             </p>
             <p style={{ fontSize: '0.72rem', color: 'var(--sage)', margin: 0, lineHeight: 1.5 }}>
               {payoutsEnabled
-                ? "You're all set to receive payouts."
+                ? t('payout.readyForPayouts')
                 : detailsSubmitted
-                ? "Stripe is verifying the details you submitted — this usually takes a few days. You can update your information anytime."
-                : 'Finish verifying your details with Stripe to start receiving payouts.'}
+                ? t('payout.stripeVerifying')
+                : t('payout.finishVerifying')}
             </p>
             <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem', flexWrap: 'wrap' }}>
               {!payoutsEnabled && (
                 <button onClick={connectStripe} disabled={busy} className="btn-glass" style={{ fontSize: '0.78rem', padding: '0.4rem 0.9rem' }}>
-                  {busy ? 'Opening…' : detailsSubmitted ? 'Update verification details' : 'Continue verification'}
+                  {busy ? t('payout.opening') : detailsSubmitted ? t('payout.updateVerification') : t('payout.continueVerification')}
                 </button>
               )}
               {bothConnected && payoutsEnabled && method !== 'stripe_connect' && (
                 <button onClick={() => openSwitchConfirm('stripe_connect')} disabled={busy} className="btn-glass" style={{ fontSize: '0.78rem', padding: '0.4rem 0.9rem' }}>
-                  Use Stripe instead
+                  {t('payout.useStripeInstead')}
                 </button>
               )}
               <button onClick={() => disconnect('stripe_connect')} disabled={busy} className="btn-danger-outline" style={{ fontSize: '0.78rem' }}>
-                Disconnect
+                {t('payout.disconnect')}
               </button>
             </div>
             <style>{`@keyframes payoutPulse { 0%,100%{opacity:1} 50%{opacity:0.45} }`}</style>
@@ -2221,22 +2246,22 @@ function PayoutMethodPanel({ profile: profileProp, onClose, createConnectOnboard
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                 <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#2FA35C', boxShadow: '0 0 0 3px rgba(47,163,92,0.18)' }} />
-                <span style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#2FA35C' }}>Connected</span>
+                <span style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#2FA35C' }}>{t('payout.connected')}</span>
               </div>
               {bothConnected && method === 'wise' && (
-                <span style={{ fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--ink)', background: 'rgba(25,37,36,0.08)', padding: '0.15rem 0.5rem', borderRadius: '999px' }}>Active</span>
+                <span style={{ fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--ink)', background: 'rgba(25,37,36,0.08)', padding: '0.15rem 0.5rem', borderRadius: '999px' }}>{t('payout.active')}</span>
               )}
             </div>
-            <p style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--ink)', margin: '0 0 0.2rem' }}>✓ Wise connected</p>
-            <p style={{ fontSize: '0.72rem', color: 'var(--sage)', margin: '0 0 0.75rem' }}>Payouts will be sent in {profile.wise_recipient_currency}.</p>
+            <p style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--ink)', margin: '0 0 0.2rem' }}>{t('payout.wiseConnected')}</p>
+            <p style={{ fontSize: '0.72rem', color: 'var(--sage)', margin: '0 0 0.75rem' }}>{t('payout.wisePayoutCurrency', { currency: profile.wise_recipient_currency })}</p>
             <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
               {bothConnected && method !== 'wise' && (
                 <button onClick={() => openSwitchConfirm('wise')} disabled={busy} className="btn-glass" style={{ fontSize: '0.78rem', padding: '0.4rem 0.9rem' }}>
-                  Use Wise instead
+                  {t('payout.useWiseInstead')}
                 </button>
               )}
               <button onClick={() => disconnect('wise')} disabled={busy} className="btn-danger-outline" style={{ fontSize: '0.78rem' }}>
-                Disconnect
+                {t('payout.disconnect')}
               </button>
             </div>
           </div>
@@ -2244,23 +2269,23 @@ function PayoutMethodPanel({ profile: profileProp, onClose, createConnectOnboard
 
         {stripeConnected && !wiseConnected && !wiseFormOpen && (
           <button onClick={chooseWise} disabled={busy} className="btn-glass" style={{ fontSize: '0.8rem', width: '100%', marginBottom: '1rem' }}>
-            + Also connect Wise as a backup
+            {t('payout.addWiseBackup')}
           </button>
         )}
         {wiseConnected && !stripeConnected && (
           <button onClick={connectStripe} disabled={busy} className="btn-glass" style={{ fontSize: '0.8rem', width: '100%', marginBottom: '1rem' }}>
-            {busy ? 'Opening…' : '+ Also connect Stripe as a backup'}
+            {busy ? t('payout.opening') : t('payout.addStripeBackup')}
           </button>
         )}
 
         {!stripeConnected && !wiseConnected && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem', marginBottom: '1rem' }}>
             <button onClick={connectStripe} disabled={busy} className="btn-primary" style={{ fontSize: '0.85rem' }}>
-              {busy ? 'Opening…' : 'Connect with Stripe'}
+              {busy ? t('payout.opening') : t('payout.connectWithStripe')}
             </button>
             {!wiseFormOpen && (
               <button onClick={chooseWise} disabled={busy} className="btn-glass" style={{ fontSize: '0.85rem' }}>
-                Connect with Wise instead
+                {t('payout.connectWithWise')}
               </button>
             )}
           </div>
@@ -2268,49 +2293,9 @@ function PayoutMethodPanel({ profile: profileProp, onClose, createConnectOnboard
 
         {wiseFormOpen && !wiseConnected && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1rem' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 700, color: 'var(--sage)', marginBottom: '0.375rem', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Currency</label>
-                  <select
-                    value={wiseCurrency}
-                    onChange={(e) => setWiseCurrency(e.target.value)}
-                    style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '0.875rem', background: 'rgba(255,255,255,0.75)', border: '1px solid rgba(25,37,36,0.12)', fontFamily: 'var(--font-body)', fontSize: '0.875rem', color: 'var(--ink)', outline: 'none', boxSizing: 'border-box' }}
-                  >
-                    <option value="USD">USD — United States</option>
-                    <option value="IDR">IDR — Indonesia</option>
-                  </select>
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 700, color: 'var(--sage)', marginBottom: '0.375rem', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Account Holder Name</label>
-                  <input
-                    type="text"
-                    value={wiseForm.accountHolderName}
-                    onChange={(e) => setWiseForm((f) => ({ ...f, accountHolderName: e.target.value }))}
-                    placeholder="Full name on the account"
-                    style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '0.875rem', background: 'rgba(255,255,255,0.75)', border: '1px solid rgba(25,37,36,0.12)', fontFamily: 'var(--font-body)', fontSize: '0.875rem', color: 'var(--ink)', outline: 'none', boxSizing: 'border-box' }}
-                  />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 700, color: 'var(--sage)', marginBottom: '0.375rem', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Account Number</label>
-                  <input
-                    type="text"
-                    value={wiseForm.accountNumber}
-                    onChange={(e) => setWiseForm((f) => ({ ...f, accountNumber: e.target.value }))}
-                    style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '0.875rem', background: 'rgba(255,255,255,0.75)', border: '1px solid rgba(25,37,36,0.12)', fontFamily: 'var(--font-body)', fontSize: '0.875rem', color: 'var(--ink)', outline: 'none', boxSizing: 'border-box' }}
-                  />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 700, color: 'var(--sage)', marginBottom: '0.375rem', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                    {wiseCurrency === 'IDR' ? 'Bank Code' : 'Routing Number (ABA)'}
-                  </label>
-                  <input
-                    type="text"
-                    value={wiseForm.bankCode}
-                    onChange={(e) => setWiseForm((f) => ({ ...f, bankCode: e.target.value }))}
-                    style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '0.875rem', background: 'rgba(255,255,255,0.75)', border: '1px solid rgba(25,37,36,0.12)', fontFamily: 'var(--font-body)', fontSize: '0.875rem', color: 'var(--ink)', outline: 'none', boxSizing: 'border-box' }}
-                  />
-                </div>
-                <button onClick={submitWiseRecipient} disabled={busy} className="btn-primary" style={{ fontSize: '0.85rem' }}>
-                  {busy ? 'Connecting…' : 'Connect Wise Account'}
+                <BankInfoForm onChange={setWiseFormData} disabled={busy} />
+                <button onClick={submitWiseRecipient} disabled={busy || !wiseFormData.isValid} className="btn-primary" style={{ fontSize: '0.85rem', opacity: !wiseFormData.isValid ? 0.5 : 1 }}>
+                  {busy ? t('payout.connecting') : t('payout.connectWiseAccount')}
                 </button>
               </div>
         )}
@@ -2318,7 +2303,7 @@ function PayoutMethodPanel({ profile: profileProp, onClose, createConnectOnboard
         )}
 
         <p style={{ fontSize: '0.7rem', color: 'var(--sage)', margin: '1rem 0 0', lineHeight: 1.5 }}>
-          Stripe payouts typically arrive within a few days of a completed collaboration. Wise payouts can take a little longer to settle.
+          {t('payout.settleNote')}
         </p>
       </div>
     </div>

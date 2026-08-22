@@ -1,6 +1,6 @@
 import { action, internalAction } from './_generated/server';
 import { api, internal } from './_generated/api';
-import { v } from 'convex/values';
+import { v, ConvexError } from 'convex/values';
 import Stripe from 'stripe';
 import { computeFee } from './fees';
 import { requireAdminAction, requireOwnerOrAdminAction } from './lib/auth';
@@ -779,7 +779,7 @@ export const createWiseRecipient = action({
     await requireOwnerOrAdminAction(ctx, args.profileId, api.profiles.getByClerkUserId);
     const token = process.env.WISE_API_TOKEN;
     const wiseProfileId = process.env.WISE_PROFILE_ID;
-    if (!token || !wiseProfileId) throw new Error('WISE_API_TOKEN/WISE_PROFILE_ID are not set in Convex environment variables');
+    if (!token || !wiseProfileId) throw new ConvexError('WISE_API_TOKEN/WISE_PROFILE_ID are not set in Convex environment variables');
 
     const res = await fetch(`${wiseBaseUrl()}/v1/accounts`, {
       method: 'POST',
@@ -792,7 +792,21 @@ export const createWiseRecipient = action({
         details: args.details,
       }),
     });
-    if (!res.ok) throw new Error(`Wise recipient creation failed: ${res.status} ${await res.text()}`);
+    if (!res.ok) {
+      // Convex redacts plain Error messages on the client in production (see
+      // lib/auth.ts) — throw ConvexError so the actual Wise validation
+      // reason (e.g. a missing address field) reaches the user instead of a
+      // generic "Server Error". Wise's error body is { errors: [{ message }] }.
+      const bodyText = await res.text();
+      let reason = bodyText;
+      try {
+        const parsed = JSON.parse(bodyText);
+        if (Array.isArray(parsed?.errors) && parsed.errors.length) {
+          reason = parsed.errors.map((e) => e.message).filter(Boolean).join(' ');
+        }
+      } catch { /* not JSON — fall back to raw body text */ }
+      throw new ConvexError(reason || `Wise recipient creation failed (${res.status}).`);
+    }
     const recipient = await res.json();
 
     await ctx.runMutation(internal.profiles.setWiseRecipient, {

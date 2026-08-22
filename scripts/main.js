@@ -946,6 +946,14 @@ function openLoginModal() {
       return;
     }
     if (!mountEl) return;
+    // Defensive unmount: if a previous mount landed here (e.g. the modal was
+    // closed before Clerk finished loading, so closeLoginModal's unmount was
+    // skipped, and this mount call is only arriving now), tear it down first.
+    // Without this, clearing innerHTML alone leaves Clerk's internal mount
+    // registry out of sync and the widget silently fails to render.
+    if (_clerkLoginMounted) {
+      try { clerk.unmountSignIn(mountEl); } catch { /* not mounted, ignore */ }
+    }
     // Reset mount area (clears loading state from above)
     mountEl.innerHTML = '';
     mountEl.setAttribute('autocomplete', 'off');
@@ -969,7 +977,7 @@ function openLoginModal() {
         appearance: {
           variables: {
             colorPrimary: '#3C5759',
-            colorBackground: 'rgba(255,255,255,0.12)',
+            colorBackground: 'rgba(255,255,255,0.24)',
             colorText: '#192524',
             colorTextSecondary: '#3C5759',
             colorInputBackground: '#ffffff',

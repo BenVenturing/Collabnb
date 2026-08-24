@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
-const WEEKDAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 const pad = (n) => String(n).padStart(2, '0');
 const dateStr = (y, m, d) => `${y}-${pad(m + 1)}-${pad(d)}`;
 
 // todoItems: [{ date: 'YYYY-MM-DD', ... }] — used to mark active days on whichever month is in view.
 export default function DashboardCalendar({ todoItems = [], selectedDate, onSelectDate }) {
+  const { t, i18n } = useTranslation('dashboardCalendar');
+  const WEEKDAYS = t('weekdays', { returnObjects: true });
   const [viewDate, setViewDate] = useState(() => new Date());
   const year = viewDate.getFullYear();
   const month = viewDate.getMonth();
@@ -14,7 +16,7 @@ export default function DashboardCalendar({ todoItems = [], selectedDate, onSele
   const first = new Date(year, month, 1);
   const startWeekday = first.getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const monthLabel = first.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  const monthLabel = first.toLocaleDateString(i18n.language, { month: 'long', year: 'numeric' });
 
   const today = new Date();
   const isCurrentMonth = year === today.getFullYear() && month === today.getMonth();
@@ -34,14 +36,14 @@ export default function DashboardCalendar({ todoItems = [], selectedDate, onSele
         <div style={{ display: 'flex', gap: '0.3rem' }}>
           <button
             onClick={() => setViewDate(new Date(year, month - 1, 1))}
-            aria-label="Previous month"
+            aria-label={t('previousMonth')}
             style={{ width: 26, height: 26, borderRadius: '50%', border: '1px solid rgba(25,37,36,0.12)', background: 'rgba(255,255,255,0.7)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--ink)' }}
           >
             <ChevronLeft size={13} />
           </button>
           <button
             onClick={() => setViewDate(new Date(year, month + 1, 1))}
-            aria-label="Next month"
+            aria-label={t('nextMonth')}
             style={{ width: 26, height: 26, borderRadius: '50%', border: '1px solid rgba(25,37,36,0.12)', background: 'rgba(255,255,255,0.7)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--ink)' }}
           >
             <ChevronRight size={13} />

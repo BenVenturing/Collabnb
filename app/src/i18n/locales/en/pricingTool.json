@@ -1,0 +1,67 @@
+{
+  "zoneCopy": {
+    "red": "Below the minimum for this workload — this can't be published as-is.",
+    "amber": "Below the recommended range for this workload.",
+    "green": "Within the recommended range."
+  },
+  "helpTable": {
+    "heading": "Points by deliverable & tier",
+    "close": "Close",
+    "colDeliverable": "Deliverable",
+    "colPts": "Pts",
+    "colWho": "Who can produce",
+    "allTiers": "All tiers",
+    "footerNote": "Cash = points × $/pt (set by tier) × complexity. Hybrid stays offset part of the cash."
+  },
+  "helpButton": {
+    "ariaLabel": "How points work"
+  },
+  "stepper": {
+    "ptsEach_one": "{{count}} pt each",
+    "ptsEach_other": "{{count}} pts each"
+  },
+  "scale": {
+    "minimal": "Minimal {{amount}}",
+    "caution": "Caution {{amount}}",
+    "recommended": "Recommended {{low}}–{{high}}"
+  },
+  "presetCard": {
+    "midrange": "midrange {{amount}}"
+  },
+  "heading": "What does a collab cost?",
+  "subtitle": "Pricing is derived from deliverable points, creator tier, and workload complexity — never a guess.",
+  "entryMode": {
+    "deliverables": "I know my deliverables",
+    "budget": "I have a budget"
+  },
+  "creatorTier": "Creator tier",
+  "compensationType": {
+    "label": "Compensation type",
+    "paid": "Paid",
+    "hybrid": "Hybrid (stay + cash)",
+    "declaredStayValue": "Declared stay value"
+  },
+  "complexity": {
+    "label": "Complexity",
+    "standard": "Standard",
+    "complex": "Complex (shot list, drone, multi-location, exclusivity)",
+    "standardShort": "1.0 standard",
+    "complexShort": "1.25 complex"
+  },
+  "budgetMode": {
+    "cashBudget": "Cash budget",
+    "effectiveBudgetPrefix": "Effective budget: {{budget}} cash + {{offset}} stay offset = ",
+    "packagesThatFit": "Packages that fit",
+    "noPresetFits": "No preset fits this budget yet — try raising it or switching tiers.",
+    "stretchOption": "Stretch option (within 120% of budget)"
+  },
+  "deliverablesMode": {
+    "presets": "Presets",
+    "buildYourOwn": "Build your own",
+    "loadSuffix": " load",
+    "loadFallback": "—",
+    "cashCompensation": "Cash compensation"
+  },
+  "mathSummary": "{{points}} pts × {{rate}}/pt ({{tier}}) × {{complexity}} = {{midpoint}} midrange",
+  "stayOffsetSuffix": " · stay offset {{offset}}"
+}

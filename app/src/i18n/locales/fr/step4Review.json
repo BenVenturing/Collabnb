@@ -1,0 +1,69 @@
+{
+  "tierLabels": {
+    "ugc_beginner": "UGC Débutant",
+    "ugc_pro": "UGC Pro",
+    "micro": "Micro-influenceur",
+    "mid": "Influenceur"
+  },
+  "compLabels": {
+    "paid": "Payé",
+    "hybrid": "Hybride"
+  },
+  "loadLabels": {
+    "light": "Charge légère",
+    "moderate": "Charge modérée",
+    "heavy": "Charge lourde",
+    "custom": "Campagne personnalisée"
+  },
+  "saveFallbackError": "Une erreur est survenue lors de l'enregistrement de ce brouillon.",
+  "heading": {
+    "edit": "Modifier l'annonce",
+    "review": "Vérifiez votre annonce"
+  },
+  "subtitle": {
+    "edit": "Vérifiez vos modifications, puis continuez vers le paiement.",
+    "review": "Voici à quoi ressemblera votre annonce pour les créateurs. Vérifiez tout, puis configurez le paiement à l'étape suivante."
+  },
+  "viewAsCreator": "Voir en tant que créateur",
+  "nightsComp": "{{nights}} nuits {{compLabel}}",
+  "photos": {
+    "heading": "Photos",
+    "hint": "La première photo est votre photo principale — elle ouvre l'annonce. Réorganisez ou définissez une nouvelle photo principale ci-dessous.",
+    "hero": "Principale",
+    "moveLeft": "Déplacer à gauche",
+    "setAsHero": "Définir comme principale",
+    "moveRight": "Déplacer à droite"
+  },
+  "sections": {
+    "offer": "L'offre",
+    "dates": "Dates et échéances",
+    "deliverables": "Livrables",
+    "thingsToKnow": "À savoir"
+  },
+  "rows": {
+    "addOns": "Extras",
+    "whatYouDeliver": "Ce que vous livrez",
+    "whatYouDeliverValue_one": "{{total}} livrable au total sur {{count}} format",
+    "whatYouDeliverValue_other": "{{total}} livrables au total sur {{count}} formats",
+    "vibe": "Ambiance",
+    "collabWindow": "Période de collaboration",
+    "collabWindowN": "Période de collaboration {{n}}",
+    "deliverablesDue": "Échéance des livrables",
+    "deliverablesDueValue": "{{days}} jours après le séjour",
+    "revisionPolicy": "Politique de révision",
+    "usageRights": "Droits d'utilisation"
+  },
+  "moreCount": "+{{count}} de plus",
+  "compZone": {
+    "amberTitle": "Cette rémunération est inférieure à la plage recommandée pour cette charge de travail",
+    "amberBody": "Plage recommandée : {{low}}–{{high}} $. Vous pouvez tout de même continuer — ceci est une recommandation, pas une obligation.",
+    "redBody": "Cette rémunération est inférieure au minimum pour les livrables et le niveau sélectionnés. Augmentez le montant, réduisez les livrables ou ajoutez une compensation séjour pour continuer."
+  },
+  "needCompensation": "Ajoutez un montant de rémunération en espèces à l'étape de tarification avant de continuer — chaque collaboration doit inclure un paiement.",
+  "saving": "Enregistrement...",
+  "saveDraft": "Enregistrer le brouillon",
+  "creatorPreview": {
+    "banner": "Aperçu créateur — voici comment les créateurs voient votre annonce",
+    "close": "Fermer"
+  }
+}

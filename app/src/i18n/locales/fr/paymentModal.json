@@ -1,0 +1,21 @@
+{
+  "heading": "Ajoutez une carte pour terminer",
+  "body": "Les deux parties ont signé. Enregistrez une carte maintenant — vous ne serez pas débité pour l'instant. Les frais de plateforme sont facturés automatiquement seulement une fois la collaboration terminée.",
+  "feeExplain": {
+    "flatFee": "Frais fixes pour une collaboration en séjour gratuit",
+    "percentage": "5 % de la valeur de la collaboration de {{amount}} $ (min. 20 $)"
+  },
+  "feeCard": {
+    "title": "Frais de plateforme Collabnb · facturés à la finalisation"
+  },
+  "errors": {
+    "saveContractFirst": "Veuillez enregistrer le contrat avant d'ajouter une carte.",
+    "stripeNotConfigured": "Stripe n'est pas configuré. Exécutez : npx convex env set STRIPE_SECRET_KEY sk_test_...",
+    "checkoutFailed": "Impossible de démarrer le paiement. Veuillez réessayer."
+  },
+  "cta": {
+    "redirecting": "Redirection vers Stripe…",
+    "payButton": "Enregistrer la carte · {{fee}} à la finalisation",
+    "later": "Je terminerai plus tard"
+  }
+}

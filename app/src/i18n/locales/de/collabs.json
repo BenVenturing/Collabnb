@@ -1,0 +1,41 @@
+{
+  "demoBadge": "Demo-Tour",
+  "dismissDemo": "Demo schließen",
+  "dismissSample": "Beispiel entfernen",
+  "hostLabel": "Gastgeber:",
+  "deliverablesLabel": "Deliverables",
+  "dueInLabel": "Fällig in",
+  "paymentLabel": "Zahlung",
+  "stayLabel": "Aufenthalt",
+  "complimentary": "Kostenlos",
+  "daysCount_one": "{{count}} Tag",
+  "daysCount_other": "{{count}} Tage",
+  "filterActive": "Aktiv",
+  "filterArchived": "Archiviert",
+  "status": {
+    "pendingReview": "Prüfung ausstehend",
+    "approved": "Genehmigt!",
+    "declined": "Abgelehnt",
+    "underReview": "Wird geprüft",
+    "completed": "Abgeschlossen",
+    "inProgress": "In Bearbeitung",
+    "applicationSent": "Bewerbung gesendet"
+  },
+  "filters": {
+    "allStatuses": "Alle Status",
+    "pending": "Ausstehend",
+    "uploaded": "Hochgeladen",
+    "closed": "Geschlossen",
+    "allListings": "Alle Angebote",
+    "anyDueDate": "Beliebige Fälligkeit",
+    "dueThisWeek": "Diese Woche fällig",
+    "dueThisMonth": "Diesen Monat fällig",
+    "noDeadline": "Keine Frist"
+  },
+  "emptyTitleNoCollabs": "Noch keine Collabs",
+  "emptyTitleNoMatches": "Keine Treffer",
+  "emptyBodyStart": "Bewirb dich für einen Aufenthalt, um loszulegen",
+  "emptyBodyAdjust": "Versuche, deine Suche oder Filter anzupassen",
+  "discoverStays": "Aufenthalte entdecken",
+  "demoToast": "Demo-Tour geschlossen — du findest sie wieder unter <strong>Einstellungen</strong> oder im <strong>Hilfe-Center (?-Symbol)</strong>"
+}

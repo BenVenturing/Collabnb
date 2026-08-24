@@ -1,0 +1,27 @@
+{
+  "heading": {
+    "available": "Acceso de por vida disponible",
+    "soldOut": "Plazas de por vida agotadas"
+  },
+  "body": {
+    "available": "La ronda gratuita de fundadores está completa. Aún puedes obtener acceso permanente con un pago único.",
+    "soldOut": "Ya no quedan plazas de por vida. Elige un plan mensual o anual para comenzar."
+  },
+  "tiers": {
+    "earlyAdopter": "Adoptante temprano",
+    "community": "Comunidad",
+    "standardLifetime": "De por vida estándar"
+  },
+  "spotsLeft_one": "{{count}} plaza a este precio — luego sube",
+  "spotsLeft_other": "{{count}} plazas a este precio — luego sube",
+  "errors": {
+    "loginRequired": "Inicia sesión para continuar.",
+    "checkoutFailed": "No se pudo iniciar el pago. Inténtalo de nuevo."
+  },
+  "cta": {
+    "redirecting": "Redirigiendo…",
+    "claim": "Obtener acceso de por vida — ${{price}}",
+    "later": "Quizás más tarde",
+    "close": "Cerrar"
+  }
+}

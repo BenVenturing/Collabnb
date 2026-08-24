@@ -2,6 +2,7 @@ import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Camera, X, Plus } from "lucide-react";
 import { useMutation, useQuery } from "convex/react";
+import { useTranslation } from "react-i18next";
 import { api } from "../../../convex/_generated/api";
 import WizardShell from "../../components/host/WizardShell";
 import LocationPicker from "../../components/host/LocationPicker";
@@ -52,6 +53,7 @@ function Input({ placeholder, value, onChange, type = "text" }) {
 }
 
 export default function Step1Basics() {
+  const { t } = useTranslation('step1Basics');
   const navigate = useNavigate();
   const { draft, updateDraft } = useListingDraft();
   const generateUploadUrl = useMutation(api.uploads.generateUploadUrl);
@@ -62,9 +64,9 @@ export default function Step1Basics() {
 
   const canProceed = draft.title.trim() && draft.location_city.trim() && draft.location_country.trim();
   const nextHint = !draft.title.trim()
-    ? "Give your listing a title."
+    ? t('nextHint.needTitle')
     : (!draft.location_city.trim() || !draft.location_country.trim())
-      ? "Fill in the city and state/country."
+      ? t('nextHint.needLocation')
       : "";
 
   async function handleImageUpload(e) {
@@ -89,7 +91,7 @@ export default function Step1Basics() {
       updateDraft({ images: [...draft.images, ...uploaded] });
     } catch (err) {
       console.error("Upload failed", err);
-      setUploadError(err.message || "One of your photos couldn't be uploaded.");
+      setUploadError(err.message || t('uploadErrorFallback'));
     } finally {
       setUploading(false);
       e.target.value = "";
@@ -108,25 +110,25 @@ export default function Step1Basics() {
       onNext={() => navigate("/host/listings/create/offer")}
     >
       <h2 style={{ fontFamily: "Cabinet Grotesk, serif", fontWeight: 800, fontSize: 28, color: "var(--ink)", margin: "0 0 6px" }}>
-        Tell us the basics
+        {t('heading')}
       </h2>
       <p style={{ fontFamily: "Satoshi, sans-serif", fontSize: 14, color: "var(--slate)", margin: "0 0 32px" }}>
-        Start with the essential details about your collaboration opportunity.
+        {t('subtitle')}
       </p>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
         {/* Title */}
         <div>
-          <Label required>Listing title</Label>
-          <Input placeholder="e.g., Cozy Lake Tahoe Cabin" value={draft.title} onChange={(v) => updateDraft({ title: v })} />
+          <Label required>{t('labels.listingTitle')}</Label>
+          <Input placeholder={t('placeholders.listingTitle')} value={draft.title} onChange={(v) => updateDraft({ title: v })} />
         </div>
 
         {/* Location */}
         <div>
-          <Label required>Location</Label>
+          <Label required>{t('labels.location')}</Label>
           <div style={{ display: "flex", gap: 12, marginBottom: 12 }}>
-            <Input placeholder="City" value={draft.location_city} onChange={(v) => updateDraft({ location_city: v })} />
-            <Input placeholder="State / Country" value={draft.location_country} onChange={(v) => updateDraft({ location_country: v })} />
+            <Input placeholder={t('placeholders.city')} value={draft.location_city} onChange={(v) => updateDraft({ location_city: v })} />
+            <Input placeholder={t('placeholders.stateCountry')} value={draft.location_country} onChange={(v) => updateDraft({ location_country: v })} />
           </div>
           <LocationPicker
             lat={draft.lat}
@@ -142,13 +144,13 @@ export default function Step1Basics() {
 
         {/* Property URL */}
         <div>
-          <Label>Property listing URL</Label>
-          <Input placeholder="https://your-stay-or-booking-link.com" value={draft.property_url} onChange={(v) => updateDraft({ property_url: v })} />
+          <Label>{t('labels.propertyUrl')}</Label>
+          <Input placeholder={t('placeholders.propertyUrl')} value={draft.property_url} onChange={(v) => updateDraft({ property_url: v })} />
         </div>
 
         {/* Images */}
         <div>
-          <Label>Property images</Label>
+          <Label>{t('labels.propertyImages')}</Label>
 
           {draft.images.length === 0 ? (
             /* Empty state — large dropzone */
@@ -158,8 +160,8 @@ export default function Step1Basics() {
               style={{ width: "100%", padding: "26px 0", border: "1.5px dashed rgba(25,37,36,0.2)", borderRadius: "0.875rem", background: "transparent", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8, cursor: "pointer", fontFamily: "Satoshi, sans-serif", fontSize: 14, color: "var(--slate)", fontWeight: 500 }}
             >
               <Camera size={20} />
-              {uploading ? "Uploading..." : "Upload images"}
-              <span style={{ fontSize: 12, color: "var(--sage)", fontWeight: 400 }}>Select multiple images from your library (up to {MAX_IMAGES})</span>
+              {uploading ? t('uploading') : t('uploadImages')}
+              <span style={{ fontSize: 12, color: "var(--sage)", fontWeight: 400 }}>{t('selectMultipleHint', { max: MAX_IMAGES })}</span>
             </button>
           ) : (
             <>
@@ -175,11 +177,11 @@ export default function Step1Basics() {
                   style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", border: "1.5px solid rgba(25,37,36,0.15)", borderRadius: 9999, background: "rgba(255,255,255,0.7)", cursor: "pointer", fontFamily: "Satoshi, sans-serif", fontSize: 13, color: "var(--ink)", fontWeight: 600 }}
                 >
                   <Plus size={15} />
-                  {uploading ? "Uploading..." : "Add photos"}
+                  {uploading ? t('uploading') : t('addPhotos')}
                 </button>
               )}
               <div style={{ fontFamily: "Satoshi, sans-serif", fontSize: 12, color: "var(--sage)", marginTop: 8 }}>
-                {draft.images.length} of {MAX_IMAGES} added{draft.images.length >= MAX_IMAGES ? " — limit reached" : ""}
+                {t('imagesCount', { count: draft.images.length, max: MAX_IMAGES })}{draft.images.length >= MAX_IMAGES ? t('limitReached') : ""}
               </div>
             </>
           )}
@@ -192,19 +194,19 @@ export default function Step1Basics() {
 
         {/* Collaboration brief */}
         <div>
-          <Label>Collaboration brief</Label>
-          <div style={{ fontFamily: "Satoshi, sans-serif", fontSize: 12, color: "var(--sage)", marginBottom: 6 }}>Describe what you're looking for from creators (optional)</div>
+          <Label>{t('labels.collaborationBrief')}</Label>
+          <div style={{ fontFamily: "Satoshi, sans-serif", fontSize: 12, color: "var(--sage)", marginBottom: 6 }}>{t('briefHint')}</div>
           <textarea
             value={draft.collaboration_brief}
             onChange={(e) => updateDraft({ collaboration_brief: e.target.value })}
-            placeholder="e.g., Looking for authentic content that highlights the mountain views and cozy cabin vibe..."
+            placeholder={t('placeholders.collaborationBrief')}
             rows={4}
             style={{ width: "100%", padding: "13px 16px", border: "1.5px solid rgba(25,37,36,0.15)", borderRadius: "0.875rem", fontFamily: "Satoshi, sans-serif", fontSize: 14, color: "var(--ink)", background: "#fff", outline: "none", resize: "vertical", boxSizing: "border-box" }}
           />
         </div>
 
         <p style={{ fontFamily: "Satoshi, sans-serif", fontSize: 12.5, color: "var(--sage)", margin: 0 }}>
-          Creator tier, compensation, and deliverables are set on the next step, with live pricing guidance.
+          {t('footerNote')}
         </p>
       </div>
     </WizardShell>

@@ -1,0 +1,19 @@
+{
+  "heading": "Continue colaborando",
+  "body": "Seu teste gratuito de 30 dias terminou. Assine para continuar enviando mensagens aos anfitriões, se candidatando a colaborações e explorando o mapa completo.",
+  "plans": {
+    "monthly": "US$ 10 / mês",
+    "yearly": "US$ 60 / ano",
+    "yearlySavings": "economize 50%"
+  },
+  "finePrint": "Cancele quando quiser. Membros fundadores sempre têm acesso gratuito.",
+  "errors": {
+    "profileNotFound": "Perfil não encontrado. Verifique se você está conectado.",
+    "stripeNotConfigured": "Stripe não configurado. Execute: npx convex env set STRIPE_SECRET_KEY sk_test_...",
+    "checkoutFailed": "Não foi possível iniciar o checkout. Tente novamente."
+  },
+  "cta": {
+    "redirecting": "Redirecionando…",
+    "later": "Talvez mais tarde"
+  }
+}

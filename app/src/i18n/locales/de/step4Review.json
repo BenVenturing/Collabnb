@@ -1,0 +1,69 @@
+{
+  "tierLabels": {
+    "ugc_beginner": "UGC Beginner",
+    "ugc_pro": "UGC Pro",
+    "micro": "Micro-Influencer",
+    "mid": "Influencer"
+  },
+  "compLabels": {
+    "paid": "Bezahlt",
+    "hybrid": "Hybrid"
+  },
+  "loadLabels": {
+    "light": "Geringer Umfang",
+    "moderate": "Mittlerer Umfang",
+    "heavy": "Hoher Umfang",
+    "custom": "Individuelle Kampagne"
+  },
+  "saveFallbackError": "Beim Speichern dieses Entwurfs ist etwas schiefgelaufen.",
+  "heading": {
+    "edit": "Angebot bearbeiten",
+    "review": "Überprüfe dein Angebot"
+  },
+  "subtitle": {
+    "edit": "Überprüfe deine Änderungen und fahre dann mit der Zahlung fort.",
+    "review": "So wird dein Angebot für Creator aussehen. Überprüfe alles und richte dann im nächsten Schritt die Zahlung ein."
+  },
+  "viewAsCreator": "Als Creator ansehen",
+  "nightsComp": "{{nights}} Nächte {{compLabel}}",
+  "photos": {
+    "heading": "Fotos",
+    "hint": "Das erste Foto ist dein Hauptbild — es führt das Angebot an. Ordne die Fotos neu an oder lege unten ein neues Hauptbild fest.",
+    "hero": "Hauptbild",
+    "moveLeft": "Nach links verschieben",
+    "setAsHero": "Als Hauptbild festlegen",
+    "moveRight": "Nach rechts verschieben"
+  },
+  "sections": {
+    "offer": "Das Angebot",
+    "dates": "Termine & Fristen",
+    "deliverables": "Deliverables",
+    "thingsToKnow": "Wissenswertes"
+  },
+  "rows": {
+    "addOns": "Extras",
+    "whatYouDeliver": "Was du lieferst",
+    "whatYouDeliverValue_one": "{{total}} Deliverable insgesamt in {{count}} Format",
+    "whatYouDeliverValue_other": "{{total}} Deliverables insgesamt in {{count}} Formaten",
+    "vibe": "Stimmung",
+    "collabWindow": "Kollaborationsfenster",
+    "collabWindowN": "Kollaborationsfenster {{n}}",
+    "deliverablesDue": "Deliverables fällig",
+    "deliverablesDueValue": "{{days}} Tage nach dem Aufenthalt",
+    "revisionPolicy": "Überarbeitungsrichtlinie",
+    "usageRights": "Nutzungsrechte"
+  },
+  "moreCount": "+{{count}} weitere",
+  "compZone": {
+    "amberTitle": "Diese Vergütung liegt unter dem empfohlenen Bereich für diesen Arbeitsumfang",
+    "amberBody": "Empfohlener Bereich: {{low}}–{{high}} $. Du kannst trotzdem fortfahren — dies ist eine Richtlinie, keine Pflicht.",
+    "redBody": "Diese Vergütung liegt unter dem Minimum für die ausgewählten Deliverables und die Stufe. Erhöhe den Betrag, reduziere die Deliverables oder füge einen Aufenthaltsausgleich hinzu, um fortzufahren."
+  },
+  "needCompensation": "Füge im Preisschritt einen Bargeldvergütungsbetrag hinzu, bevor du fortfährst — jede Kollaboration muss eine Zahlung beinhalten.",
+  "saving": "Wird gespeichert...",
+  "saveDraft": "Entwurf speichern",
+  "creatorPreview": {
+    "banner": "Creator-Vorschau — so sehen Creator dein Angebot",
+    "close": "Schließen"
+  }
+}

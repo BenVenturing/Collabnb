@@ -1,0 +1,146 @@
+{
+  "statusLabels": {
+    "pending": "Pending",
+    "under_review": "Under Review",
+    "approved": "Approved",
+    "completed": "Completed",
+    "declined": "Declined"
+  },
+  "typeLabels": {
+    "all": "All Types",
+    "application": "Applications",
+    "pitch": "Pitches"
+  },
+  "stageAll": "All",
+  "tierDefs": {
+    "UGC Beginner": "0–5K followers — New creators building their portfolio",
+    "UGC Pro": "5K–10K followers — Content creators, not influencer reach",
+    "Micro Influencer": "10K–50K followers — Influencer-style content, engaged audience",
+    "Influencer": "50K+ followers — Broad reach, established audience"
+  },
+  "contractFields": {
+    "nights": { "label": "Nights", "placeholder": "e.g. 3" },
+    "compensation": { "label": "Compensation", "placeholder": "e.g. $500 or $300 + stay" },
+    "deliverables": { "label": "Deliverables", "placeholder": "e.g. 2 Reels + 5 Photos" },
+    "turnaround": { "label": "Turnaround", "placeholder": "e.g. 14 days" },
+    "affiliate": { "label": "Affiliate %", "placeholder": "e.g. 5% or —" },
+    "extra_terms": { "label": "Extra Terms", "placeholder": "Optional add-ons" }
+  },
+  "history": {
+    "heading": "Negotiation history",
+    "creatorPitch": "Creator Pitch",
+    "host": "Host",
+    "creator": "Creator",
+    "version": "v{{version}}",
+    "latest": "← latest"
+  },
+  "pdf": {
+    "documentTitle": "Collabnb Contract",
+    "heading": "Collabnb Collaboration Contract",
+    "locked": "CONTRACT LOCKED",
+    "terms": "Terms",
+    "negotiatedRounds_one": "Negotiated over {{count}} round.",
+    "negotiatedRounds_other": "Negotiated over {{count}} rounds.",
+    "signatures": "Signatures",
+    "host": "Host",
+    "creatorSuffix": "(Creator)",
+    "notYetSigned": "Not yet signed"
+  },
+  "counterModal": {
+    "heading": "Counter Pitch",
+    "versionLine": "{{creatorName}} · {{listing}} · Version {{version}}",
+    "editingAs": "Editing as ",
+    "adjustTerms": " — adjust any terms, then send.",
+    "notePlaceholder": "Explain your changes to the other party...",
+    "noteLabel": "Note (optional)",
+    "pricingCalculator": "Pricing calculator ({{tier}})",
+    "cash": "Cash",
+    "pointsSummary": "{{points}} pts · midpoint ${{midpoint}} · range ${{low}}–${{high}}",
+    "belowFloor": "Below the minimum (${{floor}}) for this workload — raise the cash amount or reduce deliverables to send.",
+    "belowRecommended": "Below the recommended range, but above the minimum — can still be sent.",
+    "cancel": "Cancel",
+    "send": "Send Counter Pitch"
+  },
+  "signModal": {
+    "heading": "Sign & Accept",
+    "signingAs": "Signing as {{partyLabel}}",
+    "contractTerms": "Contract Terms",
+    "afterRounds_one": "After {{count}} round of negotiation",
+    "afterRounds_other": "After {{count}} rounds of negotiation",
+    "agreement": "By signing, you agree to the terms above. The contract locks once both parties sign the same version.",
+    "yourName": "Your full name",
+    "namePlaceholder": "Type your full name as signature",
+    "cancel": "Cancel",
+    "sign": "Sign and Accept"
+  },
+  "messagePanel": {
+    "heading": "Messages with {{creatorName}}",
+    "empty": "No messages yet — start the conversation.",
+    "replyPlaceholder": "Reply to {{creatorName}}…"
+  },
+  "drawer": {
+    "viewProfile": "View profile",
+    "verified": "Verified",
+    "followers": "Followers",
+    "engagement": "Engagement",
+    "collabs": "Collabs",
+    "originalPitchTerms": "Original Pitch Terms",
+    "modifiedTerms": "Modified Terms",
+    "pitchMessage": "Pitch Message",
+    "applicationMessage": "Application Message",
+    "portfolio": "Portfolio:",
+    "contractLocked": "Contract Locked — both parties have signed",
+    "saveContractPdf": "Save Contract (PDF)",
+    "hostSigned": "Host signed",
+    "creatorSigned": "{{name}} signed",
+    "awaitingCreatorSignature": "Awaiting creator signature",
+    "awaitingHostSignature": "Awaiting host signature",
+    "hostActions": "Host Actions",
+    "counterSentAwaitingCreator": "· Counter sent — awaiting creator",
+    "acceptAsIs": "Accept As Is",
+    "youSigned": "✓ You signed",
+    "counterPitch": "Counter Pitch",
+    "decline": "Decline",
+    "creatorsResponse": "Creator's Response",
+    "demo": "· demo",
+    "creatorCounteredBack": "· Creator countered back",
+    "accept": "Accept",
+    "creatorSignedChip": "✓ Creator signed",
+    "counterBack": "Counter Back",
+    "moveToReview": "Move to Review",
+    "approve": "Approve",
+    "markCompleted": "Mark Completed",
+    "message": "Message",
+    "messageCreator": "Message Creator"
+  },
+  "card": {
+    "viewProfile": "View profile",
+    "pitch": "Pitch",
+    "application": "Application",
+    "locked": "Locked",
+    "listingStats": "{{listing}} · {{followers}} followers · {{engagement}}% ER",
+    "dragToMoveStage": "Drag to move stage"
+  },
+  "header": {
+    "heading": "Proposals",
+    "subtitle": "{{total}} total · {{pending}} pending your review"
+  },
+  "declinedHeader": {
+    "count_one": "{{count}} declined proposal",
+    "count_other": "{{count}} declined proposals",
+    "clearAll": "Clear All"
+  },
+  "empty": {
+    "noProposalsYet": "No proposals yet",
+    "noFilteredProposals": "No {{filters}}proposals",
+    "onceCreatorsApply": "Once creators apply to your listings, their proposals will appear here.",
+    "tryDifferentFilter": "Try a different filter."
+  },
+  "clearDeclinedModal": {
+    "heading": "Clear Declined Proposals",
+    "body_one": "Remove all {{count}} declined proposal from view? This won't delete creator data, just hides them from your pipeline.",
+    "body_other": "Remove all {{count}} declined proposals from view? This won't delete creator data, just hides them from your pipeline.",
+    "cancel": "Cancel",
+    "removeAll": "Remove All"
+  }
+}

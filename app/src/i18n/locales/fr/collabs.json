@@ -1,0 +1,41 @@
+{
+  "demoBadge": "Visite guidée",
+  "dismissDemo": "Fermer la démo",
+  "dismissSample": "Retirer l'exemple",
+  "hostLabel": "Hôte :",
+  "deliverablesLabel": "Livrables",
+  "dueInLabel": "Échéance dans",
+  "paymentLabel": "Paiement",
+  "stayLabel": "Séjour",
+  "complimentary": "Offert",
+  "daysCount_one": "{{count}} jour",
+  "daysCount_other": "{{count}} jours",
+  "filterActive": "Actif",
+  "filterArchived": "Archivé",
+  "status": {
+    "pendingReview": "Examen en attente",
+    "approved": "Approuvé !",
+    "declined": "Refusé",
+    "underReview": "En cours d'examen",
+    "completed": "Terminé",
+    "inProgress": "En cours",
+    "applicationSent": "Candidature envoyée"
+  },
+  "filters": {
+    "allStatuses": "Tous les statuts",
+    "pending": "En attente",
+    "uploaded": "Envoyé",
+    "closed": "Clôturé",
+    "allListings": "Toutes les annonces",
+    "anyDueDate": "Toute échéance",
+    "dueThisWeek": "Échéance cette semaine",
+    "dueThisMonth": "Échéance ce mois-ci",
+    "noDeadline": "Aucune échéance"
+  },
+  "emptyTitleNoCollabs": "Pas encore de collabs",
+  "emptyTitleNoMatches": "Aucun résultat",
+  "emptyBodyStart": "Postulez à un séjour pour commencer",
+  "emptyBodyAdjust": "Essayez d'ajuster votre recherche ou vos filtres",
+  "discoverStays": "Découvrir des séjours",
+  "demoToast": "Visite guidée fermée — retrouvez-la dans <strong>Paramètres</strong> ou dans le <strong>Centre d'aide (icône ?)</strong>"
+}

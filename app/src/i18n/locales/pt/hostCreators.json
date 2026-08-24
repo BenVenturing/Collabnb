@@ -1,0 +1,89 @@
+{
+  "calendar": {
+    "months": ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"],
+    "weekdays": ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"]
+  },
+  "locationConsent": {
+    "heading": "Acesso à localização",
+    "body": "O Collabnb usa sua localização para sugerir criadores e estadias próximas. Você pode desativar isso a qualquer momento nas Configurações. ",
+    "bodyStrong": "Sua localização exata nunca é compartilhada com outros usuários.",
+    "allow": "Permitir",
+    "disable": "Desativar localização"
+  },
+  "nearby": {
+    "heading": "Criadores perto de você",
+    "subtitle": "Com base nos perfis de criadores na sua região",
+    "seeAll": "Ver tudo",
+    "scrollLeft": "Rolar para a esquerda",
+    "scrollRight": "Rolar para a direita",
+    "withinMiles": "A até {{miles}} milhas"
+  },
+  "travelDatePicker": {
+    "placeholder": "Datas de viagem",
+    "findVisiting": "Buscar criadores visitando {{city}} durante…",
+    "clear": "Limpar",
+    "showCreators": "Mostrar criadores"
+  },
+  "savedContact": {
+    "message": "Mensagem"
+  },
+  "viewToggle": {
+    "grid": "⊞  Visualização em grade",
+    "swipe": "✦  Visualização deslizante"
+  },
+  "swipe": {
+    "saveFailed": "Não foi possível salvar {{name}} — verifique sua conexão e tente novamente",
+    "defaultName": "este criador",
+    "backToGrid": "Voltar à grade",
+    "searchPlaceholder": "Buscar criadores…",
+    "filters": "Filtros",
+    "creatorType": "Tipo de criador",
+    "progress": "{{current}} / {{total}}",
+    "progressDone": "{{total}} concluídos",
+    "allCaughtUp": "Tudo em dia!",
+    "reviewedAll": "Você revisou todos os {{count}} criadores. Desfazer para rever algum.",
+    "hints": {
+      "skip": "Pular",
+      "save": "Salvar",
+      "message": "Mensagem"
+    },
+    "saved": "Salvo"
+  },
+  "header": {
+    "heading": "Criadores",
+    "subtitle": "Descubra criadores que já colaboraram com propriedades como a sua"
+  },
+  "toolbar": {
+    "searchPlaceholder": "Buscar por nome, nicho, plataforma…",
+    "filters": "Filtros"
+  },
+  "filterPanel": {
+    "nearYou": "Criadores perto de você",
+    "withinMiles": "A até {{miles}} milhas",
+    "sortBy": "Ordenar por",
+    "sort": {
+      "recommended": "Recomendado",
+      "followers": "Mais seguidores",
+      "engagement": "Maior engajamento",
+      "collabs": "Mais colabs"
+    },
+    "creatorType": "Tipo de criador",
+    "saved": "Salvo",
+    "savedOnly": "Somente salvos",
+    "platforms": "Plataformas",
+    "other": "Outro",
+    "pastCollabsOnly": "Somente colaborações anteriores",
+    "clearAll": "Limpar todos os filtros"
+  },
+  "results": {
+    "count_one": "{{count}} criador",
+    "count_other": "{{count}} criadores",
+    "count_nearby_one": "{{count}} criador próximo",
+    "count_nearby_other": "{{count}} criadores próximos",
+    "showingRealOnly": "Mostrando apenas criadores reais",
+    "hideSamples": "Ocultar criadores de exemplo",
+    "emptyTitle": "Nenhum criador encontrado",
+    "emptyDated": "Nenhum criador está visitando {{city}} nessas datas. Tente um período diferente.",
+    "emptyDefault": "Tente ajustar sua busca ou filtros."
+  }
+}

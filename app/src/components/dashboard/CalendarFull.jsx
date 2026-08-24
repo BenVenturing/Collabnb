@@ -1,22 +1,30 @@
 import { useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import i18nInstance from '../../i18n';
 
-const WEEKDAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 const pad = (n) => String(n).padStart(2, '0');
 const dateStr = (y, m, d) => `${y}-${pad(m + 1)}-${pad(d)}`;
 
 // Color-coded by stage/status — categories come from the todo item's `type`.
-const STAGE_COLORS = {
-  deadline:       { color: '#b45309', label: 'Content deadline' },
-  pending_action: { color: '#5b4db8', label: 'Pending action' },
-  stay_date:      { color: '#2d7d5e', label: 'Stay date' },
+const STAGE_COLOR_HEX = {
+  deadline:       '#b45309',
+  pending_action: '#5b4db8',
+  stay_date:      '#2d7d5e',
 };
+function stageColors() {
+  const labels = i18nInstance.t('calendarFull:stageColors', { returnObjects: true });
+  return Object.fromEntries(Object.keys(STAGE_COLOR_HEX).map((k) => [k, { color: STAGE_COLOR_HEX[k], label: labels[k] }]));
+}
 
 function MonthGrid({ year, month, itemsByDate, selectedDate, onSelectDate }) {
+  const { t, i18n } = useTranslation('calendarFull');
+  const WEEKDAYS = t('weekdays', { returnObjects: true });
+  const STAGE_COLORS = stageColors();
   const first = new Date(year, month, 1);
   const startWeekday = first.getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const monthLabel = first.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  const monthLabel = first.toLocaleDateString(i18n.language, { month: 'long', year: 'numeric' });
   const today = new Date();
 
   const cells = [];
@@ -68,6 +76,8 @@ function MonthGrid({ year, month, itemsByDate, selectedDate, onSelectDate }) {
 }
 
 export default function CalendarFull({ todoItems = [], selectedDate, onSelectDate }) {
+  const { t } = useTranslation('calendarFull');
+  const STAGE_COLORS = stageColors();
   const [baseDate, setBaseDate] = useState(() => { const d = new Date(); d.setDate(1); return d; });
 
   const itemsByDate = {};
@@ -91,14 +101,14 @@ export default function CalendarFull({ todoItems = [], selectedDate, onSelectDat
         <div style={{ display: 'flex', gap: '0.35rem' }}>
           <button
             onClick={() => setBaseDate(new Date(baseDate.getFullYear(), baseDate.getMonth() - 1, 1))}
-            aria-label="Previous month"
+            aria-label={t('previousMonth')}
             style={{ width: 28, height: 28, borderRadius: '50%', border: '1px solid rgba(25,37,36,0.12)', background: 'rgba(255,255,255,0.7)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--ink)' }}
           >
             <ChevronLeft size={14} />
           </button>
           <button
             onClick={() => setBaseDate(new Date(baseDate.getFullYear(), baseDate.getMonth() + 1, 1))}
-            aria-label="Next month"
+            aria-label={t('nextMonth')}
             style={{ width: 28, height: 28, borderRadius: '50%', border: '1px solid rgba(25,37,36,0.12)', background: 'rgba(255,255,255,0.7)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--ink)' }}
           >
             <ChevronRight size={14} />

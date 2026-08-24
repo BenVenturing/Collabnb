@@ -1,0 +1,21 @@
+{
+  "heading": "Agrega una tarjeta para terminar",
+  "body": "Ambas partes han firmado. Guarda una tarjeta ahora — no se te cobrará todavía. La tarifa de la plataforma se cobra automáticamente solo cuando se completa la colaboración.",
+  "feeExplain": {
+    "flatFee": "Tarifa fija para colaboraciones de estancia gratuita",
+    "percentage": "5% del valor de la colaboración de ${{amount}} (mín. $20)"
+  },
+  "feeCard": {
+    "title": "Tarifa de plataforma de Collabnb · se cobra al completarse"
+  },
+  "errors": {
+    "saveContractFirst": "Guarda el contrato antes de agregar una tarjeta.",
+    "stripeNotConfigured": "Stripe no está configurado. Ejecuta: npx convex env set STRIPE_SECRET_KEY sk_test_...",
+    "checkoutFailed": "No se pudo iniciar el pago. Inténtalo de nuevo."
+  },
+  "cta": {
+    "redirecting": "Redirigiendo a Stripe…",
+    "payButton": "Guardar tarjeta · {{fee}} al completarse",
+    "later": "Lo completaré más tarde"
+  }
+}

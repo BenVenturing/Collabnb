@@ -1,0 +1,35 @@
+{
+  "card": {
+    "featured": "Em destaque",
+    "removeTitle": "Remover dos salvos",
+    "moveTitle": "Mover para coleção"
+  },
+  "newCollectionModal": {
+    "heading": "Nomeie esta coleção",
+    "placeholder": "ex.: Cabanas dos sonhos, Costa Leste…",
+    "cancel": "Cancelar",
+    "create": "Criar"
+  },
+  "moveMenu": {
+    "heading": "Mover para"
+  },
+  "header": {
+    "title": "Salvos",
+    "noneSaved": "Ainda não há colaborações salvas",
+    "loading": "Carregando…",
+    "savedCount_one": "{{count}} colaboração salva",
+    "savedCount_other": "{{count}} colaborações salvas"
+  },
+  "emptyState": {
+    "title": "Nada salvo ainda",
+    "body": "Toque no coração em qualquer anúncio no Explorar para salvá-lo aqui.",
+    "browseCollabs": "Explorar colabs"
+  },
+  "newCollectionButton": "Nova coleção",
+  "emptyCollection": {
+    "loading": "Carregando…",
+    "body": "Ainda não há anúncios nesta coleção — marque um anúncio com o coração para adicioná-lo aqui."
+  },
+  "stayCount_one": "{{count}} estadia",
+  "stayCount_other": "{{count}} estadias"
+}

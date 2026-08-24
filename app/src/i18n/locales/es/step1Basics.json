@@ -1,0 +1,31 @@
+{
+  "nextHint": {
+    "needTitle": "Ponle un título a tu anuncio.",
+    "needLocation": "Completa la ciudad y el estado/país."
+  },
+  "uploadErrorFallback": "No se pudo subir una de tus fotos.",
+  "heading": "Cuéntanos lo básico",
+  "subtitle": "Empieza con los detalles esenciales sobre tu oportunidad de colaboración.",
+  "labels": {
+    "listingTitle": "Título del anuncio",
+    "location": "Ubicación",
+    "propertyUrl": "URL del anuncio de la propiedad",
+    "propertyImages": "Imágenes de la propiedad",
+    "collaborationBrief": "Resumen de la colaboración"
+  },
+  "placeholders": {
+    "listingTitle": "p. ej., Acogedora cabaña en Lake Tahoe",
+    "city": "Ciudad",
+    "stateCountry": "Estado / País",
+    "propertyUrl": "https://tu-enlace-de-reserva.com",
+    "collaborationBrief": "p. ej., Buscamos contenido auténtico que resalte las vistas a la montaña y el ambiente acogedor de la cabaña..."
+  },
+  "uploading": "Subiendo...",
+  "uploadImages": "Subir imágenes",
+  "selectMultipleHint": "Selecciona varias imágenes de tu galería (hasta {{max}})",
+  "addPhotos": "Agregar fotos",
+  "imagesCount": "{{count}} de {{max}} agregadas",
+  "limitReached": " — límite alcanzado",
+  "briefHint": "Describe qué buscas de los creadores (opcional)",
+  "footerNote": "El nivel de creador, la compensación y los entregables se configuran en el siguiente paso, con orientación de precios en vivo."
+}

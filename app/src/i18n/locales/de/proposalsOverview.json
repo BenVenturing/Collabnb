@@ -1,0 +1,59 @@
+{
+  "hello": "Hallo, {{name}}!",
+  "there": "dort",
+  "greeting": {
+    "creator": "Hier ist eine Übersicht deiner Collabs.",
+    "host": "Hier ist eine Übersicht deiner Vorschläge."
+  },
+  "nav": {
+    "overview": "Übersicht",
+    "money": {
+      "creator": "Einnahmen",
+      "host": "Ausgaben"
+    },
+    "calendar": "Kalender",
+    "activity": "Aktivität",
+    "contract": "Vertrag"
+  },
+  "sidebarTip": {
+    "creator": "Regelmäßige Uploads sorgen dafür, dass Gastgeber dich wieder einladen.",
+    "host": "Schnellere Bewerbungsprüfung hält Creator engagiert."
+  },
+  "closeSidebar": "Seitenleiste schließen",
+  "openSidebar": "Seitenleiste öffnen",
+  "chartTitle": {
+    "creator": "Einnahmenübersicht",
+    "host": "Ausgabenübersicht"
+  },
+  "chart": {
+    "money": {
+      "creator": "Einnahmen",
+      "host": "Ausgaben"
+    },
+    "volume": "Bewerbungen"
+  },
+  "stat": {
+    "creator": {
+      "active": { "label": "Aktive Collabs" },
+      "pending": { "label": "Ausstehende Bewerbungen" },
+      "earned": { "label": "Gesamteinnahmen" },
+      "due": { "label": "Content fällig" }
+    },
+    "host": {
+      "new": { "label": "Neue Bewerbungen" },
+      "review": { "label": "Prüfung ausstehend" },
+      "active": { "label": "Aktive Collabs" },
+      "spend": { "label": "Gesamtausgaben" }
+    }
+  },
+  "upcoming": "Bevorstehend",
+  "clearDateFilter": "Datumsfilter löschen ×",
+  "nothingScheduled": "Für diesen Tag ist nichts geplant.",
+  "todoMeta": {
+    "deadline": "Content-Frist",
+    "pending_action": "Ausstehende Aktion",
+    "stay_date": "Aufenthaltsdatum"
+  },
+  "searchCreator": "Deine Collabs durchsuchen…",
+  "searchHost": "Creator, Angebote durchsuchen…"
+}

@@ -1,0 +1,5 @@
+{
+  "unavailable": "Le sélecteur d'emplacement sur la carte n'est pas disponible dans cet environnement — les champs ville/état ci-dessus sont toujours utilisés.",
+  "searchPlaceholder": "Recherchez une adresse ou une ville pour placer un repère",
+  "clickHint": "Ou cliquez sur la carte, ou faites glisser le repère, pour le placer avec précision."
+}

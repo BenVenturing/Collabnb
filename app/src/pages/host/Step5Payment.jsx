@@ -2,10 +2,12 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronDown, ChevronUp, DollarSign, CreditCard, Lock } from "lucide-react";
 import { useMutation, useQuery, useAction } from "convex/react";
+import { useTranslation } from "react-i18next";
 import { ConvexError } from "convex/values";
 import { api } from "../../../convex/_generated/api";
 import WizardShell from "../../components/host/WizardShell";
 import Confetti from "../../components/Confetti";
+import ReceiptCheckoutOverlay from "../../components/ReceiptCheckoutOverlay";
 import { useListingDraft } from "../../contexts/ListingDraftContext";
 import { useAuth } from "../../contexts/AuthContext";
 
@@ -39,18 +41,9 @@ function InfoCol({ title, text }) {
   );
 }
 
-const PAYOUT_INFO = {
-  platform: {
-    host: "Your card is charged automatically once the collab is marked complete — no manual transfers, no chasing anyone down. Collabnb holds the creator's payout for 48 hours after completion in case either side needs to raise a dispute, then forwards it automatically.",
-    creator: "Payment is guaranteed and automatic — no invoicing, no waiting on you. Funds are released shortly after the 48-hour dispute window closes, and creators can see upfront that payment is protected — which tends to attract stronger applicants.",
-  },
-  in_person: {
-    host: "You hand the creator payment directly — cash, Venmo, whatever you agree on — on your own timeline. Collabnb still automatically charges your platform fee once the collab is marked complete; that's separate from the creator's payment.",
-    creator: "You're trusting the host to pay you directly. Collabnb doesn't hold, verify, or guarantee this payment, and the 48-hour dispute window doesn't apply, since no cash passes through the platform.",
-  },
-};
-
 export default function Step5Payment() {
+  const { t } = useTranslation('step5Payment');
+  const PAYOUT_INFO = t('payoutInfo', { returnObjects: true });
   const navigate = useNavigate();
   const { draft, updateDraft, clearDraft, fee, totalDeliverables, formatCount, combinedDeliverablesList } = useListingDraft();
   const { profile } = useAuth();
@@ -67,6 +60,7 @@ export default function Step5Payment() {
   const [publishError, setPublishError] = useState("");
   const [startingCardSetup, setStartingCardSetup] = useState(false);
   const [cardJustSaved, setCardJustSaved] = useState(false);
+  const [checkoutReceipt, setCheckoutReceipt] = useState(null);
 
   const isLive = existingListing?.status === "published";
   const payoutHandling = draft.payout_handling || "platform";
@@ -82,8 +76,11 @@ export default function Step5Payment() {
     const sessionId = params.get('session_id');
     if (cardSetup === 'success' && sessionId) {
       verifyHostCardSetupSession({ sessionId })
-        .then(() => setCardJustSaved(true))
-        .catch((err) => setPublishError(err?.message || "Couldn't confirm your card — please try again."));
+        .then(({ cardBrand, cardLast4, orderId }) => {
+          setCardJustSaved(true);
+          setCheckoutReceipt({ type: 'host', orderId, cardBrand, cardLast4 });
+        })
+        .catch((err) => setPublishError(err?.message || t('errors.cardConfirmFailed')));
       navigate('/host/listings/create/payment', { replace: true });
     } else if (cardSetup === 'cancelled') {
       navigate('/host/listings/create/payment', { replace: true });
@@ -149,7 +146,7 @@ export default function Step5Payment() {
     } catch (err) {
       console.error(err);
       const message = err instanceof ConvexError ? err.data : err?.message;
-      setPublishError(typeof message === "string" && message ? message : "Something went wrong publishing this listing.");
+      setPublishError(typeof message === "string" && message ? message : t('errors.publishFailed'));
       setPublishing(false);
     }
   }
@@ -166,7 +163,7 @@ export default function Step5Payment() {
         });
         if (result?.url) window.location.href = result.url;
       } catch (err) {
-        setPublishError(err?.message || "Couldn't start card setup — please try again.");
+        setPublishError(err?.message || t('errors.cardSetupFailed'));
         setStartingCardSetup(false);
       }
       return;
@@ -179,24 +176,25 @@ export default function Step5Payment() {
   return (
     <>
       <Confetti show={confetti} />
+      <ReceiptCheckoutOverlay receipt={checkoutReceipt} onClose={() => setCheckoutReceipt(null)} />
       <WizardShell
         step={5}
-        nextLabel={publishing ? "Publishing..." : startingCardSetup ? "Redirecting to Stripe..." : needsCard ? "Add a card to publish" : isLive ? "Save changes" : "Publish listing"}
+        nextLabel={publishing ? t('nextLabel.publishing') : startingCardSetup ? t('nextLabel.redirecting') : needsCard ? t('nextLabel.addCard') : isLive ? t('nextLabel.saveChanges') : t('nextLabel.publish')}
         nextDisabled={publishing || startingCardSetup}
         onNext={handlePublishClick}
       >
         <h2 style={{ fontFamily: "Cabinet Grotesk, serif", fontWeight: 800, fontSize: 28, color: "var(--ink)", margin: "0 0 6px" }}>
-          How will you get paid?
+          {t('heading')}
         </h2>
         <p style={{ fontFamily: "Satoshi, sans-serif", fontSize: 14, color: "var(--slate)", margin: "0 0 24px" }}>
-          This decides how the creator's payment moves — review it carefully, it's locked once the listing goes live.
+          {t('subtitle')}
         </p>
 
         {isLive && (
           <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(25,37,36,0.05)", border: "1px solid rgba(25,37,36,0.1)", borderRadius: "0.875rem", padding: "12px 16px", marginBottom: 20 }}>
             <Lock size={15} color="var(--slate)" />
             <p style={{ fontFamily: "Satoshi, sans-serif", fontSize: 12.5, color: "var(--slate)", margin: 0 }}>
-              This listing is already published, so payment method is locked to avoid disrupting active collaborations.
+              {t('lockedBanner')}
             </p>
           </div>
         )}
@@ -211,19 +209,19 @@ export default function Step5Payment() {
             />
             <div>
               <div style={{ fontFamily: "Satoshi, sans-serif", fontWeight: 800, fontSize: 17, color: "var(--ink)" }}>
-                {payoutHandling === "in_person" ? "I'll pay the creator myself" : "Collabnb handles payment"}
+                {payoutHandling === "in_person" ? t('payoutSwitch.inPerson') : t('payoutSwitch.platform')}
               </div>
               {payoutHandling !== "in_person" && (
                 <div style={{ fontFamily: "Satoshi, sans-serif", fontSize: 11, fontWeight: 700, color: "#2d6a4f", textTransform: "uppercase", letterSpacing: "0.05em", marginTop: 2 }}>
-                  Recommended
+                  {t('payoutSwitch.recommended')}
                 </div>
               )}
             </div>
           </div>
 
           <div style={{ display: "flex", flexWrap: "wrap", gap: 20, paddingTop: 18, borderTop: "1px solid rgba(25,37,36,0.08)" }}>
-            <InfoCol title="For you (the host)" text={info.host} />
-            <InfoCol title="For the creator" text={info.creator} />
+            <InfoCol title={t('infoCol.forHost')} text={info.host} />
+            <InfoCol title={t('infoCol.forCreator')} text={info.creator} />
           </div>
         </div>
 
@@ -235,18 +233,18 @@ export default function Step5Payment() {
           >
             <div style={{ display: "flex", alignItems: "center", gap: 8, fontFamily: "Satoshi, sans-serif", fontWeight: 700, fontSize: 15, color: "var(--ink)" }}>
               <DollarSign size={16} color="var(--slate)" />
-              Host-only: Pricing & Fees
+              {t('fees.heading')}
             </div>
             {feesOpen ? <ChevronUp size={16} color="var(--slate)" /> : <ChevronDown size={16} color="var(--slate)" />}
           </button>
           {feesOpen && (
             <div style={{ padding: "16px 20px", background: "rgba(255,251,240,0.7)", borderTop: "1px solid rgba(25,37,36,0.08)" }}>
-              <div style={{ fontFamily: "Satoshi, sans-serif", fontSize: 13, color: "var(--slate)", marginBottom: 4 }}>Platform fee</div>
+              <div style={{ fontFamily: "Satoshi, sans-serif", fontSize: 13, color: "var(--slate)", marginBottom: 4 }}>{t('fees.platformFee')}</div>
               <div style={{ fontFamily: "Satoshi, sans-serif", fontWeight: 800, fontSize: 22, color: "var(--ink)", marginBottom: 2 }}>${fee.toFixed(0)}</div>
               <div style={{ fontFamily: "Satoshi, sans-serif", fontSize: 12, color: "var(--slate)", marginBottom: 8, lineHeight: 1.5 }}>
-                {draft.compensation_type === "paid" || draft.compensation_type === "hybrid" ? "5% of cash payout (min $25)" : "Flat $25 platform fee"} — <strong>charged only once a collaboration is completed</strong>. You never pay anything upfront to publish a listing.
+                {draft.compensation_type === "paid" || draft.compensation_type === "hybrid" ? t('fees.percentDesc') : t('fees.flatDesc')} — <strong>{t('fees.chargedOnlyOnce')}</strong>{t('fees.chargedNoteSuffix')}
               </div>
-              <div style={{ fontFamily: "Satoshi, sans-serif", fontSize: 12, color: "#b45309", fontWeight: 600 }}>⚠ Creators don't see these fees</div>
+              <div style={{ fontFamily: "Satoshi, sans-serif", fontSize: 12, color: "#b45309", fontWeight: 600 }}>{t('fees.hiddenNote')}</div>
             </div>
           )}
         </div>
@@ -260,7 +258,7 @@ export default function Step5Payment() {
           <div style={{ display: "flex", alignItems: "center", gap: 8, background: "var(--mint)", borderRadius: "0.875rem", padding: "12px 16px", marginBottom: 12 }}>
             <CreditCard size={16} color="var(--ink)" />
             <p style={{ fontFamily: "Satoshi, sans-serif", fontSize: 13, color: "var(--ink)", fontWeight: 600, margin: 0 }}>
-              Card saved — you're all set. Click Publish to go live.
+              {t('cardSaved')}
             </p>
           </div>
         )}
@@ -268,7 +266,7 @@ export default function Step5Payment() {
           <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(212,168,67,0.14)", border: "1px solid rgba(212,168,67,0.35)", borderRadius: "0.875rem", padding: "12px 16px", marginBottom: 12 }}>
             <CreditCard size={16} color="#7a5a10" />
             <p style={{ fontFamily: "Satoshi, sans-serif", fontSize: 13, color: "#7a5a10", margin: 0 }}>
-              You'll need a card on file before publishing — it's only charged for Collabnb's platform fee once a collaboration completes.
+              {t('needsCardNote')}
             </p>
           </div>
         )}

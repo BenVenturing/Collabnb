@@ -1,0 +1,86 @@
+{
+  "placeholders": {
+    "ugcVideo": "UGC-Video",
+    "oneDeliverable": "1 Deliverable",
+    "instagramReels": "Instagram Reels",
+    "threeDeliverables": "3 Deliverables",
+    "photography": "Fotografie",
+    "fiveDeliverables": "5 Deliverables",
+    "tiktok": "TikTok",
+    "tenDeliverables": "10 Deliverables",
+    "youtubeVlog": "YouTube-Vlog",
+    "blogPost": "Blogbeitrag",
+    "fullPackage": "Komplettpaket"
+  },
+  "country": {
+    "staysAvailable_one": "{{count}} Aufenthalt verfügbar",
+    "staysAvailable_other": "{{count}} Aufenthalte verfügbar",
+    "noListings": "Noch keine Angebote in {{name}} — bald mehr"
+  },
+  "where": {
+    "searchFor": "„{{query}}“ suchen",
+    "worldwide": "Weltweiter Standort — Ergebnisse anzeigen",
+    "empty": "Gib ein Reiseziel oder einen Ort ein"
+  },
+  "nearbyStays": {
+    "heading": "Aufenthalte in der Nähe"
+  },
+  "what": {
+    "collabType": "Kollaborationstyp",
+    "deliverables": "Deliverables",
+    "deliverables_one": "{{count}} Deliverable",
+    "deliverables_other": "{{count}} Deliverables",
+    "earnings": "Einnahmen",
+    "paid": "Bezahlt",
+    "hybrid": "Hybrid",
+    "nights": "Nächte",
+    "nightsMin": "1 Nacht",
+    "nightsMax": "30 Nächte",
+    "collabValue": "Kollaborationswert"
+  },
+  "when": {
+    "exactDates": "Genaue Termine",
+    "flexibleDates": "Flexible Termine",
+    "clear": "Löschen",
+    "howLong": "Wie lange soll deine Kollaboration dauern?",
+    "whichMonth": "Welchen Monat suchst du?",
+    "selectEndDate": "{{date}} — Enddatum auswählen",
+    "dayFlex_one": "±{{count}} Tag",
+    "dayFlex_other": "±{{count}} Tage",
+    "durationInMonth": "{{duration}} im {{month}}",
+    "duration": {
+      "weekend": "Wochenende",
+      "1week": "1 Woche",
+      "2weeks": "2 Wochen",
+      "month": "Monat"
+    }
+  },
+  "months": {
+    "january": "Januar",
+    "february": "Februar",
+    "march": "März",
+    "april": "April",
+    "may": "Mai",
+    "june": "Juni",
+    "july": "Juli",
+    "august": "August",
+    "september": "September",
+    "october": "Oktober",
+    "november": "November",
+    "december": "Dezember"
+  },
+  "weekdays": {
+    "sun": "So",
+    "mon": "Mo",
+    "tue": "Di",
+    "wed": "Mi",
+    "thu": "Do",
+    "fri": "Fr",
+    "sat": "Sa"
+  },
+  "regions": {
+    "nearyou": "In deiner Nähe",
+    "westcoast": "Westküste",
+    "mountaindesert": "Berge & Wüste"
+  }
+}

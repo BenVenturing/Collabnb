@@ -1,0 +1,13 @@
+{
+  "stepOf": "Schritt {{step}} von {{total}}",
+  "saving": "Wird gespeichert...",
+  "saveExit": "Speichern & verlassen",
+  "helpHeading": "Dein Fortschritt wird gespeichert",
+  "helpBodyPrefix": "Jede Änderung wird automatisch in diesem Browser gespeichert. Klicke auf ",
+  "helpBodySuffix": ", um zu deinem Dashboard zurückzukehren — dein Entwurf wartet genau dort, wo du aufgehört hast.",
+  "saveFallbackError": "Dein Entwurf konnte nicht gespeichert werden — versuche es erneut.",
+  "saveErrorSuffix": " Dein Fortschritt bleibt trotzdem in diesem Browser erhalten — komm zurück und schließe ihn ab, oder verlasse ihn trotzdem von hier aus.",
+  "exitWithoutSaving": "Verlassen, ohne als Entwurf zu speichern",
+  "back": "Zurück",
+  "next": "Weiter"
+}

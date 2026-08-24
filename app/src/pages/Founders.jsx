@@ -1,5 +1,6 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { useQuery } from 'convex/react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../../convex/_generated/api';
 import { useAuth } from '../contexts/AuthContext';
 import CreatorAvatar from '../components/CreatorAvatar';
@@ -126,8 +127,9 @@ const EXAMPLE_EARLY_LISTING = {
 const QUICK_REACTIONS = ['🔥', '🙌', '❤️', '👀', '💭'];
 
 // ── Watermark: "more coming soon" (on-brand, subtle) ──────────────────────────
-function ComingSoonWatermark({ label = 'MORE COMING SOON' }) {
-  const row = new Array(5).fill(label).join('   ·   ');
+function ComingSoonWatermark({ label }) {
+  const { t } = useTranslation('founders');
+  const row = new Array(5).fill(label ?? t('comingSoonWatermark.moreComingSoon')).join('   ·   ');
   return (
     <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden', zIndex: 3 }}>
       <div style={{ position: 'absolute', top: '50%', left: '50%', width: '240%', transform: 'translate(-50%,-50%) rotate(-24deg)', display: 'flex', flexDirection: 'column', gap: '2.2rem' }}>
@@ -141,6 +143,7 @@ function ComingSoonWatermark({ label = 'MORE COMING SOON' }) {
 
 // ── Lounge (single private room, threaded) ────────────────────────────────────
 function Thread({ msg, onReact, onReply }) {
+  const { t } = useTranslation('founders');
   const [replying, setReplying] = useState(false);
   const [draft, setDraft] = useState('');
   return (
@@ -159,9 +162,9 @@ function Thread({ msg, onReact, onReply }) {
           ))}
           <div className="fnd-tools" style={{ display: 'inline-flex', gap: '0.15rem', alignItems: 'center' }}>
             {QUICK_REACTIONS.map((e) => (
-              <button key={e} onClick={() => onReact(msg.id, e)} title="React" style={{ fontSize: '0.82rem', opacity: 0.6, padding: '0.05rem 0.15rem' }}>{e}</button>
+              <button key={e} onClick={() => onReact(msg.id, e)} title={t('thread.reactTitle')} style={{ fontSize: '0.82rem', opacity: 0.6, padding: '0.05rem 0.15rem' }}>{e}</button>
             ))}
-            <button onClick={() => setReplying((v) => !v)} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.2rem', fontSize: '0.72rem', fontWeight: 600, color: GOLD, marginLeft: '0.2rem' }}><IconReply /> Reply</button>
+            <button onClick={() => setReplying((v) => !v)} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.2rem', fontSize: '0.72rem', fontWeight: 600, color: GOLD, marginLeft: '0.2rem' }}><IconReply /> {t('thread.reply')}</button>
           </div>
         </div>
 
@@ -184,8 +187,8 @@ function Thread({ msg, onReact, onReply }) {
 
         {replying && (
           <form onSubmit={(e) => { e.preventDefault(); if (draft.trim()) { onReply(msg.id, draft.trim()); setDraft(''); setReplying(false); } }} style={{ display: 'flex', gap: '0.5rem', marginTop: '0.6rem' }}>
-            <input autoFocus value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="Reply in thread…" style={{ flex: 1, fontSize: '0.82rem', padding: '0.5rem 0.75rem', borderRadius: '999px', border: '1px solid var(--hairline)', background: 'rgba(255,255,255,0.85)', outline: 'none' }} />
-            <button type="submit" style={{ fontSize: '0.78rem', fontWeight: 700, color: '#fff', background: GOLD, borderRadius: '999px', padding: '0.5rem 0.9rem' }}>Send</button>
+            <input autoFocus value={draft} onChange={(e) => setDraft(e.target.value)} placeholder={t('thread.replyPlaceholder')} style={{ flex: 1, fontSize: '0.82rem', padding: '0.5rem 0.75rem', borderRadius: '999px', border: '1px solid var(--hairline)', background: 'rgba(255,255,255,0.85)', outline: 'none' }} />
+            <button type="submit" style={{ fontSize: '0.78rem', fontWeight: 700, color: '#fff', background: GOLD, borderRadius: '999px', padding: '0.5rem 0.9rem' }}>{t('thread.send')}</button>
           </form>
         )}
       </div>
@@ -194,11 +197,12 @@ function Thread({ msg, onReact, onReply }) {
 }
 
 function Lounge({ role }) {
+  const { t } = useTranslation('founders');
   const [threads, setThreads] = useState(() => SEED_THREADS[role].map((m) => ({ ...m })));
   const [draft, setDraft] = useState('');
   const composerRef = useRef(null);
   const scrollRef = useRef(null);
-  const roomLabel = role === 'creator' ? "Creators' Lounge" : "Hosts' Lounge";
+  const roomLabel = role === 'creator' ? t('lounge.roomLabelCreator') : t('lounge.roomLabelHost');
 
   useEffect(() => { setThreads(SEED_THREADS[role].map((m) => ({ ...m }))); }, [role]);
 
@@ -227,16 +231,16 @@ function Lounge({ role }) {
           <span style={{ color: GOLD, display: 'flex' }}><IconChat s={20} /></span>
           <div>
             <p style={{ margin: 0, fontWeight: 800, fontSize: '0.95rem', color: 'var(--ink)', fontFamily: 'var(--font-display)', letterSpacing: '-0.01em' }}>{roomLabel}</p>
-            <p style={{ margin: 0, fontSize: '0.7rem', color: 'var(--sage)' }}>Private to founding {role}s · threaded</p>
+            <p style={{ margin: 0, fontSize: '0.7rem', color: 'var(--sage)' }}>{t('lounge.privateNotice', { rolePlural: t(`roleLabelPlural.${role}`) })}</p>
           </div>
         </div>
-        <button onClick={() => composerRef.current?.focus()} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.76rem', fontWeight: 700, color: GOLD, background: GOLD_SOFT, border: `1px solid ${GOLD_LINE}`, borderRadius: '999px', padding: '0.4rem 0.8rem' }}><IconPlus /> New thread</button>
+        <button onClick={() => composerRef.current?.focus()} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.76rem', fontWeight: 700, color: GOLD, background: GOLD_SOFT, border: `1px solid ${GOLD_LINE}`, borderRadius: '999px', padding: '0.4rem 0.8rem' }}><IconPlus /> {t('lounge.newThread')}</button>
       </div>
 
       <div style={{ display: 'flex', gap: '0.55rem', alignItems: 'flex-start', padding: '0.7rem 1.15rem', background: GOLD_SOFT, borderBottom: `1px solid ${GOLD_LINE}` }}>
         <span style={{ color: GOLD, display: 'flex', marginTop: 1 }}><IconPin /></span>
         <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--slate)' }}>
-          <strong style={{ color: GOLD }}>Pinned by Ben</strong> — Welcome to the founders' space. New resources are on the way, and early-access listings appear 3 days before they go public. This room is yours.
+          <strong style={{ color: GOLD }}>{t('lounge.pinnedByPrefix')}</strong>{t('lounge.pinnedBody')}
         </p>
       </div>
 
@@ -249,8 +253,8 @@ function Lounge({ role }) {
       </div>
 
       <form onSubmit={startThread} style={{ padding: '0.8rem 1.15rem', borderTop: '1px solid var(--hairline)', display: 'flex', gap: '0.6rem', alignItems: 'center' }}>
-        <input ref={composerRef} value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="Start a new thread…" style={{ flex: 1, fontSize: '0.87rem', padding: '0.7rem 1rem', borderRadius: '999px', border: '1px solid var(--hairline)', background: 'rgba(255,255,255,0.85)', outline: 'none' }} />
-        <button type="submit" style={{ fontSize: '0.85rem', fontWeight: 700, color: '#fff', background: GOLD, borderRadius: '999px', padding: '0.7rem 1.25rem' }}>Post</button>
+        <input ref={composerRef} value={draft} onChange={(e) => setDraft(e.target.value)} placeholder={t('lounge.startThreadPlaceholder')} style={{ flex: 1, fontSize: '0.87rem', padding: '0.7rem 1rem', borderRadius: '999px', border: '1px solid var(--hairline)', background: 'rgba(255,255,255,0.85)', outline: 'none' }} />
+        <button type="submit" style={{ fontSize: '0.85rem', fontWeight: 700, color: '#fff', background: GOLD, borderRadius: '999px', padding: '0.7rem 1.25rem' }}>{t('lounge.post')}</button>
       </form>
     </div>
   );
@@ -258,12 +262,13 @@ function Lounge({ role }) {
 
 // ── Resources ─────────────────────────────────────────────────────────────────
 function Resources() {
+  const { t } = useTranslation('founders');
   return (
     <div style={{ position: 'relative' }}>
       <div className="glass-card" style={{ padding: '0.9rem 1.15rem', marginBottom: '1.4rem', display: 'flex', gap: '0.6rem', alignItems: 'center' }}>
         <span style={{ color: GOLD, display: 'flex' }}><IconBook s={18} /></span>
         <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--slate)' }}>
-          <strong style={{ color: GOLD }}>Your founder library — coming soon.</strong> A preview of the playbooks, templates & guides being prepared for founders.
+          <strong style={{ color: GOLD }}>{t('resources.libraryHeading')}</strong> {t('resources.libraryBody')}
         </p>
       </div>
 
@@ -281,7 +286,7 @@ function Resources() {
                     </div>
                     <p style={{ margin: 0, fontWeight: 700, fontSize: '0.9rem', color: 'var(--ink)' }}>{it.title}</p>
                     <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--sage)', lineHeight: 1.45, flex: 1 }}>{it.desc}</p>
-                    <span style={{ alignSelf: 'flex-start', marginTop: '0.25rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.72rem', fontWeight: 700, color: 'var(--sage)', background: 'rgba(25,37,36,0.05)', border: '1px solid var(--hairline)', borderRadius: '999px', padding: '0.3rem 0.7rem' }}><IconLock s={12} /> Coming soon</span>
+                    <span style={{ alignSelf: 'flex-start', marginTop: '0.25rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.72rem', fontWeight: 700, color: 'var(--sage)', background: 'rgba(25,37,36,0.05)', border: '1px solid var(--hairline)', borderRadius: '999px', padding: '0.3rem 0.7rem' }}><IconLock s={12} /> {t('resources.comingSoonBadge')}</span>
                   </div>
                 ))}
               </div>
@@ -289,7 +294,7 @@ function Resources() {
           ))}
         </div>
 
-        <ComingSoonWatermark label="COMING SOON" />
+        <ComingSoonWatermark label={t('comingSoonWatermark.comingSoon')} />
 
         {/* Distinct centred gate */}
         <div style={{ position: 'absolute', inset: 0, zIndex: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none', padding: '1rem' }}>
@@ -297,9 +302,9 @@ function Resources() {
             <div style={{ width: 52, height: 52, margin: '0 auto', borderRadius: '50%', background: 'linear-gradient(135deg, #D4A843, #B8922A)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', boxShadow: '0 6px 18px rgba(184,146,42,0.45)' }}>
               <IconLock s={22} />
             </div>
-            <p style={{ margin: '0.9rem 0 0', fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.15rem', letterSpacing: '-0.02em', color: 'var(--ink)' }}>Resources are coming soon</p>
+            <p style={{ margin: '0.9rem 0 0', fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.15rem', letterSpacing: '-0.02em', color: 'var(--ink)' }}>{t('resources.gateHeading')}</p>
             <p style={{ margin: '0.4rem 0 0', fontSize: '0.82rem', color: 'var(--slate)', lineHeight: 1.5 }}>
-              We're preparing the founder playbooks, templates & guides. You'll be the first to get them — check back shortly.
+              {t('resources.gateBody')}
             </p>
           </div>
         </div>
@@ -310,22 +315,23 @@ function Resources() {
 
 // ── Early access — one example card showing how early-access listings appear ──
 function EarlyAccess() {
+  const { t } = useTranslation('founders');
   return (
     <div>
       <div className="glass-card" style={{ padding: '0.9rem 1.15rem', marginBottom: '1.2rem', display: 'flex', gap: '0.6rem', alignItems: 'center' }}>
         <span style={{ color: GOLD, display: 'flex' }}><IconClock s={18} /></span>
         <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--slate)' }}>
-          <strong style={{ color: GOLD }}>3-day head-start.</strong> Real early-access listings will appear here for founders only, 3 days before they go public. Here's an example of how they'll look.
+          <strong style={{ color: GOLD }}>{t('earlyAccess.headStartPrefix')}</strong> {t('earlyAccess.headStartBody')}
         </p>
       </div>
 
       <div style={{ position: 'relative', width: 260, maxWidth: '100%' }}>
         <ListingCard listing={EXAMPLE_EARLY_LISTING} saved={false} onSave={() => {}} delay={0} onNavigate={() => {}} />
         <span style={{ position: 'absolute', top: '0.75rem', left: '0.75rem', zIndex: 2, display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.04em', textTransform: 'uppercase', color: '#fff', background: 'rgba(184,146,42,0.94)', borderRadius: '999px', padding: '0.28rem 0.6rem', boxShadow: '0 2px 8px rgba(0,0,0,0.18)' }}>
-          <FounderStar size={12} ring={false} /> Early · public in 3d
+          <FounderStar size={12} ring={false} /> {t('earlyAccess.earlyBadge')}
         </span>
         <span style={{ position: 'absolute', top: '0.75rem', right: '0.75rem', zIndex: 2, fontSize: '0.58rem', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--slate)', background: 'rgba(255,255,255,0.9)', borderRadius: '999px', padding: '0.24rem 0.55rem' }}>
-          Example
+          {t('earlyAccess.exampleBadge')}
         </span>
       </div>
     </div>
@@ -334,32 +340,35 @@ function EarlyAccess() {
 
 // ── Directory — real founders only (no placeholders) ──────────────────────────
 function Directory() {
+  const { t } = useTranslation('founders');
   const [filter, setFilter] = useState('all');
   const founders = useQuery(api.admin.getFounderDirectory);
 
   const people = useMemo(() => (founders || [])
     .filter((f) => f.role === 'creator' || f.role === 'host')
     .map((f) => ({
-      name: f.full_name || f.username || 'Founder',
+      name: f.full_name || f.username || t('directory.fallbackName'),
       username: f.username || [f.city, f.region].filter(Boolean).join(', '),
       role: f.role,
       tag: f.role === 'host'
-        ? ([f.city, f.region].filter(Boolean).join(', ') || 'Founding host')
-        : (Array.isArray(f.niches) && f.niches.length ? f.niches.slice(0, 2).join(' · ') : 'Creator'),
+        ? ([f.city, f.region].filter(Boolean).join(', ') || t('directory.fallbackTagHost'))
+        : (Array.isArray(f.niches) && f.niches.length ? f.niches.slice(0, 2).join(' · ') : t('directory.fallbackTagCreator')),
       avatar_url: f.avatar_url,
-    })), [founders]);
+    })), [founders, t]);
 
   const shown = filter === 'all' ? people : people.filter((d) => d.role === filter);
+
+  const FILTERS = [['all', t('directory.filterAll')], ['creator', t('directory.filterCreators')], ['host', t('directory.filterHosts')]];
 
   return (
     <div>
       <div style={{ display: 'flex', gap: '0.4rem', marginBottom: '1.1rem' }}>
-        {[['all', 'All'], ['creator', 'Creators'], ['host', 'Hosts']].map(([v, label]) => (
+        {FILTERS.map(([v, label]) => (
           <button key={v} onClick={() => setFilter(v)} style={{ fontSize: '0.78rem', fontWeight: 700, padding: '0.4rem 0.9rem', borderRadius: '999px', background: filter === v ? GOLD : 'rgba(255,255,255,0.6)', color: filter === v ? '#fff' : 'var(--slate)', border: filter === v ? 'none' : '1px solid var(--hairline)' }}>{label}</button>
         ))}
       </div>
       {founders !== undefined && shown.length === 0 && (
-        <p style={{ fontSize: '0.82rem', color: 'var(--sage)', padding: '1rem 0' }}>No founders here yet.</p>
+        <p style={{ fontSize: '0.82rem', color: 'var(--sage)', padding: '1rem 0' }}>{t('directory.noneYet')}</p>
       )}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(230px,1fr))', gap: '0.85rem' }}>
         {shown.map((d, i) => (
@@ -379,6 +388,7 @@ function Directory() {
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 export default function Founders() {
+  const { t } = useTranslation('founders');
   const { profile } = useAuth();
   const counts = useQuery(api.admin.getFounderCounts);
 
@@ -388,10 +398,10 @@ export default function Founders() {
   const [tab, setTab] = useState('lounge');
 
   const TABS = [
-    ['lounge', 'Lounge', IconChat],
-    ['resources', 'Resources', IconBook],
-    ['access', 'Early access', IconClock],
-    ['directory', 'Directory', IconUsers],
+    ['lounge', t('tabs.lounge'), IconChat],
+    ['resources', t('tabs.resources'), IconBook],
+    ['access', t('tabs.access'), IconClock],
+    ['directory', t('tabs.directory'), IconUsers],
   ];
 
   return (
@@ -407,15 +417,15 @@ export default function Founders() {
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
             <FounderStar size={26} />
-            <h1 style={{ margin: 0, fontSize: '2rem', fontFamily: 'var(--font-display)', fontWeight: 800, letterSpacing: '-0.03em', color: 'var(--ink)' }}>Founders</h1>
+            <h1 style={{ margin: 0, fontSize: '2rem', fontFamily: 'var(--font-display)', fontWeight: 800, letterSpacing: '-0.03em', color: 'var(--ink)' }}>{t('header.title')}</h1>
           </div>
-          <p style={{ margin: '0.35rem 0 0', fontSize: '0.88rem', color: 'var(--slate)' }}>Your lifetime founding-member space.</p>
+          <p style={{ margin: '0.35rem 0 0', fontSize: '0.88rem', color: 'var(--slate)' }}>{t('header.subtitle')}</p>
         </div>
         <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center', flexWrap: 'wrap' }}>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.78rem', fontWeight: 700, color: GOLD, background: GOLD_SOFT, border: `1px solid ${GOLD_LINE}`, borderRadius: '999px', padding: '0.4rem 0.85rem' }}>
-            <FounderStar size={15} /> Founder
+            <FounderStar size={15} /> {t('header.founderBadge')}
           </span>
-          <span style={{ fontSize: '0.74rem', color: 'var(--sage)', background: 'rgba(255,255,255,0.6)', border: '1px solid var(--hairline)', borderRadius: '999px', padding: '0.4rem 0.75rem' }}>{spotsLeft} {role} spots left</span>
+          <span style={{ fontSize: '0.74rem', color: 'var(--sage)', background: 'rgba(255,255,255,0.6)', border: '1px solid var(--hairline)', borderRadius: '999px', padding: '0.4rem 0.75rem' }}>{t('header.spotsLeft', { count: spotsLeft, role: t(`roleLabel.${role}`) })}</span>
         </div>
       </div>
 

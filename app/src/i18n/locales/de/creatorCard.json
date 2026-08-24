@@ -1,0 +1,37 @@
+{
+  "sample": "BEISPIEL",
+  "founderTitle": "Gründungsmitglied — eines der ersten 100 bei Collabnb",
+  "saved": "Gespeichert",
+  "saveCreator": "Creator speichern",
+  "stats": {
+    "avgReach": "Ø Reichweite",
+    "engRate": "30-Tage-Interaktionsrate",
+    "collabs": "Collabs",
+    "avgReachTooltip": "Durchschnittliche Anzahl an Personen, die die Beiträge dieses Creators in den letzten 30 Tagen gesehen haben.",
+    "engRateTooltip": "Prozentsatz der Follower, die in den letzten 30 Tagen Beiträge geliked, kommentiert oder geteilt haben. Höher = aktiveres, treueres Publikum.",
+    "collabsTooltip": "Anzahl der abgeschlossenen Kollaborationen mit Unterkünften auf Collabnb."
+  },
+  "platforms": "Plattformen",
+  "niches": "Nischen",
+  "upcomingTrips": "Bevorstehende Reisen",
+  "pastCollabNotice": "Du hast bereits mit dieser Person zusammengearbeitet",
+  "portfolio": "Portfolio",
+  "messageCreator": "Nachricht an {{name}}",
+  "message": "Nachricht",
+  "hideCreator": "Diesen Creator ausblenden",
+  "chipStats": "@{{username}} · {{reach}} Reichweite · {{er}} % IR",
+  "monthsShort": {
+    "jan": "Jan",
+    "feb": "Feb",
+    "mar": "Mär",
+    "apr": "Apr",
+    "may": "Mai",
+    "jun": "Jun",
+    "jul": "Jul",
+    "aug": "Aug",
+    "sep": "Sep",
+    "oct": "Okt",
+    "nov": "Nov",
+    "dec": "Dez"
+  }
+}

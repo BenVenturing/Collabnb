@@ -1,0 +1,58 @@
+{
+  "comingSoonWatermark": {
+    "moreComingSoon": "MAIS EM BREVE",
+    "comingSoon": "EM BREVE"
+  },
+  "thread": {
+    "reactTitle": "Reagir",
+    "reply": "Responder",
+    "replyPlaceholder": "Responder na conversa…",
+    "send": "Enviar"
+  },
+  "lounge": {
+    "roomLabelCreator": "Sala dos Criadores",
+    "roomLabelHost": "Sala dos Anfitriões",
+    "privateNotice": "Privado para {{rolePlural}} fundadores · com tópicos",
+    "newThread": "Novo tópico",
+    "pinnedByPrefix": "Fixado por Ben",
+    "pinnedBody": " — Bem-vindo ao espaço dos fundadores. Novos recursos estão a caminho, e anúncios de acesso antecipado aparecem 3 dias antes de ficarem públicos. Esta sala é sua.",
+    "startThreadPlaceholder": "Inicie um novo tópico…",
+    "post": "Publicar"
+  },
+  "resources": {
+    "libraryHeading": "Sua biblioteca de fundador — em breve.",
+    "libraryBody": "Uma prévia dos guias, modelos e manuais sendo preparados para fundadores.",
+    "comingSoonBadge": "Em breve",
+    "gateHeading": "Os recursos chegam em breve",
+    "gateBody": "Estamos preparando os guias, modelos e manuais para fundadores. Você será o primeiro a recebê-los — volte em breve."
+  },
+  "earlyAccess": {
+    "headStartPrefix": "3 dias de vantagem.",
+    "headStartBody": "Anúncios reais de acesso antecipado aparecerão aqui somente para fundadores, 3 dias antes de ficarem públicos. Aqui está um exemplo de como ficarão.",
+    "earlyBadge": "Antecipado · público em 3d",
+    "exampleBadge": "Exemplo"
+  },
+  "directory": {
+    "filterAll": "Todos",
+    "filterCreators": "Criadores",
+    "filterHosts": "Anfitriões",
+    "noneYet": "Ainda não há fundadores aqui.",
+    "fallbackName": "Fundador",
+    "fallbackTagHost": "Anfitrião fundador",
+    "fallbackTagCreator": "Criador"
+  },
+  "roleLabel": { "creator": "criador", "host": "anfitrião" },
+  "roleLabelPlural": { "creator": "criadores", "host": "anfitriões" },
+  "header": {
+    "title": "Fundadores",
+    "subtitle": "Seu espaço vitalício de membro fundador.",
+    "founderBadge": "Fundador",
+    "spotsLeft": "{{count}} vagas de {{role}} restantes"
+  },
+  "tabs": {
+    "lounge": "Sala",
+    "resources": "Recursos",
+    "access": "Acesso antecipado",
+    "directory": "Diretório"
+  }
+}

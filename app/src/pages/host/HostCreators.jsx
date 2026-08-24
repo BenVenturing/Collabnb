@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from 'convex/react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../../../convex/_generated/api';
 import {
   Search, MessageSquare, Check, X,
@@ -213,6 +214,7 @@ function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch
 
 // ─── Location consent modal ───────────────────────────────────────────────────
 function LocationConsentModal({ onAllow, onDisable }) {
+  const { t } = useTranslation('hostCreators');
   return (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 9000,
@@ -233,11 +235,11 @@ function LocationConsentModal({ onAllow, onDisable }) {
         <div style={{ textAlign: 'center', marginBottom: 20 }}>
           <div style={{ fontSize: 36, marginBottom: 12 }}>📍</div>
           <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 18, color: 'var(--ink)', margin: '0 0 10px' }}>
-            Location access
+            {t('locationConsent.heading')}
           </h2>
           <p style={{ fontSize: 13, color: 'var(--slate)', lineHeight: 1.65, margin: 0 }}>
-            Collabnb uses your location to suggest nearby creators and stays. You can disable this anytime in Settings.{' '}
-            <strong>Your exact location is never shared with other users.</strong>
+            {t('locationConsent.body')}
+            <strong>{t('locationConsent.bodyStrong')}</strong>
           </p>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -247,7 +249,7 @@ function LocationConsentModal({ onAllow, onDisable }) {
             fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 700,
             border: 'none', cursor: 'pointer',
           }}>
-            Allow
+            {t('locationConsent.allow')}
           </button>
           <button onClick={onDisable} style={{
             padding: '12px 0', borderRadius: 9999,
@@ -255,7 +257,7 @@ function LocationConsentModal({ onAllow, onDisable }) {
             fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 600,
             border: '1.5px solid rgba(25,37,36,0.12)', cursor: 'pointer',
           }}>
-            Disable Location
+            {t('locationConsent.disable')}
           </button>
         </div>
       </div>
@@ -265,6 +267,7 @@ function LocationConsentModal({ onAllow, onDisable }) {
 
 // ─── Nearby creators section ──────────────────────────────────────────────────
 function NearbyCreatorsSection({ creators, onSeeAll, onMessage }) {
+  const { t } = useTranslation('hostCreators');
   const [hiddenIds, setHiddenIds] = useState(() => {
     try { return JSON.parse(localStorage.getItem(HIDDEN_SAMPLE_KEY) || '[]'); } catch { return []; }
   });
@@ -319,7 +322,7 @@ function NearbyCreatorsSection({ creators, onSeeAll, onMessage }) {
               fontFamily: 'var(--font-display)', fontWeight: 800,
               fontSize: 17, color: 'var(--ink)', lineHeight: 1.2,
             }}>
-              Creators Near You
+              {t('nearby.heading')}
             </span>
             <span style={{
               padding: '2px 9px', borderRadius: 9999,
@@ -334,7 +337,7 @@ function NearbyCreatorsSection({ creators, onSeeAll, onMessage }) {
             fontSize: 11.5, color: 'var(--sage)', margin: '4px 0 0 36px',
             fontFamily: 'var(--font-body)',
           }}>
-            Based on creator profiles in your metro area
+            {t('nearby.subtitle')}
           </p>
         </div>
         {hasMore && (
@@ -344,7 +347,7 @@ function NearbyCreatorsSection({ creators, onSeeAll, onMessage }) {
             fontSize: 11, fontWeight: 700, color: 'var(--sage)',
             fontFamily: 'var(--font-body)', flexShrink: 0, marginTop: 6,
           }}>
-            See All <ChevronRight size={11} />
+            {t('nearby.seeAll')} <ChevronRight size={11} />
           </button>
         )}
       </div>
@@ -356,7 +359,7 @@ function NearbyCreatorsSection({ creators, onSeeAll, onMessage }) {
         {canScrollLeft && (
           <button
             onClick={() => { scrollRef.current?.scrollBy({ left: -CARD_STRIDE, behavior: 'smooth' }); }}
-            aria-label="Scroll left"
+            aria-label={t('nearby.scrollLeft')}
             style={{
               position: 'absolute', left: -14, top: '50%', transform: 'translateY(-50%)',
               zIndex: 5, width: 32, height: 32, borderRadius: '50%',
@@ -398,7 +401,7 @@ function NearbyCreatorsSection({ creators, onSeeAll, onMessage }) {
         {canScrollRight && (
           <button
             onClick={() => { scrollRef.current?.scrollBy({ left: CARD_STRIDE, behavior: 'smooth' }); }}
-            aria-label="Scroll right"
+            aria-label={t('nearby.scrollRight')}
             style={{
               position: 'absolute', right: -14, top: '50%', transform: 'translateY(-50%)',
               zIndex: 5, width: 32, height: 32, borderRadius: '50%',
@@ -418,11 +421,10 @@ function NearbyCreatorsSection({ creators, onSeeAll, onMessage }) {
   );
 }
 
-// ─── Dual-month calendar for host travel date filter ─────────────────────────
-const HOST_MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-const HOST_WEEKDAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-
 function MiniCalendar({ year, month, startDate, endDate, onDayClick }) {
+  const { t } = useTranslation('hostCreators');
+  const HOST_MONTHS = t('calendar.months', { returnObjects: true });
+  const HOST_WEEKDAYS = t('calendar.weekdays', { returnObjects: true });
   const firstDay = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const today = new Date();
@@ -477,6 +479,8 @@ function MiniCalendar({ year, month, startDate, endDate, onDayClick }) {
 }
 
 function HostTravelDatePicker({ dateStart, dateEnd, onApply, onClear }) {
+  const { t } = useTranslation('hostCreators');
+  const HOST_MONTHS = t('calendar.months', { returnObjects: true });
   const [open, setOpen] = useState(false);
   const [localStart, setLocalStart] = useState('');
   const [localEnd, setLocalEnd] = useState('');
@@ -534,7 +538,7 @@ function HostTravelDatePicker({ dateStart, dateEnd, onApply, onClear }) {
         }}
       >
         <Calendar size={13} />
-        {isActive ? `${fmtDate(dateStart)} – ${fmtDate(dateEnd)}` : 'Travel dates'}
+        {isActive ? `${fmtDate(dateStart)} – ${fmtDate(dateEnd)}` : t('travelDatePicker.placeholder')}
         {isActive && (
           <span
             onClick={e => { e.stopPropagation(); onClear(); }}
@@ -555,7 +559,7 @@ function HostTravelDatePicker({ dateStart, dateEnd, onApply, onClear }) {
           padding: '1.25rem 1.5rem 1rem',
         }}>
           <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--sage)', margin: '0 0 12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            Find creators visiting {HOST_LOCATION.city} during…
+            {t('travelDatePicker.findVisiting', { city: HOST_LOCATION.city })}
           </p>
 
           {/* Month navigation */}
@@ -600,7 +604,7 @@ function HostTravelDatePicker({ dateStart, dateEnd, onApply, onClear }) {
                 {localStart ? fmtDate(localStart) : '?'}
                 {localEnd ? ` → ${fmtDate(localEnd)}` : ''}
               </span>
-              <button onClick={() => { setLocalStart(''); setLocalEnd(''); }} style={{ fontSize: '0.72rem', color: 'var(--sage)', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', fontFamily: 'var(--font-body)', padding: 0 }}>Clear</button>
+              <button onClick={() => { setLocalStart(''); setLocalEnd(''); }} style={{ fontSize: '0.72rem', color: 'var(--sage)', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', fontFamily: 'var(--font-body)', padding: 0 }}>{t('travelDatePicker.clear')}</button>
             </div>
           )}
 
@@ -610,14 +614,14 @@ function HostTravelDatePicker({ dateStart, dateEnd, onApply, onClear }) {
               onClick={() => { onClear(); setLocalStart(''); setLocalEnd(''); setOpen(false); }}
               style={{ flex: 1, padding: '8px 0', borderRadius: 9999, border: '1.5px solid rgba(25,37,36,0.12)', background: 'transparent', fontSize: 12, fontWeight: 700, color: 'var(--slate)', cursor: 'pointer', fontFamily: 'var(--font-body)' }}
             >
-              Clear
+              {t('travelDatePicker.clear')}
             </button>
             <button
               onClick={() => { if (localStart && localEnd) { onApply(localStart, localEnd); setOpen(false); } }}
               disabled={!localStart || !localEnd}
               style={{ flex: 2, padding: '8px 0', borderRadius: 9999, border: 'none', background: localStart && localEnd ? 'var(--ink)' : 'rgba(25,37,36,0.1)', fontSize: 12, fontWeight: 700, color: localStart && localEnd ? 'var(--bone)' : 'var(--sage)', cursor: localStart && localEnd ? 'pointer' : 'not-allowed', fontFamily: 'var(--font-body)' }}
             >
-              Show creators
+              {t('travelDatePicker.showCreators')}
             </button>
           </div>
         </div>
@@ -652,6 +656,7 @@ function SwipeCardWrapper({ creator, exitDir, onMessage, onHide }) {
 
 // ─── Saved contact row ────────────────────────────────────────────────────────
 function SavedContactRow({ creator, onMessage }) {
+  const { t: tr } = useTranslation('hostCreators');
   const t = TIER_COLORS[creator.tier] || TIER_COLORS['UGC Beginner'];
   return (
     <div style={{
@@ -677,7 +682,7 @@ function SavedContactRow({ creator, onMessage }) {
           display: 'flex', alignItems: 'center', gap: 5,
         }}
       >
-        <MessageSquare size={11} />Message
+        <MessageSquare size={11} />{tr('savedContact.message')}
       </button>
     </div>
   );
@@ -685,6 +690,7 @@ function SavedContactRow({ creator, onMessage }) {
 
 // ─── View toggle pill ─────────────────────────────────────────────────────────
 function ViewToggle({ mode, onChange }) {
+  const { t } = useTranslation('hostCreators');
   return (
     <div style={{
       display: 'inline-flex',
@@ -695,8 +701,8 @@ function ViewToggle({ mode, onChange }) {
       boxShadow: '0 2px 10px rgba(25,37,36,0.07)',
     }}>
       {[
-        { value: 'grid',  label: '⊞  Grid View'  },
-        { value: 'swipe', label: '✦  Swipe View' },
+        { value: 'grid',  label: t('viewToggle.grid')  },
+        { value: 'swipe', label: t('viewToggle.swipe') },
       ].map(({ value, label }) => (
         <button key={value} onClick={() => onChange(value)} style={{
           padding: '6px 20px', borderRadius: 9999,
@@ -716,6 +722,7 @@ function ViewToggle({ mode, onChange }) {
 
 // ─── Swipe view (immersive full-screen) ──────────────────────────────────────
 function SwipeView({ creators, onBack, savedIds, onToggleSaved }) {
+  const { t } = useTranslation('hostCreators');
   const navigate = useNavigate();
   const { setHideNav } = useAppBar();
 
@@ -791,9 +798,9 @@ function SwipeView({ creators, onBack, savedIds, onToggleSaved }) {
     try {
       const result = await onToggleSaved?.(creatorId);
       const persisted = Array.isArray(result) ? result.includes(creatorId) === add : true;
-      if (!persisted) setSaveError({ name: name || 'this creator' });
+      if (!persisted) setSaveError({ name: name || t('swipe.defaultName') });
     } catch {
-      setSaveError({ name: name || 'this creator' });
+      setSaveError({ name: name || t('swipe.defaultName') });
     }
   }
 
@@ -873,7 +880,7 @@ function SwipeView({ creators, onBack, savedIds, onToggleSaved }) {
           boxShadow: '0 8px 28px rgba(0,0,0,0.35)',
           animation: 'fadeUp 180ms cubic-bezier(0.16,1,0.3,1) forwards',
         }}>
-          Couldn't save {saveError.name} — check your connection and try again
+          {t('swipe.saveFailed', { name: saveError.name })}
           <button
             onClick={() => setSaveError(null)}
             style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', display: 'flex', padding: 0, opacity: 0.85 }}
@@ -901,7 +908,7 @@ function SwipeView({ creators, onBack, savedIds, onToggleSaved }) {
           }}
           onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.18)'}
           onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
-          title="Back to grid"
+          title={t('swipe.backToGrid')}
         >
           <ChevronLeft size={18} color="#fff" />
         </button>
@@ -916,7 +923,7 @@ function SwipeView({ creators, onBack, savedIds, onToggleSaved }) {
           <Search size={13} color="rgba(255,255,255,0.4)" style={{ flexShrink: 0 }} />
           <input
             type="text" value={swipeQuery} onChange={e => setSwipeQuery(e.target.value)}
-            placeholder="Search creators…"
+            placeholder={t('swipe.searchPlaceholder')}
             style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: '0.82rem', color: '#fff', width: '100%', fontFamily: 'var(--font-body)' }}
           />
           {swipeQuery && (
@@ -940,7 +947,7 @@ function SwipeView({ creators, onBack, savedIds, onToggleSaved }) {
             }}
           >
             <SlidersHorizontal size={12} />
-            Filters
+            {t('swipe.filters')}
             {swipeTier !== 'All' && (
               <span style={{ width: 16, height: 16, borderRadius: '50%', background: 'rgba(255,255,255,0.25)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 800 }}>1</span>
             )}
@@ -954,17 +961,17 @@ function SwipeView({ creators, onBack, savedIds, onToggleSaved }) {
               borderRadius: '1rem', padding: '1rem',
               boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
             }}>
-              <p style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.35)', margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Creator Type</p>
+              <p style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.35)', margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('swipe.creatorType')}</p>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-                {TIERS.map(t => (
-                  <button key={t} onClick={() => { setSwipeTier(t); setFiltersOpen(false); }} style={{
+                {TIERS.map(tier => (
+                  <button key={tier} onClick={() => { setSwipeTier(tier); setFiltersOpen(false); }} style={{
                     padding: '4px 10px', borderRadius: 9999,
                     fontSize: '0.72rem', fontWeight: 600,
-                    background: swipeTier === t ? 'rgba(255,255,255,0.88)' : 'rgba(255,255,255,0.08)',
-                    color: swipeTier === t ? 'var(--ink)' : 'rgba(255,255,255,0.65)',
+                    background: swipeTier === tier ? 'rgba(255,255,255,0.88)' : 'rgba(255,255,255,0.08)',
+                    color: swipeTier === tier ? 'var(--ink)' : 'rgba(255,255,255,0.65)',
                     border: 'none', cursor: 'pointer', fontFamily: 'var(--font-body)',
                   }}>
-                    {t}
+                    {tier}
                   </button>
                 ))}
               </div>
@@ -974,7 +981,7 @@ function SwipeView({ creators, onBack, savedIds, onToggleSaved }) {
 
         {/* Progress counter */}
         <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', flexShrink: 0, fontFamily: 'var(--font-body)', whiteSpace: 'nowrap' }}>
-          {currentCreator ? `${deckIdx + 1} / ${deck.length}` : `${deck.length} done`}
+          {currentCreator ? t('swipe.progress', { current: deckIdx + 1, total: deck.length }) : t('swipe.progressDone', { total: deck.length })}
         </span>
       </div>
 
@@ -1004,9 +1011,9 @@ function SwipeView({ creators, onBack, savedIds, onToggleSaved }) {
                 display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, textAlign: 'center',
               }}>
                 <div style={{ fontSize: 44 }}>✓</div>
-                <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 18, color: '#fff' }}>All caught up!</div>
+                <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 18, color: '#fff' }}>{t('swipe.allCaughtUp')}</div>
                 <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)', maxWidth: 220, margin: 0, lineHeight: 1.5 }}>
-                  You've reviewed all {deck.length} creators. Undo to revisit any.
+                  {t('swipe.reviewedAll', { count: deck.length })}
                 </p>
               </div>
             )}
@@ -1014,7 +1021,7 @@ function SwipeView({ creators, onBack, savedIds, onToggleSaved }) {
             {/* Keyboard hints */}
             {currentCreator && (
               <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', justifyContent: 'center', marginTop: 12 }}>
-                {[{ key: '←', label: 'Skip' }, { key: '→', label: 'Save' }, { key: '↑', label: 'Message' }].map(({ key, label }) => (
+                {[{ key: '←', label: t('swipe.hints.skip') }, { key: '→', label: t('swipe.hints.save') }, { key: '↑', label: t('swipe.hints.message') }].map(({ key, label }) => (
                   <span key={key} style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', display: 'flex', alignItems: 'center', gap: 5 }}>
                     <kbd style={{ padding: '2px 6px', borderRadius: 4, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', fontSize: 10, fontFamily: 'monospace', color: 'rgba(255,255,255,0.45)' }}>{key}</kbd>
                     {label}
@@ -1029,7 +1036,7 @@ function SwipeView({ creators, onBack, savedIds, onToggleSaved }) {
         {savedCreators.length > 0 && (
           <div style={{ maxWidth: 520, width: '100%', margin: '0 auto' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-              <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 13, color: 'rgba(255,255,255,0.75)', margin: 0, letterSpacing: '0.02em' }}>Saved</h3>
+              <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 13, color: 'rgba(255,255,255,0.75)', margin: 0, letterSpacing: '0.02em' }}>{t('swipe.saved')}</h3>
               <span style={{ padding: '2px 8px', borderRadius: 9999, fontSize: 10, fontWeight: 700, background: 'rgba(126,207,196,0.2)', color: '#7ecfc4' }}>
                 {savedCreators.length}
               </span>
@@ -1048,6 +1055,7 @@ function SwipeView({ creators, onBack, savedIds, onToggleSaved }) {
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 export default function HostCreators() {
+  const { t } = useTranslation('hostCreators');
   const navigate = useNavigate();
   const { profile, toggleSavedCreator: toggleSaved } = useAuth();
   const savedCreatorIds = profile?.saved_creator_ids ?? [];
@@ -1217,10 +1225,10 @@ export default function HostCreators() {
         {/* ── Header ── */}
         <div style={{ marginBottom: '1.25rem' }}>
           <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 'clamp(1.6rem,4vw,2rem)', color: 'var(--ink)', margin: 0, lineHeight: 1.1 }}>
-            Creators
+            {t('header.heading')}
           </h1>
           <p style={{ fontSize: '0.82rem', color: 'var(--sage)', marginTop: '0.25rem' }}>
-            Discover creators who've collaborated with properties like yours
+            {t('header.subtitle')}
           </p>
         </div>
 
@@ -1240,7 +1248,7 @@ export default function HostCreators() {
             <Search size={14} color="var(--sage)" style={{ flexShrink: 0 }} />
             <input
               type="text" value={query} onChange={e => setQuery(e.target.value)}
-              placeholder="Search by name, niche, platform…"
+              placeholder={t('toolbar.searchPlaceholder')}
               style={{ border: 'none', outline: 'none', background: 'transparent', fontFamily: 'var(--font-body)', fontSize: '0.82rem', color: 'var(--ink)', width: '100%' }}
             />
           </div>
@@ -1264,7 +1272,7 @@ export default function HostCreators() {
               }}
             >
               <SlidersHorizontal size={13} />
-              Filters
+              {t('toolbar.filters')}
               {activeFilterCount > 0 && (
                 <span style={{
                   display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
@@ -1305,8 +1313,8 @@ export default function HostCreators() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <MapPin size={14} color="#3C8C6A" />
                       <div>
-                        <span style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#3C8C6A' }}>Creators Near You</span>
-                        <span style={{ display: 'block', fontSize: 10, color: 'rgba(60,140,106,0.7)', marginTop: 1 }}>Within {MAX_NEARBY_MILES} miles</span>
+                        <span style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#3C8C6A' }}>{t('filterPanel.nearYou')}</span>
+                        <span style={{ display: 'block', fontSize: 10, color: 'rgba(60,140,106,0.7)', marginTop: 1 }}>{t('filterPanel.withinMiles', { miles: MAX_NEARBY_MILES })}</span>
                       </div>
                     </div>
                     <div style={{
@@ -1327,14 +1335,14 @@ export default function HostCreators() {
                 {/* Sort By */}
                 <div style={{ marginBottom: 16 }}>
                   <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--sage)', margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    Sort By
+                    {t('filterPanel.sortBy')}
                   </p>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
                     {[
-                      { value: 'recommended', label: 'Recommended' },
-                      { value: 'followers', label: 'Most Followers' },
-                      { value: 'engagement', label: 'Highest Engagement' },
-                      { value: 'collabs', label: 'Most Collabs' },
+                      { value: 'recommended', label: t('filterPanel.sort.recommended') },
+                      { value: 'followers', label: t('filterPanel.sort.followers') },
+                      { value: 'engagement', label: t('filterPanel.sort.engagement') },
+                      { value: 'collabs', label: t('filterPanel.sort.collabs') },
                     ].map(({ value, label }) => (
                       <button key={value} onClick={() => setSortBy(value)} style={{
                         padding: '5px 12px', borderRadius: 9999,
@@ -1353,19 +1361,19 @@ export default function HostCreators() {
                 {/* Creator Type */}
                 <div style={{ marginBottom: 16 }}>
                   <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--sage)', margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    Creator Type
+                    {t('filterPanel.creatorType')}
                   </p>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-                    {TIERS.map(t => (
-                      <button key={t} onClick={() => setTierFilter(t)} style={{
+                    {TIERS.map(tier => (
+                      <button key={tier} onClick={() => setTierFilter(tier)} style={{
                         padding: '5px 12px', borderRadius: 9999,
                         fontSize: '0.75rem', fontWeight: 600,
-                        background: tierFilter === t ? 'var(--ink)' : 'rgba(255,255,255,0.5)',
-                        color: tierFilter === t ? 'var(--bone)' : 'var(--slate)',
-                        border: `1px solid ${tierFilter === t ? 'var(--ink)' : 'rgba(255,255,255,0.7)'}`,
+                        background: tierFilter === tier ? 'var(--ink)' : 'rgba(255,255,255,0.5)',
+                        color: tierFilter === tier ? 'var(--bone)' : 'var(--slate)',
+                        border: `1px solid ${tierFilter === tier ? 'var(--ink)' : 'rgba(255,255,255,0.7)'}`,
                         cursor: 'pointer', transition: 'all 150ms', fontFamily: 'var(--font-body)',
                       }}>
-                        {t}
+                        {tier}
                       </button>
                     ))}
                   </div>
@@ -1374,7 +1382,7 @@ export default function HostCreators() {
                 {/* Saved Only */}
                 <div style={{ marginBottom: 16 }}>
                   <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--sage)', margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    Saved
+                    {t('filterPanel.saved')}
                   </p>
                   <button onClick={() => setSavedOnly(v => !v)} style={{
                     padding: '5px 12px', borderRadius: 9999,
@@ -1385,7 +1393,7 @@ export default function HostCreators() {
                     cursor: 'pointer', transition: 'all 150ms', fontFamily: 'var(--font-body)',
                     display: 'flex', alignItems: 'center', gap: 5,
                   }}>
-                    {savedOnly ? '❤️' : '♡'} Saved Only
+                    {savedOnly ? '❤️' : '♡'} {t('filterPanel.savedOnly')}
                     {profileSavedIds.length > 0 && (
                       <span style={{ fontSize: 10, fontWeight: 700, color: savedOnly ? 'rgba(255,255,255,0.7)' : 'var(--sage)' }}>
                         ({profileSavedIds.length})
@@ -1397,7 +1405,7 @@ export default function HostCreators() {
                 {/* Platforms */}
                 <div style={{ marginBottom: 16 }}>
                   <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--sage)', margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    Platforms
+                    {t('filterPanel.platforms')}
                   </p>
                   <div style={{ display: 'flex', gap: 5 }}>
                     {['Instagram', 'TikTok', 'YouTube'].map(p => {
@@ -1423,7 +1431,7 @@ export default function HostCreators() {
                 {/* Other */}
                 <div style={{ marginBottom: 16 }}>
                   <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--sage)', margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    Other
+                    {t('filterPanel.other')}
                   </p>
                   <button onClick={() => setShowPast(v => !v)} style={{
                     display: 'flex', alignItems: 'center', gap: 7,
@@ -1434,7 +1442,7 @@ export default function HostCreators() {
                     border: `1px solid ${showPast ? 'rgba(74,155,127,0.35)' : 'rgba(255,255,255,0.7)'}`,
                     cursor: 'pointer', transition: 'all 150ms', fontFamily: 'var(--font-body)',
                   }}>
-                    <Check size={12} />Past Collabs Only
+                    <Check size={12} />{t('filterPanel.pastCollabsOnly')}
                   </button>
                 </div>
 
@@ -1449,7 +1457,7 @@ export default function HostCreators() {
                       fontFamily: 'var(--font-body)', transition: 'all 150ms',
                     }}
                   >
-                    Clear All Filters
+                    {t('filterPanel.clearAll')}
                   </button>
                 )}
               </div>
@@ -1476,7 +1484,9 @@ export default function HostCreators() {
             {!creatorsLoading && (
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: '1.25rem', flexWrap: 'wrap' }}>
                 <p style={{ fontSize: '0.78rem', color: 'var(--sage)', margin: 0 }}>
-                  {filtered.length} creator{filtered.length !== 1 ? 's' : ''}{nearbyOnly ? ' nearby' : ''}
+                  {nearbyOnly
+                    ? t('results.count_nearby', { count: filtered.length })
+                    : t('results.count', { count: filtered.length })}
                 </p>
                 {hasRealCreators && (
                   <button
@@ -1495,7 +1505,7 @@ export default function HostCreators() {
                     }}
                   >
                     <X size={12} />
-                    {hideSamples ? 'Showing real creators only' : 'Hide sample creators'}
+                    {hideSamples ? t('results.showingRealOnly') : t('results.hideSamples')}
                   </button>
                 )}
               </div>
@@ -1515,12 +1525,12 @@ export default function HostCreators() {
                 padding: '3rem', textAlign: 'center',
               }}>
                 <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1rem', color: 'var(--ink)', marginBottom: '0.4rem' }}>
-                  No creators found
+                  {t('results.emptyTitle')}
                 </p>
                 <p style={{ fontSize: '0.82rem', color: 'var(--sage)', margin: 0 }}>
                   {dateStart && dateEnd
-                    ? `No creators are visiting ${HOST_LOCATION.city} during those dates. Try a different range.`
-                    : 'Try adjusting your search or filters.'}
+                    ? t('results.emptyDated', { city: HOST_LOCATION.city })
+                    : t('results.emptyDefault')}
                 </p>
               </div>
             ) : (

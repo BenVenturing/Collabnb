@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from 'convex/react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../../convex/_generated/api';
 import { useAuth } from '../contexts/AuthContext';
+import i18nInstance from '../i18n';
 
 const KEY_PREFIX = 'collabnb_onboarding_v3';
 const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL;
@@ -21,73 +23,75 @@ function userKeys(userId) {
 }
 
 function creatorSteps(profile, isFirstVisit, hasShared, hasExplored) {
+  const t = (k) => i18nInstance.t(`onboardingChecklist:${k}`);
   return [
     {
       id: 'photo',
-      label: 'Add a profile photo',
+      label: t('creatorSteps.photo.label'),
       done: !isFirstVisit && !!profile?.avatar_url,
-      action: { label: 'Add photo', path: '/profile?edit=true' },
+      action: { label: t('creatorSteps.photo.action'), path: '/profile?edit=true' },
     },
     {
       id: 'bio',
-      label: 'Write your bio',
+      label: t('creatorSteps.bio.label'),
       done: !isFirstVisit && !!profile?.bio && profile.bio.length > 10,
-      action: { label: 'Edit profile', path: '/profile?edit=true' },
+      action: { label: t('creatorSteps.bio.action'), path: '/profile?edit=true' },
     },
     {
       id: 'niches',
-      label: 'Add your content niches',
+      label: t('creatorSteps.niches.label'),
       done: !isFirstVisit && Array.isArray(profile?.niches) && profile.niches.length > 0,
-      action: { label: 'Add niches', path: '/profile?edit=true' },
+      action: { label: t('creatorSteps.niches.action'), path: '/profile?edit=true' },
     },
     {
       id: 'social',
-      label: 'Connect a social account',
+      label: t('creatorSteps.social.label'),
       done: !isFirstVisit && !!(profile?.instagram_handle || profile?.tiktok_handle || profile?.youtube_handle),
-      action: { label: 'Add socials', path: '/profile?edit=true' },
+      action: { label: t('creatorSteps.social.action'), path: '/profile?edit=true' },
     },
     {
       id: 'explore',
-      label: 'Browse sample listings',
+      label: t('creatorSteps.explore.label'),
       done: hasExplored,
-      action: { label: 'Browse listings', path: '/explore' },
+      action: { label: t('creatorSteps.explore.action'), path: '/explore' },
     },
     {
       id: 'share',
-      label: 'Share your sign-up with a friend',
+      label: t('creatorSteps.share.label'),
       done: hasShared,
       optional: true,
-      action: { label: 'Share link', path: null, type: 'share' },
+      action: { label: t('creatorSteps.share.action'), path: null, type: 'share' },
     },
   ];
 }
 
 function hostSteps(profile, isFirstVisit, hasShared, hasListing, hasBrowsedCreators) {
+  const t = (k) => i18nInstance.t(`onboardingChecklist:${k}`);
   return [
     {
       id: 'listing',
-      label: 'Create your first listing',
+      label: t('hostSteps.listing.label'),
       done: hasListing,
-      action: { label: 'Create listing', path: '/host/listings/create' },
+      action: { label: t('hostSteps.listing.action'), path: '/host/listings/create' },
     },
     {
       id: 'profile',
-      label: 'Complete your host profile',
+      label: t('hostSteps.profile.label'),
       done: !isFirstVisit && !!profile?.bio && profile.bio.length > 10,
-      action: { label: 'Edit profile', path: '/profile?edit=true' },
+      action: { label: t('hostSteps.profile.action'), path: '/profile?edit=true' },
     },
     {
       id: 'creators',
-      label: 'Browse creators who match your vibe',
+      label: t('hostSteps.creators.label'),
       done: hasBrowsedCreators,
-      action: { label: 'Discover creators', path: '/host/creators' },
+      action: { label: t('hostSteps.creators.action'), path: '/host/creators' },
     },
     {
       id: 'share',
-      label: 'Share your sign-up with a friend',
+      label: t('hostSteps.share.label'),
       done: hasShared,
       optional: true,
-      action: { label: 'Share link', path: null, type: 'share' },
+      action: { label: t('hostSteps.share.action'), path: null, type: 'share' },
     },
   ];
 }
@@ -135,6 +139,7 @@ function notifyProgress() {
 
 // ─── Draggable collapsed pill ───────────────────────────────────────────────────
 function DraggablePill({ widgetStyle, cardStyle, toggleCollapse, allDone, requiredCompleted, requiredTotal }) {
+  const { t } = useTranslation('onboardingChecklist');
   const [pos, setPos] = useState({ x: 0, y: 0 });
   const [dragging, setDragging] = useState(false);
   const dragRef = useRef({ startX: 0, startY: 0, origX: 0, origY: 0, moved: false });
@@ -187,7 +192,7 @@ function DraggablePill({ widgetStyle, cardStyle, toggleCollapse, allDone, requir
     >
       <button
         onClick={handleClick}
-        aria-label="Open setup checklist"
+        aria-label={t('pill.openAriaLabel')}
         style={{
           ...cardStyle,
           display: 'flex',
@@ -219,7 +224,7 @@ function DraggablePill({ widgetStyle, cardStyle, toggleCollapse, allDone, requir
           </text>
         </svg>
         <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--ink, #192524)', pointerEvents: 'none' }}>
-          {allDone ? 'All done!' : 'Account setup'}
+          {allDone ? t('pill.allDone') : t('pill.accountSetup')}
         </span>
         {!allDone && (
           <span style={{
@@ -228,7 +233,7 @@ function DraggablePill({ widgetStyle, cardStyle, toggleCollapse, allDone, requir
             borderRadius: '9999px', padding: '0.125rem 0.5rem',
             lineHeight: 1.5, pointerEvents: 'none',
           }}>
-            {requiredTotal - requiredCompleted} left
+            {t('pill.left', { count: requiredTotal - requiredCompleted })}
           </span>
         )}
       </button>
@@ -237,6 +242,7 @@ function DraggablePill({ widgetStyle, cardStyle, toggleCollapse, allDone, requir
 }
 
 export default function OnboardingChecklist() {
+  const { t } = useTranslation('onboardingChecklist');
   const { profile } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -416,7 +422,7 @@ export default function OnboardingChecklist() {
       ? `${window.location.origin}/join?ref=${code}`
       : `${window.location.origin}/join`;
     if (navigator.share) {
-      navigator.share({ title: 'Join me on Collabnb', url: shareUrl }).catch(() => {});
+      navigator.share({ title: t('shareTitle'), url: shareUrl }).catch(() => {});
     } else {
       navigator.clipboard?.writeText(shareUrl).catch(() => {});
     }
@@ -478,18 +484,18 @@ export default function OnboardingChecklist() {
               color: 'var(--ink, #192524)', margin: 0,
               whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
             }}>
-              {allDone ? 'You\'re all set!' : 'Complete your setup'}
+              {allDone ? t('header.allDoneTitle') : t('header.title')}
             </p>
             <p style={{ fontSize: '0.75rem', color: 'var(--slate, #3C5759)', margin: '0.125rem 0 0' }}>
-              {requiredCompleted}/{requiredTotal} steps complete
-              {optionalCompleted > 0 && ` + ${optionalCompleted} bonus`}
+              {t('header.stepsComplete', { completed: requiredCompleted, total: requiredTotal })}
+              {optionalCompleted > 0 && t('header.bonus', { count: optionalCompleted })}
             </p>
           </div>
           <div style={{ display: 'flex', gap: '0.25rem', flexShrink: 0, marginLeft: '0.5rem' }}>
             <button
               onClick={toggleCollapse}
-              aria-label="Collapse"
-              title="Minimize"
+              aria-label={t('header.collapseAriaLabel')}
+              title={t('header.collapseTitle')}
               style={{
                 background: 'none', border: 'none', cursor: 'pointer',
                 color: 'var(--sage, #959D90)', width: 28, height: 28,
@@ -513,8 +519,8 @@ export default function OnboardingChecklist() {
                   setDismissed(true);
                 }, 280);
               }}
-              aria-label="Close checklist"
-              title="Close"
+              aria-label={t('header.closeAriaLabel')}
+              title={t('header.closeTitle')}
               style={{
                 background: 'none', border: 'none', cursor: 'pointer',
                 color: 'var(--sage, #959D90)', width: 28, height: 28,
@@ -620,7 +626,7 @@ export default function OnboardingChecklist() {
                       fontSize: '0.6rem', fontWeight: 600, color: 'var(--sage, #959D90)',
                       marginLeft: '0.375rem', textTransform: 'uppercase', letterSpacing: '0.06em',
                     }}>
-                      optional
+                      {t('optional')}
                     </span>
                   )}
                 </span>
@@ -679,7 +685,7 @@ export default function OnboardingChecklist() {
                 fontFamily: 'var(--font-body)',
               }}
             >
-              Got it — dismiss ✓
+              {t('dismissCta')}
             </button>
           </div>
         )}

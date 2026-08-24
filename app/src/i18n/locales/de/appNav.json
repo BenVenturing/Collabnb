@@ -1,0 +1,55 @@
+{
+  "anyTime": "Jederzeit",
+  "nav": {
+    "explore": "Entdecken",
+    "collabs": "Collabs",
+    "saved": "Gespeichert",
+    "inbox": "Nachrichten",
+    "founders": "Gründer",
+    "dashboard": "Dashboard",
+    "proposals": "Vorschläge",
+    "creators": "Creator",
+    "profile": "Profil"
+  },
+  "mobileNavAriaLabel": "Mobile Navigation",
+  "myProfile": "Mein Profil",
+  "mobileBottomNavAriaLabel": "Mobile untere Navigation",
+  "mainNavAriaLabel": "Hauptnavigation",
+  "search": {
+    "where": "Wo",
+    "what": "Was",
+    "when": "Wann",
+    "destinationPlaceholder": "Ziel",
+    "searchStays": "Aufenthalte suchen",
+    "openSearchAriaLabel": "Suche öffnen"
+  },
+  "notifications": {
+    "ariaLabel": "Benachrichtigungen",
+    "heading": "Benachrichtigungen",
+    "clearAll": "Alle löschen",
+    "empty": "Noch keine Benachrichtigungen"
+  },
+  "menu": {
+    "closeMenu": "Menü schließen",
+    "openMenu": "Menü öffnen",
+    "profileFallback": "Profil",
+    "adminPanel": "Admin-Bereich",
+    "settings": "Einstellungen",
+    "setupChecklist": "Einrichtungs-Checkliste",
+    "switchToCreatorView": "Zur Creator-Ansicht wechseln",
+    "switchToHostView": "Zur Gastgeber-Ansicht wechseln",
+    "signUpAsCreator": "Als Creator anmelden",
+    "signUpAsHost": "Als Gastgeber anmelden",
+    "pendingReview": "{{role}}-Zugang wird geprüft",
+    "faqHelp": "FAQ & Hilfe",
+    "logOut": "Abmelden"
+  },
+  "roleLabels": {
+    "host": "Gastgeber",
+    "creator": "Creator"
+  },
+  "faqBubble": {
+    "ariaLabel": "Hilfe & FAQ",
+    "dismissAriaLabel": "FAQ-Button ausblenden"
+  }
+}

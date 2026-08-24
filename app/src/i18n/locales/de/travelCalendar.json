@@ -1,0 +1,45 @@
+{
+  "months": ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"],
+  "dayAbbr": ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"],
+  "cityPrivate": "Stadt privat",
+  "modal": {
+    "editTrip": "Reise bearbeiten",
+    "addTrip": "Reise hinzufügen",
+    "country": "Land",
+    "countryPlaceholder": "z. B. Japan",
+    "city": "Stadt",
+    "privateToOthers": "privat für andere Creator",
+    "cityPlaceholder": "z. B. Tokio",
+    "tripNote": "Reisenotiz",
+    "optional": "(optional)",
+    "notePlaceholder": "z. B. Offen für Glamping-Kollaborationen",
+    "cancel": "Abbrechen",
+    "saveChanges": "Änderungen speichern",
+    "saveTrip": "Reise speichern"
+  },
+  "header": {
+    "title": "Reisekalender",
+    "hoverToExtend": "Zum Erweitern des Bereichs hovern — zum Bestätigen klicken",
+    "atMax": "{{max}}/{{max}} Reisen — lösche eine, um eine weitere hinzuzufügen",
+    "clickAndDrag": "Klicken und ziehen, oder einmal klicken und dann hovern, um Termine auszuwählen",
+    "hostView": "Für dich sichtbare Reisen von Creators — Stadt wird angezeigt",
+    "privateView": "Reiseinfos sind privat"
+  },
+  "addTripButton": {
+    "cancel": "Abbrechen",
+    "addTrip": "Reise hinzufügen"
+  },
+  "hoverHint": {
+    "extend": "Über Termine hovern, um den Bereich zu erweitern, dann zum Bestätigen klicken",
+    "confirm": "{{range}} — zum Bestätigen klicken"
+  },
+  "empty": {
+    "editable": "Ziehe über Termine, um deine erste Reise hinzuzufügen — bis zu {{max}} insgesamt",
+    "readonly": "Noch keine Reisen geplant."
+  },
+  "tripList": {
+    "cityHidden": "Stadt verborgen",
+    "editTitle": "Reise bearbeiten",
+    "deleteTitle": "Reise löschen"
+  }
+}

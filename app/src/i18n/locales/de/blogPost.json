@@ -1,0 +1,14 @@
+{
+  "toggleThemeAriaLabel": "Design wechseln",
+  "notFound": {
+    "title": "Artikel nicht gefunden",
+    "body": "Dieser Beitrag wurde möglicherweise verschoben oder entfernt.",
+    "backButton": "Zurück zum Journal"
+  },
+  "theJournal": "Das Journal",
+  "cta": {
+    "heading": "Bereit für eine Kollaboration?",
+    "body": "Der Frühzugang zu Content-für-Aufenthalt-Partnerschaften ist jetzt geöffnet.",
+    "button": "Gründungsmitglied werden →"
+  }
+}

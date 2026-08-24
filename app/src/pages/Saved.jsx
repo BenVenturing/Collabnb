@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useCollabs } from '../contexts/CollabContext';
 import { SAMPLE_LISTINGS } from '../lib/mockData';
 import { useQuery } from 'convex/react';
@@ -17,6 +18,7 @@ function getCardStyle(id) {
 }
 
 function PolaroidCard({ listing, onUnsave, onNavigate, onMoveOpen, collections, delay }) {
+  const { t } = useTranslation('saved');
   const [hovered, setHovered] = useState(false);
   const { rotation, topOffset } = getCardStyle(listing.id);
   const [rippling, setRippling] = useState(false);
@@ -82,7 +84,7 @@ function PolaroidCard({ listing, onUnsave, onNavigate, onMoveOpen, collections, 
             <span className="eyebrow-tag" style={{
               position: 'absolute', top: '0.5rem', left: '0.5rem',
               fontSize: '0.55rem', padding: '0.2rem 0.45rem',
-            }}>Featured</span>
+            }}>{t('card.featured')}</span>
           )}
 
           {/* Heart / unsave */}
@@ -99,7 +101,7 @@ function PolaroidCard({ listing, onUnsave, onNavigate, onMoveOpen, collections, 
             }}
             onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.12)'}
             onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
-            title="Remove from saved"
+            title={t('card.removeTitle')}
           >
             {rippling && (
               <span style={{
@@ -154,7 +156,7 @@ function PolaroidCard({ listing, onUnsave, onNavigate, onMoveOpen, collections, 
                 border: 'none', cursor: 'pointer',
                 opacity: hovered ? 1 : 0, transition: 'opacity 200ms, background 150ms',
               }}
-              title="Move to collection"
+              title={t('card.moveTitle')}
             >
               <svg viewBox="0 0 20 20" fill="var(--sage)" style={{ width: 12, height: 12 }}>
                 <circle cx="10" cy="4"  r="1.5"/>
@@ -170,6 +172,7 @@ function PolaroidCard({ listing, onUnsave, onNavigate, onMoveOpen, collections, 
 }
 
 function NewCollectionModal({ onConfirm, onCancel }) {
+  const { t } = useTranslation('saved');
   const [name, setName] = useState('');
   const inputRef = useRef(null);
 
@@ -196,7 +199,7 @@ function NewCollectionModal({ onConfirm, onCancel }) {
         }}
       >
         <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.15rem', color: 'var(--ink)', marginBottom: '1rem' }}>
-          Name this collection
+          {t('newCollectionModal.heading')}
         </h2>
         <input
           ref={inputRef}
@@ -204,7 +207,7 @@ function NewCollectionModal({ onConfirm, onCancel }) {
           value={name}
           onChange={(e) => setName(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter' && name.trim()) onConfirm(name); if (e.key === 'Escape') onCancel(); }}
-          placeholder="e.g. Dream Cabins, East Coast…"
+          placeholder={t('newCollectionModal.placeholder')}
           style={{
             width: '100%', padding: '0.7rem 1rem',
             borderRadius: '0.75rem', fontSize: '0.9rem',
@@ -220,13 +223,13 @@ function NewCollectionModal({ onConfirm, onCancel }) {
             border: '1.5px solid rgba(25,37,36,0.12)', background: 'transparent',
             fontSize: '0.875rem', fontWeight: 500, color: 'var(--slate)',
             cursor: 'pointer', fontFamily: 'var(--font-body)',
-          }}>Cancel</button>
+          }}>{t('newCollectionModal.cancel')}</button>
           <button
             onClick={() => name.trim() && onConfirm(name)}
             disabled={!name.trim()}
             className="btn-primary"
             style={{ flex: 1, padding: '0.65rem', fontSize: '0.875rem', opacity: name.trim() ? 1 : 0.4 }}
-          >Create</button>
+          >{t('newCollectionModal.create')}</button>
         </div>
       </div>
     </div>
@@ -234,6 +237,7 @@ function NewCollectionModal({ onConfirm, onCancel }) {
 }
 
 function MoveMenu({ listing, collections, onMove, onClose, anchorPos }) {
+  const { t } = useTranslation('saved');
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 150 }}>
       <div
@@ -253,7 +257,7 @@ function MoveMenu({ listing, collections, onMove, onClose, anchorPos }) {
         }}
       >
         <p style={{ fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--sage)', padding: '0.4rem 0.75rem 0.5rem' }}>
-          Move to
+          {t('moveMenu.heading')}
         </p>
         {collections.map((col) => (
           <button
@@ -282,6 +286,7 @@ function MoveMenu({ listing, collections, onMove, onClose, anchorPos }) {
 }
 
 export default function Saved() {
+  const { t } = useTranslation('saved');
   const navigate = useNavigate();
   const { savedIds, collections, activeCollectionId, toggleSave, createCollection, setActiveCollection, moveToCollection } = useCollabs();
 
@@ -333,14 +338,14 @@ export default function Saved() {
           fontFamily: 'var(--font-display)', fontWeight: 800,
           fontSize: '1.75rem', color: 'var(--ink)', marginBottom: '0.2rem',
         }}>
-          Saved
+          {t('header.title')}
         </h1>
         <p style={{ fontSize: '0.82rem', color: 'var(--sage)' }}>
           {!hasSavedIds
-            ? 'No saved collaborations yet'
+            ? t('header.noneSaved')
             : !convexDataLoaded
-              ? 'Loading…'
-              : `${totalCount} saved collaboration${totalCount !== 1 ? 's' : ''}`}
+              ? t('header.loading')
+              : t('header.savedCount', { count: totalCount })}
         </p>
       </div>
 
@@ -368,10 +373,10 @@ export default function Saved() {
           </div>
           <div>
             <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.1rem', color: 'var(--ink)', marginBottom: '0.35rem' }}>
-              Nothing saved yet
+              {t('emptyState.title')}
             </p>
             <p style={{ fontSize: '0.82rem', color: 'var(--sage)', maxWidth: 240 }}>
-              Tap the heart on any listing in Explore to save it here.
+              {t('emptyState.body')}
             </p>
           </div>
           <button
@@ -379,7 +384,7 @@ export default function Saved() {
             className="btn-primary"
             style={{ marginTop: '0.5rem', padding: '0.65rem 1.5rem', fontSize: '0.85rem' }}
           >
-            Browse collabs
+            {t('emptyState.browseCollabs')}
           </button>
         </div>
       )}
@@ -446,7 +451,7 @@ export default function Saved() {
               <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{ width: 12, height: 12 }}>
                 <line x1="10" y1="4" x2="10" y2="16"/><line x1="4" y1="10" x2="16" y2="10"/>
               </svg>
-              New collection
+              {t('newCollectionButton')}
             </button>
           </div>
 
@@ -468,8 +473,8 @@ export default function Saved() {
                 }}>
                   <p style={{ fontSize: '0.82rem', color: 'var(--sage)' }}>
                     {col.listingIds.length > 0 && !convexDataLoaded
-                      ? 'Loading…'
-                      : 'No listings in this collection yet — heart a listing to add it here.'}
+                      ? t('emptyCollection.loading')
+                      : t('emptyCollection.body')}
                   </p>
                 </div>
               </div>
@@ -482,7 +487,7 @@ export default function Saved() {
                     {col.name}
                   </h2>
                   <span style={{ fontSize: '0.75rem', color: 'var(--sage)' }}>
-                    {listings.length} {listings.length === 1 ? 'stay' : 'stays'}
+                    {t('stayCount', { count: listings.length })}
                   </span>
                 </div>
 

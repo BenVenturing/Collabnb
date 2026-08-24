@@ -1,0 +1,40 @@
+{
+  "pendingApproval": {
+    "heading": "Sua inscrição está em análise",
+    "thanksCreator": "Obrigado por se candidatar para entrar no Collabnb como criador.",
+    "thanksHost": "Obrigado por se candidatar para anunciar sua propriedade.",
+    "reviewing": "A equipe do Collabnb está analisando seu perfil, portfólio e redes sociais. Você receberá um e-mail assim que for aprovado — geralmente em 1 a 2 dias úteis.",
+    "checklist": {
+      "heading": "O que acontece a seguir:",
+      "socialReview": "Suas redes sociais e portfólio são analisados",
+      "followerVerify": "Seu número de seguidores e engajamento são verificados",
+      "experienceAssess": "Sua experiência e profissionalismo são avaliados",
+      "interview": "Você pode receber um convite para uma breve entrevista",
+      "trackTier": "Você receberá uma trilha (UGC ou Influencer) e um nível",
+      "fullAccess": "Se aprovado, você tem acesso completo ao marketplace"
+    },
+    "receivedTitle": "Inscrição recebida",
+    "receivedDetail": "— avisaremos você no e-mail cadastrado.",
+    "backHome": "Voltar ao início"
+  },
+  "limitedAccess": {
+    "heading": "O acesso ao marketplace terminou",
+    "body": "Seu período de teste expirou. Faça upgrade para o Creator Plus para continuar explorando anúncios, se candidatando a campanhas e propondo para anfitriões.",
+    "stillCanHeading": "Você ainda pode:",
+    "stillCan": {
+      "dashboard": "Ver seu painel e perfil",
+      "contracts": "Acessar contratos e mensagens existentes",
+      "settings": "Atualizar suas configurações e portfólio"
+    },
+    "viewPricing": "Ver preços"
+  },
+  "trialBanner": {
+    "expired": "Seu teste terminou. Assine para continuar acessando o marketplace.",
+    "daysLeft_one": "Falta {{count}} dia de teste.",
+    "daysLeft_other": "Faltam {{count}} dias de teste.",
+    "daysRemaining": "{{count}}d restantes",
+    "subscribeNow": "Assinar agora",
+    "upgrade": "Fazer upgrade",
+    "dismissAriaLabel": "Dispensar"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "crash": {
+    "title": "Falha no app — copie isto e envie para o desenvolvedor:",
+    "sendButton": "Enviar relatório de falha para a equipe de desenvolvimento",
+    "sending": "Enviando…",
+    "sent": "Enviado para a equipe de desenvolvimento — obrigado!",
+    "sendFailed": "Falha ao enviar — copie os detalhes abaixo."
+  },
+  "loading": "Carregando",
+  "celebration": {
+    "quote": "Onde criadores e hospedagens boutique colaboram.",
+    "buildingProfile": "Criando seu perfil…"
+  }
+}

@@ -1,0 +1,98 @@
+{
+  "close": "Schließen",
+  "subscribeUnlock": "Abonnieren zum Freischalten →",
+  "locked": {
+    "heading": "Suche ist gesperrt",
+    "body": "Deine Testphase ist beendet — abonniere, um Ziele und Collabs zu suchen."
+  },
+  "compensation": {
+    "paid": "{{cash}} $ Bargeld",
+    "hybrid": "{{cash}} $ + Aufenthalt",
+    "seeListing": "Angebot ansehen"
+  },
+  "deliverables": {
+    "more": "+{{count}} weitere",
+    "count": "{{count}} Deliverables"
+  },
+  "card": {
+    "applyToView": "Bewerben, um zu sehen",
+    "featured": "Empfohlen",
+    "matchFallback": "Passt zu deinem Profil",
+    "matchPercent": "{{match}} % Übereinstimmung",
+    "viewHost": "Gastgeberprofil ansehen",
+    "byHost": "von"
+  },
+  "section": {
+    "seeAll": "alle ansehen",
+    "showLess": "weniger anzeigen"
+  },
+  "search": {
+    "where": "Wo",
+    "destinationsPlaceholder": "Reiseziele suchen",
+    "what": "Was",
+    "when": "Wann",
+    "anyTime": "Jederzeit"
+  },
+  "propertyTypes": {
+    "all": "Alle",
+    "cabin": "Hütte",
+    "villa": "Villa",
+    "treehouse": "Baumhaus",
+    "glamping": "Glamping",
+    "lodge": "Lodge",
+    "estate": "Anwesen",
+    "cottage": "Cottage"
+  },
+  "map": {
+    "showList": "Liste anzeigen",
+    "showMap": "Karte anzeigen",
+    "label": "Karte",
+    "collabsAvailable_one": "{{count}} Collab verfügbar",
+    "collabsAvailable_other": "{{count}} Collabs verfügbar",
+    "noCollabsArea": "Keine Collabs in diesem Gebiet — herauszoomen oder die Karte verschieben."
+  },
+  "searchArea": {
+    "button": "Diesen Bereich durchsuchen",
+    "noListings": "Leider keine Angebote in diesem spezifischen Bereich",
+    "results_one": "{{count}} Angebot in diesem Bereich",
+    "results_other": "{{count}} Angebote in diesem Bereich",
+    "clearRefresh": "Zurücksetzen und aktualisieren"
+  },
+  "limited": {
+    "body": "🔒 Deine Testphase ist beendet — Angebotsdetails sind ausgeblendet."
+  },
+  "loading": {
+    "stays": "Aufenthalte werden geladen..."
+  },
+  "ghost": {
+    "comingSoon": "Angebote folgen bald",
+    "curating": "Wir stellen die besten Aufenthalte für den Start am 15. Juli zusammen. Speichere deine Favoriten und du wirst als Erste(r) benachrichtigt."
+  },
+  "sections": {
+    "trending": "Gerade im Trend",
+    "trendingSubtitle": "Top-Auswahl dieser Woche",
+    "pickedForYou": "Für dich ausgewählt",
+    "pickedSubtitleNiches": "Passend zu deinen {{niches}}-Nischen",
+    "pickedSubtitleFallback": "Basierend auf deinem Profil und deiner Collab-Historie",
+    "near": "In der Nähe von {{place}}",
+    "nearSubtitle": "Basierend auf deinem Profilstandort und früheren Collabs",
+    "allStays": "Alle Aufenthalte",
+    "allStaysSubtitle_one": "{{count}} Collab jetzt verfügbar",
+    "allStaysSubtitle_other": "{{count}} Collabs jetzt verfügbar",
+    "nearYou": "Du"
+  },
+  "empty": {
+    "searchHeading": "Keine Angebote entsprechen deiner Suche",
+    "noStays": "Keine Aufenthalte gefunden",
+    "searchBody": "Versuche, deine Filter anzupassen oder die Suche zurückzusetzen.",
+    "filterBody": "Versuche, den Unterkunftstyp-Filter zu entfernen.",
+    "clearSearch": "Suche zurücksetzen",
+    "showAllTypes": "Alle Typen anzeigen"
+  },
+  "corner": {
+    "pricingAria": "Was kostet eine Kollaboration?",
+    "pricing": "Preise",
+    "contractAria": "Vertrag entwerfen",
+    "contract": "Vertrag"
+  }
+}

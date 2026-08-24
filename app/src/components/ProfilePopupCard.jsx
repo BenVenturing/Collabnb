@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import CreatorAvatar from './CreatorAvatar';
 
 // Reusable grain texture (matches .bg-grain in index.css)
@@ -18,10 +19,11 @@ function fmtNum(n) {
   return String(n);
 }
 
-function fmtDate(iso) {
+const MONTH_SHORT_KEYS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+function fmtDate(iso, t) {
   if (!iso) return '';
   const [, m, d] = iso.split('-').map(Number);
-  return `${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][m - 1]} ${d}`;
+  return `${t(`monthsShort.${MONTH_SHORT_KEYS[m - 1]}`)} ${d}`;
 }
 
 // ─── Stat cell ────────────────────────────────────────────────────────────────
@@ -72,7 +74,8 @@ const IconStar = () => (
 //   onViewListing   — () => void  (optional)
 //   onViewPastCollabs — () => void  (optional)
 export default function ProfilePopupCard({ person, onClose, onMessage, onViewListing, onViewPastCollabs }) {
-  const t = TIER_COLORS[person.tier] || TIER_COLORS['UGC Beginner'];
+  const tc = TIER_COLORS[person.tier] || TIER_COLORS['UGC Beginner'];
+  const { t } = useTranslation('profilePopupCard');
 
   // ESC to close
   useEffect(() => {
@@ -188,7 +191,7 @@ export default function ProfilePopupCard({ person, onClose, onMessage, onViewLis
 
             {/* Past collab green check */}
             {person.past_collab && (
-              <div title="You've collaborated with this person before" style={{
+              <div title={t('pastCollabNotice')} style={{
                 position: 'absolute', bottom: 3, right: 3,
                 width: 24, height: 24, borderRadius: '50%',
                 background: '#4A9B7F', border: '2.5px solid #fff',
@@ -203,7 +206,7 @@ export default function ProfilePopupCard({ person, onClose, onMessage, onViewLis
 
             {/* Founder gold star */}
             {person.isFounder && (
-              <div title="Founder — one of the first 100 on Collabnb" style={{
+              <div title={t('founderTitle')} style={{
                 position: 'absolute', top: 3, right: -5,
                 width: 22, height: 22, borderRadius: '50%',
                 background: 'linear-gradient(135deg, #D4A843, #B8922A)',
@@ -233,7 +236,7 @@ export default function ProfilePopupCard({ person, onClose, onMessage, onViewLis
           </div>
           {person.tier && (
             <div style={{ marginTop: 10 }}>
-              <span style={{ display: 'inline-block', padding: '4px 15px', borderRadius: 9999, fontSize: 11, fontWeight: 700, background: t.bg, color: t.color, letterSpacing: '0.01em' }}>
+              <span style={{ display: 'inline-block', padding: '4px 15px', borderRadius: 9999, fontSize: 11, fontWeight: 700, background: tc.bg, color: tc.color, letterSpacing: '0.01em' }}>
                 {person.tier}
               </span>
             </div>
@@ -246,9 +249,9 @@ export default function ProfilePopupCard({ person, onClose, onMessage, onViewLis
             display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)',
             gap: 1, background: 'rgba(25,37,36,0.06)', borderRadius: '0.875rem', overflow: 'hidden',
           }}>
-            <Stat value={fmtNum(person.followers)} label="Followers" />
-            <Stat value={person.engagement != null ? `${person.engagement}%` : '—'} label="Eng. Rate" />
-            <Stat value={person.collab_count ?? '—'} label="Collabs" />
+            <Stat value={fmtNum(person.followers)} label={t('followers')} />
+            <Stat value={person.engagement != null ? `${person.engagement}%` : '—'} label={t('engRate')} />
+            <Stat value={person.collab_count ?? '—'} label={t('collabs')} />
           </div>
         </div>
 
@@ -264,7 +267,7 @@ export default function ProfilePopupCard({ person, onClose, onMessage, onViewLis
           <div style={{ padding: '14px 24px 0', display: 'flex', flexDirection: 'column', gap: 9 }}>
             {person.platforms?.length > 0 && (
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-                <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--sage)', minWidth: 60, flexShrink: 0 }}>Platforms</span>
+                <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--sage)', minWidth: 60, flexShrink: 0 }}>{t('platforms')}</span>
                 <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
                   {person.platforms.map(p => (
                     <span key={p} style={{ padding: '3px 11px', borderRadius: 9999, fontSize: 11, fontWeight: 600, background: 'rgba(60,87,89,0.09)', color: 'var(--ink)' }}>{p}</span>
@@ -274,7 +277,7 @@ export default function ProfilePopupCard({ person, onClose, onMessage, onViewLis
             )}
             {person.niches?.length > 0 && (
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-                <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--sage)', minWidth: 60, flexShrink: 0 }}>Niches</span>
+                <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--sage)', minWidth: 60, flexShrink: 0 }}>{t('niches')}</span>
                 <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
                   {person.niches.map(n => (
                     <span key={n} style={{ padding: '3px 10px', borderRadius: 9999, fontSize: 10, fontWeight: 600, background: 'var(--bone)', color: 'var(--slate)' }}>{n}</span>
@@ -293,7 +296,7 @@ export default function ProfilePopupCard({ person, onClose, onMessage, onViewLis
                 <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
               </svg>
               <span style={{ fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 11, color: 'var(--ink)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                Upcoming Trips
+                {t('upcomingTrips')}
               </span>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -304,7 +307,7 @@ export default function ProfilePopupCard({ person, onClose, onMessage, onViewLis
                     {trip.city}{trip.country && trip.country !== 'USA' ? `, ${trip.country}` : ''}
                   </span>
                   <span style={{ fontSize: 11, color: 'var(--sage)', flexShrink: 0 }}>
-                    {fmtDate(trip.startDate)}–{fmtDate(trip.endDate)}
+                    {fmtDate(trip.startDate, t)}–{fmtDate(trip.endDate, t)}
                   </span>
                 </div>
               ))}
@@ -318,7 +321,7 @@ export default function ProfilePopupCard({ person, onClose, onMessage, onViewLis
             <svg width="13" height="13" viewBox="0 0 10 10" fill="none">
               <path d="M1.5 5l2.5 2.5 4.5-4.5" stroke="#2d7d5e" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
-            <span style={{ fontSize: 12, fontWeight: 600, color: '#2d7d5e' }}>You've collaborated with this person before</span>
+            <span style={{ fontSize: 12, fontWeight: 600, color: '#2d7d5e' }}>{t('pastCollabNotice')}</span>
           </div>
         )}
 
@@ -330,17 +333,17 @@ export default function ProfilePopupCard({ person, onClose, onMessage, onViewLis
 
           {/* Icon-only secondary buttons */}
           {person.portfolioUrl && (
-            <IconBtn title="View portfolio" onClick={() => window.open(person.portfolioUrl, '_blank')}>
+            <IconBtn title={t('viewPortfolio')} onClick={() => window.open(person.portfolioUrl, '_blank')}>
               <IconExternal />
             </IconBtn>
           )}
           {onViewListing && (
-            <IconBtn title="View listing" onClick={onViewListing}>
+            <IconBtn title={t('viewListing')} onClick={onViewListing}>
               <IconHome />
             </IconBtn>
           )}
           {onViewPastCollabs && (
-            <IconBtn title="Past collabs" onClick={onViewPastCollabs}>
+            <IconBtn title={t('pastCollabs')} onClick={onViewPastCollabs}>
               <IconActivity />
             </IconBtn>
           )}
@@ -361,7 +364,7 @@ export default function ProfilePopupCard({ person, onClose, onMessage, onViewLis
             onMouseLeave={e => { e.currentTarget.style.opacity = '1';    e.currentTarget.style.transform = 'translateY(0)';     }}
           >
             <IconMessage />
-            Message {person.name?.split(' ')[0]}
+            {t('messageCreator', { name: person.name?.split(' ')[0] })}
           </button>
         </div>
         </div>

@@ -1,0 +1,57 @@
+{
+  "loadLabels": {
+    "light": "light",
+    "moderate": "moderate",
+    "heavy": "heavy",
+    "custom": "custom campaign"
+  },
+  "nextHint": {
+    "needTier": "Pick a creator tier in the cost calculator above.",
+    "needCompensation": "Enter a cash compensation amount in the cost calculator above.",
+    "needDeliverables": "Pick at least one deliverable in the cost calculator, or add a custom one below.",
+    "needDates": "Add a collaboration window with both a start and end date."
+  },
+  "heading": "Pricing & dates",
+  "subtitle": "Set the creator tier, compensation, and deliverables — with live pricing guidance — then define when the collaboration happens.",
+  "summary": {
+    "totalDeliverables_one": "{{count}} total deliverable",
+    "totalDeliverables_other": "{{count}} total deliverables",
+    "acrossFormats_one": "Across {{count}} format · {{load}} load",
+    "acrossFormats_other": "Across {{count}} formats · {{load}} load"
+  },
+  "deliverables": {
+    "label": "Deliverables",
+    "empty": "Pick deliverables in the cost calculator above, or add a custom one below.",
+    "editUsageRights": "Edit usage rights",
+    "fromCalculator": "From the cost calculator above",
+    "usageRights": "Usage rights"
+  },
+  "form": {
+    "editUsageRightsFor": "Edit usage rights — {{type}}",
+    "editDeliverable": "Edit deliverable",
+    "addCustomDeliverable": "Add custom deliverable",
+    "typePlaceholder": "Platform/Type (e.g., Instagram Reels)",
+    "descPlaceholder": "Description",
+    "autoTypeHint": "{{qty}}x {{type}} — type and quantity come from the cost calculator above.",
+    "usageRightsLabel": "Usage rights for this deliverable",
+    "applyToAllTitle": "Apply these usage rights to every deliverable",
+    "copyToAll": "Copy to all",
+    "usageRightsPlaceholder": "e.g., Host receives a perpetual license for marketing. Creator retains ownership.",
+    "cancel": "Cancel",
+    "saveChanges": "Save changes",
+    "addDeliverable": "Add deliverable"
+  },
+  "due": {
+    "label": "Deliverables due (days after stay)"
+  },
+  "windows": {
+    "label": "Collaboration windows",
+    "hint": "Add up to {{max}} date windows creators can book within.",
+    "removeTitle": "Remove date window",
+    "addAnother": "Add another date window"
+  },
+  "policies": {
+    "revisionLabel": "Revision policy",
+    "footerNote": "Usage rights are now set per-deliverable above. Use \"Copy to all\" to apply one policy across every deliverable."
+  }
+}

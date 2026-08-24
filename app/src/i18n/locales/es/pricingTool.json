@@ -1,0 +1,67 @@
+{
+  "zoneCopy": {
+    "red": "Por debajo del mínimo para esta carga de trabajo — no se puede publicar tal cual.",
+    "amber": "Por debajo del rango recomendado para esta carga de trabajo.",
+    "green": "Dentro del rango recomendado."
+  },
+  "helpTable": {
+    "heading": "Puntos por entregable y nivel",
+    "close": "Cerrar",
+    "colDeliverable": "Entregable",
+    "colPts": "Pts",
+    "colWho": "Quién puede producirlo",
+    "allTiers": "Todos los niveles",
+    "footerNote": "Efectivo = puntos × $/pt (según el nivel) × complejidad. En híbrido, la estancia compensa parte del efectivo."
+  },
+  "helpButton": {
+    "ariaLabel": "Cómo funcionan los puntos"
+  },
+  "stepper": {
+    "ptsEach_one": "{{count}} pt cada uno",
+    "ptsEach_other": "{{count}} pts cada uno"
+  },
+  "scale": {
+    "minimal": "Mínimo {{amount}}",
+    "caution": "Precaución {{amount}}",
+    "recommended": "Recomendado {{low}}–{{high}}"
+  },
+  "presetCard": {
+    "midrange": "rango medio {{amount}}"
+  },
+  "heading": "¿Cuánto cuesta una colaboración?",
+  "subtitle": "El precio se calcula a partir de los puntos del entregable, el nivel del creador y la complejidad de la carga de trabajo — nunca es una estimación al azar.",
+  "entryMode": {
+    "deliverables": "Conozco mis entregables",
+    "budget": "Tengo un presupuesto"
+  },
+  "creatorTier": "Nivel de creador",
+  "compensationType": {
+    "label": "Tipo de compensación",
+    "paid": "Pagado",
+    "hybrid": "Híbrido (estancia + efectivo)",
+    "declaredStayValue": "Valor declarado de la estancia"
+  },
+  "complexity": {
+    "label": "Complejidad",
+    "standard": "Estándar",
+    "complex": "Compleja (lista de tomas, dron, múltiples ubicaciones, exclusividad)",
+    "standardShort": "1.0 estándar",
+    "complexShort": "1.25 compleja"
+  },
+  "budgetMode": {
+    "cashBudget": "Presupuesto en efectivo",
+    "effectiveBudgetPrefix": "Presupuesto efectivo: {{budget}} en efectivo + {{offset}} de compensación por estancia = ",
+    "packagesThatFit": "Paquetes que se ajustan",
+    "noPresetFits": "Ningún paquete predefinido se ajusta a este presupuesto todavía — intenta aumentarlo o cambiar de nivel.",
+    "stretchOption": "Opción ampliada (dentro del 120% del presupuesto)"
+  },
+  "deliverablesMode": {
+    "presets": "Preajustes",
+    "buildYourOwn": "Crea el tuyo",
+    "loadSuffix": " de carga",
+    "loadFallback": "—",
+    "cashCompensation": "Compensación en efectivo"
+  },
+  "mathSummary": "{{points}} pts × {{rate}}/pt ({{tier}}) × {{complexity}} = {{midpoint}} rango medio",
+  "stayOffsetSuffix": " · compensación por estancia {{offset}}"
+}

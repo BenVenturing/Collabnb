@@ -1,0 +1,14 @@
+{
+  "toggleThemeAriaLabel": "Cambiar tema",
+  "notFound": {
+    "title": "Artículo no encontrado",
+    "body": "Es posible que esta publicación se haya movido o eliminado.",
+    "backButton": "Volver al Journal"
+  },
+  "theJournal": "El Journal",
+  "cta": {
+    "heading": "¿Listo para colaborar?",
+    "body": "El acceso anticipado a las colaboraciones de contenido por estancia ya está abierto.",
+    "button": "Conviértete en Fundador →"
+  }
+}

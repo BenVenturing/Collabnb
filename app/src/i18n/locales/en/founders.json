@@ -1,0 +1,58 @@
+{
+  "comingSoonWatermark": {
+    "moreComingSoon": "MORE COMING SOON",
+    "comingSoon": "COMING SOON"
+  },
+  "thread": {
+    "reactTitle": "React",
+    "reply": "Reply",
+    "replyPlaceholder": "Reply in thread…",
+    "send": "Send"
+  },
+  "lounge": {
+    "roomLabelCreator": "Creators' Lounge",
+    "roomLabelHost": "Hosts' Lounge",
+    "privateNotice": "Private to founding {{rolePlural}} · threaded",
+    "newThread": "New thread",
+    "pinnedByPrefix": "Pinned by Ben",
+    "pinnedBody": " — Welcome to the founders' space. New resources are on the way, and early-access listings appear 3 days before they go public. This room is yours.",
+    "startThreadPlaceholder": "Start a new thread…",
+    "post": "Post"
+  },
+  "resources": {
+    "libraryHeading": "Your founder library — coming soon.",
+    "libraryBody": "A preview of the playbooks, templates & guides being prepared for founders.",
+    "comingSoonBadge": "Coming soon",
+    "gateHeading": "Resources are coming soon",
+    "gateBody": "We're preparing the founder playbooks, templates & guides. You'll be the first to get them — check back shortly."
+  },
+  "earlyAccess": {
+    "headStartPrefix": "3-day head-start.",
+    "headStartBody": "Real early-access listings will appear here for founders only, 3 days before they go public. Here's an example of how they'll look.",
+    "earlyBadge": "Early · public in 3d",
+    "exampleBadge": "Example"
+  },
+  "directory": {
+    "filterAll": "All",
+    "filterCreators": "Creators",
+    "filterHosts": "Hosts",
+    "noneYet": "No founders here yet.",
+    "fallbackName": "Founder",
+    "fallbackTagHost": "Founding host",
+    "fallbackTagCreator": "Creator"
+  },
+  "roleLabel": { "creator": "creator", "host": "host" },
+  "roleLabelPlural": { "creator": "creators", "host": "hosts" },
+  "header": {
+    "title": "Founders",
+    "subtitle": "Your lifetime founding-member space.",
+    "founderBadge": "Founder",
+    "spotsLeft": "{{count}} {{role}} spots left"
+  },
+  "tabs": {
+    "lounge": "Lounge",
+    "resources": "Resources",
+    "access": "Early access",
+    "directory": "Directory"
+  }
+}

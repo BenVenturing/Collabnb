@@ -1,15 +1,19 @@
 import { useState, useEffect, useRef } from 'react';
 import { DESTINATIONS, COUNTRIES, COLLAB_TYPES } from '../lib/searchData';
 import { formatDate, formatDateRange } from '../lib/dateUtils';
+import { useTranslation } from 'react-i18next';
 
 // ─── Animated placeholder hook (typewriter + thinking dots) ────────────────
-const WHAT_PLACEHOLDERS = [
-  'UGC Video', '1 deliverable', 'Instagram Reels', '3 deliverables',
-  'Photography', '5 deliverables', 'TikTok', '10 deliverables',
-  'YouTube Vlog', 'Blog Post', 'Full Package',
-];
-
 export function useAnimatedPlaceholder() {
+  const { t } = useTranslation('searchDropdowns');
+  const WHAT_PLACEHOLDERS = [
+    t('placeholders.ugcVideo'), t('placeholders.oneDeliverable'),
+    t('placeholders.instagramReels'), t('placeholders.threeDeliverables'),
+    t('placeholders.photography'), t('placeholders.fiveDeliverables'),
+    t('placeholders.tiktok'), t('placeholders.tenDeliverables'),
+    t('placeholders.youtubeVlog'), t('placeholders.blogPost'),
+    t('placeholders.fullPackage'),
+  ];
   const [display, setDisplay] = useState('');
   const idxRef = useRef(0);
   const charRef = useRef(0);
@@ -51,6 +55,10 @@ export function useAnimatedPlaceholder() {
 const MONTHS = [
   'January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December',
+];
+const MONTH_KEYS = [
+  'january', 'february', 'march', 'april', 'may', 'june',
+  'july', 'august', 'september', 'october', 'november', 'december',
 ];
 
 // ─── Custom location icons ──────────────────────────────────────────────────────
@@ -175,6 +183,7 @@ const SHOW_REGIONS = false;
 
 // ─── Where search content (scrollable, grouped by region + nearby stays) ──────
 export function WhereSearchContent({ whereVal, setWhereVal, onClose, listings = [] }) {
+  const { t } = useTranslation('searchDropdowns');
   const q = whereVal.toLowerCase().trim();
   const nearLabels = useNearYouLabels();
   const REGIONS_RESOLVED = nearLabels
@@ -229,7 +238,7 @@ export function WhereSearchContent({ whereVal, setWhereVal, onClose, listings = 
                   fontSize: '0.6rem', fontWeight: 600, textTransform: 'uppercase',
                   letterSpacing: '0.1em', color: 'var(--slate)', margin: 0,
                 }}>
-                  {region.name}
+                  {t(`regions.${region.name.replace(/[^a-z]/gi, '').toLowerCase()}`)}
                 </p>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
@@ -281,8 +290,8 @@ export function WhereSearchContent({ whereVal, setWhereVal, onClose, listings = 
             <p style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--ink)', lineHeight: 1.3 }}>{matchedCountry.name}</p>
             <p style={{ fontSize: '0.72rem', color: 'var(--sage)', marginTop: '0.05rem' }}>
               {countryListingCount > 0
-                ? `${countryListingCount} stay${countryListingCount > 1 ? 's' : ''} available`
-                : 'No listings yet in ' + matchedCountry.name + ' — more coming soon'}
+                ? t('country.staysAvailable', { count: countryListingCount })
+                : t('country.noListings', { name: matchedCountry.name })}
             </p>
           </div>
         </button>
@@ -313,8 +322,8 @@ export function WhereSearchContent({ whereVal, setWhereVal, onClose, listings = 
               </svg>
             </div>
           <div>
-            <p style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--ink)' }}>Search for "{whereVal}"</p>
-            <p style={{ fontSize: '0.72rem', color: 'var(--sage)', marginTop: '0.1rem' }}>Worldwide location — show results</p>
+            <p style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--ink)' }}>{t('where.searchFor', { query: whereVal })}</p>
+            <p style={{ fontSize: '0.72rem', color: 'var(--sage)', marginTop: '0.1rem' }}>{t('where.worldwide')}</p>
           </div>
         </button>
       )}
@@ -326,7 +335,7 @@ export function WhereSearchContent({ whereVal, setWhereVal, onClose, listings = 
             fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase',
             letterSpacing: '0.14em', color: 'var(--sage)', marginBottom: '0.5rem',
           }}>
-            Nearby Stays
+            {t('nearbyStays.heading')}
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
             {nearbyStays.map((l) => (
@@ -364,7 +373,7 @@ export function WhereSearchContent({ whereVal, setWhereVal, onClose, listings = 
       {/* Empty state */}
       {!q && filteredRegions.length === 0 && nearbyStays.length === 0 && (
         <p style={{ fontSize: '0.85rem', color: 'var(--sage)', textAlign: 'center', padding: '1rem 0' }}>
-          Type a destination or location
+          {t('where.empty')}
         </p>
       )}
     </div>
@@ -373,6 +382,7 @@ export function WhereSearchContent({ whereVal, setWhereVal, onClose, listings = 
 
 // ─── What search content (clickable filters + earnings sliders) ──────────────
 export function WhatSearchContent({ whatVal, setWhatVal, onClose, typeQuery = '' }) {
+  const { t } = useTranslation('searchDropdowns');
   const DELIVERABLE_COUNTS = ['1', '3', '5', '10', '15+'];
 
   // Parse current whatVal
@@ -448,7 +458,7 @@ export function WhatSearchContent({ whatVal, setWhatVal, onClose, typeQuery = ''
         fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase',
         letterSpacing: '0.14em', color: 'var(--sage)', marginBottom: '0.5rem',
       }}>
-        Collab Type
+        {t('what.collabType')}
       </p>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem', marginBottom: '1rem' }}>
         {filteredTypes.map((ct) => {
@@ -478,7 +488,7 @@ export function WhatSearchContent({ whatVal, setWhatVal, onClose, typeQuery = ''
         fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase',
         letterSpacing: '0.14em', color: 'var(--sage)', marginBottom: '0.5rem',
       }}>
-        Deliverables
+        {t('what.deliverables')}
       </p>
       <div style={{ display: 'flex', gap: '0.375rem', flexWrap: 'wrap', marginBottom: '1.25rem' }}>
         {DELIVERABLE_COUNTS.map((count) => {
@@ -497,7 +507,7 @@ export function WhatSearchContent({ whatVal, setWhatVal, onClose, typeQuery = ''
                 transition: 'all 140ms', fontFamily: 'var(--font-body)',
               }}
             >
-              {count} {count === '1' ? 'deliverable' : 'deliverables'}
+              {t('what.deliverables', { count: Number(count) })}
             </button>
           );
         })}
@@ -511,7 +521,7 @@ export function WhatSearchContent({ whatVal, setWhatVal, onClose, typeQuery = ''
           fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase',
           letterSpacing: '0.14em', color: 'var(--sage)', marginBottom: '0.75rem',
         }}>
-          Earnings
+          {t('what.earnings')}
         </p>
 
         {/* Paid / Hybrid toggle */}
@@ -532,7 +542,7 @@ export function WhatSearchContent({ whatVal, setWhatVal, onClose, typeQuery = ''
                   fontFamily: 'var(--font-body)', transition: 'all 140ms',
                 }}
               >
-                {opt}
+                {t(opt === 'Hybrid' ? 'what.hybrid' : 'what.paid')}
               </button>
             );
           })}
@@ -542,7 +552,7 @@ export function WhatSearchContent({ whatVal, setWhatVal, onClose, typeQuery = ''
           /* Nights slider */
           <div style={{ marginBottom: '0.5rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.3rem' }}>
-              <p style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--slate)' }}>Nights</p>
+              <p style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--slate)' }}>{t('what.nights')}</p>
               <p style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--ink)' }}>{nights}</p>
             </div>
             <input
@@ -554,15 +564,15 @@ export function WhatSearchContent({ whatVal, setWhatVal, onClose, typeQuery = ''
               style={{ width: '100%', accentColor: 'var(--ink)', height: '4px', cursor: 'pointer' }}
             />
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: '0.62rem', color: 'var(--sage)' }}>1 night</span>
-              <span style={{ fontSize: '0.62rem', color: 'var(--sage)' }}>30 nights</span>
+              <span style={{ fontSize: '0.62rem', color: 'var(--sage)' }}>{t('what.nightsMin')}</span>
+              <span style={{ fontSize: '0.62rem', color: 'var(--sage)' }}>{t('what.nightsMax')}</span>
             </div>
           </div>
         ) : (
           /* Collab value slider */
           <div style={{ marginBottom: '0.5rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.3rem' }}>
-              <p style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--slate)' }}>Collab Value</p>
+              <p style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--slate)' }}>{t('what.collabValue')}</p>
               <p style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--ink)' }}>${Number(collabValue).toLocaleString()}</p>
             </div>
             <input
@@ -588,7 +598,7 @@ export function WhatSearchContent({ whatVal, setWhatVal, onClose, typeQuery = ''
 // ─── When search content (visual calendar date picker) ──────────────────────
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-function CalendarMonth({ year, month, startDate, endDate, onDayClick }) {
+function CalendarMonth({ year, month, startDate, endDate, onDayClick, t }) {
   const firstDay = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const today = new Date();
@@ -615,7 +625,7 @@ function CalendarMonth({ year, month, startDate, endDate, onDayClick }) {
         fontSize: '0.85rem', fontWeight: 700, color: 'var(--ink)',
         textAlign: 'center', marginBottom: '0.5rem',
       }}>
-        {MONTHS[month]} {year}
+        {t(`months.${MONTH_KEYS[month]}`)} {year}
       </p>
       {/* Weekday headers */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '2px', marginBottom: '4px' }}>
@@ -624,7 +634,7 @@ function CalendarMonth({ year, month, startDate, endDate, onDayClick }) {
             fontSize: '0.65rem', fontWeight: 700, color: 'var(--sage)',
             textAlign: 'center', padding: '0.25rem 0', textTransform: 'uppercase',
           }}>
-            {wd}
+            {t(`weekdays.${wd.toLowerCase()}`)}
           </div>
         ))}
       </div>
@@ -686,6 +696,7 @@ const DURATION_OPTIONS = ['Weekend', '1 Week', '2 Weeks', 'Month'];
 const FLEX_MONTHS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 
 export function WhenSearchContent({ whenVal, setWhenVal, onClose }) {
+  const { t } = useTranslation('searchDropdowns');
   const today = new Date();
   const [baseMonth, setBaseMonth] = useState(today.getMonth());
   const [baseYear, setBaseYear] = useState(today.getFullYear());
@@ -846,7 +857,7 @@ export function WhenSearchContent({ whenVal, setWhenVal, onClose }) {
                 boxShadow: active ? '0 1px 4px rgba(25,37,36,0.08)' : 'none',
               }}
             >
-              {opt}
+              {t(opt === 'Exact dates' ? 'when.exactDates' : 'when.flexibleDates')}
             </button>
           );
         })}
@@ -876,10 +887,10 @@ export function WhenSearchContent({ whenVal, setWhenVal, onClose }) {
               </svg>
             </button>
             <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--ink)' }}>
-              {MONTHS[baseMonth]} {baseYear}
+              {t(`months.${MONTH_KEYS[baseMonth]}`)} {baseYear}
             </span>
             <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--sage)' }}>
-              {MONTHS[secondMonth]} {secondYear}
+              {t(`months.${MONTH_KEYS[secondMonth]}`)} {secondYear}
             </span>
             <button
               onClick={nextMonth}
@@ -906,6 +917,7 @@ export function WhenSearchContent({ whenVal, setWhenVal, onClose }) {
               startDate={startDate}
               endDate={endDate}
               onDayClick={handleDayClick}
+              t={t}
             />
             <CalendarMonth
               year={secondYear}
@@ -913,6 +925,7 @@ export function WhenSearchContent({ whenVal, setWhenVal, onClose }) {
               startDate={startDate}
               endDate={endDate}
               onDayClick={handleDayClick}
+              t={t}
             />
           </div>
 
@@ -933,7 +946,7 @@ export function WhenSearchContent({ whenVal, setWhenVal, onClose }) {
                   onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(209,235,219,0.4)'}
                   onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.6)'}
                 >
-                  +/− {n} day{ n > 1 ? 's' : ''}
+                  {t('when.dayFlex', { count: n })}
                 </button>
               ))}
             </div>
@@ -959,7 +972,7 @@ export function WhenSearchContent({ whenVal, setWhenVal, onClose }) {
                 onMouseEnter={(e) => { if (endDate) e.currentTarget.style.background = '#3E8A6F'; }}
                 onMouseLeave={(e) => { if (endDate) e.currentTarget.style.background = '#4A9B7F'; }}
               >
-                {endDate ? formatDateRange(startDate, endDate) : `${formatDisplay(startDate)} — select end date`}
+                {endDate ? formatDateRange(startDate, endDate) : t('when.selectEndDate', { date: formatDisplay(startDate) })}
               </button>
               <button
                 onClick={clearDates}
@@ -970,7 +983,7 @@ export function WhenSearchContent({ whenVal, setWhenVal, onClose }) {
                   fontFamily: 'var(--font-body)',
                 }}
               >
-                Clear
+                {t('when.clear')}
               </button>
             </div>
           )}
@@ -986,7 +999,7 @@ export function WhenSearchContent({ whenVal, setWhenVal, onClose }) {
             letterSpacing: '0.14em', color: 'var(--sage)', marginBottom: '0.5rem',
             marginTop: '0.75rem',
           }}>
-            How long would you want your collab to be?
+            {t('when.howLong')}
           </p>
           <div style={{ display: 'flex', gap: '0.375rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
             {DURATION_OPTIONS.map((d) => {
@@ -1005,7 +1018,7 @@ export function WhenSearchContent({ whenVal, setWhenVal, onClose }) {
                     transition: 'all 140ms', fontFamily: 'var(--font-body)',
                   }}
                 >
-                  {d}
+                  {t(`when.duration.${d.replace(/\s+/g, '').toLowerCase()}`)}
                 </button>
               );
             })}
@@ -1016,7 +1029,7 @@ export function WhenSearchContent({ whenVal, setWhenVal, onClose }) {
             fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase',
             letterSpacing: '0.14em', color: 'var(--sage)', marginBottom: '0.5rem',
           }}>
-            What month are you looking for?
+            {t('when.whichMonth')}
           </p>
           <div style={{
             display: 'flex', gap: '0.375rem', flexWrap: 'wrap',
@@ -1039,7 +1052,7 @@ export function WhenSearchContent({ whenVal, setWhenVal, onClose }) {
                     transition: 'all 140ms', fontFamily: 'var(--font-body)',
                   }}
                 >
-                  {label}
+                  {t(`months.${MONTH_KEYS[m - 1]}`)}
                 </button>
               );
             })}
@@ -1053,7 +1066,7 @@ export function WhenSearchContent({ whenVal, setWhenVal, onClose }) {
               background: 'rgba(74,155,127,0.1)',
             }}>
               <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--ink)' }}>
-                {flexDuration} in {flexMonth}
+                {t('when.durationInMonth', { duration: flexDuration, month: flexMonth })}
               </span>
               <button
                 onClick={clearDates}
@@ -1064,7 +1077,7 @@ export function WhenSearchContent({ whenVal, setWhenVal, onClose }) {
                   fontFamily: 'var(--font-body)',
                 }}
               >
-                Clear
+                {t('when.clear')}
               </button>
             </div>
           )}

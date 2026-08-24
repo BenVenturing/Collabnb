@@ -1,0 +1,47 @@
+{
+  "payoutInfo": {
+    "platform": {
+      "host": "Your card is charged automatically once the collab is marked complete — no manual transfers, no chasing anyone down. Collabnb holds the creator's payout for 48 hours after completion in case either side needs to raise a dispute, then forwards it automatically.",
+      "creator": "Payment is guaranteed and automatic — no invoicing, no waiting on you. Funds are released shortly after the 48-hour dispute window closes, and creators can see upfront that payment is protected — which tends to attract stronger applicants."
+    },
+    "in_person": {
+      "host": "You hand the creator payment directly — cash, Venmo, whatever you agree on — on your own timeline. Collabnb still automatically charges your platform fee once the collab is marked complete; that's separate from the creator's payment.",
+      "creator": "You're trusting the host to pay you directly. Collabnb doesn't hold, verify, or guarantee this payment, and the 48-hour dispute window doesn't apply, since no cash passes through the platform."
+    }
+  },
+  "errors": {
+    "cardConfirmFailed": "Couldn't confirm your card — please try again.",
+    "publishFailed": "Something went wrong publishing this listing.",
+    "cardSetupFailed": "Couldn't start card setup — please try again."
+  },
+  "nextLabel": {
+    "publishing": "Publishing...",
+    "redirecting": "Redirecting to Stripe...",
+    "addCard": "Add a card to publish",
+    "saveChanges": "Save changes",
+    "publish": "Publish listing"
+  },
+  "heading": "How will you get paid?",
+  "subtitle": "This decides how the creator's payment moves — review it carefully, it's locked once the listing goes live.",
+  "lockedBanner": "This listing is already published, so payment method is locked to avoid disrupting active collaborations.",
+  "payoutSwitch": {
+    "inPerson": "I'll pay the creator myself",
+    "platform": "Collabnb handles payment",
+    "recommended": "Recommended"
+  },
+  "infoCol": {
+    "forHost": "For you (the host)",
+    "forCreator": "For the creator"
+  },
+  "fees": {
+    "heading": "Host-only: Pricing & Fees",
+    "platformFee": "Platform fee",
+    "percentDesc": "5% of cash payout (min $25)",
+    "flatDesc": "Flat $25 platform fee",
+    "chargedOnlyOnce": "charged only once a collaboration is completed",
+    "chargedNoteSuffix": ". You never pay anything upfront to publish a listing.",
+    "hiddenNote": "⚠ Creators don't see these fees"
+  },
+  "cardSaved": "Card saved — you're all set. Click Publish to go live.",
+  "needsCardNote": "You'll need a card on file before publishing — it's only charged for Collabnb's platform fee once a collaboration completes."
+}

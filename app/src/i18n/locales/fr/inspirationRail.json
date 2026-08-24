@@ -1,0 +1,14 @@
+{
+  "liveNow": "En ligne en ce moment — pour vous inspirer",
+  "cashSuffix": "Espèces",
+  "plusNights": "+ {{nights}} nuits",
+  "deliverables": "{{count}} livrables",
+  "tips": [
+    "« Les meilleures annonces racontent une histoire — pas seulement une chambre. »",
+    "Astuce : Commencez par votre photo la plus marquante. C'est la première chose que voient les créateurs.",
+    "« Les meilleures collaborations commencent par une offre claire et généreuse. »",
+    "Astuce : Des livrables précis suscitent de meilleures propositions que des livrables vagues.",
+    "« Montrez l'expérience, pas seulement le logement. »",
+    "Astuce : Un texte court et chaleureux transforme les visiteurs en candidats."
+  ]
+}

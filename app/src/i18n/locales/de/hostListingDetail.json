@@ -1,0 +1,95 @@
+{
+  "statusLabels": {
+    "pending": "Ausstehend",
+    "under_review": "Wird geprüft",
+    "approved": "Genehmigt",
+    "completed": "Abgeschlossen",
+    "declined": "Abgelehnt"
+  },
+  "tierDefs": {
+    "UGC Beginner": "0–5K Follower — Neue Creator im Aufbau ihres Portfolios",
+    "UGC Pro": "5K–10K Follower — Content-Ersteller, keine Influencer-Reichweite",
+    "Micro Influencer": "10K–50K Follower — Content im Influencer-Stil, engagiertes Publikum",
+    "Influencer": "50K+ Follower — Große Reichweite, etabliertes Publikum",
+    "Macro": "100K+ Follower — Top-Creator mit großer Reichweite"
+  },
+  "listingStatusLabels": {
+    "active": "Aktiv",
+    "paused": "Pausiert",
+    "draft": "Entwurf"
+  },
+  "photoModal": {
+    "close": "Schließen"
+  },
+  "applicantRow": {
+    "pitch": "ANGEBOT",
+    "meta": "@{{username}} · {{followers}} Follower · {{applied}}",
+    "proposedChanges": "Vorgeschlagene Änderungen",
+    "review": "Prüfen",
+    "openProposal": "Vorschlag öffnen",
+    "message": "Nachricht"
+  },
+  "loading": "Wird geladen…",
+  "notFound": "Angebot nicht gefunden.",
+  "header": {
+    "myListings": "Meine Angebote",
+    "creatorView": "Creator-Ansicht",
+    "editListing": "Angebot bearbeiten",
+    "changeStatusTitle": "Klicken, um den Status zu ändern"
+  },
+  "photos": {
+    "title": "Fotos",
+    "subtitle_one": "{{count}} Foto — klicken zum Vergrößern",
+    "subtitle_other": "{{count}} Fotos — klicken zum Vergrößern",
+    "view": "Ansehen",
+    "cover": "Titelbild"
+  },
+  "details": {
+    "title": "Angebotsdetails",
+    "compensation": "Vergütung",
+    "deliverables": "Deliverables",
+    "creatorTier": "Creator-Stufe",
+    "available": "Verfügbar",
+    "deliverableLoad": "Deliverable-Umfang",
+    "dueIn": "Fällig in",
+    "dueInDays": "{{days}} Tagen",
+    "whatYoureOffering": "Was du anbietest"
+  },
+  "affiliate": {
+    "title": "Affiliate-Code",
+    "subtitle": "Creator können mit diesem Code Provision auf Buchungen verdienen",
+    "copied": "Kopiert!",
+    "copy": "Kopieren",
+    "shareCode": "Teile diesen Code mit genehmigten Creators",
+    "noCode": "Für dieses Angebot ist kein Affiliate-Code festgelegt.",
+    "addCode": "Code hinzufügen"
+  },
+  "applicants": {
+    "heading": "Bewerber",
+    "subtitle_one": "{{total}} insgesamt · {{pitchCount}} Angebot",
+    "subtitle_other": "{{total}} insgesamt · {{pitchCount}} Angebote",
+    "allChip": "Alle ({{count}})",
+    "statusChip": "{{status}} ({{count}})",
+    "emptyNone": "Noch keine Bewerbungen — teile dein Angebot, um Creator anzuziehen.",
+    "emptyFiltered": "Keine {{status}} Bewerber."
+  },
+  "statusModal": {
+    "blockedTitle": "Kann nicht auf Entwurf gesetzt werden",
+    "blockedBody": "Dieses Angebot hat Creator in einem aktiven Vertrag. Du musst alle aktiven Kollaborationen abschließen oder abbrechen, bevor du den Status auf Entwurf änderst.",
+    "gotIt": "Verstanden",
+    "publishTitle": "Dieses Angebot veröffentlichen?",
+    "publishBody": "Es wird sofort live und für Creator auf Collabnb sichtbar.",
+    "cancel": "Abbrechen",
+    "publish": "Veröffentlichen",
+    "publishing": "Wird veröffentlicht…",
+    "toDraftTitle": "Auf Entwurf setzen?",
+    "pendingWarning_one": "{{count}} Creator mit ausstehenden oder in Prüfung befindlichen Anfragen erhält eine Nachricht: ",
+    "pendingWarning_other": "{{count}} Creator mit ausstehenden oder in Prüfung befindlichen Anfragen erhalten eine Nachricht: ",
+    "pauseMessage": "Entschuldige die Unannehmlichkeiten — dieses Angebot wurde vorübergehend pausiert. Wir melden uns, falls es wieder live geht.",
+    "typeToConfirmPrefix": "Gib ",
+    "typeToConfirmSuffix": " ein, um zu bestätigen:",
+    "noPendingBody": "Das Angebot wird für Creator ausgeblendet, und es werden keine neuen Bewerbungen mehr angenommen.",
+    "moveToDraft": "Auf Entwurf setzen",
+    "saving": "Wird gespeichert…"
+  }
+}

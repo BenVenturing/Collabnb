@@ -1,20 +1,22 @@
 import { useState, useMemo } from 'react';
 import { useQuery } from 'convex/react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../../convex/_generated/api';
 import { useNavigate } from 'react-router-dom';
 import collabnbLogo from '../assets/collabnb-logo.png';
 
 const CAT = {
-  creators: { label: 'Creators', color: '#7B68C8', bg: 'rgba(123,104,200,0.1)' },
-  hosts:    { label: 'Hosts',    color: '#4A9B7F', bg: 'rgba(74,155,127,0.1)' },
-  industry: { label: 'Industry', color: '#3C5759', bg: 'rgba(60,87,89,0.1)'   },
-  stats:    { label: 'Stats',    color: '#D4A843', bg: 'rgba(212,168,67,0.1)' },
+  creators: { color: '#7B68C8', bg: 'rgba(123,104,200,0.1)' },
+  hosts:    { color: '#4A9B7F', bg: 'rgba(74,155,127,0.1)' },
+  industry: { color: '#3C5759', bg: 'rgba(60,87,89,0.1)'   },
+  stats:    { color: '#D4A843', bg: 'rgba(212,168,67,0.1)' },
 };
 
 const CATS = ['all', 'creators', 'hosts', 'industry', 'stats'];
 
 function CategoryPill({ cat, size = 'sm' }) {
-  const cfg = CAT[cat] || { label: cat, color: '#3C5759', bg: 'rgba(60,87,89,0.1)' };
+  const { t } = useTranslation('blog');
+  const cfg = CAT[cat] || { color: '#3C5759', bg: 'rgba(60,87,89,0.1)' };
   return (
     <span style={{
       fontSize: size === 'sm' ? '0.62rem' : '0.7rem',
@@ -27,30 +29,33 @@ function CategoryPill({ cat, size = 'sm' }) {
       letterSpacing: '0.06em',
       lineHeight: 1,
     }}>
-      {cfg.label || cat}
+      {t(`categories.${cat}`, { defaultValue: cat })}
     </span>
   );
 }
 
 function ReadTime({ mins }) {
+  const { t } = useTranslation('blog');
   return (
     <span style={{ fontSize: '0.72rem', color: 'var(--sage)', fontWeight: 500 }}>
-      {mins || 1} min read
+      {t('readTime', { count: mins || 1 })}
     </span>
   );
 }
 
 function DateLabel({ ts }) {
+  const { i18n } = useTranslation('blog');
   if (!ts) return null;
   return (
     <span style={{ fontSize: '0.72rem', color: 'var(--sage)' }}>
-      {new Date(ts).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+      {new Date(ts).toLocaleDateString(i18n.language, { month: 'short', day: 'numeric', year: 'numeric' })}
     </span>
   );
 }
 
 // ─── Featured (hero) post card ────────────────────────────────────────────────
 function FeaturedCard({ post }) {
+  const { t } = useTranslation('blog');
   const navigate = useNavigate();
   const [hovered, setHovered] = useState(false);
 
@@ -80,7 +85,7 @@ function FeaturedCard({ post }) {
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
             <span style={{ fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--sage)', background: 'rgba(25,37,36,0.05)', padding: '0.2rem 0.55rem', borderRadius: 9999 }}>
-              Featured
+              {t('featuredBadge')}
             </span>
             <CategoryPill cat={post.category} size="sm" />
           </div>
@@ -113,7 +118,7 @@ function FeaturedCard({ post }) {
           <span style={{ color: 'var(--stone)' }}>·</span>
           <DateLabel ts={post.published_at} />
           <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.82rem', fontWeight: 600, color: 'var(--slate)', opacity: hovered ? 1 : 0.6, transition: 'opacity 180ms' }}>
-            Read
+            {t('read')}
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
               <path d="M5 12h14M12 5l7 7-7 7"/>
             </svg>
@@ -256,6 +261,7 @@ function SkeletonCard() {
 
 // ─── Minimal Journal top bar ─────────────────────────────────────────────────
 function JournalTopBar() {
+  const { t } = useTranslation('blog');
   return (
     <div style={{
       position: 'fixed', top: 0, left: 0, right: 0, zIndex: 900,
@@ -284,7 +290,7 @@ function JournalTopBar() {
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
           <path d="M19 12H5M12 19l-7-7 7-7"/>
         </svg>
-        Back to Collabnb
+        {t('topBar.backToCollabnb')}
       </a>
     </div>
   );
@@ -293,6 +299,7 @@ function JournalTopBar() {
 // ─── Main page ────────────────────────────────────────────────────────────────
 // ─── Cinematic horizontal journal gallery ─────────────────────────────────────
 function JournalGallery({ posts }) {
+  const { t } = useTranslation('blog');
   const navigate = useNavigate();
   const [hovered, setHovered] = useState(null);   // focused card index
   const [exiting, setExiting] = useState(null);   // slug being opened
@@ -308,10 +315,10 @@ function JournalGallery({ posts }) {
     <section style={{ marginBottom: '3.5rem' }}>
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '0.5rem', gap: '1rem' }}>
         <h2 style={{ fontFamily: 'var(--font-blog-display)', fontWeight: 500, fontSize: 'clamp(1.4rem, 2.6vw, 2.1rem)', color: 'var(--ink)', margin: 0, letterSpacing: '-0.01em' }}>
-          Selected <span style={{ fontStyle: 'italic' }}>from the</span> Journal
+          {t('gallery.headingPrefix')}<span style={{ fontStyle: 'italic' }}>{t('gallery.headingItalic')}</span>{t('gallery.headingSuffix')}
         </h2>
         <span style={{ fontSize: '0.62rem', fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--sage)', whiteSpace: 'nowrap' }}>
-          Drag / hover to explore
+          {t('gallery.dragHint')}
         </span>
       </div>
 
@@ -376,7 +383,7 @@ function JournalGallery({ posts }) {
                     style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', transform: isHovered ? 'scale(1.06)' : 'scale(1)', transition: 'transform 760ms var(--ease-out-expo)' }}
                   />
                 ) : (
-                  <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--sage)', fontSize: '0.75rem' }}>No image</div>
+                  <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--sage)', fontSize: '0.75rem' }}>{t('gallery.noImage')}</div>
                 )}
                 <div style={{ position: 'absolute', top: '0.75rem', left: '0.75rem' }}>
                   <CategoryPill cat={post.category} />
@@ -406,6 +413,7 @@ function JournalGallery({ posts }) {
 }
 
 export default function Blog() {
+  const { t } = useTranslation('blog');
   const posts = useQuery(api.blog.getPublished, { limit: 50 });
   const [query, setQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('all');
@@ -421,7 +429,7 @@ export default function Blog() {
       list = list.filter(p =>
         p.title?.toLowerCase().includes(q) ||
         p.excerpt?.toLowerCase().includes(q) ||
-        (p.tags || []).some(t => t.toLowerCase().includes(q))
+        (p.tags || []).some(tag => tag.toLowerCase().includes(q))
       );
     }
     return list;
@@ -456,7 +464,7 @@ export default function Blog() {
           lineHeight: 1.1,
           margin: '0 0 1rem',
         }}>
-          The Journal
+          {t('header.title')}
         </h1>
         <p style={{
           fontSize: 'clamp(0.95rem, 1.5vw, 1.1rem)',
@@ -465,7 +473,7 @@ export default function Blog() {
           margin: '0 auto',
           lineHeight: 1.7,
         }}>
-          Insights for boutique hosts & UGC creators building the future of content-for-stay.
+          {t('header.subtitle')}
         </p>
 
         {/* Divider */}
@@ -481,7 +489,7 @@ export default function Blog() {
           </svg>
           <input
             type="text"
-            placeholder="Search articles…"
+            placeholder={t('searchPlaceholder')}
             value={query}
             onChange={e => setQuery(e.target.value)}
             style={{
@@ -535,7 +543,7 @@ export default function Blog() {
                   textTransform: cat === 'all' ? 'none' : 'capitalize',
                 }}
               >
-                {cat === 'all' ? 'All' : (cfg?.label || cat)}
+                {cat === 'all' ? t('categories.all') : t(`categories.${cat}`, { defaultValue: cat })}
               </button>
             );
           })}
@@ -556,19 +564,19 @@ export default function Blog() {
       {posts !== undefined && filtered.length === 0 && (
         <div style={{ textAlign: 'center', padding: '5rem 2rem' }}>
           <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.25rem', color: 'var(--ink)', margin: '0 0 0.5rem' }}>
-            {query || activeCategory !== 'all' ? 'No matching articles' : 'No posts yet'}
+            {query || activeCategory !== 'all' ? t('emptyState.noMatchTitle') : t('emptyState.noPostsTitle')}
           </p>
           <p style={{ fontSize: '0.875rem', color: 'var(--sage)', marginBottom: '1.25rem' }}>
             {query || activeCategory !== 'all'
-              ? 'Try a different search term or category.'
-              : 'Check back soon — new content is on its way.'}
+              ? t('emptyState.noMatchBody')
+              : t('emptyState.noPostsBody')}
           </p>
           {(query || activeCategory !== 'all') && (
             <button
               onClick={() => { setQuery(''); setActiveCategory('all'); }}
               style={{ padding: '0.55rem 1.25rem', borderRadius: 9999, border: '1.5px solid rgba(25,37,36,0.15)', background: 'transparent', fontFamily: 'var(--font-body)', fontSize: '0.82rem', fontWeight: 600, color: 'var(--slate)', cursor: 'pointer' }}
             >
-              Clear filters
+              {t('emptyState.clearFilters')}
             </button>
           )}
         </div>
@@ -585,7 +593,7 @@ export default function Blog() {
           {isDefault && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
               <span style={{ fontSize: '0.65rem', fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--sage)' }}>
-                More from the Journal
+                {t('moreFromJournal')}
               </span>
               <div style={{ flex: 1, height: 1, background: 'var(--stone)' }} />
             </div>

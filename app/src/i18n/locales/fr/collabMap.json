@@ -1,0 +1,8 @@
+{
+  "mapUnavailable": "Carte indisponible",
+  "mapConfigHint": "Définissez VITE_MAPBOX_TOKEN dans app/.env.local pour activer la carte.",
+  "exitFullscreen": "Quitter le plein écran",
+  "expandFullscreen": "Passer en plein écran",
+  "zoomIn": "Zoomer",
+  "zoomOut": "Dézoomer"
+}

@@ -1,0 +1,94 @@
+{
+  "reachChart": {
+    "tooltipLine1": "Fonctionnalité à venir —",
+    "tooltipLine2": "Intégration Instagram en cours."
+  },
+  "statusLabels": {
+    "active": "Actif",
+    "paused": "En pause",
+    "draft": "Brouillon"
+  },
+  "filters": {
+    "all": "Tous"
+  },
+  "normalizedListing": {
+    "cashOnly": "{{amount}} $ en espèces",
+    "hybridCashStay": "{{amount}} $ + séjour",
+    "seeListing": "Voir l'annonce",
+    "deliverablesMore": " +{{count}} de plus",
+    "deliverableCount": "{{count}} livrables",
+    "defaultCollabType": "Collab"
+  },
+  "charts": {
+    "totalCollabs": "Total des collabs",
+    "creatorsWorkedWith": "Créateurs avec qui vous avez travaillé",
+    "contentPieces": "Contenus produits",
+    "estReach": "Portée est."
+  },
+  "chartModal": {
+    "allTimeLabel": "{{title}} · Depuis toujours",
+    "previewDataNote": "Données d'aperçu · Le suivi en direct s'active avec le backend de production",
+    "close": "Fermer"
+  },
+  "listingCard": {
+    "stats": {
+      "applied": "Candidatures",
+      "confirmed": "Confirmés",
+      "done": "Terminés"
+    },
+    "menu": {
+      "deleteSample": "Supprimer l'exemple",
+      "edit": "Modifier",
+      "pause": "Mettre en pause",
+      "unpause": "Réactiver",
+      "duplicate": "Dupliquer"
+    }
+  },
+  "browse": {
+    "backToDashboard": "Retour au tableau de bord",
+    "title": "La marketplace",
+    "subtitle": "Parcourez d'autres logements pour vous inspirer — c'est ce que voient les créateurs lorsqu'ils explorent les annonces.",
+    "hideMap": "Masquer la carte",
+    "showMap": "Afficher la carte",
+    "emptyArea": "Aucune annonce dans cette zone — essayez de déplacer la carte.",
+    "emptyNone": "Aucune annonce à parcourir pour l'instant.",
+    "emptySearch": "Aucune annonce ne correspond à votre recherche.",
+    "close": "Fermer"
+  },
+  "greeting": {
+    "morning": "Bonjour",
+    "afternoon": "Bon après-midi",
+    "evening": "Bonsoir"
+  },
+  "header": {
+    "dashboardTitle": "Tableau de bord de {{firstName}}",
+    "newListing": "Nouvelle annonce"
+  },
+  "compensationBanner": {
+    "title_one": "1 annonce nécessite l'ajout d'une rémunération",
+    "title_other": "{{count}} annonces nécessitent l'ajout d'une rémunération",
+    "body_one": "Chaque collaboration inclut désormais le paiement du créateur. Cette annonce est masquée d'Explorer jusqu'à ce que vous la modifiiez et ajoutiez un montant de rémunération : {{titles}}.",
+    "body_other": "Chaque collaboration inclut désormais le paiement du créateur. Ces annonces sont masquées d'Explorer jusqu'à ce que vous les modifiiez et ajoutiez un montant de rémunération : {{titles}}."
+  },
+  "myListings": {
+    "heading": "Mes annonces",
+    "total": "{{count}} au total",
+    "browseMarketplace": "Parcourir la marketplace",
+    "emptyTitle": "Aucune annonce {{filter}}",
+    "emptyAll": "Créez votre première annonce pour commencer à attirer des créateurs.",
+    "emptyFiltered": "Vous n'avez actuellement aucune annonce {{filter}}."
+  },
+  "activity": {
+    "heading": "Activité",
+    "subtitle": "Ce qui nécessite votre attention",
+    "empty": "Aucune activité. Tout est à jour."
+  },
+  "impact": {
+    "heading": "Votre impact",
+    "subtitle": "Depuis toujours"
+  },
+  "pricingWidget": {
+    "label": "Tarification",
+    "ariaLabel": "Combien coûte une collaboration ?"
+  }
+}

@@ -1,0 +1,5 @@
+{
+  "unavailable": "Map pin picker isn't available in this environment — the city/state fields above are still used.",
+  "searchPlaceholder": "Search an address or city to drop a pin",
+  "clickHint": "Or click the map, or drag the pin, to place it exactly."
+}

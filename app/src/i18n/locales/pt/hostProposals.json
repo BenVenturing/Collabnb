@@ -1,0 +1,146 @@
+{
+  "statusLabels": {
+    "pending": "Pendente",
+    "under_review": "Em análise",
+    "approved": "Aprovado",
+    "completed": "Concluído",
+    "declined": "Recusado"
+  },
+  "typeLabels": {
+    "all": "Todos os tipos",
+    "application": "Candidaturas",
+    "pitch": "Propostas"
+  },
+  "stageAll": "Todos",
+  "tierDefs": {
+    "UGC Beginner": "0–5K seguidores — Novos criadores construindo seu portfólio",
+    "UGC Pro": "5K–10K seguidores — Criadores de conteúdo, não alcance de influenciador",
+    "Micro Influencer": "10K–50K seguidores — Conteúdo estilo influenciador, público engajado",
+    "Influencer": "50K+ seguidores — Amplo alcance, público estabelecido"
+  },
+  "contractFields": {
+    "nights": { "label": "Noites", "placeholder": "ex.: 3" },
+    "compensation": { "label": "Compensação", "placeholder": "ex.: US$ 500 ou US$ 300 + estadia" },
+    "deliverables": { "label": "Entregáveis", "placeholder": "ex.: 2 Reels + 5 Fotos" },
+    "turnaround": { "label": "Prazo de entrega", "placeholder": "ex.: 14 dias" },
+    "affiliate": { "label": "% de afiliado", "placeholder": "ex.: 5% ou —" },
+    "extra_terms": { "label": "Termos extras", "placeholder": "Adicionais opcionais" }
+  },
+  "history": {
+    "heading": "Histórico de negociação",
+    "creatorPitch": "Proposta do criador",
+    "host": "Anfitrião",
+    "creator": "Criador",
+    "version": "v{{version}}",
+    "latest": "← mais recente"
+  },
+  "pdf": {
+    "documentTitle": "Contrato Collabnb",
+    "heading": "Contrato de colaboração Collabnb",
+    "locked": "CONTRATO BLOQUEADO",
+    "terms": "Termos",
+    "negotiatedRounds_one": "Negociado em {{count}} rodada.",
+    "negotiatedRounds_other": "Negociado em {{count}} rodadas.",
+    "signatures": "Assinaturas",
+    "host": "Anfitrião",
+    "creatorSuffix": "(Criador)",
+    "notYetSigned": "Ainda não assinado"
+  },
+  "counterModal": {
+    "heading": "Contraproposta",
+    "versionLine": "{{creatorName}} · {{listing}} · Versão {{version}}",
+    "editingAs": "Editando como ",
+    "adjustTerms": " — ajuste os termos que quiser e depois envie.",
+    "notePlaceholder": "Explique suas alterações para a outra parte...",
+    "noteLabel": "Nota (opcional)",
+    "pricingCalculator": "Calculadora de preços ({{tier}})",
+    "cash": "Dinheiro",
+    "pointsSummary": "{{points}} pts · ponto médio US$ {{midpoint}} · faixa US$ {{low}}–{{high}}",
+    "belowFloor": "Abaixo do mínimo (US$ {{floor}}) para esta carga de trabalho — aumente o valor em dinheiro ou reduza os entregáveis para enviar.",
+    "belowRecommended": "Abaixo da faixa recomendada, mas acima do mínimo — ainda pode ser enviado.",
+    "cancel": "Cancelar",
+    "send": "Enviar contraproposta"
+  },
+  "signModal": {
+    "heading": "Assinar e aceitar",
+    "signingAs": "Assinando como {{partyLabel}}",
+    "contractTerms": "Termos do contrato",
+    "afterRounds_one": "Após {{count}} rodada de negociação",
+    "afterRounds_other": "Após {{count}} rodadas de negociação",
+    "agreement": "Ao assinar, você concorda com os termos acima. O contrato é bloqueado assim que ambas as partes assinarem a mesma versão.",
+    "yourName": "Seu nome completo",
+    "namePlaceholder": "Digite seu nome completo como assinatura",
+    "cancel": "Cancelar",
+    "sign": "Assinar e aceitar"
+  },
+  "messagePanel": {
+    "heading": "Mensagens com {{creatorName}}",
+    "empty": "Ainda não há mensagens — inicie a conversa.",
+    "replyPlaceholder": "Responder a {{creatorName}}…"
+  },
+  "drawer": {
+    "viewProfile": "Ver perfil",
+    "verified": "Verificado",
+    "followers": "Seguidores",
+    "engagement": "Engajamento",
+    "collabs": "Colabs",
+    "originalPitchTerms": "Termos originais da proposta",
+    "modifiedTerms": "Termos modificados",
+    "pitchMessage": "Mensagem da proposta",
+    "applicationMessage": "Mensagem da candidatura",
+    "portfolio": "Portfólio:",
+    "contractLocked": "Contrato bloqueado — ambas as partes assinaram",
+    "saveContractPdf": "Salvar contrato (PDF)",
+    "hostSigned": "Anfitrião assinou",
+    "creatorSigned": "{{name}} assinou",
+    "awaitingCreatorSignature": "Aguardando assinatura do criador",
+    "awaitingHostSignature": "Aguardando assinatura do anfitrião",
+    "hostActions": "Ações do anfitrião",
+    "counterSentAwaitingCreator": "· Contraproposta enviada — aguardando criador",
+    "acceptAsIs": "Aceitar como está",
+    "youSigned": "✓ Você assinou",
+    "counterPitch": "Contraproposta",
+    "decline": "Recusar",
+    "creatorsResponse": "Resposta do criador",
+    "demo": "· demo",
+    "creatorCounteredBack": "· Criador fez uma nova contraproposta",
+    "accept": "Aceitar",
+    "creatorSignedChip": "✓ Criador assinou",
+    "counterBack": "Contrapropor de volta",
+    "moveToReview": "Mover para revisão",
+    "approve": "Aprovar",
+    "markCompleted": "Marcar como concluído",
+    "message": "Mensagem",
+    "messageCreator": "Enviar mensagem ao criador"
+  },
+  "card": {
+    "viewProfile": "Ver perfil",
+    "pitch": "Proposta",
+    "application": "Candidatura",
+    "locked": "Bloqueado",
+    "listingStats": "{{listing}} · {{followers}} seguidores · {{engagement}}% ER",
+    "dragToMoveStage": "Arraste para mudar de etapa"
+  },
+  "header": {
+    "heading": "Propostas",
+    "subtitle": "{{total}} no total · {{pending}} pendentes da sua revisão"
+  },
+  "declinedHeader": {
+    "count_one": "{{count}} proposta recusada",
+    "count_other": "{{count}} propostas recusadas",
+    "clearAll": "Limpar tudo"
+  },
+  "empty": {
+    "noProposalsYet": "Ainda não há propostas",
+    "noFilteredProposals": "Nenhuma proposta {{filters}}",
+    "onceCreatorsApply": "Quando os criadores se candidatarem aos seus anúncios, as propostas deles aparecerão aqui.",
+    "tryDifferentFilter": "Tente um filtro diferente."
+  },
+  "clearDeclinedModal": {
+    "heading": "Limpar propostas recusadas",
+    "body_one": "Remover {{count}} proposta recusada da visualização? Isso não exclui os dados do criador, apenas os oculta do seu pipeline.",
+    "body_other": "Remover as {{count}} propostas recusadas da visualização? Isso não exclui os dados do criador, apenas os oculta do seu pipeline.",
+    "cancel": "Cancelar",
+    "removeAll": "Remover tudo"
+  }
+}

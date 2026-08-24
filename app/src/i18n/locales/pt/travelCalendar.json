@@ -1,0 +1,45 @@
+{
+  "months": ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"],
+  "dayAbbr": ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"],
+  "cityPrivate": "cidade privada",
+  "modal": {
+    "editTrip": "Editar viagem",
+    "addTrip": "Adicionar viagem",
+    "country": "País",
+    "countryPlaceholder": "ex.: Japão",
+    "city": "Cidade",
+    "privateToOthers": "privado para outros criadores",
+    "cityPlaceholder": "ex.: Tóquio",
+    "tripNote": "Nota da viagem",
+    "optional": "(opcional)",
+    "notePlaceholder": "ex.: Aberto a colabs de glamping",
+    "cancel": "Cancelar",
+    "saveChanges": "Salvar alterações",
+    "saveTrip": "Salvar viagem"
+  },
+  "header": {
+    "title": "Calendário de viagens",
+    "hoverToExtend": "Passe o mouse para estender o intervalo — clique para confirmar",
+    "atMax": "{{max}}/{{max}} viagens — exclua uma para adicionar outra",
+    "clickAndDrag": "Clique e arraste, ou clique uma vez e depois passe o mouse para selecionar datas",
+    "hostView": "Viagens de criadores visíveis para você — cidade exibida",
+    "privateView": "As informações da viagem são privadas"
+  },
+  "addTripButton": {
+    "cancel": "Cancelar",
+    "addTrip": "Adicionar viagem"
+  },
+  "hoverHint": {
+    "extend": "Passe o mouse sobre as datas para estender o intervalo, depois clique para confirmar",
+    "confirm": "{{range}} — clique para confirmar"
+  },
+  "empty": {
+    "editable": "Arraste sobre as datas para adicionar sua primeira viagem — até {{max}} no total",
+    "readonly": "Ainda não há viagens planejadas."
+  },
+  "tripList": {
+    "cityHidden": "cidade oculta",
+    "editTitle": "Editar viagem",
+    "deleteTitle": "Excluir viagem"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "stepOf": "Étape {{step}} sur {{total}}",
+  "saving": "Enregistrement...",
+  "saveExit": "Enregistrer et quitter",
+  "helpHeading": "Votre progression est enregistrée",
+  "helpBodyPrefix": "Chaque modification est enregistrée automatiquement dans ce navigateur. Cliquez sur ",
+  "helpBodySuffix": " pour retourner à votre tableau de bord — votre brouillon vous attendra exactement là où vous l'avez laissé.",
+  "saveFallbackError": "Impossible d'enregistrer votre brouillon — réessayez.",
+  "saveErrorSuffix": " Votre progression reste conservée dans ce navigateur — revenez le terminer, ou quittez quand même depuis ici.",
+  "exitWithoutSaving": "Quitter sans enregistrer comme brouillon",
+  "back": "Retour",
+  "next": "Suivant"
+}

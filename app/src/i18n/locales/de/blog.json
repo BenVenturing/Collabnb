@@ -1,0 +1,36 @@
+{
+  "categories": {
+    "creators": "Creator",
+    "hosts": "Gastgeber",
+    "industry": "Branche",
+    "stats": "Statistiken",
+    "all": "Alle"
+  },
+  "readTime_one": "{{count}} Min. Lesezeit",
+  "readTime_other": "{{count}} Min. Lesezeit",
+  "featuredBadge": "Empfohlen",
+  "read": "Lesen",
+  "topBar": {
+    "backToCollabnb": "Zurück zu Collabnb"
+  },
+  "gallery": {
+    "headingPrefix": "Ausgewählt ",
+    "headingItalic": "aus dem",
+    "headingSuffix": " Journal",
+    "dragHint": "Ziehen / Hover zum Erkunden",
+    "noImage": "Kein Bild"
+  },
+  "header": {
+    "title": "Das Journal",
+    "subtitle": "Einblicke für Boutique-Gastgeber & UGC-Creator, die die Zukunft von Content-für-Aufenthalt gestalten."
+  },
+  "searchPlaceholder": "Artikel durchsuchen…",
+  "emptyState": {
+    "noMatchTitle": "Keine passenden Artikel",
+    "noPostsTitle": "Noch keine Beiträge",
+    "noMatchBody": "Versuche einen anderen Suchbegriff oder eine andere Kategorie.",
+    "noPostsBody": "Schau bald wieder vorbei — neuer Content ist unterwegs.",
+    "clearFilters": "Filter zurücksetzen"
+  },
+  "moreFromJournal": "Mehr aus dem Journal"
+}

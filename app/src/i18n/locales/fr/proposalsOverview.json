@@ -1,0 +1,59 @@
+{
+  "hello": "Bonjour, {{name}} !",
+  "there": "là",
+  "greeting": {
+    "creator": "Voici un aperçu de vos collabs.",
+    "host": "Voici un aperçu de vos propositions."
+  },
+  "nav": {
+    "overview": "Aperçu",
+    "money": {
+      "creator": "Revenus",
+      "host": "Dépenses"
+    },
+    "calendar": "Calendrier",
+    "activity": "Activité",
+    "contract": "Contrat"
+  },
+  "sidebarTip": {
+    "creator": "Des publications régulières incitent les hôtes à vous réinviter.",
+    "host": "Examiner les candidatures plus rapidement fidélise les créateurs."
+  },
+  "closeSidebar": "Fermer la barre latérale",
+  "openSidebar": "Ouvrir la barre latérale",
+  "chartTitle": {
+    "creator": "Aperçu des revenus",
+    "host": "Aperçu des dépenses"
+  },
+  "chart": {
+    "money": {
+      "creator": "Revenus",
+      "host": "Dépenses"
+    },
+    "volume": "Candidatures"
+  },
+  "stat": {
+    "creator": {
+      "active": { "label": "Collabs actives" },
+      "pending": { "label": "Candidatures en attente" },
+      "earned": { "label": "Total gagné" },
+      "due": { "label": "Contenu à livrer" }
+    },
+    "host": {
+      "new": { "label": "Nouvelles candidatures" },
+      "review": { "label": "Examen en attente" },
+      "active": { "label": "Collabs actives" },
+      "spend": { "label": "Dépenses totales" }
+    }
+  },
+  "upcoming": "À venir",
+  "clearDateFilter": "Effacer le filtre de date ×",
+  "nothingScheduled": "Rien de prévu pour ce jour.",
+  "todoMeta": {
+    "deadline": "Date limite du contenu",
+    "pending_action": "Action en attente",
+    "stay_date": "Date de séjour"
+  },
+  "searchCreator": "Rechercher vos collabs…",
+  "searchHost": "Rechercher des créateurs, des annonces…"
+}

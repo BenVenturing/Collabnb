@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, ArrowRight, Star, Eye, X } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { useMutation, useQuery } from "convex/react";
 import { ConvexError } from "convex/values";
 import { api } from "../../../convex/_generated/api";
@@ -10,10 +11,6 @@ import { useAuth } from "../../contexts/AuthContext";
 import { formatDateRange } from "../../lib/dateUtils";
 import ListingDetail from "../ListingDetail";
 import { calcMidpoint, calcStayOffset, calcRange, evaluateZone, totalPoints } from "../../../convex/lib/compensationPoints";
-
-const TIER_LABELS = { ugc_beginner: "UGC Beginner", ugc_pro: "UGC Pro", micro: "Micro Influencer", mid: "Influencer" };
-const COMP_LABELS = { paid: "Paid", hybrid: "Hybrid" };
-const LOAD_LABELS = { light: "Light Load", moderate: "Moderate Load", heavy: "Heavy Load", custom: "Custom Campaign" };
 
 function Section({ title, children }) {
   return (
@@ -37,6 +34,10 @@ function Row({ label, value }) {
 }
 
 export default function Step4Review() {
+  const { t } = useTranslation('step4Review');
+  const TIER_LABELS = t('tierLabels', { returnObjects: true });
+  const COMP_LABELS = t('compLabels', { returnObjects: true });
+  const LOAD_LABELS = t('loadLabels', { returnObjects: true });
   const navigate = useNavigate();
   const { draft, updateDraft, clearDraft, totalDeliverables, formatCount, combinedDeliverablesList } = useListingDraft();
   const { profile } = useAuth();
@@ -132,7 +133,7 @@ export default function Step4Review() {
     } catch (err) {
       console.error(err);
       const message = err instanceof ConvexError ? err.data : err?.message;
-      setSaveError(typeof message === "string" && message ? message : "Something went wrong saving this draft.");
+      setSaveError(typeof message === "string" && message ? message : t('saveFallbackError'));
       setSaving(false);
     }
   }
@@ -157,10 +158,10 @@ export default function Step4Review() {
         onNext={() => navigate("/host/listings/create/payment")}
       >
         <h2 style={{ fontFamily: "Cabinet Grotesk, serif", fontWeight: 800, fontSize: 28, color: "var(--ink)", margin: "0 0 6px", display: "flex", alignItems: "center", gap: 10 }}>
-          {editingId ? "Edit listing" : "Review your listing"}
+          {editingId ? t('heading.edit') : t('heading.review')}
         </h2>
         <p style={{ fontFamily: "Satoshi, sans-serif", fontSize: 14, color: "var(--slate)", margin: "0 0 16px" }}>
-          {editingId ? "Review your changes, then continue to payment." : "Here's how your listing will appear to creators. Review everything, then set up payment on the next step."}
+          {editingId ? t('subtitle.edit') : t('subtitle.review')}
         </p>
 
         {/* View as creator toggle */}
@@ -168,7 +169,7 @@ export default function Step4Review() {
           onClick={() => setCreatorView(true)}
           style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "10px 16px", marginBottom: 28, borderRadius: 9999, border: "1.5px solid var(--ink)", background: "transparent", cursor: "pointer", fontFamily: "Satoshi, sans-serif", fontSize: 14, fontWeight: 700, color: "var(--ink)" }}
         >
-          <Eye size={16} /> View as a creator
+          <Eye size={16} /> {t('viewAsCreator')}
         </button>
 
         {/* Header card */}
@@ -177,7 +178,7 @@ export default function Step4Review() {
           <div style={{ fontFamily: "Satoshi, sans-serif", fontSize: 13, color: "var(--slate)", marginTop: 2 }}>{draft.location_city}{draft.location_country ? `, ${draft.location_country}` : ""}</div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 12 }}>
             {tierLabel && <span style={{ padding: "5px 12px", borderRadius: 9999, border: "1.5px solid rgba(25,37,36,0.15)", fontFamily: "Satoshi, sans-serif", fontSize: 12, fontWeight: 600, color: "var(--ink)" }}>{tierLabel}</span>}
-            {compLabel && draft.nights && draft.compensation_type !== "paid" && <span style={{ padding: "5px 12px", borderRadius: 9999, background: "var(--mint)", fontFamily: "Satoshi, sans-serif", fontSize: 12, fontWeight: 600, color: "var(--ink)" }}>{draft.nights} nights {compLabel}</span>}
+            {compLabel && draft.nights && draft.compensation_type !== "paid" && <span style={{ padding: "5px 12px", borderRadius: 9999, background: "var(--mint)", fontFamily: "Satoshi, sans-serif", fontSize: 12, fontWeight: 600, color: "var(--ink)" }}>{t('nightsComp', { nights: draft.nights, compLabel })}</span>}
             {loadLabel && <span style={{ padding: "5px 12px", borderRadius: 9999, border: "1.5px solid rgba(25,37,36,0.15)", fontFamily: "Satoshi, sans-serif", fontSize: 12, fontWeight: 600, color: "var(--ink)" }}>{loadLabel}</span>}
           </div>
         </div>
@@ -185,8 +186,8 @@ export default function Step4Review() {
         {/* Photos — order + hero */}
         {draft.images.length > 0 && (
           <div style={{ marginBottom: 24 }}>
-            <div style={{ fontFamily: "Satoshi, sans-serif", fontWeight: 700, fontSize: 16, color: "var(--ink)", marginBottom: 4 }}>Photos</div>
-            <div style={{ fontFamily: "Satoshi, sans-serif", fontSize: 12, color: "var(--sage)", marginBottom: 12 }}>The first photo is your hero — it leads the listing. Reorder or set a new hero below.</div>
+            <div style={{ fontFamily: "Satoshi, sans-serif", fontWeight: 700, fontSize: 16, color: "var(--ink)", marginBottom: 4 }}>{t('photos.heading')}</div>
+            <div style={{ fontFamily: "Satoshi, sans-serif", fontSize: 12, color: "var(--sage)", marginBottom: 12 }}>{t('photos.hint')}</div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
               {draft.images.map((id, i) => (
                 <div key={id || i} style={{ width: 104 }}>
@@ -200,18 +201,18 @@ export default function Step4Review() {
                     )}
                     {i === 0 && (
                       <span style={{ position: "absolute", top: 6, left: 6, display: "inline-flex", alignItems: "center", gap: 3, padding: "3px 7px", borderRadius: 9999, background: "var(--ink)", color: "#fff", fontFamily: "Satoshi, sans-serif", fontSize: 10, fontWeight: 700 }}>
-                        <Star size={10} fill="#fff" /> Hero
+                        <Star size={10} fill="#fff" /> {t('photos.hero')}
                       </span>
                     )}
                   </div>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4, marginTop: 6 }}>
-                    <button onClick={() => moveImage(i, i - 1)} disabled={i === 0} title="Move left" style={{ width: 26, height: 26, borderRadius: "50%", border: "1.5px solid rgba(25,37,36,0.15)", background: "#fff", cursor: i === 0 ? "default" : "pointer", opacity: i === 0 ? 0.35 : 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <button onClick={() => moveImage(i, i - 1)} disabled={i === 0} title={t('photos.moveLeft')} style={{ width: 26, height: 26, borderRadius: "50%", border: "1.5px solid rgba(25,37,36,0.15)", background: "#fff", cursor: i === 0 ? "default" : "pointer", opacity: i === 0 ? 0.35 : 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
                       <ArrowLeft size={13} color="var(--ink)" />
                     </button>
                     {i !== 0 && (
-                      <button onClick={() => moveImage(i, 0)} title="Set as hero" style={{ background: "none", border: "none", cursor: "pointer", fontFamily: "Satoshi, sans-serif", fontSize: 11, fontWeight: 600, color: "var(--slate)", padding: "0 2px" }}>Hero</button>
+                      <button onClick={() => moveImage(i, 0)} title={t('photos.setAsHero')} style={{ background: "none", border: "none", cursor: "pointer", fontFamily: "Satoshi, sans-serif", fontSize: 11, fontWeight: 600, color: "var(--slate)", padding: "0 2px" }}>{t('photos.hero')}</button>
                     )}
-                    <button onClick={() => moveImage(i, i + 1)} disabled={i === draft.images.length - 1} title="Move right" style={{ width: 26, height: 26, borderRadius: "50%", border: "1.5px solid rgba(25,37,36,0.15)", background: "#fff", cursor: i === draft.images.length - 1 ? "default" : "pointer", opacity: i === draft.images.length - 1 ? 0.35 : 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <button onClick={() => moveImage(i, i + 1)} disabled={i === draft.images.length - 1} title={t('photos.moveRight')} style={{ width: 26, height: 26, borderRadius: "50%", border: "1.5px solid rgba(25,37,36,0.15)", background: "#fff", cursor: i === draft.images.length - 1 ? "default" : "pointer", opacity: i === draft.images.length - 1 ? 0.35 : 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
                       <ArrowRight size={13} color="var(--ink)" />
                     </button>
                   </div>
@@ -222,20 +223,20 @@ export default function Step4Review() {
           </div>
         )}
 
-        <Section title="The Offer">
-          {draft.perks.length > 0 && <Row label="Add-ons" value={"• " + draft.perks.join("\n• ")} />}
-          <Row label="What you deliver" value={`${totalDeliverables} total deliverables across ${formatCount} format${formatCount !== 1 ? "s" : ""}`} />
-          {draft.vibe_tags.length > 0 && <Row label="Vibe" value={draft.vibe_tags.join(", ")} />}
+        <Section title={t('sections.offer')}>
+          {draft.perks.length > 0 && <Row label={t('rows.addOns')} value={"• " + draft.perks.join("\n• ")} />}
+          <Row label={t('rows.whatYouDeliver')} value={t('rows.whatYouDeliverValue', { total: totalDeliverables, count: formatCount })} />
+          {draft.vibe_tags.length > 0 && <Row label={t('rows.vibe')} value={draft.vibe_tags.join(", ")} />}
         </Section>
 
-        <Section title="Dates & Deadlines">
+        <Section title={t('sections.dates')}>
           {dateRanges.map((r, i) => (
-            <Row key={i} label={dateRanges.length > 1 ? `Collaboration Window ${i + 1}` : "Collaboration Window"} value={formatDateRange(r.startDate, r.endDate)} />
+            <Row key={i} label={dateRanges.length > 1 ? t('rows.collabWindowN', { n: i + 1 }) : t('rows.collabWindow')} value={formatDateRange(r.startDate, r.endDate)} />
           ))}
-          <Row label="Deliverables Due" value={`${draft.turnaround_days} days after stay`} />
+          <Row label={t('rows.deliverablesDue')} value={t('rows.deliverablesDueValue', { days: draft.turnaround_days })} />
         </Section>
 
-        <Section title="Deliverables">
+        <Section title={t('sections.deliverables')}>
           {combinedDeliverablesList.slice(0, 2).map((d, i) => (
             <div key={i} style={{ background: "var(--bone)", borderRadius: "0.625rem", padding: "10px 14px" }}>
               <div style={{ fontFamily: "Satoshi, sans-serif", fontWeight: 700, fontSize: 13, color: "var(--ink)" }}>{d.quantity}x {d.type}</div>
@@ -243,29 +244,29 @@ export default function Step4Review() {
             </div>
           ))}
           {combinedDeliverablesList.length > 2 && (
-            <div style={{ fontFamily: "Satoshi, sans-serif", fontSize: 13, color: "var(--sage)", textAlign: "center" }}>+{combinedDeliverablesList.length - 2} more</div>
+            <div style={{ fontFamily: "Satoshi, sans-serif", fontSize: 13, color: "var(--sage)", textAlign: "center" }}>{t('moreCount', { count: combinedDeliverablesList.length - 2 })}</div>
           )}
         </Section>
 
-        <Section title="Things to know">
-          <Row label="Revision policy" value={draft.revision_policy} />
-          <Row label="Usage rights" value={draft.usage_rights} />
+        <Section title={t('sections.thingsToKnow')}>
+          <Row label={t('rows.revisionPolicy')} value={draft.revision_policy} />
+          <Row label={t('rows.usageRights')} value={draft.usage_rights} />
         </Section>
 
         {/* Compensation zone warning */}
         {compZone === "amber" && compRange && (
           <div style={{ background: "rgba(212,168,67,0.14)", border: "1px solid rgba(212,168,67,0.35)", borderRadius: "0.875rem", padding: "12px 16px", marginBottom: 16 }}>
             <p style={{ fontFamily: "Satoshi, sans-serif", fontSize: 13, fontWeight: 700, color: "#7a5a10", margin: "0 0 2px" }}>
-              This compensation is below the recommended range for this workload
+              {t('compZone.amberTitle')}
             </p>
             <p style={{ fontFamily: "Satoshi, sans-serif", fontSize: 12.5, color: "#7a5a10", margin: 0 }}>
-              Recommended range: ${Math.round(compRange.low)}–${Math.round(compRange.high)}. You can still continue — this is a guideline, not a requirement.
+              {t('compZone.amberBody', { low: Math.round(compRange.low), high: Math.round(compRange.high) })}
             </p>
           </div>
         )}
         {compZone === "red" && (
           <p style={{ fontFamily: "Satoshi, sans-serif", fontSize: 13, color: "#b45309", fontWeight: 600, marginBottom: 12 }}>
-            This compensation is below the minimum for the selected deliverables and tier. Raise the amount, reduce the deliverables, or add a stay offset to continue.
+            {t('compZone.redBody')}
           </p>
         )}
         {saveError && (
@@ -277,7 +278,7 @@ export default function Step4Review() {
         {/* Save draft */}
         {!hasCompensation && (
           <p style={{ fontFamily: "Satoshi, sans-serif", fontSize: 13, color: "#b45309", fontWeight: 600, marginBottom: 12 }}>
-            Add a cash compensation amount in the pricing step before continuing — every collaboration must include payment.
+            {t('needCompensation')}
           </p>
         )}
         <button
@@ -285,7 +286,7 @@ export default function Step4Review() {
           disabled={saving || !hasCompensation}
           style={{ width: "100%", padding: "14px 0", marginBottom: 16, background: "none", border: "none", cursor: "pointer", fontFamily: "Satoshi, sans-serif", fontSize: 15, fontWeight: 600, color: "var(--slate)", textDecoration: "underline" }}
         >
-          {saving ? "Saving..." : "Save draft"}
+          {saving ? t('saving') : t('saveDraft')}
         </button>
       </WizardShell>
 
@@ -294,10 +295,10 @@ export default function Step4Review() {
         <div style={{ position: "fixed", inset: 0, zIndex: 200, background: "var(--bone)", display: "flex", flexDirection: "column" }}>
           <div style={{ flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 20px", background: "rgba(239,236,233,0.92)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)", borderBottom: "1px solid rgba(255,255,255,0.6)" }}>
             <span style={{ fontFamily: "Satoshi, sans-serif", fontSize: 14, fontWeight: 700, color: "var(--ink)", display: "inline-flex", alignItems: "center", gap: 8 }}>
-              <Eye size={16} /> Creator preview — this is how creators see your listing
+              <Eye size={16} /> {t('creatorPreview.banner')}
             </span>
             <button onClick={() => setCreatorView(false)} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 9999, border: "1.5px solid var(--ink)", background: "transparent", cursor: "pointer", fontFamily: "Satoshi, sans-serif", fontSize: 13, fontWeight: 700, color: "var(--ink)" }}>
-              <X size={15} /> Close
+              <X size={15} /> {t('creatorPreview.close')}
             </button>
           </div>
           <div style={{ flex: 1, overflowY: "auto" }}>

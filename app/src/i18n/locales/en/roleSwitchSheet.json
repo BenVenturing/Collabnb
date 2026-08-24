@@ -1,0 +1,44 @@
+{
+  "roleLabels": {
+    "host": "Host",
+    "creator": "Creator"
+  },
+  "errors": {
+    "accountNotLoaded": "Account not loaded yet — please try again.",
+    "instagramRequired": "An Instagram handle is required so we can review your profile.",
+    "generic": "Something went wrong. Please try again."
+  },
+  "signingUpAs": "Signing up as",
+  "yourAccount": "Your account",
+  "useDifferentEmail": "use a different email",
+  "keepMyEmail": "keep my account email",
+  "emailPlaceholder": "you@example.com",
+  "description": {
+    "host": "You'll join as a host using this same account. Like every new host, your details go through a quick review before host tools unlock — you'll keep full creator access in the meantime.",
+    "creator": "You'll join as a creator using this same account. Like every new creator, your profile goes through a quick review before creator access unlocks — you'll keep full host access in the meantime."
+  },
+  "form": {
+    "businessName": "Property or business name",
+    "businessNamePlaceholder": "Moss & Pine Cabin",
+    "city": "City",
+    "cityPlaceholder": "Asheville",
+    "country": "Home country",
+    "countryPlaceholder": "United States",
+    "website": "Website",
+    "websitePlaceholder": "https://yourproperty.com",
+    "instagram": "Instagram handle",
+    "handlePlaceholder": "@yourhandle",
+    "tiktok": "TikTok handle",
+    "portfolio": "Portfolio or website",
+    "portfolioPlaceholder": "https://yourportfolio.com",
+    "optional": "(optional)"
+  },
+  "submitting": "Submitting…",
+  "signUpAs": "Sign up as {{role}} →",
+  "startFresh": "Start fresh →",
+  "requestReceived": "Request received",
+  "reviewNotice": "The Collabnb team will review your {{role}} details — the same check every new {{role}} goes through. Your account stays exactly as it is until you're approved.",
+  "emailNoticePrefix": "We'll email you at ",
+  "emailNoticeSuffix": " — usually within 1–2 business days.",
+  "done": "Done"
+}

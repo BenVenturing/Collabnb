@@ -1,0 +1,58 @@
+{
+  "comingSoonWatermark": {
+    "moreComingSoon": "MEHR FOLGT BALD",
+    "comingSoon": "DEMNÄCHST"
+  },
+  "thread": {
+    "reactTitle": "Reagieren",
+    "reply": "Antworten",
+    "replyPlaceholder": "Im Thread antworten…",
+    "send": "Senden"
+  },
+  "lounge": {
+    "roomLabelCreator": "Creator-Lounge",
+    "roomLabelHost": "Gastgeber-Lounge",
+    "privateNotice": "Privat für Gründungs-{{rolePlural}} · mit Threads",
+    "newThread": "Neuer Thread",
+    "pinnedByPrefix": "Angeheftet von Ben",
+    "pinnedBody": " — Willkommen im Bereich der Gründungsmitglieder. Neue Ressourcen sind unterwegs, und Angebote mit Frühzugang erscheinen 3 Tage, bevor sie öffentlich werden. Dieser Raum gehört dir.",
+    "startThreadPlaceholder": "Neuen Thread starten…",
+    "post": "Posten"
+  },
+  "resources": {
+    "libraryHeading": "Deine Gründer-Bibliothek — demnächst.",
+    "libraryBody": "Eine Vorschau der Playbooks, Vorlagen und Leitfäden, die für Gründungsmitglieder vorbereitet werden.",
+    "comingSoonBadge": "Demnächst",
+    "gateHeading": "Ressourcen kommen bald",
+    "gateBody": "Wir bereiten die Gründer-Playbooks, Vorlagen und Leitfäden vor. Du bekommst sie als Erste(r) — schau bald wieder vorbei."
+  },
+  "earlyAccess": {
+    "headStartPrefix": "3 Tage Vorsprung.",
+    "headStartBody": "Echte Angebote mit Frühzugang erscheinen hier exklusiv für Gründungsmitglieder, 3 Tage bevor sie öffentlich werden. Hier ein Beispiel, wie sie aussehen.",
+    "earlyBadge": "Früh · öffentlich in 3T",
+    "exampleBadge": "Beispiel"
+  },
+  "directory": {
+    "filterAll": "Alle",
+    "filterCreators": "Creator",
+    "filterHosts": "Gastgeber",
+    "noneYet": "Noch keine Gründungsmitglieder hier.",
+    "fallbackName": "Gründungsmitglied",
+    "fallbackTagHost": "Gründungs-Gastgeber",
+    "fallbackTagCreator": "Creator"
+  },
+  "roleLabel": { "creator": "Creator", "host": "Gastgeber" },
+  "roleLabelPlural": { "creator": "Creator", "host": "Gastgeber" },
+  "header": {
+    "title": "Gründungsmitglieder",
+    "subtitle": "Dein lebenslanger Bereich als Gründungsmitglied.",
+    "founderBadge": "Gründungsmitglied",
+    "spotsLeft": "{{count}} {{role}}-Plätze übrig"
+  },
+  "tabs": {
+    "lounge": "Lounge",
+    "resources": "Ressourcen",
+    "access": "Frühzugang",
+    "directory": "Verzeichnis"
+  }
+}

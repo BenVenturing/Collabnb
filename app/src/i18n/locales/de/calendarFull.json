@@ -1,0 +1,10 @@
+{
+  "weekdays": ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"],
+  "stageColors": {
+    "deadline": "Content-Frist",
+    "pending_action": "Ausstehende Aktion",
+    "stay_date": "Aufenthaltsdatum"
+  },
+  "previousMonth": "Vorheriger Monat",
+  "nextMonth": "Nächster Monat"
+}

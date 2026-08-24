@@ -1,0 +1,35 @@
+{
+  "card": {
+    "featured": "En vedette",
+    "removeTitle": "Retirer des favoris",
+    "moveTitle": "Déplacer vers une collection"
+  },
+  "newCollectionModal": {
+    "heading": "Nommez cette collection",
+    "placeholder": "ex. Cabanes de rêve, Côte Est…",
+    "cancel": "Annuler",
+    "create": "Créer"
+  },
+  "moveMenu": {
+    "heading": "Déplacer vers"
+  },
+  "header": {
+    "title": "Enregistrés",
+    "noneSaved": "Aucune collaboration enregistrée pour l'instant",
+    "loading": "Chargement…",
+    "savedCount_one": "{{count}} collaboration enregistrée",
+    "savedCount_other": "{{count}} collaborations enregistrées"
+  },
+  "emptyState": {
+    "title": "Rien d'enregistré pour l'instant",
+    "body": "Appuyez sur le cœur de n'importe quelle annonce dans Explorer pour l'enregistrer ici.",
+    "browseCollabs": "Parcourir les collabs"
+  },
+  "newCollectionButton": "Nouvelle collection",
+  "emptyCollection": {
+    "loading": "Chargement…",
+    "body": "Aucune annonce dans cette collection pour l'instant — mettez un cœur sur une annonce pour l'ajouter ici."
+  },
+  "stayCount_one": "{{count}} séjour",
+  "stayCount_other": "{{count}} séjours"
+}

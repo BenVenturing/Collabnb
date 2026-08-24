@@ -1,0 +1,89 @@
+{
+  "calendar": {
+    "months": ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
+    "weekdays": ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+  },
+  "locationConsent": {
+    "heading": "Location access",
+    "body": "Collabnb uses your location to suggest nearby creators and stays. You can disable this anytime in Settings. ",
+    "bodyStrong": "Your exact location is never shared with other users.",
+    "allow": "Allow",
+    "disable": "Disable Location"
+  },
+  "nearby": {
+    "heading": "Creators Near You",
+    "subtitle": "Based on creator profiles in your metro area",
+    "seeAll": "See All",
+    "scrollLeft": "Scroll left",
+    "scrollRight": "Scroll right",
+    "withinMiles": "Within {{miles}} miles"
+  },
+  "travelDatePicker": {
+    "placeholder": "Travel dates",
+    "findVisiting": "Find creators visiting {{city}} during…",
+    "clear": "Clear",
+    "showCreators": "Show creators"
+  },
+  "savedContact": {
+    "message": "Message"
+  },
+  "viewToggle": {
+    "grid": "⊞  Grid View",
+    "swipe": "✦  Swipe View"
+  },
+  "swipe": {
+    "saveFailed": "Couldn't save {{name}} — check your connection and try again",
+    "defaultName": "this creator",
+    "backToGrid": "Back to grid",
+    "searchPlaceholder": "Search creators…",
+    "filters": "Filters",
+    "creatorType": "Creator Type",
+    "progress": "{{current}} / {{total}}",
+    "progressDone": "{{total}} done",
+    "allCaughtUp": "All caught up!",
+    "reviewedAll": "You've reviewed all {{count}} creators. Undo to revisit any.",
+    "hints": {
+      "skip": "Skip",
+      "save": "Save",
+      "message": "Message"
+    },
+    "saved": "Saved"
+  },
+  "header": {
+    "heading": "Creators",
+    "subtitle": "Discover creators who've collaborated with properties like yours"
+  },
+  "toolbar": {
+    "searchPlaceholder": "Search by name, niche, platform…",
+    "filters": "Filters"
+  },
+  "filterPanel": {
+    "nearYou": "Creators Near You",
+    "withinMiles": "Within {{miles}} miles",
+    "sortBy": "Sort By",
+    "sort": {
+      "recommended": "Recommended",
+      "followers": "Most Followers",
+      "engagement": "Highest Engagement",
+      "collabs": "Most Collabs"
+    },
+    "creatorType": "Creator Type",
+    "saved": "Saved",
+    "savedOnly": "Saved Only",
+    "platforms": "Platforms",
+    "other": "Other",
+    "pastCollabsOnly": "Past Collabs Only",
+    "clearAll": "Clear All Filters"
+  },
+  "results": {
+    "count_one": "{{count}} creator",
+    "count_other": "{{count}} creators",
+    "count_nearby_one": "{{count}} creator nearby",
+    "count_nearby_other": "{{count}} creators nearby",
+    "showingRealOnly": "Showing real creators only",
+    "hideSamples": "Hide sample creators",
+    "emptyTitle": "No creators found",
+    "emptyDated": "No creators are visiting {{city}} during those dates. Try a different range.",
+    "emptyDefault": "Try adjusting your search or filters."
+  }
+}

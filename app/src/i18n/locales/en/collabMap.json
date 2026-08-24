@@ -1,0 +1,8 @@
+{
+  "mapUnavailable": "Map unavailable",
+  "mapConfigHint": "Set VITE_MAPBOX_TOKEN in app/.env.local to enable the map.",
+  "exitFullscreen": "Exit full screen",
+  "expandFullscreen": "Expand to full screen",
+  "zoomIn": "Zoom in",
+  "zoomOut": "Zoom out"
+}

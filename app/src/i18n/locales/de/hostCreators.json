@@ -1,0 +1,89 @@
+{
+  "calendar": {
+    "months": ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"],
+    "weekdays": ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"]
+  },
+  "locationConsent": {
+    "heading": "Standortzugriff",
+    "body": "Collabnb nutzt deinen Standort, um Creator und Aufenthalte in der Nähe vorzuschlagen. Du kannst dies jederzeit in den Einstellungen deaktivieren. ",
+    "bodyStrong": "Dein genauer Standort wird niemals mit anderen Nutzern geteilt.",
+    "allow": "Erlauben",
+    "disable": "Standort deaktivieren"
+  },
+  "nearby": {
+    "heading": "Creator in deiner Nähe",
+    "subtitle": "Basierend auf Creator-Profilen in deiner Region",
+    "seeAll": "Alle ansehen",
+    "scrollLeft": "Nach links scrollen",
+    "scrollRight": "Nach rechts scrollen",
+    "withinMiles": "Innerhalb von {{miles}} Meilen"
+  },
+  "travelDatePicker": {
+    "placeholder": "Reisedaten",
+    "findVisiting": "Creator finden, die {{city}} besuchen während…",
+    "clear": "Löschen",
+    "showCreators": "Creator anzeigen"
+  },
+  "savedContact": {
+    "message": "Nachricht"
+  },
+  "viewToggle": {
+    "grid": "⊞  Rasteransicht",
+    "swipe": "✦  Wischansicht"
+  },
+  "swipe": {
+    "saveFailed": "{{name}} konnte nicht gespeichert werden — prüfe deine Verbindung und versuche es erneut",
+    "defaultName": "dieser Creator",
+    "backToGrid": "Zurück zum Raster",
+    "searchPlaceholder": "Creator suchen…",
+    "filters": "Filter",
+    "creatorType": "Creator-Typ",
+    "progress": "{{current}} / {{total}}",
+    "progressDone": "{{total}} erledigt",
+    "allCaughtUp": "Alles erledigt!",
+    "reviewedAll": "Du hast alle {{count}} Creator durchgesehen. Rückgängig machen, um einen erneut anzusehen.",
+    "hints": {
+      "skip": "Überspringen",
+      "save": "Speichern",
+      "message": "Nachricht"
+    },
+    "saved": "Gespeichert"
+  },
+  "header": {
+    "heading": "Creator",
+    "subtitle": "Entdecke Creator, die mit Unterkünften wie deiner zusammengearbeitet haben"
+  },
+  "toolbar": {
+    "searchPlaceholder": "Suche nach Name, Nische, Plattform…",
+    "filters": "Filter"
+  },
+  "filterPanel": {
+    "nearYou": "Creator in deiner Nähe",
+    "withinMiles": "Innerhalb von {{miles}} Meilen",
+    "sortBy": "Sortieren nach",
+    "sort": {
+      "recommended": "Empfohlen",
+      "followers": "Meiste Follower",
+      "engagement": "Höchste Interaktion",
+      "collabs": "Meiste Collabs"
+    },
+    "creatorType": "Creator-Typ",
+    "saved": "Gespeichert",
+    "savedOnly": "Nur Gespeicherte",
+    "platforms": "Plattformen",
+    "other": "Sonstiges",
+    "pastCollabsOnly": "Nur frühere Kollaborationen",
+    "clearAll": "Alle Filter zurücksetzen"
+  },
+  "results": {
+    "count_one": "{{count}} Creator",
+    "count_other": "{{count}} Creator",
+    "count_nearby_one": "{{count}} Creator in der Nähe",
+    "count_nearby_other": "{{count}} Creator in der Nähe",
+    "showingRealOnly": "Zeige nur echte Creator",
+    "hideSamples": "Beispiel-Creator ausblenden",
+    "emptyTitle": "Keine Creator gefunden",
+    "emptyDated": "Keine Creator besuchen {{city}} in diesem Zeitraum. Versuche einen anderen Zeitraum.",
+    "emptyDefault": "Versuche, deine Suche oder Filter anzupassen."
+  }
+}

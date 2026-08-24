@@ -1,0 +1,8 @@
+{
+  "mapUnavailable": "Karte nicht verfügbar",
+  "mapConfigHint": "Lege VITE_MAPBOX_TOKEN in app/.env.local fest, um die Karte zu aktivieren.",
+  "exitFullscreen": "Vollbild verlassen",
+  "expandFullscreen": "Auf Vollbild erweitern",
+  "zoomIn": "Vergrößern",
+  "zoomOut": "Verkleinern"
+}

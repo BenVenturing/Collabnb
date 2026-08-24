@@ -1,0 +1,69 @@
+{
+  "tierLabels": {
+    "ugc_beginner": "UGC Beginner",
+    "ugc_pro": "UGC Pro",
+    "micro": "Micro Influencer",
+    "mid": "Influencer"
+  },
+  "compLabels": {
+    "paid": "Paid",
+    "hybrid": "Hybrid"
+  },
+  "loadLabels": {
+    "light": "Light Load",
+    "moderate": "Moderate Load",
+    "heavy": "Heavy Load",
+    "custom": "Custom Campaign"
+  },
+  "saveFallbackError": "Something went wrong saving this draft.",
+  "heading": {
+    "edit": "Edit listing",
+    "review": "Review your listing"
+  },
+  "subtitle": {
+    "edit": "Review your changes, then continue to payment.",
+    "review": "Here's how your listing will appear to creators. Review everything, then set up payment on the next step."
+  },
+  "viewAsCreator": "View as a creator",
+  "nightsComp": "{{nights}} nights {{compLabel}}",
+  "photos": {
+    "heading": "Photos",
+    "hint": "The first photo is your hero — it leads the listing. Reorder or set a new hero below.",
+    "hero": "Hero",
+    "moveLeft": "Move left",
+    "setAsHero": "Set as hero",
+    "moveRight": "Move right"
+  },
+  "sections": {
+    "offer": "The Offer",
+    "dates": "Dates & Deadlines",
+    "deliverables": "Deliverables",
+    "thingsToKnow": "Things to know"
+  },
+  "rows": {
+    "addOns": "Add-ons",
+    "whatYouDeliver": "What you deliver",
+    "whatYouDeliverValue_one": "{{total}} total deliverable across {{count}} format",
+    "whatYouDeliverValue_other": "{{total}} total deliverables across {{count}} formats",
+    "vibe": "Vibe",
+    "collabWindow": "Collaboration Window",
+    "collabWindowN": "Collaboration Window {{n}}",
+    "deliverablesDue": "Deliverables Due",
+    "deliverablesDueValue": "{{days}} days after stay",
+    "revisionPolicy": "Revision policy",
+    "usageRights": "Usage rights"
+  },
+  "moreCount": "+{{count}} more",
+  "compZone": {
+    "amberTitle": "This compensation is below the recommended range for this workload",
+    "amberBody": "Recommended range: ${{low}}–${{high}}. You can still continue — this is a guideline, not a requirement.",
+    "redBody": "This compensation is below the minimum for the selected deliverables and tier. Raise the amount, reduce the deliverables, or add a stay offset to continue."
+  },
+  "needCompensation": "Add a cash compensation amount in the pricing step before continuing — every collaboration must include payment.",
+  "saving": "Saving...",
+  "saveDraft": "Save draft",
+  "creatorPreview": {
+    "banner": "Creator preview — this is how creators see your listing",
+    "close": "Close"
+  }
+}

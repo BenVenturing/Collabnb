@@ -1,0 +1,67 @@
+{
+  "zoneCopy": {
+    "red": "En dessous du minimum pour cette charge de travail — impossible de publier tel quel.",
+    "amber": "En dessous de la plage recommandée pour cette charge de travail.",
+    "green": "Dans la plage recommandée."
+  },
+  "helpTable": {
+    "heading": "Points par livrable et niveau",
+    "close": "Fermer",
+    "colDeliverable": "Livrable",
+    "colPts": "Pts",
+    "colWho": "Qui peut le produire",
+    "allTiers": "Tous les niveaux",
+    "footerNote": "Espèces = points × $/pt (selon le niveau) × complexité. En hybride, le séjour compense une partie des espèces."
+  },
+  "helpButton": {
+    "ariaLabel": "Comment fonctionnent les points"
+  },
+  "stepper": {
+    "ptsEach_one": "{{count}} pt chacun",
+    "ptsEach_other": "{{count}} pts chacun"
+  },
+  "scale": {
+    "minimal": "Minimal {{amount}}",
+    "caution": "Attention {{amount}}",
+    "recommended": "Recommandé {{low}}–{{high}}"
+  },
+  "presetCard": {
+    "midrange": "milieu de gamme {{amount}}"
+  },
+  "heading": "Combien coûte une collaboration ?",
+  "subtitle": "Le tarif est calculé à partir des points de livrables, du niveau du créateur et de la complexité de la charge de travail — jamais au hasard.",
+  "entryMode": {
+    "deliverables": "Je connais mes livrables",
+    "budget": "J'ai un budget"
+  },
+  "creatorTier": "Niveau du créateur",
+  "compensationType": {
+    "label": "Type de rémunération",
+    "paid": "Payé",
+    "hybrid": "Hybride (séjour + espèces)",
+    "declaredStayValue": "Valeur déclarée du séjour"
+  },
+  "complexity": {
+    "label": "Complexité",
+    "standard": "Standard",
+    "complex": "Complexe (liste de plans, drone, plusieurs lieux, exclusivité)",
+    "standardShort": "1.0 standard",
+    "complexShort": "1.25 complexe"
+  },
+  "budgetMode": {
+    "cashBudget": "Budget en espèces",
+    "effectiveBudgetPrefix": "Budget effectif : {{budget}} en espèces + {{offset}} de compensation séjour = ",
+    "packagesThatFit": "Packs correspondants",
+    "noPresetFits": "Aucun pack prédéfini ne correspond à ce budget pour l'instant — essayez de l'augmenter ou de changer de niveau.",
+    "stretchOption": "Option étendue (jusqu'à 120 % du budget)"
+  },
+  "deliverablesMode": {
+    "presets": "Préréglages",
+    "buildYourOwn": "Créez le vôtre",
+    "loadSuffix": " charge",
+    "loadFallback": "—",
+    "cashCompensation": "Rémunération en espèces"
+  },
+  "mathSummary": "{{points}} pts × {{rate}}/pt ({{tier}}) × {{complexity}} = {{midpoint}} milieu de gamme",
+  "stayOffsetSuffix": " · compensation séjour {{offset}}"
+}

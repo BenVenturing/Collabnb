@@ -1,0 +1,37 @@
+{
+  "sample": "EXEMPLE",
+  "founderTitle": "Fondateur — l'un des 100 premiers sur Collabnb",
+  "saved": "Enregistré",
+  "saveCreator": "Enregistrer le créateur",
+  "stats": {
+    "avgReach": "Portée moy.",
+    "engRate": "Taux d'engagement (30j)",
+    "collabs": "Collabs",
+    "avgReachTooltip": "Nombre moyen de personnes ayant vu les publications de ce créateur au cours des 30 derniers jours.",
+    "engRateTooltip": "Pourcentage d'abonnés ayant aimé, commenté ou partagé des publications au cours des 30 derniers jours. Plus élevé = audience plus active et fidèle.",
+    "collabsTooltip": "Nombre de collaborations terminées avec des logements sur Collabnb."
+  },
+  "platforms": "Plateformes",
+  "niches": "Niches",
+  "upcomingTrips": "Voyages à venir",
+  "pastCollabNotice": "Vous avez déjà collaboré avec cette personne",
+  "portfolio": "Portfolio",
+  "messageCreator": "Envoyer un message à {{name}}",
+  "message": "Message",
+  "hideCreator": "Masquer ce créateur",
+  "chipStats": "@{{username}} · portée {{reach}} · {{er}} % TE",
+  "monthsShort": {
+    "jan": "janv.",
+    "feb": "févr.",
+    "mar": "mars",
+    "apr": "avr.",
+    "may": "mai",
+    "jun": "juin",
+    "jul": "juil.",
+    "aug": "août",
+    "sep": "sept.",
+    "oct": "oct.",
+    "nov": "nov.",
+    "dec": "déc."
+  }
+}

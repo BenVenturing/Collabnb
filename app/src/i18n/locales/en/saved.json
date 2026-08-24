@@ -1,0 +1,35 @@
+{
+  "card": {
+    "featured": "Featured",
+    "removeTitle": "Remove from saved",
+    "moveTitle": "Move to collection"
+  },
+  "newCollectionModal": {
+    "heading": "Name this collection",
+    "placeholder": "e.g. Dream Cabins, East Coast…",
+    "cancel": "Cancel",
+    "create": "Create"
+  },
+  "moveMenu": {
+    "heading": "Move to"
+  },
+  "header": {
+    "title": "Saved",
+    "noneSaved": "No saved collaborations yet",
+    "loading": "Loading…",
+    "savedCount_one": "{{count}} saved collaboration",
+    "savedCount_other": "{{count}} saved collaborations"
+  },
+  "emptyState": {
+    "title": "Nothing saved yet",
+    "body": "Tap the heart on any listing in Explore to save it here.",
+    "browseCollabs": "Browse collabs"
+  },
+  "newCollectionButton": "New collection",
+  "emptyCollection": {
+    "loading": "Loading…",
+    "body": "No listings in this collection yet — heart a listing to add it here."
+  },
+  "stayCount_one": "{{count}} stay",
+  "stayCount_other": "{{count}} stays"
+}

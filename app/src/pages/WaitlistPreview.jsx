@@ -1,5 +1,6 @@
 import { useEffect, useRef, useMemo } from 'react';
 import { useQuery } from 'convex/react';
+import { useTranslation } from 'react-i18next';
 import collabnbLogo from '../assets/collabnb-logo.png';
 import { api } from '../../convex/_generated/api';
 import { useAuth } from '../contexts/AuthContext';
@@ -159,6 +160,7 @@ function LockedCard({ listing }) {
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 export default function WaitlistPreview() {
+  const { t } = useTranslation('waitlistPreview');
   const { profile, signOut } = useAuth();
   const publishedPreview = useQuery(api.listings.getPublishedPreview, { limit: 6 });
   const previewListings = (publishedPreview || []).map((l) => ({
@@ -212,7 +214,7 @@ export default function WaitlistPreview() {
             cursor: 'pointer', transition: 'background 0.15s',
           }}
         >
-          Sign out
+          {t('header.signOut')}
         </button>
       </header>
 
@@ -246,14 +248,14 @@ export default function WaitlistPreview() {
             color: 'var(--ink)', margin: 0, marginBottom: '0.75rem',
             lineHeight: 1.15,
           }}>
-            You're on the list!
+            {t('hero.heading')}
           </h1>
           <p style={{ fontSize: '1.05rem', color: 'var(--slate)', lineHeight: 1.65, margin: 0 }}>
-            Welcome to Collabnb{profile?.full_name ? `, ${profile.full_name.split(' ')[0]}` : ''}. Your application is being reviewed — we'll email you at{' '}
-            <strong style={{ color: 'var(--ink)' }}>{profile?.email || 'your inbox'}</strong> once you're approved.
+            {t('hero.welcomeText', { namePart: profile?.full_name ? `, ${profile.full_name.split(' ')[0]}` : '' })}
+            <strong style={{ color: 'var(--ink)' }}>{profile?.email || t('hero.inboxFallback')}</strong>{t('hero.welcomeSuffix')}
           </p>
           <p style={{ fontSize: '0.875rem', color: 'var(--sage)', marginTop: '0.75rem' }}>
-            Usually within 1–2 business days.
+            {t('hero.etaNote')}
           </p>
         </div>
 
@@ -267,7 +269,7 @@ export default function WaitlistPreview() {
             }}>
               <div style={{ flex: 1, height: 1, background: 'var(--stone)' }} />
               <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--sage)', whiteSpace: 'nowrap' }}>
-                A sneak peek of what's waiting for you
+                {t('sneakPeek')}
               </span>
               <div style={{ flex: 1, height: 1, background: 'var(--stone)' }} />
             </div>
@@ -307,35 +309,35 @@ export default function WaitlistPreview() {
               fontSize: '0.78rem', fontWeight: 700, letterSpacing: '0.04em',
             }}>
               <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#4ecdc4', display: 'inline-block', animation: 'pulse 2s ease-in-out infinite' }} />
-              REVIEW IN PROGRESS
+              {t('statusCard.reviewInProgress')}
             </span>
           </div>
           <p style={{ fontSize: '0.88rem', color: 'var(--slate)', lineHeight: 1.65, margin: 0 }}>
-            Once approved, you'll unlock full access to browse, apply to collabs, and message hosts. Full listings go live <strong>July 15th</strong>.
+            {t('statusCard.bodyPrefix')}<strong>{t('statusCard.liveDate')}</strong>.
           </p>
         </div>
 
         {/* Globe */}
         <div style={{ textAlign: 'center', marginTop: '4rem', width: '100%', maxWidth: 560, padding: '0 1.5rem 3rem' }}>
           <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.25rem', color: 'var(--ink)', marginBottom: '0.375rem' }}>
-            Our Global Community
+            {t('globe.heading')}
           </h3>
           <p style={{ color: 'var(--sage)', fontSize: '0.9rem', marginBottom: '0.875rem' }}>
-            Creators and hosts connecting across the world
+            {t('globe.subtitle')}
           </p>
           <GlobeCanvas profiles={allProfiles} />
           <div style={{ display: 'flex', justifyContent: 'center', gap: '0.75rem', marginTop: '1.5rem', flexWrap: 'wrap' }}>
             <span className="eyebrow-tag" style={{ gap: '0.5rem' }}>
               <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#22c55e', display: 'inline-block', flexShrink: 0 }} />
-              <strong>{globeStats.creators || '—'}</strong>&nbsp;Creators
+              <strong>{globeStats.creators || '—'}</strong>&nbsp;{t('globe.creators')}
             </span>
             <span className="eyebrow-tag" style={{ gap: '0.5rem' }}>
               <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#ef4444', display: 'inline-block', flexShrink: 0 }} />
-              <strong>{globeStats.hosts || '—'}</strong>&nbsp;Hosts
+              <strong>{globeStats.hosts || '—'}</strong>&nbsp;{t('globe.hosts')}
             </span>
             <span className="eyebrow-tag" style={{ gap: '0.5rem' }}>
               <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#D0D5CE', display: 'inline-block', flexShrink: 0 }} />
-              <strong>{globeStats.countries > 0 ? `${globeStats.countries}+` : '1+'}</strong>&nbsp;Countries
+              <strong>{globeStats.countries > 0 ? `${globeStats.countries}+` : '1+'}</strong>&nbsp;{t('globe.countries')}
             </span>
           </div>
         </div>

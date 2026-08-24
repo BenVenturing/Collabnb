@@ -1,0 +1,95 @@
+{
+  "statusLabels": {
+    "pending": "En attente",
+    "under_review": "En cours d'examen",
+    "approved": "Approuvé",
+    "completed": "Terminé",
+    "declined": "Refusé"
+  },
+  "tierDefs": {
+    "UGC Beginner": "0–5K abonnés — Nouveaux créateurs constituant leur portfolio",
+    "UGC Pro": "5K–10K abonnés — Créateurs de contenu, pas une portée d'influenceur",
+    "Micro Influencer": "10K–50K abonnés — Contenu de style influenceur, audience engagée",
+    "Influencer": "50K+ abonnés — Large portée, audience établie",
+    "Macro": "100K+ abonnés — Créateurs de premier plan avec une portée majeure"
+  },
+  "listingStatusLabels": {
+    "active": "Actif",
+    "paused": "En pause",
+    "draft": "Brouillon"
+  },
+  "photoModal": {
+    "close": "Fermer"
+  },
+  "applicantRow": {
+    "pitch": "PROPOSITION",
+    "meta": "@{{username}} · {{followers}} abonnés · {{applied}}",
+    "proposedChanges": "Modifications proposées",
+    "review": "Examiner",
+    "openProposal": "Ouvrir la proposition",
+    "message": "Message"
+  },
+  "loading": "Chargement…",
+  "notFound": "Annonce introuvable.",
+  "header": {
+    "myListings": "Mes annonces",
+    "creatorView": "Vue créateur",
+    "editListing": "Modifier l'annonce",
+    "changeStatusTitle": "Cliquez pour changer le statut"
+  },
+  "photos": {
+    "title": "Photos",
+    "subtitle_one": "{{count}} photo — cliquez pour zoomer",
+    "subtitle_other": "{{count}} photos — cliquez pour zoomer",
+    "view": "Voir",
+    "cover": "Couverture"
+  },
+  "details": {
+    "title": "Détails de l'annonce",
+    "compensation": "Rémunération",
+    "deliverables": "Livrables",
+    "creatorTier": "Niveau du créateur",
+    "available": "Disponible",
+    "deliverableLoad": "Charge de livrables",
+    "dueIn": "Échéance dans",
+    "dueInDays": "{{days}} jours",
+    "whatYoureOffering": "Ce que vous proposez"
+  },
+  "affiliate": {
+    "title": "Code d'affiliation",
+    "subtitle": "Les créateurs peuvent utiliser ce code pour gagner une commission sur les réservations",
+    "copied": "Copié !",
+    "copy": "Copier",
+    "shareCode": "Partagez ce code avec les créateurs approuvés",
+    "noCode": "Aucun code d'affiliation défini pour cette annonce.",
+    "addCode": "Ajouter un code"
+  },
+  "applicants": {
+    "heading": "Candidats",
+    "subtitle_one": "{{total}} au total · {{pitchCount}} proposition",
+    "subtitle_other": "{{total}} au total · {{pitchCount}} propositions",
+    "allChip": "Tous ({{count}})",
+    "statusChip": "{{status}} ({{count}})",
+    "emptyNone": "Aucune candidature pour l'instant — partagez votre annonce pour attirer des créateurs.",
+    "emptyFiltered": "Aucun candidat {{status}}."
+  },
+  "statusModal": {
+    "blockedTitle": "Impossible de passer en brouillon",
+    "blockedBody": "Cette annonce a des créateurs sous contrat actif. Vous devez terminer ou annuler toutes les collaborations actives avant de repasser le statut en brouillon.",
+    "gotIt": "Compris",
+    "publishTitle": "Publier cette annonce ?",
+    "publishBody": "Elle deviendra immédiatement active et visible par les créateurs sur Collabnb.",
+    "cancel": "Annuler",
+    "publish": "Publier",
+    "publishing": "Publication…",
+    "toDraftTitle": "Repasser en brouillon ?",
+    "pendingWarning_one": "{{count}} créateur avec une demande en attente ou en cours d'examen recevra un message : ",
+    "pendingWarning_other": "{{count}} créateurs avec des demandes en attente ou en cours d'examen recevront un message : ",
+    "pauseMessage": "Désolé pour le désagrément — cette annonce a été temporairement mise en pause. Nous vous recontacterons si elle est republiée.",
+    "typeToConfirmPrefix": "Tapez ",
+    "typeToConfirmSuffix": " pour confirmer :",
+    "noPendingBody": "L'annonce sera masquée aux créateurs et aucune nouvelle candidature ne sera acceptée.",
+    "moveToDraft": "Repasser en brouillon",
+    "saving": "Enregistrement…"
+  }
+}

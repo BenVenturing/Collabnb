@@ -1,0 +1,14 @@
+{
+  "crash": {
+    "title": "Plantage de l'application — copiez ceci et envoyez-le au développeur :",
+    "sendButton": "Envoyer le rapport de plantage à l'équipe de développement",
+    "sending": "Envoi en cours…",
+    "sent": "Envoyé à l'équipe de développement — merci !",
+    "sendFailed": "Échec de l'envoi — copiez plutôt les détails ci-dessous."
+  },
+  "loading": "Chargement",
+  "celebration": {
+    "quote": "Là où créateurs et hébergements boutique collaborent.",
+    "buildingProfile": "Création de votre profil…"
+  }
+}

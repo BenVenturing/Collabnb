@@ -1,0 +1,54 @@
+{
+  "heading": "What's the offer?",
+  "subtitle": "Tell creators what makes your listing special and what perks they'll get.",
+  "amenities": {
+    "label": "Property amenities",
+    "desc": "Search and select what your property offers. These appear on your listing page.",
+    "searchPlaceholder": "Search amenities (e.g., WiFi, pool, hot tub)",
+    "allAmenities": "All amenities",
+    "mostCommon": "Most common",
+    "noMatch": "No amenities match \"{{query}}\".",
+    "showCommonOnly": "Show common only",
+    "showAllAmenities": "Show all amenities",
+    "selected": "Selected ({{count}})",
+    "createOwn": "Create your own amenity",
+    "createCustomHeading": "Create a custom amenity",
+    "namePlaceholder": "Name your amenity (e.g., Rooftop Hammock)",
+    "chooseGraphic": "Choose a graphic",
+    "cancel": "Cancel",
+    "addAmenity": "Add amenity"
+  },
+  "addOns": {
+    "label": "Add-ons",
+    "desc": "Optional extras you can include to sweeten the offer.",
+    "placeholder": "e.g., Hot tub access"
+  },
+  "affiliate": {
+    "codeLabel": "Your affiliate code (optional)",
+    "codeDesc": "Paste your own affiliate code or link from your booking platform (e.g., Airbnb, VRBO, direct site).",
+    "codePlaceholder": "e.g., https://airbnb.com/ref/abc123 or MYCODE10",
+    "percentLabel": "Affiliate percentage (%)",
+    "percentDesc": "What percentage commission will the creator earn from your affiliate link?",
+    "percentPlaceholder": "e.g., 10",
+    "regenerate": "Regenerate",
+    "generate": "Generate",
+    "collabnbCode": " Collabnb Code",
+    "shuffleCode": "Shuffle code",
+    "trackingNote": "Collabnb does not currently track affiliate clicks. Code-honoring is on the host. Real tracking coming in a future update."
+  },
+  "vibeTags": {
+    "label": "Vibe tags (optional)",
+    "desc": "Add a few words that describe the vibe (Cozy, Luxury, Adventure, etc.)",
+    "suggestButton": "Suggest tags from listing info",
+    "placeholder": "e.g., Cozy",
+    "ideas": "Ideas:",
+    "showDifferentIdeas": "Show different ideas"
+  },
+  "maxOffers": {
+    "label": "How many times do you want to offer this collab?",
+    "desc": "Set a max number of confirmed collabs for this listing. Once reached, the listing auto-pauses.",
+    "setLimit": "Set a limit",
+    "unlimited": "Unlimited",
+    "numberOfCollabs": "Number of collabs"
+  }
+}

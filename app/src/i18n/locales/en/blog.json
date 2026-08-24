@@ -1,0 +1,36 @@
+{
+  "categories": {
+    "creators": "Creators",
+    "hosts": "Hosts",
+    "industry": "Industry",
+    "stats": "Stats",
+    "all": "All"
+  },
+  "readTime_one": "{{count}} min read",
+  "readTime_other": "{{count}} min read",
+  "featuredBadge": "Featured",
+  "read": "Read",
+  "topBar": {
+    "backToCollabnb": "Back to Collabnb"
+  },
+  "gallery": {
+    "headingPrefix": "Selected ",
+    "headingItalic": "from the",
+    "headingSuffix": " Journal",
+    "dragHint": "Drag / hover to explore",
+    "noImage": "No image"
+  },
+  "header": {
+    "title": "The Journal",
+    "subtitle": "Insights for boutique hosts & UGC creators building the future of content-for-stay."
+  },
+  "searchPlaceholder": "Search articles…",
+  "emptyState": {
+    "noMatchTitle": "No matching articles",
+    "noPostsTitle": "No posts yet",
+    "noMatchBody": "Try a different search term or category.",
+    "noPostsBody": "Check back soon — new content is on its way.",
+    "clearFilters": "Clear filters"
+  },
+  "moreFromJournal": "More from the Journal"
+}

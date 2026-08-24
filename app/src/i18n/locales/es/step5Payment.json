@@ -1,0 +1,47 @@
+{
+  "payoutInfo": {
+    "platform": {
+      "host": "Se cobra a tu tarjeta automáticamente en cuanto la colaboración se marca como completada — sin transferencias manuales, sin tener que perseguir a nadie. Collabnb retiene el pago del creador durante 48 horas después de completarse por si alguna de las partes necesita presentar una disputa, y luego lo transfiere automáticamente.",
+      "creator": "El pago está garantizado y es automático — sin facturación, sin esperarte. Los fondos se liberan poco después de que se cierra la ventana de disputa de 48 horas, y los creadores pueden ver de antemano que el pago está protegido — lo cual tiende a atraer mejores postulantes."
+    },
+    "in_person": {
+      "host": "Le pagas al creador directamente — efectivo, Venmo, lo que acuerden — en tu propio horario. Collabnb sigue cobrando automáticamente tu tarifa de plataforma en cuanto la colaboración se marca como completada; eso es independiente del pago al creador.",
+      "creator": "Estás confiando en que el anfitrión te pague directamente. Collabnb no retiene, verifica ni garantiza este pago, y la ventana de disputa de 48 horas no aplica, ya que ningún efectivo pasa por la plataforma."
+    }
+  },
+  "errors": {
+    "cardConfirmFailed": "No se pudo confirmar tu tarjeta — inténtalo de nuevo.",
+    "publishFailed": "Algo salió mal al publicar este anuncio.",
+    "cardSetupFailed": "No se pudo iniciar la configuración de la tarjeta — inténtalo de nuevo."
+  },
+  "nextLabel": {
+    "publishing": "Publicando...",
+    "redirecting": "Redirigiendo a Stripe...",
+    "addCard": "Agrega una tarjeta para publicar",
+    "saveChanges": "Guardar cambios",
+    "publish": "Publicar anuncio"
+  },
+  "heading": "¿Cómo recibirás el pago?",
+  "subtitle": "Esto define cómo se mueve el pago del creador — revísalo con cuidado, se bloquea una vez que el anuncio esté publicado.",
+  "lockedBanner": "Este anuncio ya está publicado, por lo que el método de pago está bloqueado para no interrumpir colaboraciones activas.",
+  "payoutSwitch": {
+    "inPerson": "Yo le pagaré al creador directamente",
+    "platform": "Collabnb gestiona el pago",
+    "recommended": "Recomendado"
+  },
+  "infoCol": {
+    "forHost": "Para ti (el anfitrión)",
+    "forCreator": "Para el creador"
+  },
+  "fees": {
+    "heading": "Solo anfitrión: precios y tarifas",
+    "platformFee": "Tarifa de la plataforma",
+    "percentDesc": "5% del pago en efectivo (mín. $25)",
+    "flatDesc": "Tarifa fija de plataforma de $25",
+    "chargedOnlyOnce": "se cobra solo una vez que se completa una colaboración",
+    "chargedNoteSuffix": ". Nunca pagas nada por adelantado para publicar un anuncio.",
+    "hiddenNote": "⚠ Los creadores no ven estas tarifas"
+  },
+  "cardSaved": "Tarjeta guardada — todo listo. Haz clic en Publicar para activarlo.",
+  "needsCardNote": "Necesitarás una tarjeta registrada antes de publicar — solo se cobra la tarifa de plataforma de Collabnb una vez que se completa una colaboración."
+}

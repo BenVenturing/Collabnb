@@ -1,0 +1,15 @@
+{
+  "steps": [
+    { "title": "1. Die Grundlagen", "desc": "Erzähl uns von deinem Angebot und der Art der Kollaboration" },
+    { "title": "2. Das Angebot", "desc": "Welche Vorteile und Erlebnisse bekommen Creator?" },
+    { "title": "3. Deliverables & Termine", "desc": "Lege den Kollaborationszeitraum fest und definiere, was du brauchst" },
+    { "title": "4. Prüfen & veröffentlichen", "desc": "Sieh dir dein Angebot in der Vorschau an und veröffentliche es für Creator" }
+  ],
+  "headingLine1": "Es ist einfach, ein Angebot",
+  "headingLine2": "auf Collabnb zu erstellen",
+  "subtitle": "Wir führen dich Schritt für Schritt durch den Prozess. Du kannst jederzeit speichern und zurückkehren.",
+  "verificationRequired": "Verifizierung erforderlich",
+  "verificationBody": "Dein Konto wird derzeit vom Collabnb-Team geprüft. Sobald es genehmigt ist, kannst du ein Angebot veröffentlichen. Das dauert in der Regel 1–2 Werktage.",
+  "getStarted": "Loslegen",
+  "pendingVerification": "Verifizierung ausstehend"
+}

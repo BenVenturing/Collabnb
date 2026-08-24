@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useTranslation, Trans } from 'react-i18next';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation } from 'convex/react';
@@ -65,6 +66,7 @@ const pulseKeyframes = `
 `;
 
 function StageProgressBar({ stages, currentStage, viewingStage, onStageClick, demoPlaying }) {
+  const { t } = useTranslation('collabDetail');
   const prevViewingRef = useRef(viewingStage);
   const [animatingDot, setAnimatingDot] = useState(null);
 
@@ -172,7 +174,7 @@ function StageProgressBar({ stages, currentStage, viewingStage, onStageClick, de
                     lineHeight: 1, marginTop: '0.15rem', whiteSpace: 'nowrap',
                     fontStyle: 'italic',
                   }}>
-                    Current
+                    {t('current')}
                   </span>
                 )}
                 {!demoPlaying && completed && s?.date && (
@@ -211,16 +213,17 @@ function StageProgressBar({ stages, currentStage, viewingStage, onStageClick, de
 /* ─── Stage panels ───────────────────────────────────────────────────────── */
 
 function PendingPanel({ collab, advanceStage, onRemove }) {
+  const { t } = useTranslation('collabDetail');
   const [prompted, setPrompted] = useState(false);
   const [confirmWithdraw, setConfirmWithdraw] = useState(false);
   return (
     <div style={{ background: 'rgba(255,255,255,0.65)', borderRadius: '1rem', padding: '1.25rem', border: '1px solid rgba(255,255,255,0.8)' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
         <span style={{ fontSize: '1rem' }}>🟡</span>
-        <h4 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.9rem', color: 'var(--ink)', margin: 0 }}>Pending Acceptance</h4>
+        <h4 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.9rem', color: 'var(--ink)', margin: 0 }}>{t('pending.title')}</h4>
       </div>
       <p style={{ color: 'var(--slate)', fontSize: '0.85rem', margin: '0 0 1rem', lineHeight: 1.6 }}>
-        This collaboration is waiting for the host to review and accept your application.
+        {t('pending.body')}
       </p>
       <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
         <button
@@ -231,14 +234,14 @@ function PendingPanel({ collab, advanceStage, onRemove }) {
             setTimeout(() => setPrompted(false), 2500);
           }}
         >
-          {prompted ? '✓ Host Notified' : 'Prompt Host'}
+          {prompted ? t('pending.prompted') : t('pending.prompt')}
         </button>
         <button
           className="btn-glass"
           style={{ fontSize: '0.8rem', padding: '0.6rem 1.25rem' }}
           onClick={() => advanceStage(collab.id)}
         >
-          Advance to Accepted
+          {t('pending.advance')}
         </button>
         {onRemove && (
           <button
@@ -246,13 +249,13 @@ function PendingPanel({ collab, advanceStage, onRemove }) {
             style={{ fontSize: '0.8rem', padding: '0.6rem 1.25rem', color: '#c0392b', borderColor: 'rgba(192,57,43,0.2)' }}
             onClick={() => setConfirmWithdraw(true)}
           >
-            Withdraw Proposal
+            {t('pending.withdraw')}
           </button>
         )}
       </div>
       {prompted && (
         <p style={{ fontSize: '0.72rem', color: 'var(--sage)', marginTop: '0.5rem' }}>
-          Notification sent to host — they'll be prompted to review your application.
+          {t('pending.notified')}
         </p>
       )}
       {confirmWithdraw && (
@@ -267,6 +270,7 @@ function PendingPanel({ collab, advanceStage, onRemove }) {
 
 /* ─── Withdraw confirmation popup ─────────────────────────────────────────── */
 function WithdrawConfirmModal({ onConfirm, onCancel }) {
+  const { t } = useTranslation('collabDetail');
   useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape') onCancel(); };
     window.addEventListener('keydown', onKey);
@@ -302,10 +306,10 @@ function WithdrawConfirmModal({ onConfirm, onCancel }) {
           🗑
         </div>
         <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1rem', color: 'var(--ink)', margin: '0 0 0.5rem' }}>
-          Withdraw proposal?
+          {t('withdraw.title')}
         </h3>
         <p style={{ fontSize: '0.82rem', color: 'var(--slate)', lineHeight: 1.55, margin: '0 0 1.25rem' }}>
-          This permanently removes your proposal from your collabs. This can't be undone.
+          {t('withdraw.body')}
         </p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
           <button
@@ -316,14 +320,14 @@ function WithdrawConfirmModal({ onConfirm, onCancel }) {
               fontFamily: 'var(--font-body)', fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer',
             }}
           >
-            Yes, Remove Proposal
+            {t('withdraw.confirm')}
           </button>
           <button
             onClick={onCancel}
             className="btn-glass"
             style={{ width: '100%', padding: '0.7rem', fontSize: '0.85rem', fontWeight: 600 }}
           >
-            Cancel
+            {t('withdraw.cancel')}
           </button>
         </div>
       </div>
@@ -333,6 +337,7 @@ function WithdrawConfirmModal({ onConfirm, onCancel }) {
 }
 
 function AcceptedPanel({ collab, updateStageData, advanceStage }) {
+  const { t } = useTranslation('collabDetail');
   const [url, setUrl] = useState(collab.drive_url || '');
   const [saved, setSaved] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
@@ -350,17 +355,17 @@ function AcceptedPanel({ collab, updateStageData, advanceStage }) {
     <div style={{ background: 'rgba(255,255,255,0.65)', borderRadius: '1rem', padding: '1.25rem', border: '1px solid rgba(255,255,255,0.8)' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
         <span style={{ fontSize: '1rem' }}>📋</span>
-        <h4 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.9rem', color: 'var(--ink)', margin: 0 }}>Deliverables In Progress</h4>
+        <h4 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.9rem', color: 'var(--ink)', margin: 0 }}>{t('accepted.title')}</h4>
       </div>
       <p style={{ color: 'var(--slate)', fontSize: '0.85rem', margin: '0 0 1rem', lineHeight: 1.6 }}>
-        The host has accepted! Share a link to your Google Drive or Dropbox folder so the host can preview your work.
+        {t('accepted.body')}
       </p>
       <div style={{ marginBottom: '0.75rem' }}>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
           <input
             value={url}
             onChange={(e) => setUrl(e.target.value)}
-            placeholder="https://drive.google.com/..."
+            placeholder={t('accepted.placeholder')}
             style={{
               flex: 1, padding: '0.6rem 0.875rem', borderRadius: '0.75rem',
               background: 'rgba(255,255,255,0.75)', border: '1px solid rgba(25,37,36,0.12)',
@@ -376,7 +381,7 @@ function AcceptedPanel({ collab, updateStageData, advanceStage }) {
               onMouseEnter={() => setShowTooltip(true)}
               onMouseLeave={() => setShowTooltip(false)}
             >
-              {saved ? 'Saved' : hasLink ? 'Update' : 'Save'}
+              {saved ? t('accepted.saved') : hasLink ? t('accepted.update') : t('accepted.save')}
             </button>
             {showTooltip && (
               <div style={{
@@ -386,7 +391,7 @@ function AcceptedPanel({ collab, updateStageData, advanceStage }) {
                 whiteSpace: 'nowrap', pointerEvents: 'none', zIndex: 10,
                 boxShadow: '0 4px 12px rgba(25,37,36,0.15)',
               }}>
-                Be sure that the link is editable by the host.
+                {t('accepted.tooltip')}
                 <div style={{
                   position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)',
                   width: 0, height: 0, borderLeft: '5px solid transparent',
@@ -406,32 +411,33 @@ function AcceptedPanel({ collab, updateStageData, advanceStage }) {
           background: 'rgba(74,155,127,0.1)', color: '#4A9B7F',
           display: 'flex', alignItems: 'center', gap: '0.4rem',
         }}>
-          ✓ Drive link sent to host!
+          {t('accepted.linkSent')}
         </div>
       )}
 
       {/* Edit/resend button after first save */}
       {hasLink && (
         <p style={{ fontSize: '0.72rem', color: 'var(--sage)', margin: '0 0 0.75rem', fontStyle: 'italic' }}>
-          Need to update the link? Enter a new one above and click "{url !== collab.drive_url ? 'Save' : 'Update'}" to resend to the host.
+          {t('accepted.resend', { action: url !== collab.drive_url ? t('accepted.save') : t('accepted.update') })}
         </p>
       )}
 
       <p style={{ fontSize: '0.7rem', color: 'var(--sage)', fontStyle: 'italic', margin: '0 0 1rem' }}>
-        Future integrations with Frame.io, Wipster, and more on the way.
+        {t('accepted.integrations')}
       </p>
       <button
         className="btn-glass"
         style={{ fontSize: '0.8rem', padding: '0.6rem 1.25rem' }}
         onClick={() => advanceStage(collab.id)}
       >
-        Advance to Adjustments
+        {t('accepted.advance')}
       </button>
     </div>
   );
 }
 
 function AdjustmentsPanel({ collab, updateStageData, advanceStage }) {
+  const { t } = useTranslation('collabDetail');
   const deliverables = collab.deliverables || '';
   const parseDefault = (keyword) => {
     const m = deliverables.match(new RegExp(`(\\d+)\\s*${keyword}`, 'i'));
@@ -450,10 +456,10 @@ function AdjustmentsPanel({ collab, updateStageData, advanceStage }) {
     <div style={{ background: 'rgba(255,255,255,0.65)', borderRadius: '1rem', padding: '1.25rem', border: '1px solid rgba(255,255,255,0.8)' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
         <span style={{ fontSize: '1rem' }}>🔄</span>
-        <h4 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.9rem', color: 'var(--ink)', margin: 0 }}>Adjustments</h4>
+        <h4 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.9rem', color: 'var(--ink)', margin: 0 }}>{t('adjustments.title')}</h4>
       </div>
       <p style={{ color: 'var(--slate)', fontSize: '0.85rem', margin: '0 0 0.75rem', lineHeight: 1.6 }}>
-        Adjust the deliverables agreed upon in the Collabnb Agreement. The host will be notified of any changes.
+        {t('adjustments.body')}
       </p>
 
       {/* Agreement deliverables reference */}
@@ -463,22 +469,22 @@ function AdjustmentsPanel({ collab, updateStageData, advanceStage }) {
         border: '1px solid rgba(209,235,221,0.4)',
       }}>
         <p style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--sage)', margin: '0 0 0.2rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-          From Collabnb Agreement
+          {t('adjustments.fromAgreement')}
         </p>
         <p style={{ fontSize: '0.78rem', color: 'var(--slate)', margin: 0, fontStyle: 'italic' }}>
-          {deliverables || 'No deliverables specified'}
+          {deliverables || t('adjustments.noDeliverables')}
         </p>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem', marginBottom: '1rem' }}>
         {[
-          { key: 'reels', label: 'Reels', icon: '🎬' },
-          { key: 'photos', label: 'Photos', icon: '📸' },
-          { key: 'blog_posts', label: 'Blog Posts', icon: '✍️' },
-        ].map(({ key, label, icon }) => (
+          { key: 'reels', icon: '🎬' },
+          { key: 'photos', icon: '📸' },
+          { key: 'blog_posts', icon: '✍️' },
+        ].map(({ key, icon }) => (
           <div key={key} style={{ textAlign: 'center' }}>
             <p style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--sage)', margin: '0 0 0.35rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-              {icon} {label}
+              {icon} {t(`adjustments.types.${key}`)}
             </p>
             <input
               type="number" min="0"
@@ -501,14 +507,14 @@ function AdjustmentsPanel({ collab, updateStageData, advanceStage }) {
           style={{ fontSize: '0.8rem', padding: '0.6rem 1rem' }}
           onClick={() => updateStageData(collab.id, 'updated', { content_stats: stats })}
         >
-          Save Adjustments
+          {t('adjustments.save')}
         </button>
         <button
           className="btn-glass"
           style={{ fontSize: '0.8rem', padding: '0.6rem 1.25rem' }}
           onClick={() => advanceStage(collab.id)}
         >
-          Advance to Uploaded
+          {t('adjustments.advance')}
         </button>
       </div>
     </div>
@@ -516,6 +522,7 @@ function AdjustmentsPanel({ collab, updateStageData, advanceStage }) {
 }
 
 function UploadedPanel({ collab, advanceStage }) {
+  const { t } = useTranslation('collabDetail');
   const stats = collab.content_stats;
   const [checklist, setChecklist] = useState({ drive: false, tagged: false, located: false, met: false });
   const allChecked = Object.values(checklist).every(Boolean);
@@ -523,7 +530,7 @@ function UploadedPanel({ collab, advanceStage }) {
     <div style={{ background: 'rgba(255,255,255,0.65)', borderRadius: '1rem', padding: '1.25rem', border: '1px solid rgba(255,255,255,0.8)' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
         <span style={{ fontSize: '1rem' }}>🔵</span>
-        <h4 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.9rem', color: 'var(--ink)', margin: 0 }}>Uploaded</h4>
+        <h4 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.9rem', color: 'var(--ink)', margin: 0 }}>{t('uploaded.title')}</h4>
       </div>
 
       {/* Stats display */}
@@ -541,14 +548,14 @@ function UploadedPanel({ collab, advanceStage }) {
       )}
 
       {/* Review checklist */}
-      <p style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--ink)', margin: '0 0 0.5rem' }}>Review Checklist</p>
+      <p style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--ink)', margin: '0 0 0.5rem' }}>{t('uploaded.checklist')}</p>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', marginBottom: '0.75rem' }}>
         {[
-          { key: 'drive', label: 'All files uploaded to shared drive' },
-          { key: 'tagged', label: 'Content tagged @collabnb' },
-          { key: 'located', label: 'Location tagged on all posts' },
-          { key: 'met', label: 'All deliverables met' },
-        ].map(({ key, label }) => (
+          { key: 'drive' },
+          { key: 'tagged' },
+          { key: 'located' },
+          { key: 'met' },
+        ].map(({ key }) => (
           <label key={key} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.8rem', color: 'var(--slate)' }}>
             <input
               type="checkbox"
@@ -556,13 +563,13 @@ function UploadedPanel({ collab, advanceStage }) {
               onChange={() => setChecklist((p) => ({ ...p, [key]: !p[key] }))}
               style={{ accentColor: 'var(--slate)' }}
             />
-            {label}
+            {t(`uploaded.items.${key}`)}
           </label>
         ))}
       </div>
 
       <p style={{ fontSize: '0.7rem', color: 'var(--sage)', fontStyle: 'italic', margin: '0 0 1rem' }}>
-        AI content analysis and performance projections coming soon.
+        {t('uploaded.ai')}
       </p>
 
       {allChecked && (
@@ -571,12 +578,12 @@ function UploadedPanel({ collab, advanceStage }) {
           style={{ fontSize: '0.8rem', padding: '0.6rem 1.25rem' }}
           onClick={() => advanceStage(collab.id)}
         >
-          Request Approval
+          {t('uploaded.requestApproval')}
         </button>
       )}
       {!allChecked && (
         <p style={{ fontSize: '0.72rem', color: 'var(--stone)', fontStyle: 'italic' }}>
-          Complete all checklist items to request approval.
+          {t('uploaded.hint')}
         </p>
       )}
     </div>
@@ -593,6 +600,7 @@ const LABEL_S = { fontSize: '0.65rem', fontWeight: 700, color: 'var(--sage)', te
 const TRUSTPILOT_REVIEW_URL = 'https://www.trustpilot.com/evaluate/collabnb.com';
 
 function StarRow({ value, onChange, size = '1.6rem' }) {
+  const { t } = useTranslation('collabDetail');
   const [hover, setHover] = useState(0);
   return (
     <div style={{ display: 'flex', gap: '0.25rem' }}>
@@ -603,7 +611,7 @@ function StarRow({ value, onChange, size = '1.6rem' }) {
           onClick={() => onChange(n)}
           onMouseEnter={() => setHover(n)}
           onMouseLeave={() => setHover(0)}
-          aria-label={`${n} star${n === 1 ? '' : 's'}`}
+          aria-label={t('star', { count: n })}
           style={{
             background: 'none', border: 'none', padding: 0, cursor: 'pointer',
             fontSize: size, lineHeight: 1, transition: 'transform 120ms',
@@ -619,6 +627,7 @@ function StarRow({ value, onChange, size = '1.6rem' }) {
 }
 
 function ClosedPanel({ collab, toggleCloseCollab }) {
+  const { t } = useTranslation('collabDetail');
   const stage = collab.stages?.closed || {};
   const creatorDone = !!stage.creator_closed;
   const hostDone = !!stage.host_closed;
@@ -688,19 +697,19 @@ function ClosedPanel({ collab, toggleCloseCollab }) {
     <div style={{ background: 'rgba(255,255,255,0.65)', borderRadius: '1rem', padding: '1.25rem', border: '1px solid rgba(255,255,255,0.8)' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
         <span style={{ fontSize: '1rem' }}>🟢</span>
-        <h4 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.9rem', color: 'var(--ink)', margin: 0 }}>Close Collaboration</h4>
+        <h4 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.9rem', color: 'var(--ink)', margin: 0 }}>{t('closed.title')}</h4>
       </div>
 
       {/* Dual-close progress */}
       <div style={{ marginBottom: '1.25rem' }}>
         <p style={{ fontSize: '0.85rem', color: 'var(--slate)', margin: '0 0 0.75rem', lineHeight: 1.6 }}>
-          Both parties rate each other to confirm the close — this closes the collaboration and releases payment.
+          {t('closed.body')}
         </p>
         <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '0.75rem' }}>
           {[
-            { party: 'creator', done: creatorDone, label: 'Creator' },
-            { party: 'host', done: hostDone, label: 'Host' },
-          ].map(({ party, done, label }) => {
+            { party: 'creator', done: creatorDone },
+            { party: 'host', done: hostDone },
+          ].map(({ party, done }) => {
             const rev = reviewByRole(party);
             return (
               <button
@@ -718,7 +727,7 @@ function ClosedPanel({ collab, toggleCloseCollab }) {
               >
                 <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   {done ? <CheckIcon /> : <span style={{ width: 12, height: 12, borderRadius: '50%', border: '2px solid var(--stone)', display: 'inline-block' }} />}
-                  {label}: {done ? 'Confirmed' : 'Rate & Close'}
+                  {t(`closed.parties.${party}`)}: {done ? t('closed.confirmed') : t('closed.rateClose')}
                 </span>
                 {rev && (
                   <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#D4A843' }}>
@@ -733,10 +742,12 @@ function ClosedPanel({ collab, toggleCloseCollab }) {
         {ratingParty && (
           <div style={{ marginBottom: '0.75rem', padding: '1rem', borderRadius: '0.875rem', background: 'rgba(255,255,255,0.6)', border: '1px solid rgba(255,255,255,0.8)', backdropFilter: 'blur(20px) saturate(140%)', WebkitBackdropFilter: 'blur(20px) saturate(140%)' }}>
             <p style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--ink)', margin: '0 0 0.25rem', fontFamily: 'var(--font-display)' }}>
-              {ratingParty === 'creator' ? `Rate your host${collab.host_name ? ` — ${collab.host_name}` : ''}` : `Rate your creator${collab.creator_name ? ` — ${collab.creator_name}` : ''}`}
+              {ratingParty === 'creator'
+                ? (collab.host_name ? t('closed.rateHost', { name: collab.host_name }) : t('closed.rateHostPlain'))
+                : (collab.creator_name ? t('closed.rateCreator', { name: collab.creator_name }) : t('closed.rateCreatorPlain'))}
             </p>
             <p style={{ fontSize: '0.72rem', color: 'var(--sage)', margin: '0 0 0.75rem' }}>
-              How was the collaboration? Your rating confirms your close.
+              {t('closed.howWasIt')}
             </p>
             <div style={{ marginBottom: '0.75rem' }}>
               <StarRow value={stars} onChange={setStars} />
@@ -744,7 +755,7 @@ function ClosedPanel({ collab, toggleCloseCollab }) {
             <textarea
               value={reviewComment}
               onChange={(e) => setReviewComment(e.target.value)}
-              placeholder="Share a few words about the experience (optional)"
+              placeholder={t('closed.commentPlaceholder')}
               rows={2}
               style={{ ...INPUT_S, resize: 'vertical', marginBottom: '0.75rem' }}
             />
@@ -755,13 +766,13 @@ function ClosedPanel({ collab, toggleCloseCollab }) {
                 onClick={handleSubmitReview}
                 style={{ fontSize: '0.8rem', padding: '0.6rem 1.25rem', opacity: stars < 1 || submittingReview ? 0.5 : 1, cursor: stars < 1 ? 'not-allowed' : 'pointer' }}
               >
-                {submittingReview ? 'Submitting…' : 'Submit Rating & Confirm Close'}
+                {submittingReview ? t('closed.submitting') : t('closed.submitRating')}
               </button>
               <button
                 onClick={() => setRatingParty(null)}
                 style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 600, color: 'var(--sage)', fontFamily: 'var(--font-body)' }}
               >
-                Cancel
+                {t('closed.cancel')}
               </button>
             </div>
           </div>
@@ -779,7 +790,7 @@ function ClosedPanel({ collab, toggleCloseCollab }) {
         <div style={{ marginBottom: '1.25rem', padding: '1rem', borderRadius: '0.875rem', background: 'rgba(255,255,255,0.5)', border: '1px solid rgba(25,37,36,0.08)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
             <span style={{ fontSize: '0.9rem' }}>📊</span>
-            <h5 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.85rem', color: 'var(--ink)', margin: 0 }}>Share Your Content Performance</h5>
+            <h5 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.85rem', color: 'var(--ink)', margin: 0 }}>{t('closed.sharePerformance')}</h5>
           </div>
 
           {metricsSubmitted ? (
@@ -787,42 +798,40 @@ function ClosedPanel({ collab, toggleCloseCollab }) {
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
                 <CheckIcon />
                 <p style={{ fontSize: '0.82rem', fontWeight: 600, color: '#4A9B7F', margin: 0 }}>
-                  Metrics saved! Collabnb Content ER: <strong>{computedER}%</strong>
+                  <Trans i18nKey="closed.metricsSaved" t={t} values={{ er: computedER }}>Metrics saved! Collabnb Content ER: <strong>{{er}}%</strong></Trans>
                 </p>
               </div>
               <p style={{ fontSize: '0.7rem', color: 'var(--stone)', margin: 0, fontStyle: 'italic' }}>
-                Instagram API integration coming soon — metrics will update automatically.
+                {t('closed.instaSoon')}
               </p>
             </div>
           ) : (
             <div>
               <p style={{ fontSize: '0.8rem', color: 'var(--slate)', margin: '0 0 0.875rem', lineHeight: 1.5 }}>
-                How did your Collabnb post perform? Your data stays private and helps us improve matches.
+                {t('closed.howDidPost')}
               </p>
               <p style={{ fontSize: '0.75rem', color: 'var(--slate)', margin: '0 0 0.875rem', lineHeight: 1.5, background: 'rgba(209,235,219,0.3)', borderRadius: '0.75rem', padding: '0.625rem 0.75rem' }}>
-                <strong>Tag us when you post</strong> — it helps hosts spot your work on the platform.<br />
-                Instagram: tag <strong>@collabnb</strong> in the caption and add us as a collaborator.<br />
-                TikTok: tag <strong>@collabnbofficial</strong> in the caption.
+                <Trans i18nKey="closed.tagUs" t={t}><strong>Tag us when you post</strong> — it helps hosts spot your work on the platform.<br />Instagram: tag <strong>@collabnb</strong> in the caption and add us as a collaborator.<br />TikTok: tag <strong>@collabnbofficial</strong> in the caption.</Trans>
               </p>
               <div style={{ marginBottom: '0.625rem' }}>
-                <label style={LABEL_S}>Post URL (Instagram / TikTok / YouTube)</label>
-                <input type="url" placeholder="https://www.instagram.com/p/..." value={form.post_url} onChange={setField('post_url')} style={INPUT_S} />
+                <label style={LABEL_S}>{t('closed.postUrl')}</label>
+                <input type="url" placeholder={t('closed.postUrlPlaceholder')} value={form.post_url} onChange={setField('post_url')} style={INPUT_S} />
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.625rem', marginBottom: '0.625rem' }}>
                 <div>
-                  <label style={LABEL_S}>Views *</label>
+                  <label style={LABEL_S}>{t('closed.views')}</label>
                   <input type="number" min="0" placeholder="0" value={form.views} onChange={setField('views')} style={INPUT_S} />
                 </div>
                 <div>
-                  <label style={LABEL_S}>Likes *</label>
+                  <label style={LABEL_S}>{t('closed.likes')}</label>
                   <input type="number" min="0" placeholder="0" value={form.likes} onChange={setField('likes')} style={INPUT_S} />
                 </div>
                 <div>
-                  <label style={LABEL_S}>Comments *</label>
+                  <label style={LABEL_S}>{t('closed.comments')}</label>
                   <input type="number" min="0" placeholder="0" value={form.comments} onChange={setField('comments')} style={INPUT_S} />
                 </div>
                 <div>
-                  <label style={LABEL_S}>Saves / Shares (optional)</label>
+                  <label style={LABEL_S}>{t('closed.saves')}</label>
                   <input type="number" min="0" placeholder="0" value={form.saves} onChange={setField('saves')} style={INPUT_S} />
                 </div>
               </div>
@@ -836,10 +845,10 @@ function ClosedPanel({ collab, toggleCloseCollab }) {
                   border: 'none', transition: 'background 150ms',
                 }}
               >
-                Save Performance Data
+                {t('closed.savePerformance')}
               </button>
               <p style={{ fontSize: '0.68rem', color: 'var(--stone)', margin: '0.5rem 0 0', fontStyle: 'italic', textAlign: 'center' }}>
-                Instagram API integration coming soon — metrics will update automatically.
+                {t('closed.instaSoon')}
               </p>
             </div>
           )}
@@ -853,18 +862,17 @@ function ClosedPanel({ collab, toggleCloseCollab }) {
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
           <DollarSmall />
-          <p style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--slate)', margin: 0 }}>Integrated Payments — Coming Soon</p>
+          <p style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--slate)', margin: 0 }}>{t('closed.payments')}</p>
         </div>
         <p style={{ fontSize: '0.72rem', color: 'var(--sage)', margin: 0, lineHeight: 1.5 }}>
-          Collabnb will handle payouts, invoicing, and tax forms so you can focus on creating.
-          Payment processor integration is on the way.
+          {t('closed.paymentsBody')}
         </p>
       </div>
 
       {bothDone && (
         <div style={{ marginTop: '1rem', padding: '1rem', borderRadius: '0.875rem', background: 'rgba(74,155,127,0.1)', textAlign: 'center' }}>
           <p style={{ fontSize: '0.85rem', fontWeight: 700, color: '#4A9B7F', margin: '0 0 0.75rem' }}>
-            ✓ Both parties confirmed — collaboration will be archived
+            {t('closed.bothConfirmed')}
           </p>
           <a
             href={TRUSTPILOT_REVIEW_URL}
@@ -877,10 +885,10 @@ function ClosedPanel({ collab, toggleCloseCollab }) {
               fontFamily: 'var(--font-body)',
             }}
           >
-            ★ Review Collabnb on Trustpilot
+            {t('closed.trustpilot')}
           </a>
           <p style={{ fontSize: '0.68rem', color: 'var(--sage)', margin: '0.6rem 0 0', fontStyle: 'italic' }}>
-            We've also emailed you a Trustpilot review link.
+            {t('closed.trustpilotEmail')}
           </p>
         </div>
       )}
@@ -889,18 +897,19 @@ function ClosedPanel({ collab, toggleCloseCollab }) {
 }
 
 function ArchivedPanel({ collab }) {
+  const { t } = useTranslation('collabDetail');
   return (
     <div style={{ background: 'rgba(255,255,255,0.65)', borderRadius: '1rem', padding: '1.25rem', border: '1px solid rgba(255,255,255,0.8)' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
         <span style={{ fontSize: '1rem' }}>📦</span>
-        <h4 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.9rem', color: 'var(--ink)', margin: 0 }}>Archived Collaboration</h4>
+        <h4 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.9rem', color: 'var(--ink)', margin: 0 }}>{t('archived.title')}</h4>
       </div>
       <p style={{ color: 'var(--slate)', fontSize: '0.85rem', margin: 0, lineHeight: 1.6 }}>
-        This collaboration has been completed and archived. Use the timeline above to revisit any stage, or view the listing details below.
+        {t('archived.body')}
       </p>
       {collab.payment && (
         <div style={{ marginTop: '1rem', padding: '0.75rem', borderRadius: '0.75rem', background: 'rgba(74,155,127,0.1)', textAlign: 'center' }}>
-          <p style={{ fontSize: '0.85rem', fontWeight: 700, color: '#4A9B7F', margin: 0 }}>Payment: {collab.payment}</p>
+          <p style={{ fontSize: '0.85rem', fontWeight: 700, color: '#4A9B7F', margin: 0 }}>{t('archived.payment', { amount: collab.payment })}</p>
         </div>
       )}
       <div style={{ marginTop: '1rem', textAlign: 'center' }}>
@@ -915,7 +924,7 @@ function ArchivedPanel({ collab }) {
             fontFamily: 'var(--font-body)',
           }}
         >
-          ★ Review Collabnb on Trustpilot
+          {t('archived.trustpilot')}
         </a>
       </div>
     </div>
@@ -924,6 +933,7 @@ function ArchivedPanel({ collab }) {
 
 /* ─── Main CollabDetail component ─────────────────────────────────────────── */
 export default function CollabDetail({ collab, onClose }) {
+  const { t } = useTranslation('collabDetail');
   const navigate = useNavigate();
   const { advanceStage, updateStageData, toggleCloseCollab, removeCollab, contracts } = useCollabs();
   const { profile } = useAuth();
@@ -1059,10 +1069,10 @@ export default function CollabDetail({ collab, onClose }) {
                 }}
               >
                 {collab.days_left > 0
-                  ? `Due in ${collab.days_left} day${collab.days_left === 1 ? '' : 's'}`
+                  ? t('dueIn', { count: collab.days_left })
                   : collab.days_left === 0
-                    ? 'Due today'
-                    : `Overdue by ${Math.abs(collab.days_left)} days`}
+                    ? t('dueToday')
+                    : t('overdue', { count: Math.abs(collab.days_left) })}
               </span>
             )}
           </div>
@@ -1078,7 +1088,7 @@ export default function CollabDetail({ collab, onClose }) {
                   color: demoPlaying ? '#4A9B7F' : 'var(--slate)', flexShrink: 0,
                   fontSize: '0.8rem',
                 }}
-                title={demoPlaying ? 'Pause auto-advance' : 'Resume auto-advance'}
+                title={demoPlaying ? t('pauseAuto') : t('resumeAuto')}
               >
                 {demoPlaying ? '⏸' : '▶'}
               </button>
@@ -1152,7 +1162,7 @@ export default function CollabDetail({ collab, onClose }) {
           {isViewingPast && (
             <div style={{ textAlign: 'center', marginTop: '0.75rem' }}>
               <p style={{ fontSize: '0.72rem', color: 'var(--sage)', fontStyle: 'italic' }}>
-                Viewing past stage — actions are disabled. Click current or future stages to interact.
+                {t('pastStageNotice')}
               </p>
             </div>
           )}
@@ -1173,7 +1183,7 @@ export default function CollabDetail({ collab, onClose }) {
             minWidth: 0,
           }}>
             <h4 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.85rem', color: 'var(--sage)', margin: '0 0 0.75rem', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-              Listing Details
+              {t('listingDetails')}
             </h4>
             <div style={{
               width: '100%', height: '160px', borderRadius: '0.875rem',
@@ -1246,7 +1256,7 @@ export default function CollabDetail({ collab, onClose }) {
               style={{ marginTop: '0.75rem', fontSize: '0.75rem', padding: '0.5rem 1rem' }}
               onClick={() => navigate('/explore')}
             >
-              <GlobeSmall /> View Full Listing
+              <GlobeSmall /> {t('viewFullListing')}
             </button>
           </div>
 
@@ -1254,7 +1264,7 @@ export default function CollabDetail({ collab, onClose }) {
           {collab.is_active && (
           <div style={{ flex: '1 1 50%', padding: '1.5rem', minWidth: 0 }}>
             <h4 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.85rem', color: 'var(--sage)', margin: '0 0 0.75rem', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-              Contract Summary
+              {t('contractSummary')}
             </h4>
 
             {/* Creator × Host */}
@@ -1268,14 +1278,14 @@ export default function CollabDetail({ collab, onClose }) {
                   background: 'linear-gradient(135deg, #3C5759, #959D90)', margin: '0 auto 0.25rem',
                 }}>
                   {profile?.avatar_url ? (
-                    <img src={profile.avatar_url} alt="Creator" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                    <img src={profile.avatar_url} alt={t('contractSummary.creatorAlt')} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
                   ) : (
                     <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '0.75rem', fontWeight: 700 }}>
                       {profile?.full_name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || 'BV'}
                     </div>
                   )}
                 </div>
-                <p style={{ fontSize: '0.65rem', fontWeight: 600, color: 'var(--ink)', margin: 0 }}>Creator</p>
+                <p style={{ fontSize: '0.65rem', fontWeight: 600, color: 'var(--ink)', margin: 0 }}>{t('contractSummary.creatorLabel')}</p>
               </div>
               <span style={{ color: 'var(--stone)', fontSize: '0.8rem' }}>×</span>
               <div style={{ textAlign: 'center' }}>
@@ -1284,34 +1294,34 @@ export default function CollabDetail({ collab, onClose }) {
                   background: 'linear-gradient(135deg, #959D90, #D0D5CE)', margin: '0 auto 0.25rem',
                 }}>
                   {(hostProfile?.avatar_url || host.avatar_fallback) ? (
-                    <img src={hostProfile?.avatar_url || host.avatar_fallback} alt="Host" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                    <img src={hostProfile?.avatar_url || host.avatar_fallback} alt={t('contractSummary.hostAlt')} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
                   ) : (
                     <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '0.75rem', fontWeight: 700 }}>
                       {collab.host_name?.charAt(0) || 'H'}
                     </div>
                   )}
                 </div>
-                <p style={{ fontSize: '0.65rem', fontWeight: 600, color: 'var(--ink)', margin: 0 }}>Host</p>
+                <p style={{ fontSize: '0.65rem', fontWeight: 600, color: 'var(--ink)', margin: 0 }}>{t('contractSummary.hostLabel')}</p>
               </div>
             </div>
 
             {/* Agreement title */}
             <h5 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.9rem', color: 'var(--ink)', textAlign: 'center', margin: '0 0 0.75rem', paddingBottom: '0.5rem', borderBottom: '1px solid rgba(25,37,36,0.06)' }}>
-              Collabnb Agreement
+              {t('contractSummary.agreement')}
             </h5>
 
             {/* Details grid */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginBottom: '0.75rem' }}>
               {[
-                { label: 'Location', value: collab.location },
-                { label: 'Dates', value: collab.dates },
-                { label: 'Property', value: collab.property_name },
-                { label: 'Deliverables', value: collab.deliverables },
-                { label: 'Payment', value: collab.payment || '—' },
-                { label: 'Usage', value: 'Social Media Only' },
-              ].map(({ label, value }) => (
-                <div key={label} style={{ padding: '0.4rem 0.5rem', background: 'rgba(209,235,219,0.15)', borderRadius: '0.5rem' }}>
-                  <p style={{ fontSize: '0.6rem', fontWeight: 700, color: 'var(--sage)', margin: 0, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</p>
+                { key: 'location', value: collab.location },
+                { key: 'dates', value: collab.dates },
+                { key: 'property', value: collab.property_name },
+                { key: 'deliverables', value: collab.deliverables },
+                { key: 'payment', value: collab.payment || '—' },
+                { key: 'usage', value: t('contractSummary.socialMediaOnly') },
+              ].map(({ key, value }) => (
+                <div key={key} style={{ padding: '0.4rem 0.5rem', background: 'rgba(209,235,219,0.15)', borderRadius: '0.5rem' }}>
+                  <p style={{ fontSize: '0.6rem', fontWeight: 700, color: 'var(--sage)', margin: 0, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{t(`contractSummary.${key}`)}</p>
                   <p style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--ink)', margin: '0.1rem 0 0', lineHeight: 1.2 }}>{value}</p>
                 </div>
               ))}
@@ -1324,22 +1334,30 @@ export default function CollabDetail({ collab, onClose }) {
               marginBottom: '0.75rem',
             }}>
               <p style={{ fontSize: '0.7rem', color: 'var(--slate)', lineHeight: 1.6, margin: 0 }}>
-                This collaboration agreement is between <strong>{collab.host_name || 'the Host'}</strong> and <strong>Ben Venturing</strong> regarding <strong>{collab.property_name}</strong> located in <strong>{collab.location}</strong> from <strong>{collab.dates}</strong>. The creator agrees to deliver <strong>{collab.deliverables}</strong> as compensation for <strong>{collab.payment || 'a hosted stay experience'}</strong>.
+                <Trans i18nKey="contractSummary.body" t={t} values={{
+                  hostName: collab.host_name || t('contractSummary.theHost'),
+                  creatorName: 'Ben Venturing',
+                  propertyName: collab.property_name,
+                  location: collab.location,
+                  dates: collab.dates,
+                  deliverables: collab.deliverables,
+                  payment: collab.payment || t('contractSummary.stayComp'),
+                }}>This collaboration agreement is between <strong>{{hostName}}</strong> and <strong>{{creatorName}}</strong> regarding <strong>{{propertyName}}</strong> located in <strong>{{location}}</strong> from <strong>{{dates}}</strong>. The creator agrees to deliver <strong>{{deliverables}}</strong> as compensation for <strong>{{payment}}</strong>.</Trans>
               </p>
             </div>
 
             {/* Signature lines */}
             <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '0.75rem' }}>
               <div style={{ flex: 1, padding: '0.5rem 0.625rem', borderRadius: '0.5rem', background: 'rgba(255,255,255,0.5)' }}>
-                <p style={{ fontSize: '0.6rem', fontWeight: 700, color: 'var(--sage)', margin: '0 0 0.2rem', textTransform: 'uppercase' }}>Creator Signature</p>
+                <p style={{ fontSize: '0.6rem', fontWeight: 700, color: 'var(--sage)', margin: '0 0 0.2rem', textTransform: 'uppercase' }}>{t('contractSummary.creatorSignature')}</p>
                 <p style={{ fontFamily: "'Pacifico', cursive", fontSize: '0.85rem', color: 'var(--ink)', margin: 0 }}>Ben Venturing</p>
               </div>
               <div style={{ flex: 1, padding: '0.5rem 0.625rem', borderRadius: '0.5rem', background: 'rgba(255,255,255,0.5)' }}>
-                <p style={{ fontSize: '0.6rem', fontWeight: 700, color: 'var(--sage)', margin: '0 0 0.2rem', textTransform: 'uppercase' }}>Host Signature</p>
+                <p style={{ fontSize: '0.6rem', fontWeight: 700, color: 'var(--sage)', margin: '0 0 0.2rem', textTransform: 'uppercase' }}>{t('contractSummary.hostSignature')}</p>
                 {contract?.host_signed ? (
                   <p style={{ fontFamily: "'Pacifico', cursive", fontSize: '0.85rem', color: 'var(--ink)', margin: 0 }}>{collab.host_name}</p>
                 ) : (
-                  <p style={{ fontSize: '0.75rem', color: 'var(--stone)', fontStyle: 'italic', margin: 0 }}>Pending</p>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--stone)', fontStyle: 'italic', margin: 0 }}>{t('contractSummary.pending')}</p>
                 )}
               </div>
             </div>
@@ -1359,7 +1377,7 @@ export default function CollabDetail({ collab, onClose }) {
                     deliverables: collab.deliverables,
                   } } })}
                 >
-                  {contract ? 'Edit Contract' : 'Create Contract'}
+                  {contract ? t('contractSummary.editContract') : t('contractSummary.createContract')}
                 </button>
               )}
               <button
@@ -1367,7 +1385,7 @@ export default function CollabDetail({ collab, onClose }) {
                 style={{ flex: contract?.host_signed ? 1 : 'initial', fontSize: '0.75rem', padding: '0.5rem 0.75rem' }}
                 onClick={() => navigate('/contract')}
               >
-                View All
+                {t('contractSummary.viewAll')}
               </button>
             </div>
           </div>)}
@@ -1376,7 +1394,7 @@ export default function CollabDetail({ collab, onClose }) {
         {isDemo && (
           <div style={{ padding: '1.5rem 1.5rem 0.5rem', textAlign: 'center' }}>
             <p style={{ fontSize: '0.72rem', color: 'var(--sage)', fontStyle: 'italic' }}>
-              This is a demo tour — listing details and contract sections are hidden. Use the stage walkthrough above to explore the collaboration lifecycle.
+              {t('demoBypass')}
             </p>
           </div>
         )}
@@ -1384,7 +1402,7 @@ export default function CollabDetail({ collab, onClose }) {
         {/* ── Footer ────────────────────────────────────────────────────── */}
         <div style={{ padding: '0.75rem 1.5rem', textAlign: 'center' }}>
           <p style={{ fontSize: '0.65rem', color: 'var(--stone)', margin: 0 }}>
-            Collabnb — Creator Collaboration Platform
+            {t('footer')}
           </p>
         </div>
       </div>

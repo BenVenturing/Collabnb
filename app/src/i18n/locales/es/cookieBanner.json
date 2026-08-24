@@ -1,0 +1,14 @@
+{
+  "ariaLabel": "Aviso de cookies",
+  "heading": "Usamos cookies",
+  "body": "Cookies propias para entender cómo se usa Collabnb — así podemos mejorarlo.",
+  "details": {
+    "pre": "Usamos una cookie para recordar tu sesión y registrar qué páginas visitas, en qué haces clic, cuánto tiempo permaneces y por dónde te vas. ",
+    "strong": "Sin anuncios. Sin vender tus datos. Sin redes publicitarias de terceros.",
+    "post": " Puedes borrar las cookies cuando quieras en tu navegador y Collabnb seguirá funcionando.",
+    "faqLink": "Más información en las preguntas frecuentes"
+  },
+  "less": "Menos",
+  "review": "Revisar",
+  "gotIt": "Entendido"
+}

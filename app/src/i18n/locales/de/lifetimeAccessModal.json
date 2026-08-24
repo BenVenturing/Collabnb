@@ -1,0 +1,27 @@
+{
+  "heading": {
+    "available": "Lebenslanger Zugang verfügbar",
+    "soldOut": "Lebenslange Plätze ausverkauft"
+  },
+  "body": {
+    "available": "Die kostenlose Gründungsrunde ist voll. Du kannst trotzdem mit einer einmaligen Zahlung dauerhaften Zugang erhalten.",
+    "soldOut": "Alle lebenslangen Plätze sind vergeben. Wähle einen monatlichen oder jährlichen Plan, um loszulegen."
+  },
+  "tiers": {
+    "earlyAdopter": "Early Adopter",
+    "community": "Community",
+    "standardLifetime": "Standard Lifetime"
+  },
+  "spotsLeft_one": "{{count}} Platz zu diesem Preis — danach steigt er",
+  "spotsLeft_other": "{{count}} Plätze zu diesem Preis — danach steigt er",
+  "errors": {
+    "loginRequired": "Bitte melde dich an, um fortzufahren.",
+    "checkoutFailed": "Der Checkout konnte nicht gestartet werden. Bitte versuche es erneut."
+  },
+  "cta": {
+    "redirecting": "Weiterleitung…",
+    "claim": "Lebenslangen Zugang erhalten — {{price}} $",
+    "later": "Vielleicht später",
+    "close": "Schließen"
+  }
+}

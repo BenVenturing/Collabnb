@@ -1,0 +1,15 @@
+{
+  "steps": [
+    { "title": "1. The basics", "desc": "Tell us about your listing and collaboration type" },
+    { "title": "2. The offer", "desc": "What perks and experience will creators get?" },
+    { "title": "3. Deliverables & dates", "desc": "Set collaboration window and define what you need" },
+    { "title": "4. Review & publish", "desc": "Preview your listing and publish to creators" }
+  ],
+  "headingLine1": "It's easy to create",
+  "headingLine2": "a listing on Collabnb",
+  "subtitle": "We'll guide you through the process step by step. You can save and come back anytime.",
+  "verificationRequired": "Verification required",
+  "verificationBody": "Your account is under review by the Collabnb team. Once approved you'll be able to publish a listing. This usually takes 1–2 business days.",
+  "getStarted": "Get started",
+  "pendingVerification": "Pending verification"
+}

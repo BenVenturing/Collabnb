@@ -1,0 +1,54 @@
+{
+  "heading": "Wie sieht das Angebot aus?",
+  "subtitle": "Erzähle Creators, was dein Angebot besonders macht und welche Vorteile sie erhalten.",
+  "amenities": {
+    "label": "Ausstattung der Unterkunft",
+    "desc": "Suche und wähle aus, was deine Unterkunft bietet. Diese erscheinen auf deiner Angebotsseite.",
+    "searchPlaceholder": "Ausstattung suchen (z. B. WLAN, Pool, Whirlpool)",
+    "allAmenities": "Alle Ausstattungsmerkmale",
+    "mostCommon": "Am häufigsten",
+    "noMatch": "Keine Ausstattung passt zu „{{query}}“.",
+    "showCommonOnly": "Nur häufige anzeigen",
+    "showAllAmenities": "Alle Ausstattungsmerkmale anzeigen",
+    "selected": "Ausgewählt ({{count}})",
+    "createOwn": "Eigene Ausstattung erstellen",
+    "createCustomHeading": "Individuelle Ausstattung erstellen",
+    "namePlaceholder": "Benenne deine Ausstattung (z. B. Hängematte auf dem Dach)",
+    "chooseGraphic": "Grafik auswählen",
+    "cancel": "Abbrechen",
+    "addAmenity": "Ausstattung hinzufügen"
+  },
+  "addOns": {
+    "label": "Extras",
+    "desc": "Optionale Extras, mit denen du das Angebot aufwerten kannst.",
+    "placeholder": "z. B. Zugang zum Whirlpool"
+  },
+  "affiliate": {
+    "codeLabel": "Dein Affiliate-Code (optional)",
+    "codeDesc": "Füge deinen eigenen Affiliate-Code oder -Link deiner Buchungsplattform ein (z. B. Airbnb, VRBO, eigene Website).",
+    "codePlaceholder": "z. B. https://airbnb.com/ref/abc123 oder MEINCODE10",
+    "percentLabel": "Affiliate-Prozentsatz (%)",
+    "percentDesc": "Wie viel Provision verdient der Creator über deinen Affiliate-Link?",
+    "percentPlaceholder": "z. B. 10",
+    "regenerate": "Neu generieren",
+    "generate": "Generieren",
+    "collabnbCode": " Collabnb-Code",
+    "shuffleCode": "Code mischen",
+    "trackingNote": "Collabnb verfolgt derzeit keine Affiliate-Klicks. Die Einhaltung des Codes liegt beim Gastgeber. Echtes Tracking folgt in einem zukünftigen Update."
+  },
+  "vibeTags": {
+    "label": "Stimmungs-Tags (optional)",
+    "desc": "Füge ein paar Worte hinzu, die die Stimmung beschreiben (Gemütlich, Luxuriös, Abenteuerlich usw.)",
+    "suggestButton": "Tags aus den Angebotsdaten vorschlagen",
+    "placeholder": "z. B. Gemütlich",
+    "ideas": "Ideen:",
+    "showDifferentIdeas": "Andere Ideen anzeigen"
+  },
+  "maxOffers": {
+    "label": "Wie oft möchtest du diese Kollaboration anbieten?",
+    "desc": "Lege eine maximale Anzahl bestätigter Kollaborationen für dieses Angebot fest. Bei Erreichen pausiert das Angebot automatisch.",
+    "setLimit": "Limit festlegen",
+    "unlimited": "Unbegrenzt",
+    "numberOfCollabs": "Anzahl der Kollaborationen"
+  }
+}

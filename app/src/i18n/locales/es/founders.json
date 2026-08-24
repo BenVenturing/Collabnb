@@ -1,0 +1,58 @@
+{
+  "comingSoonWatermark": {
+    "moreComingSoon": "MÁS PRÓXIMAMENTE",
+    "comingSoon": "PRÓXIMAMENTE"
+  },
+  "thread": {
+    "reactTitle": "Reaccionar",
+    "reply": "Responder",
+    "replyPlaceholder": "Responder en el hilo…",
+    "send": "Enviar"
+  },
+  "lounge": {
+    "roomLabelCreator": "Sala de creadores",
+    "roomLabelHost": "Sala de anfitriones",
+    "privateNotice": "Privado para {{rolePlural}} fundadores · con hilos",
+    "newThread": "Nuevo hilo",
+    "pinnedByPrefix": "Fijado por Ben",
+    "pinnedBody": " — Bienvenido al espacio de fundadores. Nuevos recursos están en camino, y los anuncios de acceso anticipado aparecen 3 días antes de ser públicos. Esta sala es tuya.",
+    "startThreadPlaceholder": "Inicia un nuevo hilo…",
+    "post": "Publicar"
+  },
+  "resources": {
+    "libraryHeading": "Tu biblioteca de fundadores — próximamente.",
+    "libraryBody": "Un adelanto de las guías, plantillas y manuales que se están preparando para los fundadores.",
+    "comingSoonBadge": "Próximamente",
+    "gateHeading": "Los recursos llegarán pronto",
+    "gateBody": "Estamos preparando las guías, plantillas y manuales para fundadores. Serás el primero en recibirlos — vuelve pronto."
+  },
+  "earlyAccess": {
+    "headStartPrefix": "3 días de ventaja.",
+    "headStartBody": "Los anuncios reales de acceso anticipado aparecerán aquí solo para fundadores, 3 días antes de hacerse públicos. Aquí tienes un ejemplo de cómo se verán.",
+    "earlyBadge": "Anticipado · público en 3d",
+    "exampleBadge": "Ejemplo"
+  },
+  "directory": {
+    "filterAll": "Todos",
+    "filterCreators": "Creadores",
+    "filterHosts": "Anfitriones",
+    "noneYet": "Aún no hay fundadores aquí.",
+    "fallbackName": "Fundador",
+    "fallbackTagHost": "Anfitrión fundador",
+    "fallbackTagCreator": "Creador"
+  },
+  "roleLabel": { "creator": "creador", "host": "anfitrión" },
+  "roleLabelPlural": { "creator": "creadores", "host": "anfitriones" },
+  "header": {
+    "title": "Fundadores",
+    "subtitle": "Tu espacio vitalicio de miembro fundador.",
+    "founderBadge": "Fundador",
+    "spotsLeft": "{{count}} plazas de {{role}} restantes"
+  },
+  "tabs": {
+    "lounge": "Sala",
+    "resources": "Recursos",
+    "access": "Acceso anticipado",
+    "directory": "Directorio"
+  }
+}

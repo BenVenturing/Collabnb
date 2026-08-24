@@ -1,4 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
+import { useTranslation } from "react-i18next";
+import i18nInstance from "../i18n";
 import {
   TIER_IDS, TIERS, DELIVERABLE_TYPES, DELIVERABLE_LABELS, DELIVERABLE_POINTS,
   PRESET_PACKAGES, LOAD_TIER_LABELS,
@@ -8,11 +10,7 @@ import {
 
 // Range bar: a single smooth gradient from very light green to deep green.
 // The hard floor, caution threshold, and recommended range stay labelled beneath.
-const ZONE_COPY = {
-  red: "Below the minimum for this workload — this can't be published as-is.",
-  amber: "Below the recommended range for this workload.",
-  green: "Within the recommended range.",
-};
+function zoneCopy(zone) { return i18nInstance.t(`pricingTool:zoneCopy.${zone}`); }
 
 function fmt(n) {
   return `$${Math.round(n).toLocaleString()}`;
@@ -45,6 +43,7 @@ function HelpCircle({ size = 16, color = "currentColor" }) {
 // Small "?" popover: a simple table of deliverable increments, their point
 // values, and which creator tiers can produce each. Kept intentionally compact.
 export function PointsHelpTable({ open, onClose }) {
+  const { t } = useTranslation('pricingTool');
   if (!open) return null;
   return (
     <div
@@ -64,11 +63,11 @@ export function PointsHelpTable({ open, onClose }) {
       >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
           <div style={{ fontFamily: "var(--font-blog-display)", fontWeight: 600, fontSize: 15, color: "var(--ink)" }}>
-            Points by deliverable & tier
+            {t('helpTable.heading')}
           </div>
           <button
             onClick={onClose}
-            aria-label="Close"
+            aria-label={t('helpTable.close')}
             style={{ width: 24, height: 24, borderRadius: "50%", border: "none", background: "rgba(25,37,36,0.08)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
           >
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--slate)" strokeWidth="2.5" strokeLinecap="round">
@@ -79,9 +78,9 @@ export function PointsHelpTable({ open, onClose }) {
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
           <thead>
             <tr style={{ color: "var(--sage)", textTransform: "uppercase", letterSpacing: "0.05em", fontSize: 10 }}>
-              <th style={{ textAlign: "left", fontWeight: 700, padding: "6px 4px", borderBottom: "1px solid rgba(25,37,36,0.12)" }}>Deliverable</th>
-              <th style={{ textAlign: "center", fontWeight: 700, padding: "6px 4px", borderBottom: "1px solid rgba(25,37,36,0.12)" }}>Pts</th>
-              <th style={{ textAlign: "left", fontWeight: 700, padding: "6px 4px", borderBottom: "1px solid rgba(25,37,36,0.12)" }}>Who can produce</th>
+              <th style={{ textAlign: "left", fontWeight: 700, padding: "6px 4px", borderBottom: "1px solid rgba(25,37,36,0.12)" }}>{t('helpTable.colDeliverable')}</th>
+              <th style={{ textAlign: "center", fontWeight: 700, padding: "6px 4px", borderBottom: "1px solid rgba(25,37,36,0.12)" }}>{t('helpTable.colPts')}</th>
+              <th style={{ textAlign: "left", fontWeight: 700, padding: "6px 4px", borderBottom: "1px solid rgba(25,37,36,0.12)" }}>{t('helpTable.colWho')}</th>
             </tr>
           </thead>
           <tbody>
@@ -92,7 +91,7 @@ export function PointsHelpTable({ open, onClose }) {
                   <td style={{ padding: "7px 4px", fontWeight: 600, borderBottom: "1px solid rgba(25,37,36,0.07)" }}>{DELIVERABLE_LABELS[type]}</td>
                   <td style={{ padding: "7px 4px", textAlign: "center", fontWeight: 700, borderBottom: "1px solid rgba(25,37,36,0.07)" }}>{DELIVERABLE_POINTS[type]}</td>
                   <td style={{ padding: "7px 4px", fontSize: 11, color: "var(--slate)", borderBottom: "1px solid rgba(25,37,36,0.07)" }}>
-                    {allowed.length === TIER_IDS.length ? "All tiers" : allowed.join(", ")}
+                    {allowed.length === TIER_IDS.length ? t('helpTable.allTiers') : allowed.join(", ")}
                   </td>
                 </tr>
               );
@@ -100,7 +99,7 @@ export function PointsHelpTable({ open, onClose }) {
           </tbody>
         </table>
         <p style={{ fontSize: 11, color: "var(--sage)", marginTop: 10, lineHeight: 1.45 }}>
-          Cash = points × $/pt (set by tier) × complexity. Hybrid stays offset part of the cash.
+          {t('helpTable.footerNote')}
         </p>
       </div>
     </div>
@@ -109,13 +108,14 @@ export function PointsHelpTable({ open, onClose }) {
 
 // Self-contained "?" trigger + popover — drops next to the modal close "x".
 export function PointsHelpButton({ style }) {
+  const { t } = useTranslation('pricingTool');
   const [open, setOpen] = useState(false);
   return (
     <>
       <button
         onClick={() => setOpen(true)}
-        aria-label="How points work"
-        title="How points work"
+        aria-label={t('helpButton.ariaLabel')}
+        title={t('helpButton.ariaLabel')}
         style={{
           width: 32, height: 32, borderRadius: "50%", border: "none",
           background: "rgba(25,37,36,0.07)", display: "flex", alignItems: "center", justifyContent: "center",
@@ -182,6 +182,7 @@ function SegmentedToggle({ options, value, onChange }) {
 }
 
 function Stepper({ label, points, quantity, onChange, disabled, step = 1, min = 0, renderValue }) {
+  const { t } = useTranslation('pricingTool');
   const dec = () => onChange(Math.max(min, quantity - step));
   const inc = () => onChange(quantity + step);
   return (
@@ -194,7 +195,7 @@ function Stepper({ label, points, quantity, onChange, disabled, step = 1, min = 
       <div>
         <div style={{ fontFamily: "var(--font-blog-body)", fontSize: 13, fontWeight: 600, color: "var(--ink)" }}>{label}</div>
         {points > 0 && (
-          <div style={{ fontFamily: "var(--font-blog-body)", fontSize: 11, color: "var(--sage)" }}>{points} pt{points !== 1 ? "s" : ""} each</div>
+          <div style={{ fontFamily: "var(--font-blog-body)", fontSize: 11, color: "var(--sage)" }}>{t('stepper.ptsEach', { count: points })}</div>
         )}
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -222,6 +223,7 @@ function Stepper({ label, points, quantity, onChange, disabled, step = 1, min = 
 // recommended range stay labelled, a median pin marks the recommended amount
 // (rounded), and the cash marker tracks wherever the host has landed.
 function ThreeZoneScale({ hardFloor, warnThreshold, range, cashAmount, midpoint }) {
+  const { t } = useTranslation('pricingTool');
   const upperBound = Math.max(range.high * 1.3, (cashAmount || 0) * 1.15, hardFloor * 2, 100);
   const pct = (n) => Math.max(0, Math.min(100, (n / upperBound) * 100));
   const medianP = pct(midpoint);
@@ -259,15 +261,16 @@ function ThreeZoneScale({ hardFloor, warnThreshold, range, cashAmount, midpoint 
       </div>
 
       <div style={{ display: "flex", justifyContent: "space-between", marginTop: 10, fontFamily: "var(--font-blog-body)", fontSize: 10.5, color: "var(--sage)" }}>
-        <span>Minimal {fmt(hardFloor)}</span>
-        <span>Caution {fmt(warnThreshold)}</span>
-        <span>Recommended {fmt(range.low)}–{fmt(range.high)}</span>
+        <span>{t('scale.minimal', { amount: fmt(hardFloor) })}</span>
+        <span>{t('scale.caution', { amount: fmt(warnThreshold) })}</span>
+        <span>{t('scale.recommended', { low: fmt(range.low), high: fmt(range.high) })}</span>
       </div>
     </div>
   );
 }
 
 function PresetCard({ preset, points, midpoint, active, onClick }) {
+  const { t } = useTranslation('pricingTool');
   return (
     <button
       onClick={onClick}
@@ -280,13 +283,14 @@ function PresetCard({ preset, points, midpoint, active, onClick }) {
     >
       <div style={{ fontFamily: "var(--font-blog-body)", fontWeight: 700, fontSize: 13, color: "var(--ink)" }}>{preset.name}</div>
       <div style={{ fontFamily: "var(--font-blog-body)", fontSize: 11.5, color: "var(--sage)", marginTop: 2 }}>
-        midrange {fmt(midpoint)}
+        {t('presetCard.midrange', { amount: fmt(midpoint) })}
       </div>
     </button>
   );
 }
 
 export default function PricingTool({ mode = "sandbox", initialValue, onChange }) {
+  const { t } = useTranslation('pricingTool');
   const [entryMode, setEntryMode] = useState("deliverables");
   const [tierId, setTierId] = useState(initialValue?.tierId || "ugc_pro");
   const [compensationType, setCompensationType] = useState(initialValue?.compensationType || "paid");
@@ -360,10 +364,10 @@ export default function PricingTool({ mode = "sandbox", initialValue, onChange }
   return (
     <div className="glass-card" style={{ padding: "22px 22px 26px", fontFamily: "var(--font-blog-body)" }}>
       <h3 style={{ fontFamily: "var(--font-blog-display)", fontWeight: 600, fontSize: 20, color: "var(--ink)", margin: "0 0 4px" }}>
-        What does a collab cost?
+        {t('heading')}
       </h3>
       <p style={{ fontSize: 13, color: "var(--slate)", margin: "0 0 18px", lineHeight: 1.5 }}>
-        Pricing is derived from deliverable points, creator tier, and workload complexity — never a guess.
+        {t('subtitle')}
       </p>
 
       {/* Entry mode */}
@@ -372,15 +376,15 @@ export default function PricingTool({ mode = "sandbox", initialValue, onChange }
           value={entryMode}
           onChange={setEntryMode}
           options={[
-            { value: "deliverables", label: "I know my deliverables" },
-            { value: "budget", label: "I have a budget" },
+            { value: "deliverables", label: t('entryMode.deliverables') },
+            { value: "budget", label: t('entryMode.budget') },
           ]}
         />
       </div>
 
       {/* Tier selector */}
       <div style={{ marginBottom: 14 }}>
-        <div style={{ fontSize: 11.5, fontWeight: 700, color: "var(--sage)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>Creator tier</div>
+        <div style={{ fontSize: 11.5, fontWeight: 700, color: "var(--sage)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>{t('creatorTier')}</div>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
           {TIER_IDS.map((id) => (
             <Pill key={id} active={tierId === id} onClick={() => setTierId(id)}>{TIERS[id].label}</Pill>
@@ -390,13 +394,13 @@ export default function PricingTool({ mode = "sandbox", initialValue, onChange }
 
       {/* Compensation type + stay value */}
       <div style={{ marginBottom: 18 }}>
-        <div style={{ fontSize: 11.5, fontWeight: 700, color: "var(--sage)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>Compensation type</div>
+        <div style={{ fontSize: 11.5, fontWeight: 700, color: "var(--sage)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>{t('compensationType.label')}</div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-          <Pill active={compensationType === "paid"} onClick={() => setCompensationType("paid")}>Paid</Pill>
-          <Pill active={compensationType === "hybrid"} onClick={() => setCompensationType("hybrid")}>Hybrid (stay + cash)</Pill>
+          <Pill active={compensationType === "paid"} onClick={() => setCompensationType("paid")}>{t('compensationType.paid')}</Pill>
+          <Pill active={compensationType === "hybrid"} onClick={() => setCompensationType("hybrid")}>{t('compensationType.hybrid')}</Pill>
           {compensationType === "hybrid" && (
             <div style={{ display: "flex", alignItems: "center", gap: 6, marginLeft: 4 }}>
-              <span style={{ fontSize: 12.5, color: "var(--slate)" }}>Declared stay value</span>
+              <span style={{ fontSize: 12.5, color: "var(--slate)" }}>{t('compensationType.declaredStayValue')}</span>
               <div style={{ position: "relative" }}>
                 <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", fontSize: 13, color: "var(--sage)" }}>$</span>
                 <input
@@ -416,17 +420,17 @@ export default function PricingTool({ mode = "sandbox", initialValue, onChange }
 
       {/* Complexity */}
       <div style={{ marginBottom: 20 }}>
-        <div style={{ fontSize: 11.5, fontWeight: 700, color: "var(--sage)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>Complexity</div>
+        <div style={{ fontSize: 11.5, fontWeight: 700, color: "var(--sage)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>{t('complexity.label')}</div>
         <div style={{ display: "flex", gap: 8 }}>
-          <Pill active={complexity === "standard"} onClick={() => setComplexity("standard")}>Standard</Pill>
-          <Pill active={complexity === "complex"} onClick={() => setComplexity("complex")}>Complex (shot list, drone, multi-location, exclusivity)</Pill>
+          <Pill active={complexity === "standard"} onClick={() => setComplexity("standard")}>{t('complexity.standard')}</Pill>
+          <Pill active={complexity === "complex"} onClick={() => setComplexity("complex")}>{t('complexity.complex')}</Pill>
         </div>
       </div>
 
       {entryMode === "budget" ? (
         <div>
           <div style={{ marginBottom: 14 }}>
-            <div style={{ fontSize: 11.5, fontWeight: 700, color: "var(--sage)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>Cash budget</div>
+            <div style={{ fontSize: 11.5, fontWeight: 700, color: "var(--sage)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>{t('budgetMode.cashBudget')}</div>
             <div style={{ position: "relative", maxWidth: 160 }}>
               <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 14, color: "var(--sage)" }}>$</span>
               <input
@@ -439,14 +443,14 @@ export default function PricingTool({ mode = "sandbox", initialValue, onChange }
             </div>
             {compensationType === "hybrid" && effectiveStayOffset > 0 && (
               <p style={{ fontSize: 11.5, color: "var(--sage)", marginTop: 6 }}>
-                Effective budget: {fmt(budget)} cash + {fmt(effectiveStayOffset)} stay offset = <strong style={{ color: "var(--ink)" }}>{fmt(effectiveBudget)}</strong>
+                {t('budgetMode.effectiveBudgetPrefix', { budget: fmt(budget), offset: fmt(effectiveStayOffset) })}<strong style={{ color: "var(--ink)" }}>{fmt(effectiveBudget)}</strong>
               </p>
             )}
           </div>
 
-          <div style={{ fontSize: 11.5, fontWeight: 700, color: "var(--sage)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>Packages that fit</div>
+          <div style={{ fontSize: 11.5, fontWeight: 700, color: "var(--sage)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>{t('budgetMode.packagesThatFit')}</div>
           {fitting.length === 0 ? (
-            <p style={{ fontSize: 13, color: "var(--sage)" }}>No preset fits this budget yet — try raising it or switching tiers.</p>
+            <p style={{ fontSize: 13, color: "var(--sage)" }}>{t('budgetMode.noPresetFits')}</p>
           ) : (
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 10, marginBottom: 14 }}>
               {fitting.map((p) => (
@@ -456,7 +460,7 @@ export default function PricingTool({ mode = "sandbox", initialValue, onChange }
           )}
           {stretch && (
             <>
-              <div style={{ fontSize: 11.5, fontWeight: 700, color: "var(--sage)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>Stretch option (within 120% of budget)</div>
+              <div style={{ fontSize: 11.5, fontWeight: 700, color: "var(--sage)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>{t('budgetMode.stretchOption')}</div>
               <PresetCard preset={stretch} points={stretch.points} midpoint={stretch.midpoint} active={selectedPreset === stretch.name} onClick={() => applyPreset(stretch)} />
             </>
           )}
@@ -465,7 +469,7 @@ export default function PricingTool({ mode = "sandbox", initialValue, onChange }
         <div>
           {/* Presets */}
           <div style={{ marginBottom: 16 }}>
-            <div style={{ fontSize: 11.5, fontWeight: 700, color: "var(--sage)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>Presets</div>
+            <div style={{ fontSize: 11.5, fontWeight: 700, color: "var(--sage)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>{t('deliverablesMode.presets')}</div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(170px, 1fr))", gap: 10 }}>
               {relevantPresets.map((p) => {
                 const pPoints = totalPoints(p.deliverables);
@@ -480,8 +484,8 @@ export default function PricingTool({ mode = "sandbox", initialValue, onChange }
           {/* Deliverable steppers */}
           <div style={{ background: "rgba(209,235,219,0.35)", borderRadius: 14, padding: 16, marginBottom: 16 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 10 }}>
-              <div style={{ fontSize: 11.5, fontWeight: 700, color: "var(--sage)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Build your own</div>
-              <div style={{ fontSize: 12, fontWeight: 600, color: "var(--slate)" }}>{loadTier ? LOAD_TIER_LABELS[loadTier] : "—"} load</div>
+              <div style={{ fontSize: 11.5, fontWeight: 700, color: "var(--sage)", textTransform: "uppercase", letterSpacing: "0.06em" }}>{t('deliverablesMode.buildYourOwn')}</div>
+              <div style={{ fontSize: 12, fontWeight: 600, color: "var(--slate)" }}>{loadTier ? LOAD_TIER_LABELS[loadTier] : t('deliverablesMode.loadFallback')}{t('deliverablesMode.loadSuffix')}</div>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 8 }}>
               {DELIVERABLE_TYPES.map((type) => (
@@ -499,7 +503,7 @@ export default function PricingTool({ mode = "sandbox", initialValue, onChange }
 
           {/* Cash amount + math */}
           <div style={{ marginBottom: 8 }}>
-            <div style={{ fontSize: 11.5, fontWeight: 700, color: "var(--sage)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>Cash compensation</div>
+            <div style={{ fontSize: 11.5, fontWeight: 700, color: "var(--sage)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>{t('deliverablesMode.cashCompensation')}</div>
             <div style={{ position: "relative", maxWidth: 160 }}>
               <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 14, color: "var(--sage)" }}>$</span>
               <input
@@ -519,15 +523,15 @@ export default function PricingTool({ mode = "sandbox", initialValue, onChange }
                 {fmt(range.low)}–{fmt(range.high)}
               </div>
               <p style={{ fontSize: 12, color: "var(--slate)", margin: "0 0 4px" }}>
-                {points} pts × {fmt(tier.ratePerPoint)}/pt ({tier.label}) × {complexity === "complex" ? "1.25 complex" : "1.0 standard"} = {fmt(midpoint)} midrange
-                {stayOffset > 0 && <> · stay offset {fmt(stayOffset)}</>}
+                {t('mathSummary', { points, rate: fmt(tier.ratePerPoint), tier: tier.label, complexity: complexity === "complex" ? t('complexity.complexShort') : t('complexity.standardShort'), midpoint: fmt(midpoint) })}
+                {stayOffset > 0 && t('stayOffsetSuffix', { offset: fmt(stayOffset) })}
               </p>
 
               <ThreeZoneScale hardFloor={hardFloor} warnThreshold={warnThreshold} range={range} cashAmount={cashAmount} midpoint={midpoint} />
 
               {zone && zone !== "green" && (
                 <p style={{ marginTop: 10, fontSize: 11, color: "var(--sage)", lineHeight: 1.4 }}>
-                  {ZONE_COPY[zone]}
+                  {zoneCopy(zone)}
                 </p>
               )}
             </>

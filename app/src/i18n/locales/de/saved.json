@@ -1,0 +1,35 @@
+{
+  "card": {
+    "featured": "Empfohlen",
+    "removeTitle": "Aus Gespeicherten entfernen",
+    "moveTitle": "In Sammlung verschieben"
+  },
+  "newCollectionModal": {
+    "heading": "Benenne diese Sammlung",
+    "placeholder": "z. B. Traumhütten, Ostküste…",
+    "cancel": "Abbrechen",
+    "create": "Erstellen"
+  },
+  "moveMenu": {
+    "heading": "Verschieben nach"
+  },
+  "header": {
+    "title": "Gespeichert",
+    "noneSaved": "Noch keine gespeicherten Kollaborationen",
+    "loading": "Wird geladen…",
+    "savedCount_one": "{{count}} gespeicherte Kollaboration",
+    "savedCount_other": "{{count}} gespeicherte Kollaborationen"
+  },
+  "emptyState": {
+    "title": "Noch nichts gespeichert",
+    "body": "Tippe auf das Herz bei einer Anzeige in „Entdecken“, um sie hier zu speichern.",
+    "browseCollabs": "Collabs durchsuchen"
+  },
+  "newCollectionButton": "Neue Sammlung",
+  "emptyCollection": {
+    "loading": "Wird geladen…",
+    "body": "Noch keine Anzeigen in dieser Sammlung — markiere eine Anzeige mit dem Herz, um sie hier hinzuzufügen."
+  },
+  "stayCount_one": "{{count}} Aufenthalt",
+  "stayCount_other": "{{count}} Aufenthalte"
+}

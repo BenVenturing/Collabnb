@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation } from 'convex/react';
+import { useTranslation } from 'react-i18next';
+import i18nInstance from '../../i18n';
 import { api } from '../../../convex/_generated/api';
 import { SAMPLE_LISTINGS } from '../../lib/mockData';
 import { useListingDraft } from '../../contexts/ListingDraftContext';
@@ -115,12 +117,13 @@ const AFFILIATE_CODES = {
 
 // ─── Status config ────────────────────────────────────────────────────────────
 const APPL_STATUS = {
-  pending:      { label: 'Pending',      bg: 'rgba(212,168,67,0.15)',  border: 'rgba(212,168,67,0.4)',  color: '#b45309' },
-  under_review: { label: 'Under Review', bg: 'rgba(123,104,200,0.12)', border: 'rgba(123,104,200,0.3)', color: '#5b4db8' },
-  approved:     { label: 'Approved',     bg: 'rgba(74,155,127,0.12)',  border: 'rgba(74,155,127,0.3)',  color: '#2d7d5e' },
-  completed:    { label: 'Completed',    bg: 'rgba(60,87,89,0.12)',    border: 'rgba(60,87,89,0.3)',    color: '#3C5759' },
-  declined:     { label: 'Declined',     bg: 'rgba(200,104,104,0.1)',  border: 'rgba(200,104,104,0.25)',color: '#9b2d2d' },
+  pending:      { bg: 'rgba(212,168,67,0.15)',  border: 'rgba(212,168,67,0.4)',  color: '#b45309' },
+  under_review: { bg: 'rgba(123,104,200,0.12)', border: 'rgba(123,104,200,0.3)', color: '#5b4db8' },
+  approved:     { bg: 'rgba(74,155,127,0.12)',  border: 'rgba(74,155,127,0.3)',  color: '#2d7d5e' },
+  completed:    { bg: 'rgba(60,87,89,0.12)',    border: 'rgba(60,87,89,0.3)',    color: '#3C5759' },
+  declined:     { bg: 'rgba(200,104,104,0.1)',  border: 'rgba(200,104,104,0.25)',color: '#9b2d2d' },
 };
+function applStatusLabel(key) { return i18nInstance.t(`hostListingDetail:statusLabels.${key}`); }
 
 const TIER_COLORS = {
   'UGC Beginner':     { bg: 'rgba(209,235,219,0.6)', color: 'var(--ink)' },
@@ -130,13 +133,7 @@ const TIER_COLORS = {
   'Macro':            { bg: 'rgba(200,104,104,0.1)', color: '#9b2d2d'    },
 };
 
-const TIER_DEFS = {
-  'UGC Beginner':     '0–5K followers — New creators building their portfolio',
-  'UGC Pro':          '5K–10K followers — Content creators, not influencer reach',
-  'Micro Influencer': '10K–50K followers — Influencer-style content, engaged audience',
-  'Influencer':       '50K+ followers — Broad reach, established audience',
-  'Macro':            '100K+ followers — Top-tier creators with major reach',
-};
+function tierDef(tier) { return i18nInstance.t(`hostListingDetail:tierDefs.${tier}`); }
 
 function fmtFollowers(n) {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
@@ -152,10 +149,11 @@ function getListingStatus(id) {
 }
 
 const LISTING_STATUS_CFG = {
-  active: { label: 'Active', bg: 'rgba(74,155,127,0.85)',  color: '#fff' },
-  paused: { label: 'Paused', bg: 'rgba(212,168,67,0.85)',  color: '#fff' },
-  draft:  { label: 'Draft',  bg: 'rgba(149,157,144,0.7)',  color: '#fff' },
+  active: { bg: 'rgba(74,155,127,0.85)',  color: '#fff' },
+  paused: { bg: 'rgba(212,168,67,0.85)',  color: '#fff' },
+  draft:  { bg: 'rgba(149,157,144,0.7)',  color: '#fff' },
 };
+function listingStatusLabel(key) { return i18nInstance.t(`hostListingDetail:listingStatusLabels.${key}`); }
 
 const HOST_META_DEFAULT = {
   '1': 'active', '2': 'active', '3': 'paused',
@@ -187,6 +185,7 @@ function normalizeConvexListing(l) {
 
 // ─── Photo zoom modal ─────────────────────────────────────────────────────────
 function PhotoModal({ images, startIndex, onClose }) {
+  const { t } = useTranslation('hostListingDetail');
   const [idx, setIdx] = useState(startIndex);
   const prev = useCallback(() => setIdx((p) => (p - 1 + images.length) % images.length), [images.length]);
   const next = useCallback(() => setIdx((p) => (p + 1) % images.length), [images.length]);
@@ -225,7 +224,7 @@ function PhotoModal({ images, startIndex, onClose }) {
           fontFamily: 'var(--font-body)',
         }}
       >
-        <ArrowLeft size={14} /> Close
+        <ArrowLeft size={14} /> {t('photoModal.close')}
       </button>
 
       {/* Counter */}
@@ -288,6 +287,7 @@ function PhotoModal({ images, startIndex, onClose }) {
 
 // ─── Applicant row ─────────────────────────────────────────────────────────────
 function ApplicantRow({ proposal, navigate }) {
+  const { t } = useTranslation('hostListingDetail');
   const [expanded, setExpanded] = useState(false);
   const isPitch = proposal.type === 'pitch';
   const st = APPL_STATUS[proposal.status] || APPL_STATUS.pending;
@@ -347,12 +347,12 @@ function ApplicantRow({ proposal, navigate }) {
                 background: 'rgba(209,235,219,0.7)', color: '#2d6a4f',
                 border: '1px solid rgba(74,155,127,0.3)',
               }}>
-                PITCH
+                {t('applicantRow.pitch')}
               </span>
             )}
           </div>
           <p style={{ fontSize: '0.72rem', color: 'var(--sage)', marginTop: '0.05rem' }}>
-            @{proposal.creator.username} · {fmtFollowers(proposal.creator.followers)} followers · {proposal.applied}
+            {t('applicantRow.meta', { username: proposal.creator.username, followers: fmtFollowers(proposal.creator.followers), applied: proposal.applied })}
           </p>
         </div>
 
@@ -362,10 +362,10 @@ function ApplicantRow({ proposal, navigate }) {
             <span style={{ padding: '0.2rem 0.6rem', borderRadius: 9999, fontSize: '0.67rem', fontWeight: 700, background: tier.bg, color: tier.color }}>
               {proposal.creator.tier}
             </span>
-            <span title={TIER_DEFS[proposal.creator.tier]} style={{ fontSize: '0.6rem', color: 'var(--sage)', cursor: 'help', lineHeight: 1 }}>ⓘ</span>
+            <span title={tierDef(proposal.creator.tier)} style={{ fontSize: '0.6rem', color: 'var(--sage)', cursor: 'help', lineHeight: 1 }}>ⓘ</span>
           </div>
           <span style={{ padding: '0.2rem 0.6rem', borderRadius: 9999, fontSize: '0.67rem', fontWeight: 700, background: st.bg, color: st.color, border: `1px solid ${st.border}` }}>
-            {st.label}
+            {applStatusLabel(proposal.status)}
           </span>
           {expanded ? <ChevronUp size={14} color="var(--sage)" /> : <ChevronDown size={14} color="var(--sage)" />}
         </div>
@@ -392,7 +392,7 @@ function ApplicantRow({ proposal, navigate }) {
           {isPitch && proposal.pitch_details?.length > 0 && (
             <div style={{ background: 'rgba(209,235,219,0.18)', border: '1px solid rgba(74,155,127,0.2)', borderRadius: '0.875rem', padding: '0.875rem 1rem', marginBottom: '0.875rem' }}>
               <p style={{ fontSize: '0.67rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#2d6a4f', marginBottom: '0.625rem' }}>
-                Proposed changes
+                {t('applicantRow.proposedChanges')}
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
                 {proposal.pitch_details.map(({ field, original, proposed }) => (
@@ -421,7 +421,7 @@ function ApplicantRow({ proposal, navigate }) {
               onMouseEnter={(e) => e.currentTarget.style.opacity = '0.85'}
               onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
             >
-              {proposal.status === 'pending' ? 'Review' : 'Open proposal'}
+              {proposal.status === 'pending' ? t('applicantRow.review') : t('applicantRow.openProposal')}
             </button>
             <button
               onClick={(e) => { e.stopPropagation(); navigate('/inbox'); }}
@@ -435,7 +435,7 @@ function ApplicantRow({ proposal, navigate }) {
               onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(25,37,36,0.1)'}
               onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(25,37,36,0.06)'}
             >
-              <MessageSquare size={12} /> Message
+              <MessageSquare size={12} /> {t('applicantRow.message')}
             </button>
           </div>
         </div>
@@ -456,6 +456,7 @@ function SectionHead({ title, sub }) {
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 export default function HostListingDetail() {
+  const { t } = useTranslation('hostListingDetail');
   const { id } = useParams();
   const navigate = useNavigate();
   const { loadDraft } = useListingDraft();
@@ -582,7 +583,7 @@ export default function HostListingDetail() {
   if (!isSampleId && convexRaw === undefined) {
     return (
       <div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <p style={{ color: 'var(--sage)', fontFamily: 'var(--font-body)' }}>Loading…</p>
+        <p style={{ color: 'var(--sage)', fontFamily: 'var(--font-body)' }}>{t('loading')}</p>
       </div>
     );
   }
@@ -590,7 +591,7 @@ export default function HostListingDetail() {
   if (!listing) {
     return (
       <div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <p style={{ color: 'var(--sage)', fontFamily: 'var(--font-body)' }}>Listing not found.</p>
+        <p style={{ color: 'var(--sage)', fontFamily: 'var(--font-body)' }}>{t('notFound')}</p>
       </div>
     );
   }
@@ -621,7 +622,7 @@ export default function HostListingDetail() {
             onMouseEnter={(e) => e.currentTarget.style.color = 'var(--ink)'}
             onMouseLeave={(e) => e.currentTarget.style.color = 'var(--slate)'}
           >
-            <ArrowLeft size={14} /> My Listings
+            <ArrowLeft size={14} /> {t('header.myListings')}
           </button>
 
           <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -638,7 +639,7 @@ export default function HostListingDetail() {
               onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(25,37,36,0.1)'}
               onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(25,37,36,0.06)'}
             >
-              <ExternalLink size={12} /> Creator view
+              <ExternalLink size={12} /> {t('header.creatorView')}
             </button>
             <button
               onClick={handleEditListing}
@@ -652,7 +653,7 @@ export default function HostListingDetail() {
               onMouseEnter={(e) => e.currentTarget.style.opacity = '0.85'}
               onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
             >
-              Edit listing
+              {t('header.editListing')}
             </button>
           </div>
         </div>
@@ -679,9 +680,9 @@ export default function HostListingDetail() {
               }}
               onMouseEnter={e => e.currentTarget.style.opacity = '0.82'}
               onMouseLeave={e => e.currentTarget.style.opacity = '1'}
-              title="Click to change status"
+              title={t('header.changeStatusTitle')}
             >
-              {statusCfg.label}
+              {listingStatusLabel(rawStatus in LISTING_STATUS_CFG ? rawStatus : 'draft')}
               <ChevronDown size={9} />
             </button>
           </div>
@@ -693,7 +694,7 @@ export default function HostListingDetail() {
 
         {/* ── 1. Photo gallery ──────────────────────────────────────────── */}
         <div style={{ marginBottom: '2rem' }}>
-          <SectionHead title="Photos" sub={`${images.length} photo${images.length !== 1 ? 's' : ''} — click to zoom`} />
+          <SectionHead title={t('photos.title')} sub={t('photos.subtitle', { count: images.length })} />
           <div style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
@@ -725,7 +726,7 @@ export default function HostListingDetail() {
                   opacity: 0, transition: 'opacity 200ms',
                 }}>
                   <span style={{ color: '#fff', fontSize: '0.72rem', fontWeight: 700, fontFamily: 'var(--font-body)' }}>
-                    View
+                    {t('photos.view')}
                   </span>
                 </div>
                 {i === 0 && (
@@ -735,7 +736,7 @@ export default function HostListingDetail() {
                     background: 'rgba(255,255,255,0.88)', borderRadius: 9999,
                     color: 'var(--ink)', backdropFilter: 'blur(8px)',
                   }}>
-                    Cover
+                    {t('photos.cover')}
                   </span>
                 )}
               </div>
@@ -745,7 +746,7 @@ export default function HostListingDetail() {
 
         {/* ── 2. Listing details ────────────────────────────────────────── */}
         <div style={{ marginBottom: '2rem' }}>
-          <SectionHead title="Listing details" />
+          <SectionHead title={t('details.title')} />
           <div style={{ ...GC, padding: '1.5rem' }}>
             {/* Description */}
             <p style={{ fontSize: '0.875rem', color: 'var(--slate)', lineHeight: 1.7, marginBottom: '1.25rem' }}>
@@ -758,12 +759,12 @@ export default function HostListingDetail() {
               gap: '0.75rem',
             }}>
               {[
-                { icon: '💰', label: 'Compensation', value: listing.compensation },
-                { icon: '📦', label: 'Deliverables', value: listing.deliverables },
-                { icon: '🎯', label: 'Creator tier', value: tierLabel(listing.creator_tier) },
-                { icon: '📅', label: 'Available', value: listing.dates_available },
-                { icon: '⏱️', label: 'Deliverable load', value: listing.deliverable_load },
-                { icon: '📋', label: 'Due in', value: `${listing.due_days} days` },
+                { icon: '💰', label: t('details.compensation'), value: listing.compensation },
+                { icon: '📦', label: t('details.deliverables'), value: listing.deliverables },
+                { icon: '🎯', label: t('details.creatorTier'), value: tierLabel(listing.creator_tier) },
+                { icon: '📅', label: t('details.available'), value: listing.dates_available },
+                { icon: '⏱️', label: t('details.deliverableLoad'), value: listing.deliverable_load },
+                { icon: '📋', label: t('details.dueIn'), value: t('details.dueInDays', { days: listing.due_days }) },
               ].map(({ icon, label, value }) => (
                 <div key={label} style={{ padding: '0.875rem', background: 'rgba(25,37,36,0.03)', borderRadius: '0.75rem', border: '1px solid rgba(25,37,36,0.06)' }}>
                   <p style={{ fontSize: '1rem', marginBottom: '0.3rem' }}>{icon}</p>
@@ -777,7 +778,7 @@ export default function HostListingDetail() {
             {listing.what_you_get?.length > 0 && (
               <div style={{ marginTop: '1.25rem', borderTop: '1px solid rgba(25,37,36,0.07)', paddingTop: '1.25rem' }}>
                 <p style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--sage)', marginBottom: '0.75rem' }}>
-                  What you're offering
+                  {t('details.whatYoureOffering')}
                 </p>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
                   {listing.what_you_get.map((item) => (
@@ -793,7 +794,7 @@ export default function HostListingDetail() {
 
         {/* ── 3. Affiliate info ─────────────────────────────────────────── */}
         <div style={{ marginBottom: '2rem' }}>
-          <SectionHead title="Affiliate code" sub="Creators can use this code to earn commission from bookings" />
+          <SectionHead title={t('affiliate.title')} sub={t('affiliate.subtitle')} />
           <div style={{ ...GC, padding: '1.25rem 1.5rem' }}>
             {affiliateCode ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
@@ -818,16 +819,16 @@ export default function HostListingDetail() {
                   }}
                 >
                   {copiedCode ? <Check size={13} /> : <Copy size={13} />}
-                  {copiedCode ? 'Copied!' : 'Copy'}
+                  {copiedCode ? t('affiliate.copied') : t('affiliate.copy')}
                 </button>
                 <p style={{ fontSize: '0.75rem', color: 'var(--sage)', margin: 0 }}>
-                  Share this code with approved creators
+                  {t('affiliate.shareCode')}
                 </p>
               </div>
             ) : (
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
                 <p style={{ fontSize: '0.875rem', color: 'var(--sage)', margin: 0 }}>
-                  No affiliate code set for this listing.
+                  {t('affiliate.noCode')}
                 </p>
                 <button
                   onClick={() => navigate('/host/listings/create/offer')}
@@ -838,7 +839,7 @@ export default function HostListingDetail() {
                     fontFamily: 'var(--font-body)',
                   }}
                 >
-                  Add code
+                  {t('affiliate.addCode')}
                 </button>
               </div>
             )}
@@ -850,19 +851,19 @@ export default function HostListingDetail() {
           <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.75rem' }}>
             <div>
               <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.1rem', color: 'var(--ink)', margin: 0 }}>
-                Applicants
+                {t('applicants.heading')}
               </h2>
               <p style={{ fontSize: '0.75rem', color: 'var(--sage)', marginTop: '0.15rem' }}>
-                {applicants.length} total · {pitchCount} pitch{pitchCount !== 1 ? 'es' : ''}
+                {t('applicants.subtitle', { total: applicants.length, pitchCount })}
               </p>
             </div>
             {/* Status filter chips */}
             <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
               {[
-                { key: 'all', label: `All (${applicants.length})` },
+                { key: 'all', label: t('applicants.allChip', { count: applicants.length }) },
                 ...Object.entries(statusCounts).map(([k, n]) => ({
                   key: k,
-                  label: `${APPL_STATUS[k]?.label || k} (${n})`,
+                  label: t('applicants.statusChip', { status: k in APPL_STATUS ? applStatusLabel(k) : k, count: n }),
                 })),
               ].map(({ key, label }) => (
                 <button
@@ -890,8 +891,8 @@ export default function HostListingDetail() {
             <div style={{ ...GC, padding: '2.5rem', textAlign: 'center' }}>
               <p style={{ fontSize: '0.875rem', color: 'var(--sage)', margin: 0 }}>
                 {applicants.length === 0
-                  ? 'No applications yet — share your listing to attract creators.'
-                  : `No ${statusFilter} applicants.`}
+                  ? t('applicants.emptyNone')
+                  : t('applicants.emptyFiltered', { status: statusFilter in APPL_STATUS ? applStatusLabel(statusFilter).toLowerCase() : statusFilter })}
               </p>
             </div>
           ) : (
@@ -929,13 +930,13 @@ export default function HostListingDetail() {
               <>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', marginBottom: '0.75rem' }}>
                   <AlertTriangle size={18} color="#b45309" />
-                  <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1rem', color: 'var(--ink)', margin: 0 }}>Can't move to draft</h3>
+                  <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1rem', color: 'var(--ink)', margin: 0 }}>{t('statusModal.blockedTitle')}</h3>
                 </div>
                 <p style={{ fontSize: '0.875rem', color: 'var(--slate)', lineHeight: 1.6, marginBottom: '1.25rem' }}>
-                  This listing has creators in an active contract. You must complete or cancel all active collaborations before changing the status to draft.
+                  {t('statusModal.blockedBody')}
                 </p>
                 <button onClick={() => setStatusModal(null)} style={{ width: '100%', padding: '0.65rem', borderRadius: 9999, background: 'var(--ink)', border: 'none', color: '#fff', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-body)' }}>
-                  Got it
+                  {t('statusModal.gotIt')}
                 </button>
               </>
             )}
@@ -943,16 +944,16 @@ export default function HostListingDetail() {
             {/* Publish confirmation */}
             {statusModal === 'publish' && (
               <>
-                <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1rem', color: 'var(--ink)', margin: '0 0 0.5rem' }}>Publish this listing?</h3>
+                <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1rem', color: 'var(--ink)', margin: '0 0 0.5rem' }}>{t('statusModal.publishTitle')}</h3>
                 <p style={{ fontSize: '0.875rem', color: 'var(--slate)', lineHeight: 1.6, marginBottom: '1.25rem' }}>
-                  It will become live and visible to creators on Collabnb right away.
+                  {t('statusModal.publishBody')}
                 </p>
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
                   <button onClick={() => { setStatusModal(null); setDraftConfirmText(''); }} style={{ flex: 1, padding: '0.65rem', borderRadius: 9999, background: 'rgba(25,37,36,0.07)', border: 'none', color: 'var(--ink)', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-body)' }}>
-                    Cancel
+                    {t('statusModal.cancel')}
                   </button>
                   <button onClick={() => applyStatusChange('active')} disabled={statusSaving} style={{ flex: 1, padding: '0.65rem', borderRadius: 9999, background: '#4A9B7F', border: 'none', color: '#fff', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-body)', opacity: statusSaving ? 0.6 : 1 }}>
-                    {statusSaving ? 'Publishing…' : 'Publish'}
+                    {statusSaving ? t('statusModal.publishing') : t('statusModal.publish')}
                   </button>
                 </div>
               </>
@@ -961,16 +962,16 @@ export default function HostListingDetail() {
             {/* To-draft confirmation (with or without pending inquiries) */}
             {statusModal === 'to-draft' && (
               <>
-                <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1rem', color: 'var(--ink)', margin: '0 0 0.5rem' }}>Move to draft?</h3>
+                <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1rem', color: 'var(--ink)', margin: '0 0 0.5rem' }}>{t('statusModal.toDraftTitle')}</h3>
                 {hasPendingInquiries ? (
                   <>
                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', background: 'rgba(212,168,67,0.1)', border: '1px solid rgba(212,168,67,0.3)', borderRadius: '0.75rem', padding: '0.75rem', marginBottom: '0.875rem' }}>
                       <AlertTriangle size={15} color="#b45309" style={{ flexShrink: 0, marginTop: 1 }} />
                       <p style={{ fontSize: '0.78rem', color: '#92400E', lineHeight: 1.55, margin: 0 }}>
-                        {pendingCount} creator{pendingCount !== 1 ? 's' : ''} with pending or under-review inquiries will receive a message: <em>"Sorry for the hassle — this listing has been temporarily paused. We'll reach out if it goes live again."</em>
+                        {t('statusModal.pendingWarning', { count: pendingCount })}<em>"{t('statusModal.pauseMessage')}"</em>
                       </p>
                     </div>
-                    <p style={{ fontSize: '0.82rem', color: 'var(--slate)', marginBottom: '0.75rem' }}>Type <strong>draft</strong> to confirm:</p>
+                    <p style={{ fontSize: '0.82rem', color: 'var(--slate)', marginBottom: '0.75rem' }}>{t('statusModal.typeToConfirmPrefix')}<strong>draft</strong>{t('statusModal.typeToConfirmSuffix')}</p>
                     <input
                       value={draftConfirmText}
                       onChange={e => setDraftConfirmText(e.target.value)}
@@ -981,19 +982,19 @@ export default function HostListingDetail() {
                   </>
                 ) : (
                   <p style={{ fontSize: '0.875rem', color: 'var(--slate)', lineHeight: 1.6, marginBottom: '1.25rem' }}>
-                    The listing will be hidden from creators and no new applications will be accepted.
+                    {t('statusModal.noPendingBody')}
                   </p>
                 )}
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
                   <button onClick={() => { setStatusModal(null); setDraftConfirmText(''); }} style={{ flex: 1, padding: '0.65rem', borderRadius: 9999, background: 'rgba(25,37,36,0.07)', border: 'none', color: 'var(--ink)', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-body)' }}>
-                    Cancel
+                    {t('statusModal.cancel')}
                   </button>
                   <button
                     onClick={() => applyStatusChange('draft')}
                     disabled={statusSaving || (hasPendingInquiries && draftConfirmText.toLowerCase().trim() !== 'draft')}
                     style={{ flex: 1, padding: '0.65rem', borderRadius: 9999, background: 'var(--ink)', border: 'none', color: '#fff', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-body)', opacity: (statusSaving || (hasPendingInquiries && draftConfirmText.toLowerCase().trim() !== 'draft')) ? 0.4 : 1, transition: 'opacity 140ms' }}
                   >
-                    {statusSaving ? 'Saving…' : 'Move to draft'}
+                    {statusSaving ? t('statusModal.saving') : t('statusModal.moveToDraft')}
                   </button>
                 </div>
               </>

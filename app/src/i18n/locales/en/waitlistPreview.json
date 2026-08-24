@@ -1,0 +1,25 @@
+{
+  "header": {
+    "signOut": "Sign out"
+  },
+  "hero": {
+    "heading": "You're on the list!",
+    "welcomeText": "Welcome to Collabnb{{namePart}}. Your application is being reviewed — we'll email you at ",
+    "welcomeSuffix": " once you're approved.",
+    "inboxFallback": "your inbox",
+    "etaNote": "Usually within 1–2 business days."
+  },
+  "sneakPeek": "A sneak peek of what's waiting for you",
+  "statusCard": {
+    "reviewInProgress": "REVIEW IN PROGRESS",
+    "bodyPrefix": "Once approved, you'll unlock full access to browse, apply to collabs, and message hosts. Full listings go live ",
+    "liveDate": "July 15th"
+  },
+  "globe": {
+    "heading": "Our Global Community",
+    "subtitle": "Creators and hosts connecting across the world",
+    "creators": "Creators",
+    "hosts": "Hosts",
+    "countries": "Countries"
+  }
+}

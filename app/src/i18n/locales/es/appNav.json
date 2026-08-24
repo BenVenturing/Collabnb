@@ -1,0 +1,55 @@
+{
+  "anyTime": "Cualquier fecha",
+  "nav": {
+    "explore": "Explorar",
+    "collabs": "Colabs",
+    "saved": "Guardado",
+    "inbox": "Mensajes",
+    "founders": "Fundadores",
+    "dashboard": "Panel",
+    "proposals": "Propuestas",
+    "creators": "Creadores",
+    "profile": "Perfil"
+  },
+  "mobileNavAriaLabel": "Navegación móvil",
+  "myProfile": "Mi perfil",
+  "mobileBottomNavAriaLabel": "Navegación inferior móvil",
+  "mainNavAriaLabel": "Navegación principal",
+  "search": {
+    "where": "Dónde",
+    "what": "Qué",
+    "when": "Cuándo",
+    "destinationPlaceholder": "Destino",
+    "searchStays": "Buscar estancias",
+    "openSearchAriaLabel": "Abrir búsqueda"
+  },
+  "notifications": {
+    "ariaLabel": "Notificaciones",
+    "heading": "Notificaciones",
+    "clearAll": "Borrar todo",
+    "empty": "Aún no hay notificaciones"
+  },
+  "menu": {
+    "closeMenu": "Cerrar menú",
+    "openMenu": "Abrir menú",
+    "profileFallback": "Perfil",
+    "adminPanel": "Panel de administración",
+    "settings": "Configuración",
+    "setupChecklist": "Lista de configuración",
+    "switchToCreatorView": "Cambiar a vista de creador",
+    "switchToHostView": "Cambiar a vista de anfitrión",
+    "signUpAsCreator": "Registrarse como creador",
+    "signUpAsHost": "Registrarse como anfitrión",
+    "pendingReview": "Acceso de {{role}} en revisión",
+    "faqHelp": "Preguntas frecuentes y ayuda",
+    "logOut": "Cerrar sesión"
+  },
+  "roleLabels": {
+    "host": "Anfitrión",
+    "creator": "Creador"
+  },
+  "faqBubble": {
+    "ariaLabel": "Ayuda y preguntas frecuentes",
+    "dismissAriaLabel": "Descartar botón de FAQ"
+  }
+}

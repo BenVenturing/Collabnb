@@ -1,0 +1,31 @@
+{
+  "nextHint": {
+    "needTitle": "Gib deinem Angebot einen Titel.",
+    "needLocation": "Trage Stadt und Bundesland/Land ein."
+  },
+  "uploadErrorFallback": "Eines deiner Fotos konnte nicht hochgeladen werden.",
+  "heading": "Erzähl uns die Grundlagen",
+  "subtitle": "Beginne mit den wichtigsten Details zu deiner Kollaborationsmöglichkeit.",
+  "labels": {
+    "listingTitle": "Titel des Angebots",
+    "location": "Standort",
+    "propertyUrl": "URL zum Unterkunftsangebot",
+    "propertyImages": "Bilder der Unterkunft",
+    "collaborationBrief": "Kollaborations-Briefing"
+  },
+  "placeholders": {
+    "listingTitle": "z. B. Gemütliche Hütte am Lake Tahoe",
+    "city": "Stadt",
+    "stateCountry": "Bundesland / Land",
+    "propertyUrl": "https://dein-buchungslink.com",
+    "collaborationBrief": "z. B. Wir suchen authentischen Content, der den Bergblick und die gemütliche Hüttenatmosphäre zeigt..."
+  },
+  "uploading": "Wird hochgeladen...",
+  "uploadImages": "Bilder hochladen",
+  "selectMultipleHint": "Wähle mehrere Bilder aus deiner Bibliothek aus (bis zu {{max}})",
+  "addPhotos": "Fotos hinzufügen",
+  "imagesCount": "{{count}} von {{max}} hinzugefügt",
+  "limitReached": " — Limit erreicht",
+  "briefHint": "Beschreibe, was du dir von Creators wünschst (optional)",
+  "footerNote": "Creator-Stufe, Vergütung und Deliverables werden im nächsten Schritt mit Live-Preisempfehlungen festgelegt."
+}

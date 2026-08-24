@@ -1,0 +1,94 @@
+{
+  "reachChart": {
+    "tooltipLine1": "Funktion folgt bald —",
+    "tooltipLine2": "Instagram-Integration in Arbeit."
+  },
+  "statusLabels": {
+    "active": "Aktiv",
+    "paused": "Pausiert",
+    "draft": "Entwurf"
+  },
+  "filters": {
+    "all": "Alle"
+  },
+  "normalizedListing": {
+    "cashOnly": "{{amount}} $ Bargeld",
+    "hybridCashStay": "{{amount}} $ + Aufenthalt",
+    "seeListing": "Angebot ansehen",
+    "deliverablesMore": " +{{count}} weitere",
+    "deliverableCount": "{{count}} Deliverables",
+    "defaultCollabType": "Collab"
+  },
+  "charts": {
+    "totalCollabs": "Collabs gesamt",
+    "creatorsWorkedWith": "Zusammengearbeitet mit Creators",
+    "contentPieces": "Content-Beiträge",
+    "estReach": "Geschätzte Reichweite"
+  },
+  "chartModal": {
+    "allTimeLabel": "{{title}} · Gesamtzeit",
+    "previewDataNote": "Vorschaudaten · Live-Tracking aktiviert sich mit dem Produktions-Backend",
+    "close": "Schließen"
+  },
+  "listingCard": {
+    "stats": {
+      "applied": "Beworben",
+      "confirmed": "Bestätigt",
+      "done": "Abgeschlossen"
+    },
+    "menu": {
+      "deleteSample": "Beispiel löschen",
+      "edit": "Bearbeiten",
+      "pause": "Pausieren",
+      "unpause": "Fortsetzen",
+      "duplicate": "Duplizieren"
+    }
+  },
+  "browse": {
+    "backToDashboard": "Zurück zum Dashboard",
+    "title": "Der Marktplatz",
+    "subtitle": "Durchstöbere andere Unterkünfte zur Inspiration — das sehen Creator, wenn sie Angebote durchsuchen.",
+    "hideMap": "Karte ausblenden",
+    "showMap": "Karte anzeigen",
+    "emptyArea": "Keine Angebote in diesem Gebiet — versuche, die Karte zu verschieben.",
+    "emptyNone": "Noch keine Angebote zum Durchstöbern.",
+    "emptySearch": "Keine Angebote entsprechen deiner Suche.",
+    "close": "Schließen"
+  },
+  "greeting": {
+    "morning": "Guten Morgen",
+    "afternoon": "Guten Tag",
+    "evening": "Guten Abend"
+  },
+  "header": {
+    "dashboardTitle": "{{firstName}}s Dashboard",
+    "newListing": "Neues Angebot"
+  },
+  "compensationBanner": {
+    "title_one": "1 Angebot benötigt eine Vergütung",
+    "title_other": "{{count}} Angebote benötigen eine Vergütung",
+    "body_one": "Jede Kollaboration beinhaltet jetzt eine Creator-Zahlung. Dieses Angebot ist in „Entdecken“ ausgeblendet, bis du es bearbeitest und einen Vergütungsbetrag hinzufügst: {{titles}}.",
+    "body_other": "Jede Kollaboration beinhaltet jetzt eine Creator-Zahlung. Diese Angebote sind in „Entdecken“ ausgeblendet, bis du sie bearbeitest und einen Vergütungsbetrag hinzufügst: {{titles}}."
+  },
+  "myListings": {
+    "heading": "Meine Angebote",
+    "total": "{{count}} insgesamt",
+    "browseMarketplace": "Marktplatz durchsuchen",
+    "emptyTitle": "Keine {{filter}} Angebote",
+    "emptyAll": "Erstelle dein erstes Angebot, um Creator anzuziehen.",
+    "emptyFiltered": "Du hast derzeit keine {{filter}} Angebote."
+  },
+  "activity": {
+    "heading": "Aktivität",
+    "subtitle": "Was deine Aufmerksamkeit braucht",
+    "empty": "Keine Aktivität. Alles erledigt."
+  },
+  "impact": {
+    "heading": "Deine Wirkung",
+    "subtitle": "Gesamtzeit"
+  },
+  "pricingWidget": {
+    "label": "Preise",
+    "ariaLabel": "Was kostet eine Kollaboration?"
+  }
+}

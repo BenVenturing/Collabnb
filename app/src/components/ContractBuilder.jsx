@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useQuery, useAction } from 'convex/react';
 import { api } from '../../convex/_generated/api';
@@ -40,6 +41,7 @@ function dateStamp() {
 }
 
 export default function ContractBuilder() {
+  const { t } = useTranslation('contractBuilder');
   const navigate = useNavigate();
   const location = useLocation();
   const prefill = location.state?.prefill;
@@ -53,7 +55,7 @@ export default function ContractBuilder() {
     id: String(h._id),
     name: h.full_name,
     avatar: h.avatar_url,
-    subtitle: [h.city, h.region].filter(Boolean).join(', ') || 'Host',
+    subtitle: [h.city, h.region].filter(Boolean).join(', ') || t('role.host'),
     isReal: true,
   }));
   const sendHosts = liveHosts.length ? liveHosts : KNOWN_HOSTS;
@@ -147,27 +149,27 @@ export default function ContractBuilder() {
   const generateSummary = () => {
     const payment = computePaymentDisplay();
     const usage = computeUsageDisplay();
-    let text = `This collaboration agreement is between `;
+    let text = t('summary.prefix');
 
     if (form.creator && form.host) {
-      text += `${form.creator} (Creator) and ${form.host} (Host)`;
+      text += t('summary.creatorAndHost', { creator: form.creator, host: form.host });
     } else if (form.creator) {
-      text += `${form.creator} (Creator) and the Host`;
+      text += t('summary.creatorOnly', { creator: form.creator });
     } else if (form.host) {
-      text += `the Creator and ${form.host} (Host)`;
+      text += t('summary.hostOnly', { host: form.host });
     } else {
-      text += `the Creator and the Host`;
+      text += t('summary.neither');
     }
 
-    if (form.property_name) text += ` for a collaboration at ${form.property_name}`;
-    if (form.location) text += ` in ${form.location}`;
-    if (form.dates) text += `, taking place from ${form.dates}`;
-    text += `. `;
+    if (form.property_name) text += t('summary.at', { property: form.property_name });
+    if (form.location) text += t('summary.in', { location: form.location });
+    if (form.dates) text += t('summary.takingPlace', { dates: form.dates });
+    text += '. ';
 
-    if (form.deliverables) text += `The Creator agrees to deliver ${form.deliverables}`;
-    if (payment) text += ` — compensation: ${payment}`;
-    if (usage) text += `. Content usage is limited to ${usage}`;
-    text += '. Both parties agree to the terms outlined above.';
+    if (form.deliverables) text += t('summary.deliver', { deliverables: form.deliverables });
+    if (payment) text += t('summary.compensation', { payment });
+    if (usage) text += t('summary.usage', { usage });
+    text += t('summary.suffix');
 
     return text;
   };
@@ -287,8 +289,8 @@ export default function ContractBuilder() {
       usageRights: c.usage_rights || '',
     });
     setStatus(c.status || 'draft');
-    setCreatorSig(c.creator_signed ? (c.creator_name || profile?.full_name || 'Creator') : '');
-    setHostSig(c.host_signed ? (c.host_name || profile?.full_name || 'Host') : '');
+    setCreatorSig(c.creator_signed ? (c.creator_name || profile?.full_name || t('role.creator')) : '');
+    setHostSig(c.host_signed ? (c.host_name || profile?.full_name || t('role.host')) : '');
     setSummaryNote(c.summary_note || generateSummary());
     setEditingId(c.id);
     setShowList(false);
@@ -297,7 +299,7 @@ export default function ContractBuilder() {
   };
 
   const computePaymentDisplay = () => {
-    if (form.isFreeStay) return 'Free Stay';
+    if (form.isFreeStay) return t('freeStay');
     if (form.currency && form.paymentAmount) return `${form.currency} ${form.paymentAmount}`;
     return '';
   };
@@ -305,7 +307,7 @@ export default function ContractBuilder() {
   const computeUsageDisplay = () => {
     if (!form.usageRights) return '';
     const found = USAGE_RIGHTS.find((u) => u.value === form.usageRights);
-    return found ? found.label : form.usageRights;
+    return found ? t(`usage.${found.value}`) : form.usageRights;
   };
 
   const buildContractData = () => ({
@@ -319,7 +321,7 @@ export default function ContractBuilder() {
     payment: computePaymentDisplay(),
     cash_value: cashValue,
     payout_handling: form.isFreeStay ? 'platform' : form.payoutHandling,
-    usage_rights: computeUsageDisplay(),
+    usage_rights: USAGE_RIGHTS.find((u) => u.value === form.usageRights)?.label || form.usageRights,
     summary_note: summaryNote,
     status,
     creator_signed: !!creatorSig,
@@ -348,7 +350,7 @@ export default function ContractBuilder() {
   const signAsHost = () => {
     const name = selectedHost?.name || form.host;
     if (!name) {
-      window.alert('Please send this contract to a host first.');
+      window.alert(t('sendFirstAlert'));
       return;
     }
     setHostSig(name);
@@ -411,8 +413,8 @@ export default function ContractBuilder() {
     try {
       const html2pdf = (await import('html2pdf.js')).default;
       const stamp = dateStamp();
-      const creatorName = form.creator?.replace(/\s+/g, '_') || 'Creator';
-      const hostName = form.host?.replace(/\s+/g, '_') || 'Host';
+      const creatorName = form.creator?.replace(/\s+/g, '_') || t('role.creator');
+      const hostName = form.host?.replace(/\s+/g, '_') || t('role.host');
       const fileName = `Contract_${stamp}_${creatorName}_${hostName}.pdf`;
 
       html2pdf()
@@ -455,7 +457,7 @@ export default function ContractBuilder() {
     sendContractMessage({
       hostName: host.name,
       contractId: id,
-      contractTitle: form.property_name || form.creator || 'Contract',
+      contractTitle: form.property_name || form.creator || t('contract'),
     });
 
     markContractSent(id);
@@ -469,12 +471,12 @@ export default function ContractBuilder() {
   };
 
   const fieldEntries = [
-    { key: 'creator', label: 'Creator name' },
-    { key: 'host', label: 'Host name' },
-    { key: 'property_name', label: 'Property name' },
-    { key: 'location', label: 'Location' },
-    { key: 'dates', label: 'Dates' },
-    { key: 'deliverables', label: 'Deliverables' },
+    { key: 'creator' },
+    { key: 'host' },
+    { key: 'property_name' },
+    { key: 'location' },
+    { key: 'dates' },
+    { key: 'deliverables' },
   ];
 
   return (
@@ -487,13 +489,13 @@ export default function ContractBuilder() {
             className="text-sm text-sage hover:text-ink transition-colors flex items-center gap-1"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
-            Back
+            {t('back')}
           </button>
           <button
             onClick={() => { setShowList(!showList); resetForm(); }}
             className="text-sm text-sage hover:text-ink transition-colors font-semibold"
           >
-            {showList ? 'New Contract' : `Saved Contracts (${contractList.length})`}
+            {showList ? t('newContract') : t('savedContracts', { count: contractList.length })}
           </button>
         </div>
 
@@ -501,9 +503,9 @@ export default function ContractBuilder() {
         {showList && (
           <div className="mb-6">
             <div className="glass-card p-6">
-              <h2 className="font-display font-bold text-ink text-lg mb-4">Your Contracts</h2>
+              <h2 className="font-display font-bold text-ink text-lg mb-4">{t('yourContracts')}</h2>
               {contractList.length === 0 ? (
-                <p className="text-sage text-sm">No contracts saved yet.</p>
+                <p className="text-sage text-sm">{t('noContractsSaved')}</p>
               ) : (
                 <div className="space-y-3">
                   {contractList.map((c) => {
@@ -515,11 +517,11 @@ export default function ContractBuilder() {
                         className="w-full flex items-center justify-between p-4 rounded-xl bg-white/60 border border-stone/30 hover:bg-white/90 hover:border-mint transition-all text-left"
                       >
                         <div className="min-w-0 flex-1">
-                          <p className="font-semibold text-ink text-sm truncate">{c.property_name || c.creator_name || 'Untitled'}</p>
-                          <p className="text-xs text-sage mt-0.5">{c.dates || c.location || 'No details'}</p>
+                          <p className="font-semibold text-ink text-sm truncate">{c.property_name || c.creator_name || t('untitled')}</p>
+                          <p className="text-xs text-sage mt-0.5">{c.dates || c.location || t('noDetails')}</p>
                         </div>
                         <span className={`ml-3 text-xs font-semibold px-3 py-1 rounded-full flex-shrink-0 ${sc.bg}`}>
-                          {sc.label}
+                          {t(`statusName.${c.status}`)}
                         </span>
                       </button>
                     );
@@ -537,7 +539,7 @@ export default function ContractBuilder() {
               <div className="glass-card p-6">
                 <div className="flex items-center justify-between mb-5">
                   <h2 className="font-display font-bold text-ink text-lg">
-                    {editingId ? 'Edit Contract' : 'Build Contract'}
+                    {editingId ? t('editContract') : t('buildContract')}
                   </h2>
                   {saveStatus !== 'idle' && (
                     <span style={{
@@ -545,18 +547,18 @@ export default function ContractBuilder() {
                       color: saveStatus === 'saved' ? '#4A9B7F' : 'var(--sage)',
                       transition: 'color 200ms',
                     }}>
-                      {saveStatus === 'saving' ? 'Saving…' : 'Saved ✓'}
+                      {saveStatus === 'saving' ? t('saving') : t('saved')}
                     </span>
                   )}
                 </div>
 
-                {fieldEntries.map(({ key, label }) => (
+                {fieldEntries.map(({ key }) => (
                   <div key={key} className="mb-3">
                     <label className="block text-xs font-semibold text-sage uppercase tracking-wider mb-1">
-                      {label}
+                      {t(`field.${key}`)}
                     </label>
                     <input
-                      placeholder={label}
+                      placeholder={t(`field.${key}`)}
                       value={form[key]}
                       onChange={(e) => updateField(key, e.target.value)}
                       className="w-full px-3 py-2 rounded-xl border border-stone/50 bg-white/60 text-ink text-sm
@@ -569,13 +571,13 @@ export default function ContractBuilder() {
                 {/* ── Currency / Payment ── */}
                 <div className="mb-3">
                   <label className="block text-xs font-semibold text-sage uppercase tracking-wider mb-1">
-                    Payment / Compensation
+                    {t('paymentCompensation')}
                   </label>
                   <div className="flex items-center gap-2 mb-2">
                     {form.isFreeStay ? (
                       /* Legacy stay-only contracts — read-only; free stay can no longer be selected */
                       <span className="flex-1 px-3 py-2 text-sm font-semibold text-ink bg-mint/40 rounded-xl">
-                        Free Stay <span className="text-sage font-normal">· legacy</span>
+                        {t('freeStay')} <span className="text-sage font-normal">{t('legacy')}</span>
                       </span>
                     ) : (
                       <>
@@ -591,7 +593,7 @@ export default function ContractBuilder() {
                         </select>
                         <input
                           type="text"
-                          placeholder="Amount"
+                          placeholder={t('amount')}
                           value={form.paymentAmount}
                           onChange={(e) => updateField('paymentAmount', e.target.value)}
                           className="flex-1 px-3 py-2 rounded-xl border border-stone/50 bg-white/60 text-ink text-sm
@@ -608,7 +610,7 @@ export default function ContractBuilder() {
                         checked={form.payoutHandling === 'in_person'}
                         onChange={(e) => updateField('payoutHandling', e.target.checked ? 'in_person' : 'platform')}
                       />
-                      Host pays the creator in person (Collabnb still auto-charges its platform fee, but won't collect or hold the creator's payment — no 48h dispute window applies)
+                      {t('inPersonPayout')}
                     </label>
                   )}
                 </div>
@@ -616,7 +618,7 @@ export default function ContractBuilder() {
                 {/* ── Usage Rights Dropdown ── */}
                 <div className="mb-3">
                   <label className="block text-xs font-semibold text-sage uppercase tracking-wider mb-1">
-                    Usage Rights
+                    {t('usageRights')}
                   </label>
                   <select
                     value={form.usageRights}
@@ -624,9 +626,9 @@ export default function ContractBuilder() {
                     className="w-full px-3 py-2 rounded-xl border border-stone/50 bg-white/60 text-ink text-sm
                                outline-none transition-colors focus:border-mint focus:bg-white"
                   >
-                    <option value="">Select usage rights…</option>
+                    <option value="">{t('selectUsageRights')}</option>
                     {USAGE_RIGHTS.map((u) => (
-                      <option key={u.value} value={u.value}>{u.label}</option>
+                      <option key={u.value} value={u.value}>{t(`usage.${u.value}`)}</option>
                     ))}
                   </select>
                 </div>
@@ -634,7 +636,7 @@ export default function ContractBuilder() {
                 {/* ── Auto-generated summary note ── */}
                 <div className="mb-3">
                   <label className="block text-xs font-semibold text-sage uppercase tracking-wider mb-1">
-                    Summary Note
+                    {t('summaryNote')}
                   </label>
                   <textarea
                     value={summaryNote}
@@ -644,7 +646,7 @@ export default function ContractBuilder() {
                                placeholder:text-sage/60 outline-none transition-colors resize-y
                                focus:border-mint focus:bg-white focus:shadow-sm"
                   />
-                  <p className="text-[0.6rem] text-sage/70 mt-1">Auto-generated from your fields — edit freely.</p>
+                  <p className="text-[0.6rem] text-sage/70 mt-1">{t('summaryNoteHint')}</p>
                 </div>
 
                 {/* Save / New buttons */}
@@ -653,14 +655,14 @@ export default function ContractBuilder() {
                     onClick={saveCurrentContract}
                     className="btn-primary flex-1"
                   >
-                    Save Contract
+                    {t('saveContract')}
                   </button>
                   {editingId && (
                     <button
                       onClick={resetForm}
                       className="btn-glass text-sm"
                     >
-                      New
+                      {t('new')}
                     </button>
                   )}
                 </div>
@@ -720,9 +722,9 @@ export default function ContractBuilder() {
                         )}
                       </div>
                       <span className="text-sm font-semibold text-ink text-center leading-tight">
-                        {form.creator || 'Creator'}
+                        {form.creator || t('role.creator')}
                       </span>
-                      <span className="text-[10px] text-sage uppercase tracking-wider">Creator</span>
+                      <span className="text-[10px] text-sage uppercase tracking-wider">{t('role.creator')}</span>
                     </div>
 
                     <span className="text-sage text-lg font-bold" style={{ fontFamily: '"Cabinet Grotesk", sans-serif' }}>×</span>
@@ -761,28 +763,28 @@ export default function ContractBuilder() {
                         )}
                       </div>
                       <span className="text-sm font-semibold text-center leading-tight" style={{ color: hostSig ? 'var(--ink)' : 'var(--sage)' }}>
-                        {form.host || 'Awaiting Host'}
+                        {form.host || t('awaitingHost')}
                       </span>
-                      <span className="text-[10px] text-sage uppercase tracking-wider">Host</span>
+                      <span className="text-[10px] text-sage uppercase tracking-wider">{t('role.host')}</span>
                     </div>
                   </div>
 
                   <h2 className="font-display font-bold text-ink text-xl border-b border-stone/30 pb-2 text-center">
-                    Collabnb Agreement
+                    {t('agreement')}
                   </h2>
 
                   {/* ── Summary details grid ── */}
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-sm">
                     {[
-                      ['Location', form.location],
-                      ['Dates', form.dates],
-                      ['Property', form.property_name],
-                      ['Deliverables', form.deliverables],
-                      ['Payment', computePaymentDisplay() || '—'],
-                      ['📋 Usage', computeUsageDisplay() || '—'],
-                    ].map(([icon, val]) => (
-                      <div key={icon} className="bg-bone/50 rounded-xl px-3 py-2">
-                        <span className="text-sage text-xs uppercase tracking-wider block mb-0.5">{icon}</span>
+                      { key: 'location', val: form.location },
+                      { key: 'dates', val: form.dates },
+                      { key: 'property', val: form.property_name },
+                      { key: 'deliverables', val: form.deliverables },
+                      { key: 'payment', val: computePaymentDisplay() || '—' },
+                      { key: 'usage', val: computeUsageDisplay() || '—' },
+                    ].map(({ key, val }) => (
+                      <div key={key} className="bg-bone/50 rounded-xl px-3 py-2">
+                        <span className="text-sage text-xs uppercase tracking-wider block mb-0.5">{t(`previewField.${key}`)}</span>
                         <span className="text-ink font-semibold">{val || '—'}</span>
                       </div>
                     ))}
@@ -815,25 +817,25 @@ export default function ContractBuilder() {
                   {/* ── Signatures (calligraphy style) ── */}
                   <div className="flex flex-wrap gap-6 text-sm">
                     <div>
-                      <span className="text-sage text-xs uppercase tracking-wider block mb-1">Creator Signature</span>
+                      <span className="text-sage text-xs uppercase tracking-wider block mb-1">{t('creatorSignature')}</span>
                       <span style={{
                         fontFamily: creatorSig ? '"Pacifico", "Brush Script MT", cursive' : 'inherit',
                         fontSize: creatorSig ? '1.15rem' : 'inherit',
                         fontWeight: creatorSig ? 400 : 600,
                         color: creatorSig ? '#192524' : undefined,
                       }}>
-                        {creatorSig || 'Pending'}
+                        {creatorSig || t('pending')}
                       </span>
                     </div>
                     <div>
-                      <span className="text-sage text-xs uppercase tracking-wider block mb-1">Host Signature</span>
+                      <span className="text-sage text-xs uppercase tracking-wider block mb-1">{t('hostSignature')}</span>
                       <span style={{
                         fontFamily: hostSig ? '"Pacifico", "Brush Script MT", cursive' : 'inherit',
                         fontSize: hostSig ? '1.15rem' : 'inherit',
                         fontWeight: hostSig ? 400 : 600,
                         color: hostSig ? '#192524' : undefined,
                       }}>
-                        {hostSig || 'Pending'}
+                        {hostSig || t('pending')}
                       </span>
                     </div>
                   </div>
@@ -864,14 +866,14 @@ export default function ContractBuilder() {
                   {/* Creator signs */}
                   {!creatorSig && (
                     <button onClick={signAsCreator} className="btn-primary">
-                      Sign as Creator
+                      {t('signAsCreator')}
                     </button>
                   )}
 
                   {/* Host signs (only when contract has been sent to them / is pending) */}
                   {(status === 'pending' || status === 'draft') && !hostSig && creatorSig && (
                     <button onClick={signAsHost} className="btn-glass">
-                      Sign &amp; Accept
+                      {t('signAccept')}
                     </button>
                   )}
 
@@ -894,7 +896,7 @@ export default function ContractBuilder() {
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="inline mr-1">
                             <polyline points="20 6 9 17 4 12"/>
                           </svg>
-                          {profile?.role === 'host' ? 'Sent to Creator ✓' : 'Sent to Host ✓'}
+                          {profile?.role === 'host' ? t('sentToCreator') : t('sentToHost')}
                         </>
                       ) : (
                         <>
@@ -902,35 +904,40 @@ export default function ContractBuilder() {
                             <line x1="22" y1="2" x2="11" y2="13"/>
                             <polygon points="22 2 15 22 11 13 2 9 22 2"/>
                           </svg>
-                          {profile?.role === 'host' ? 'Send to Creator' : 'Send to Host'}
+                          {profile?.role === 'host' ? t('sendToCreator') : t('sendToHost')}
                         </>
                       )}
                     </button>
                   )}
 
                   <button onClick={downloadPDF} className="btn-glass">
-                    Download PDF
+                    {t('downloadPdf')}
                   </button>
 
                   {/* Save a card at signing; the platform fee is charged on completion */}
                   {status === 'in_progress' && !contractPaid && !cardSaved && (
                     <button onClick={() => setShowPaymentModal(true)} className="btn-primary">
-                      Save Card for Fee
+                      {t('saveCardForFee')}
                     </button>
                   )}
                 </div>
 
                 {/* ── Status ── */}
                 <div className="mt-4 flex items-center gap-2">
-                  <span className="text-sage text-xs uppercase tracking-wider">Status:</span>
+                  <span className="text-sage text-xs uppercase tracking-wider">{t('statusColon')}</span>
                   <span className={`text-sm font-semibold px-3 py-1 rounded-full ${
                     STATUS_CONFIG[status]?.bg || STATUS_CONFIG.draft.bg
                   }`}>
-                    {STATUS_CONFIG[status]?.label || status}
+                    {t(`statusName.${status}`)}
                   </span>
                   {status === 'pending' && (
                     <span className="text-xs text-sage ml-2">
-                      (needs {!creatorSig ? 'creator ' : ''}{!hostSig ? 'host ' : ''}signature)
+                      {(() => {
+                        const parts = [];
+                        if (!creatorSig) parts.push(t('signerCreator'));
+                        if (!hostSig) parts.push(t('signerHost'));
+                        return t('needsSignature', { who: parts.join(' ') });
+                      })()}
                     </span>
                   )}
                   {status === 'in_progress' && (
@@ -938,7 +945,7 @@ export default function ContractBuilder() {
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                         <polyline points="20 6 9 17 4 12"/>
                       </svg>
-                      Both parties signed
+                      {t('bothSigned')}
                     </span>
                   )}
                   {contractPaid && (
@@ -946,7 +953,7 @@ export default function ContractBuilder() {
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                         <polyline points="20 6 9 17 4 12"/>
                       </svg>
-                      Payment confirmed
+                      {t('paymentConfirmed')}
                     </span>
                   )}
                   {cardSaved && !contractPaid && (
@@ -954,12 +961,12 @@ export default function ContractBuilder() {
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                         <polyline points="20 6 9 17 4 12"/>
                       </svg>
-                      Card saved — fee charged on completion
+                      {t('cardSaved')}
                     </span>
                   )}
                   {paymentCancelled && !contractPaid && !cardSaved && (
                     <span className="text-xs text-amber-600 ml-2">
-                      Cancelled — click "Save Card for Fee" to retry
+                      {t('cancelledRetry')}
                     </span>
                   )}
                 </div>
@@ -992,7 +999,7 @@ export default function ContractBuilder() {
           <svg viewBox='0 0 16 16' width='14' height='14' fill='#4A2E00'>
             <path d='M8 1.5l1.67 3.38 3.73.54-2.7 2.63.64 3.72L8 9.77l-3.34 1.76.64-3.72L2.6 5.42l3.73-.54z'/>
           </svg>
-          Founding member — no platform fee
+          {t('founderToast')}
         </div>
       )}
 
@@ -1038,26 +1045,26 @@ export default function ContractBuilder() {
                   </svg>
                 </div>
                 <h4 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.1rem', color: 'var(--ink)', margin: '0 0 0.5rem' }}>
-                  Contract Sent!
+                  {t('sendSentTitle')}
                 </h4>
                 <p style={{ color: 'var(--sage)', fontSize: '0.875rem', margin: 0 }}>
-                  A message has been created in your Inbox.
+                  {t('sendSentBody')}
                 </p>
               </div>
             ) : (
               <>
                 <h4 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.15rem', color: 'var(--ink)', marginBottom: '0.5rem' }}>
-                  {profile?.role === 'host' ? 'Send Contract to Creator' : 'Send Contract to Host'}
+                  {t(profile?.role === 'host' ? 'sendModalToCreator' : 'sendModalToHost')}
                 </h4>
                 <p style={{ color: 'var(--sage)', fontSize: '0.85rem', marginBottom: '1.25rem' }}>
                   {profile?.role === 'host'
-                    ? `Send this contract to ${form.creator || 'the creator'}. It will appear in their Inbox.`
-                    : 'Select a host to send this contract to. It will appear in your Inbox.'}
+                    ? t('sendModalBodyCreator', { name: form.creator || t('role.creator') })
+                    : t('sendModalBodyHost')}
                 </p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
                   {profile?.role === 'host' ? (
                     <button
-                      onClick={() => handleSendToHost({ id: 'creator', name: form.creator || 'Creator', avatar: null, properties: [] })}
+                      onClick={() => handleSendToHost({ id: 'creator', name: form.creator || t('role.creator'), avatar: null, properties: [] })}
                       className="w-full flex items-center gap-3 p-3 rounded-xl bg-white/60 border border-stone/30 hover:bg-white/90 hover:border-mint transition-all text-left"
                       style={{ fontFamily: 'var(--font-body)', cursor: 'pointer' }}
                     >
@@ -1065,8 +1072,8 @@ export default function ContractBuilder() {
                         {(form.creator || 'C').charAt(0).toUpperCase()}
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <p style={{ fontWeight: 600, fontSize: '0.875rem', color: 'var(--ink)', margin: 0 }}>{form.creator || 'Creator'}</p>
-                        <p style={{ fontSize: '0.72rem', color: 'var(--sage)', margin: '0.1rem 0 0' }}>Send contract for review & signature</p>
+                        <p style={{ fontWeight: 600, fontSize: '0.875rem', color: 'var(--ink)', margin: 0 }}>{form.creator || t('role.creator')}</p>
+                        <p style={{ fontSize: '0.72rem', color: 'var(--sage)', margin: '0.1rem 0 0' }}>{t('sendForReview')}</p>
                       </div>
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--sage)', flexShrink: 0 }}>
                         <line x1="22" y1="2" x2="11" y2="13"/>
@@ -1107,7 +1114,7 @@ export default function ContractBuilder() {
                     className="text-sm text-sage hover:text-ink transition-colors"
                     style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font-body)' }}
                   >
-                    Cancel
+                    {t('cancel')}
                   </button>
                 </div>
               </>

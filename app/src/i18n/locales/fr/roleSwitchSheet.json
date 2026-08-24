@@ -1,0 +1,44 @@
+{
+  "roleLabels": {
+    "host": "Hôte",
+    "creator": "Créateur"
+  },
+  "errors": {
+    "accountNotLoaded": "Le compte n'est pas encore chargé — veuillez réessayer.",
+    "instagramRequired": "Un identifiant Instagram est requis pour que nous puissions examiner votre profil.",
+    "generic": "Un problème est survenu. Veuillez réessayer."
+  },
+  "signingUpAs": "Inscription en tant que",
+  "yourAccount": "Votre compte",
+  "useDifferentEmail": "utiliser un autre e-mail",
+  "keepMyEmail": "conserver l'e-mail de mon compte",
+  "emailPlaceholder": "vous@exemple.com",
+  "description": {
+    "host": "Vous rejoindrez en tant qu'hôte avec ce même compte. Comme tout nouvel hôte, vos informations passent par un examen rapide avant que les outils hôte ne soient débloqués — vous conserverez un accès créateur complet entre-temps.",
+    "creator": "Vous rejoindrez en tant que créateur avec ce même compte. Comme tout nouveau créateur, votre profil passe par un examen rapide avant que l'accès créateur ne soit débloqué — vous conserverez un accès hôte complet entre-temps."
+  },
+  "form": {
+    "businessName": "Nom du logement ou de l'entreprise",
+    "businessNamePlaceholder": "Cabane Mousse & Pin",
+    "city": "Ville",
+    "cityPlaceholder": "Asheville",
+    "country": "Pays de résidence",
+    "countryPlaceholder": "États-Unis",
+    "website": "Site web",
+    "websitePlaceholder": "https://votrelogement.com",
+    "instagram": "Identifiant Instagram",
+    "handlePlaceholder": "@votreidentifiant",
+    "tiktok": "Identifiant TikTok",
+    "portfolio": "Portfolio ou site web",
+    "portfolioPlaceholder": "https://votreportfolio.com",
+    "optional": "(facultatif)"
+  },
+  "submitting": "Envoi…",
+  "signUpAs": "S'inscrire comme {{role}} →",
+  "startFresh": "Recommencer →",
+  "requestReceived": "Demande reçue",
+  "reviewNotice": "L'équipe Collabnb examinera vos informations en tant que {{role}} — le même contrôle que chaque nouveau {{role}} traverse. Votre compte reste exactement tel quel jusqu'à votre approbation.",
+  "emailNoticePrefix": "Nous vous enverrons un e-mail à ",
+  "emailNoticeSuffix": " — généralement sous 1 à 2 jours ouvrés.",
+  "done": "Terminé"
+}

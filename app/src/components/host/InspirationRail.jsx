@@ -2,6 +2,8 @@ import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { MapPin } from "lucide-react";
 import { useQuery } from "convex/react";
+import { useTranslation } from "react-i18next";
+import i18nInstance from "../../i18n";
 import { api } from "../../../convex/_generated/api";
 
 const CYCLE_MS = 5200;
@@ -60,31 +62,25 @@ function formatComp(l) {
   if (l.compensation) return l.compensation;
   const cash = Number(l.cash_amount || 0).toLocaleString();
   const cur = l.currency && l.currency !== "USD" ? ` ${l.currency}` : "";
-  if (l.compensation_type === "paid") return `$${cash}${cur} Cash`;
-  if (l.compensation_type === "hybrid") return `$${cash}${cur} + ${l.nights || "?"} nights`;
+  const tr = (key, opts) => i18nInstance.t(`inspirationRail:${key}`, opts);
+  if (l.compensation_type === "paid") return `$${cash}${cur} ${tr('cashSuffix')}`;
+  if (l.compensation_type === "hybrid") return `$${cash}${cur} ${tr('plusNights', { nights: l.nights || "?" })}`;
   return "";
 }
 function formatDeliv(l) {
-  if (typeof l.deliverable_count === "number" && l.deliverable_count > 0) return `${l.deliverable_count} deliverables`;
+  const tr = (key, opts) => i18nInstance.t(`inspirationRail:${key}`, opts);
+  if (typeof l.deliverable_count === "number" && l.deliverable_count > 0) return tr('deliverables', { count: l.deliverable_count });
   if (l.deliverables_list?.length) {
     const n = l.deliverables_list.reduce((s, d) => s + (d.quantity || 0), 0);
-    if (n > 0) return `${n} deliverables`;
+    if (n > 0) return tr('deliverables', { count: n });
   }
   if (l.deliverables) return l.deliverables;
   return "";
 }
 
-// ─── Rotating inspiration quotes + host tips ─────────────────────────────────
-const TIPS = [
-  "“The best listings tell a story — not just a room.”",
-  "Tip: Lead with your most striking photo. It's the first thing creators see.",
-  "“Great collabs start with a clear, generous offer.”",
-  "Tip: Specific deliverables get better pitches than vague ones.",
-  "“Show the experience, not just the property.”",
-  "Tip: A short, warm brief converts browsers into applicants.",
-];
-
 export default function InspirationRail() {
+  const { t } = useTranslation('inspirationRail');
+  const TIPS = t('tips', { returnObjects: true });
   const navigate = useNavigate();
   const all = useQuery(api.listings.getAll);
   const samples = useQuery(api.listings.getSamples);
@@ -134,7 +130,7 @@ export default function InspirationRail() {
       onMouseLeave={() => setPaused(false)}
     >
       <div style={{ fontFamily: "var(--font-body, Satoshi, sans-serif)", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.14em", color: "var(--sage)", marginBottom: 12, textAlign: "center" }}>
-        Live right now — for inspiration
+        {t('liveNow')}
       </div>
 
       {/* Detail-hero mini card */}

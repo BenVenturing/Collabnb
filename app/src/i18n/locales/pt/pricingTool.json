@@ -1,0 +1,67 @@
+{
+  "zoneCopy": {
+    "red": "Abaixo do mínimo para esta carga de trabalho — não pode ser publicado assim.",
+    "amber": "Abaixo da faixa recomendada para esta carga de trabalho.",
+    "green": "Dentro da faixa recomendada."
+  },
+  "helpTable": {
+    "heading": "Pontos por entregável e nível",
+    "close": "Fechar",
+    "colDeliverable": "Entregável",
+    "colPts": "Pts",
+    "colWho": "Quem pode produzir",
+    "allTiers": "Todos os níveis",
+    "footerNote": "Dinheiro = pontos × $/pt (definido pelo nível) × complexidade. No híbrido, a estadia compensa parte do dinheiro."
+  },
+  "helpButton": {
+    "ariaLabel": "Como funcionam os pontos"
+  },
+  "stepper": {
+    "ptsEach_one": "{{count}} pt cada",
+    "ptsEach_other": "{{count}} pts cada"
+  },
+  "scale": {
+    "minimal": "Mínimo {{amount}}",
+    "caution": "Atenção {{amount}}",
+    "recommended": "Recomendado {{low}}–{{high}}"
+  },
+  "presetCard": {
+    "midrange": "faixa média {{amount}}"
+  },
+  "heading": "Quanto custa uma colaboração?",
+  "subtitle": "O preço é derivado dos pontos de entregáveis, nível do criador e complexidade da carga de trabalho — nunca um palpite.",
+  "entryMode": {
+    "deliverables": "Eu sei meus entregáveis",
+    "budget": "Eu tenho um orçamento"
+  },
+  "creatorTier": "Nível do criador",
+  "compensationType": {
+    "label": "Tipo de compensação",
+    "paid": "Pago",
+    "hybrid": "Híbrido (estadia + dinheiro)",
+    "declaredStayValue": "Valor declarado da estadia"
+  },
+  "complexity": {
+    "label": "Complexidade",
+    "standard": "Padrão",
+    "complex": "Complexa (lista de tomadas, drone, múltiplos locais, exclusividade)",
+    "standardShort": "1,0 padrão",
+    "complexShort": "1,25 complexa"
+  },
+  "budgetMode": {
+    "cashBudget": "Orçamento em dinheiro",
+    "effectiveBudgetPrefix": "Orçamento efetivo: {{budget}} em dinheiro + {{offset}} de compensação de estadia = ",
+    "packagesThatFit": "Pacotes que se encaixam",
+    "noPresetFits": "Nenhum pacote predefinido se encaixa neste orçamento ainda — tente aumentá-lo ou mudar de nível.",
+    "stretchOption": "Opção ampliada (dentro de 120% do orçamento)"
+  },
+  "deliverablesMode": {
+    "presets": "Predefinições",
+    "buildYourOwn": "Monte o seu",
+    "loadSuffix": " de carga",
+    "loadFallback": "—",
+    "cashCompensation": "Compensação em dinheiro"
+  },
+  "mathSummary": "{{points}} pts × {{rate}}/pt ({{tier}}) × {{complexity}} = {{midpoint}} faixa média",
+  "stayOffsetSuffix": " · compensação de estadia {{offset}}"
+}

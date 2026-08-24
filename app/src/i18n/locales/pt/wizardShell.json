@@ -1,0 +1,13 @@
+{
+  "stepOf": "Etapa {{step}} de {{total}}",
+  "saving": "Salvando...",
+  "saveExit": "Salvar e sair",
+  "helpHeading": "Seu progresso está salvo",
+  "helpBodyPrefix": "Cada alteração é salva automaticamente neste navegador. Toque em ",
+  "helpBodySuffix": " para voltar ao seu painel — seu rascunho estará esperando exatamente onde você parou.",
+  "saveFallbackError": "Não foi possível salvar seu rascunho — tente novamente.",
+  "saveErrorSuffix": " Seu progresso continua salvo neste navegador — volte e termine de preenchê-lo, ou saia mesmo assim por aqui.",
+  "exitWithoutSaving": "Sair sem salvar como rascunho",
+  "back": "Voltar",
+  "next": "Próximo"
+}

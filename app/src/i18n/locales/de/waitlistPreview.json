@@ -1,0 +1,25 @@
+{
+  "header": {
+    "signOut": "Abmelden"
+  },
+  "hero": {
+    "heading": "Du stehst auf der Liste!",
+    "welcomeText": "Willkommen bei Collabnb{{namePart}}. Deine Bewerbung wird geprüft — wir schreiben dir an ",
+    "welcomeSuffix": ", sobald du genehmigt bist.",
+    "inboxFallback": "dein Postfach",
+    "etaNote": "In der Regel innerhalb von 1–2 Werktagen."
+  },
+  "sneakPeek": "Ein Vorgeschmack auf das, was auf dich wartet",
+  "statusCard": {
+    "reviewInProgress": "PRÜFUNG LÄUFT",
+    "bodyPrefix": "Sobald du genehmigt bist, erhältst du vollen Zugang, um zu stöbern, dich für Kollaborationen zu bewerben und Gastgebern zu schreiben. Alle Angebote gehen am ",
+    "liveDate": "15. Juli"
+  },
+  "globe": {
+    "heading": "Unsere globale Community",
+    "subtitle": "Creator und Gastgeber vernetzen sich weltweit",
+    "creators": "Creator",
+    "hosts": "Gastgeber",
+    "countries": "Länder"
+  }
+}

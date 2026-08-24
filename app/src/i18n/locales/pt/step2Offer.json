@@ -1,0 +1,54 @@
+{
+  "heading": "Qual é a oferta?",
+  "subtitle": "Conte aos criadores o que torna seu anúncio especial e quais benefícios eles terão.",
+  "amenities": {
+    "label": "Comodidades da propriedade",
+    "desc": "Busque e selecione o que sua propriedade oferece. Elas aparecem na página do seu anúncio.",
+    "searchPlaceholder": "Buscar comodidades (ex.: Wi-Fi, piscina, banheira de hidromassagem)",
+    "allAmenities": "Todas as comodidades",
+    "mostCommon": "Mais comuns",
+    "noMatch": "Nenhuma comodidade corresponde a \"{{query}}\".",
+    "showCommonOnly": "Mostrar apenas as comuns",
+    "showAllAmenities": "Mostrar todas as comodidades",
+    "selected": "Selecionadas ({{count}})",
+    "createOwn": "Crie sua própria comodidade",
+    "createCustomHeading": "Criar uma comodidade personalizada",
+    "namePlaceholder": "Nomeie sua comodidade (ex.: Rede na cobertura)",
+    "chooseGraphic": "Escolha um ícone",
+    "cancel": "Cancelar",
+    "addAmenity": "Adicionar comodidade"
+  },
+  "addOns": {
+    "label": "Adicionais",
+    "desc": "Extras opcionais que você pode incluir para melhorar a oferta.",
+    "placeholder": "ex.: Acesso à banheira de hidromassagem"
+  },
+  "affiliate": {
+    "codeLabel": "Seu código de afiliado (opcional)",
+    "codeDesc": "Cole seu próprio código ou link de afiliado da sua plataforma de reservas (ex.: Airbnb, VRBO, site direto).",
+    "codePlaceholder": "ex.: https://airbnb.com/ref/abc123 ou MEUCODIGO10",
+    "percentLabel": "Porcentagem de afiliado (%)",
+    "percentDesc": "Qual porcentagem de comissão o criador ganhará com seu link de afiliado?",
+    "percentPlaceholder": "ex.: 10",
+    "regenerate": "Regenerar",
+    "generate": "Gerar",
+    "collabnbCode": " Código Collabnb",
+    "shuffleCode": "Embaralhar código",
+    "trackingNote": "Atualmente o Collabnb não rastreia cliques de afiliados. Cumprir o código é responsabilidade do anfitrião. O rastreamento real chegará em uma atualização futura."
+  },
+  "vibeTags": {
+    "label": "Tags de estilo (opcional)",
+    "desc": "Adicione algumas palavras que descrevam o estilo (Aconchegante, Luxo, Aventura, etc.)",
+    "suggestButton": "Sugerir tags a partir das informações do anúncio",
+    "placeholder": "ex.: Aconchegante",
+    "ideas": "Ideias:",
+    "showDifferentIdeas": "Mostrar outras ideias"
+  },
+  "maxOffers": {
+    "label": "Quantas vezes você quer oferecer esta colaboração?",
+    "desc": "Defina um número máximo de colaborações confirmadas para este anúncio. Ao atingi-lo, o anúncio é pausado automaticamente.",
+    "setLimit": "Definir um limite",
+    "unlimited": "Ilimitado",
+    "numberOfCollabs": "Número de colaborações"
+  }
+}

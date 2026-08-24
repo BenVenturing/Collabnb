@@ -1,0 +1,40 @@
+{
+  "pendingApproval": {
+    "heading": "Votre candidature est en cours d'examen",
+    "thanksCreator": "Merci d'avoir postulé pour rejoindre Collabnb en tant que créateur.",
+    "thanksHost": "Merci d'avoir postulé pour publier votre logement.",
+    "reviewing": "L'équipe Collabnb examine votre profil, votre portfolio et vos comptes sociaux. Vous recevrez un e-mail une fois approuvé — généralement sous 1 à 2 jours ouvrés.",
+    "checklist": {
+      "heading": "Ce qui se passe ensuite :",
+      "socialReview": "Vos comptes sociaux et votre portfolio sont examinés",
+      "followerVerify": "Votre nombre d'abonnés et votre engagement sont vérifiés",
+      "experienceAssess": "Votre expérience et votre professionnalisme sont évalués",
+      "interview": "Vous pourriez recevoir une demande d'entretien rapide",
+      "trackTier": "Un parcours (UGC ou Influenceur) et un niveau vous seront attribués",
+      "fullAccess": "Si vous êtes approuvé, vous obtenez un accès complet à la marketplace"
+    },
+    "receivedTitle": "Candidature reçue",
+    "receivedDetail": "— nous vous informerons à l'adresse e-mail enregistrée.",
+    "backHome": "Retour à l'accueil"
+  },
+  "limitedAccess": {
+    "heading": "L'accès à la marketplace a pris fin",
+    "body": "Votre période d'essai a expiré. Passez à Creator Plus pour continuer à explorer les annonces, postuler à des campagnes et proposer aux hôtes.",
+    "stillCanHeading": "Vous pouvez toujours :",
+    "stillCan": {
+      "dashboard": "Voir votre tableau de bord et votre profil",
+      "contracts": "Accéder aux contrats et messages existants",
+      "settings": "Mettre à jour vos paramètres et votre portfolio"
+    },
+    "viewPricing": "Voir les tarifs"
+  },
+  "trialBanner": {
+    "expired": "Votre essai est terminé. Abonnez-vous pour continuer à accéder à la marketplace.",
+    "daysLeft_one": "Il vous reste {{count}} jour d'essai.",
+    "daysLeft_other": "Il vous reste {{count}} jours d'essai.",
+    "daysRemaining": "{{count}} j restants",
+    "subscribeNow": "S'abonner maintenant",
+    "upgrade": "Mettre à niveau",
+    "dismissAriaLabel": "Ignorer"
+  }
+}

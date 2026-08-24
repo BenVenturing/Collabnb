@@ -1,0 +1,27 @@
+{
+  "heading": {
+    "available": "Accès à vie disponible",
+    "soldOut": "Places à vie épuisées"
+  },
+  "body": {
+    "available": "Le tour de fondateurs gratuit est complet. Vous pouvez encore obtenir un accès permanent avec un paiement unique.",
+    "soldOut": "Il ne reste plus de places à vie. Choisissez un plan mensuel ou annuel pour commencer."
+  },
+  "tiers": {
+    "earlyAdopter": "Early Adopter",
+    "community": "Communauté",
+    "standardLifetime": "À vie standard"
+  },
+  "spotsLeft_one": "{{count}} place à ce prix — puis il augmente",
+  "spotsLeft_other": "{{count}} places à ce prix — puis il augmente",
+  "errors": {
+    "loginRequired": "Veuillez vous connecter pour continuer.",
+    "checkoutFailed": "Impossible de démarrer le paiement. Veuillez réessayer."
+  },
+  "cta": {
+    "redirecting": "Redirection…",
+    "claim": "Obtenir l'accès à vie — {{price}} $",
+    "later": "Peut-être plus tard",
+    "close": "Fermer"
+  }
+}

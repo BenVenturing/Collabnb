@@ -1,0 +1,86 @@
+{
+  "placeholders": {
+    "ugcVideo": "UGC Video",
+    "oneDeliverable": "1 deliverable",
+    "instagramReels": "Instagram Reels",
+    "threeDeliverables": "3 deliverables",
+    "photography": "Photography",
+    "fiveDeliverables": "5 deliverables",
+    "tiktok": "TikTok",
+    "tenDeliverables": "10 deliverables",
+    "youtubeVlog": "YouTube Vlog",
+    "blogPost": "Blog Post",
+    "fullPackage": "Full Package"
+  },
+  "country": {
+    "staysAvailable_one": "{{count}} stay available",
+    "staysAvailable_other": "{{count}} stays available",
+    "noListings": "No listings yet in {{name}} — more coming soon"
+  },
+  "where": {
+    "searchFor": "Search for \"{{query}}\"",
+    "worldwide": "Worldwide location — show results",
+    "empty": "Type a destination or location"
+  },
+  "nearbyStays": {
+    "heading": "Nearby Stays"
+  },
+  "what": {
+    "collabType": "Collab Type",
+    "deliverables": "Deliverables",
+    "deliverables_one": "{{count}} deliverable",
+    "deliverables_other": "{{count}} deliverables",
+    "earnings": "Earnings",
+    "paid": "Paid",
+    "hybrid": "Hybrid",
+    "nights": "Nights",
+    "nightsMin": "1 night",
+    "nightsMax": "30 nights",
+    "collabValue": "Collab Value"
+  },
+  "when": {
+    "exactDates": "Exact dates",
+    "flexibleDates": "Flexible dates",
+    "clear": "Clear",
+    "howLong": "How long would you want your collab to be?",
+    "whichMonth": "What month are you looking for?",
+    "selectEndDate": "{{date}} — select end date",
+    "dayFlex_one": "±{{count}} day",
+    "dayFlex_other": "±{{count}} days",
+    "durationInMonth": "{{duration}} in {{month}}",
+    "duration": {
+      "weekend": "Weekend",
+      "1week": "1 Week",
+      "2weeks": "2 Weeks",
+      "month": "Month"
+    }
+  },
+  "months": {
+    "january": "January",
+    "february": "February",
+    "march": "March",
+    "april": "April",
+    "may": "May",
+    "june": "June",
+    "july": "July",
+    "august": "August",
+    "september": "September",
+    "october": "October",
+    "november": "November",
+    "december": "December"
+  },
+  "weekdays": {
+    "sun": "Sun",
+    "mon": "Mon",
+    "tue": "Tue",
+    "wed": "Wed",
+    "thu": "Thu",
+    "fri": "Fri",
+    "sat": "Sat"
+  },
+  "regions": {
+    "nearyou": "Near You",
+    "westcoast": "West Coast",
+    "mountaindesert": "Mountain & Desert"
+  }
+}

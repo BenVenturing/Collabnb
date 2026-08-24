@@ -1,0 +1,57 @@
+{
+  "loadLabels": {
+    "light": "leve",
+    "moderate": "moderada",
+    "heavy": "pesada",
+    "custom": "campanha personalizada"
+  },
+  "nextHint": {
+    "needTier": "Escolha um nível de criador na calculadora de custos acima.",
+    "needCompensation": "Insira um valor de compensação em dinheiro na calculadora de custos acima.",
+    "needDeliverables": "Escolha pelo menos um entregável na calculadora de custos, ou adicione um personalizado abaixo.",
+    "needDates": "Adicione uma janela de colaboração com data de início e término."
+  },
+  "heading": "Preços e datas",
+  "subtitle": "Defina o nível do criador, a compensação e os entregáveis — com orientação de preços em tempo real — e depois defina quando a colaboração acontece.",
+  "summary": {
+    "totalDeliverables_one": "{{count}} entregável no total",
+    "totalDeliverables_other": "{{count}} entregáveis no total",
+    "acrossFormats_one": "Em {{count}} formato · carga {{load}}",
+    "acrossFormats_other": "Em {{count}} formatos · carga {{load}}"
+  },
+  "deliverables": {
+    "label": "Entregáveis",
+    "empty": "Escolha entregáveis na calculadora de custos acima, ou adicione um personalizado abaixo.",
+    "editUsageRights": "Editar direitos de uso",
+    "fromCalculator": "Da calculadora de custos acima",
+    "usageRights": "Direitos de uso"
+  },
+  "form": {
+    "editUsageRightsFor": "Editar direitos de uso — {{type}}",
+    "editDeliverable": "Editar entregável",
+    "addCustomDeliverable": "Adicionar entregável personalizado",
+    "typePlaceholder": "Plataforma/Tipo (ex.: Reels do Instagram)",
+    "descPlaceholder": "Descrição",
+    "autoTypeHint": "{{qty}}x {{type}} — o tipo e a quantidade vêm da calculadora de custos acima.",
+    "usageRightsLabel": "Direitos de uso para este entregável",
+    "applyToAllTitle": "Aplicar estes direitos de uso a todos os entregáveis",
+    "copyToAll": "Copiar para todos",
+    "usageRightsPlaceholder": "ex.: O anfitrião recebe uma licença perpétua para marketing. O criador mantém a propriedade.",
+    "cancel": "Cancelar",
+    "saveChanges": "Salvar alterações",
+    "addDeliverable": "Adicionar entregável"
+  },
+  "due": {
+    "label": "Entregáveis vencem (dias após a estadia)"
+  },
+  "windows": {
+    "label": "Janelas de colaboração",
+    "hint": "Adicione até {{max}} janelas de datas nas quais os criadores podem reservar.",
+    "removeTitle": "Remover janela de datas",
+    "addAnother": "Adicionar outra janela de datas"
+  },
+  "policies": {
+    "revisionLabel": "Política de revisão",
+    "footerNote": "Os direitos de uso agora são definidos por entregável acima. Use \"Copiar para todos\" para aplicar uma política a todos os entregáveis."
+  }
+}

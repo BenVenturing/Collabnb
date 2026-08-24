@@ -1,0 +1,35 @@
+{
+  "card": {
+    "featured": "Destacado",
+    "removeTitle": "Quitar de guardados",
+    "moveTitle": "Mover a colección"
+  },
+  "newCollectionModal": {
+    "heading": "Nombra esta colección",
+    "placeholder": "p. ej., Cabañas de ensueño, Costa Este…",
+    "cancel": "Cancelar",
+    "create": "Crear"
+  },
+  "moveMenu": {
+    "heading": "Mover a"
+  },
+  "header": {
+    "title": "Guardado",
+    "noneSaved": "Aún no hay colaboraciones guardadas",
+    "loading": "Cargando…",
+    "savedCount_one": "{{count}} colaboración guardada",
+    "savedCount_other": "{{count}} colaboraciones guardadas"
+  },
+  "emptyState": {
+    "title": "Nada guardado todavía",
+    "body": "Toca el corazón en cualquier anuncio de Explorar para guardarlo aquí.",
+    "browseCollabs": "Explorar colabs"
+  },
+  "newCollectionButton": "Nueva colección",
+  "emptyCollection": {
+    "loading": "Cargando…",
+    "body": "Aún no hay anuncios en esta colección — marca uno con el corazón para agregarlo aquí."
+  },
+  "stayCount_one": "{{count}} estancia",
+  "stayCount_other": "{{count}} estancias"
+}

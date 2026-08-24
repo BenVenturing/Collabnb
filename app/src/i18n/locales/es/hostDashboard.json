@@ -1,0 +1,94 @@
+{
+  "reachChart": {
+    "tooltipLine1": "Función próximamente —",
+    "tooltipLine2": "Integración con Instagram en progreso."
+  },
+  "statusLabels": {
+    "active": "Activo",
+    "paused": "Pausado",
+    "draft": "Borrador"
+  },
+  "filters": {
+    "all": "Todos"
+  },
+  "normalizedListing": {
+    "cashOnly": "${{amount}} en efectivo",
+    "hybridCashStay": "${{amount}} + estancia",
+    "seeListing": "Ver anuncio",
+    "deliverablesMore": " +{{count}} más",
+    "deliverableCount": "{{count}} entregables",
+    "defaultCollabType": "Colab"
+  },
+  "charts": {
+    "totalCollabs": "Colaboraciones totales",
+    "creatorsWorkedWith": "Creadores con los que trabajaste",
+    "contentPieces": "Piezas de contenido",
+    "estReach": "Alcance est."
+  },
+  "chartModal": {
+    "allTimeLabel": "{{title}} · Todo el tiempo",
+    "previewDataNote": "Datos de vista previa · El seguimiento en vivo se activa con el backend de producción",
+    "close": "Cerrar"
+  },
+  "listingCard": {
+    "stats": {
+      "applied": "Postulados",
+      "confirmed": "Confirmados",
+      "done": "Terminados"
+    },
+    "menu": {
+      "deleteSample": "Eliminar muestra",
+      "edit": "Editar",
+      "pause": "Pausar",
+      "unpause": "Reanudar",
+      "duplicate": "Duplicar"
+    }
+  },
+  "browse": {
+    "backToDashboard": "Volver al panel",
+    "title": "El mercado",
+    "subtitle": "Explora otras propiedades para inspirarte — esto es lo que ven los creadores cuando exploran anuncios.",
+    "hideMap": "Ocultar mapa",
+    "showMap": "Mostrar mapa",
+    "emptyArea": "No hay anuncios en esta zona — intenta mover el mapa.",
+    "emptyNone": "Aún no hay anuncios para explorar.",
+    "emptySearch": "Ningún anuncio coincide con tu búsqueda.",
+    "close": "Cerrar"
+  },
+  "greeting": {
+    "morning": "Buenos días",
+    "afternoon": "Buenas tardes",
+    "evening": "Buenas noches"
+  },
+  "header": {
+    "dashboardTitle": "Panel de {{firstName}}",
+    "newListing": "Nuevo anuncio"
+  },
+  "compensationBanner": {
+    "title_one": "1 anuncio necesita compensación agregada",
+    "title_other": "{{count}} anuncios necesitan compensación agregada",
+    "body_one": "Ahora toda colaboración incluye pago al creador. Este anuncio está oculto de Explorar hasta que lo edites y agregues un monto de compensación: {{titles}}.",
+    "body_other": "Ahora toda colaboración incluye pago al creador. Estos anuncios están ocultos de Explorar hasta que los edites y agregues un monto de compensación: {{titles}}."
+  },
+  "myListings": {
+    "heading": "Mis anuncios",
+    "total": "{{count}} en total",
+    "browseMarketplace": "Explorar el mercado",
+    "emptyTitle": "No hay anuncios {{filter}}",
+    "emptyAll": "Crea tu primer anuncio para empezar a atraer creadores.",
+    "emptyFiltered": "No tienes anuncios {{filter}} en este momento."
+  },
+  "activity": {
+    "heading": "Actividad",
+    "subtitle": "Qué necesita tu atención",
+    "empty": "Sin actividad. Todo al día."
+  },
+  "impact": {
+    "heading": "Tu impacto",
+    "subtitle": "Todo el tiempo"
+  },
+  "pricingWidget": {
+    "label": "Precios",
+    "ariaLabel": "¿Cuánto cuesta una colaboración?"
+  }
+}

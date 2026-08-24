@@ -1,0 +1,57 @@
+{
+  "loadLabels": {
+    "light": "leicht",
+    "moderate": "moderat",
+    "heavy": "hoch",
+    "custom": "individuelle Kampagne"
+  },
+  "nextHint": {
+    "needTier": "Wähle eine Creator-Stufe im Kostenrechner oben.",
+    "needCompensation": "Gib einen Bargeldvergütungsbetrag im Kostenrechner oben ein.",
+    "needDeliverables": "Wähle mindestens ein Deliverable im Kostenrechner aus oder füge unten ein individuelles hinzu.",
+    "needDates": "Füge ein Kollaborationsfenster mit Start- und Enddatum hinzu."
+  },
+  "heading": "Preise & Termine",
+  "subtitle": "Lege Creator-Stufe, Vergütung und Deliverables fest — mit Live-Preisempfehlungen — und bestimme dann, wann die Kollaboration stattfindet.",
+  "summary": {
+    "totalDeliverables_one": "{{count}} Deliverable insgesamt",
+    "totalDeliverables_other": "{{count}} Deliverables insgesamt",
+    "acrossFormats_one": "Über {{count}} Format · {{load}} Umfang",
+    "acrossFormats_other": "Über {{count}} Formate · {{load}} Umfang"
+  },
+  "deliverables": {
+    "label": "Deliverables",
+    "empty": "Wähle Deliverables im Kostenrechner oben aus, oder füge unten ein individuelles hinzu.",
+    "editUsageRights": "Nutzungsrechte bearbeiten",
+    "fromCalculator": "Aus dem Kostenrechner oben",
+    "usageRights": "Nutzungsrechte"
+  },
+  "form": {
+    "editUsageRightsFor": "Nutzungsrechte bearbeiten — {{type}}",
+    "editDeliverable": "Deliverable bearbeiten",
+    "addCustomDeliverable": "Individuelles Deliverable hinzufügen",
+    "typePlaceholder": "Plattform/Typ (z. B. Instagram Reels)",
+    "descPlaceholder": "Beschreibung",
+    "autoTypeHint": "{{qty}}x {{type}} — Typ und Menge stammen aus dem Kostenrechner oben.",
+    "usageRightsLabel": "Nutzungsrechte für dieses Deliverable",
+    "applyToAllTitle": "Diese Nutzungsrechte auf alle Deliverables anwenden",
+    "copyToAll": "Auf alle übertragen",
+    "usageRightsPlaceholder": "z. B. Der Gastgeber erhält eine unbefristete Lizenz für Marketing. Der Creator behält die Eigentumsrechte.",
+    "cancel": "Abbrechen",
+    "saveChanges": "Änderungen speichern",
+    "addDeliverable": "Deliverable hinzufügen"
+  },
+  "due": {
+    "label": "Deliverables fällig (Tage nach dem Aufenthalt)"
+  },
+  "windows": {
+    "label": "Kollaborationsfenster",
+    "hint": "Füge bis zu {{max}} Terminfenster hinzu, innerhalb derer Creator buchen können.",
+    "removeTitle": "Terminfenster entfernen",
+    "addAnother": "Weiteres Terminfenster hinzufügen"
+  },
+  "policies": {
+    "revisionLabel": "Überarbeitungsrichtlinie",
+    "footerNote": "Nutzungsrechte werden jetzt oben pro Deliverable festgelegt. Nutze „Auf alle übertragen“, um eine Richtlinie auf alle Deliverables anzuwenden."
+  }
+}

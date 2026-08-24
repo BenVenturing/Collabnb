@@ -1,0 +1,29 @@
+{
+  "maintenance": "🔧 Collabnb befindet sich derzeit in Wartung. Einige Funktionen sind möglicherweise nicht verfügbar.",
+  "pendingVerification": {
+    "title": "Konto wird geprüft",
+    "body": "Du hörst innerhalb von 24–48 Stunden von uns."
+  },
+  "pastDue": {
+    "titlePrefix": "Zahlung überfällig",
+    "titleSuffix": " — deine letzte Abo-Abbuchung ist fehlgeschlagen.",
+    "opening": "Wird geöffnet…",
+    "updatePayment": "Zahlung aktualisieren"
+  },
+  "launchBanner": {
+    "daysToLaunch": "🚀 Noch {{days}} Tage bis zum Start",
+    "livePrefix": "Live ",
+    "liveDate": "15. Juli",
+    "userCountPrefix": "👥 "
+  },
+  "dismiss": "Ausblenden",
+  "welcomeToast": {
+    "greeting": "Willkommen, {{name}}!",
+    "body": "Dein Konto wird geprüft — du hörst innerhalb von 24–48 Stunden von uns."
+  },
+  "contractButton": {
+    "ariaLabel": "Vertragsersteller öffnen",
+    "title": "Vertragsersteller",
+    "label": "Vertrag"
+  }
+}

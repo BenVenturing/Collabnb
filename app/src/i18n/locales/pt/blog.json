@@ -1,0 +1,36 @@
+{
+  "categories": {
+    "creators": "Criadores",
+    "hosts": "Anfitriões",
+    "industry": "Indústria",
+    "stats": "Estatísticas",
+    "all": "Tudo"
+  },
+  "readTime_one": "{{count}} min de leitura",
+  "readTime_other": "{{count}} min de leitura",
+  "featuredBadge": "Em destaque",
+  "read": "Ler",
+  "topBar": {
+    "backToCollabnb": "Voltar ao Collabnb"
+  },
+  "gallery": {
+    "headingPrefix": "Seleção ",
+    "headingItalic": "do",
+    "headingSuffix": " Journal",
+    "dragHint": "Arraste ou passe o mouse para explorar",
+    "noImage": "Sem imagem"
+  },
+  "header": {
+    "title": "O Journal",
+    "subtitle": "Insights para anfitriões boutique e criadores de UGC construindo o futuro do conteúdo por estadia."
+  },
+  "searchPlaceholder": "Pesquisar artigos…",
+  "emptyState": {
+    "noMatchTitle": "Nenhum artigo correspondente",
+    "noPostsTitle": "Ainda não há publicações",
+    "noMatchBody": "Tente um termo de busca ou categoria diferente.",
+    "noPostsBody": "Volte em breve — novo conteúdo está a caminho.",
+    "clearFilters": "Limpar filtros"
+  },
+  "moreFromJournal": "Mais do Journal"
+}

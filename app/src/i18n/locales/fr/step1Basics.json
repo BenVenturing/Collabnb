@@ -1,0 +1,31 @@
+{
+  "nextHint": {
+    "needTitle": "Donnez un titre à votre annonce.",
+    "needLocation": "Renseignez la ville et l'état/pays."
+  },
+  "uploadErrorFallback": "Une de vos photos n'a pas pu être téléchargée.",
+  "heading": "Parlez-nous des bases",
+  "subtitle": "Commencez par les détails essentiels de votre opportunité de collaboration.",
+  "labels": {
+    "listingTitle": "Titre de l'annonce",
+    "location": "Emplacement",
+    "propertyUrl": "URL de l'annonce du logement",
+    "propertyImages": "Photos du logement",
+    "collaborationBrief": "Brief de collaboration"
+  },
+  "placeholders": {
+    "listingTitle": "ex. Cabane cosy à Lake Tahoe",
+    "city": "Ville",
+    "stateCountry": "État / Pays",
+    "propertyUrl": "https://votre-lien-de-reservation.com",
+    "collaborationBrief": "ex. Nous recherchons un contenu authentique qui met en valeur la vue sur la montagne et l'ambiance chaleureuse du chalet..."
+  },
+  "uploading": "Téléchargement...",
+  "uploadImages": "Télécharger des images",
+  "selectMultipleHint": "Sélectionnez plusieurs images depuis votre bibliothèque (jusqu'à {{max}})",
+  "addPhotos": "Ajouter des photos",
+  "imagesCount": "{{count}} sur {{max}} ajoutées",
+  "limitReached": " — limite atteinte",
+  "briefHint": "Décrivez ce que vous recherchez chez les créateurs (facultatif)",
+  "footerNote": "Le niveau de créateur, la rémunération et les livrables sont définis à l'étape suivante, avec des indications de tarification en temps réel."
+}

@@ -1,0 +1,14 @@
+{
+  "ariaLabel": "Cookie-Hinweis",
+  "heading": "Wir verwenden Cookies",
+  "body": "First-Party-Cookies, um zu verstehen, wie Collabnb genutzt wird — damit wir es verbessern können.",
+  "details": {
+    "pre": "Wir verwenden ein Cookie, um deine Sitzung zu merken und aufzuzeichnen, welche Seiten du besuchst, worauf du klickst, wie lange du bleibst und wo du die Seite verlässt. ",
+    "strong": "Keine Werbung. Kein Verkauf deiner Daten. Keine Werbenetzwerke von Drittanbietern.",
+    "post": " Du kannst Cookies jederzeit in deinem Browser löschen, Collabnb funktioniert trotzdem weiter.",
+    "faqLink": "Mehr dazu in den FAQ"
+  },
+  "less": "Weniger",
+  "review": "Details ansehen",
+  "gotIt": "Verstanden"
+}

@@ -1,0 +1,89 @@
+{
+  "calendar": {
+    "months": ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"],
+    "weekdays": ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"]
+  },
+  "locationConsent": {
+    "heading": "Accès à la localisation",
+    "body": "Collabnb utilise votre position pour suggérer des créateurs et des séjours à proximité. Vous pouvez désactiver ceci à tout moment dans les paramètres. ",
+    "bodyStrong": "Votre position exacte n'est jamais partagée avec d'autres utilisateurs.",
+    "allow": "Autoriser",
+    "disable": "Désactiver la localisation"
+  },
+  "nearby": {
+    "heading": "Créateurs près de vous",
+    "subtitle": "Basé sur les profils de créateurs dans votre région",
+    "seeAll": "Voir tout",
+    "scrollLeft": "Défiler à gauche",
+    "scrollRight": "Défiler à droite",
+    "withinMiles": "Dans un rayon de {{miles}} miles"
+  },
+  "travelDatePicker": {
+    "placeholder": "Dates de voyage",
+    "findVisiting": "Trouver des créateurs visitant {{city}} pendant…",
+    "clear": "Effacer",
+    "showCreators": "Afficher les créateurs"
+  },
+  "savedContact": {
+    "message": "Message"
+  },
+  "viewToggle": {
+    "grid": "⊞  Vue grille",
+    "swipe": "✦  Vue glissement"
+  },
+  "swipe": {
+    "saveFailed": "Impossible d'enregistrer {{name}} — vérifiez votre connexion et réessayez",
+    "defaultName": "ce créateur",
+    "backToGrid": "Retour à la grille",
+    "searchPlaceholder": "Rechercher des créateurs…",
+    "filters": "Filtres",
+    "creatorType": "Type de créateur",
+    "progress": "{{current}} / {{total}}",
+    "progressDone": "{{total}} terminés",
+    "allCaughtUp": "Tout est à jour !",
+    "reviewedAll": "Vous avez passé en revue les {{count}} créateurs. Annuler pour en revoir un.",
+    "hints": {
+      "skip": "Passer",
+      "save": "Enregistrer",
+      "message": "Message"
+    },
+    "saved": "Enregistré"
+  },
+  "header": {
+    "heading": "Créateurs",
+    "subtitle": "Découvrez des créateurs qui ont collaboré avec des logements comme le vôtre"
+  },
+  "toolbar": {
+    "searchPlaceholder": "Rechercher par nom, niche, plateforme…",
+    "filters": "Filtres"
+  },
+  "filterPanel": {
+    "nearYou": "Créateurs près de vous",
+    "withinMiles": "Dans un rayon de {{miles}} miles",
+    "sortBy": "Trier par",
+    "sort": {
+      "recommended": "Recommandé",
+      "followers": "Plus d'abonnés",
+      "engagement": "Engagement le plus élevé",
+      "collabs": "Plus de collabs"
+    },
+    "creatorType": "Type de créateur",
+    "saved": "Enregistré",
+    "savedOnly": "Enregistrés uniquement",
+    "platforms": "Plateformes",
+    "other": "Autre",
+    "pastCollabsOnly": "Collaborations passées uniquement",
+    "clearAll": "Effacer tous les filtres"
+  },
+  "results": {
+    "count_one": "{{count}} créateur",
+    "count_other": "{{count}} créateurs",
+    "count_nearby_one": "{{count}} créateur à proximité",
+    "count_nearby_other": "{{count}} créateurs à proximité",
+    "showingRealOnly": "Affichage des créateurs réels uniquement",
+    "hideSamples": "Masquer les créateurs d'exemple",
+    "emptyTitle": "Aucun créateur trouvé",
+    "emptyDated": "Aucun créateur ne visite {{city}} à ces dates. Essayez une autre plage.",
+    "emptyDefault": "Essayez d'ajuster votre recherche ou vos filtres."
+  }
+}

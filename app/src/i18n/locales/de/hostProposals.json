@@ -1,0 +1,146 @@
+{
+  "statusLabels": {
+    "pending": "Ausstehend",
+    "under_review": "Wird geprüft",
+    "approved": "Genehmigt",
+    "completed": "Abgeschlossen",
+    "declined": "Abgelehnt"
+  },
+  "typeLabels": {
+    "all": "Alle Typen",
+    "application": "Bewerbungen",
+    "pitch": "Angebote"
+  },
+  "stageAll": "Alle",
+  "tierDefs": {
+    "UGC Beginner": "0–5K Follower — Neue Creator im Aufbau ihres Portfolios",
+    "UGC Pro": "5K–10K Follower — Content-Ersteller, keine Influencer-Reichweite",
+    "Micro Influencer": "10K–50K Follower — Content im Influencer-Stil, engagiertes Publikum",
+    "Influencer": "50K+ Follower — Große Reichweite, etabliertes Publikum"
+  },
+  "contractFields": {
+    "nights": { "label": "Nächte", "placeholder": "z. B. 3" },
+    "compensation": { "label": "Vergütung", "placeholder": "z. B. 500 $ oder 300 $ + Aufenthalt" },
+    "deliverables": { "label": "Deliverables", "placeholder": "z. B. 2 Reels + 5 Fotos" },
+    "turnaround": { "label": "Bearbeitungszeit", "placeholder": "z. B. 14 Tage" },
+    "affiliate": { "label": "Affiliate %", "placeholder": "z. B. 5 % oder —" },
+    "extra_terms": { "label": "Zusätzliche Bedingungen", "placeholder": "Optionale Extras" }
+  },
+  "history": {
+    "heading": "Verhandlungsverlauf",
+    "creatorPitch": "Angebot des Creators",
+    "host": "Gastgeber",
+    "creator": "Creator",
+    "version": "v{{version}}",
+    "latest": "← neueste"
+  },
+  "pdf": {
+    "documentTitle": "Collabnb-Vertrag",
+    "heading": "Collabnb-Kollaborationsvertrag",
+    "locked": "VERTRAG GESPERRT",
+    "terms": "Bedingungen",
+    "negotiatedRounds_one": "Über {{count}} Runde verhandelt.",
+    "negotiatedRounds_other": "Über {{count}} Runden verhandelt.",
+    "signatures": "Unterschriften",
+    "host": "Gastgeber",
+    "creatorSuffix": "(Creator)",
+    "notYetSigned": "Noch nicht unterschrieben"
+  },
+  "counterModal": {
+    "heading": "Gegenangebot",
+    "versionLine": "{{creatorName}} · {{listing}} · Version {{version}}",
+    "editingAs": "Bearbeitung als ",
+    "adjustTerms": " — passe beliebige Bedingungen an und sende dann.",
+    "notePlaceholder": "Erkläre der anderen Partei deine Änderungen...",
+    "noteLabel": "Notiz (optional)",
+    "pricingCalculator": "Preisrechner ({{tier}})",
+    "cash": "Bargeld",
+    "pointsSummary": "{{points}} Pkt. · Mittelwert {{midpoint}} $ · Bereich {{low}}–{{high}} $",
+    "belowFloor": "Unter dem Minimum ({{floor}} $) für diesen Arbeitsumfang — erhöhe den Bargeldbetrag oder reduziere die Deliverables, um zu senden.",
+    "belowRecommended": "Unter dem empfohlenen Bereich, aber über dem Minimum — kann trotzdem gesendet werden.",
+    "cancel": "Abbrechen",
+    "send": "Gegenangebot senden"
+  },
+  "signModal": {
+    "heading": "Unterschreiben & akzeptieren",
+    "signingAs": "Unterschreiben als {{partyLabel}}",
+    "contractTerms": "Vertragsbedingungen",
+    "afterRounds_one": "Nach {{count}} Verhandlungsrunde",
+    "afterRounds_other": "Nach {{count}} Verhandlungsrunden",
+    "agreement": "Mit deiner Unterschrift stimmst du den obigen Bedingungen zu. Der Vertrag wird gesperrt, sobald beide Parteien dieselbe Version unterschrieben haben.",
+    "yourName": "Dein vollständiger Name",
+    "namePlaceholder": "Gib deinen vollständigen Namen als Unterschrift ein",
+    "cancel": "Abbrechen",
+    "sign": "Unterschreiben und akzeptieren"
+  },
+  "messagePanel": {
+    "heading": "Nachrichten mit {{creatorName}}",
+    "empty": "Noch keine Nachrichten — starte die Unterhaltung.",
+    "replyPlaceholder": "Antwort an {{creatorName}}…"
+  },
+  "drawer": {
+    "viewProfile": "Profil ansehen",
+    "verified": "Verifiziert",
+    "followers": "Follower",
+    "engagement": "Interaktion",
+    "collabs": "Collabs",
+    "originalPitchTerms": "Ursprüngliche Angebotsbedingungen",
+    "modifiedTerms": "Geänderte Bedingungen",
+    "pitchMessage": "Angebotsnachricht",
+    "applicationMessage": "Bewerbungsnachricht",
+    "portfolio": "Portfolio:",
+    "contractLocked": "Vertrag gesperrt — beide Parteien haben unterschrieben",
+    "saveContractPdf": "Vertrag speichern (PDF)",
+    "hostSigned": "Gastgeber hat unterschrieben",
+    "creatorSigned": "{{name}} hat unterschrieben",
+    "awaitingCreatorSignature": "Wartet auf Unterschrift des Creators",
+    "awaitingHostSignature": "Wartet auf Unterschrift des Gastgebers",
+    "hostActions": "Gastgeber-Aktionen",
+    "counterSentAwaitingCreator": "· Gegenangebot gesendet — wartet auf Creator",
+    "acceptAsIs": "So akzeptieren",
+    "youSigned": "✓ Du hast unterschrieben",
+    "counterPitch": "Gegenangebot",
+    "decline": "Ablehnen",
+    "creatorsResponse": "Antwort des Creators",
+    "demo": "· Demo",
+    "creatorCounteredBack": "· Creator hat erneut ein Gegenangebot gemacht",
+    "accept": "Annehmen",
+    "creatorSignedChip": "✓ Creator hat unterschrieben",
+    "counterBack": "Zurück-Gegenangebot",
+    "moveToReview": "Zur Prüfung verschieben",
+    "approve": "Genehmigen",
+    "markCompleted": "Als abgeschlossen markieren",
+    "message": "Nachricht",
+    "messageCreator": "Nachricht an Creator"
+  },
+  "card": {
+    "viewProfile": "Profil ansehen",
+    "pitch": "Angebot",
+    "application": "Bewerbung",
+    "locked": "Gesperrt",
+    "listingStats": "{{listing}} · {{followers}} Follower · {{engagement}} % ER",
+    "dragToMoveStage": "Ziehen, um die Phase zu ändern"
+  },
+  "header": {
+    "heading": "Vorschläge",
+    "subtitle": "{{total}} insgesamt · {{pending}} warten auf deine Prüfung"
+  },
+  "declinedHeader": {
+    "count_one": "{{count}} abgelehnter Vorschlag",
+    "count_other": "{{count}} abgelehnte Vorschläge",
+    "clearAll": "Alle löschen"
+  },
+  "empty": {
+    "noProposalsYet": "Noch keine Vorschläge",
+    "noFilteredProposals": "Keine {{filters}}Vorschläge",
+    "onceCreatorsApply": "Sobald sich Creator auf deine Angebote bewerben, erscheinen ihre Vorschläge hier.",
+    "tryDifferentFilter": "Versuche einen anderen Filter."
+  },
+  "clearDeclinedModal": {
+    "heading": "Abgelehnte Vorschläge löschen",
+    "body_one": "Alle {{count}} abgelehnten Vorschlag aus der Ansicht entfernen? Dies löscht keine Creator-Daten, sondern blendet sie nur aus deiner Pipeline aus.",
+    "body_other": "Alle {{count}} abgelehnten Vorschläge aus der Ansicht entfernen? Dies löscht keine Creator-Daten, sondern blendet sie nur aus deiner Pipeline aus.",
+    "cancel": "Abbrechen",
+    "removeAll": "Alle entfernen"
+  }
+}

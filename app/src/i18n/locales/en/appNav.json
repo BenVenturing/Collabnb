@@ -1,0 +1,55 @@
+{
+  "anyTime": "Any time",
+  "nav": {
+    "explore": "Explore",
+    "collabs": "Collabs",
+    "saved": "Saved",
+    "inbox": "Inbox",
+    "founders": "Founders",
+    "dashboard": "Dashboard",
+    "proposals": "Proposals",
+    "creators": "Creators",
+    "profile": "Profile"
+  },
+  "mobileNavAriaLabel": "Mobile navigation",
+  "myProfile": "My Profile",
+  "mobileBottomNavAriaLabel": "Mobile bottom navigation",
+  "mainNavAriaLabel": "Main navigation",
+  "search": {
+    "where": "Where",
+    "what": "What",
+    "when": "When",
+    "destinationPlaceholder": "Destination",
+    "searchStays": "Search stays",
+    "openSearchAriaLabel": "Open search"
+  },
+  "notifications": {
+    "ariaLabel": "Notifications",
+    "heading": "Notifications",
+    "clearAll": "Clear all",
+    "empty": "No notifications yet"
+  },
+  "menu": {
+    "closeMenu": "Close menu",
+    "openMenu": "Open menu",
+    "profileFallback": "Profile",
+    "adminPanel": "Admin Panel",
+    "settings": "Settings",
+    "setupChecklist": "Setup Checklist",
+    "switchToCreatorView": "Switch to Creator View",
+    "switchToHostView": "Switch to Host View",
+    "signUpAsCreator": "Sign up as Creator",
+    "signUpAsHost": "Sign up as Host",
+    "pendingReview": "{{role}} access pending review",
+    "faqHelp": "FAQ & Help",
+    "logOut": "Log Out"
+  },
+  "roleLabels": {
+    "host": "Host",
+    "creator": "Creator"
+  },
+  "faqBubble": {
+    "ariaLabel": "Help & FAQ",
+    "dismissAriaLabel": "Dismiss FAQ button"
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "roleLabels": {
+    "host": "Anfitrión",
+    "creator": "Creador"
+  },
+  "errors": {
+    "accountNotLoaded": "La cuenta aún no se ha cargado — inténtalo de nuevo.",
+    "instagramRequired": "Se requiere un usuario de Instagram para poder revisar tu perfil.",
+    "generic": "Algo salió mal. Inténtalo de nuevo."
+  },
+  "signingUpAs": "Registrándote como",
+  "yourAccount": "Tu cuenta",
+  "useDifferentEmail": "usar un correo diferente",
+  "keepMyEmail": "mantener el correo de mi cuenta",
+  "emailPlaceholder": "tu@ejemplo.com",
+  "description": {
+    "host": "Te unirás como anfitrión con esta misma cuenta. Como todo nuevo anfitrión, tus datos pasan por una revisión rápida antes de que se desbloqueen las herramientas de anfitrión — mientras tanto, conservarás el acceso completo como creador.",
+    "creator": "Te unirás como creador con esta misma cuenta. Como todo nuevo creador, tu perfil pasa por una revisión rápida antes de que se desbloquee el acceso de creador — mientras tanto, conservarás el acceso completo como anfitrión."
+  },
+  "form": {
+    "businessName": "Nombre de la propiedad o negocio",
+    "businessNamePlaceholder": "Cabaña Musgo y Pino",
+    "city": "Ciudad",
+    "cityPlaceholder": "Asheville",
+    "country": "País de residencia",
+    "countryPlaceholder": "Estados Unidos",
+    "website": "Sitio web",
+    "websitePlaceholder": "https://tupropiedad.com",
+    "instagram": "Usuario de Instagram",
+    "handlePlaceholder": "@tuusuario",
+    "tiktok": "Usuario de TikTok",
+    "portfolio": "Portafolio o sitio web",
+    "portfolioPlaceholder": "https://tuportafolio.com",
+    "optional": "(opcional)"
+  },
+  "submitting": "Enviando…",
+  "signUpAs": "Registrarse como {{role}} →",
+  "startFresh": "Empezar de nuevo →",
+  "requestReceived": "Solicitud recibida",
+  "reviewNotice": "El equipo de Collabnb revisará tus datos como {{role}} — la misma verificación por la que pasa todo nuevo {{role}}. Tu cuenta se mantiene exactamente igual hasta que seas aprobado.",
+  "emailNoticePrefix": "Te enviaremos un correo a ",
+  "emailNoticeSuffix": " — normalmente en 1 a 2 días hábiles.",
+  "done": "Listo"
+}

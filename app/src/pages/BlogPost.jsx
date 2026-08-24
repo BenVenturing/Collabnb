@@ -1,4 +1,5 @@
 import { useQuery } from 'convex/react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../../convex/_generated/api';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useState, useEffect, useRef } from 'react';
@@ -33,6 +34,7 @@ function useScrollReveal(active) {
 
 // ─── Theme toggle (appears after 200px scroll) ────────────────────────────────
 function ThemeToggle({ theme, toggle }) {
+  const { t } = useTranslation('blogPost');
   const [vis, setVis] = useState(false);
   useEffect(() => {
     const fn = () => setVis(window.scrollY > 200);
@@ -42,7 +44,7 @@ function ThemeToggle({ theme, toggle }) {
   return (
     <button
       onClick={toggle}
-      aria-label="Toggle theme"
+      aria-label={t('toggleThemeAriaLabel')}
       style={{
         position: 'fixed', top: '1.25rem', right: '1.25rem', zIndex: 200,
         width: 38, height: 38, borderRadius: '50%',
@@ -78,6 +80,7 @@ function PostSkeleton({ theme }) {
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 export default function BlogPost() {
+  const { t }              = useTranslation('blogPost');
   const { slug }          = useParams();
   const navigate          = useNavigate();
   const { theme, toggle } = useBlogTheme();
@@ -96,10 +99,10 @@ export default function BlogPost() {
   if (!post) return wrap(
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100dvh', padding: '0 1.5rem' }}>
       <div style={{ textAlign: 'center' }}>
-        <p style={{ fontFamily: 'var(--font-blog-display)', fontWeight: 500, fontSize: '1.5rem', color: 'var(--blog-ink)', marginBottom: '0.5rem' }}>Article not found</p>
-        <p style={{ fontSize: '0.875rem', color: 'var(--blog-sage)', marginBottom: '1.5rem', fontFamily: 'var(--font-blog-body)' }}>This post may have been moved or removed.</p>
+        <p style={{ fontFamily: 'var(--font-blog-display)', fontWeight: 500, fontSize: '1.5rem', color: 'var(--blog-ink)', marginBottom: '0.5rem' }}>{t('notFound.title')}</p>
+        <p style={{ fontSize: '0.875rem', color: 'var(--blog-sage)', marginBottom: '1.5rem', fontFamily: 'var(--font-blog-body)' }}>{t('notFound.body')}</p>
         <button onClick={() => navigate('/blog')} style={{ padding: '0.65rem 1.5rem', borderRadius: 9999, border: 'none', background: 'var(--blog-ink)', color: 'var(--blog-bg)', fontFamily: 'var(--font-blog-body)', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer' }}>
-          Back to the Journal
+          {t('notFound.backButton')}
         </button>
       </div>
     </div>
@@ -119,7 +122,7 @@ export default function BlogPost() {
           onMouseLeave={e => { e.currentTarget.style.color = 'var(--blog-sage)'; }}
         >
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-          The Journal
+          {t('theJournal')}
         </button>
       </div>
 
@@ -128,17 +131,17 @@ export default function BlogPost() {
       {/* CTA */}
       <div className="blog-reveal" style={{ marginTop: '5rem', paddingTop: '3rem', borderTop: '1px solid var(--blog-divider)', textAlign: 'center', fontFamily: 'var(--font-blog-body)' }}>
         <p style={{ fontFamily: 'var(--font-blog-display)', fontWeight: 500, fontSize: '1.5rem', color: 'var(--blog-ink)', margin: '0 0 0.625rem', letterSpacing: '-0.02em', lineHeight: 1.25 }}>
-          Ready to collab?
+          {t('cta.heading')}
         </p>
         <p style={{ fontSize: '0.9rem', color: 'var(--blog-sage)', margin: '0 0 1.75rem', lineHeight: 1.65 }}>
-          Early access to content-for-stay partnerships is open now.
+          {t('cta.body')}
         </p>
         <a href="/join.html"
           style={{ display: 'inline-block', padding: '0.8rem 2rem', borderRadius: 9999, background: 'var(--blog-ink)', color: 'var(--blog-bg)', fontSize: '0.875rem', fontWeight: 600, textDecoration: 'none', transition: 'opacity 150ms' }}
           onMouseEnter={e => { e.currentTarget.style.opacity = '0.8'; }}
           onMouseLeave={e => { e.currentTarget.style.opacity = '1'; }}
         >
-          Become a Founder →
+          {t('cta.button')}
         </a>
       </div>
     </article>

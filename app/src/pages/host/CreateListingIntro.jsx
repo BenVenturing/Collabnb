@@ -1,17 +1,15 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FileText, Sparkles, Package2, CheckCircle, X, Lock } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "../../contexts/AuthContext";
 import { useListingDraft } from "../../contexts/ListingDraftContext";
 
-const STEPS = [
-  { icon: FileText, title: "1. The basics", desc: "Tell us about your listing and collaboration type" },
-  { icon: Sparkles, title: "2. The offer", desc: "What perks and experience will creators get?" },
-  { icon: Package2, title: "3. Deliverables & dates", desc: "Set collaboration window and define what you need" },
-  { icon: CheckCircle, title: "4. Review & publish", desc: "Preview your listing and publish to creators" },
-];
+const STEP_ICONS = [FileText, Sparkles, Package2, CheckCircle];
 
 export default function CreateListingIntro() {
+  const { t } = useTranslation('createListingIntro');
+  const STEPS = t('steps', { returnObjects: true }).map((s, i) => ({ ...s, icon: STEP_ICONS[i] }));
   const navigate = useNavigate();
   const { profile } = useAuth();
   const { clearDraft } = useListingDraft();
@@ -37,10 +35,10 @@ export default function CreateListingIntro() {
 
       <div style={{ flex: 1, padding: "24px 24px 48px", maxWidth: 680, margin: "0 auto", width: "100%", position: "relative", zIndex: 1 }}>
         <h1 style={{ fontFamily: "Cabinet Grotesk, serif", fontWeight: 800, fontSize: "clamp(28px, 5vw, 38px)", color: "var(--ink)", lineHeight: 1.15, margin: "0 0 12px" }}>
-          It's easy to create<br />a listing on Collabnb
+          {t('headingLine1')}<br />{t('headingLine2')}
         </h1>
         <p style={{ fontFamily: "Satoshi, sans-serif", fontSize: 15, color: "var(--slate)", margin: "0 0 40px", lineHeight: 1.55 }}>
-          We'll guide you through the process step by step. You can save and come back anytime.
+          {t('subtitle')}
         </p>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -76,9 +74,9 @@ export default function CreateListingIntro() {
               <Lock size={16} color="#92400E" />
             </div>
             <div>
-              <p style={{ fontFamily: "Satoshi, sans-serif", fontWeight: 700, fontSize: 13, color: "#92400E", margin: "0 0 3px" }}>Verification required</p>
+              <p style={{ fontFamily: "Satoshi, sans-serif", fontWeight: 700, fontSize: 13, color: "#92400E", margin: "0 0 3px" }}>{t('verificationRequired')}</p>
               <p style={{ fontFamily: "Satoshi, sans-serif", fontSize: 12.5, color: "#78350F", margin: 0, lineHeight: 1.55 }}>
-                Your account is under review by the Collabnb team. Once approved you'll be able to publish a listing. This usually takes 1–2 business days.
+                {t('verificationBody')}
               </p>
             </div>
           </div>
@@ -90,7 +88,7 @@ export default function CreateListingIntro() {
           onClick={() => isVerified && navigate("/host/listings/create/basics")}
           style={{ width: "100%", padding: "16px 0", borderRadius: 9999, border: "none", background: isVerified ? "var(--ink)" : "rgba(25,37,36,0.25)", fontFamily: "Satoshi, sans-serif", fontSize: 16, fontWeight: 700, color: "#fff", cursor: isVerified ? "pointer" : "not-allowed", letterSpacing: "-0.01em", transition: "background 200ms" }}
         >
-          {isVerified ? "Get started" : "Pending verification"}
+          {isVerified ? t('getStarted') : t('pendingVerification')}
         </button>
       </div>
     </div>

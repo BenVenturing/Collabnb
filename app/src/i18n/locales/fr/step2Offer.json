@@ -1,0 +1,54 @@
+{
+  "heading": "Quelle est l'offre ?",
+  "subtitle": "Indiquez aux créateurs ce qui rend votre annonce spéciale et les avantages qu'ils recevront.",
+  "amenities": {
+    "label": "Équipements du logement",
+    "desc": "Recherchez et sélectionnez ce que propose votre logement. Ils apparaîtront sur la page de votre annonce.",
+    "searchPlaceholder": "Rechercher des équipements (ex. Wi-Fi, piscine, jacuzzi)",
+    "allAmenities": "Tous les équipements",
+    "mostCommon": "Les plus courants",
+    "noMatch": "Aucun équipement ne correspond à « {{query}} ».",
+    "showCommonOnly": "Afficher uniquement les courants",
+    "showAllAmenities": "Afficher tous les équipements",
+    "selected": "Sélectionnés ({{count}})",
+    "createOwn": "Créer votre propre équipement",
+    "createCustomHeading": "Créer un équipement personnalisé",
+    "namePlaceholder": "Nommez votre équipement (ex. Hamac sur le toit)",
+    "chooseGraphic": "Choisir une icône",
+    "cancel": "Annuler",
+    "addAmenity": "Ajouter l'équipement"
+  },
+  "addOns": {
+    "label": "Extras",
+    "desc": "Options supplémentaires que vous pouvez inclure pour bonifier l'offre.",
+    "placeholder": "ex. Accès au jacuzzi"
+  },
+  "affiliate": {
+    "codeLabel": "Votre code d'affiliation (facultatif)",
+    "codeDesc": "Collez votre propre code ou lien d'affiliation depuis votre plateforme de réservation (ex. Airbnb, VRBO, site direct).",
+    "codePlaceholder": "ex. https://airbnb.com/ref/abc123 ou MONCODE10",
+    "percentLabel": "Pourcentage d'affiliation (%)",
+    "percentDesc": "Quel pourcentage de commission le créateur gagnera-t-il avec votre lien d'affiliation ?",
+    "percentPlaceholder": "ex. 10",
+    "regenerate": "Régénérer",
+    "generate": "Générer",
+    "collabnbCode": " Code Collabnb",
+    "shuffleCode": "Mélanger le code",
+    "trackingNote": "Collabnb ne suit pas encore les clics d'affiliation. Le respect du code repose sur l'hôte. Un suivi réel arrivera dans une future mise à jour."
+  },
+  "vibeTags": {
+    "label": "Tags d'ambiance (facultatif)",
+    "desc": "Ajoutez quelques mots décrivant l'ambiance (Cosy, Luxe, Aventure, etc.)",
+    "suggestButton": "Suggérer des tags à partir des infos de l'annonce",
+    "placeholder": "ex. Cosy",
+    "ideas": "Idées :",
+    "showDifferentIdeas": "Afficher d'autres idées"
+  },
+  "maxOffers": {
+    "label": "Combien de fois souhaitez-vous proposer cette collaboration ?",
+    "desc": "Définissez un nombre maximum de collaborations confirmées pour cette annonce. Une fois atteint, l'annonce se met en pause automatiquement.",
+    "setLimit": "Définir une limite",
+    "unlimited": "Illimité",
+    "numberOfCollabs": "Nombre de collaborations"
+  }
+}

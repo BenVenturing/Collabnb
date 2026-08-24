@@ -1,0 +1,25 @@
+{
+  "header": {
+    "signOut": "Se déconnecter"
+  },
+  "hero": {
+    "heading": "Vous êtes sur la liste !",
+    "welcomeText": "Bienvenue sur Collabnb{{namePart}}. Votre candidature est en cours d'examen — nous vous enverrons un e-mail à ",
+    "welcomeSuffix": " dès que vous serez approuvé(e).",
+    "inboxFallback": "votre boîte de réception",
+    "etaNote": "Généralement sous 1 à 2 jours ouvrés."
+  },
+  "sneakPeek": "Un aperçu de ce qui vous attend",
+  "statusCard": {
+    "reviewInProgress": "EXAMEN EN COURS",
+    "bodyPrefix": "Une fois approuvé, vous débloquerez un accès complet pour parcourir, postuler à des collaborations et envoyer des messages aux hôtes. Les annonces complètes seront en ligne le ",
+    "liveDate": "15 juillet"
+  },
+  "globe": {
+    "heading": "Notre communauté mondiale",
+    "subtitle": "Créateurs et hôtes connectés partout dans le monde",
+    "creators": "Créateurs",
+    "hosts": "Hôtes",
+    "countries": "Pays"
+  }
+}

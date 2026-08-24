@@ -7,6 +7,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useQuery, useAction } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 
 const LAUNCH_DATE = new Date('2026-07-15T00:00:00+07:00');
@@ -14,6 +15,7 @@ const LAUNCH_BANNER_KEY = 'collabnb_launch_banner_dismissed';
 const BANNER_H = '2rem';
 
 function MaintenanceBanner() {
+  const { t } = useTranslation('layout');
   const isMaintenance = useQuery(api.admin.getMaintenanceMode);
   if (!isMaintenance) return null;
   const { profile } = useAuth();
@@ -26,12 +28,13 @@ function MaintenanceBanner() {
       fontSize: '0.82rem', fontWeight: 600,
       boxShadow: '0 2px 8px rgba(25,37,36,0.15)',
     }}>
-      🔧 Collabnb is currently undergoing maintenance. Some features may be unavailable.
+      {t('maintenance')}
     </div>
   );
 }
 
 function PendingVerificationBanner() {
+  const { t } = useTranslation('layout');
   return (
     <div style={{
       position: 'fixed', top: 0, left: 0, right: 0, zIndex: 9999,
@@ -47,14 +50,15 @@ function PendingVerificationBanner() {
         background: '#D97706', flexShrink: 0,
         boxShadow: '0 0 6px rgba(217,119,6,0.5)',
       }} />
-      <span style={{ fontWeight: 600 }}>Account under review</span>
+      <span style={{ fontWeight: 600 }}>{t('pendingVerification.title')}</span>
       <span style={{ opacity: 0.7 }}>·</span>
-      <span style={{ opacity: 0.85 }}>You'll hear from us within 24–48 hours.</span>
+      <span style={{ opacity: 0.85 }}>{t('pendingVerification.body')}</span>
     </div>
   );
 }
 
 function PastDueBanner({ topOffset }) {
+  const { t } = useTranslation('layout');
   const { profile } = useAuth();
   const createBillingPortalSession = useAction(api.stripe.createBillingPortalSession);
   const [busy, setBusy] = useState(false);
@@ -86,19 +90,20 @@ function PastDueBanner({ topOffset }) {
       fontSize: '0.8rem', fontWeight: 500, textAlign: 'center',
       boxShadow: '0 2px 8px rgba(25,37,36,0.18)',
     }}>
-      <span><strong>Payment past due</strong> — your last subscription charge failed.</span>
+      <span><strong>{t('pastDue.titlePrefix')}</strong>{t('pastDue.titleSuffix')}</span>
       <button
         onClick={handleFix}
         disabled={busy}
         style={{ background: '#FEE2E2', color: '#B91C1C', border: 'none', borderRadius: '999px', padding: '0.25rem 0.85rem', fontSize: '0.75rem', fontWeight: 700, cursor: busy ? 'wait' : 'pointer', opacity: busy ? 0.7 : 1, whiteSpace: 'nowrap' }}
       >
-        {busy ? 'Opening…' : 'Update payment'}
+        {busy ? t('pastDue.opening') : t('pastDue.updatePayment')}
       </button>
     </div>
   );
 }
 
 export default function Layout({ children }) {
+  const { t } = useTranslation('layout');
   const navigate = useNavigate();
   const location = useLocation();
   const { profile } = useAuth();
@@ -156,19 +161,19 @@ export default function Layout({ children }) {
           textAlign: 'center',
           boxShadow: '0 2px 8px rgba(25,37,36,0.18)',
         }}>
-          <span style={{ color: '#7ecfc4', fontWeight: 700, whiteSpace: 'nowrap' }}>🚀 {daysLeft} days to launch</span>
+          <span style={{ color: '#7ecfc4', fontWeight: 700, whiteSpace: 'nowrap' }}>{t('launchBanner.daysToLaunch', { days: daysLeft })}</span>
           <span style={{ color: 'rgba(255,255,255,0.7)' }}>·</span>
-          <span style={{ whiteSpace: 'nowrap' }}>Live <strong>July 15th</strong></span>
+          <span style={{ whiteSpace: 'nowrap' }}>{t('launchBanner.livePrefix')}<strong>{t('launchBanner.liveDate')}</strong></span>
           {userCount !== null && (
             <>
               <span style={{ color: 'rgba(255,255,255,0.7)' }}>·</span>
-              <span style={{ color: '#a8f0e8', fontWeight: 600, whiteSpace: 'nowrap' }}>👥 {userCount.toLocaleString()}</span>
+              <span style={{ color: '#a8f0e8', fontWeight: 600, whiteSpace: 'nowrap' }}>{t('launchBanner.userCountPrefix')}{userCount.toLocaleString()}</span>
             </>
           )}
           <button
             onClick={() => { localStorage.setItem(LAUNCH_BANNER_KEY, '1'); setBannerDismissed(true); }}
             style={{ position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', fontSize: '1rem', cursor: 'pointer', lineHeight: 1, padding: '0.25rem 0.4rem' }}
-            aria-label="Dismiss"
+            aria-label={t('dismiss')}
           >×</button>
         </div>
       )}
@@ -230,16 +235,16 @@ export default function Layout({ children }) {
           </div>
           <div>
             <p style={{ fontWeight: 700, fontSize: '0.875rem', color: 'var(--ink)', margin: 0 }}>
-              Welcome, {welcomeToast.name}!
+              {t('welcomeToast.greeting', { name: welcomeToast.name })}
             </p>
             <p style={{ fontSize: '0.78rem', color: 'var(--sage)', margin: '0.1rem 0 0' }}>
-              Your account is under review — you'll hear from us within 24–48 hours.
+              {t('welcomeToast.body')}
             </p>
           </div>
           <button
             onClick={() => setWelcomeToast(null)}
             style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--stone)', fontSize: '1rem', lineHeight: 1, padding: '0.25rem', flexShrink: 0 }}
-            aria-label="Dismiss"
+            aria-label={t('dismiss')}
           >×</button>
         </div>
       )}
@@ -258,8 +263,8 @@ export default function Layout({ children }) {
                      shadow-lg hover:shadow-xl hover:bg-white/95
                      transition-all duration-200 text-ink text-sm font-semibold
                      active:scale-95"
-          aria-label="Open contract builder"
-          title="Contract Builder"
+          aria-label={t('contractButton.ariaLabel')}
+          title={t('contractButton.title')}
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
@@ -268,7 +273,7 @@ export default function Layout({ children }) {
             <line x1="16" y1="17" x2="8" y2="17"/>
             <polyline points="10 9 9 9 8 9"/>
           </svg>
-          <span className="hidden sm:inline">Contract</span>
+          <span className="hidden sm:inline">{t('contractButton.label')}</span>
         </button>
       )}
     </div>

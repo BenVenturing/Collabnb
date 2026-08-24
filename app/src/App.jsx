@@ -38,6 +38,7 @@ import Step5Payment         from './pages/host/Step5Payment';
 import AdminDashboard       from './pages/AdminDashboard';
 import Blog                 from './pages/Blog';
 import BlogPost             from './pages/BlogPost';
+import ReceiptPreview       from './pages/dev/ReceiptPreview';
 
 // One-click "send this crash to the dev team" button shown in the crash
 // screen below. Lives outside the class ErrorBoundary since hooks need a
@@ -228,7 +229,7 @@ function AppRoutes() {
   if (!session) {
     const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
     const path = window.location.pathname;
-    const isPublicRoute = path === '/blog' || path.startsWith('/blog/');
+    const isPublicRoute = path === '/blog' || path.startsWith('/blog/') || path === '/dev/receipt-preview';
     if (!isLocalhost && !isPublicRoute) {
       window.location.href = '/login.html';
       return null;
@@ -263,6 +264,9 @@ function AppRoutes() {
           {/* Public Journal — no nav chrome, no auth, no launch banner */}
           <Route path="/blog"       element={<Blog />} />
           <Route path="/blog/:slug" element={<BlogPost />} />
+
+          {/* Internal preview — no nav chrome, no auth. Not linked anywhere. */}
+          <Route path="/dev/receipt-preview" element={<ReceiptPreview />} />
 
           {/* All other routes — wrapped in Layout (nav + HAZY bg) */}
           <Route path="*" element={

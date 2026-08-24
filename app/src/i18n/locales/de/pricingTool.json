@@ -1,0 +1,67 @@
+{
+  "zoneCopy": {
+    "red": "Unter dem Minimum für diesen Arbeitsumfang — kann so nicht veröffentlicht werden.",
+    "amber": "Unter dem empfohlenen Bereich für diesen Arbeitsumfang.",
+    "green": "Im empfohlenen Bereich."
+  },
+  "helpTable": {
+    "heading": "Punkte nach Deliverable & Stufe",
+    "close": "Schließen",
+    "colDeliverable": "Deliverable",
+    "colPts": "Pkt.",
+    "colWho": "Wer kann es produzieren",
+    "allTiers": "Alle Stufen",
+    "footerNote": "Bargeld = Punkte × $/Pkt. (nach Stufe) × Komplexität. Bei Hybrid gleicht der Aufenthalt einen Teil des Bargelds aus."
+  },
+  "helpButton": {
+    "ariaLabel": "Wie Punkte funktionieren"
+  },
+  "stepper": {
+    "ptsEach_one": "{{count}} Pkt. je",
+    "ptsEach_other": "{{count}} Pkt. je"
+  },
+  "scale": {
+    "minimal": "Minimal {{amount}}",
+    "caution": "Vorsicht {{amount}}",
+    "recommended": "Empfohlen {{low}}–{{high}}"
+  },
+  "presetCard": {
+    "midrange": "Mittelwert {{amount}}"
+  },
+  "heading": "Was kostet eine Kollaboration?",
+  "subtitle": "Der Preis ergibt sich aus Deliverable-Punkten, Creator-Stufe und Komplexität des Arbeitsumfangs — nie eine Vermutung.",
+  "entryMode": {
+    "deliverables": "Ich kenne meine Deliverables",
+    "budget": "Ich habe ein Budget"
+  },
+  "creatorTier": "Creator-Stufe",
+  "compensationType": {
+    "label": "Vergütungsart",
+    "paid": "Bezahlt",
+    "hybrid": "Hybrid (Aufenthalt + Bargeld)",
+    "declaredStayValue": "Angegebener Aufenthaltswert"
+  },
+  "complexity": {
+    "label": "Komplexität",
+    "standard": "Standard",
+    "complex": "Komplex (Shotlist, Drohne, mehrere Standorte, Exklusivität)",
+    "standardShort": "1,0 Standard",
+    "complexShort": "1,25 komplex"
+  },
+  "budgetMode": {
+    "cashBudget": "Bargeldbudget",
+    "effectiveBudgetPrefix": "Effektives Budget: {{budget}} Bargeld + {{offset}} Aufenthaltsausgleich = ",
+    "packagesThatFit": "Passende Pakete",
+    "noPresetFits": "Noch kein Preset passt zu diesem Budget — versuche, es zu erhöhen oder die Stufe zu wechseln.",
+    "stretchOption": "Erweiterte Option (innerhalb von 120 % des Budgets)"
+  },
+  "deliverablesMode": {
+    "presets": "Presets",
+    "buildYourOwn": "Eigenes Paket erstellen",
+    "loadSuffix": " Umfang",
+    "loadFallback": "—",
+    "cashCompensation": "Bargeldvergütung"
+  },
+  "mathSummary": "{{points}} Pkt. × {{rate}}/Pkt. ({{tier}}) × {{complexity}} = {{midpoint}} Mittelwert",
+  "stayOffsetSuffix": " · Aufenthaltsausgleich {{offset}}"
+}

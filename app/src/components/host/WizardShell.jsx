@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { useMutation } from "convex/react";
 import { ConvexError } from "convex/values";
 import { ArrowLeft, HelpCircle } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import i18nInstance from "../../i18n";
 import { api } from "../../../convex/_generated/api";
 import { useListingDraft } from "../../contexts/ListingDraftContext";
 import { useAuth } from "../../contexts/AuthContext";
@@ -16,7 +18,9 @@ const STEPS = [
   { label: "Payment", path: "/host/listings/create/payment" },
 ];
 
-export default function WizardShell({ step, children, onBack, onNext, nextLabel = "Next", nextDisabled = false, nextHint = "" }) {
+export default function WizardShell({ step, children, onBack, onNext, nextLabel, nextDisabled = false, nextHint = "" }) {
+  const { t } = useTranslation('wizardShell');
+  const resolvedNextLabel = nextLabel ?? t('next');
   const navigate = useNavigate();
   const [showHelp, setShowHelp] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -94,7 +98,7 @@ export default function WizardShell({ step, children, onBack, onNext, nextLabel 
       navigate("/host");
     } catch (err) {
       const message = err instanceof ConvexError ? err.data : err?.message;
-      setSaveError(typeof message === "string" && message ? message : "Couldn't save your draft — try again.");
+      setSaveError(typeof message === "string" && message ? message : i18nInstance.t('wizardShell:saveFallbackError'));
       setSaving(false);
     }
   }
@@ -113,11 +117,11 @@ export default function WizardShell({ step, children, onBack, onNext, nextLabel 
             <ArrowLeft size={18} />
           </button>
           <span style={{ fontFamily: "Satoshi, sans-serif", fontSize: 14, fontWeight: 600, color: "var(--ink)" }}>
-            Step {step} of {STEPS.length}
+            {t('stepOf', { step, total: STEPS.length })}
           </span>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <button onClick={handleSaveExit} disabled={saving} style={{ background: "none", border: "none", cursor: saving ? "default" : "pointer", fontFamily: "Satoshi, sans-serif", fontSize: 13, color: "var(--slate)", textDecoration: "underline", padding: 0, opacity: saving ? 0.6 : 1 }}>
-              {saving ? "Saving..." : "Save & exit"}
+              {saving ? t('saving') : t('saveExit')}
             </button>
             <div
               style={{ position: "relative", display: "flex" }}
@@ -134,8 +138,8 @@ export default function WizardShell({ step, children, onBack, onNext, nextLabel 
                   fontFamily: "Satoshi, sans-serif", fontSize: 12.5, lineHeight: 1.5,
                   boxShadow: "0 8px 28px rgba(25,37,36,0.28)",
                 }}>
-                  <div style={{ fontWeight: 700, marginBottom: 4 }}>Your progress is saved</div>
-                  Every change is saved to this browser automatically. Hit <strong>Save &amp; exit</strong> to head back to your dashboard — your draft will be waiting exactly where you left off.
+                  <div style={{ fontWeight: 700, marginBottom: 4 }}>{t('helpHeading')}</div>
+                  {t('helpBodyPrefix')}<strong>{t('saveExit')}</strong>{t('helpBodySuffix')}
                   <span style={{ position: "absolute", top: -5, right: 14, width: 10, height: 10, background: "var(--ink)", transform: "rotate(45deg)" }} />
                 </div>
               )}
@@ -153,10 +157,10 @@ export default function WizardShell({ step, children, onBack, onNext, nextLabel 
         {saveError && (
           <div style={{ maxWidth: 680, margin: "0 auto 12px", padding: "10px 14px", borderRadius: "0.75rem", background: "rgba(212,168,67,0.14)", border: "1px solid rgba(212,168,67,0.35)" }}>
             <p style={{ fontFamily: "Satoshi, sans-serif", fontSize: 12.5, color: "#7a5a10", margin: 0, lineHeight: 1.5 }}>
-              {saveError} Your progress is still kept in this browser — come back and finish filling it in, or exit anyway from here.
+              {saveError}{t('saveErrorSuffix')}
             </p>
             <button onClick={() => navigate("/host")} style={{ marginTop: 6, background: "none", border: "none", cursor: "pointer", padding: 0, fontFamily: "Satoshi, sans-serif", fontSize: 12.5, fontWeight: 700, color: "#7a5a10", textDecoration: "underline" }}>
-              Exit without saving as a draft
+              {t('exitWithoutSaving')}
             </button>
           </div>
         )}
@@ -199,7 +203,7 @@ export default function WizardShell({ step, children, onBack, onNext, nextLabel 
             onClick={handleBack}
             style={{ flex: 1, padding: "14px 0", borderRadius: 9999, border: "1.5px solid var(--ink)", background: "transparent", fontFamily: "Satoshi, sans-serif", fontSize: 15, fontWeight: 700, color: "var(--ink)", cursor: "pointer" }}
           >
-            Back
+            {t('back')}
           </button>
           <button
             onClick={onNext}
@@ -220,7 +224,7 @@ export default function WizardShell({ step, children, onBack, onNext, nextLabel 
               transition: "background 0.2s, box-shadow 0.2s",
             }}
           >
-            {nextLabel}
+            {resolvedNextLabel}
           </button>
         </div>
       </div>

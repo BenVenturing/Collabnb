@@ -1,0 +1,98 @@
+{
+  "close": "Close",
+  "subscribeUnlock": "Subscribe to unlock →",
+  "locked": {
+    "heading": "Search is locked",
+    "body": "Your trial has ended — subscribe to search destinations and collabs."
+  },
+  "compensation": {
+    "paid": "${{cash}} cash",
+    "hybrid": "${{cash}} + stay",
+    "seeListing": "See listing"
+  },
+  "deliverables": {
+    "more": "+{{count}} more",
+    "count": "{{count}} deliverables"
+  },
+  "card": {
+    "applyToView": "Apply to view",
+    "featured": "Featured",
+    "matchFallback": "Matched to your profile",
+    "matchPercent": "{{match}}% match",
+    "viewHost": "View host profile",
+    "byHost": "by"
+  },
+  "section": {
+    "seeAll": "see all",
+    "showLess": "show less"
+  },
+  "search": {
+    "where": "Where",
+    "destinationsPlaceholder": "Search destinations",
+    "what": "What",
+    "when": "When",
+    "anyTime": "Any time"
+  },
+  "propertyTypes": {
+    "all": "All",
+    "cabin": "Cabin",
+    "villa": "Villa",
+    "treehouse": "Treehouse",
+    "glamping": "Glamping",
+    "lodge": "Lodge",
+    "estate": "Estate",
+    "cottage": "Cottage"
+  },
+  "map": {
+    "showList": "Show list",
+    "showMap": "Show map",
+    "label": "Map",
+    "collabsAvailable_one": "{{count}} collab available",
+    "collabsAvailable_other": "{{count}} collabs available",
+    "noCollabsArea": "No collabs in this area — zoom out or move the map."
+  },
+  "searchArea": {
+    "button": "Search this area",
+    "noListings": "Sorry, no listings in this specific area",
+    "results_one": "{{count}} listing in this area",
+    "results_other": "{{count}} listings in this area",
+    "clearRefresh": "Clear and refresh"
+  },
+  "limited": {
+    "body": "🔒 Your trial has ended — listing details are hidden."
+  },
+  "loading": {
+    "stays": "Loading stays..."
+  },
+  "ghost": {
+    "comingSoon": "Listings coming soon",
+    "curating": "We're curating the best stays for launch on July 15th. Save your favorites and you'll be notified first."
+  },
+  "sections": {
+    "trending": "Trending Now",
+    "trendingSubtitle": "Top picks this week",
+    "pickedForYou": "Picked for You",
+    "pickedSubtitleNiches": "Matched to your {{niches}} niches",
+    "pickedSubtitleFallback": "Matched to your profile and collab history",
+    "near": "Near {{place}}",
+    "nearSubtitle": "Based on your profile location and past collabs",
+    "allStays": "All Stays",
+    "allStaysSubtitle_one": "{{count}} collab available now",
+    "allStaysSubtitle_other": "{{count}} collabs available now",
+    "nearYou": "You"
+  },
+  "empty": {
+    "searchHeading": "No listings match your search",
+    "noStays": "No stays found",
+    "searchBody": "Try adjusting your filters or clearing the search.",
+    "filterBody": "Try removing the property type filter.",
+    "clearSearch": "Clear search",
+    "showAllTypes": "Show all types"
+  },
+  "corner": {
+    "pricingAria": "What does a collab cost?",
+    "pricing": "Pricing",
+    "contractAria": "Draft a contract",
+    "contract": "Contract"
+  }
+}

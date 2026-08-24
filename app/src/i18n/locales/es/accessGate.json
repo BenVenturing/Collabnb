@@ -1,0 +1,40 @@
+{
+  "pendingApproval": {
+    "heading": "Tu solicitud está en revisión",
+    "thanksCreator": "Gracias por postularte para unirte a Collabnb como creador.",
+    "thanksHost": "Gracias por postularte para publicar tu propiedad.",
+    "reviewing": "El equipo de Collabnb está revisando tu perfil, portafolio y redes sociales. Recibirás un correo cuando seas aprobado — normalmente en 1 a 2 días hábiles.",
+    "checklist": {
+      "heading": "Qué sucede a continuación:",
+      "socialReview": "Se revisan tus redes sociales y tu portafolio",
+      "followerVerify": "Se verifican tu número de seguidores y tu interacción",
+      "experienceAssess": "Se evalúa tu experiencia y profesionalismo",
+      "interview": "Podrías recibir una solicitud para una breve entrevista",
+      "trackTier": "Se te asignará un track (UGC o Influencer) y un nivel",
+      "fullAccess": "Si eres aprobado, obtienes acceso completo al mercado"
+    },
+    "receivedTitle": "Solicitud recibida",
+    "receivedDetail": "— te notificaremos al correo que tenemos registrado.",
+    "backHome": "Volver al inicio"
+  },
+  "limitedAccess": {
+    "heading": "El acceso al mercado ha terminado",
+    "body": "Tu período de prueba ha expirado. Actualiza a Creator Plus para seguir explorando anuncios, postulando a campañas y proponiendo a anfitriones.",
+    "stillCanHeading": "Aún puedes:",
+    "stillCan": {
+      "dashboard": "Ver tu panel y tu perfil",
+      "contracts": "Acceder a contratos y mensajes existentes",
+      "settings": "Actualizar tu configuración y portafolio"
+    },
+    "viewPricing": "Ver precios"
+  },
+  "trialBanner": {
+    "expired": "Tu prueba ha terminado. Suscríbete para seguir accediendo al mercado.",
+    "daysLeft_one": "Te queda {{count}} día de prueba.",
+    "daysLeft_other": "Te quedan {{count}} días de prueba.",
+    "daysRemaining": "{{count}}d restantes",
+    "subscribeNow": "Suscribirse ahora",
+    "upgrade": "Mejorar plan",
+    "dismissAriaLabel": "Descartar"
+  }
+}

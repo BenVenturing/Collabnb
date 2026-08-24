@@ -1,0 +1,28 @@
+{
+  "pastCollabNotice": "Ya has colaborado con esta persona antes",
+  "founderTitle": "Fundador — uno de los primeros 100 en Collabnb",
+  "followers": "Seguidores",
+  "engRate": "Tasa de interacción",
+  "collabs": "Colabs",
+  "platforms": "Plataformas",
+  "niches": "Nichos",
+  "upcomingTrips": "Próximos viajes",
+  "viewPortfolio": "Ver portafolio",
+  "viewListing": "Ver anuncio",
+  "pastCollabs": "Colaboraciones pasadas",
+  "messageCreator": "Enviar mensaje a {{name}}",
+  "monthsShort": {
+    "jan": "ene",
+    "feb": "feb",
+    "mar": "mar",
+    "apr": "abr",
+    "may": "may",
+    "jun": "jun",
+    "jul": "jul",
+    "aug": "ago",
+    "sep": "sep",
+    "oct": "oct",
+    "nov": "nov",
+    "dec": "dic"
+  }
+}

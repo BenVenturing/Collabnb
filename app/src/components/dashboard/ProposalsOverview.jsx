@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import DashboardChart from './DashboardChart';
@@ -68,16 +69,17 @@ const TODO_META = {
   stay_date:      { label: 'Stay date',        icon: CalendarIcon, color: '#2d7d5e', bg: 'rgba(74,155,127,0.12)' },
 };
 
-const sidebarItems = (moneyLabel) => [
-  { key: 'overview', label: 'Overview',  icon: LayoutDashboard, action: 'tab' },
-  { key: 'chart',    label: moneyLabel,  icon: DollarSign,      action: 'modal-chart' },
-  { key: 'calendar', label: 'Calendar',  icon: CalendarIcon,    action: 'modal-calendar' },
-  { key: 'activity', label: 'Activity',  icon: CheckCircle2,    action: 'tab' },
-  { key: 'contract', label: 'Contract',  icon: FileText,        action: 'nav' },
+const sidebarItems = (moneyLabelKey) => [
+  { key: 'overview', labelKey: 'nav.overview', icon: LayoutDashboard, action: 'tab' },
+  { key: 'chart',    labelKey: moneyLabelKey,  icon: DollarSign,      action: 'modal-chart' },
+  { key: 'calendar', labelKey: 'nav.calendar', icon: CalendarIcon,    action: 'modal-calendar' },
+  { key: 'activity', labelKey: 'nav.activity', icon: CheckCircle2,    action: 'tab' },
+  { key: 'contract', labelKey: 'nav.contract', icon: FileText,        action: 'nav' },
 ];
 
 export default function ProposalsOverview({ role, search, onSearchChange, filters = [], onStatClick, children }) {
   const cfg = ROLE_CONFIG[role];
+  const { t } = useTranslation('proposalsOverview');
   const { profile } = useAuth();
   const navigate = useNavigate();
   const isPending = profile?.tier === 'waitlist' && !profile?.is_verified;
@@ -92,7 +94,13 @@ export default function ProposalsOverview({ role, search, onSearchChange, filter
     ? cfg.todo.filter((t) => t.date === selectedDate)
     : cfg.todo;
 
-  const firstName = profile?.full_name?.split(' ')[0] || 'there';
+  const firstName = profile?.full_name?.split(' ')[0] || t('there');
+
+  const chartTitle = t(role === 'host' ? 'chartTitle.host' : 'chartTitle.creator');
+  const chartDatasets = {
+    money: { ...cfg.chart.money, label: t(role === 'host' ? 'chart.money.host' : 'chart.money.creator') },
+    volume: { ...cfg.chart.volume, label: t('chart.volume') },
+  };
 
   const handleSidebarClick = (item) => {
     if (item.action === 'tab') setActiveTab(item.key);
@@ -146,7 +154,7 @@ export default function ProposalsOverview({ role, search, onSearchChange, filter
           <button
             className="dbo-hamburger"
             onClick={() => setSidebarOpen(false)}
-            aria-label="Close sidebar"
+            aria-label={t('closeSidebar')}
             style={{ marginLeft: 'auto', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', color: 'var(--bone)', cursor: 'pointer' }}
           >
             <X size={18} />
@@ -154,7 +162,7 @@ export default function ProposalsOverview({ role, search, onSearchChange, filter
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
-          {sidebarItems(cfg.sidebarMoneyLabel).map((item) => {
+          {sidebarItems(role === 'host' ? 'nav.money.host' : 'nav.money.creator').map((item) => {
             const Icon = item.icon;
             const selected = item.action === 'tab' && activeTab === item.key;
             return (
@@ -173,7 +181,7 @@ export default function ProposalsOverview({ role, search, onSearchChange, filter
                 onMouseLeave={(e) => { if (!selected) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(239,236,233,0.75)'; } }}
               >
                 <Icon size={16} />
-                {item.label}
+                {t(item.labelKey)}
               </button>
             );
           })}
@@ -181,9 +189,7 @@ export default function ProposalsOverview({ role, search, onSearchChange, filter
 
         <div style={{ marginTop: 'auto', padding: '0.85rem', borderRadius: '0.9rem', background: 'rgba(255,255,255,0.06)' }}>
           <p style={{ fontSize: '0.72rem', color: 'rgba(239,236,233,0.6)', margin: 0, lineHeight: 1.5 }}>
-            {role === 'host'
-              ? 'Reviewing applications faster keeps creators engaged.'
-              : 'Consistent uploads keep hosts inviting you back.'}
+            {t(role === 'host' ? 'sidebarTip.host' : 'sidebarTip.creator')}
           </p>
         </div>
       </div>
@@ -195,16 +201,16 @@ export default function ProposalsOverview({ role, search, onSearchChange, filter
           <button
             className="dbo-hamburger"
             onClick={() => setSidebarOpen(true)}
-            aria-label="Open sidebar"
+            aria-label={t('openSidebar')}
             style={{ background: 'rgba(255,255,255,0.7)', border: '1px solid rgba(25,37,36,0.1)', borderRadius: '0.75rem', width: 38, height: 38, alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--ink)', flexShrink: 0 }}
           >
             <Menu size={18} />
           </button>
           <div>
             <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 'clamp(1.4rem, 2.4vw, 1.8rem)', color: 'var(--ink)', margin: '0 0 0.3rem' }}>
-              Hello, {firstName}!
+              {t('hello', { name: firstName })}
             </h1>
-            <p style={{ fontSize: '0.88rem', color: 'var(--slate)', margin: 0 }}>{cfg.greetingSubtitle}</p>
+            <p style={{ fontSize: '0.88rem', color: 'var(--slate)', margin: 0 }}>{t(`greeting.${role}`)}</p>
           </div>
         </div>
 
@@ -212,7 +218,7 @@ export default function ProposalsOverview({ role, search, onSearchChange, filter
           <>
             {/* Stat cards — click to jump into Activity, pre-filtered */}
             <div className="dbo-stats-grid" style={{ display: 'grid', gap: '1rem' }}>
-              {cfg.statCards.map(({ key, label, value, sub, icon: Icon, presetKey }) => (
+              {cfg.statCards.map(({ key, value, sub, icon: Icon, presetKey }) => (
                 <button
                   key={key}
                   onClick={() => handleStatClick(presetKey)}
@@ -222,7 +228,7 @@ export default function ProposalsOverview({ role, search, onSearchChange, filter
                   onMouseLeave={(e) => { e.currentTarget.style.transform = ''; }}
                 >
                   <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '0.6rem' }}>
-                    <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--sage)' }}>{label}</span>
+                    <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--sage)' }}>{t(`stat.${role}.${key}.label`)}</span>
                     <div style={{ width: 30, height: 30, borderRadius: '0.6rem', background: 'rgba(60,87,89,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                       <Icon size={14} color="var(--slate)" />
                     </div>
@@ -235,36 +241,36 @@ export default function ProposalsOverview({ role, search, onSearchChange, filter
 
             {/* Chart + Calendar (compact previews — full views open from the sidebar) */}
             <div className="dbo-charts-grid" style={{ display: 'grid', gap: '1rem', alignItems: 'stretch' }}>
-              <DashboardChart datasets={cfg.chart} title={cfg.chartTitle} />
+              <DashboardChart datasets={chartDatasets} title={chartTitle} />
               <DashboardCalendar todoItems={cfg.todo} selectedDate={selectedDate} onSelectDate={setSelectedDate} />
             </div>
 
             {/* Upcoming — nested under Overview */}
             <div className="glass-card" style={{ padding: '1.25rem 1.5rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.05rem', color: 'var(--ink)', margin: 0 }}>Upcoming</h3>
+                <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.05rem', color: 'var(--ink)', margin: 0 }}>{t('upcoming')}</h3>
                 {selectedDate && (
                   <button onClick={() => setSelectedDate(null)} style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--sage)', background: 'none', border: 'none', cursor: 'pointer' }}>
-                    Clear date filter ×
+                    {t('clearDateFilter')}
                   </button>
                 )}
               </div>
               {visibleTodo.length === 0 ? (
-                <p style={{ fontSize: '0.82rem', color: 'var(--sage)', textAlign: 'center', padding: '1rem 0' }}>Nothing scheduled for this day.</p>
+                <p style={{ fontSize: '0.82rem', color: 'var(--sage)', textAlign: 'center', padding: '1rem 0' }}>{t('nothingScheduled')}</p>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-                  {visibleTodo.map((t, i) => {
-                    const meta = TODO_META[t.type];
+                  {visibleTodo.map((todo, i) => {
+                    const meta = TODO_META[todo.type];
                     const Icon = meta.icon;
-                    const d = new Date(`${t.date}T00:00:00`);
+                    const d = new Date(`${todo.date}T00:00:00`);
                     return (
                       <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.6rem 0.7rem', borderRadius: '0.85rem', background: 'rgba(25,37,36,0.03)' }}>
                         <div style={{ width: 32, height: 32, borderRadius: '0.6rem', background: meta.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                           <Icon size={14} color={meta.color} />
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <p style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--ink)', margin: 0 }}>{t.title}</p>
-                          <p style={{ fontSize: '0.68rem', color: 'var(--sage)', margin: '0.1rem 0 0' }}>{meta.label}</p>
+                          <p style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--ink)', margin: 0 }}>{todo.title}</p>
+                          <p style={{ fontSize: '0.68rem', color: 'var(--sage)', margin: '0.1rem 0 0' }}>{t(`todoMeta.${todo.type}`)}</p>
                         </div>
                         <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--slate)', flexShrink: 0 }}>
                           {d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
@@ -291,7 +297,7 @@ export default function ProposalsOverview({ role, search, onSearchChange, filter
                 <input
                   value={search}
                   onChange={(e) => onSearchChange?.(e.target.value)}
-                  placeholder={role === 'host' ? 'Search creators, listings…' : 'Search your collabs…'}
+                  placeholder={t(role === 'host' ? 'searchHost' : 'searchCreator')}
                   style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: '0.82rem', fontFamily: 'var(--font-body)', color: 'var(--ink)', flex: 1, minWidth: 0 }}
                 />
               </div>
@@ -324,13 +330,13 @@ export default function ProposalsOverview({ role, search, onSearchChange, filter
       </div>
 
       {chartModalOpen && (
-        <DashboardModal title={cfg.chartTitle} onClose={() => setChartModalOpen(false)} maxWidth={640}>
-          <DashboardChart datasets={cfg.chart} title="" />
+        <DashboardModal title={chartTitle} onClose={() => setChartModalOpen(false)} maxWidth={640}>
+          <DashboardChart datasets={chartDatasets} title="" />
         </DashboardModal>
       )}
 
       {calendarModalOpen && (
-        <DashboardModal title="Calendar" onClose={() => setCalendarModalOpen(false)} maxWidth={920}>
+        <DashboardModal title={t('nav.calendar')} onClose={() => setCalendarModalOpen(false)} maxWidth={920}>
           <CalendarFull todoItems={cfg.todo} selectedDate={selectedDate} onSelectDate={setSelectedDate} />
         </DashboardModal>
       )}

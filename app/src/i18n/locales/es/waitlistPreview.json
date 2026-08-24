@@ -1,0 +1,25 @@
+{
+  "header": {
+    "signOut": "Cerrar sesión"
+  },
+  "hero": {
+    "heading": "¡Estás en la lista!",
+    "welcomeText": "Bienvenido/a a Collabnb{{namePart}}. Tu solicitud está siendo revisada — te enviaremos un correo a ",
+    "welcomeSuffix": " en cuanto seas aprobado/a.",
+    "inboxFallback": "tu bandeja de entrada",
+    "etaNote": "Normalmente en 1 a 2 días hábiles."
+  },
+  "sneakPeek": "Un adelanto de lo que te espera",
+  "statusCard": {
+    "reviewInProgress": "REVISIÓN EN CURSO",
+    "bodyPrefix": "Una vez aprobado, tendrás acceso completo para explorar, postularte a colaboraciones y enviar mensajes a los anfitriones. Los anuncios completos estarán disponibles el ",
+    "liveDate": "15 de julio"
+  },
+  "globe": {
+    "heading": "Nuestra comunidad global",
+    "subtitle": "Creadores y anfitriones conectando en todo el mundo",
+    "creators": "Creadores",
+    "hosts": "Anfitriones",
+    "countries": "Países"
+  }
+}

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 // Shared article renderer — used by the public BlogPost page AND the admin
 // editor preview, so what admins approve is exactly what readers see.
@@ -10,6 +11,7 @@ function domainOf(url) {
 
 // Full-width editorial figure (replaces the old floated inline images).
 function Figure({ img, animate }) {
+  const { t } = useTranslation('blogArticle');
   const [loaded, setLoaded] = useState(false);
   if (!img?.url) return null;
   return (
@@ -40,8 +42,8 @@ function Figure({ img, animate }) {
           <span style={{ fontStyle: 'italic' }}>{img.alt || ''}</span>
           {img.credit && (
             img.creditUrl
-              ? <a href={img.creditUrl} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--blog-sage)', textDecoration: 'none', whiteSpace: 'nowrap' }}>{img.credit} / Unsplash</a>
-              : <span style={{ whiteSpace: 'nowrap' }}>{img.credit} / Unsplash</span>
+              ? <a href={img.creditUrl} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--blog-sage)', textDecoration: 'none', whiteSpace: 'nowrap' }}>{t('unsplashCredit', { credit: img.credit })}</a>
+              : <span style={{ whiteSpace: 'nowrap' }}>{t('unsplashCredit', { credit: img.credit })}</span>
           )}
         </figcaption>
       )}
@@ -93,6 +95,7 @@ function prepareSegments(post) {
 // `images` lets the admin editor preview unsaved image swaps; falls back to
 // the stored post fields. Shape: { hero, inline1..3: { url, alt, credit, creditUrl } }
 export default function BlogArticle({ post, images, pullQuote, animate = false }) {
+  const { t, i18n } = useTranslation('blogArticle');
   const imgs = {
     hero: images?.hero ?? { url: post.hero_image_url, alt: post.hero_image_alt, credit: post.hero_image_credit, creditUrl: post.hero_image_credit_url },
     '%%INLINE_IMAGE_1%%': images?.inline1 ?? { url: post.inline_image_1_url, alt: post.inline_image_1_alt, credit: post.inline_image_1_credit },
@@ -103,7 +106,7 @@ export default function BlogArticle({ post, images, pullQuote, animate = false }
   const [heroLoaded, setHeroLoaded] = useState(false);
   const segments = prepareSegments(post);
   const dateStr = new Date(post.published_at || post.generated_at)
-    .toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+    .toLocaleDateString(i18n.language, { month: 'long', day: 'numeric', year: 'numeric' });
   const fade = (delay) => animate
     ? { animation: 'blogFadeUp 600ms ease-out both', animationDelay: `${delay}ms` }
     : {};
@@ -118,7 +121,7 @@ export default function BlogArticle({ post, images, pullQuote, animate = false }
         letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--blog-sage)',
       }}>
         <span style={{ color: 'var(--blog-slate)', fontWeight: 700 }}>{post.category}</span>
-        {post.reading_time && <><span aria-hidden="true">·</span><span>{post.reading_time} min read</span></>}
+        {post.reading_time && <><span aria-hidden="true">·</span><span>{t('readTime', { count: post.reading_time })}</span></>}
         <span aria-hidden="true">·</span>
         <span>{dateStr}</span>
       </div>
@@ -170,7 +173,7 @@ export default function BlogArticle({ post, images, pullQuote, animate = false }
           {imgs.hero.credit && (
             <a href={imgs.hero.creditUrl || '#'} target="_blank" rel="noopener noreferrer"
               style={{ position: 'absolute', bottom: '0.5rem', right: '0.625rem', fontSize: '0.6rem', color: 'rgba(255,255,255,0.8)', background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)', padding: '0.18rem 0.45rem', borderRadius: 3, textDecoration: 'none' }}>
-              {imgs.hero.credit} / Unsplash
+              {t('unsplashCredit', { credit: imgs.hero.credit })}
             </a>
           )}
         </div>
@@ -200,7 +203,7 @@ export default function BlogArticle({ post, images, pullQuote, animate = false }
       {/* Sources */}
       {(post.sources || []).length > 0 && (
         <div className={animate ? 'blog-reveal' : undefined} style={{ marginTop: '2rem', paddingTop: '1.5rem', borderTop: '1px solid var(--blog-divider)' }}>
-          <p style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--blog-sage)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '0.6rem' }}>Sources</p>
+          <p style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--blog-sage)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '0.6rem' }}>{t('sources')}</p>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem 0.5rem' }}>
             {(post.sources || []).map((s, i) => (
               <a key={i} href={s} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.72rem', color: 'var(--blog-accent)', padding: '0.25rem 0.7rem', borderRadius: 9999, border: '1px solid var(--blog-divider)', textDecoration: 'none' }}>

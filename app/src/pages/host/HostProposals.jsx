@@ -1,6 +1,8 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation } from 'convex/react';
+import { useTranslation } from 'react-i18next';
+import i18nInstance from '../../i18n';
 import { api } from '../../../convex/_generated/api';
 import { useAuth } from '../../contexts/AuthContext';
 import ProfilePopupCard from '../../components/ProfilePopupCard';
@@ -81,12 +83,13 @@ const PROPOSALS = [
 ];
 
 const STATUS_CFG = {
-  pending:      { label: 'Pending',      bg: 'rgba(212,168,67,0.15)',  border: 'rgba(212,168,67,0.4)',  color: '#b45309' },
-  under_review: { label: 'Under Review', bg: 'rgba(123,104,200,0.12)', border: 'rgba(123,104,200,0.3)', color: '#5b4db8' },
-  approved:     { label: 'Approved',     bg: 'rgba(74,155,127,0.12)',  border: 'rgba(74,155,127,0.3)',  color: '#2d7d5e' },
-  completed:    { label: 'Completed',    bg: 'rgba(60,87,89,0.12)',    border: 'rgba(60,87,89,0.3)',    color: '#3C5759' },
-  declined:     { label: 'Declined',     bg: 'rgba(200,104,104,0.1)',  border: 'rgba(200,104,104,0.25)',color: '#9b2d2d' },
+  pending:      { bg: 'rgba(212,168,67,0.15)',  border: 'rgba(212,168,67,0.4)',  color: '#b45309' },
+  under_review: { bg: 'rgba(123,104,200,0.12)', border: 'rgba(123,104,200,0.3)', color: '#5b4db8' },
+  approved:     { bg: 'rgba(74,155,127,0.12)',  border: 'rgba(74,155,127,0.3)',  color: '#2d7d5e' },
+  completed:    { bg: 'rgba(60,87,89,0.12)',    border: 'rgba(60,87,89,0.3)',    color: '#3C5759' },
+  declined:     { bg: 'rgba(200,104,104,0.1)',  border: 'rgba(200,104,104,0.25)',color: '#9b2d2d' },
 };
+function statusLabel(key) { return i18nInstance.t(`hostProposals:statusLabels.${key}`); }
 
 const TIER_COLORS = {
   'UGC Beginner':     { bg: 'rgba(209,235,219,0.6)', color: 'var(--ink)' },
@@ -95,27 +98,24 @@ const TIER_COLORS = {
   'Influencer':       { bg: 'rgba(212,168,67,0.15)', color: '#b45309'    },
 };
 
-const TIER_DEFS = {
-  'UGC Beginner':     '0–5K followers — New creators building their portfolio',
-  'UGC Pro':          '5K–10K followers — Content creators, not influencer reach',
-  'Micro Influencer': '10K–50K followers — Influencer-style content, engaged audience',
-  'Influencer':       '50K+ followers — Broad reach, established audience',
-};
+function tierDef(tier) { return i18nInstance.t(`hostProposals:tierDefs.${tier}`); }
 
 const STAGE_TABS = [
-  { key: 'all',          label: 'All'          },
-  { key: 'pending',      label: 'Pending'      },
-  { key: 'under_review', label: 'Under Review' },
-  { key: 'approved',     label: 'Approved'     },
-  { key: 'completed',    label: 'Completed'    },
-  { key: 'declined',     label: 'Declined'     },
+  { key: 'all' },
+  { key: 'pending' },
+  { key: 'under_review' },
+  { key: 'approved' },
+  { key: 'completed' },
+  { key: 'declined' },
 ];
+function stageLabel(key) { return key === 'all' ? i18nInstance.t('hostProposals:stageAll') : statusLabel(key); }
 
 const TYPE_TABS = [
-  { key: 'all',         label: 'All Types'    },
-  { key: 'application', label: 'Applications' },
-  { key: 'pitch',       label: 'Pitches'      },
+  { key: 'all' },
+  { key: 'application' },
+  { key: 'pitch' },
 ];
+function typeLabel(key) { return i18nInstance.t(`hostProposals:typeLabels.${key}`); }
 
 const PITCH_BORDER_CLOSED   = '1.5px solid rgba(209,235,219,0.9)';
 const PITCH_BORDER_EXPANDED = '1.5px solid rgba(149,157,144,0.55)';
@@ -130,13 +130,15 @@ function fmtFollowers(n) {
 
 // ─── Contract fields ──────────────────────────────────────────────────────────
 const CONTRACT_FIELDS = [
-  { key: 'nights',       label: 'Nights',       placeholder: 'e.g. 3' },
-  { key: 'compensation', label: 'Compensation', placeholder: 'e.g. $500 or $300 + stay' },
-  { key: 'deliverables', label: 'Deliverables', placeholder: 'e.g. 2 Reels + 5 Photos' },
-  { key: 'turnaround',   label: 'Turnaround',   placeholder: 'e.g. 14 days' },
-  { key: 'affiliate',    label: 'Affiliate %',  placeholder: 'e.g. 5% or —' },
-  { key: 'extra_terms',  label: 'Extra Terms',  placeholder: 'Optional add-ons' },
+  { key: 'nights' },
+  { key: 'compensation' },
+  { key: 'deliverables' },
+  { key: 'turnaround' },
+  { key: 'affiliate' },
+  { key: 'extra_terms' },
 ];
+function contractFieldLabel(key) { return i18nInstance.t(`hostProposals:contractFields.${key}.label`); }
+function contractFieldPlaceholder(key) { return i18nInstance.t(`hostProposals:contractFields.${key}.placeholder`); }
 
 function getLatestFields(proposal) {
   if (proposal.contractHistory?.length > 0) {
@@ -188,22 +190,23 @@ function saveApplications(list) {
 function generateContractHtml(proposal) {
   const fields = getLatestFields(proposal);
   const { signatures, contractHistory, creator, listing } = proposal;
+  const tp = (key, opts) => i18nInstance.t(`hostProposals:${key}`, opts);
   const rows = CONTRACT_FIELDS
     .filter(f => fields[f.key])
-    .map(f => `<tr><td style="font-weight:700;width:140px;padding:10px 14px;border-bottom:1px solid #eee;">${f.label}</td><td style="padding:10px 14px;border-bottom:1px solid #eee;">${fields[f.key]}</td></tr>`)
+    .map(f => `<tr><td style="font-weight:700;width:140px;padding:10px 14px;border-bottom:1px solid #eee;">${contractFieldLabel(f.key)}</td><td style="padding:10px 14px;border-bottom:1px solid #eee;">${fields[f.key]}</td></tr>`)
     .join('');
-  return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Collabnb Contract</title>
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${tp('pdf.documentTitle')}</title>
 <style>body{font-family:Georgia,serif;max-width:680px;margin:48px auto;color:#192524;line-height:1.6}h1{font-size:22px;margin:0 0 4px}p.meta{color:#666;font-size:13px;margin:0 0 32px}table{width:100%;border-collapse:collapse;margin:24px 0}h2{font-size:14px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#666;margin:28px 0 8px}.sig-row{display:flex;gap:40px;margin-top:40px}.sig-box{flex:1;border-top:1px solid #ccc;padding-top:12px}.sig-name{font-size:20px;font-style:italic;margin-bottom:4px}.sig-label{font-size:11px;color:#666}.locked{display:inline-block;padding:3px 10px;border-radius:9999px;background:rgba(74,155,127,0.15);color:#2d7d5e;font-size:12px;font-weight:700;margin-bottom:24px}</style></head>
 <body>
-<h1>Collabnb Collaboration Contract</h1>
+<h1>${tp('pdf.heading')}</h1>
 <p class="meta">${listing} · ${creator.name} (@${creator.username}) · ${new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'})}</p>
-${proposal.locked ? '<span class="locked">CONTRACT LOCKED</span>' : ''}
-<h2>Terms</h2><table>${rows}</table>
-${contractHistory.length > 0 ? `<p style="font-size:12px;color:#666;margin-top:8px;">Negotiated over ${contractHistory.length} round${contractHistory.length!==1?'s':''}.</p>` : ''}
-<h2>Signatures</h2>
+${proposal.locked ? `<span class="locked">${tp('pdf.locked')}</span>` : ''}
+<h2>${tp('pdf.terms')}</h2><table>${rows}</table>
+${contractHistory.length > 0 ? `<p style="font-size:12px;color:#666;margin-top:8px;">${tp('pdf.negotiatedRounds', { count: contractHistory.length })}</p>` : ''}
+<h2>${tp('pdf.signatures')}</h2>
 <div class="sig-row">
-  <div class="sig-box"><div class="sig-name">${signatures.hostSignature || '___________________________'}</div><div class="sig-label">Host · ${signatures.hostSignedAt ? new Date(signatures.hostSignedAt).toLocaleDateString() : 'Not yet signed'}</div></div>
-  <div class="sig-box"><div class="sig-name">${signatures.creatorSignature || '___________________________'}</div><div class="sig-label">${creator.name} (Creator) · ${signatures.creatorSignedAt ? new Date(signatures.creatorSignedAt).toLocaleDateString() : 'Not yet signed'}</div></div>
+  <div class="sig-box"><div class="sig-name">${signatures.hostSignature || '___________________________'}</div><div class="sig-label">${tp('pdf.host')} · ${signatures.hostSignedAt ? new Date(signatures.hostSignedAt).toLocaleDateString() : tp('pdf.notYetSigned')}</div></div>
+  <div class="sig-box"><div class="sig-name">${signatures.creatorSignature || '___________________________'}</div><div class="sig-label">${creator.name} ${tp('pdf.creatorSuffix')} · ${signatures.creatorSignedAt ? new Date(signatures.creatorSignedAt).toLocaleDateString() : tp('pdf.notYetSigned')}</div></div>
 </div>
 </body></html>`;
 }
@@ -219,18 +222,19 @@ function openContractPdf(proposal) {
 
 // ─── Contract history timeline ────────────────────────────────────────────────
 function ContractHistoryTimeline({ history }) {
+  const { t } = useTranslation('hostProposals');
   if (!history?.length) return null;
   return (
     <div style={{ padding: '10px 24px', borderBottom: '1px solid rgba(25,37,36,0.07)', background: 'rgba(239,236,233,0.35)' }}>
-      <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--sage)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 7 }}>Negotiation history</div>
+      <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--sage)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 7 }}>{t('history.heading')}</div>
       <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
-        <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--sage)', padding: '3px 8px', borderRadius: 9999, background: 'rgba(25,37,36,0.06)' }}>Creator Pitch</span>
+        <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--sage)', padding: '3px 8px', borderRadius: 9999, background: 'rgba(25,37,36,0.06)' }}>{t('history.creatorPitch')}</span>
         {history.map((entry, i) => (
           <span key={i} style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <span style={{ color: 'var(--stone)', fontSize: 10, margin: '0 3px' }}>→</span>
             <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 8px', borderRadius: 9999, background: entry.modifiedBy === 'host' ? 'rgba(123,104,200,0.1)' : 'rgba(74,155,127,0.1)', color: entry.modifiedBy === 'host' ? '#5b4db8' : '#2d7d5e' }}>
-              {entry.modifiedBy === 'host' ? 'Host' : 'Creator'} v{entry.version}
-              {i === history.length - 1 && <span style={{ marginLeft: 4, opacity: 0.6 }}>← latest</span>}
+              {entry.modifiedBy === 'host' ? t('history.host') : t('history.creator')} {t('history.version', { version: entry.version })}
+              {i === history.length - 1 && <span style={{ marginLeft: 4, opacity: 0.6 }}>{t('history.latest')}</span>}
             </span>
           </span>
         ))}
@@ -246,10 +250,11 @@ function ContractHistoryTimeline({ history }) {
 
 // ─── Counter pitch modal ──────────────────────────────────────────────────────
 function CounterPitchModal({ proposal, fromParty, onSend, onClose }) {
+  const { t } = useTranslation('hostProposals');
   const [fields, setFields] = useState(() => getLatestFields(proposal));
   const [note, setNote] = useState('');
   const version = (proposal.contractHistory?.length ?? 0) + 1;
-  const partyLabel = fromParty === 'host' ? 'Host' : proposal.creator.name;
+  const partyLabel = fromParty === 'host' ? t('history.host') : proposal.creator.name;
 
   // ── Live points/pricing — the same math the listing pricing tool uses ──
   const tierId = normalizeTierId(proposal.creator.tier) || 'ugc_pro';
@@ -293,29 +298,29 @@ function CounterPitchModal({ proposal, fromParty, onSend, onClose }) {
       <div style={{ width: '100%', maxWidth: 560, background: '#fff', borderRadius: '1.5rem', padding: '1.75rem', maxHeight: '88dvh', overflowY: 'auto', boxShadow: '0 32px 64px -16px rgba(25,37,36,0.3)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
           <div>
-            <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.1rem', color: 'var(--ink)', margin: 0 }}>Counter Pitch</p>
+            <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.1rem', color: 'var(--ink)', margin: 0 }}>{t('counterModal.heading')}</p>
             <p style={{ fontSize: '0.75rem', color: 'var(--sage)', margin: '0.2rem 0 0' }}>
-              {proposal.creator.name} · {proposal.listing} · Version {version}
+              {t('counterModal.versionLine', { creatorName: proposal.creator.name, listing: proposal.listing, version })}
             </p>
           </div>
           <button onClick={onClose} style={{ width: 30, height: 30, borderRadius: '50%', background: 'rgba(25,37,36,0.07)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--slate)', fontSize: '0.9rem' }}>✕</button>
         </div>
         <p style={{ fontSize: '0.78rem', color: 'var(--sage)', marginBottom: '1.25rem' }}>
-          Editing as <strong style={{ color: 'var(--slate)' }}>{partyLabel}</strong> — adjust any terms, then send.
+          {t('counterModal.editingAs')}<strong style={{ color: 'var(--slate)' }}>{partyLabel}</strong>{t('counterModal.adjustTerms')}
         </p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem', marginBottom: '1rem' }}>
-          {CONTRACT_FIELDS.map(({ key, label, placeholder }) => (
+          {CONTRACT_FIELDS.map(({ key }) => (
             <div key={key}>
-              <p style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--sage)', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 0.3rem' }}>{label}</p>
-              <input value={fields[key] || ''} onChange={(e) => setFields(f => ({ ...f, [key]: e.target.value }))} placeholder={placeholder}
+              <p style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--sage)', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 0.3rem' }}>{contractFieldLabel(key)}</p>
+              <input value={fields[key] || ''} onChange={(e) => setFields(f => ({ ...f, [key]: e.target.value }))} placeholder={contractFieldPlaceholder(key)}
                 style={{ width: '100%', padding: '0.625rem 0.875rem', border: '1.5px solid rgba(25,37,36,0.12)', borderRadius: '0.75rem', fontFamily: 'var(--font-body)', fontSize: '0.875rem', color: 'var(--ink)', background: '#fafafa', outline: 'none', boxSizing: 'border-box' }}
                 onFocus={(e) => { e.target.style.borderColor = 'rgba(25,37,36,0.35)'; }}
                 onBlur={(e) => { e.target.style.borderColor = 'rgba(25,37,36,0.12)'; }} />
             </div>
           ))}
           <div>
-            <p style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--sage)', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 0.3rem' }}>Note (optional)</p>
-            <textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="Explain your changes to the other party..." rows={2}
+            <p style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--sage)', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 0.3rem' }}>{t('counterModal.noteLabel')}</p>
+            <textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder={t('counterModal.notePlaceholder')} rows={2}
               style={{ width: '100%', padding: '0.625rem 0.875rem', border: '1.5px solid rgba(25,37,36,0.12)', borderRadius: '0.75rem', fontFamily: 'var(--font-body)', fontSize: '0.875rem', color: 'var(--ink)', background: '#fafafa', outline: 'none', resize: 'vertical', boxSizing: 'border-box' }}
               onFocus={(e) => { e.target.style.borderColor = 'rgba(25,37,36,0.35)'; }}
               onBlur={(e) => { e.target.style.borderColor = 'rgba(25,37,36,0.12)'; }} />
@@ -324,7 +329,7 @@ function CounterPitchModal({ proposal, fromParty, onSend, onClose }) {
           {/* ── Live pricing calculator — optional, overrides the free-text compensation/deliverables fields when used ── */}
           <div style={{ borderRadius: '0.875rem', border: '1px solid rgba(25,37,36,0.1)', padding: '0.875rem', background: 'rgba(209,235,219,0.25)' }}>
             <p style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--sage)', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 0.5rem' }}>
-              Pricing calculator ({proposal.creator.tier})
+              {t('counterModal.pricingCalculator', { tier: proposal.creator.tier })}
             </p>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '0.4rem', marginBottom: '0.625rem' }}>
               {DELIVERABLE_TYPES.map((type) => {
@@ -342,28 +347,28 @@ function CounterPitchModal({ proposal, fromParty, onSend, onClose }) {
               })}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: points > 0 ? 8 : 0 }}>
-              <span style={{ fontSize: '0.75rem', color: 'var(--slate)' }}>Cash</span>
+              <span style={{ fontSize: '0.75rem', color: 'var(--slate)' }}>{t('counterModal.cash')}</span>
               <input type="number" min={0} value={cashAmount || ''} onChange={(e) => setCashAmount(Number(e.target.value) || 0)}
                 style={{ width: 90, padding: '0.35rem 0.5rem', borderRadius: '0.5rem', border: '1.5px solid rgba(25,37,36,0.15)', fontSize: '0.8rem', outline: 'none' }} />
-              {points > 0 && <span style={{ fontSize: '0.72rem', color: 'var(--sage)' }}>{points} pts · midpoint ${Math.round(midpoint)} · range ${Math.round(range.low)}–${Math.round(range.high)}</span>}
+              {points > 0 && <span style={{ fontSize: '0.72rem', color: 'var(--sage)' }}>{t('counterModal.pointsSummary', { points, midpoint: Math.round(midpoint), low: Math.round(range.low), high: Math.round(range.high) })}</span>}
             </div>
             {zone === 'red' && (
               <p style={{ fontSize: '0.72rem', fontWeight: 700, color: '#8a4a30', margin: 0 }}>
-                Below the minimum (${Math.round(hardFloor)}) for this workload — raise the cash amount or reduce deliverables to send.
+                {t('counterModal.belowFloor', { floor: Math.round(hardFloor) })}
               </p>
             )}
             {zone === 'amber' && (
               <p style={{ fontSize: '0.72rem', fontWeight: 600, color: '#7a5a10', margin: 0 }}>
-                Below the recommended range, but above the minimum — can still be sent.
+                {t('counterModal.belowRecommended')}
               </p>
             )}
           </div>
         </div>
         <div style={{ display: 'flex', gap: '0.625rem' }}>
-          <button onClick={onClose} style={{ flex: 1, padding: '0.75rem', borderRadius: 9999, border: '1.5px solid rgba(25,37,36,0.12)', background: 'transparent', fontFamily: 'var(--font-body)', fontSize: '0.875rem', fontWeight: 600, color: 'var(--slate)', cursor: 'pointer' }}>Cancel</button>
+          <button onClick={onClose} style={{ flex: 1, padding: '0.75rem', borderRadius: 9999, border: '1.5px solid rgba(25,37,36,0.12)', background: 'transparent', fontFamily: 'var(--font-body)', fontSize: '0.875rem', fontWeight: 600, color: 'var(--slate)', cursor: 'pointer' }}>{t('counterModal.cancel')}</button>
           <button onClick={handleSend} disabled={belowFloor}
             style={{ flex: 2, padding: '0.75rem', borderRadius: 9999, border: 'none', background: belowFloor ? 'rgba(25,37,36,0.25)' : 'var(--ink)', fontFamily: 'var(--font-body)', fontSize: '0.875rem', fontWeight: 700, color: '#fff', cursor: belowFloor ? 'not-allowed' : 'pointer' }}>
-            Send Counter Pitch
+            {t('counterModal.send')}
           </button>
         </div>
       </div>
@@ -373,8 +378,9 @@ function CounterPitchModal({ proposal, fromParty, onSend, onClose }) {
 
 // ─── Signature modal ──────────────────────────────────────────────────────────
 function SignatureModal({ proposal, party, onSign, onClose }) {
+  const { t } = useTranslation('hostProposals');
   const [name, setName] = useState('');
-  const partyLabel = party === 'host' ? 'Host' : `${proposal.creator.name} (Creator)`;
+  const partyLabel = party === 'host' ? t('history.host') : `${proposal.creator.name} ${t('pdf.creatorSuffix')}`;
   const latestFields = getLatestFields(proposal);
   const roundCount = proposal.contractHistory?.length ?? 0;
   const ready = name.trim().length >= 2;
@@ -385,38 +391,38 @@ function SignatureModal({ proposal, party, onSign, onClose }) {
       <div style={{ width: '100%', maxWidth: 520, background: '#fff', borderRadius: '1.5rem', padding: '1.75rem', maxHeight: '88dvh', overflowY: 'auto', boxShadow: '0 32px 64px -16px rgba(25,37,36,0.3)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
           <div>
-            <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.1rem', color: 'var(--ink)', margin: 0 }}>Sign & Accept</p>
-            <p style={{ fontSize: '0.75rem', color: 'var(--sage)', margin: '0.2rem 0 0' }}>Signing as {partyLabel}</p>
+            <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.1rem', color: 'var(--ink)', margin: 0 }}>{t('signModal.heading')}</p>
+            <p style={{ fontSize: '0.75rem', color: 'var(--sage)', margin: '0.2rem 0 0' }}>{t('signModal.signingAs', { partyLabel })}</p>
           </div>
           <button onClick={onClose} style={{ width: 30, height: 30, borderRadius: '50%', background: 'rgba(25,37,36,0.07)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--slate)', fontSize: '0.9rem' }}>✕</button>
         </div>
         <div style={{ background: 'rgba(239,236,233,0.5)', borderRadius: '1rem', padding: '1rem', marginBottom: '1.25rem' }}>
-          <p style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--sage)', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 0.75rem' }}>Contract Terms</p>
+          <p style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--sage)', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 0.75rem' }}>{t('signModal.contractTerms')}</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-            {CONTRACT_FIELDS.filter(f => latestFields[f.key]).map(({ key, label }) => (
+            {CONTRACT_FIELDS.filter(f => latestFields[f.key]).map(({ key }) => (
               <div key={key} style={{ display: 'flex', gap: 8, fontSize: '0.82rem' }}>
-                <span style={{ color: 'var(--sage)', minWidth: 110 }}>{label}</span>
+                <span style={{ color: 'var(--sage)', minWidth: 110 }}>{contractFieldLabel(key)}</span>
                 <span style={{ color: 'var(--ink)', fontWeight: 600 }}>{latestFields[key]}</span>
               </div>
             ))}
           </div>
-          {roundCount > 0 && <p style={{ fontSize: '0.7rem', color: 'var(--sage)', margin: '0.75rem 0 0' }}>After {roundCount} round{roundCount !== 1 ? 's' : ''} of negotiation</p>}
+          {roundCount > 0 && <p style={{ fontSize: '0.7rem', color: 'var(--sage)', margin: '0.75rem 0 0' }}>{t('signModal.afterRounds', { count: roundCount })}</p>}
         </div>
         <p style={{ fontSize: '0.8rem', color: 'var(--slate)', marginBottom: '0.875rem', lineHeight: 1.55 }}>
-          By signing, you agree to the terms above. The contract locks once both parties sign the same version.
+          {t('signModal.agreement')}
         </p>
         <div style={{ marginBottom: '1.25rem' }}>
-          <p style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--sage)', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 0.35rem' }}>Your full name</p>
-          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Type your full name as signature"
+          <p style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--sage)', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 0.35rem' }}>{t('signModal.yourName')}</p>
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder={t('signModal.namePlaceholder')}
             style={{ width: '100%', padding: '0.75rem 1rem', border: '1.5px solid rgba(25,37,36,0.12)', borderRadius: '0.75rem', fontFamily: 'Georgia, serif', fontSize: '1rem', fontStyle: 'italic', color: 'var(--ink)', background: '#fafafa', outline: 'none', boxSizing: 'border-box' }}
             onFocus={(e) => { e.target.style.borderColor = 'rgba(25,37,36,0.35)'; }}
             onBlur={(e) => { e.target.style.borderColor = 'rgba(25,37,36,0.12)'; }} />
         </div>
         <div style={{ display: 'flex', gap: '0.625rem' }}>
-          <button onClick={onClose} style={{ flex: 1, padding: '0.75rem', borderRadius: 9999, border: '1.5px solid rgba(25,37,36,0.12)', background: 'transparent', fontFamily: 'var(--font-body)', fontSize: '0.875rem', fontWeight: 600, color: 'var(--slate)', cursor: 'pointer' }}>Cancel</button>
+          <button onClick={onClose} style={{ flex: 1, padding: '0.75rem', borderRadius: 9999, border: '1.5px solid rgba(25,37,36,0.12)', background: 'transparent', fontFamily: 'var(--font-body)', fontSize: '0.875rem', fontWeight: 600, color: 'var(--slate)', cursor: 'pointer' }}>{t('signModal.cancel')}</button>
           <button onClick={() => { if (ready) onSign(name.trim()); }} disabled={!ready}
             style={{ flex: 2, padding: '0.75rem', borderRadius: 9999, border: 'none', background: ready ? 'rgba(74,155,127,0.9)' : 'rgba(25,37,36,0.1)', fontFamily: 'var(--font-body)', fontSize: '0.875rem', fontWeight: 700, color: ready ? '#fff' : 'var(--sage)', cursor: ready ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-            <Pen size={13} /> Sign and Accept
+            <Pen size={13} /> {t('signModal.sign')}
           </button>
         </div>
       </div>
@@ -456,6 +462,7 @@ function DroppableTab({ stageKey, label, count, active, isFlashing, dragging, cu
 
 // ─── Inline host → creator message panel ─────────────────────────────────────
 function HostMessagePanel({ threadKey, creatorName }) {
+  const { t } = useTranslation('hostProposals');
   const { profile } = useAuth();
   const convexMessages = useQuery(api.threadMessages.getByThread, { threadKey });
   const sendMutation = useMutation(api.threadMessages.sendMessage);
@@ -491,7 +498,7 @@ function HostMessagePanel({ threadKey, creatorName }) {
   return (
     <div style={{ padding: '16px 24px', borderTop: '1px solid rgba(25,37,36,0.07)', background: 'rgba(239,236,233,0.2)' }}>
       <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--sage)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 10 }}>
-        Messages with {creatorName}
+        {t('messagePanel.heading', { creatorName })}
       </div>
 
       {/* Message list */}
@@ -499,7 +506,7 @@ function HostMessagePanel({ threadKey, creatorName }) {
         {convexMessages === undefined ? (
           <SkeletonCard variant="message" />
         ) : convexMessages.length === 0 ? (
-          <p style={{ fontSize: 12, color: 'var(--sage)', margin: 0 }}>No messages yet — start the conversation.</p>
+          <p style={{ fontSize: 12, color: 'var(--sage)', margin: 0 }}>{t('messagePanel.empty')}</p>
         ) : (
           convexMessages.map((msg) => {
             const isMe = msg.sender_role === 'host' || (hostId && msg.sender_id === hostId);
@@ -530,7 +537,7 @@ function HostMessagePanel({ threadKey, creatorName }) {
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
-          placeholder={`Reply to ${creatorName}…`}
+          placeholder={t('messagePanel.replyPlaceholder', { creatorName })}
           style={{ flex: 1, padding: '9px 12px', border: '1.5px solid rgba(25,37,36,0.12)', borderRadius: '0.75rem', fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--ink)', background: '#fff', outline: 'none', resize: 'none', minHeight: '2.25rem', maxHeight: 100 }}
           onFocus={(e) => { e.target.style.borderColor = 'rgba(25,37,36,0.35)'; }}
           onBlur={(e) => { e.target.style.borderColor = 'rgba(25,37,36,0.12)'; }}
@@ -556,8 +563,9 @@ function HostMessagePanel({ threadKey, creatorName }) {
 
 // ─── Proposal drawer ──────────────────────────────────────────────────────────
 function ProposalDrawer({ proposal, onStatusChange, onCounter, onSign, onCreatorClick }) {
+  const { t } = useTranslation('hostProposals');
   const navigate = useNavigate();
-  const t = TIER_COLORS[proposal.creator.tier] || TIER_COLORS['UGC Beginner'];
+  const tierColor = TIER_COLORS[proposal.creator.tier] || TIER_COLORS['UGC Beginner'];
   const isPitch = proposal.type === 'pitch';
   const { signatures = emptySignatures(), contractHistory = [], locked } = proposal;
 
@@ -575,17 +583,17 @@ function ProposalDrawer({ proposal, onStatusChange, onCounter, onSign, onCreator
             src={proposal.creator.avatar} name={proposal.creator.name}
             size={60}
             onClick={() => onCreatorClick(proposal.creator)}
-            title="View profile"
+            title={t('drawer.viewProfile')}
             style={{ border: '2px solid rgba(25,37,36,0.08)', cursor: 'pointer' }}
           />
           <div style={{ flex: 1 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
               <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 15, color: 'var(--ink)' }}>{proposal.creator.name}</span>
               {proposal.creator.verified && (
-                <span style={{ display: 'flex', alignItems: 'center', gap: 3, padding: '2px 7px', borderRadius: 9999, background: 'rgba(74,155,127,0.12)', border: '1px solid rgba(74,155,127,0.3)', fontSize: 10, fontWeight: 700, color: '#2d7d5e' }}><Check size={9} />Verified</span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 3, padding: '2px 7px', borderRadius: 9999, background: 'rgba(74,155,127,0.12)', border: '1px solid rgba(74,155,127,0.3)', fontSize: 10, fontWeight: 700, color: '#2d7d5e' }}><Check size={9} />{t('drawer.verified')}</span>
               )}
-              <span style={{ padding: '2px 8px', borderRadius: 9999, fontSize: 10, fontWeight: 700, background: t.bg, color: t.color }}>{proposal.creator.tier}</span>
-              <span title={TIER_DEFS[proposal.creator.tier]} style={{ fontSize: 9, color: 'var(--sage)', cursor: 'help', lineHeight: 1 }}>ⓘ</span>
+              <span style={{ padding: '2px 8px', borderRadius: 9999, fontSize: 10, fontWeight: 700, background: tierColor.bg, color: tierColor.color }}>{proposal.creator.tier}</span>
+              <span title={tierDef(proposal.creator.tier)} style={{ fontSize: 9, color: 'var(--sage)', cursor: 'help', lineHeight: 1 }}>ⓘ</span>
             </div>
             <div style={{ fontSize: 12, color: 'var(--sage)', marginTop: 3 }}>@{proposal.creator.username} · {proposal.creator.location}</div>
             <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
@@ -596,7 +604,7 @@ function ProposalDrawer({ proposal, onStatusChange, onCounter, onSign, onCreator
           </div>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 1, marginTop: 16, background: 'rgba(25,37,36,0.06)', borderRadius: '0.75rem', overflow: 'hidden' }}>
-          {[{ label: 'Followers', value: fmtFollowers(proposal.creator.followers) }, { label: 'Engagement', value: `${proposal.creator.engagement}%` }, { label: 'Collabs', value: proposal.creator.collab_count }].map(({ label, value }) => (
+          {[{ label: t('drawer.followers'), value: fmtFollowers(proposal.creator.followers) }, { label: t('drawer.engagement'), value: `${proposal.creator.engagement}%` }, { label: t('drawer.collabs'), value: proposal.creator.collab_count }].map(({ label, value }) => (
             <div key={label} style={{ padding: '12px 0', background: '#fff', textAlign: 'center' }}>
               <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 17, color: 'var(--ink)', lineHeight: 1 }}>{value}</div>
               <div style={{ fontSize: 11, color: 'var(--sage)', marginTop: 3 }}>{label}</div>
@@ -611,7 +619,7 @@ function ProposalDrawer({ proposal, onStatusChange, onCounter, onSign, onCreator
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
             <Sparkles size={12} color="#2d7d5e" />
             <span style={{ fontSize: 10, fontWeight: 700, color: '#2d7d5e', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
-              {contractHistory.length > 0 ? 'Original Pitch Terms' : 'Modified Terms'}
+              {contractHistory.length > 0 ? t('drawer.originalPitchTerms') : t('drawer.modifiedTerms')}
             </span>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -632,7 +640,7 @@ function ProposalDrawer({ proposal, onStatusChange, onCounter, onSign, onCreator
       {/* Message */}
       <div style={{ padding: '16px 24px', borderBottom: '1px solid rgba(25,37,36,0.07)' }}>
         <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--sage)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 8 }}>
-          {isPitch ? 'Pitch Message' : 'Application Message'}
+          {isPitch ? t('drawer.pitchMessage') : t('drawer.applicationMessage')}
         </div>
         <p style={{ fontSize: 13, color: 'var(--ink)', lineHeight: 1.65, margin: 0 }}>{proposal.message}</p>
       </div>
@@ -640,7 +648,7 @@ function ProposalDrawer({ proposal, onStatusChange, onCounter, onSign, onCreator
       {/* Portfolio */}
       <div style={{ padding: '11px 24px', borderBottom: '1px solid rgba(25,37,36,0.07)', display: 'flex', alignItems: 'center', gap: 8 }}>
         <ExternalLink size={13} color="var(--sage)" />
-        <span style={{ fontSize: 12, color: 'var(--slate)' }}>Portfolio:</span>
+        <span style={{ fontSize: 12, color: 'var(--slate)' }}>{t('drawer.portfolio')}</span>
         <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink)' }}>{proposal.creator.portfolio}</span>
       </div>
 
@@ -649,11 +657,11 @@ function ProposalDrawer({ proposal, onStatusChange, onCounter, onSign, onCreator
         <div style={{ padding: '20px 24px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, padding: '10px 16px', borderRadius: '0.875rem', background: 'rgba(74,155,127,0.1)', border: '1px solid rgba(74,155,127,0.25)' }}>
             <Lock size={14} color="#2d7d5e" />
-            <span style={{ fontSize: 13, fontWeight: 700, color: '#2d7d5e' }}>Contract Locked — both parties have signed</span>
+            <span style={{ fontSize: 13, fontWeight: 700, color: '#2d7d5e' }}>{t('drawer.contractLocked')}</span>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
             {[
-              { label: 'Host', sig: signatures.hostSignature, at: signatures.hostSignedAt },
+              { label: t('history.host'), sig: signatures.hostSignature, at: signatures.hostSignedAt },
               { label: proposal.creator.name, sig: signatures.creatorSignature, at: signatures.creatorSignedAt },
             ].map(({ label, sig, at }) => (
               <div key={label} style={{ padding: '12px 14px', borderRadius: '0.875rem', background: 'rgba(239,236,233,0.6)', border: '1px solid rgba(25,37,36,0.08)' }}>
@@ -665,7 +673,7 @@ function ProposalDrawer({ proposal, onStatusChange, onCounter, onSign, onCreator
           </div>
           <button onClick={() => openContractPdf(proposal)}
             style={{ width: '100%', padding: '10px 0', borderRadius: 9999, border: '1.5px solid rgba(25,37,36,0.15)', background: 'transparent', fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 700, color: 'var(--ink)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7 }}>
-            <Download size={13} /> Save Contract (PDF)
+            <Download size={13} /> {t('drawer.saveContractPdf')}
           </button>
         </div>
       )}
@@ -678,19 +686,19 @@ function ProposalDrawer({ proposal, onStatusChange, onCounter, onSign, onCreator
             <div style={{ padding: '10px 24px', borderBottom: '1px solid rgba(25,37,36,0.07)', display: 'flex', gap: 10, flexWrap: 'wrap' }}>
               {hostSigned && (
                 <span style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '4px 10px', borderRadius: 9999, background: 'rgba(74,155,127,0.1)', fontSize: 11, fontWeight: 700, color: '#2d7d5e' }}>
-                  <CheckCircle2 size={11} /> Host signed
+                  <CheckCircle2 size={11} /> {t('drawer.hostSigned')}
                 </span>
               )}
               {creatorSigned && (
                 <span style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '4px 10px', borderRadius: 9999, background: 'rgba(74,155,127,0.1)', fontSize: 11, fontWeight: 700, color: '#2d7d5e' }}>
-                  <CheckCircle2 size={11} /> {proposal.creator.name} signed
+                  <CheckCircle2 size={11} /> {t('drawer.creatorSigned', { name: proposal.creator.name })}
                 </span>
               )}
               {hostSigned && !creatorSigned && (
-                <span style={{ fontSize: 11, color: 'var(--sage)', alignSelf: 'center' }}>Awaiting creator signature</span>
+                <span style={{ fontSize: 11, color: 'var(--sage)', alignSelf: 'center' }}>{t('drawer.awaitingCreatorSignature')}</span>
               )}
               {!hostSigned && creatorSigned && (
-                <span style={{ fontSize: 11, color: 'var(--sage)', alignSelf: 'center' }}>Awaiting host signature</span>
+                <span style={{ fontSize: 11, color: 'var(--sage)', alignSelf: 'center' }}>{t('drawer.awaitingHostSignature')}</span>
               )}
             </div>
           )}
@@ -698,24 +706,24 @@ function ProposalDrawer({ proposal, onStatusChange, onCounter, onSign, onCreator
           {/* HOST actions */}
           <div style={{ padding: '14px 24px', borderBottom: '1px solid rgba(25,37,36,0.07)' }}>
             <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--sage)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 10 }}>
-              Host Actions {proposal.counterPending === 'creator' && <span style={{ color: '#b45309', marginLeft: 6 }}>· Counter sent — awaiting creator</span>}
+              {t('drawer.hostActions')} {proposal.counterPending === 'creator' && <span style={{ color: '#b45309', marginLeft: 6 }}>{t('drawer.counterSentAwaitingCreator')}</span>}
             </div>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               {!hostSigned ? (
                 <button onClick={() => onSign(proposal.id, 'host')}
                   style={{ flex: 1, padding: '9px 0', borderRadius: 9999, border: 'none', background: 'var(--ink)', color: '#fff', fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 700, cursor: 'pointer', minWidth: 120, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                  <Pen size={12} /> Accept As Is
+                  <Pen size={12} /> {t('drawer.acceptAsIs')}
                 </button>
               ) : (
-                <span style={{ flex: 1, padding: '9px 0', borderRadius: 9999, background: 'rgba(74,155,127,0.1)', color: '#2d7d5e', fontSize: 13, fontWeight: 700, textAlign: 'center', minWidth: 120 }}>✓ You signed</span>
+                <span style={{ flex: 1, padding: '9px 0', borderRadius: 9999, background: 'rgba(74,155,127,0.1)', color: '#2d7d5e', fontSize: 13, fontWeight: 700, textAlign: 'center', minWidth: 120 }}>{t('drawer.youSigned')}</span>
               )}
               <button onClick={() => onCounter(proposal.id, 'host')}
                 style={{ flex: 1, padding: '9px 0', borderRadius: 9999, border: '1.5px solid rgba(123,104,200,0.4)', background: 'rgba(123,104,200,0.08)', color: '#5b4db8', fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 700, cursor: 'pointer', minWidth: 100 }}>
-                Counter Pitch
+                {t('drawer.counterPitch')}
               </button>
               <button onClick={() => onStatusChange(proposal.id, 'declined')}
                 style={{ padding: '9px 16px', borderRadius: 9999, border: '1.5px solid rgba(200,104,104,0.3)', background: 'transparent', color: '#9b2d2d', fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
-                Decline
+                {t('drawer.decline')}
               </button>
             </div>
           </div>
@@ -723,25 +731,25 @@ function ProposalDrawer({ proposal, onStatusChange, onCounter, onSign, onCreator
           {/* CREATOR actions (demo) */}
           <div style={{ padding: '14px 24px', borderBottom: '1px solid rgba(25,37,36,0.07)', background: 'rgba(239,236,233,0.3)' }}>
             <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--sage)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 10 }}>
-              Creator's Response <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, color: 'var(--stone)' }}>· demo</span>
-              {proposal.counterPending === 'host' && <span style={{ color: '#2d7d5e', marginLeft: 6 }}>· Creator countered back</span>}
+              {t('drawer.creatorsResponse')} <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, color: 'var(--stone)' }}>{t('drawer.demo')}</span>
+              {proposal.counterPending === 'host' && <span style={{ color: '#2d7d5e', marginLeft: 6 }}>{t('drawer.creatorCounteredBack')}</span>}
             </div>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               {!creatorSigned ? (
                 <button onClick={() => onSign(proposal.id, 'creator')}
                   style={{ flex: 1, padding: '9px 0', borderRadius: 9999, border: 'none', background: 'rgba(74,155,127,0.12)', color: '#2d7d5e', fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 700, cursor: 'pointer', minWidth: 80, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                  <Pen size={12} /> Accept
+                  <Pen size={12} /> {t('drawer.accept')}
                 </button>
               ) : (
-                <span style={{ flex: 1, padding: '9px 0', borderRadius: 9999, background: 'rgba(74,155,127,0.1)', color: '#2d7d5e', fontSize: 13, fontWeight: 700, textAlign: 'center', minWidth: 80 }}>✓ Creator signed</span>
+                <span style={{ flex: 1, padding: '9px 0', borderRadius: 9999, background: 'rgba(74,155,127,0.1)', color: '#2d7d5e', fontSize: 13, fontWeight: 700, textAlign: 'center', minWidth: 80 }}>{t('drawer.creatorSignedChip')}</span>
               )}
               <button onClick={() => onCounter(proposal.id, 'creator')}
                 style={{ flex: 1, padding: '9px 0', borderRadius: 9999, border: '1.5px solid rgba(74,155,127,0.3)', background: 'rgba(74,155,127,0.07)', color: '#2d7d5e', fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 700, cursor: 'pointer', minWidth: 100 }}>
-                Counter Back
+                {t('drawer.counterBack')}
               </button>
               <button onClick={() => onStatusChange(proposal.id, 'declined')}
                 style={{ padding: '9px 16px', borderRadius: 9999, border: '1.5px solid rgba(200,104,104,0.3)', background: 'transparent', color: '#9b2d2d', fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
-                Decline
+                {t('drawer.decline')}
               </button>
             </div>
           </div>
@@ -755,11 +763,11 @@ function ProposalDrawer({ proposal, onStatusChange, onCounter, onSign, onCreator
             <>
               <button onClick={() => onStatusChange(proposal.id, 'under_review')}
                 style={{ flex: 1, padding: '10px 0', borderRadius: 9999, border: 'none', background: 'rgba(123,104,200,0.12)', color: '#5b4db8', fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', minWidth: 120 }}>
-                Move to Review
+                {t('drawer.moveToReview')}
               </button>
               <button onClick={() => onStatusChange(proposal.id, 'declined')}
                 style={{ padding: '10px 20px', borderRadius: 9999, border: '1.5px solid rgba(200,104,104,0.3)', background: 'transparent', color: '#9b2d2d', fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
-                Decline
+                {t('drawer.decline')}
               </button>
             </>
           )}
@@ -767,24 +775,24 @@ function ProposalDrawer({ proposal, onStatusChange, onCounter, onSign, onCreator
             <>
               <button onClick={() => onStatusChange(proposal.id, 'approved')}
                 style={{ flex: 1, padding: '10px 0', borderRadius: 9999, border: 'none', background: 'var(--ink)', color: '#fff', fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 700, cursor: 'pointer', minWidth: 100 }}>
-                Approve
+                {t('drawer.approve')}
               </button>
               <button onClick={() => onStatusChange(proposal.id, 'declined')}
                 style={{ padding: '10px 20px', borderRadius: 9999, border: '1.5px solid rgba(25,37,36,0.15)', background: 'transparent', color: 'var(--slate)', fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
-                Decline
+                {t('drawer.decline')}
               </button>
             </>
           )}
           {proposal.status === 'approved' && (
             <button onClick={() => onStatusChange(proposal.id, 'completed')}
               style={{ flex: 1, padding: '10px 0', borderRadius: 9999, border: 'none', background: 'rgba(74,155,127,0.12)', color: '#2d7d5e', fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
-              Mark Completed
+              {t('drawer.markCompleted')}
             </button>
           )}
           {!proposal.thread_key && (
             <button onClick={() => navigate('/inbox')}
               style={{ padding: '10px 18px', borderRadius: 9999, border: '1.5px solid rgba(25,37,36,0.12)', background: 'transparent', color: 'var(--ink)', fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
-              <MessageSquare size={13} /> Message
+              <MessageSquare size={13} /> {t('drawer.message')}
             </button>
           )}
         </div>
@@ -795,7 +803,7 @@ function ProposalDrawer({ proposal, onStatusChange, onCounter, onSign, onCreator
         <div style={{ padding: '0 24px 14px' }}>
           <button onClick={() => navigate('/inbox')}
             style={{ padding: '9px 18px', borderRadius: 9999, border: '1.5px solid rgba(25,37,36,0.12)', background: 'transparent', color: 'var(--ink)', fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
-            <MessageSquare size={13} /> Message Creator
+            <MessageSquare size={13} /> {t('drawer.messageCreator')}
           </button>
         </div>
       )}
@@ -810,8 +818,9 @@ function ProposalDrawer({ proposal, onStatusChange, onCounter, onSign, onCreator
 
 // ─── Proposal card ────────────────────────────────────────────────────────────
 function ProposalCard({ proposal, expanded, onToggle, onStatusChange, onCounter, onSign, onCreatorClick, dragHandleListeners, dragHandleAttributes }) {
+  const { t: tr } = useTranslation('hostProposals');
   const s = STATUS_CFG[proposal.status] || STATUS_CFG.pending;
-  const t = TIER_COLORS[proposal.creator.tier] || TIER_COLORS['UGC Beginner'];
+  const tierColor = TIER_COLORS[proposal.creator.tier] || TIER_COLORS['UGC Beginner'];
   const isPitch = proposal.type === 'pitch';
   const isLocked = proposal.locked;
 
@@ -828,14 +837,14 @@ function ProposalCard({ proposal, expanded, onToggle, onStatusChange, onCounter,
         <div {...dragHandleListeners} {...dragHandleAttributes} onClick={(e) => e.stopPropagation()}
           style={{ flexShrink: 0, color: 'var(--stone)', cursor: 'grab', padding: '4px 2px', borderRadius: '0.375rem', touchAction: 'none', userSelect: 'none', transition: 'color 150ms' }}
           onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--slate)'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--stone)'; }} title="Drag to move stage">
+          onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--stone)'; }} title={tr('card.dragToMoveStage')}>
           <GripVertical size={15} />
         </div>
         <CreatorAvatar
           src={proposal.creator.avatar} name={proposal.creator.name}
           size={44}
           onClick={e => { e.stopPropagation(); onCreatorClick(proposal.creator); }}
-          title="View profile"
+          title={tr('card.viewProfile')}
           style={{ border: '1.5px solid rgba(25,37,36,0.07)', cursor: 'pointer' }}
         />
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -846,22 +855,22 @@ function ProposalCard({ proposal, expanded, onToggle, onStatusChange, onCounter,
               onMouseEnter={e => e.currentTarget.style.textDecoration = 'underline'}
               onMouseLeave={e => e.currentTarget.style.textDecoration = 'none'}
             >{proposal.creator.name}</span>
-            <span style={{ padding: '2px 8px', borderRadius: 9999, fontSize: 10, fontWeight: 700, background: t.bg, color: t.color, flexShrink: 0 }}>{proposal.creator.tier}</span>
-            <span title={TIER_DEFS[proposal.creator.tier]} style={{ fontSize: 9, color: 'var(--sage)', cursor: 'help', lineHeight: 1 }}>ⓘ</span>
+            <span style={{ padding: '2px 8px', borderRadius: 9999, fontSize: 10, fontWeight: 700, background: tierColor.bg, color: tierColor.color, flexShrink: 0 }}>{proposal.creator.tier}</span>
+            <span title={tierDef(proposal.creator.tier)} style={{ fontSize: 9, color: 'var(--sage)', cursor: 'help', lineHeight: 1 }}>ⓘ</span>
             {isPitch ? (
               <span style={{ display: 'flex', alignItems: 'center', gap: 3, padding: '2px 7px', borderRadius: 9999, fontSize: 9, fontWeight: 700, background: 'rgba(209,235,219,0.7)', border: '1px solid rgba(149,157,144,0.35)', color: '#2d7d5e', flexShrink: 0 }}>
-                <Sparkles size={8} />Pitch
+                <Sparkles size={8} />{tr('card.pitch')}
               </span>
             ) : (
-              <span style={{ padding: '2px 7px', borderRadius: 9999, fontSize: 9, fontWeight: 700, background: 'rgba(25,37,36,0.06)', color: 'var(--sage)', flexShrink: 0 }}>Application</span>
+              <span style={{ padding: '2px 7px', borderRadius: 9999, fontSize: 9, fontWeight: 700, background: 'rgba(25,37,36,0.06)', color: 'var(--sage)', flexShrink: 0 }}>{tr('card.application')}</span>
             )}
-            {isLocked && <span style={{ display: 'flex', alignItems: 'center', gap: 3, padding: '2px 7px', borderRadius: 9999, fontSize: 9, fontWeight: 700, background: 'rgba(74,155,127,0.12)', color: '#2d7d5e', flexShrink: 0 }}><Lock size={8} />Locked</span>}
+            {isLocked && <span style={{ display: 'flex', alignItems: 'center', gap: 3, padding: '2px 7px', borderRadius: 9999, fontSize: 9, fontWeight: 700, background: 'rgba(74,155,127,0.12)', color: '#2d7d5e', flexShrink: 0 }}><Lock size={8} />{tr('card.locked')}</span>}
           </div>
-          <div style={{ fontSize: 12, color: 'var(--sage)', marginTop: 2 }}>{proposal.listing} · {fmtFollowers(proposal.creator.followers)} followers · {proposal.creator.engagement}% ER</div>
+          <div style={{ fontSize: 12, color: 'var(--sage)', marginTop: 2 }}>{tr('card.listingStats', { listing: proposal.listing, followers: fmtFollowers(proposal.creator.followers), engagement: proposal.creator.engagement })}</div>
           <div style={{ fontSize: 12, color: 'var(--slate)', marginTop: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{proposal.message.slice(0, 90)}…</div>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
-          <span style={{ padding: '3px 9px', borderRadius: 9999, fontSize: 10, fontWeight: 700, background: s.bg, border: `1px solid ${s.border}`, color: s.color, whiteSpace: 'nowrap' }}>{s.label}</span>
+          <span style={{ padding: '3px 9px', borderRadius: 9999, fontSize: 10, fontWeight: 700, background: s.bg, border: `1px solid ${s.border}`, color: s.color, whiteSpace: 'nowrap' }}>{statusLabel(proposal.status)}</span>
           <span style={{ fontSize: 11, color: 'var(--sage)' }}>{proposal.applied}</span>
           {expanded ? <ChevronUp size={14} color="var(--sage)" /> : <ChevronDown size={14} color="var(--sage)" />}
         </div>
@@ -920,6 +929,7 @@ function normalizePitch(p) {
 }
 
 export default function HostProposals() {
+  const { t } = useTranslation('hostProposals');
   const location = useLocation();
   const { profile } = useAuth();
   const hostId = profile?._id || profile?.id;
@@ -1168,8 +1178,8 @@ export default function HostProposals() {
           {/* Header */}
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem', marginBottom: '1.75rem', flexWrap: 'wrap' }}>
             <div>
-              <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 'clamp(1.6rem,4vw,2rem)', color: 'var(--ink)', margin: 0, lineHeight: 1.1 }}>Proposals</h1>
-              <p style={{ fontSize: '0.82rem', color: 'var(--sage)', marginTop: '0.25rem' }}>{visible.length} total · {pendingCount} pending your review</p>
+              <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 'clamp(1.6rem,4vw,2rem)', color: 'var(--ink)', margin: 0, lineHeight: 1.1 }}>{t('header.heading')}</h1>
+              <p style={{ fontSize: '0.82rem', color: 'var(--sage)', marginTop: '0.25rem' }}>{t('header.subtitle', { total: visible.length, pending: pendingCount })}</p>
             </div>
             <div style={{ position: 'relative' }}>
               <button onClick={() => setDropOpen(!dropOpen)}
@@ -1194,22 +1204,22 @@ export default function HostProposals() {
 
           {/* Stage tabs */}
           <div style={{ display: 'flex', gap: 6, marginBottom: '0.75rem', flexWrap: 'wrap', padding: dragging ? '0.5rem 0.625rem' : '0', background: dragging ? 'rgba(255,255,255,0.55)' : 'transparent', backdropFilter: dragging ? 'blur(16px) saturate(140%)' : undefined, WebkitBackdropFilter: dragging ? 'blur(16px) saturate(140%)' : undefined, border: `1.5px solid ${dragging ? 'rgba(255,255,255,0.75)' : 'transparent'}`, borderRadius: '1.25rem', boxShadow: dragging ? '0 4px 20px rgba(25,37,36,0.07)' : 'none', transition: 'all 250ms cubic-bezier(0.32,0.72,0,1)' }}>
-            {STAGE_TABS.map((t) => (
-              <DroppableTab key={t.key} stageKey={t.key} label={t.label} count={stageCounts[t.key]} active={tab === t.key} isFlashing={flashStage === t.key} dragging={dragging} currentDragStatus={activeProposal?.status} onClick={() => resetTypeOnTabChange(t.key)} />
+            {STAGE_TABS.map((st) => (
+              <DroppableTab key={st.key} stageKey={st.key} label={stageLabel(st.key)} count={stageCounts[st.key]} active={tab === st.key} isFlashing={flashStage === st.key} dragging={dragging} currentDragStatus={activeProposal?.status} onClick={() => resetTypeOnTabChange(st.key)} />
             ))}
           </div>
 
           {/* Type filter */}
           <div style={{ display: 'flex', gap: 6, marginBottom: '1.5rem', alignItems: 'center' }}>
-            {TYPE_TABS.map((t) => {
-              const active = typeFilter === t.key;
-              const count  = typeCounts[t.key];
-              const isPitchTab = t.key === 'pitch';
+            {TYPE_TABS.map((tt) => {
+              const active = typeFilter === tt.key;
+              const count  = typeCounts[tt.key];
+              const isPitchTab = tt.key === 'pitch';
               return (
-                <button key={t.key} onClick={() => { setTypeFilter(t.key); setExpanded(null); }}
+                <button key={tt.key} onClick={() => { setTypeFilter(tt.key); setExpanded(null); }}
                   style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '0.3rem 0.75rem', borderRadius: 9999, fontSize: '0.75rem', fontWeight: 600, background: active ? (isPitchTab ? 'rgba(209,235,219,0.7)' : 'rgba(25,37,36,0.08)') : 'transparent', color: active ? (isPitchTab ? '#2d7d5e' : 'var(--ink)') : 'var(--sage)', border: `1px solid ${active ? (isPitchTab ? 'rgba(149,157,144,0.4)' : 'rgba(25,37,36,0.15)') : 'transparent'}`, cursor: 'pointer', transition: 'all 150ms', fontFamily: 'var(--font-body)' }}>
                   {isPitchTab && <Sparkles size={10} />}
-                  {t.label}
+                  {typeLabel(tt.key)}
                   {count > 0 && <span style={{ padding: '1px 5px', borderRadius: 9999, fontSize: '0.62rem', fontWeight: 700, lineHeight: 1.5, background: active ? 'rgba(25,37,36,0.1)' : 'rgba(25,37,36,0.06)', color: active ? 'inherit' : 'var(--slate)' }}>{count}</span>}
                 </button>
               );
@@ -1219,10 +1229,10 @@ export default function HostProposals() {
           {/* Clear All Declined header */}
           {tab === 'declined' && declinedCount > 0 && (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-              <span style={{ fontSize: 12, color: 'var(--sage)', fontWeight: 600 }}>{declinedCount} declined proposal{declinedCount !== 1 ? 's' : ''}</span>
+              <span style={{ fontSize: 12, color: 'var(--sage)', fontWeight: 600 }}>{t('declinedHeader.count', { count: declinedCount })}</span>
               <button onClick={() => setShowClearDeclined(true)}
                 style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 9999, border: '1px solid rgba(200,104,104,0.3)', background: 'transparent', fontSize: 11, fontWeight: 700, color: '#9b2d2d', cursor: 'pointer', fontFamily: 'var(--font-body)' }}>
-                <Trash2 size={11} /> Clear All
+                <Trash2 size={11} /> {t('declinedHeader.clearAll')}
               </button>
             </div>
           )}
@@ -1238,13 +1248,13 @@ export default function HostProposals() {
             <div style={{ background: 'rgba(255,255,255,0.6)', backdropFilter: 'blur(20px)', border: '1.5px solid rgba(255,255,255,0.7)', borderRadius: '1.25rem', padding: '3rem', textAlign: 'center' }}>
               <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1rem', color: 'var(--ink)', marginBottom: '0.4rem' }}>
                 {allProposals.length === 0
-                  ? 'No proposals yet'
-                  : `No ${typeFilter !== 'all' ? typeFilter + 's' : ''}${tab !== 'all' ? ' ' + (STAGE_TABS.find((t) => t.key === tab)?.label.toLowerCase()) : ''} proposals`}
+                  ? t('empty.noProposalsYet')
+                  : t('empty.noFilteredProposals', { filters: [typeFilter !== 'all' ? typeLabel(typeFilter).toLowerCase() : '', tab !== 'all' ? stageLabel(tab).toLowerCase() : ''].filter(Boolean).join(' ') + (typeFilter !== 'all' || tab !== 'all' ? ' ' : '') })}
               </p>
               <p style={{ fontSize: '0.82rem', color: 'var(--sage)', margin: 0 }}>
                 {allProposals.length === 0
-                  ? 'Once creators apply to your listings, their proposals will appear here.'
-                  : 'Try a different filter.'}
+                  ? t('empty.onceCreatorsApply')
+                  : t('empty.tryDifferentFilter')}
               </p>
             </div>
           ) : (
@@ -1273,7 +1283,7 @@ export default function HostProposals() {
                 <div style={{ fontSize: 11, color: 'var(--sage)', marginTop: 2 }}>{activeProposal.listing}</div>
               </div>
               <span style={{ marginLeft: 'auto', flexShrink: 0, padding: '3px 9px', borderRadius: 9999, fontSize: 10, fontWeight: 700, background: STATUS_CFG[activeProposal.status]?.bg, color: STATUS_CFG[activeProposal.status]?.color }}>
-                {STATUS_CFG[activeProposal.status]?.label}
+                {statusLabel(activeProposal.status)}
               </span>
             </div>
           ) : null}
@@ -1330,13 +1340,13 @@ export default function HostProposals() {
           style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(25,37,36,0.5)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
           <div onClick={(e) => e.stopPropagation()}
             style={{ width: '100%', maxWidth: 400, background: 'rgba(255,255,255,0.97)', borderRadius: '1.5rem', padding: '2rem', boxShadow: '0 20px 60px rgba(25,37,36,0.2)' }}>
-            <h4 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.1rem', color: 'var(--slate)', margin: '0 0 0.75rem' }}>Clear Declined Proposals</h4>
+            <h4 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.1rem', color: 'var(--slate)', margin: '0 0 0.75rem' }}>{t('clearDeclinedModal.heading')}</h4>
             <p style={{ color: 'var(--sage)', fontSize: '0.875rem', lineHeight: 1.6, margin: '0 0 1.5rem' }}>
-              Remove all {declinedCount} declined proposal{declinedCount !== 1 ? 's' : ''} from view? This won't delete creator data, just hides them from your pipeline.
+              {t('clearDeclinedModal.body', { count: declinedCount })}
             </p>
             <div style={{ display: 'flex', gap: '0.75rem' }}>
-              <button onClick={() => setShowClearDeclined(false)} style={{ flex: 1, padding: '0.75rem', borderRadius: 9999, border: '1.5px solid rgba(25,37,36,0.12)', background: 'transparent', fontFamily: 'var(--font-body)', fontSize: '0.875rem', fontWeight: 600, color: 'var(--slate)', cursor: 'pointer' }}>Cancel</button>
-              <button onClick={handleClearDeclined} style={{ flex: 1, padding: '0.75rem', borderRadius: 9999, border: 'none', background: 'rgba(200,104,104,0.85)', fontFamily: 'var(--font-body)', fontSize: '0.875rem', fontWeight: 700, color: '#fff', cursor: 'pointer' }}>Remove All</button>
+              <button onClick={() => setShowClearDeclined(false)} style={{ flex: 1, padding: '0.75rem', borderRadius: 9999, border: '1.5px solid rgba(25,37,36,0.12)', background: 'transparent', fontFamily: 'var(--font-body)', fontSize: '0.875rem', fontWeight: 600, color: 'var(--slate)', cursor: 'pointer' }}>{t('clearDeclinedModal.cancel')}</button>
+              <button onClick={handleClearDeclined} style={{ flex: 1, padding: '0.75rem', borderRadius: 9999, border: 'none', background: 'rgba(200,104,104,0.85)', fontFamily: 'var(--font-body)', fontSize: '0.875rem', fontWeight: 700, color: '#fff', cursor: 'pointer' }}>{t('clearDeclinedModal.removeAll')}</button>
             </div>
           </div>
         </div>

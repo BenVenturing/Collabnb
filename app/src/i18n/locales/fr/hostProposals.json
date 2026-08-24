@@ -1,0 +1,146 @@
+{
+  "statusLabels": {
+    "pending": "En attente",
+    "under_review": "En cours d'examen",
+    "approved": "Approuvé",
+    "completed": "Terminé",
+    "declined": "Refusé"
+  },
+  "typeLabels": {
+    "all": "Tous les types",
+    "application": "Candidatures",
+    "pitch": "Propositions"
+  },
+  "stageAll": "Tous",
+  "tierDefs": {
+    "UGC Beginner": "0–5K abonnés — Nouveaux créateurs constituant leur portfolio",
+    "UGC Pro": "5K–10K abonnés — Créateurs de contenu, pas une portée d'influenceur",
+    "Micro Influencer": "10K–50K abonnés — Contenu de style influenceur, audience engagée",
+    "Influencer": "50K+ abonnés — Large portée, audience établie"
+  },
+  "contractFields": {
+    "nights": { "label": "Nuits", "placeholder": "ex. 3" },
+    "compensation": { "label": "Rémunération", "placeholder": "ex. 500 $ ou 300 $ + séjour" },
+    "deliverables": { "label": "Livrables", "placeholder": "ex. 2 Reels + 5 Photos" },
+    "turnaround": { "label": "Délai", "placeholder": "ex. 14 jours" },
+    "affiliate": { "label": "% d'affiliation", "placeholder": "ex. 5 % ou —" },
+    "extra_terms": { "label": "Conditions supplémentaires", "placeholder": "Extras facultatifs" }
+  },
+  "history": {
+    "heading": "Historique de négociation",
+    "creatorPitch": "Proposition du créateur",
+    "host": "Hôte",
+    "creator": "Créateur",
+    "version": "v{{version}}",
+    "latest": "← plus récente"
+  },
+  "pdf": {
+    "documentTitle": "Contrat Collabnb",
+    "heading": "Contrat de collaboration Collabnb",
+    "locked": "CONTRAT VERROUILLÉ",
+    "terms": "Conditions",
+    "negotiatedRounds_one": "Négocié sur {{count}} tour.",
+    "negotiatedRounds_other": "Négocié sur {{count}} tours.",
+    "signatures": "Signatures",
+    "host": "Hôte",
+    "creatorSuffix": "(Créateur)",
+    "notYetSigned": "Pas encore signé"
+  },
+  "counterModal": {
+    "heading": "Contre-proposition",
+    "versionLine": "{{creatorName}} · {{listing}} · Version {{version}}",
+    "editingAs": "Modification en tant que ",
+    "adjustTerms": " — ajustez les conditions, puis envoyez.",
+    "notePlaceholder": "Expliquez vos modifications à l'autre partie...",
+    "noteLabel": "Note (facultatif)",
+    "pricingCalculator": "Calculateur de tarification ({{tier}})",
+    "cash": "Espèces",
+    "pointsSummary": "{{points}} pts · milieu {{midpoint}} $ · plage {{low}}–{{high}} $",
+    "belowFloor": "En dessous du minimum ({{floor}} $) pour cette charge de travail — augmentez le montant en espèces ou réduisez les livrables pour envoyer.",
+    "belowRecommended": "En dessous de la plage recommandée, mais au-dessus du minimum — peut tout de même être envoyé.",
+    "cancel": "Annuler",
+    "send": "Envoyer la contre-proposition"
+  },
+  "signModal": {
+    "heading": "Signer et accepter",
+    "signingAs": "Signature en tant que {{partyLabel}}",
+    "contractTerms": "Conditions du contrat",
+    "afterRounds_one": "Après {{count}} tour de négociation",
+    "afterRounds_other": "Après {{count}} tours de négociation",
+    "agreement": "En signant, vous acceptez les conditions ci-dessus. Le contrat se verrouille une fois que les deux parties ont signé la même version.",
+    "yourName": "Votre nom complet",
+    "namePlaceholder": "Tapez votre nom complet comme signature",
+    "cancel": "Annuler",
+    "sign": "Signer et accepter"
+  },
+  "messagePanel": {
+    "heading": "Messages avec {{creatorName}}",
+    "empty": "Pas encore de messages — démarrez la conversation.",
+    "replyPlaceholder": "Répondre à {{creatorName}}…"
+  },
+  "drawer": {
+    "viewProfile": "Voir le profil",
+    "verified": "Vérifié",
+    "followers": "Abonnés",
+    "engagement": "Engagement",
+    "collabs": "Collabs",
+    "originalPitchTerms": "Conditions originales de la proposition",
+    "modifiedTerms": "Conditions modifiées",
+    "pitchMessage": "Message de la proposition",
+    "applicationMessage": "Message de la candidature",
+    "portfolio": "Portfolio :",
+    "contractLocked": "Contrat verrouillé — les deux parties ont signé",
+    "saveContractPdf": "Enregistrer le contrat (PDF)",
+    "hostSigned": "L'hôte a signé",
+    "creatorSigned": "{{name}} a signé",
+    "awaitingCreatorSignature": "En attente de la signature du créateur",
+    "awaitingHostSignature": "En attente de la signature de l'hôte",
+    "hostActions": "Actions de l'hôte",
+    "counterSentAwaitingCreator": "· Contre-proposition envoyée — en attente du créateur",
+    "acceptAsIs": "Accepter tel quel",
+    "youSigned": "✓ Vous avez signé",
+    "counterPitch": "Contre-proposition",
+    "decline": "Refuser",
+    "creatorsResponse": "Réponse du créateur",
+    "demo": "· démo",
+    "creatorCounteredBack": "· Le créateur a fait une nouvelle contre-proposition",
+    "accept": "Accepter",
+    "creatorSignedChip": "✓ Le créateur a signé",
+    "counterBack": "Contre-proposer",
+    "moveToReview": "Passer en examen",
+    "approve": "Approuver",
+    "markCompleted": "Marquer comme terminé",
+    "message": "Message",
+    "messageCreator": "Envoyer un message au créateur"
+  },
+  "card": {
+    "viewProfile": "Voir le profil",
+    "pitch": "Proposition",
+    "application": "Candidature",
+    "locked": "Verrouillé",
+    "listingStats": "{{listing}} · {{followers}} abonnés · {{engagement}} % ER",
+    "dragToMoveStage": "Glisser pour changer d'étape"
+  },
+  "header": {
+    "heading": "Propositions",
+    "subtitle": "{{total}} au total · {{pending}} en attente de votre examen"
+  },
+  "declinedHeader": {
+    "count_one": "{{count}} proposition refusée",
+    "count_other": "{{count}} propositions refusées",
+    "clearAll": "Tout effacer"
+  },
+  "empty": {
+    "noProposalsYet": "Aucune proposition pour l'instant",
+    "noFilteredProposals": "Aucune proposition {{filters}}",
+    "onceCreatorsApply": "Une fois que des créateurs postulent à vos annonces, leurs propositions apparaîtront ici.",
+    "tryDifferentFilter": "Essayez un autre filtre."
+  },
+  "clearDeclinedModal": {
+    "heading": "Effacer les propositions refusées",
+    "body_one": "Retirer la {{count}} proposition refusée de l'affichage ? Cela ne supprime pas les données du créateur, cela les masque simplement de votre pipeline.",
+    "body_other": "Retirer les {{count}} propositions refusées de l'affichage ? Cela ne supprime pas les données du créateur, cela les masque simplement de votre pipeline.",
+    "cancel": "Annuler",
+    "removeAll": "Tout retirer"
+  }
+}

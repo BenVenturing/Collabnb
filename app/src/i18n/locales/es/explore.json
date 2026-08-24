@@ -1,0 +1,98 @@
+{
+  "close": "Cerrar",
+  "subscribeUnlock": "Suscríbete para desbloquear →",
+  "locked": {
+    "heading": "La búsqueda está bloqueada",
+    "body": "Tu prueba ha terminado — suscríbete para buscar destinos y colaboraciones."
+  },
+  "compensation": {
+    "paid": "${{cash}} en efectivo",
+    "hybrid": "${{cash}} + estancia",
+    "seeListing": "Ver anuncio"
+  },
+  "deliverables": {
+    "more": "+{{count}} más",
+    "count": "{{count}} entregables"
+  },
+  "card": {
+    "applyToView": "Postúlate para ver",
+    "featured": "Destacado",
+    "matchFallback": "Coincide con tu perfil",
+    "matchPercent": "{{match}}% de coincidencia",
+    "viewHost": "Ver perfil del anfitrión",
+    "byHost": "por"
+  },
+  "section": {
+    "seeAll": "ver todo",
+    "showLess": "ver menos"
+  },
+  "search": {
+    "where": "Dónde",
+    "destinationsPlaceholder": "Buscar destinos",
+    "what": "Qué",
+    "when": "Cuándo",
+    "anyTime": "Cualquier fecha"
+  },
+  "propertyTypes": {
+    "all": "Todos",
+    "cabin": "Cabaña",
+    "villa": "Villa",
+    "treehouse": "Casa en el árbol",
+    "glamping": "Glamping",
+    "lodge": "Lodge",
+    "estate": "Finca",
+    "cottage": "Casa de campo"
+  },
+  "map": {
+    "showList": "Mostrar lista",
+    "showMap": "Mostrar mapa",
+    "label": "Mapa",
+    "collabsAvailable_one": "{{count}} colaboración disponible",
+    "collabsAvailable_other": "{{count}} colaboraciones disponibles",
+    "noCollabsArea": "No hay colaboraciones en esta zona — aleja el zoom o mueve el mapa."
+  },
+  "searchArea": {
+    "button": "Buscar en esta zona",
+    "noListings": "Lo sentimos, no hay anuncios en esta zona específica",
+    "results_one": "{{count}} anuncio en esta zona",
+    "results_other": "{{count}} anuncios en esta zona",
+    "clearRefresh": "Borrar y actualizar"
+  },
+  "limited": {
+    "body": "🔒 Tu prueba ha terminado — los detalles del anuncio están ocultos."
+  },
+  "loading": {
+    "stays": "Cargando estancias..."
+  },
+  "ghost": {
+    "comingSoon": "Anuncios próximamente",
+    "curating": "Estamos seleccionando las mejores estancias para el lanzamiento del 15 de julio. Guarda tus favoritas y serás de los primeros en enterarte."
+  },
+  "sections": {
+    "trending": "Tendencias ahora",
+    "trendingSubtitle": "Los favoritos de esta semana",
+    "pickedForYou": "Elegidos para ti",
+    "pickedSubtitleNiches": "Según tus nichos de {{niches}}",
+    "pickedSubtitleFallback": "Según tu perfil e historial de colaboraciones",
+    "near": "Cerca de {{place}}",
+    "nearSubtitle": "Según la ubicación de tu perfil y colaboraciones pasadas",
+    "allStays": "Todas las estancias",
+    "allStaysSubtitle_one": "{{count}} colaboración disponible ahora",
+    "allStaysSubtitle_other": "{{count}} colaboraciones disponibles ahora",
+    "nearYou": "Tú"
+  },
+  "empty": {
+    "searchHeading": "Ningún anuncio coincide con tu búsqueda",
+    "noStays": "No se encontraron estancias",
+    "searchBody": "Prueba ajustando tus filtros o borrando la búsqueda.",
+    "filterBody": "Prueba quitando el filtro de tipo de propiedad.",
+    "clearSearch": "Borrar búsqueda",
+    "showAllTypes": "Mostrar todos los tipos"
+  },
+  "corner": {
+    "pricingAria": "¿Cuánto cuesta una colaboración?",
+    "pricing": "Precios",
+    "contractAria": "Redactar un contrato",
+    "contract": "Contrato"
+  }
+}

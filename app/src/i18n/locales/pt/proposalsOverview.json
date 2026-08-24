@@ -1,0 +1,59 @@
+{
+  "hello": "Olá, {{name}}!",
+  "there": "aí",
+  "greeting": {
+    "creator": "Aqui está um resumo das suas colabs.",
+    "host": "Aqui está um resumo das suas propostas."
+  },
+  "nav": {
+    "overview": "Visão geral",
+    "money": {
+      "creator": "Ganhos",
+      "host": "Gastos"
+    },
+    "calendar": "Calendário",
+    "activity": "Atividade",
+    "contract": "Contrato"
+  },
+  "sidebarTip": {
+    "creator": "Uploads consistentes fazem os anfitriões te chamarem de novo.",
+    "host": "Revisar candidaturas mais rápido mantém os criadores engajados."
+  },
+  "closeSidebar": "Fechar barra lateral",
+  "openSidebar": "Abrir barra lateral",
+  "chartTitle": {
+    "creator": "Resumo de ganhos",
+    "host": "Resumo de gastos"
+  },
+  "chart": {
+    "money": {
+      "creator": "Ganhos",
+      "host": "Gastos"
+    },
+    "volume": "Candidaturas"
+  },
+  "stat": {
+    "creator": {
+      "active": { "label": "Colabs ativas" },
+      "pending": { "label": "Candidaturas pendentes" },
+      "earned": { "label": "Total ganho" },
+      "due": { "label": "Conteúdo pendente" }
+    },
+    "host": {
+      "new": { "label": "Novas candidaturas" },
+      "review": { "label": "Análise pendente" },
+      "active": { "label": "Colabs ativas" },
+      "spend": { "label": "Gasto total" }
+    }
+  },
+  "upcoming": "Próximos",
+  "clearDateFilter": "Limpar filtro de data ×",
+  "nothingScheduled": "Nada agendado para este dia.",
+  "todoMeta": {
+    "deadline": "Prazo de conteúdo",
+    "pending_action": "Ação pendente",
+    "stay_date": "Data da estadia"
+  },
+  "searchCreator": "Buscar suas colabs…",
+  "searchHost": "Buscar criadores, anúncios…"
+}

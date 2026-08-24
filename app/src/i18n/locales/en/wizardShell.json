@@ -1,0 +1,13 @@
+{
+  "stepOf": "Step {{step}} of {{total}}",
+  "saving": "Saving...",
+  "saveExit": "Save & exit",
+  "helpHeading": "Your progress is saved",
+  "helpBodyPrefix": "Every change is saved to this browser automatically. Hit ",
+  "helpBodySuffix": " to head back to your dashboard — your draft will be waiting exactly where you left off.",
+  "saveFallbackError": "Couldn't save your draft — try again.",
+  "saveErrorSuffix": " Your progress is still kept in this browser — come back and finish filling it in, or exit anyway from here.",
+  "exitWithoutSaving": "Exit without saving as a draft",
+  "back": "Back",
+  "next": "Next"
+}

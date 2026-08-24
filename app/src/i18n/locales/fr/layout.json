@@ -1,0 +1,29 @@
+{
+  "maintenance": "🔧 Collabnb est actuellement en maintenance. Certaines fonctionnalités peuvent être indisponibles.",
+  "pendingVerification": {
+    "title": "Compte en cours d'examen",
+    "body": "Vous aurez de nos nouvelles sous 24 à 48 heures."
+  },
+  "pastDue": {
+    "titlePrefix": "Paiement en retard",
+    "titleSuffix": " — le dernier prélèvement de votre abonnement a échoué.",
+    "opening": "Ouverture…",
+    "updatePayment": "Mettre à jour le paiement"
+  },
+  "launchBanner": {
+    "daysToLaunch": "🚀 {{days}} jours avant le lancement",
+    "livePrefix": "En ligne ",
+    "liveDate": "15 juillet",
+    "userCountPrefix": "👥 "
+  },
+  "dismiss": "Ignorer",
+  "welcomeToast": {
+    "greeting": "Bienvenue, {{name}} !",
+    "body": "Votre compte est en cours d'examen — vous aurez de nos nouvelles sous 24 à 48 heures."
+  },
+  "contractButton": {
+    "ariaLabel": "Ouvrir le générateur de contrat",
+    "title": "Générateur de contrat",
+    "label": "Contrat"
+  }
+}

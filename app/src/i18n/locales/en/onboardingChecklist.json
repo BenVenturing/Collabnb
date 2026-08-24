@@ -1,0 +1,36 @@
+{
+  "creatorSteps": {
+    "photo": { "label": "Add a profile photo", "action": "Add photo" },
+    "bio": { "label": "Write your bio", "action": "Edit profile" },
+    "niches": { "label": "Add your content niches", "action": "Add niches" },
+    "social": { "label": "Connect a social account", "action": "Add socials" },
+    "explore": { "label": "Browse sample listings", "action": "Browse listings" },
+    "share": { "label": "Share your sign-up with a friend", "action": "Share link" }
+  },
+  "hostSteps": {
+    "listing": { "label": "Create your first listing", "action": "Create listing" },
+    "profile": { "label": "Complete your host profile", "action": "Edit profile" },
+    "creators": { "label": "Browse creators who match your vibe", "action": "Discover creators" },
+    "share": { "label": "Share your sign-up with a friend", "action": "Share link" }
+  },
+  "pill": {
+    "openAriaLabel": "Open setup checklist",
+    "allDone": "All done!",
+    "accountSetup": "Account setup",
+    "left_one": "{{count}} left",
+    "left_other": "{{count}} left"
+  },
+  "header": {
+    "allDoneTitle": "You're all set!",
+    "title": "Complete your setup",
+    "stepsComplete": "{{completed}}/{{total}} steps complete",
+    "bonus": " + {{count}} bonus",
+    "collapseAriaLabel": "Collapse",
+    "collapseTitle": "Minimize",
+    "closeAriaLabel": "Close checklist",
+    "closeTitle": "Close"
+  },
+  "optional": "optional",
+  "dismissCta": "Got it — dismiss ✓",
+  "shareTitle": "Join me on Collabnb"
+}

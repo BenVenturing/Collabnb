@@ -1,0 +1,57 @@
+{
+  "loadLabels": {
+    "light": "ligera",
+    "moderate": "moderada",
+    "heavy": "alta",
+    "custom": "campaña personalizada"
+  },
+  "nextHint": {
+    "needTier": "Elige un nivel de creador en la calculadora de costos de arriba.",
+    "needCompensation": "Ingresa un monto de compensación en efectivo en la calculadora de costos de arriba.",
+    "needDeliverables": "Elige al menos un entregable en la calculadora de costos, o agrega uno personalizado abajo.",
+    "needDates": "Agrega una ventana de colaboración con fecha de inicio y fin."
+  },
+  "heading": "Precios y fechas",
+  "subtitle": "Configura el nivel de creador, la compensación y los entregables — con orientación de precios en vivo — y luego define cuándo ocurre la colaboración.",
+  "summary": {
+    "totalDeliverables_one": "{{count}} entregable en total",
+    "totalDeliverables_other": "{{count}} entregables en total",
+    "acrossFormats_one": "En {{count}} formato · carga {{load}}",
+    "acrossFormats_other": "En {{count}} formatos · carga {{load}}"
+  },
+  "deliverables": {
+    "label": "Entregables",
+    "empty": "Elige entregables en la calculadora de costos de arriba, o agrega uno personalizado abajo.",
+    "editUsageRights": "Editar derechos de uso",
+    "fromCalculator": "De la calculadora de costos de arriba",
+    "usageRights": "Derechos de uso"
+  },
+  "form": {
+    "editUsageRightsFor": "Editar derechos de uso — {{type}}",
+    "editDeliverable": "Editar entregable",
+    "addCustomDeliverable": "Agregar entregable personalizado",
+    "typePlaceholder": "Plataforma/Tipo (p. ej., Reels de Instagram)",
+    "descPlaceholder": "Descripción",
+    "autoTypeHint": "{{qty}}x {{type}} — el tipo y la cantidad provienen de la calculadora de costos de arriba.",
+    "usageRightsLabel": "Derechos de uso para este entregable",
+    "applyToAllTitle": "Aplicar estos derechos de uso a todos los entregables",
+    "copyToAll": "Copiar a todos",
+    "usageRightsPlaceholder": "p. ej., El anfitrión recibe una licencia perpetua para marketing. El creador conserva la propiedad.",
+    "cancel": "Cancelar",
+    "saveChanges": "Guardar cambios",
+    "addDeliverable": "Agregar entregable"
+  },
+  "due": {
+    "label": "Entregables vencen (días después de la estancia)"
+  },
+  "windows": {
+    "label": "Ventanas de colaboración",
+    "hint": "Agrega hasta {{max}} ventanas de fechas en las que los creadores pueden reservar.",
+    "removeTitle": "Quitar ventana de fechas",
+    "addAnother": "Agregar otra ventana de fechas"
+  },
+  "policies": {
+    "revisionLabel": "Política de revisión",
+    "footerNote": "Los derechos de uso ahora se configuran por entregable arriba. Usa \"Copiar a todos\" para aplicar una política a todos los entregables."
+  }
+}

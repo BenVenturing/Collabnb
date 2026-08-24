@@ -1,0 +1,36 @@
+{
+  "categories": {
+    "creators": "Créateurs",
+    "hosts": "Hôtes",
+    "industry": "Industrie",
+    "stats": "Statistiques",
+    "all": "Tout"
+  },
+  "readTime_one": "{{count}} min de lecture",
+  "readTime_other": "{{count}} min de lecture",
+  "featuredBadge": "En vedette",
+  "read": "Lire",
+  "topBar": {
+    "backToCollabnb": "Retour à Collabnb"
+  },
+  "gallery": {
+    "headingPrefix": "Sélection ",
+    "headingItalic": "du",
+    "headingSuffix": " Journal",
+    "dragHint": "Glissez ou survolez pour explorer",
+    "noImage": "Aucune image"
+  },
+  "header": {
+    "title": "Le Journal",
+    "subtitle": "Des idées pour les hôtes boutique et les créateurs UGC qui bâtissent l'avenir du contenu contre séjour."
+  },
+  "searchPlaceholder": "Rechercher des articles…",
+  "emptyState": {
+    "noMatchTitle": "Aucun article correspondant",
+    "noPostsTitle": "Pas encore d'articles",
+    "noMatchBody": "Essayez un autre terme de recherche ou une autre catégorie.",
+    "noPostsBody": "Revenez bientôt — du nouveau contenu arrive.",
+    "clearFilters": "Effacer les filtres"
+  },
+  "moreFromJournal": "Plus du Journal"
+}

@@ -1,0 +1,59 @@
+{
+  "hello": "Hello, {{name}}!",
+  "there": "there",
+  "greeting": {
+    "creator": "Here's an overview of your collabs.",
+    "host": "Here's an overview of your proposals."
+  },
+  "nav": {
+    "overview": "Overview",
+    "money": {
+      "creator": "Earnings",
+      "host": "Spend"
+    },
+    "calendar": "Calendar",
+    "activity": "Activity",
+    "contract": "Contract"
+  },
+  "sidebarTip": {
+    "creator": "Consistent uploads keep hosts inviting you back.",
+    "host": "Reviewing applications faster keeps creators engaged."
+  },
+  "closeSidebar": "Close sidebar",
+  "openSidebar": "Open sidebar",
+  "chartTitle": {
+    "creator": "Earnings Overview",
+    "host": "Spend Overview"
+  },
+  "chart": {
+    "money": {
+      "creator": "Earnings",
+      "host": "Spend"
+    },
+    "volume": "Applications"
+  },
+  "stat": {
+    "creator": {
+      "active": { "label": "Active Collabs" },
+      "pending": { "label": "Pending Applications" },
+      "earned": { "label": "Total Earned" },
+      "due": { "label": "Content Due" }
+    },
+    "host": {
+      "new": { "label": "New Applications" },
+      "review": { "label": "Pending Review" },
+      "active": { "label": "Active Collabs" },
+      "spend": { "label": "Total Spend" }
+    }
+  },
+  "upcoming": "Upcoming",
+  "clearDateFilter": "Clear date filter ×",
+  "nothingScheduled": "Nothing scheduled for this day.",
+  "todoMeta": {
+    "deadline": "Content deadline",
+    "pending_action": "Pending action",
+    "stay_date": "Stay date"
+  },
+  "searchCreator": "Search your collabs…",
+  "searchHost": "Search creators, listings…"
+}

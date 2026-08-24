@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
@@ -256,6 +257,7 @@ export default function CollabMap({
     m.fitBounds(b, { padding: 90, maxZoom: 9, duration: 600 });
   }, [fitKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const { t } = useTranslation('collabMap');
   if (!TOKEN) {
     return (
       <div style={{
@@ -263,8 +265,8 @@ export default function CollabMap({
         background: 'var(--paper, #efece9)', color: 'var(--sage, #6b7a70)', textAlign: 'center', padding: '2rem',
       }}>
         <div>
-          <p style={{ fontWeight: 700, marginBottom: '0.35rem' }}>Map unavailable</p>
-          <p style={{ fontSize: '0.8rem' }}>Set <code>VITE_MAPBOX_TOKEN</code> in <code>app/.env.local</code> to enable the map.</p>
+          <p style={{ fontWeight: 700, marginBottom: '0.35rem' }}>{t('mapUnavailable')}</p>
+          <p style={{ fontSize: '0.8rem' }}>{t('mapConfigHint')}</p>
         </div>
       </div>
     );
@@ -298,11 +300,12 @@ const ctrlBtnStyle = {
 
 // Custom liquid-glass map controls (expand + zoom), replacing Mapbox's default.
 function MapControls({ map, onToggleExpand, expanded }) {
+  const { t } = useTranslation('collabMap');
   return (
     <div style={{ position: 'absolute', top: 12, right: 12, zIndex: 4, display: 'flex', flexDirection: 'column', gap: 8 }}>
       {onToggleExpand && (
         <button
-          title={expanded ? 'Exit full screen' : 'Expand to full screen'}
+          title={expanded ? t('exitFullscreen') : t('expandFullscreen')}
           onClick={() => onToggleExpand()}
           style={{ ...ctrlBtnStyle, borderRadius: 10, boxShadow: '0 2px 10px rgba(25,37,36,0.18)' }}
         >
@@ -314,8 +317,8 @@ function MapControls({ map, onToggleExpand, expanded }) {
         </button>
       )}
       <div style={{ display: 'flex', flexDirection: 'column', borderRadius: 10, overflow: 'hidden', boxShadow: '0 2px 10px rgba(25,37,36,0.18)' }}>
-        <button title="Zoom in" onClick={() => map.zoomIn({ duration: 200 })} style={{ ...ctrlBtnStyle, borderBottom: '1px solid rgba(25,37,36,0.08)', fontSize: 20, lineHeight: 1 }}>+</button>
-        <button title="Zoom out" onClick={() => map.zoomOut({ duration: 200 })} style={{ ...ctrlBtnStyle, fontSize: 22, lineHeight: 1 }}>−</button>
+        <button title={t('zoomIn')} onClick={() => map.zoomIn({ duration: 200 })} style={{ ...ctrlBtnStyle, borderBottom: '1px solid rgba(25,37,36,0.08)', fontSize: 20, lineHeight: 1 }}>+</button>
+        <button title={t('zoomOut')} onClick={() => map.zoomOut({ duration: 200 })} style={{ ...ctrlBtnStyle, fontSize: 22, lineHeight: 1 }}>−</button>
       </div>
     </div>
   );

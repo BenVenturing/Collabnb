@@ -1,0 +1,29 @@
+{
+  "maintenance": "🔧 Collabnb is currently undergoing maintenance. Some features may be unavailable.",
+  "pendingVerification": {
+    "title": "Account under review",
+    "body": "You'll hear from us within 24–48 hours."
+  },
+  "pastDue": {
+    "titlePrefix": "Payment past due",
+    "titleSuffix": " — your last subscription charge failed.",
+    "opening": "Opening…",
+    "updatePayment": "Update payment"
+  },
+  "launchBanner": {
+    "daysToLaunch": "🚀 {{days}} days to launch",
+    "livePrefix": "Live ",
+    "liveDate": "July 15th",
+    "userCountPrefix": "👥 "
+  },
+  "dismiss": "Dismiss",
+  "welcomeToast": {
+    "greeting": "Welcome, {{name}}!",
+    "body": "Your account is under review — you'll hear from us within 24–48 hours."
+  },
+  "contractButton": {
+    "ariaLabel": "Open contract builder",
+    "title": "Contract Builder",
+    "label": "Contract"
+  }
+}

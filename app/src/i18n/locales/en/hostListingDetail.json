@@ -1,0 +1,95 @@
+{
+  "statusLabels": {
+    "pending": "Pending",
+    "under_review": "Under Review",
+    "approved": "Approved",
+    "completed": "Completed",
+    "declined": "Declined"
+  },
+  "tierDefs": {
+    "UGC Beginner": "0–5K followers — New creators building their portfolio",
+    "UGC Pro": "5K–10K followers — Content creators, not influencer reach",
+    "Micro Influencer": "10K–50K followers — Influencer-style content, engaged audience",
+    "Influencer": "50K+ followers — Broad reach, established audience",
+    "Macro": "100K+ followers — Top-tier creators with major reach"
+  },
+  "listingStatusLabels": {
+    "active": "Active",
+    "paused": "Paused",
+    "draft": "Draft"
+  },
+  "photoModal": {
+    "close": "Close"
+  },
+  "applicantRow": {
+    "pitch": "PITCH",
+    "meta": "@{{username}} · {{followers}} followers · {{applied}}",
+    "proposedChanges": "Proposed changes",
+    "review": "Review",
+    "openProposal": "Open proposal",
+    "message": "Message"
+  },
+  "loading": "Loading…",
+  "notFound": "Listing not found.",
+  "header": {
+    "myListings": "My Listings",
+    "creatorView": "Creator view",
+    "editListing": "Edit listing",
+    "changeStatusTitle": "Click to change status"
+  },
+  "photos": {
+    "title": "Photos",
+    "subtitle_one": "{{count}} photo — click to zoom",
+    "subtitle_other": "{{count}} photos — click to zoom",
+    "view": "View",
+    "cover": "Cover"
+  },
+  "details": {
+    "title": "Listing details",
+    "compensation": "Compensation",
+    "deliverables": "Deliverables",
+    "creatorTier": "Creator tier",
+    "available": "Available",
+    "deliverableLoad": "Deliverable load",
+    "dueIn": "Due in",
+    "dueInDays": "{{days}} days",
+    "whatYoureOffering": "What you're offering"
+  },
+  "affiliate": {
+    "title": "Affiliate code",
+    "subtitle": "Creators can use this code to earn commission from bookings",
+    "copied": "Copied!",
+    "copy": "Copy",
+    "shareCode": "Share this code with approved creators",
+    "noCode": "No affiliate code set for this listing.",
+    "addCode": "Add code"
+  },
+  "applicants": {
+    "heading": "Applicants",
+    "subtitle_one": "{{total}} total · {{pitchCount}} pitch",
+    "subtitle_other": "{{total}} total · {{pitchCount}} pitches",
+    "allChip": "All ({{count}})",
+    "statusChip": "{{status}} ({{count}})",
+    "emptyNone": "No applications yet — share your listing to attract creators.",
+    "emptyFiltered": "No {{status}} applicants."
+  },
+  "statusModal": {
+    "blockedTitle": "Can't move to draft",
+    "blockedBody": "This listing has creators in an active contract. You must complete or cancel all active collaborations before changing the status to draft.",
+    "gotIt": "Got it",
+    "publishTitle": "Publish this listing?",
+    "publishBody": "It will become live and visible to creators on Collabnb right away.",
+    "cancel": "Cancel",
+    "publish": "Publish",
+    "publishing": "Publishing…",
+    "toDraftTitle": "Move to draft?",
+    "pendingWarning_one": "{{count}} creator with pending or under-review inquiries will receive a message: ",
+    "pendingWarning_other": "{{count}} creators with pending or under-review inquiries will receive a message: ",
+    "pauseMessage": "Sorry for the hassle — this listing has been temporarily paused. We'll reach out if it goes live again.",
+    "typeToConfirmPrefix": "Type ",
+    "typeToConfirmSuffix": " to confirm:",
+    "noPendingBody": "The listing will be hidden from creators and no new applications will be accepted.",
+    "moveToDraft": "Move to draft",
+    "saving": "Saving…"
+  }
+}

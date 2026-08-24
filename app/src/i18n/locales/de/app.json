@@ -1,0 +1,14 @@
+{
+  "crash": {
+    "title": "App-Absturz — kopiere dies und sende es an den Entwickler:",
+    "sendButton": "Absturzbericht an das Entwicklerteam senden",
+    "sending": "Wird gesendet…",
+    "sent": "An das Entwicklerteam gesendet — danke!",
+    "sendFailed": "Senden fehlgeschlagen — kopiere stattdessen die Details unten."
+  },
+  "loading": "Wird geladen",
+  "celebration": {
+    "quote": "Wo Creator und Boutique-Unterkünfte zusammenarbeiten.",
+    "buildingProfile": "Dein Profil wird erstellt…"
+  }
+}

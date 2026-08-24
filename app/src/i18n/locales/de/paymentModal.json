@@ -1,0 +1,21 @@
+{
+  "heading": "Füge eine Karte hinzu, um abzuschließen",
+  "body": "Beide Parteien haben unterschrieben. Speichere jetzt eine Karte — es wird noch nichts abgebucht. Die Plattformgebühr wird automatisch erst berechnet, sobald die Kollaboration abgeschlossen ist.",
+  "feeExplain": {
+    "flatFee": "Pauschalgebühr für Kollaborationen mit kostenlosem Aufenthalt",
+    "percentage": "5 % des Kollaborationswerts von {{amount}} $ (mind. 20 $)"
+  },
+  "feeCard": {
+    "title": "Collabnb-Plattformgebühr · wird bei Abschluss berechnet"
+  },
+  "errors": {
+    "saveContractFirst": "Bitte speichere den Vertrag, bevor du eine Karte hinzufügst.",
+    "stripeNotConfigured": "Stripe ist nicht konfiguriert. Führe aus: npx convex env set STRIPE_SECRET_KEY sk_test_...",
+    "checkoutFailed": "Der Checkout konnte nicht gestartet werden. Bitte versuche es erneut."
+  },
+  "cta": {
+    "redirecting": "Weiterleitung zu Stripe…",
+    "payButton": "Karte speichern · {{fee}} bei Abschluss",
+    "later": "Das erledige ich später"
+  }
+}

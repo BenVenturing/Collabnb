@@ -2,6 +2,8 @@ import { useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, MapPin, Users, Calendar, MessageSquare, MoreVertical, X, Trash2, ArrowLeft, Compass, Search } from 'lucide-react';
 import { useQuery } from 'convex/react';
+import { useTranslation } from 'react-i18next';
+import i18nInstance from '../i18n';
 import { api } from '../../convex/_generated/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useListingDraft } from '../contexts/ListingDraftContext';
@@ -115,6 +117,7 @@ function MiniBarChart({ data, color, delay = 0 }) {
 }
 
 function BlurredReachChart({ data, color, delay = 0 }) {
+  const { t } = useTranslation('hostDashboard');
   const [tipVisible, setTipVisible] = useState(false);
   const w = 88, h = 38;
   const d = sparkPath(data, w, h);
@@ -162,7 +165,7 @@ function BlurredReachChart({ data, color, delay = 0 }) {
           lineHeight: 1.4,
           animation: 'fadeUp 140ms ease forwards',
         }}>
-          Feature coming soon —<br />Instagram integration in progress.
+          {t('reachChart.tooltipLine1')}<br />{t('reachChart.tooltipLine2')}
         </div>
       )}
     </div>
@@ -170,29 +173,31 @@ function BlurredReachChart({ data, color, delay = 0 }) {
 }
 
 const STATUS_CFG = {
-  active: { label: 'Active',  bg: 'rgba(74,155,127,0.85)',  color: '#fff' },
-  paused: { label: 'Paused',  bg: 'rgba(212,168,67,0.85)',  color: '#fff' },
-  draft:  { label: 'Draft',   bg: 'rgba(149,157,144,0.7)',  color: '#fff' },
+  active: { bg: 'rgba(74,155,127,0.85)',  color: '#fff' },
+  paused: { bg: 'rgba(212,168,67,0.85)',  color: '#fff' },
+  draft:  { bg: 'rgba(149,157,144,0.7)',  color: '#fff' },
 };
 
 // ─── Convex listing normalizer ────────────────────────────────────────────────
 function normalizeConvexListing(l) {
   const images = l.gallery_images?.length ? l.gallery_images : (l.image ? [l.image] : []);
 
+  const t = (key, opts) => i18nInstance.t(`hostDashboard:${key}`, opts);
+
   let compensation = l.compensation || '';
   if (!compensation) {
-    if (l.compensation_type === 'paid') compensation = `$${l.cash_amount || '?'} cash`;
-    else if (l.compensation_type === 'hybrid') compensation = `$${l.cash_amount || '?'} + stay`;
-    else compensation = 'See listing';
+    if (l.compensation_type === 'paid') compensation = t('normalizedListing.cashOnly', { amount: l.cash_amount || '?' });
+    else if (l.compensation_type === 'hybrid') compensation = t('normalizedListing.hybridCashStay', { amount: l.cash_amount || '?' });
+    else compensation = t('normalizedListing.seeListing');
   }
 
   let deliverables = typeof l.deliverables === 'string' ? l.deliverables : '';
   if (!deliverables && l.deliverables_list?.length) {
     const parts = l.deliverables_list.slice(0, 2).map((d) => `${d.quantity}× ${d.type}`);
     deliverables = parts.join(', ');
-    if (l.deliverables_list.length > 2) deliverables += ` +${l.deliverables_list.length - 2} more`;
+    if (l.deliverables_list.length > 2) deliverables += t('normalizedListing.deliverablesMore', { count: l.deliverables_list.length - 2 });
   } else if (!deliverables && l.deliverable_count) {
-    deliverables = `${l.deliverable_count} deliverables`;
+    deliverables = t('normalizedListing.deliverableCount', { count: l.deliverable_count });
   }
 
   // Normalize 'published' → 'active' so STATUS_CFG renders correctly.
@@ -207,18 +212,19 @@ function normalizeConvexListing(l) {
     gallery_images: images,
     compensation,
     deliverables,
-    collab_type: l.collab_type || l.deliverable_load || 'Collab',
+    collab_type: l.collab_type || l.deliverable_load || t('normalizedListing.defaultCollabType'),
   };
 }
 
 // ─── Expanded chart modal ─────────────────────────────────────────────────────
 function ExpandedChartModal({ cardKey, onClose, stats, chartData }) {
+  const { t } = useTranslation('hostDashboard');
   const [hoveredIdx, setHoveredIdx] = useState(null);
 
   const CFGS = {
-    collabs:  { title: 'Total Collabs',        total: fmtStat(stats.totalCollabs),   data: chartData.collabs,  color: '#4A9B7F', type: 'line' },
-    creators: { title: 'Creators Worked With', total: fmtStat(stats.uniqueCreators), data: chartData.creators, color: '#3C5759', type: 'bar'  },
-    content:  { title: 'Content Pieces',       total: fmtStat(stats.contentPieces),  data: chartData.content,  color: '#7B68C8', type: 'line' },
+    collabs:  { title: t('charts.totalCollabs'),        total: fmtStat(stats.totalCollabs),   data: chartData.collabs,  color: '#4A9B7F', type: 'line' },
+    creators: { title: t('charts.creatorsWorkedWith'), total: fmtStat(stats.uniqueCreators), data: chartData.creators, color: '#3C5759', type: 'bar'  },
+    content:  { title: t('charts.contentPieces'),       total: fmtStat(stats.contentPieces),  data: chartData.content,  color: '#7B68C8', type: 'line' },
   };
   const cfg = CFGS[cardKey];
   if (!cfg) return null;
@@ -258,9 +264,9 @@ function ExpandedChartModal({ cardKey, onClose, stats, chartData }) {
           <div>
             <div style={{ width: 8, height: 8, borderRadius: '50%', background: cfg.color, marginBottom: '0.4rem' }} />
             <p style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '2rem', color: 'var(--ink)', margin: 0, lineHeight: 1 }}>{cfg.total}</p>
-            <p style={{ fontSize: '0.82rem', color: 'var(--sage)', marginTop: '0.2rem' }}>{cfg.title} · All time</p>
+            <p style={{ fontSize: '0.82rem', color: 'var(--sage)', marginTop: '0.2rem' }}>{t('chartModal.allTimeLabel', { title: cfg.title })}</p>
           </div>
-          <button onClick={onClose} style={{ width: 32, height: 32, borderRadius: '50%', border: 'none', background: 'rgba(25,37,36,0.07)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <button onClick={onClose} aria-label={t('chartModal.close')} style={{ width: 32, height: 32, borderRadius: '50%', border: 'none', background: 'rgba(25,37,36,0.07)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <X size={14} color="var(--ink)" />
           </button>
         </div>
@@ -309,7 +315,7 @@ function ExpandedChartModal({ cardKey, onClose, stats, chartData }) {
         )}
 
         <p style={{ fontSize: '0.7rem', color: 'var(--sage)', textAlign: 'center', marginTop: '0.875rem' }}>
-          Preview data · Live tracking activates with production backend
+          {t('chartModal.previewDataNote')}
         </p>
       </div>
     </div>
@@ -318,11 +324,13 @@ function ExpandedChartModal({ cardKey, onClose, stats, chartData }) {
 
 // ─── Host Listing Card ────────────────────────────────────────────────────────
 function HostListingCard({ listing, meta, delay, glowState, onToggleStatus, onDuplicate, onRemoveSample }) {
+  const { t } = useTranslation('hostDashboard');
   const navigate = useNavigate();
   const { loadDraft } = useListingDraft();
   const [hovered, setHovered] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const status = STATUS_CFG[meta.status] || STATUS_CFG.draft;
+  const statusLabel = t(`statusLabels.${meta.status in STATUS_CFG ? meta.status : 'draft'}`);
   const isActive = meta.status === 'active';
   const pulsing = isActive && glowState === 'pulsing';
   const frozen  = isActive && glowState === 'frozen';
@@ -371,7 +379,7 @@ function HostListingCard({ listing, meta, delay, glowState, onToggleStatus, onDu
             fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.04em',
             background: status.bg, color: status.color, backdropFilter: 'blur(8px)',
           }}>
-            {status.label}
+            {statusLabel}
           </span>
         </div>
 
@@ -393,9 +401,9 @@ function HostListingCard({ listing, meta, delay, glowState, onToggleStatus, onDu
           </div>
           <div style={{ display: 'flex', gap: 0, background: 'rgba(25,37,36,0.04)', borderRadius: '0.625rem', padding: '0.5rem 0' }}>
             {[
-              { num: meta.applicants, label: 'Applied'    },
-              { num: meta.confirmed,  label: 'Confirmed'  },
-              { num: meta.completed,  label: 'Done'       },
+              { num: meta.applicants, label: t('listingCard.stats.applied')    },
+              { num: meta.confirmed,  label: t('listingCard.stats.confirmed')  },
+              { num: meta.completed,  label: t('listingCard.stats.done')       },
             ].map(({ num, label }, i) => (
               <div key={label} style={{ flex: 1, textAlign: 'center', borderRight: i < 2 ? '1px solid rgba(25,37,36,0.08)' : 'none' }}>
                 <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.875rem', color: 'var(--ink)', lineHeight: 1 }}>{num}</p>
@@ -442,9 +450,9 @@ function HostListingCard({ listing, meta, delay, glowState, onToggleStatus, onDu
             {(listing.is_sample ? [
               // Samples get one consolidated action — removes it from this
               // host's dashboard only; other hosts and Explore keep their copy
-              { label: 'Delete sample', Icon: Trash2, danger: true, action: (e) => { e.stopPropagation(); onRemoveSample?.(listing); setMenuOpen(false); } },
+              { label: t('listingCard.menu.deleteSample'), Icon: Trash2, danger: true, action: (e) => { e.stopPropagation(); onRemoveSample?.(listing); setMenuOpen(false); } },
             ] : [
-              { label: 'Edit', action: (e) => {
+              { label: t('listingCard.menu.edit'), action: (e) => {
                 e.stopPropagation();
                 const draft = {
                   title: listing.title || '',
@@ -488,8 +496,8 @@ function HostListingCard({ listing, meta, delay, glowState, onToggleStatus, onDu
                 navigate('/host/listings/create/basics');
                 setMenuOpen(false);
               } },
-              { label: meta.status === 'paused' ? 'Unpause' : 'Pause', action: (e) => { e.stopPropagation(); if (meta.status !== 'draft') onToggleStatus(listing.id); setMenuOpen(false); }, muted: meta.status === 'draft' },
-              { label: 'Duplicate', action: (e) => { e.stopPropagation(); onDuplicate(listing); setMenuOpen(false); } },
+              { label: meta.status === 'paused' ? t('listingCard.menu.unpause') : t('listingCard.menu.pause'), action: (e) => { e.stopPropagation(); if (meta.status !== 'draft') onToggleStatus(listing.id); setMenuOpen(false); }, muted: meta.status === 'draft' },
+              { label: t('listingCard.menu.duplicate'), action: (e) => { e.stopPropagation(); onDuplicate(listing); setMenuOpen(false); } },
             ]).map(({ label, action, muted, danger, Icon }) => (
               <button
                 key={label}
@@ -569,6 +577,7 @@ function useLocationPlaceholder() {
 }
 
 function BrowseMarketplace({ onBack }) {
+  const { t } = useTranslation('hostDashboard');
   const navigate = useNavigate();
   const real    = useQuery(api.listings.getAll, {});
   const samples = useQuery(api.listings.getSamples);
@@ -626,15 +635,15 @@ function BrowseMarketplace({ onBack }) {
         onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.72)'}
       >
         <ArrowLeft size={14} />
-        Back to dashboard
+        {t('browse.backToDashboard')}
       </button>
 
       <div style={{ marginBottom: '1.25rem' }}>
         <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 'clamp(1.5rem, 4vw, 2rem)', color: 'var(--ink)', margin: 0, lineHeight: 1.1 }}>
-          The marketplace
+          {t('browse.title')}
         </h1>
         <p style={{ fontSize: '0.82rem', color: 'var(--sage)', marginTop: '0.3rem' }}>
-          Browse other properties for inspiration — this is what creators see when they explore listings.
+          {t('browse.subtitle')}
         </p>
       </div>
 
@@ -666,7 +675,7 @@ function BrowseMarketplace({ onBack }) {
           }}
         >
           <MapPin size={14} />
-          {mapOpen ? 'Hide map' : 'Show map'}
+          {mapOpen ? t('browse.hideMap') : t('browse.showMap')}
         </button>
       </div>
 
@@ -680,8 +689,8 @@ function BrowseMarketplace({ onBack }) {
           ) : listed.length === 0 ? (
             <div style={{ ...GC, padding: '3rem', textAlign: 'center' }}>
               <p style={{ fontSize: '0.85rem', color: 'var(--sage)', margin: 0 }}>
-                {mapOpen && mapBounds ? 'No listings in this area — try moving the map.'
-                  : listings.length === 0 ? 'No listings to browse yet.' : 'No listings match your search.'}
+                {mapOpen && mapBounds ? t('browse.emptyArea')
+                  : listings.length === 0 ? t('browse.emptyNone') : t('browse.emptySearch')}
               </p>
             </div>
           ) : (
@@ -713,7 +722,7 @@ function BrowseMarketplace({ onBack }) {
                   <div style={{ position: 'relative', width: 260, background: '#fff', borderRadius: '1.25rem', filter: 'drop-shadow(0 12px 28px rgba(25,37,36,0.28))' }}>
                     <button
                       onClick={(e) => { e.stopPropagation(); setActivePinId(null); }}
-                      aria-label="Close"
+                      aria-label={t('browse.close')}
                       style={{
                         position: 'absolute', top: -10, left: -10, zIndex: 2,
                         width: 26, height: 26, borderRadius: '50%', border: '1px solid rgba(255,255,255,0.6)',
@@ -736,6 +745,7 @@ function BrowseMarketplace({ onBack }) {
 
 // ─── Main dashboard ───────────────────────────────────────────────────────────
 export default function HostDashboard() {
+  const { t } = useTranslation('hostDashboard');
   const navigate = useNavigate();
   const { profile } = useAuth();
   const { loadDraft, clearDraft } = useListingDraft();
@@ -946,7 +956,7 @@ export default function HostDashboard() {
   const firstName      = profile?.full_name?.split(' ')[0] ?? 'there';
 
   const hour = new Date().getHours();
-  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+  const greeting = hour < 12 ? t('greeting.morning') : hour < 17 ? t('greeting.afternoon') : t('greeting.evening');
 
   if (browseMode) {
     return <BrowseMarketplace onBack={() => setBrowseMode(false)} />;
@@ -981,7 +991,7 @@ export default function HostDashboard() {
           <div>
             <p style={{ fontSize: '0.78rem', color: 'var(--sage)', marginBottom: '0.2rem' }}>{greeting},</p>
             <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 'clamp(1.6rem, 4vw, 2.2rem)', color: 'var(--ink)', margin: 0, lineHeight: 1.1 }}>
-              {firstName}'s Dashboard
+              {t('header.dashboardTitle', { firstName })}
             </h1>
           </div>
           <button
@@ -990,7 +1000,7 @@ export default function HostDashboard() {
             style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.65rem 1.25rem', fontSize: '0.875rem', flexShrink: 0 }}
           >
             <Plus size={15} />
-            New listing
+            {t('header.newListing')}
           </button>
         </div>
 
@@ -1003,10 +1013,10 @@ export default function HostDashboard() {
               <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(212,168,67,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: '1rem' }}>💵</div>
               <div>
                 <p style={{ fontFamily: 'Satoshi, sans-serif', fontWeight: 700, fontSize: 13, color: '#92400E', margin: '0 0 3px' }}>
-                  {needsReview.length === 1 ? '1 listing needs' : `${needsReview.length} listings need`} compensation added
+                  {t('compensationBanner.title', { count: needsReview.length })}
                 </p>
                 <p style={{ fontFamily: 'Satoshi, sans-serif', fontSize: 12.5, color: '#78350F', margin: 0, lineHeight: 1.55 }}>
-                  Every collaboration now includes creator payment. {needsReview.length === 1 ? 'This listing is' : 'These listings are'} hidden from Explore until you edit {needsReview.length === 1 ? 'it' : 'them'} and add a compensation amount: {needsReview.map((l) => l.title).join(', ')}.
+                  {t('compensationBanner.body', { count: needsReview.length, titles: needsReview.map((l) => l.title).join(', ') })}
                 </p>
               </div>
             </div>
@@ -1088,8 +1098,8 @@ export default function HostDashboard() {
         <div ref={listingsSectionRef} style={{ marginBottom: '2.5rem', scrollMarginTop: '8rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.75rem' }}>
             <div>
-              <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.25rem', color: 'var(--ink)', margin: 0 }}>My Listings</h2>
-              <p style={{ fontSize: '0.75rem', color: 'var(--sage)', marginTop: '0.15rem' }}>{hostListings.length} total</p>
+              <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.25rem', color: 'var(--ink)', margin: 0 }}>{t('myListings.heading')}</h2>
+              <p style={{ fontSize: '0.75rem', color: 'var(--sage)', marginTop: '0.15rem' }}>{t('myListings.total', { count: hostListings.length })}</p>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
               <div style={{ display: 'flex', gap: '0.4rem' }}>
@@ -1108,7 +1118,7 @@ export default function HostDashboard() {
                       fontFamily: 'var(--font-body)',
                     }}
                   >
-                    {f === 'all' ? 'All' : f.charAt(0).toUpperCase() + f.slice(1)}
+                    {f === 'all' ? t('filters.all') : t(`statusLabels.${f}`)}
                   </button>
                 ))}
               </div>
@@ -1127,7 +1137,7 @@ export default function HostDashboard() {
                 }}
               >
                 <Compass size={13} />
-                Browse marketplace
+                {t('myListings.browseMarketplace')}
               </button>
             </div>
           </div>
@@ -1141,10 +1151,10 @@ export default function HostDashboard() {
           ) : filtered.length === 0 ? (
             <div style={{ ...GC, padding: '3rem', textAlign: 'center' }}>
               <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.1rem', color: 'var(--ink)', marginBottom: '0.5rem' }}>
-                No {filter} listings
+                {t('myListings.emptyTitle', { filter: filter === 'all' ? t('filters.all').toLowerCase() : t(`statusLabels.${filter}`).toLowerCase() })}
               </p>
               <p style={{ fontSize: '0.82rem', color: 'var(--sage)' }}>
-                {filter === 'all' ? 'Create your first listing to start attracting creators.' : `You have no ${filter} listings right now.`}
+                {filter === 'all' ? t('myListings.emptyAll') : t('myListings.emptyFiltered', { filter: t(`statusLabels.${filter}`).toLowerCase() })}
               </p>
             </div>
           ) : (
@@ -1159,8 +1169,8 @@ export default function HostDashboard() {
         {/* ── Activity Feed ── */}
         <div style={{ marginBottom: '2.5rem' }}>
           <div style={{ marginBottom: '1rem' }}>
-            <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.25rem', color: 'var(--ink)', margin: 0 }}>Activity</h2>
-            <p style={{ fontSize: '0.75rem', color: 'var(--sage)', marginTop: '0.15rem' }}>What needs your attention</p>
+            <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.25rem', color: 'var(--ink)', margin: 0 }}>{t('activity.heading')}</h2>
+            <p style={{ fontSize: '0.75rem', color: 'var(--sage)', marginTop: '0.15rem' }}>{t('activity.subtitle')}</p>
           </div>
 
           {convexHostListings === undefined ? (
@@ -1171,7 +1181,7 @@ export default function HostDashboard() {
             </div>
           ) : (
             <div style={{ ...GC, padding: '2rem', textAlign: 'center' }}>
-              <p style={{ fontSize: '0.85rem', color: 'var(--sage)', margin: 0 }}>No activity. All caught up.</p>
+              <p style={{ fontSize: '0.85rem', color: 'var(--sage)', margin: 0 }}>{t('activity.empty')}</p>
             </div>
           )}
         </div>
@@ -1179,8 +1189,8 @@ export default function HostDashboard() {
         {/* ── Impact Metrics ── */}
         <div>
           <div style={{ marginBottom: '1rem' }}>
-            <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.25rem', color: 'var(--ink)', margin: 0 }}>Your Impact</h2>
-            <p style={{ fontSize: '0.75rem', color: 'var(--sage)', marginTop: '0.15rem' }}>All time</p>
+            <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.25rem', color: 'var(--ink)', margin: 0 }}>{t('impact.heading')}</h2>
+            <p style={{ fontSize: '0.75rem', color: 'var(--sage)', marginTop: '0.15rem' }}>{t('impact.subtitle')}</p>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '1rem' }}>
 
@@ -1193,7 +1203,7 @@ export default function HostDashboard() {
             >
               <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#4A9B7F', marginBottom: '0.6rem' }} />
               <p style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.75rem', color: 'var(--ink)', margin: '0 0 0.15rem', lineHeight: 1, letterSpacing: '-0.03em' }}>{fmtStat(hostStats.totalCollabs)}</p>
-              <p style={{ fontSize: '0.75rem', color: 'var(--sage)', fontFamily: 'var(--font-body)', marginBottom: '0.75rem' }}>Total Collabs</p>
+              <p style={{ fontSize: '0.75rem', color: 'var(--sage)', fontFamily: 'var(--font-body)', marginBottom: '0.75rem' }}>{t('charts.totalCollabs')}</p>
               {chartsAnimated && <MiniLineChart data={hostChartData.collabs} color="#4A9B7F" delay={0} />}
             </div>
 
@@ -1206,7 +1216,7 @@ export default function HostDashboard() {
             >
               <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#3C5759', marginBottom: '0.6rem' }} />
               <p style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.75rem', color: 'var(--ink)', margin: '0 0 0.15rem', lineHeight: 1, letterSpacing: '-0.03em' }}>{fmtStat(hostStats.uniqueCreators)}</p>
-              <p style={{ fontSize: '0.75rem', color: 'var(--sage)', fontFamily: 'var(--font-body)', marginBottom: '0.75rem' }}>Creators Worked With</p>
+              <p style={{ fontSize: '0.75rem', color: 'var(--sage)', fontFamily: 'var(--font-body)', marginBottom: '0.75rem' }}>{t('charts.creatorsWorkedWith')}</p>
               {chartsAnimated && <MiniBarChart data={hostChartData.creators} color="#3C5759" delay={80} />}
             </div>
 
@@ -1219,7 +1229,7 @@ export default function HostDashboard() {
             >
               <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#7B68C8', marginBottom: '0.6rem' }} />
               <p style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.75rem', color: 'var(--ink)', margin: '0 0 0.15rem', lineHeight: 1, letterSpacing: '-0.03em' }}>{fmtStat(hostStats.contentPieces)}</p>
-              <p style={{ fontSize: '0.75rem', color: 'var(--sage)', fontFamily: 'var(--font-body)', marginBottom: '0.75rem' }}>Content Pieces</p>
+              <p style={{ fontSize: '0.75rem', color: 'var(--sage)', fontFamily: 'var(--font-body)', marginBottom: '0.75rem' }}>{t('charts.contentPieces')}</p>
               {chartsAnimated && <MiniLineChart data={hostChartData.content} color="#7B68C8" delay={160} />}
             </div>
 
@@ -1227,7 +1237,7 @@ export default function HostDashboard() {
             <div style={{ ...GC, padding: '1.25rem 1.5rem' }}>
               <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#D4A843', marginBottom: '0.6rem' }} />
               <p style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.75rem', color: 'var(--ink)', margin: '0 0 0.15rem', lineHeight: 1, letterSpacing: '-0.03em' }}>{hostStats.estReach > 0 ? fmtStat(hostStats.estReach) : '—'}</p>
-              <p style={{ fontSize: '0.75rem', color: 'var(--sage)', fontFamily: 'var(--font-body)', marginBottom: '0.75rem' }}>Est. Reach</p>
+              <p style={{ fontSize: '0.75rem', color: 'var(--sage)', fontFamily: 'var(--font-body)', marginBottom: '0.75rem' }}>{t('charts.estReach')}</p>
               {chartsAnimated && <BlurredReachChart data={hostChartData.reach} color="#D4A843" delay={240} />}
             </div>
 
@@ -1244,8 +1254,8 @@ export default function HostDashboard() {
     {/* ── Floating pricing tool widget (see collab cost before creating a listing) ── */}
     <button
       onClick={() => setPricingToolOpen(true)}
-      aria-label="What does a collab cost?"
-      title="What does a collab cost?"
+      aria-label={t('pricingWidget.ariaLabel')}
+      title={t('pricingWidget.ariaLabel')}
       style={{
         position: 'fixed', bottom: '5.5rem', right: '1.5rem', zIndex: 200,
         display: 'flex', alignItems: 'center', gap: 6,
@@ -1262,7 +1272,7 @@ export default function HostDashboard() {
       onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
     >
       <span style={{ fontFamily: 'var(--font-blog-display)', fontWeight: 700, fontSize: '1rem', color: 'var(--ink)', lineHeight: 1 }}>$</span>
-      Pricing
+      {t('pricingWidget.label')}
     </button>
 
     {pricingToolOpen && (
@@ -1279,7 +1289,7 @@ export default function HostDashboard() {
             <PointsHelpButton />
             <button
               onClick={() => setPricingToolOpen(false)}
-              aria-label="Close"
+              aria-label={t('chartModal.close')}
               style={{
                 width: 32, height: 32, borderRadius: '50%', border: 'none',
                 background: 'rgba(25,37,36,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center',

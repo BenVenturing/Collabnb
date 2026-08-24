@@ -1,15 +1,17 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import FAQModal from './FAQModal';
 
 export default function FloatingHelpButton() {
+  const { t } = useTranslation('floatingHelpButton');
   const [open, setOpen] = useState(false);
 
   return (
     <>
       <button
         onClick={() => setOpen(true)}
-        aria-label="Help & FAQ"
-        title="Help & FAQ"
+        aria-label={t('helpFaq')}
+        title={t('helpFaq')}
         style={{
           position: 'fixed',
           bottom: '10.5rem',

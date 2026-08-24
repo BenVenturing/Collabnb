@@ -1,0 +1,41 @@
+{
+  "demoBadge": "Recorrido de demostración",
+  "dismissDemo": "Cerrar demo",
+  "dismissSample": "Quitar muestra",
+  "hostLabel": "Anfitrión:",
+  "deliverablesLabel": "Entregables",
+  "dueInLabel": "Vence en",
+  "paymentLabel": "Pago",
+  "stayLabel": "Estancia",
+  "complimentary": "Cortesía",
+  "daysCount_one": "{{count}} día",
+  "daysCount_other": "{{count}} días",
+  "filterActive": "Activo",
+  "filterArchived": "Archivado",
+  "status": {
+    "pendingReview": "Revisión pendiente",
+    "approved": "¡Aprobado!",
+    "declined": "Rechazado",
+    "underReview": "En revisión",
+    "completed": "Completado",
+    "inProgress": "En curso",
+    "applicationSent": "Solicitud enviada"
+  },
+  "filters": {
+    "allStatuses": "Todos los estados",
+    "pending": "Pendiente",
+    "uploaded": "Subido",
+    "closed": "Cerrado",
+    "allListings": "Todos los anuncios",
+    "anyDueDate": "Cualquier fecha límite",
+    "dueThisWeek": "Vence esta semana",
+    "dueThisMonth": "Vence este mes",
+    "noDeadline": "Sin fecha límite"
+  },
+  "emptyTitleNoCollabs": "Aún no hay colabs",
+  "emptyTitleNoMatches": "Sin coincidencias",
+  "emptyBodyStart": "Postúlate a una estancia para empezar",
+  "emptyBodyAdjust": "Prueba ajustando tu búsqueda o filtros",
+  "discoverStays": "Descubrir estancias",
+  "demoToast": "Recorrido de demostración cerrado — encuéntralo de nuevo en <strong>Configuración</strong> o en el <strong>Centro de ayuda (ícono ?)</strong>"
+}

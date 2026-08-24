@@ -1,0 +1,15 @@
+{
+  "steps": [
+    { "title": "1. Les bases", "desc": "Parlez-nous de votre annonce et du type de collaboration" },
+    { "title": "2. L'offre", "desc": "Quels avantages et quelle expérience les créateurs recevront-ils ?" },
+    { "title": "3. Livrables et dates", "desc": "Définissez la période de collaboration et ce dont vous avez besoin" },
+    { "title": "4. Vérification et publication", "desc": "Prévisualisez votre annonce et publiez-la pour les créateurs" }
+  ],
+  "headingLine1": "C'est facile de créer",
+  "headingLine2": "une annonce sur Collabnb",
+  "subtitle": "Nous vous guiderons étape par étape. Vous pouvez enregistrer et revenir à tout moment.",
+  "verificationRequired": "Vérification requise",
+  "verificationBody": "Votre compte est en cours d'examen par l'équipe Collabnb. Une fois approuvé, vous pourrez publier une annonce. Cela prend généralement 1 à 2 jours ouvrés.",
+  "getStarted": "Commencer",
+  "pendingVerification": "Vérification en attente"
+}

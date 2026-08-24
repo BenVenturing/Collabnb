@@ -1,0 +1,5 @@
+{
+  "unavailable": "O seletor de local no mapa não está disponível neste ambiente — os campos de cidade/estado acima ainda são usados.",
+  "searchPlaceholder": "Pesquise um endereço ou cidade para colocar um pino",
+  "clickHint": "Ou clique no mapa, ou arraste o pino, para posicioná-lo com precisão."
+}

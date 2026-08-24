@@ -1,0 +1,5 @@
+{
+  "unavailable": "El selector de ubicación en el mapa no está disponible en este entorno — los campos de ciudad/estado de arriba se siguen utilizando.",
+  "searchPlaceholder": "Busca una dirección o ciudad para colocar un pin",
+  "clickHint": "O haz clic en el mapa, o arrastra el pin, para colocarlo con precisión."
+}

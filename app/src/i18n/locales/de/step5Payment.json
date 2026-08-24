@@ -1,0 +1,47 @@
+{
+  "payoutInfo": {
+    "platform": {
+      "host": "Deine Karte wird automatisch belastet, sobald die Kollaboration als abgeschlossen markiert ist — keine manuellen Überweisungen, kein Hinterherlaufen. Collabnb hält die Auszahlung des Creators 48 Stunden nach Abschluss zurück, falls eine Seite einen Streitfall melden muss, und leitet sie dann automatisch weiter.",
+      "creator": "Die Zahlung ist garantiert und automatisch — keine Rechnungsstellung, kein Warten auf dich. Die Gelder werden kurz nach Ablauf des 48-Stunden-Streitfensters freigegeben, und Creator sehen von vornherein, dass die Zahlung geschützt ist — das zieht tendenziell stärkere Bewerber an."
+    },
+    "in_person": {
+      "host": "Du zahlst den Creator direkt — bar, per Venmo, wie ihr es vereinbart — nach deinem eigenen Zeitplan. Collabnb berechnet weiterhin automatisch deine Plattformgebühr, sobald die Kollaboration als abgeschlossen markiert ist; das ist unabhängig von der Zahlung an den Creator.",
+      "creator": "Du vertraust darauf, dass der Gastgeber dich direkt bezahlt. Collabnb hält, prüft oder garantiert diese Zahlung nicht, und das 48-Stunden-Streitfenster gilt nicht, da kein Geld über die Plattform läuft."
+    }
+  },
+  "errors": {
+    "cardConfirmFailed": "Deine Karte konnte nicht bestätigt werden — bitte versuche es erneut.",
+    "publishFailed": "Beim Veröffentlichen dieses Angebots ist etwas schiefgelaufen.",
+    "cardSetupFailed": "Die Karteneinrichtung konnte nicht gestartet werden — bitte versuche es erneut."
+  },
+  "nextLabel": {
+    "publishing": "Wird veröffentlicht...",
+    "redirecting": "Weiterleitung zu Stripe...",
+    "addCard": "Karte hinzufügen, um zu veröffentlichen",
+    "saveChanges": "Änderungen speichern",
+    "publish": "Angebot veröffentlichen"
+  },
+  "heading": "Wie wirst du bezahlt?",
+  "subtitle": "Dies bestimmt, wie die Zahlung des Creators abläuft — prüfe es sorgfältig, es wird gesperrt, sobald das Angebot live geht.",
+  "lockedBanner": "Dieses Angebot ist bereits veröffentlicht, daher ist die Zahlungsmethode gesperrt, um laufende Kollaborationen nicht zu stören.",
+  "payoutSwitch": {
+    "inPerson": "Ich zahle den Creator selbst",
+    "platform": "Collabnb übernimmt die Zahlung",
+    "recommended": "Empfohlen"
+  },
+  "infoCol": {
+    "forHost": "Für dich (den Gastgeber)",
+    "forCreator": "Für den Creator"
+  },
+  "fees": {
+    "heading": "Nur für Gastgeber: Preise & Gebühren",
+    "platformFee": "Plattformgebühr",
+    "percentDesc": "5 % der Bargeldauszahlung (mind. 25 $)",
+    "flatDesc": "Pauschale Plattformgebühr von 25 $",
+    "chargedOnlyOnce": "wird nur berechnet, sobald eine Kollaboration abgeschlossen ist",
+    "chargedNoteSuffix": ". Du zahlst nie etwas im Voraus, um ein Angebot zu veröffentlichen.",
+    "hiddenNote": "⚠ Creator sehen diese Gebühren nicht"
+  },
+  "cardSaved": "Karte gespeichert — alles bereit. Klicke auf Veröffentlichen, um live zu gehen.",
+  "needsCardNote": "Du benötigst eine hinterlegte Karte, bevor du veröffentlichst — sie wird erst mit Collabnbs Plattformgebühr belastet, sobald eine Kollaboration abgeschlossen ist."
+}

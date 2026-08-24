@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus, Minus, Pencil, X, Copy } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import WizardShell from "../../components/host/WizardShell";
 import { useListingDraft } from "../../contexts/ListingDraftContext";
 import ThemedDateRangePicker from "../../components/host/ThemedDateRangePicker";
@@ -13,9 +14,9 @@ function Input({ value, onChange, onBlur, placeholder, type = "text" }) {
   return <input type={type} value={value} onChange={(e) => onChange(e.target.value)} onBlur={onBlur} placeholder={placeholder} style={{ width: "100%", padding: "12px 16px", border: "1.5px solid rgba(25,37,36,0.15)", borderRadius: "0.875rem", fontFamily: "Satoshi, sans-serif", fontSize: 14, color: "var(--ink)", background: "#fff", outline: "none", boxSizing: "border-box" }} />;
 }
 
-const LOAD_LABELS = { light: "light", moderate: "moderate", heavy: "heavy", custom: "custom campaign" };
-
 export default function Step3Deliverables() {
+  const { t } = useTranslation('step3Deliverables');
+  const LOAD_LABELS = t('loadLabels', { returnObjects: true });
   const navigate = useNavigate();
   const { draft, updateDraft, totalDeliverables, formatCount, combinedDeliverablesList, autoDeliverableCount, DEFAULT_USAGE_RIGHTS } = useListingDraft();
 
@@ -61,13 +62,13 @@ export default function Step3Deliverables() {
   // Tells the host exactly what's missing when Next is disabled, instead of
   // the button silently doing nothing.
   const nextHint = !draft.creator_tier
-    ? "Pick a creator tier in the cost calculator above."
+    ? t('nextHint.needTier')
     : !hasCompensation
-      ? "Enter a cash compensation amount in the cost calculator above."
+      ? t('nextHint.needCompensation')
       : !hasDeliverables
-        ? "Pick at least one deliverable in the cost calculator, or add a custom one below."
+        ? t('nextHint.needDeliverables')
         : completeRanges.length === 0
-          ? "Add a collaboration window with both a start and end date."
+          ? t('nextHint.needDates')
           : "";
 
   function resetForm() {
@@ -135,10 +136,10 @@ export default function Step3Deliverables() {
       onNext={() => navigate("/host/listings/create/review")}
     >
       <h2 style={{ fontFamily: "Cabinet Grotesk, serif", fontWeight: 800, fontSize: 28, color: "var(--ink)", margin: "0 0 6px" }}>
-        Pricing & dates
+        {t('heading')}
       </h2>
       <p style={{ fontFamily: "Satoshi, sans-serif", fontSize: 14, color: "var(--slate)", margin: "0 0 32px" }}>
-        Set the creator tier, compensation, and deliverables — with live pricing guidance — then define when the collaboration happens.
+        {t('subtitle')}
       </p>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
@@ -160,20 +161,20 @@ export default function Step3Deliverables() {
         {totalDeliverables > 0 && (
           <div style={{ background: "var(--mint)", borderRadius: "0.875rem", padding: "14px 18px" }}>
             <div style={{ fontFamily: "Satoshi, sans-serif", fontWeight: 700, fontSize: 15, color: "var(--ink)" }}>
-              {totalDeliverables} total deliverables
+              {t('summary.totalDeliverables', { count: totalDeliverables })}
             </div>
             <div style={{ fontFamily: "Satoshi, sans-serif", fontSize: 12, color: "var(--slate)", marginTop: 2 }}>
-              Across {formatCount} format{formatCount !== 1 ? "s" : ""} · {LOAD_LABELS[draft.deliverable_load] || ""} load
+              {t('summary.acrossFormats', { count: formatCount, load: LOAD_LABELS[draft.deliverable_load] || "" })}
             </div>
           </div>
         )}
 
         {/* Deliverables list — auto cards from the cost calculator above, plus any custom cards added below. Always kept in sync with the calculator. */}
         <div>
-          <Label>Deliverables</Label>
+          <Label>{t('deliverables.label')}</Label>
           {combinedDeliverablesList.length === 0 ? (
             <div style={{ fontFamily: "Satoshi, sans-serif", fontSize: 13, color: "var(--sage)" }}>
-              Pick deliverables in the cost calculator above, or add a custom one below.
+              {t('deliverables.empty')}
             </div>
           ) : (
             <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
@@ -184,20 +185,20 @@ export default function Step3Deliverables() {
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 }}>
                       <div style={{ fontFamily: "Satoshi, sans-serif", fontWeight: 700, fontSize: 14, color: "var(--ink)" }}>{d.quantity}x {d.type}</div>
                       <div style={{ display: "flex", gap: 6 }}>
-                        <button onClick={() => (auto ? startEditAuto(d) : startEdit(toCustomIdx(i)))} title="Edit usage rights" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--sage)" }}><Pencil size={13} /></button>
+                        <button onClick={() => (auto ? startEditAuto(d) : startEdit(toCustomIdx(i)))} title={t('deliverables.editUsageRights')} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--sage)" }}><Pencil size={13} /></button>
                         {!auto && (
                           <button onClick={() => removeDeliverable(toCustomIdx(i))} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--sage)" }}><X size={13} /></button>
                         )}
                       </div>
                     </div>
                     {auto ? (
-                      <div style={{ fontFamily: "Satoshi, sans-serif", fontSize: 11, color: "var(--sage)", fontStyle: "italic" }}>From the cost calculator above</div>
+                      <div style={{ fontFamily: "Satoshi, sans-serif", fontSize: 11, color: "var(--sage)", fontStyle: "italic" }}>{t('deliverables.fromCalculator')}</div>
                     ) : (
                       <div style={{ fontFamily: "Satoshi, sans-serif", fontSize: 12, color: "var(--slate)" }}>{d.description}</div>
                     )}
                     {d.usage_rights && (
                       <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px solid rgba(25,37,36,0.08)" }}>
-                        <div style={{ fontFamily: "Satoshi, sans-serif", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--sage)", marginBottom: 2 }}>Usage rights</div>
+                        <div style={{ fontFamily: "Satoshi, sans-serif", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--sage)", marginBottom: 2 }}>{t('deliverables.usageRights')}</div>
                         <div style={{ fontFamily: "Satoshi, sans-serif", fontSize: 11, color: "var(--slate)", lineHeight: 1.4 }}>{d.usage_rights}</div>
                       </div>
                     )}
@@ -211,7 +212,7 @@ export default function Step3Deliverables() {
         {/* Add custom deliverable */}
         <div style={{ background: "rgba(255,255,255,0.85)", backdropFilter: "blur(14px) saturate(130%)", WebkitBackdropFilter: "blur(14px) saturate(130%)", borderRadius: "0.875rem", border: "1px solid rgba(255,255,255,0.88)", padding: "20px", boxShadow: "0 2px 12px rgba(25,37,36,0.05)" }}>
           <div style={{ fontFamily: "Satoshi, sans-serif", fontWeight: 700, fontSize: 14, color: "var(--ink)", marginBottom: 14 }}>
-            {editingAutoType ? `Edit usage rights — ${editingAutoType}` : editIdx !== null ? "Edit deliverable" : "Add custom deliverable"}
+            {editingAutoType ? t('form.editUsageRightsFor', { type: editingAutoType }) : editIdx !== null ? t('form.editDeliverable') : t('form.addCustomDeliverable')}
           </div>
           {!editingAutoType && (
             <>
@@ -222,35 +223,35 @@ export default function Step3Deliverables() {
                   <span style={{ fontFamily: "Satoshi, sans-serif", fontWeight: 700, fontSize: 15, color: "var(--ink)", minWidth: 20, textAlign: "center" }}>{customQty}</span>
                   <button onClick={() => setCustomQty(customQty + 1)} style={{ background: "none", border: "none", cursor: "pointer" }}><Plus size={13} color="var(--ink)" /></button>
                 </div>
-                <input value={customType} onChange={(e) => setCustomType(e.target.value)} placeholder="Platform/Type (e.g., Instagram Reels)" style={{ flex: 1, padding: "10px 14px", border: "1.5px solid rgba(25,37,36,0.15)", borderRadius: "0.625rem", fontFamily: "Satoshi, sans-serif", fontSize: 13, color: "var(--ink)", background: "var(--bone)", outline: "none" }} />
+                <input value={customType} onChange={(e) => setCustomType(e.target.value)} placeholder={t('form.typePlaceholder')} style={{ flex: 1, padding: "10px 14px", border: "1.5px solid rgba(25,37,36,0.15)", borderRadius: "0.625rem", fontFamily: "Satoshi, sans-serif", fontSize: 13, color: "var(--ink)", background: "var(--bone)", outline: "none" }} />
               </div>
-              <input value={customDesc} onChange={(e) => setCustomDesc(e.target.value)} placeholder="Description" style={{ width: "100%", padding: "10px 14px", border: "1.5px solid rgba(25,37,36,0.15)", borderRadius: "0.625rem", fontFamily: "Satoshi, sans-serif", fontSize: 13, color: "var(--ink)", background: "var(--bone)", outline: "none", boxSizing: "border-box", marginBottom: 12 }} />
+              <input value={customDesc} onChange={(e) => setCustomDesc(e.target.value)} placeholder={t('form.descPlaceholder')} style={{ width: "100%", padding: "10px 14px", border: "1.5px solid rgba(25,37,36,0.15)", borderRadius: "0.625rem", fontFamily: "Satoshi, sans-serif", fontSize: 13, color: "var(--ink)", background: "var(--bone)", outline: "none", boxSizing: "border-box", marginBottom: 12 }} />
             </>
           )}
           {editingAutoType && (
             <div style={{ fontFamily: "Satoshi, sans-serif", fontSize: 12, color: "var(--sage)", marginBottom: 12 }}>
-              {customQty}x {editingAutoType} — type and quantity come from the cost calculator above.
+              {t('form.autoTypeHint', { qty: customQty, type: editingAutoType })}
             </div>
           )}
 
           {/* Usage rights for this deliverable */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-            <div style={{ fontFamily: "Satoshi, sans-serif", fontWeight: 700, fontSize: 12, color: "var(--ink)" }}>Usage rights for this deliverable</div>
+            <div style={{ fontFamily: "Satoshi, sans-serif", fontWeight: 700, fontSize: 12, color: "var(--ink)" }}>{t('form.usageRightsLabel')}</div>
             {!editingAutoType && (
               <button
                 onClick={copyUsageToAll}
                 disabled={draft.deliverables_list.length === 0}
-                title="Apply these usage rights to every deliverable"
+                title={t('form.applyToAllTitle')}
                 style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "none", border: "none", cursor: draft.deliverables_list.length === 0 ? "not-allowed" : "pointer", fontFamily: "Satoshi, sans-serif", fontSize: 12, fontWeight: 600, color: draft.deliverables_list.length === 0 ? "var(--sage)" : "var(--slate)", padding: 0 }}
               >
-                <Copy size={13} /> Copy to all
+                <Copy size={13} /> {t('form.copyToAll')}
               </button>
             )}
           </div>
           <textarea
             value={customUsage}
             onChange={(e) => setCustomUsage(e.target.value)}
-            placeholder="e.g., Host receives a perpetual license for marketing. Creator retains ownership."
+            placeholder={t('form.usageRightsPlaceholder')}
             rows={2}
             style={{ width: "100%", padding: "10px 14px", border: "1.5px solid rgba(25,37,36,0.15)", borderRadius: "0.625rem", fontFamily: "Satoshi, sans-serif", fontSize: 13, color: "var(--ink)", background: "var(--bone)", outline: "none", resize: "vertical", boxSizing: "border-box", marginBottom: 12 }}
           />
@@ -261,7 +262,7 @@ export default function Step3Deliverables() {
                 onClick={resetForm}
                 style={{ flex: 1, padding: "12px 0", borderRadius: 9999, border: "1.5px solid rgba(25,37,36,0.15)", background: "transparent", fontFamily: "Satoshi, sans-serif", fontSize: 14, fontWeight: 700, color: "var(--ink)", cursor: "pointer" }}
               >
-                Cancel
+                {t('form.cancel')}
               </button>
             )}
             <button
@@ -269,14 +270,14 @@ export default function Step3Deliverables() {
               disabled={!editingAutoType && !customType.trim()}
               style={{ flex: 2, padding: "12px 0", borderRadius: 9999, border: "none", background: (editingAutoType || customType.trim()) ? "var(--ink)" : "rgba(25,37,36,0.14)", fontFamily: "Satoshi, sans-serif", fontSize: 14, fontWeight: 700, color: (editingAutoType || customType.trim()) ? "#fff" : "var(--slate)", cursor: (editingAutoType || customType.trim()) ? "pointer" : "not-allowed", transition: "background 150ms" }}
             >
-              + {editingAutoType || editIdx !== null ? "Save changes" : "Add deliverable"}
+              + {editingAutoType || editIdx !== null ? t('form.saveChanges') : t('form.addDeliverable')}
             </button>
           </div>
         </div>
 
         {/* Deliverables due */}
         <div style={{ background: "rgba(255,255,255,0.55)", backdropFilter: "blur(14px) saturate(130%)", WebkitBackdropFilter: "blur(14px) saturate(130%)", borderRadius: "0.875rem", border: "1px solid rgba(255,255,255,0.7)", padding: "18px 20px", boxShadow: "0 2px 12px rgba(25,37,36,0.05)" }}>
-          <Label>Deliverables due (days after stay)</Label>
+          <Label>{t('due.label')}</Label>
           <Input
             type="number"
             value={draft.turnaround_days}
@@ -288,8 +289,8 @@ export default function Step3Deliverables() {
 
         {/* Collaboration windows (up to 3) */}
         <div>
-          <Label required>Collaboration windows</Label>
-          <div style={{ fontFamily: "Satoshi, sans-serif", fontSize: 12, color: "var(--sage)", marginBottom: 8 }}>Add up to {MAX_DATE_RANGES} date windows creators can book within.</div>
+          <Label required>{t('windows.label')}</Label>
+          <div style={{ fontFamily: "Satoshi, sans-serif", fontSize: 12, color: "var(--sage)", marginBottom: 8 }}>{t('windows.hint', { max: MAX_DATE_RANGES })}</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {dateRanges.map((r, i) => (
               <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
@@ -301,7 +302,7 @@ export default function Step3Deliverables() {
                   />
                 </div>
                 {dateRanges.length > 1 && (
-                  <button onClick={() => removeRange(i)} title="Remove date window" style={{ marginTop: 10, width: 30, height: 30, borderRadius: "50%", border: "1.5px solid rgba(25,37,36,0.15)", background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <button onClick={() => removeRange(i)} title={t('windows.removeTitle')} style={{ marginTop: 10, width: 30, height: 30, borderRadius: "50%", border: "1.5px solid rgba(25,37,36,0.15)", background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                     <X size={14} color="var(--slate)" />
                   </button>
                 )}
@@ -310,14 +311,14 @@ export default function Step3Deliverables() {
           </div>
           {dateRanges.length < MAX_DATE_RANGES && (
             <button onClick={addRange} style={{ marginTop: 12, display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", border: "1.5px dashed rgba(25,37,36,0.25)", borderRadius: 9999, background: "transparent", cursor: "pointer", fontFamily: "Satoshi, sans-serif", fontSize: 13, fontWeight: 600, color: "var(--ink)" }}>
-              <Plus size={15} /> Add another date window
+              <Plus size={15} /> {t('windows.addAnother')}
             </button>
           )}
         </div>
 
         {/* Policies */}
         <div>
-          <Label>Revision policy</Label>
+          <Label>{t('policies.revisionLabel')}</Label>
           <textarea
             value={draft.revision_policy}
             onChange={(e) => updateDraft({ revision_policy: e.target.value })}
@@ -325,7 +326,7 @@ export default function Step3Deliverables() {
             style={{ width: "100%", padding: "13px 16px", border: "1.5px solid rgba(25,37,36,0.15)", borderRadius: "0.875rem", fontFamily: "Satoshi, sans-serif", fontSize: 14, color: "var(--ink)", background: "#fff", outline: "none", resize: "vertical", boxSizing: "border-box" }}
           />
           <div style={{ fontFamily: "Satoshi, sans-serif", fontSize: 12, color: "var(--sage)", marginTop: 6 }}>
-            Usage rights are now set per-deliverable above. Use "Copy to all" to apply one policy across every deliverable.
+            {t('policies.footerNote')}
           </div>
         </div>
       </div>

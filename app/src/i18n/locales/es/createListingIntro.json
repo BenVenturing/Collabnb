@@ -1,0 +1,15 @@
+{
+  "steps": [
+    { "title": "1. Lo básico", "desc": "Cuéntanos sobre tu anuncio y el tipo de colaboración" },
+    { "title": "2. La oferta", "desc": "¿Qué beneficios y experiencia recibirán los creadores?" },
+    { "title": "3. Entregables y fechas", "desc": "Define la ventana de colaboración y qué necesitas" },
+    { "title": "4. Revisar y publicar", "desc": "Previsualiza tu anuncio y publícalo para los creadores" }
+  ],
+  "headingLine1": "Es fácil crear",
+  "headingLine2": "un anuncio en Collabnb",
+  "subtitle": "Te guiaremos paso a paso durante todo el proceso. Puedes guardar y volver cuando quieras.",
+  "verificationRequired": "Verificación requerida",
+  "verificationBody": "Tu cuenta está siendo revisada por el equipo de Collabnb. Una vez aprobada, podrás publicar un anuncio. Esto suele tardar de 1 a 2 días hábiles.",
+  "getStarted": "Comenzar",
+  "pendingVerification": "Verificación pendiente"
+}

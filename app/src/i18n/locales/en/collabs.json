@@ -1,0 +1,41 @@
+{
+  "demoBadge": "Demo Tour",
+  "dismissDemo": "Dismiss demo",
+  "dismissSample": "Remove sample",
+  "hostLabel": "Host:",
+  "deliverablesLabel": "Deliverables",
+  "dueInLabel": "Due in",
+  "paymentLabel": "Payment",
+  "stayLabel": "Stay",
+  "complimentary": "Complimentary",
+  "daysCount_one": "{{count}} day",
+  "daysCount_other": "{{count}} days",
+  "filterActive": "Active",
+  "filterArchived": "Archived",
+  "status": {
+    "pendingReview": "Pending Review",
+    "approved": "Approved!",
+    "declined": "Declined",
+    "underReview": "Under Review",
+    "completed": "Completed",
+    "inProgress": "In Progress",
+    "applicationSent": "Application Sent"
+  },
+  "filters": {
+    "allStatuses": "All statuses",
+    "pending": "Pending",
+    "uploaded": "Uploaded",
+    "closed": "Closed",
+    "allListings": "All listings",
+    "anyDueDate": "Any due date",
+    "dueThisWeek": "Due this week",
+    "dueThisMonth": "Due this month",
+    "noDeadline": "No deadline"
+  },
+  "emptyTitleNoCollabs": "No collabs yet",
+  "emptyTitleNoMatches": "No matches",
+  "emptyBodyStart": "Apply to a stay to get started",
+  "emptyBodyAdjust": "Try adjusting your search or filters",
+  "discoverStays": "Discover Stays",
+  "demoToast": "Demo tour closed — find it again in <strong>Settings</strong> or the <strong>Help Center (? icon)</strong>"
+}

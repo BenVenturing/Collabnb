@@ -1,0 +1,19 @@
+{
+  "heading": "Continuez à collaborer",
+  "body": "Votre essai gratuit de 30 jours est terminé. Abonnez-vous pour continuer à envoyer des messages aux hôtes, postuler à des collaborations et explorer la carte complète.",
+  "plans": {
+    "monthly": "10 $ / mois",
+    "yearly": "60 $ / an",
+    "yearlySavings": "économisez 50 %"
+  },
+  "finePrint": "Annulez à tout moment. Les membres fondateurs sont toujours gratuits.",
+  "errors": {
+    "profileNotFound": "Profil introuvable. Assurez-vous d'être connecté.",
+    "stripeNotConfigured": "Stripe n'est pas configuré. Exécutez : npx convex env set STRIPE_SECRET_KEY sk_test_...",
+    "checkoutFailed": "Impossible de démarrer le paiement. Veuillez réessayer."
+  },
+  "cta": {
+    "redirecting": "Redirection…",
+    "later": "Peut-être plus tard"
+  }
+}

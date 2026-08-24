@@ -1,0 +1,21 @@
+{
+  "heading": "Adicione um cartão para concluir",
+  "body": "Ambas as partes assinaram. Salve um cartão agora — você ainda não será cobrado. A taxa da plataforma é cobrada automaticamente somente quando a colaboração for concluída.",
+  "feeExplain": {
+    "flatFee": "Taxa fixa para colaboração de estadia gratuita",
+    "percentage": "5% do valor da colaboração de US$ {{amount}} (mín. US$ 20)"
+  },
+  "feeCard": {
+    "title": "Taxa da plataforma Collabnb · cobrada na conclusão"
+  },
+  "errors": {
+    "saveContractFirst": "Salve o contrato antes de adicionar um cartão.",
+    "stripeNotConfigured": "Stripe não configurado. Execute: npx convex env set STRIPE_SECRET_KEY sk_test_...",
+    "checkoutFailed": "Não foi possível iniciar o checkout. Tente novamente."
+  },
+  "cta": {
+    "redirecting": "Redirecionando para o Stripe…",
+    "payButton": "Salvar cartão · {{fee}} na conclusão",
+    "later": "Vou concluir isso depois"
+  }
+}

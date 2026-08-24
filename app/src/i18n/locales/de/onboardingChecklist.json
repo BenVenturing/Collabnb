@@ -1,0 +1,36 @@
+{
+  "creatorSteps": {
+    "photo": { "label": "Füge ein Profilfoto hinzu", "action": "Foto hinzufügen" },
+    "bio": { "label": "Schreibe deine Bio", "action": "Profil bearbeiten" },
+    "niches": { "label": "Füge deine Content-Nischen hinzu", "action": "Nischen hinzufügen" },
+    "social": { "label": "Verbinde ein Social-Konto", "action": "Socials hinzufügen" },
+    "explore": { "label": "Durchstöbere Beispielangebote", "action": "Angebote durchsuchen" },
+    "share": { "label": "Teile deine Anmeldung mit einem Freund", "action": "Link teilen" }
+  },
+  "hostSteps": {
+    "listing": { "label": "Erstelle dein erstes Angebot", "action": "Angebot erstellen" },
+    "profile": { "label": "Vervollständige dein Gastgeberprofil", "action": "Profil bearbeiten" },
+    "creators": { "label": "Durchstöbere Creator, die zu dir passen", "action": "Creator entdecken" },
+    "share": { "label": "Teile deine Anmeldung mit einem Freund", "action": "Link teilen" }
+  },
+  "pill": {
+    "openAriaLabel": "Einrichtungs-Checkliste öffnen",
+    "allDone": "Alles erledigt!",
+    "accountSetup": "Kontoeinrichtung",
+    "left_one": "noch {{count}}",
+    "left_other": "noch {{count}}"
+  },
+  "header": {
+    "allDoneTitle": "Alles bereit!",
+    "title": "Schließe deine Einrichtung ab",
+    "stepsComplete": "{{completed}}/{{total}} Schritte abgeschlossen",
+    "bonus": " + {{count}} Bonus",
+    "collapseAriaLabel": "Einklappen",
+    "collapseTitle": "Minimieren",
+    "closeAriaLabel": "Checkliste schließen",
+    "closeTitle": "Schließen"
+  },
+  "optional": "optional",
+  "dismissCta": "Verstanden — schließen ✓",
+  "shareTitle": "Begleite mich auf Collabnb"
+}

@@ -1,0 +1,69 @@
+{
+  "tierLabels": {
+    "ugc_beginner": "UGC Iniciante",
+    "ugc_pro": "UGC Pro",
+    "micro": "Micro Influenciador",
+    "mid": "Influenciador"
+  },
+  "compLabels": {
+    "paid": "Pago",
+    "hybrid": "Híbrido"
+  },
+  "loadLabels": {
+    "light": "Carga leve",
+    "moderate": "Carga moderada",
+    "heavy": "Carga pesada",
+    "custom": "Campanha personalizada"
+  },
+  "saveFallbackError": "Algo deu errado ao salvar este rascunho.",
+  "heading": {
+    "edit": "Editar anúncio",
+    "review": "Revise seu anúncio"
+  },
+  "subtitle": {
+    "edit": "Revise suas alterações e depois continue para o pagamento.",
+    "review": "É assim que seu anúncio aparecerá para os criadores. Revise tudo e depois configure o pagamento na próxima etapa."
+  },
+  "viewAsCreator": "Ver como criador",
+  "nightsComp": "{{nights}} noites {{compLabel}}",
+  "photos": {
+    "heading": "Fotos",
+    "hint": "A primeira foto é a sua principal — ela lidera o anúncio. Reordene ou defina uma nova foto principal abaixo.",
+    "hero": "Principal",
+    "moveLeft": "Mover para a esquerda",
+    "setAsHero": "Definir como principal",
+    "moveRight": "Mover para a direita"
+  },
+  "sections": {
+    "offer": "A oferta",
+    "dates": "Datas e prazos",
+    "deliverables": "Entregáveis",
+    "thingsToKnow": "Coisas que você deve saber"
+  },
+  "rows": {
+    "addOns": "Adicionais",
+    "whatYouDeliver": "O que você entrega",
+    "whatYouDeliverValue_one": "{{total}} entregável no total em {{count}} formato",
+    "whatYouDeliverValue_other": "{{total}} entregáveis no total em {{count}} formatos",
+    "vibe": "Estilo",
+    "collabWindow": "Janela de colaboração",
+    "collabWindowN": "Janela de colaboração {{n}}",
+    "deliverablesDue": "Prazo dos entregáveis",
+    "deliverablesDueValue": "{{days}} dias após a estadia",
+    "revisionPolicy": "Política de revisão",
+    "usageRights": "Direitos de uso"
+  },
+  "moreCount": "+{{count}} mais",
+  "compZone": {
+    "amberTitle": "Esta compensação está abaixo da faixa recomendada para esta carga de trabalho",
+    "amberBody": "Faixa recomendada: US$ {{low}}–{{high}}. Você ainda pode continuar — isso é uma diretriz, não um requisito.",
+    "redBody": "Esta compensação está abaixo do mínimo para os entregáveis e o nível selecionados. Aumente o valor, reduza os entregáveis ou adicione uma compensação de estadia para continuar."
+  },
+  "needCompensation": "Adicione um valor de compensação em dinheiro na etapa de preços antes de continuar — toda colaboração deve incluir pagamento.",
+  "saving": "Salvando...",
+  "saveDraft": "Salvar rascunho",
+  "creatorPreview": {
+    "banner": "Prévia do criador — é assim que os criadores veem seu anúncio",
+    "close": "Fechar"
+  }
+}

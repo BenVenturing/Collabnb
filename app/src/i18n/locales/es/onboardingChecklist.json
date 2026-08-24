@@ -1,0 +1,36 @@
+{
+  "creatorSteps": {
+    "photo": { "label": "Agrega una foto de perfil", "action": "Agregar foto" },
+    "bio": { "label": "Escribe tu biografía", "action": "Editar perfil" },
+    "niches": { "label": "Agrega tus nichos de contenido", "action": "Agregar nichos" },
+    "social": { "label": "Conecta una red social", "action": "Agregar redes" },
+    "explore": { "label": "Explora anuncios de muestra", "action": "Explorar anuncios" },
+    "share": { "label": "Comparte tu registro con un amigo", "action": "Compartir enlace" }
+  },
+  "hostSteps": {
+    "listing": { "label": "Crea tu primer anuncio", "action": "Crear anuncio" },
+    "profile": { "label": "Completa tu perfil de anfitrión", "action": "Editar perfil" },
+    "creators": { "label": "Explora creadores que combinen con tu estilo", "action": "Descubrir creadores" },
+    "share": { "label": "Comparte tu registro con un amigo", "action": "Compartir enlace" }
+  },
+  "pill": {
+    "openAriaLabel": "Abrir lista de configuración",
+    "allDone": "¡Todo listo!",
+    "accountSetup": "Configuración de la cuenta",
+    "left_one": "queda {{count}}",
+    "left_other": "quedan {{count}}"
+  },
+  "header": {
+    "allDoneTitle": "¡Todo listo!",
+    "title": "Completa tu configuración",
+    "stepsComplete": "{{completed}}/{{total}} pasos completados",
+    "bonus": " + {{count}} extra",
+    "collapseAriaLabel": "Contraer",
+    "collapseTitle": "Minimizar",
+    "closeAriaLabel": "Cerrar lista",
+    "closeTitle": "Cerrar"
+  },
+  "optional": "opcional",
+  "dismissCta": "Entendido — cerrar ✓",
+  "shareTitle": "Únete a mí en Collabnb"
+}

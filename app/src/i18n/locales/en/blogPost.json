@@ -1,0 +1,14 @@
+{
+  "toggleThemeAriaLabel": "Toggle theme",
+  "notFound": {
+    "title": "Article not found",
+    "body": "This post may have been moved or removed.",
+    "backButton": "Back to the Journal"
+  },
+  "theJournal": "The Journal",
+  "cta": {
+    "heading": "Ready to collab?",
+    "body": "Early access to content-for-stay partnerships is open now.",
+    "button": "Become a Founder →"
+  }
+}

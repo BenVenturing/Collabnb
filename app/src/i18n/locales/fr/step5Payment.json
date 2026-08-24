@@ -1,0 +1,47 @@
+{
+  "payoutInfo": {
+    "platform": {
+      "host": "Votre carte est débitée automatiquement dès que la collab est marquée comme terminée — pas de virements manuels, pas besoin de relancer qui que ce soit. Collabnb conserve le paiement du créateur pendant 48 heures après la fin, au cas où l'une des parties devrait ouvrir un litige, puis le transfère automatiquement.",
+      "creator": "Le paiement est garanti et automatique — pas de facturation, pas d'attente. Les fonds sont libérés peu après la fermeture de la fenêtre de litige de 48 heures, et les créateurs peuvent voir dès le départ que le paiement est protégé — ce qui tend à attirer de meilleurs candidats."
+    },
+    "in_person": {
+      "host": "Vous payez le créateur directement — espèces, Venmo, ce que vous convenez — selon votre propre calendrier. Collabnb facture toujours automatiquement vos frais de plateforme une fois la collab marquée comme terminée ; cela est distinct du paiement du créateur.",
+      "creator": "Vous faites confiance à l'hôte pour vous payer directement. Collabnb ne détient, ne vérifie ni ne garantit ce paiement, et la fenêtre de litige de 48 heures ne s'applique pas, puisqu'aucun montant ne transite par la plateforme."
+    }
+  },
+  "errors": {
+    "cardConfirmFailed": "Impossible de confirmer votre carte — veuillez réessayer.",
+    "publishFailed": "Une erreur est survenue lors de la publication de cette annonce.",
+    "cardSetupFailed": "Impossible de démarrer la configuration de la carte — veuillez réessayer."
+  },
+  "nextLabel": {
+    "publishing": "Publication...",
+    "redirecting": "Redirection vers Stripe...",
+    "addCard": "Ajouter une carte pour publier",
+    "saveChanges": "Enregistrer les modifications",
+    "publish": "Publier l'annonce"
+  },
+  "heading": "Comment serez-vous payé ?",
+  "subtitle": "Ceci détermine comment le paiement du créateur circule — vérifiez-le attentivement, il est verrouillé dès que l'annonce est publiée.",
+  "lockedBanner": "Cette annonce est déjà publiée, le mode de paiement est donc verrouillé pour éviter de perturber les collaborations actives.",
+  "payoutSwitch": {
+    "inPerson": "Je paierai le créateur moi-même",
+    "platform": "Collabnb gère le paiement",
+    "recommended": "Recommandé"
+  },
+  "infoCol": {
+    "forHost": "Pour vous (l'hôte)",
+    "forCreator": "Pour le créateur"
+  },
+  "fees": {
+    "heading": "Réservé à l'hôte : tarifs et frais",
+    "platformFee": "Frais de plateforme",
+    "percentDesc": "5 % du paiement en espèces (min. 25 $)",
+    "flatDesc": "Frais de plateforme fixes de 25 $",
+    "chargedOnlyOnce": "facturés uniquement une fois la collaboration terminée",
+    "chargedNoteSuffix": ". Vous ne payez jamais rien à l'avance pour publier une annonce.",
+    "hiddenNote": "⚠ Les créateurs ne voient pas ces frais"
+  },
+  "cardSaved": "Carte enregistrée — tout est prêt. Cliquez sur Publier pour la mettre en ligne.",
+  "needsCardNote": "Vous aurez besoin d'une carte enregistrée avant de publier — elle n'est débitée que pour les frais de plateforme Collabnb une fois une collaboration terminée."
+}

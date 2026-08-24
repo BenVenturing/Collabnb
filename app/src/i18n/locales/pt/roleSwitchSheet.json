@@ -1,0 +1,44 @@
+{
+  "roleLabels": {
+    "host": "Anfitrião",
+    "creator": "Criador"
+  },
+  "errors": {
+    "accountNotLoaded": "A conta ainda não foi carregada — tente novamente.",
+    "instagramRequired": "É necessário um nome de usuário do Instagram para que possamos analisar seu perfil.",
+    "generic": "Algo deu errado. Tente novamente."
+  },
+  "signingUpAs": "Cadastrando-se como",
+  "yourAccount": "Sua conta",
+  "useDifferentEmail": "usar um e-mail diferente",
+  "keepMyEmail": "manter o e-mail da minha conta",
+  "emailPlaceholder": "voce@exemplo.com",
+  "description": {
+    "host": "Você entrará como anfitrião usando esta mesma conta. Como todo novo anfitrião, seus dados passam por uma análise rápida antes que as ferramentas de anfitrião sejam liberadas — enquanto isso, você mantém acesso completo como criador.",
+    "creator": "Você entrará como criador usando esta mesma conta. Como todo novo criador, seu perfil passa por uma análise rápida antes que o acesso de criador seja liberado — enquanto isso, você mantém acesso completo como anfitrião."
+  },
+  "form": {
+    "businessName": "Nome da propriedade ou empresa",
+    "businessNamePlaceholder": "Cabana Musgo & Pinho",
+    "city": "Cidade",
+    "cityPlaceholder": "Asheville",
+    "country": "País de origem",
+    "countryPlaceholder": "Estados Unidos",
+    "website": "Site",
+    "websitePlaceholder": "https://suapropriedade.com",
+    "instagram": "Usuário do Instagram",
+    "handlePlaceholder": "@seuusuario",
+    "tiktok": "Usuário do TikTok",
+    "portfolio": "Portfólio ou site",
+    "portfolioPlaceholder": "https://seuportfolio.com",
+    "optional": "(opcional)"
+  },
+  "submitting": "Enviando…",
+  "signUpAs": "Cadastrar-se como {{role}} →",
+  "startFresh": "Começar do zero →",
+  "requestReceived": "Solicitação recebida",
+  "reviewNotice": "A equipe do Collabnb analisará seus dados de {{role}} — a mesma verificação pela qual todo novo {{role}} passa. Sua conta permanece exatamente como está até que você seja aprovado.",
+  "emailNoticePrefix": "Enviaremos um e-mail para ",
+  "emailNoticeSuffix": " — geralmente em 1 a 2 dias úteis.",
+  "done": "Concluído"
+}

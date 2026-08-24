@@ -1,0 +1,14 @@
+{
+  "toggleThemeAriaLabel": "Changer de thème",
+  "notFound": {
+    "title": "Article introuvable",
+    "body": "Cet article a peut-être été déplacé ou supprimé.",
+    "backButton": "Retour au Journal"
+  },
+  "theJournal": "Le Journal",
+  "cta": {
+    "heading": "Prêt à collaborer ?",
+    "body": "L'accès anticipé aux partenariats contenu-contre-séjour est ouvert dès maintenant.",
+    "button": "Devenir Fondateur →"
+  }
+}

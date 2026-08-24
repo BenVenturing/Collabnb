@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { SAMPLE_HOST, IMG_FALLBACK } from '../lib/mockData';
@@ -39,6 +40,7 @@ function pinLabel(l) {
 // trial-ended creator is locked out — real suggestions stay visible but obscured,
 // with a subscribe CTA. Drives the upsell without handing over the data.
 function LockedDropdown({ children, onSubscribe }) {
+  const { t } = useTranslation('explore');
   return (
     <div style={{ position: 'relative', minHeight: 180 }}>
       <div aria-hidden style={{ filter: 'blur(6px)', pointerEvents: 'none', userSelect: 'none', opacity: 0.85 }}>
@@ -55,13 +57,13 @@ function LockedDropdown({ children, onSubscribe }) {
             <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
           </svg>
         </div>
-        <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, color: 'var(--ink)', fontSize: '0.95rem', margin: 0 }}>Search is locked</p>
-        <p style={{ fontSize: '0.78rem', color: 'var(--sage)', margin: 0, maxWidth: 240, lineHeight: 1.4 }}>Your trial has ended — subscribe to search destinations and collabs.</p>
+        <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, color: 'var(--ink)', fontSize: '0.95rem', margin: 0 }}>{t('locked.heading')}</p>
+        <p style={{ fontSize: '0.78rem', color: 'var(--sage)', margin: 0, maxWidth: 240, lineHeight: 1.4 }}>{t('locked.body')}</p>
         <button
           onClick={onSubscribe}
           style={{ marginTop: '0.25rem', padding: '0.55rem 1.1rem', borderRadius: 999, border: 'none', cursor: 'pointer', background: 'var(--ink)', color: '#fff', fontFamily: 'var(--font-body)', fontWeight: 800, fontSize: '0.82rem' }}
         >
-          Subscribe to unlock →
+          {t('subscribeUnlock')}
         </button>
       </div>
     </div>
@@ -69,23 +71,23 @@ function LockedDropdown({ children, onSubscribe }) {
 }
 
 // ─── Convex listing normalizer ────────────────────────────────────────────────
-function normalizeConvexListing(l) {
+function normalizeConvexListing(l, t) {
   const images = l.gallery_images?.length ? l.gallery_images : (l.image ? [l.image] : []);
 
   let compensation = l.compensation || '';
   if (!compensation) {
-    if (l.compensation_type === 'paid') compensation = `$${l.cash_amount || '?'} cash`;
-    else if (l.compensation_type === 'hybrid') compensation = `$${l.cash_amount || '?'} + stay`;
-    else compensation = 'See listing';
+    if (l.compensation_type === 'paid') compensation = t('compensation.paid', { cash: l.cash_amount || '?' });
+    else if (l.compensation_type === 'hybrid') compensation = t('compensation.hybrid', { cash: l.cash_amount || '?' });
+    else compensation = t('compensation.seeListing');
   }
 
   let deliverables = typeof l.deliverables === 'string' ? l.deliverables : '';
   if (!deliverables && l.deliverables_list?.length) {
     const parts = l.deliverables_list.slice(0, 2).map((d) => `${d.quantity}× ${d.type}`);
     deliverables = parts.join(', ');
-    if (l.deliverables_list.length > 2) deliverables += ` +${l.deliverables_list.length - 2} more`;
+    if (l.deliverables_list.length > 2) deliverables += t('deliverables.more', { count: l.deliverables_list.length - 2 });
   } else if (!deliverables && l.deliverable_count) {
-    deliverables = `${l.deliverable_count} deliverables`;
+    deliverables = t('deliverables.count', { count: l.deliverable_count });
   }
 
   return {
@@ -114,6 +116,7 @@ function normalizeConvexListing(l) {
 // is passed, so a host can open the read-only listing detail page)
 export function ListingCard({ listing, saved, onSave, delay, onNavigate, onHostClick, browseOnly = false }) {
   const { profile } = useAuth();
+  const { t } = useTranslation('explore');
   const [rippling, setRippling] = useState(false);
   const isSample = listing._isSample === true;
   // Viewer's avatar may only stand in for the host's when the viewer owns the listing
@@ -155,7 +158,7 @@ export function ListingCard({ listing, saved, onSave, delay, onNavigate, onHostC
                 <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
                 <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
               </svg>
-              <p style={{ fontSize: '0.65rem', fontWeight: 600, opacity: 0.7, margin: 0, lineHeight: 1.3 }}>Apply to view</p>
+              <p style={{ fontSize: '0.65rem', fontWeight: 600, opacity: 0.7, margin: 0, lineHeight: 1.3 }}>{t('card.applyToView')}</p>
             </div>
           </div>
         )}
@@ -169,14 +172,14 @@ export function ListingCard({ listing, saved, onSave, delay, onNavigate, onHostC
             position: 'absolute', top: '0.75rem', left: '0.75rem',
             fontSize: '0.58rem', padding: '0.25rem 0.55rem',
           }}>
-            Featured
+            {t('card.featured')}
           </span>
         )}
 
         {/* Match badge — strong matches only */}
         {typeof listing._match === 'number' && listing._match >= MATCH_BADGE_THRESHOLD && (
           <span
-            title={listing._matchReasons?.join(' · ') || 'Matched to your profile'}
+            title={listing._matchReasons?.join(' · ') || t('card.matchFallback')}
             style={{
               position: 'absolute', bottom: '0.6rem', left: '0.75rem',
               padding: '0.25rem 0.55rem', borderRadius: '9999px',
@@ -186,7 +189,7 @@ export function ListingCard({ listing, saved, onSave, delay, onNavigate, onHostC
               boxShadow: '0 2px 8px rgba(25,37,36,0.12)',
             }}
           >
-            {listing._match}% match
+            {t('card.matchPercent', { match: listing._match })}
           </span>
         )}
 
@@ -251,7 +254,7 @@ export function ListingCard({ listing, saved, onSave, delay, onNavigate, onHostC
         {onHostClick && (
           <div
             onClick={e => { e.stopPropagation(); onHostClick(); }}
-            title="View host profile"
+            title={t('card.viewHost')}
             style={{
               marginTop: '0.625rem', paddingTop: '0.5rem',
               borderTop: '1px solid rgba(25,37,36,0.06)',
@@ -265,7 +268,7 @@ export function ListingCard({ listing, saved, onSave, delay, onNavigate, onHostC
               <img src={listing.host_avatar || (isOwnListing ? profile.avatar_url : null) || SAMPLE_HOST.avatar_fallback} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.currentTarget.style.display = 'none'; }} />
             </div>
             <span style={{ fontSize: '0.67rem', color: 'var(--sage)' }}>
-              by <span style={{ fontWeight: 600, color: 'var(--slate)' }}>{listing.host_name || SAMPLE_HOST.name}</span>
+              {t('card.byHost')} <span style={{ fontWeight: 600, color: 'var(--slate)' }}>{listing.host_name || SAMPLE_HOST.name}</span>
             </span>
           </div>
         )}
@@ -322,6 +325,7 @@ function GhostSection() {
 
 // ─── Section Row ──────────────────────────────────────────────────────────────
 function SectionRow({ title, subtitle, listings, saved, onSave, onNavigate, expanded, onToggleExpand, hidden, onHostClick }) {
+  const { t } = useTranslation('explore');
   if (!listings.length || hidden) return null;
   return (
     <div style={{ marginBottom: expanded ? '3rem' : '2.5rem' }}>
@@ -339,7 +343,7 @@ function SectionRow({ title, subtitle, listings, saved, onSave, onNavigate, expa
               fontFamily: 'var(--font-body)', whiteSpace: 'nowrap', padding: 0,
             }}
           >
-            {expanded ? 'show less' : 'see all'}
+            {expanded ? t('section.showLess') : t('section.seeAll')}
           </button>
         </div>
         {subtitle && <p style={{ fontSize: '0.75rem', color: 'var(--sage)', margin: '0.1rem 0 0' }}>{subtitle}</p>}
@@ -410,6 +414,7 @@ function Dropdown({ children, align = 'left', width }) {
 // ─── Main page ────────────────────────────────────────────────────────────────
 export default function Explore() {
   const navigate = useNavigate();
+  const { t } = useTranslation('explore');
   const { profile } = useAuth();
   const { compactSearch, setCompactSearch, mapDestination, setMapAreaDisplay, setMapView } = useAppBar();
   const [activeField, setActiveField] = useState(null); // 'where' | 'what' | 'when'
@@ -418,6 +423,16 @@ export default function Explore() {
   const [whatQuery,   setWhatQuery]   = useState('');
   const [whenVal,     setWhenVal]     = useState('');
   const [propFilter,  setPropFilter]  = useState('All');
+  const propFilterLabels = {
+    All: t('propertyTypes.all'),
+    Cabin: t('propertyTypes.cabin'),
+    Villa: t('propertyTypes.villa'),
+    Treehouse: t('propertyTypes.treehouse'),
+    Glamping: t('propertyTypes.glamping'),
+    Lodge: t('propertyTypes.lodge'),
+    Estate: t('propertyTypes.estate'),
+    Cottage: t('propertyTypes.cottage'),
+  };
   const [expandedSection, setExpandedSection] = useState(null); // null | section title
   const { savedIds, toggleSave } = useCollabs();
   const [popupHost, setPopupHost] = useState(null);
@@ -440,6 +455,7 @@ export default function Explore() {
   const [isNarrow, setIsNarrow] = useState(() => typeof window !== 'undefined' && window.innerWidth < 900);
   const [isSearchingArea, setIsSearchingArea] = useState(false);
   const [areaResultMsg, setAreaResultMsg] = useState(null);
+  const [areaResultIsError, setAreaResultIsError] = useState(false);
 
   useEffect(() => {
     const on = () => setIsNarrow(window.innerWidth < 900);
@@ -478,10 +494,12 @@ export default function Explore() {
       const listingsInArea = mapListings.filter(inBounds);
       const count = listingsInArea.length;
       if (count === 0) {
-        setAreaResultMsg("Sorry, no listings in this specific area");
+        setAreaResultMsg(t('searchArea.noListings'));
+        setAreaResultIsError(true);
         setTimeout(() => setAreaResultMsg(null), 4500);
       } else {
-        setAreaResultMsg(`${count} ${count === 1 ? 'listing' : 'listings'} in this area`);
+        setAreaResultMsg(t('searchArea.results', { count }));
+        setAreaResultIsError(false);
         setTimeout(() => setAreaResultMsg(null), 2600);
       }
     }, 650);
@@ -632,13 +650,13 @@ export default function Explore() {
   const convexActive = convexRaw
     ? convexRaw
         .filter((l) => l.status === 'published' || l.status === 'active')
-        .map(normalizeConvexListing)
+        .map((l) => normalizeConvexListing(l, t))
     : null; // null = still loading
 
   // Sample listings come from Convex only (no bundled mock fallback).
   // Filter out any the user has dismissed on this device.
   const sampleActive = (samplesRaw || [])
-    .map((l) => ({ ...normalizeConvexListing(l), _isSample: true }))
+    .map((l) => ({ ...normalizeConvexListing(l, t), _isSample: true }))
     .filter((l) => !hiddenSampleIds.includes(l.id));
 
   // Client-side cache: seed display instantly on repeat visits, update when fresh data arrives
@@ -721,7 +739,7 @@ export default function Explore() {
 
   const searchFiltered = isLoading ? [] : applySearch(allListings);
 
-  const nearLocationLabel = (whereVal || debouncedWhere || profile?.city || '').split(',')[0].trim() || 'You';
+  const nearLocationLabel = (whereVal || debouncedWhere || profile?.city || '').split(',')[0].trim() || t('sections.nearYou');
 
   // Human-friendly WHEN display ("Aug 11–20" instead of "2026-08-11 → 2026-08-20")
   const whenDisplay = whenVal
@@ -777,8 +795,8 @@ export default function Explore() {
     .map((l) => ({ lat: l.lat, lng: l.lng }));
 
   const forYouSubtitle = profile?.niches?.length
-    ? `Matched to your ${profile.niches.slice(0, 2).join(' & ')} niches`
-    : 'Matched to your profile and collab history';
+    ? t('sections.pickedSubtitleNiches', { niches: profile.niches.slice(0, 2).join(' & ') })
+    : t('sections.pickedSubtitleFallback');
 
   const openListingNewTab = (id) => window.open(`/listing/${id}`, '_blank', 'noopener');
 
@@ -804,7 +822,7 @@ export default function Explore() {
           <div style={{ position: 'relative', width: 264, background: '#fff', borderRadius: '1.25rem', filter: 'drop-shadow(0 12px 28px rgba(25,37,36,0.28))' }}>
             <button
               onClick={(e) => { e.stopPropagation(); setActivePinId(null); }}
-              aria-label="Close"
+              aria-label={t('close')}
               style={{
                 position: 'absolute', top: -10, left: -10, zIndex: 2,
                 width: 26, height: 26, borderRadius: '50%', border: '1px solid rgba(255,255,255,0.6)',
@@ -847,13 +865,13 @@ export default function Explore() {
           </div>
         ) : areaResultMsg ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" style={{ width: 14, height: 14, color: areaResultMsg.includes('Sorry') ? '#d97706' : '#10b981' }}>
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" style={{ width: 14, height: 14, color: areaResultIsError ? '#d97706' : '#10b981' }}>
               <circle cx="8.5" cy="8.5" r="5.25"/><line x1="13.25" y1="13.25" x2="18" y2="18"/>
             </svg>
             <span>{areaResultMsg}</span>
             <span
               onClick={(e) => { e.stopPropagation(); setAreaResultMsg(null); }}
-              title="Clear and refresh"
+              title={t('searchArea.clearRefresh')}
               style={{
                 display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                 width: 18, height: 18, borderRadius: '50%', background: 'rgba(25,37,36,0.08)',
@@ -864,7 +882,7 @@ export default function Explore() {
         ) : (
           <>
             <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" style={{ width: 14, height: 14 }}><circle cx="8.5" cy="8.5" r="5.25"/><line x1="13.25" y1="13.25" x2="18" y2="18"/></svg>
-            Search this area
+            {t('searchArea.button')}
           </>
         )}
       </button>
@@ -896,9 +914,9 @@ export default function Explore() {
             boxShadow: '0 6px 20px rgba(25,37,36,0.30)',
           }}
         >
-          <span>🔒 Your trial has ended — listing details are hidden.</span>
+          <span>{t('limited.body')}</span>
           <span style={{ background: '#D1EBDB', color: '#192524', borderRadius: 999, padding: '0.35rem 1rem', fontWeight: 800, fontSize: '0.82rem', whiteSpace: 'nowrap' }}>
-            Subscribe to unlock →
+            {t('subscribeUnlock')}
           </span>
         </button>
       )}
@@ -954,13 +972,13 @@ export default function Explore() {
               }}
               onClick={() => { if (activeField !== 'where') setActiveField('where'); }}
             >
-              <label>Where</label>
+              <label>{t('search.where')}</label>
               <input
                 type="text"
                 value={whereVal}
                 onChange={(e) => { setWhereVal(e.target.value); if (activeField !== 'where') setActiveField('where'); }}
                 onFocus={() => setActiveField('where')}
-                placeholder="Search destinations"
+                placeholder={t('search.destinationsPlaceholder')}
                 className="search-value"
                 style={{
                   border: 'none', outline: 'none', background: 'transparent',
@@ -979,7 +997,7 @@ export default function Explore() {
               style={{ cursor: 'text', position: 'relative', zIndex: 1 }}
               onClick={() => { if (activeField !== 'what') setActiveField('what'); }}
             >
-              <label>What</label>
+              <label>{t('search.what')}</label>
               <input
                 type="text"
                 value={whatQuery}
@@ -1003,9 +1021,9 @@ export default function Explore() {
               style={{ flex: '0.75', position: 'relative', zIndex: 1 }}
               onClick={() => setActiveField(activeField === 'when' ? null : 'when')}
             >
-              <label>When</label>
+              <label>{t('search.when')}</label>
               <span className="search-value" style={{ color: whenVal ? 'var(--ink)' : undefined, fontWeight: whenVal ? 600 : undefined }}>
-                {whenDisplay || 'Any time'}
+                {whenDisplay || t('search.anyTime')}
               </span>
             </div>
 
@@ -1093,7 +1111,7 @@ export default function Explore() {
                 className={`chip ${propFilter === f ? 'active' : ''}`}
                 style={{ flexShrink: 0 }}
               >
-                {f}
+                {propFilterLabels[f]}
               </button>
             ))}
           </div>
@@ -1105,12 +1123,12 @@ export default function Explore() {
             {mapOpen ? (
               <>
                 <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
-                Show list
+                {t('map.showList')}
               </>
             ) : (
               <>
                 <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
-                Show map
+                {t('map.showMap')}
               </>
             )}
           </button>
@@ -1125,7 +1143,7 @@ export default function Explore() {
           <div style={{ marginBottom: '2.5rem' }}>
             <div style={{ padding: '0 1.5rem', marginBottom: '1rem' }}>
               <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.2rem', color: 'var(--ink)', marginBottom: '0.1rem' }}>
-                Loading stays...
+                {t('loading.stays')}
               </h2>
             </div>
             <div className="snap-row no-scrollbar" style={{ padding: '0 1.5rem 0.5rem' }}>
@@ -1154,10 +1172,10 @@ export default function Explore() {
                 pointerEvents: 'auto',
               }}>
                 <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.1rem', color: 'var(--ink)', margin: '0 0 0.4rem' }}>
-                  Listings coming soon
+                  {t('ghost.comingSoon')}
                 </p>
                 <p style={{ fontSize: '0.82rem', color: 'var(--sage)', lineHeight: 1.5, margin: 0 }}>
-                  We're curating the best stays for launch on July 15th. Save your favorites and you'll be notified first.
+                  {t('ghost.curating')}
                 </p>
               </div>
             </div>
@@ -1165,8 +1183,8 @@ export default function Explore() {
         ) : (
           <>
             <SectionRow
-              title="Trending Now"
-              subtitle="Top picks this week"
+              title={t('sections.trending')}
+              subtitle={t('sections.trendingSubtitle')}
               listings={trending}
               saved={savedIds}
               onSave={toggleSave}
@@ -1178,7 +1196,7 @@ export default function Explore() {
             />
 
             <SectionRow
-              title="Picked for You"
+              title={t('sections.pickedForYou')}
               subtitle={forYouSubtitle}
               listings={forYou}
               saved={savedIds}
@@ -1191,8 +1209,8 @@ export default function Explore() {
             />
 
             <SectionRow
-              title={`Near ${nearLocationLabel}`}
-              subtitle="Based on your profile location and past collabs"
+              title={t('sections.near', { place: nearLocationLabel })}
+              subtitle={t('sections.nearSubtitle')}
               listings={nearMe}
               saved={savedIds}
               onSave={toggleSave}
@@ -1204,8 +1222,8 @@ export default function Explore() {
             />
 
             <SectionRow
-              title="All Stays"
-              subtitle={`${allFiltered.length} collabs available now`}
+              title={t('sections.allStays')}
+              subtitle={t('sections.allStaysSubtitle', { count: allFiltered.length })}
               listings={allFiltered}
               saved={savedIds}
               onSave={toggleSave}
@@ -1220,20 +1238,20 @@ export default function Explore() {
               <div style={{ textAlign: 'center', paddingTop: '3rem', paddingBottom: '3rem' }}>
                 <p style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>✦</p>
                 <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.5rem', color: 'var(--ink)', marginBottom: '0.5rem' }}>
-                  {(debouncedWhere || debouncedWhat || whenVal) ? 'No listings match your search' : 'No stays found'}
+                  {(debouncedWhere || debouncedWhat || whenVal) ? t('empty.searchHeading') : t('empty.noStays')}
                 </h2>
                 <p style={{ fontSize: '0.875rem', color: 'var(--sage)', marginBottom: '1.5rem' }}>
                   {(debouncedWhere || debouncedWhat || whenVal)
-                    ? 'Try adjusting your filters or clearing the search.'
-                    : 'Try removing the property type filter.'}
+                    ? t('empty.searchBody')
+                    : t('empty.filterBody')}
                 </p>
                 {(debouncedWhere || debouncedWhat || whenVal) ? (
                   <button className="btn-glass" onClick={() => { setWhereVal(''); setWhatVal(''); setWhatQuery(''); setWhenVal(''); }} style={{ fontSize: '0.875rem' }}>
-                    Clear search
+                    {t('empty.clearSearch')}
                   </button>
                 ) : (
                   <button className="btn-glass" onClick={() => setPropFilter('All')} style={{ fontSize: '0.875rem' }}>
-                    Show all types
+                    {t('empty.showAllTypes')}
                   </button>
                 )}
               </div>
@@ -1250,7 +1268,7 @@ export default function Explore() {
             {!mapExpanded && (
               <div className="no-scrollbar" style={{ flex: '0 0 clamp(320px, 46%, 620px)', overflowY: 'auto', paddingRight: '0.25rem' }}>
                 <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.95rem', color: 'var(--ink)', margin: '0 0 0.9rem' }}>
-                  {mapListInBounds.length} {mapListInBounds.length === 1 ? 'collab' : 'collabs'} available
+                  {t('map.collabsAvailable', { count: mapListInBounds.length })}
                 </p>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, 260px)', justifyContent: 'center', gap: '1rem' }}>
                   {mapListInBounds.map((l, i) => {
@@ -1279,14 +1297,14 @@ export default function Explore() {
                 </div>
                 {mapListInBounds.length === 0 && (
                   <p style={{ fontSize: '0.85rem', color: 'var(--sage)', textAlign: 'center', paddingTop: '2rem' }}>
-                    No collabs in this area — zoom out or move the map.
+                    {t('map.noCollabsArea')}
                   </p>
                 )}
               </div>
             )}
             <div style={{ flex: 1, position: 'relative', borderRadius: '1.25rem', overflow: 'hidden', boxShadow: '0 8px 32px rgba(25,37,36,0.12)' }}>
               {collabMapNode}
-              {/* Clean single "Show list" control on the map */}
+              {/* Clean single "{t('map.showList')}" control on the map */}
               <button
                 onClick={() => setMapOpen(false)}
                 style={{
@@ -1299,7 +1317,7 @@ export default function Explore() {
                 }}
               >
                 <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
-                Show list
+                {t('map.showList')}
               </button>
             </div>
           </div>
@@ -1316,7 +1334,7 @@ export default function Explore() {
             style={{ position: 'fixed', bottom: '1.5rem', left: '50%', transform: 'translateX(-50%)', zIndex: 310, display: 'flex', alignItems: 'center', gap: 8, borderRadius: 9999, padding: '0.7rem 1.4rem', fontWeight: 700, boxShadow: '0 6px 20px rgba(25,37,36,0.3)' }}
           >
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
-            Show list
+            {t('map.showList')}
           </button>
         </div>
       )}
@@ -1328,7 +1346,7 @@ export default function Explore() {
           className="btn-primary"
           style={{ position: 'fixed', bottom: '5.25rem', left: '50%', transform: 'translateX(-50%)', zIndex: 200, display: 'flex', alignItems: 'center', gap: 8, borderRadius: 9999, padding: '0.7rem 1.4rem', fontWeight: 700, boxShadow: '0 6px 20px rgba(25,37,36,0.3)' }}
         >
-          Map
+          {t('map.label')}
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
         </button>
       )}
@@ -1349,8 +1367,8 @@ export default function Explore() {
       }}>
         <button
           onClick={() => setPricingToolOpen(true)}
-          aria-label="What does a collab cost?"
-          title="What does a collab cost?"
+          aria-label={t('corner.pricingAria')}
+          title={t('corner.pricingAria')}
           style={{
             display: 'flex', alignItems: 'center', gap: 6,
             height: 40, padding: '0 14px', borderRadius: 9999,
@@ -1366,13 +1384,13 @@ export default function Explore() {
           onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
         >
           <span style={{ fontFamily: 'var(--font-blog-display)', fontWeight: 700, fontSize: '1rem', color: 'var(--ink)', lineHeight: 1 }}>$</span>
-          Pricing
+          {t('corner.pricing')}
         </button>
 
         <button
           onClick={() => navigate('/contract')}
-          aria-label="Draft a contract"
-          title="Draft a contract"
+          aria-label={t('corner.contractAria')}
+          title={t('corner.contractAria')}
           style={{
             display: 'flex', alignItems: 'center', gap: 6,
             height: 40, padding: '0 14px', borderRadius: 9999,
@@ -1390,7 +1408,7 @@ export default function Explore() {
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/>
           </svg>
-          Contract
+          {t('corner.contract')}
         </button>
       </div>
       )}
@@ -1409,7 +1427,7 @@ export default function Explore() {
               <PointsHelpButton />
               <button
                 onClick={() => setPricingToolOpen(false)}
-                aria-label="Close"
+                aria-label={t('close')}
                 style={{
                   width: 32, height: 32, borderRadius: '50%', border: 'none',
                   background: 'rgba(25,37,36,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center',

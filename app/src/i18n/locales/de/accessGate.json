@@ -1,0 +1,40 @@
+{
+  "pendingApproval": {
+    "heading": "Deine Bewerbung wird geprüft",
+    "thanksCreator": "Danke, dass du dich als Creator bei Collabnb beworben hast.",
+    "thanksHost": "Danke, dass du dich beworben hast, deine Unterkunft zu listen.",
+    "reviewing": "Das Collabnb-Team prüft dein Profil, dein Portfolio und deine Social-Media-Konten. Du bekommst eine E-Mail, sobald du genehmigt bist — in der Regel innerhalb von 1–2 Werktagen.",
+    "checklist": {
+      "heading": "Was als Nächstes passiert:",
+      "socialReview": "Deine Social-Media-Konten und dein Portfolio werden geprüft",
+      "followerVerify": "Deine Followerzahl und Interaktion werden verifiziert",
+      "experienceAssess": "Deine Erfahrung und Professionalität werden bewertet",
+      "interview": "Möglicherweise erhältst du eine Einladung zu einem kurzen Interview",
+      "trackTier": "Dir wird ein Track (UGC oder Influencer) und eine Stufe zugewiesen",
+      "fullAccess": "Bei Genehmigung erhältst du vollen Zugang zum Marktplatz"
+    },
+    "receivedTitle": "Bewerbung erhalten",
+    "receivedDetail": "— wir benachrichtigen dich unter deiner hinterlegten E-Mail-Adresse.",
+    "backHome": "Zurück zur Startseite"
+  },
+  "limitedAccess": {
+    "heading": "Marktplatzzugang ist beendet",
+    "body": "Deine Testphase ist abgelaufen. Upgrade auf Creator Plus, um weiterhin Angebote zu durchsuchen, dich für Kampagnen zu bewerben und Gastgebern Angebote zu unterbreiten.",
+    "stillCanHeading": "Du kannst weiterhin:",
+    "stillCan": {
+      "dashboard": "Dein Dashboard und Profil ansehen",
+      "contracts": "Auf bestehende Verträge und Nachrichten zugreifen",
+      "settings": "Deine Einstellungen und dein Portfolio aktualisieren"
+    },
+    "viewPricing": "Preise ansehen"
+  },
+  "trialBanner": {
+    "expired": "Deine Testphase ist beendet. Abonniere, um weiterhin auf den Marktplatz zuzugreifen.",
+    "daysLeft_one": "Noch {{count}} Tag Testphase.",
+    "daysLeft_other": "Noch {{count}} Tage Testphase.",
+    "daysRemaining": "noch {{count}} T.",
+    "subscribeNow": "Jetzt abonnieren",
+    "upgrade": "Upgraden",
+    "dismissAriaLabel": "Schließen"
+  }
+}

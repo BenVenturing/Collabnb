@@ -1,0 +1,69 @@
+{
+  "tierLabels": {
+    "ugc_beginner": "UGC Principiante",
+    "ugc_pro": "UGC Pro",
+    "micro": "Micro Influencer",
+    "mid": "Influencer"
+  },
+  "compLabels": {
+    "paid": "Pagado",
+    "hybrid": "Híbrido"
+  },
+  "loadLabels": {
+    "light": "Carga ligera",
+    "moderate": "Carga moderada",
+    "heavy": "Carga alta",
+    "custom": "Campaña personalizada"
+  },
+  "saveFallbackError": "Algo salió mal al guardar este borrador.",
+  "heading": {
+    "edit": "Editar anuncio",
+    "review": "Revisa tu anuncio"
+  },
+  "subtitle": {
+    "edit": "Revisa tus cambios y luego continúa al pago.",
+    "review": "Así es como tu anuncio aparecerá para los creadores. Revisa todo y luego configura el pago en el siguiente paso."
+  },
+  "viewAsCreator": "Ver como creador",
+  "nightsComp": "{{nights}} noches {{compLabel}}",
+  "photos": {
+    "heading": "Fotos",
+    "hint": "La primera foto es tu foto principal — encabeza el anuncio. Reordena o establece una nueva foto principal abajo.",
+    "hero": "Principal",
+    "moveLeft": "Mover a la izquierda",
+    "setAsHero": "Establecer como principal",
+    "moveRight": "Mover a la derecha"
+  },
+  "sections": {
+    "offer": "La oferta",
+    "dates": "Fechas y plazos",
+    "deliverables": "Entregables",
+    "thingsToKnow": "Cosas que debes saber"
+  },
+  "rows": {
+    "addOns": "Extras",
+    "whatYouDeliver": "Qué entregas",
+    "whatYouDeliverValue_one": "{{total}} entregable en total en {{count}} formato",
+    "whatYouDeliverValue_other": "{{total}} entregables en total en {{count}} formatos",
+    "vibe": "Estilo",
+    "collabWindow": "Ventana de colaboración",
+    "collabWindowN": "Ventana de colaboración {{n}}",
+    "deliverablesDue": "Vencimiento de entregables",
+    "deliverablesDueValue": "{{days}} días después de la estancia",
+    "revisionPolicy": "Política de revisión",
+    "usageRights": "Derechos de uso"
+  },
+  "moreCount": "+{{count}} más",
+  "compZone": {
+    "amberTitle": "Esta compensación está por debajo del rango recomendado para esta carga de trabajo",
+    "amberBody": "Rango recomendado: ${{low}}–${{high}}. Aún puedes continuar — esto es una guía, no un requisito.",
+    "redBody": "Esta compensación está por debajo del mínimo para los entregables y el nivel seleccionados. Aumenta el monto, reduce los entregables o agrega una compensación por estancia para continuar."
+  },
+  "needCompensation": "Agrega un monto de compensación en efectivo en el paso de precios antes de continuar — toda colaboración debe incluir un pago.",
+  "saving": "Guardando...",
+  "saveDraft": "Guardar borrador",
+  "creatorPreview": {
+    "banner": "Vista previa de creador — así es como los creadores ven tu anuncio",
+    "close": "Cerrar"
+  }
+}

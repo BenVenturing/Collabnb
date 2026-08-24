@@ -1,217 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation } from 'convex/react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../../convex/_generated/api';
 import { useAuth } from '../contexts/AuthContext';
-
-// ─── FAQ data ──────────────────────────────────────────────────────────────────
-const FAQ_SECTIONS = [
-  {
-    title: 'About Collabnb',
-    items: [
-      {
-        q: 'How is Collabnb different from Airbnb or influencer platforms?',
-        a: "Airbnb connects paying guests with accommodation. Collabnb is different: boutique hospitality brands hire creators as professional marketing partners to produce authentic content campaigns\n\nUnlike influencer platforms, we are not an agency taking a cut, we do not run gifting campaigns for mass brands, and we do not cater to large hotel chains. We focus exclusively on boutique hospitality and creators who treat content creation as a profession. Every collaboration is structured around clear deliverables, agreed compensation, and a signed contract — never a vague arrangement.",
-      },
-      {
-        q: 'Can I sign up as both a creator and a host?',
-        a: "Yes. If you're a creator who also owns or manages a boutique property, you can join both waitlists. Submit two separate applications — one as a creator (with your handles and tier) and one as a host (with your property details). Each is reviewed independently, and each counts against its own 100-spot founding pool.",
-      },
-      {
-        q: "Can I apply if I'm a small creator?",
-        a: "Yes. Collabnb was explicitly built with beginner tiers: UGC Beginner (0–5K followers, building a portfolio) and UGC Pro (5K–10K followers, paid UGC output). Follower count isn't the only metric.\n\nA focused UGC creator producing high-quality vertical video for boutique properties is exactly what many hosts want — even with a small following. Quality of output and fit matter more than size.",
-      },
-      {
-        q: 'I run a boutique property — how do I post a collab listing?',
-        a: "Sign up on the host waitlist and we'll verify your property before launch. Once the app is live, you'll post collab listings with: the stay details, your deliverable brief (e.g. \"3 Reels + 1 TikTok, romantic vibe, no face required\"), the dates available, and your preferred creator tier.\n\nCreators apply to you — you review their portfolio and approve the best fit. No agency, no middleman taking a cut.",
-      },
-      {
-        q: 'When does the app launch?',
-        a: 'July 15, 2026. The waitlist closes or fills before then. Verified waitlist members receive early access before the public launch. Beta testers (opt-in on the join form) get access even earlier to help shape the product.',
-      },
-    ],
-  },
-  {
-    title: 'Getting Started',
-    items: [
-      {
-        q: 'What is Collabnb?',
-        a: 'Collabnb is a creator-first hospitality marketing platform connecting boutique properties with vetted creators. Hosts hire creators as professional marketing partners for campaigns with clear deliverables and fair compensation — Reels, TikToks, photography, and more.',
-      },
-      {
-        q: 'How do I sign up as a host or creator?',
-        a: "Visit the homepage and click \"Get Started.\" Choose your role (host or creator), fill out your profile, and submit for verification. You'll receive a confirmation email once your account is approved.",
-      },
-      {
-        q: 'How does verification work?',
-        a: 'Our team manually reviews each profile to maintain a trusted, curated network of professional creators and quality properties. For creators: we verify social accounts, follower counts, portfolio quality, and professionalism. For hosts: we verify property details, online presence, and business credentials.',
-      },
-      {
-        q: 'How long does verification take?',
-        a: "Verification typically takes 1–2 business days. You'll receive an email notification once your account has been reviewed.",
-      },
-    ],
-  },
-  {
-    title: 'Creator Tiers',
-    items: [
-      {
-        q: 'What are the creator tiers?',
-        a: "Collabnb has four professional tiers across two tracks. UGC tiers are portfolio-driven, where content runs on the host's channels. Influencer tiers are audience-reach driven, where content runs on the creator's channels.:\n• UGC Beginner — 0–5K followers, building a portfolio, admitted on quality\n• UGC Pro — 5K–10K followers, paid UGC producer with proven output\n• Micro Influencer — 10K–50K followers\n• Influencer — 50K+ followers\n\nYour track and tier are assigned during verification based on your portfolio, follower counts, and professional experience. They determine which listings and deliverable types you can be booked for.",
-      },
-      {
-        q: 'How do I know which tier I qualify for?',
-        a: "Your track and tier are assigned by the Collabnb team during verification. For the UGC track, tier is based on portfolio quality. For the Influencer track, tier is based on verified follower counts. You can view your current track and tier on your Profile page.",
-      },
-    ],
-  },
-  {
-    title: 'Listings + Collabs',
-    items: [
-      {
-        q: 'What does pausing a listing do?',
-        a: 'Pausing a listing removes it from the Explore feed so no new creators can discover or apply. However, all existing applications and active collaborations continue unaffected — nothing is cancelled.',
-      },
-      {
-        q: 'How do deliverables work?',
-        a: "Each campaign specifies the deliverables required — photo sets, story frames, carousels, Reels, or YouTube videos. The points system assigns each deliverable a weight based on production effort (a photo is 1 point, a Reel is 3 points, a YouTube video is 5 points). The total determines the load shown on the card: Light (2 pts or fewer), Moderate (3-4 pts), or Heavy (5+ pts). This lets you compare effort at a glance, regardless of deliverable mix.",
-      },
-      {
-        q: 'What is the difference between an Application and a Pitch?',
-        a: "An Application means you are accepting the campaign exactly as listed — dates, deliverables, and compensation unchanged. A Pitch is a modified proposal where you can suggest different terms (dates, deliverables, or compensation). Pitches count toward your monthly pitch limit.",
-      },
-      {
-        q: 'How many pitches can I submit per month?',
-        a: 'You can submit up to 10 pitches per month. The counter resets on the 1st of each month. Standard applications (no changes to listing terms) do not count toward this limit.',
-      },
-      {
-        q: 'How do contracts work?',
-        a: "Once a host accepts your application or pitch, a contract is generated with all agreed terms. Both parties sign digitally to lock in the arrangement. The platform fee is never charged at signing — it is charged automatically only after the collaboration is marked complete, so the host pays once the work is actually delivered.",
-      },
-    ],
-  },
-  {
-    title: 'Payments',
-    items: [
-      {
-        q: 'How much does Collabnb cost for hosts?',
-        a: 'Hosts never pay to browse, search, message, or post listings. Fees are charged only after a collaboration is completed. For completed collaborations under $500 cash value: $20 flat fee. For collaborations $500 and above: 5% of the cash value. Hybrid Collaborations: cash-only basis — the stay value is excluded. Founding Members pay nothing, ever.',
-        keywords: ['pricing', 'price', 'plan', 'plans', 'host pricing', 'host cost'],
-      },
-      {
-        q: 'How much does Collabnb cost for creators?',
-        a: "Collabnb is free for all approved creators during your 30-day trial. After the trial, Creator Plus is $10/month or $60/year. Founding Members — the first 100 verified creators — keep full access forever at no cost. There is no charge to browse, apply, or communicate. The subscription only starts after your trial ends.",
-        keywords: ['pricing', 'price', 'plan', 'plans', 'subscription cost', 'creator pricing'],
-      },
-      {
-        q: 'What is the yearly plan money-back guarantee?',
-        a: "If you subscribe to Creator Plus on the yearly plan and don't secure a single confirmed collaboration by the end of your term, you can request a refund of your subscription fee. To qualify: you must have sent outreach/pitch messages to hosts through the platform, wait until your full term has ended before asking, keep your subscription active the whole term (no early cancel or downgrade), and only collaborations confirmed through Collabnb's contract system count — if you moved a conversation off-platform and never brought the outcome back to confirm it here, we can't verify what happened, so it won't qualify. Email hellocollabnb@gmail.com within 14 days of your term ending to claim. This guarantee applies only to the yearly Creator Plus plan — not monthly, not lifetime access, and not host fees.",
-        keywords: ['guarantee', 'refund', 'money back', 'money-back guarantee', 'yearly guarantee'],
-      },
-      {
-        q: 'What is a Founding Member?',
-        a: 'Founding Members are the first 100 verified creators and first 100 verified hosts on Collabnb. They receive permanent free access — no platform fees for hosts, no Creator Plus subscription for creators — as a thank-you for being early partners in building the community. Founding status is assigned at verification in approval order. Once all 100 spots per role are filled, founding is closed permanently.',
-      },
-      {
-        q: 'When is the host platform fee charged?',
-        a: "Nothing is charged up front. When the collaboration is marked complete, the host's saved card is charged once — for the agreed cash payment to the creator plus Collabnb's platform fee. If a card was saved at contract signing, this happens automatically; otherwise the host completes a one-tap payment when the collab closes. Either way: you do not pay until you get value.",
-      },
-      {
-        q: 'How do creators actually get paid?',
-        a: "Collabnb processes the payment for you, the same way Airbnb pays out hosts. When your collaboration is marked complete, the host's card is charged for the full agreed amount. That payment is held and processed through Stripe, then Collabnb forwards your share directly to whichever payout method you've connected in Profile → Settings → Payout Method — currently Stripe or Wise. Both you and the host get an email receipt once the payout is sent.\n\nA quick note on timing: payouts sent via a connected Stripe account arrive quickly. Payouts routed through Wise can take a few extra business days to settle, since Collabnb has to receive the funds before forwarding them on. Either way, you'll see the payout status (pending, processing, or paid) on the contract.",
-        keywords: ['payout', 'get paid', 'wise', 'stripe connect', 'bank account', 'paypal'],
-      },
-      {
-        q: 'How does the referral code work, and how do I get free months?',
-        a: "Every member gets a personal referral code to share. When someone signs up using your code, you BOTH get 1 free month right away. Then, once that new member completes their first collaboration, you BOTH get another free month on top — so a successful referral is worth 2 free months to each of you. Free months are applied automatically at billing time before any charge. They stack: refer multiple friends and you can build up several months of credit.",
-      },
-    ],
-  },
-  {
-    title: 'Affiliate Links',
-    items: [
-      {
-        q: 'How do affiliate codes work?',
-        a: 'Each host receives an affiliate code generated from their initials plus their discount percentage (e.g., TBR25 for a 25% referral discount). Affiliate codes currently run on the honor system — creators apply the code at checkout.',
-      },
-      {
-        q: 'Does Collabnb track affiliate clicks?',
-        a: 'Not yet. Click and conversion tracking for affiliate codes is a planned feature coming later. For now, code usage is tracked manually on both sides.',
-      },
-    ],
-  },
-  {
-    title: 'Creator Features',
-    items: [
-      {
-        q: 'How does the travel calendar work?',
-        a: "The travel calendar lets you mark the dates you're available to travel and take on collaborations. Hosts can see your availability when reviewing your application, making it easier to match on timing.",
-      },
-      {
-        q: 'What is the swipe view?',
-        a: 'The swipe view is an alternative way to browse listings — similar to a card-swipe interface. You can quickly swipe right to save a listing or left to skip it, making discovery faster on mobile.',
-      },
-      {
-        q: 'What is 30-Day Engagement Rate?',
-        a: "30-Day Engagement Rate is the percentage of a creator's followers who actively liked, commented, or shared their posts in the last 30 days. A high rate signals a loyal, responsive audience — often more valuable to hosts than raw follower count.\n\nFor example, a creator with 10K followers and a 12% engagement rate (1,200 engaged people per post) typically drives more real visibility than a creator with 100K followers and a 1% rate. We show the 30-day rolling average so you see current momentum, not a historical snapshot.",
-      },
-      {
-        q: 'Can I hide my profile from the Host Creators page?',
-        a: "Yes. In Edit Profile, toggle \"Profile is visible to hosts\" off to hide yourself from the Host Creators directory. Hosts won't be able to find or message you while hidden, but any conversations you already have stay open. Turn it back on anytime — it takes effect immediately.",
-        keywords: ['visibility', 'hide profile', 'privacy'],
-      },
-    ],
-  },
-  {
-    title: 'Founders',
-    items: [
-      {
-        q: 'What is the Founders space?',
-        a: "The Founders space is a private area for verified Founding Members, at /founders. It includes a role-scoped lounge (creators only see other creators, hosts only see other hosts), a resources library, early-access listings, and a directory of fellow founders.",
-        keywords: ['founder', 'founders tab', 'lounge'],
-      },
-      {
-        q: 'Who can access the Founders space?',
-        a: "Only verified Founding Members — the first 100 verified creators and first 100 verified hosts. If you're not a Founding Member, the Founders tab is hidden from your navigation and the /founders route redirects you elsewhere.",
-        keywords: ['founder access', 'founding member'],
-      },
-      {
-        q: 'What can I do in the Founders lounge?',
-        a: "Post and reply in a threaded lounge with other founders in your role. It's a space to connect with peers, share tips, and get early visibility into new features and resources before they roll out more broadly.",
-        keywords: ['founder lounge', 'threads'],
-      },
-    ],
-  },
-  {
-    title: 'Creator Metrics',
-    items: [
-      {
-        q: 'How do I find my average reach / views?',
-        a: "Instagram: Go to your profile → tap a post → View Insights → Reach. Average this across your last 10–15 posts for a representative number.\n\nTikTok: Go to Profile → Analytics → Content tab → tap each video to see views. Average your last 10–15 videos.\n\nYouTube: Go to YouTube Studio → Analytics → Reach tab → Impressions and Views over the last 28 days. Divide total views by number of videos published.",
-      },
-      {
-        q: 'How is Engagement Rate calculated?',
-        a: "Collabnb calculates it automatically — you don't need to enter it yourself. Just fill in your average views, likes, and comments and we compute:\n\nEngagement Rate = (Avg Likes + Avg Comments) ÷ Avg Views × 100\n\nThis gives a content-level engagement rate, which reflects how compelling your actual content is — independent of follower count.",
-      },
-      {
-        q: 'How often should I update my metrics?',
-        a: "Update your metrics once a month. You'll receive a reminder notification when it's time.\n\nKeeping your numbers current ensures hosts see accurate reach and engagement when reviewing your profile — outdated stats can hurt your chances of being matched. You can only update once every 30 days to keep numbers meaningful.\n\nTo update: go to your Profile → My Metrics → enter your latest numbers → Save.",
-      },
-    ],
-  },
-  {
-    title: 'Privacy & Cookies',
-    items: [
-      {
-        q: 'Does Collabnb use cookies to track me?',
-        a: "Yes — but only first-party cookies, and only to make Collabnb better. We use a single cookie to remember your session and understand how the app is used: which pages you visit, what you click, how long you stay, and where you leave.\n\nWe do not use advertising cookies, we do not sell your data, and we do not share it with third-party ad networks. You can clear cookies any time in your browser settings and the app will still work normally.",
-      },
-      {
-        q: 'What activity data do you collect?',
-        a: "Usage signals: pages viewed, buttons and links clicked, time on each page, scroll depth, and the page you leave from — plus how you first arrived (e.g. a link from Instagram or a search). Once you're signed in, this activity is tied to your account so we can improve your experience. It is used only to run and improve Collabnb, never sold.",
-      },
-    ],
-  },
-];
 
 // ─── Accordion item ────────────────────────────────────────────────────────────
 function AccordionItem({ q, a, visible }) {
@@ -273,6 +64,7 @@ function itemMatches(item, tokens) {
 
 // ─── Ask-a-question CTA (shown when no FAQ or community answer matches) ────────
 function AskQuestionCTA({ search, profile }) {
+  const { t } = useTranslation('faqModal');
   const [open, setOpen] = useState(false);
   const [name, setName] = useState(profile?.full_name || '');
   const [email, setEmail] = useState(profile?.email || '');
@@ -313,10 +105,10 @@ function AskQuestionCTA({ search, profile }) {
     return (
       <div style={{ textAlign: 'center', padding: '1.5rem 1rem', background: 'rgba(209,235,219,0.25)', borderRadius: '0.875rem', border: '1px solid rgba(74,155,127,0.2)' }}>
         <p style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--ink)', marginBottom: '0.3rem' }}>
-          Question posted!
+          {t('askQuestion.postedHeading')}
         </p>
         <p style={{ fontSize: '0.8rem', color: 'var(--slate)', lineHeight: 1.6, maxWidth: 320, margin: '0 auto' }}>
-          It's now live in the FAQ below marked "Awaiting answer." We've emailed the team and the answer will appear right here as soon as we reply.
+          {t('askQuestion.postedBody')}
         </p>
       </div>
     );
@@ -325,7 +117,7 @@ function AskQuestionCTA({ search, profile }) {
   return (
     <div style={{ textAlign: 'center', padding: '1.75rem 1rem', border: '1px dashed rgba(25,37,36,0.15)', borderRadius: '0.875rem' }}>
       <p style={{ fontSize: '0.875rem', color: 'var(--slate)', marginBottom: '0.875rem' }}>
-        {search ? <>No questions match "{search}".</> : 'No questions found.'}
+        {search ? t('askQuestion.noMatchQuoted', { search }) : t('askQuestion.noneFound')}
       </p>
       {!open ? (
         <button
@@ -336,22 +128,22 @@ function AskQuestionCTA({ search, profile }) {
             fontFamily: 'var(--font-body)', fontSize: '0.85rem', fontWeight: 700,
           }}
         >
-          Ask this as a question
+          {t('askQuestion.askButton')}
         </button>
       ) : (
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem', textAlign: 'left', maxWidth: 360, margin: '0 auto' }}>
           <textarea
             required value={question}
             onChange={(e) => setQuestion(e.target.value)}
-            rows={2} placeholder="Type your question…"
+            rows={2} placeholder={t('askQuestion.questionPlaceholder')}
             style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.5 }}
           />
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.625rem' }}>
-            <input type="text" required placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} />
-            <input type="email" required placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} style={inputStyle} />
+            <input type="text" required placeholder={t('askQuestion.namePlaceholder')} value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} />
+            <input type="email" required placeholder={t('askQuestion.emailPlaceholder')} value={email} onChange={(e) => setEmail(e.target.value)} style={inputStyle} />
           </div>
           <p style={{ fontSize: '0.72rem', color: 'var(--sage)', margin: 0, lineHeight: 1.5 }}>
-            This posts publicly to the Help Center right away as "Awaiting answer," and emails our team so we can reply fast.
+            {t('askQuestion.publicNotice')}
           </p>
           <button
             type="submit"
@@ -363,7 +155,7 @@ function AskQuestionCTA({ search, profile }) {
               opacity: submitting ? 0.7 : 1,
             }}
           >
-            {submitting ? 'Posting…' : 'Post question'}
+            {submitting ? t('askQuestion.posting') : t('askQuestion.postQuestion')}
           </button>
         </form>
       )}
@@ -373,6 +165,7 @@ function AskQuestionCTA({ search, profile }) {
 
 // ─── Community question item (submitted via "Ask this as a question") ─────────
 function CommunityQuestionItem({ question, answer, answered_at }) {
+  const { t } = useTranslation('faqModal');
   const [open, setOpen] = useState(false);
   return (
     <div style={{ borderBottom: '1px solid rgba(25,37,36,0.07)' }}>
@@ -394,7 +187,7 @@ function CommunityQuestionItem({ question, answer, answered_at }) {
           </svg>
         ) : (
           <span style={{ flexShrink: 0, fontSize: '0.68rem', fontWeight: 700, color: '#92400E', background: 'rgba(212,168,67,0.15)', padding: '0.2rem 0.5rem', borderRadius: '999px', whiteSpace: 'nowrap' }}>
-            Awaiting answer
+            {t('communityQuestions.awaitingAnswer')}
           </span>
         )}
       </button>
@@ -411,6 +204,7 @@ function CommunityQuestionItem({ question, answer, answered_at }) {
 
 // ─── Tab 1: FAQ ────────────────────────────────────────────────────────────────
 function FAQTab({ profile }) {
+  const { t } = useTranslation('faqModal');
   const [search, setSearch] = useState('');
   const term = search.toLowerCase().trim();
   const tokens = term ? term.split(/\s+/).filter(Boolean) : [];
@@ -420,7 +214,8 @@ function FAQTab({ profile }) {
     tokens.length === 0 || itemMatches({ q: c.question, a: c.answer || '' }, tokens)
   );
 
-  const sectionsWithVisibility = FAQ_SECTIONS.map((section) => ({
+  const faqSections = t('faqSections', { returnObjects: true });
+  const sectionsWithVisibility = faqSections.map((section) => ({
     ...section,
     items: section.items.map((item) => ({
       ...item,
@@ -443,7 +238,7 @@ function FAQTab({ profile }) {
         </svg>
         <input
           type="text"
-          placeholder="Search questions…"
+          placeholder={t('search.placeholder')}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           style={{
@@ -484,7 +279,7 @@ function FAQTab({ profile }) {
                 fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.12em',
                 textTransform: 'uppercase', color: 'var(--sage)', marginBottom: '0.25rem',
               }}>
-                Community Questions
+                {t('communityQuestions.heading')}
               </p>
               {visibleCommunity.map((c) => (
                 <CommunityQuestionItem key={c._id} question={c.question} answer={c.answer} answered_at={c.answered_at} />
@@ -498,15 +293,15 @@ function FAQTab({ profile }) {
 }
 
 // ─── Tab 2: Send a Message ─────────────────────────────────────────────────────
-const CATEGORIES = [
-  'Bug Report',
-  'Feature Request',
-  'Account Help',
-  'General Question',
-  'Other',
-];
-
 function MessageTab({ profile }) {
+  const { t } = useTranslation('faqModal');
+  const CATEGORIES = [
+    t('messageTab.categories.bugReport'),
+    t('messageTab.categories.featureRequest'),
+    t('messageTab.categories.accountHelp'),
+    t('messageTab.categories.generalQuestion'),
+    t('messageTab.categories.other'),
+  ];
   const [name, setName] = useState(profile?.full_name || '');
   const [email, setEmail] = useState(profile?.email || '');
   const [category, setCategory] = useState('');
@@ -545,10 +340,10 @@ function MessageTab({ profile }) {
           </svg>
         </div>
         <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.1rem', color: 'var(--ink)', marginBottom: '0.5rem' }}>
-          Message sent!
+          {t('messageTab.sentHeading')}
         </p>
         <p style={{ fontSize: '0.85rem', color: 'var(--slate)', lineHeight: 1.6, maxWidth: 280, margin: '0 auto' }}>
-          We typically respond within 1–2 business days, often right here in this same window — log back in and check this tab for a reply.
+          {t('messageTab.sentBody')}
         </p>
       </div>
     );
@@ -568,7 +363,7 @@ function MessageTab({ profile }) {
     <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.875rem' }}>
         <div>
-          <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--slate)', marginBottom: '0.375rem' }}>Name</label>
+          <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--slate)', marginBottom: '0.375rem' }}>{t('messageTab.nameLabel')}</label>
           <input
             type="text" required value={name}
             onChange={(e) => setName(e.target.value)}
@@ -578,7 +373,7 @@ function MessageTab({ profile }) {
           />
         </div>
         <div>
-          <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--slate)', marginBottom: '0.375rem' }}>Email</label>
+          <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--slate)', marginBottom: '0.375rem' }}>{t('messageTab.emailLabel')}</label>
           <input
             type="email" required value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -590,22 +385,22 @@ function MessageTab({ profile }) {
       </div>
 
       <div>
-        <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--slate)', marginBottom: '0.375rem' }}>Category</label>
+        <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--slate)', marginBottom: '0.375rem' }}>{t('messageTab.categoryLabel')}</label>
         <select
           value={category} onChange={(e) => setCategory(e.target.value)}
           style={{ ...inputStyle, appearance: 'none', cursor: 'pointer' }}
         >
-          <option value="">Select a category…</option>
+          <option value="">{t('messageTab.categoryPlaceholder')}</option>
           {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
         </select>
       </div>
 
       <div>
-        <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--slate)', marginBottom: '0.375rem' }}>Message</label>
+        <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--slate)', marginBottom: '0.375rem' }}>{t('messageTab.messageLabel')}</label>
         <textarea
           required value={message}
           onChange={(e) => setMessage(e.target.value)}
-          rows={5} placeholder="Describe your question or issue…"
+          rows={5} placeholder={t('messageTab.messagePlaceholder')}
           style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.6 }}
           onFocus={(e) => { e.target.style.borderColor = 'rgba(25,37,36,0.25)'; }}
           onBlur={(e) => { e.target.style.borderColor = 'rgba(25,37,36,0.1)'; }}
@@ -624,7 +419,7 @@ function MessageTab({ profile }) {
         onMouseEnter={(e) => { if (!submitting) e.currentTarget.style.opacity = '0.88'; }}
         onMouseLeave={(e) => { e.currentTarget.style.opacity = submitting ? '0.7' : '1'; }}
       >
-        {submitting ? 'Sending…' : 'Send Message'}
+        {submitting ? t('messageTab.sending') : t('messageTab.sendMessage')}
       </button>
     </form>
 
@@ -632,7 +427,7 @@ function MessageTab({ profile }) {
     {prevMessages && prevMessages.length > 0 && (
       <div style={{ marginTop: '1.5rem', borderTop: '1px solid rgba(25,37,36,0.07)', paddingTop: '1.25rem' }}>
         <p style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--slate)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.75rem' }}>
-          Previous Messages
+          {t('messageTab.previousMessages')}
         </p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
           {prevMessages.map((m) => (
@@ -649,13 +444,13 @@ function MessageTab({ profile }) {
               {m.admin_reply ? (
                 <div style={{ padding: '0.625rem 0.875rem', background: 'rgba(209,235,219,0.25)', borderTop: '1px solid rgba(74,155,127,0.15)' }}>
                   <div style={{ fontSize: '0.68rem', fontWeight: 700, color: '#2d6a4f', marginBottom: '0.25rem' }}>
-                    Collabnb Support · {m.admin_reply_at ? new Date(m.admin_reply_at).toLocaleDateString() : ''}
+                    {t('messageTab.supportPrefix')} · {m.admin_reply_at ? new Date(m.admin_reply_at).toLocaleDateString() : ''}
                   </div>
                   <p style={{ fontSize: '0.83rem', color: 'var(--ink)', margin: 0, lineHeight: 1.55 }}>{m.admin_reply}</p>
                 </div>
               ) : (
                 <div style={{ padding: '0.5rem 0.875rem', background: 'rgba(255,255,255,0.5)', borderTop: '1px solid rgba(25,37,36,0.05)' }}>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--slate)' }}>Awaiting reply — we'll respond here within 1–2 business days.</span>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--slate)' }}>{t('messageTab.awaitingReply')}</span>
                 </div>
               )}
             </div>
@@ -669,6 +464,7 @@ function MessageTab({ profile }) {
 
 // ─── Tab 3: Suggestions ────────────────────────────────────────────────────────
 function SuggestionsTab({ userId }) {
+  const { t } = useTranslation('faqModal');
   const suggestions = useQuery(api.suggestions.getSuggestions, { userId: userId || undefined });
   const seedMutation = useMutation(api.suggestions.seedSuggestions);
   const voteMutation = useMutation(api.suggestions.vote);
@@ -707,10 +503,10 @@ function SuggestionsTab({ userId }) {
     <div>
       <div style={{ marginBottom: '1.5rem' }}>
         <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.1rem', color: 'var(--ink)', marginBottom: '0.375rem' }}>
-          Shape the future of Collabnb
+          {t('suggestions.heading')}
         </p>
         <p style={{ fontSize: '0.875rem', color: 'var(--slate)' }}>
-          Upvote features and ideas you want to see. Top suggestions help us prioritize the roadmap.
+          {t('suggestions.subtitle')}
         </p>
       </div>
 
@@ -739,13 +535,13 @@ function SuggestionsTab({ userId }) {
                 {s.status === 'approved' && (
                   <span style={{ fontSize: '0.7rem', color: '#92400E', background: 'rgba(212,168,67,0.15)', padding: '0.1rem 0.45rem', borderRadius: '99px', display: 'inline-flex', alignItems: 'center', gap: '0.2rem', marginTop: '0.35rem' }}>
                     <svg viewBox="0 0 16 16" width="8" height="8" fill="currentColor"><path d="M8 1l1.85 3.75L14 5.5l-3 2.92.7 4.08L8 10.4l-3.7 2.1.7-4.08L2 5.5l4.15-.75z"/></svg>
-                    Featured
+                    {t('suggestions.featured')}
                   </span>
                 )}
                 {s.status === 'implemented' && (
                   <span style={{ fontSize: '0.7rem', color: '#166534', background: '#D1FAE5', padding: '0.1rem 0.45rem', borderRadius: '99px', display: 'inline-flex', alignItems: 'center', gap: '0.2rem', marginTop: '0.35rem' }}>
                     <svg viewBox="0 0 16 16" width="8" height="8" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 8 6.5 11.5 13 4.5"/></svg>
-                    Implemented
+                    {t('suggestions.implemented')}
                   </span>
                 )}
               </div>
@@ -754,7 +550,7 @@ function SuggestionsTab({ userId }) {
                 {/* Upvote only (no downvote) */}
                 <button
                   onClick={() => handleVote(s._id, 'up')}
-                  title={userId ? 'Upvote' : 'Sign in to vote'}
+                  title={userId ? t('suggestions.upvoteTitle') : t('suggestions.signInToVoteTitle')}
                   style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     width: 28, height: 28,
@@ -792,7 +588,7 @@ function SuggestionsTab({ userId }) {
           type="text"
           value={newText}
           onChange={(e) => setNewText(e.target.value)}
-          placeholder="Suggest a feature…"
+          placeholder={t('suggestions.placeholder')}
           maxLength={200}
           style={{
             flex: 1, padding: '0.7rem 0.9rem',
@@ -817,7 +613,7 @@ function SuggestionsTab({ userId }) {
             transition: 'background 150ms, color 150ms', whiteSpace: 'nowrap',
           }}
         >
-          {submitting ? '…' : 'Submit'}
+          {submitting ? t('suggestions.submitting') : t('suggestions.submit')}
         </button>
       </form>
     </div>
@@ -825,12 +621,13 @@ function SuggestionsTab({ userId }) {
 }
 
 // ─── Main modal ────────────────────────────────────────────────────────────────
-const TABS = ['FAQ', 'Send a Message', 'Suggestions'];
-
 export default function FAQModal({ isOpen, onClose }) {
+  const { t } = useTranslation('faqModal');
   const { profile, session } = useAuth();
   const [activeTab, setActiveTab] = useState(0);
   const userId = session?.user?.id || null;
+
+  const TABS = [t('tabs.faq'), t('tabs.sendMessage'), t('tabs.suggestions')];
 
   // Close on Escape
   useEffect(() => {
@@ -911,7 +708,7 @@ export default function FAQModal({ isOpen, onClose }) {
               </svg>
             </div>
             <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.05rem', color: 'var(--ink)' }}>
-              Help Center
+              {t('modal.title')}
             </span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
@@ -923,7 +720,7 @@ export default function FAQModal({ isOpen, onClose }) {
                   window.location.assign('/collabs');
                 }, 100);
               }}
-              title="Reopen Demo Tour"
+              title={t('modal.reopenDemoTitle')}
               style={{
                 background: 'none', border: 'none', cursor: 'pointer',
                 display: 'flex', alignItems: 'center', gap: '0.25rem',
@@ -937,7 +734,7 @@ export default function FAQModal({ isOpen, onClose }) {
               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
                 <polygon points="5 3 19 12 5 21 5 3"/>
               </svg>
-              Demo Tour
+              {t('modal.demoTour')}
             </button>
             <button
               onClick={onClose}
@@ -948,7 +745,7 @@ export default function FAQModal({ isOpen, onClose }) {
               }}
               onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(25,37,36,0.13)'; }}
               onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(25,37,36,0.07)'; }}
-              aria-label="Close"
+              aria-label={t('modal.closeAriaLabel')}
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
                 <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />

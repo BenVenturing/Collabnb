@@ -1,0 +1,57 @@
+{
+  "loadLabels": {
+    "light": "légère",
+    "moderate": "modérée",
+    "heavy": "lourde",
+    "custom": "campagne personnalisée"
+  },
+  "nextHint": {
+    "needTier": "Choisissez un niveau de créateur dans le calculateur de coûts ci-dessus.",
+    "needCompensation": "Saisissez un montant de rémunération en espèces dans le calculateur de coûts ci-dessus.",
+    "needDeliverables": "Choisissez au moins un livrable dans le calculateur de coûts, ou ajoutez-en un personnalisé ci-dessous.",
+    "needDates": "Ajoutez une période de collaboration avec une date de début et de fin."
+  },
+  "heading": "Tarification et dates",
+  "subtitle": "Définissez le niveau du créateur, la rémunération et les livrables — avec des indications de tarification en temps réel — puis précisez quand la collaboration a lieu.",
+  "summary": {
+    "totalDeliverables_one": "{{count}} livrable au total",
+    "totalDeliverables_other": "{{count}} livrables au total",
+    "acrossFormats_one": "Sur {{count}} format · charge {{load}}",
+    "acrossFormats_other": "Sur {{count}} formats · charge {{load}}"
+  },
+  "deliverables": {
+    "label": "Livrables",
+    "empty": "Choisissez des livrables dans le calculateur de coûts ci-dessus, ou ajoutez-en un personnalisé ci-dessous.",
+    "editUsageRights": "Modifier les droits d'utilisation",
+    "fromCalculator": "Depuis le calculateur de coûts ci-dessus",
+    "usageRights": "Droits d'utilisation"
+  },
+  "form": {
+    "editUsageRightsFor": "Modifier les droits d'utilisation — {{type}}",
+    "editDeliverable": "Modifier le livrable",
+    "addCustomDeliverable": "Ajouter un livrable personnalisé",
+    "typePlaceholder": "Plateforme/Type (ex. Reels Instagram)",
+    "descPlaceholder": "Description",
+    "autoTypeHint": "{{qty}}x {{type}} — le type et la quantité proviennent du calculateur de coûts ci-dessus.",
+    "usageRightsLabel": "Droits d'utilisation pour ce livrable",
+    "applyToAllTitle": "Appliquer ces droits d'utilisation à tous les livrables",
+    "copyToAll": "Copier partout",
+    "usageRightsPlaceholder": "ex. L'hôte reçoit une licence perpétuelle pour le marketing. Le créateur conserve la propriété.",
+    "cancel": "Annuler",
+    "saveChanges": "Enregistrer les modifications",
+    "addDeliverable": "Ajouter le livrable"
+  },
+  "due": {
+    "label": "Livrables dus (jours après le séjour)"
+  },
+  "windows": {
+    "label": "Périodes de collaboration",
+    "hint": "Ajoutez jusqu'à {{max}} périodes de dates dans lesquelles les créateurs peuvent réserver.",
+    "removeTitle": "Supprimer la période de dates",
+    "addAnother": "Ajouter une autre période de dates"
+  },
+  "policies": {
+    "revisionLabel": "Politique de révision",
+    "footerNote": "Les droits d'utilisation sont désormais définis par livrable ci-dessus. Utilisez « Copier partout » pour appliquer une politique à tous les livrables."
+  }
+}

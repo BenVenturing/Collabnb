@@ -1,0 +1,5 @@
+{
+  "weekdays": ["D", "L", "M", "X", "J", "V", "S"],
+  "previousMonth": "Mes anterior",
+  "nextMonth": "Mes siguiente"
+}

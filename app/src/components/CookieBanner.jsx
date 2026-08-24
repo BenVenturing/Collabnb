@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 // Compact first-party cookie notice, bottom-left, shown once per browser.
 // "Review" expands more detail in-place; tracking runs by default (not a gate).
@@ -16,6 +17,7 @@ const CookieIcon = () => (
 );
 
 export default function CookieBanner() {
+  const { t } = useTranslation('cookieBanner');
   const [show, setShow] = useState(() => {
     try { return localStorage.getItem(ACK_KEY) !== '1'; } catch { return false; }
   });
@@ -33,7 +35,7 @@ export default function CookieBanner() {
   return (
     <div
       role="dialog"
-      aria-label="Cookie notice"
+      aria-label={t('ariaLabel')}
       style={{
         position: 'fixed', left: '0.85rem', bottom: '0.85rem', zIndex: 9998, maxWidth: 258,
         background: '#F7F5F2', border: '1px solid rgba(25,37,36,0.1)', borderRadius: 12,
@@ -48,23 +50,21 @@ export default function CookieBanner() {
       <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
         <span style={{ flex: '0 0 auto', color: '#3C5759', display: 'flex' }}><CookieIcon /></span>
         <h4 style={{ margin: 0, fontSize: '0.82rem', fontWeight: 700, letterSpacing: '-0.01em' }}>
-          We use cookies
+          {t('heading')}
         </h4>
       </div>
 
       <p style={{ margin: '5px 0 0', fontSize: '0.72rem', lineHeight: 1.4, color: '#3C5759' }}>
-        First-party cookies to understand how Collabnb is used — so we can make it better.
+        {t('body')}
       </p>
 
       {expanded && (
         <p style={{ margin: '7px 0 0', fontSize: '0.7rem', lineHeight: 1.45, color: '#3C5759',
           borderTop: '1px solid rgba(25,37,36,0.08)', paddingTop: 7 }}>
-          We use one cookie to remember your session and record which pages you visit, what you click,
-          how long you stay, and where you leave. <strong>No ads. No selling your data. No third-party ad
-          networks.</strong> Clear cookies anytime in your browser and Collabnb still works.{' '}
+          {t('details.pre')}<strong>{t('details.strong')}</strong>{t('details.post')}{' '}
           <a href="/faq.html#cookies" target="_blank" rel="noreferrer"
             style={{ color: '#192524', fontWeight: 600, textDecoration: 'underline', textUnderlineOffset: 2 }}>
-            More in the FAQ
+            {t('details.faqLink')}
           </a>.
         </p>
       )}
@@ -76,7 +76,7 @@ export default function CookieBanner() {
           style={{ border: 0, background: 'none', cursor: 'pointer', font: 'inherit',
             fontSize: '0.72rem', fontWeight: 600, color: '#3C5759', padding: 0, textDecoration: 'underline', textUnderlineOffset: 2 }}
         >
-          {expanded ? 'Less' : 'Review'}
+          {expanded ? t('less') : t('review')}
         </button>
         <button
           type="button"
@@ -84,7 +84,7 @@ export default function CookieBanner() {
           style={{ border: 0, cursor: 'pointer', font: 'inherit', fontSize: '0.72rem', fontWeight: 700,
             padding: '5px 14px', borderRadius: 99, background: '#192524', color: '#F7F5F2' }}
         >
-          Got it
+          {t('gotIt')}
         </button>
       </div>
     </div>

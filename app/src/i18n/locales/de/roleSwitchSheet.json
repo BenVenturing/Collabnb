@@ -1,0 +1,44 @@
+{
+  "roleLabels": {
+    "host": "Gastgeber",
+    "creator": "Creator"
+  },
+  "errors": {
+    "accountNotLoaded": "Konto noch nicht geladen — bitte versuche es erneut.",
+    "instagramRequired": "Ein Instagram-Handle wird benötigt, damit wir dein Profil prüfen können.",
+    "generic": "Etwas ist schiefgelaufen. Bitte versuche es erneut."
+  },
+  "signingUpAs": "Anmeldung als",
+  "yourAccount": "Dein Konto",
+  "useDifferentEmail": "andere E-Mail verwenden",
+  "keepMyEmail": "meine Konto-E-Mail behalten",
+  "emailPlaceholder": "du@beispiel.com",
+  "description": {
+    "host": "Du trittst mit diesem Konto als Gastgeber bei. Wie bei jedem neuen Gastgeber werden deine Angaben kurz geprüft, bevor die Gastgeber-Tools freigeschaltet werden — in der Zwischenzeit behältst du vollen Creator-Zugang.",
+    "creator": "Du trittst mit diesem Konto als Creator bei. Wie bei jedem neuen Creator wird dein Profil kurz geprüft, bevor der Creator-Zugang freigeschaltet wird — in der Zwischenzeit behältst du vollen Gastgeber-Zugang."
+  },
+  "form": {
+    "businessName": "Name der Unterkunft oder des Unternehmens",
+    "businessNamePlaceholder": "Moos & Kiefer Hütte",
+    "city": "Stadt",
+    "cityPlaceholder": "Asheville",
+    "country": "Heimatland",
+    "countryPlaceholder": "Vereinigte Staaten",
+    "website": "Website",
+    "websitePlaceholder": "https://deine-unterkunft.com",
+    "instagram": "Instagram-Handle",
+    "handlePlaceholder": "@deinhandle",
+    "tiktok": "TikTok-Handle",
+    "portfolio": "Portfolio oder Website",
+    "portfolioPlaceholder": "https://deinportfolio.com",
+    "optional": "(optional)"
+  },
+  "submitting": "Wird gesendet…",
+  "signUpAs": "Als {{role}} anmelden →",
+  "startFresh": "Neu starten →",
+  "requestReceived": "Anfrage erhalten",
+  "reviewNotice": "Das Collabnb-Team prüft deine {{role}}-Angaben — dieselbe Prüfung, die jeder neue {{role}} durchläuft. Dein Konto bleibt genau wie es ist, bis du genehmigt bist.",
+  "emailNoticePrefix": "Wir schreiben dir an ",
+  "emailNoticeSuffix": " — in der Regel innerhalb von 1–2 Werktagen.",
+  "done": "Fertig"
+}

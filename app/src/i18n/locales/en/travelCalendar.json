@@ -1,0 +1,45 @@
+{
+  "months": ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
+  "dayAbbr": ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"],
+  "cityPrivate": "city private",
+  "modal": {
+    "editTrip": "Edit Trip",
+    "addTrip": "Add Trip",
+    "country": "Country",
+    "countryPlaceholder": "e.g. Japan",
+    "city": "City",
+    "privateToOthers": "private to other creators",
+    "cityPlaceholder": "e.g. Tokyo",
+    "tripNote": "Trip note",
+    "optional": "(optional)",
+    "notePlaceholder": "e.g. Open to glamping collabs",
+    "cancel": "Cancel",
+    "saveChanges": "Save Changes",
+    "saveTrip": "Save Trip"
+  },
+  "header": {
+    "title": "Travel Calendar",
+    "hoverToExtend": "Hover to extend range — click to confirm",
+    "atMax": "{{max}}/{{max}} trips — delete one to add another",
+    "clickAndDrag": "Click and drag, or click once then hover to select dates",
+    "hostView": "Creator trips visible to you — city shown",
+    "privateView": "Trip info is private"
+  },
+  "addTripButton": {
+    "cancel": "Cancel",
+    "addTrip": "Add trip"
+  },
+  "hoverHint": {
+    "extend": "Hover over dates to extend range, then click to confirm",
+    "confirm": "{{range}} — click to confirm"
+  },
+  "empty": {
+    "editable": "Drag across dates to add your first trip — up to {{max}} total",
+    "readonly": "No trips planned yet."
+  },
+  "tripList": {
+    "cityHidden": "city hidden",
+    "editTitle": "Edit trip",
+    "deleteTitle": "Delete trip"
+  }
+}

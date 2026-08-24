@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useCollabs } from '../contexts/CollabContext';
 import { DEMO_COLLAB } from '../lib/mockData';
@@ -25,6 +26,7 @@ const STATUS_STYLES = {
 };
 
 function CollabCard({ collab, onClick, onDismissDemo, onDismissSample }) {
+  const { t } = useTranslation('collabs');
   const style = STATUS_STYLES[collab.status] || STATUS_STYLES.pending;
   const canDismiss = collab.is_demo || collab.is_sample;
   const onDismiss = collab.is_demo ? onDismissDemo : onDismissSample;
@@ -70,7 +72,7 @@ function CollabCard({ collab, onClick, onDismissDemo, onDismissSample }) {
             color: '#fff', background: 'rgba(184,146,42,0.88)',
             padding: '0.2rem 0.55rem', borderRadius: '9999px',
             backdropFilter: 'blur(8px)',
-          }}>Demo Tour</span>
+          }}>{t('demoBadge')}</span>
         )}
 
         {/* Dismiss button */}
@@ -87,7 +89,7 @@ function CollabCard({ collab, onClick, onDismissDemo, onDismissSample }) {
             }}
             onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(200,60,60,0.75)'; }}
             onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(0,0,0,0.28)'; }}
-            title={collab.is_demo ? 'Dismiss demo' : 'Remove sample'}
+            title={collab.is_demo ? t('dismissDemo') : t('dismissSample')}
           >
             <XIcon />
           </button>
@@ -126,7 +128,7 @@ function CollabCard({ collab, onClick, onDismissDemo, onDismissSample }) {
             <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" style={{ width: 12, height: 12, color: 'var(--sage)', flexShrink: 0 }}>
               <circle cx="8" cy="5" r="3"/><path d="M2 14c0-3.31 2.69-6 6-6s6 2.69 6 6"/>
             </svg>
-            <span style={{ color: 'var(--sage)' }}>Host:</span> {collab.host_name}
+            <span style={{ color: 'var(--sage)' }}>{t('hostLabel')}</span> {collab.host_name}
           </p>
         )}
 
@@ -149,25 +151,25 @@ function CollabCard({ collab, onClick, onDismissDemo, onDismissSample }) {
         {/* Deliverables + due/payment */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
           <div>
-            <p style={{ fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--sage)', marginBottom: '0.2rem' }}>Deliverables</p>
+            <p style={{ fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--sage)', marginBottom: '0.2rem' }}>{t('deliverablesLabel')}</p>
             <p style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--ink)' }}>{collab.deliverables}</p>
           </div>
           {collab.days_left && (
             <div style={{ textAlign: 'right' }}>
-              <p style={{ fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--sage)', marginBottom: '0.2rem' }}>Due in</p>
-              <p style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--slate)' }}>{collab.days_left} days</p>
+              <p style={{ fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--sage)', marginBottom: '0.2rem' }}>{t('dueInLabel')}</p>
+              <p style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--slate)' }}>{t('daysCount', { count: collab.days_left })}</p>
             </div>
           )}
           {collab.payment && !collab.days_left && (
             <div style={{ textAlign: 'right' }}>
-              <p style={{ fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--sage)', marginBottom: '0.2rem' }}>Payment</p>
+              <p style={{ fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--sage)', marginBottom: '0.2rem' }}>{t('paymentLabel')}</p>
               <p style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--slate)' }}>{collab.payment}</p>
             </div>
           )}
           {!collab.days_left && !collab.payment && (
             <div style={{ textAlign: 'right' }}>
-              <p style={{ fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--sage)', marginBottom: '0.2rem' }}>Stay</p>
-              <p style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--slate)' }}>Complimentary</p>
+              <p style={{ fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--sage)', marginBottom: '0.2rem' }}>{t('stayLabel')}</p>
+              <p style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--slate)' }}>{t('complimentary')}</p>
             </div>
           )}
         </div>
@@ -177,6 +179,7 @@ function CollabCard({ collab, onClick, onDismissDemo, onDismissSample }) {
 }
 
 export default function Collabs() {
+  const { t } = useTranslation('collabs');
   const navigate = useNavigate();
   const { collabs } = useCollabs();
   const [filter, setFilter] = useState('active');
@@ -220,6 +223,16 @@ export default function Collabs() {
     return map;
   }, [convexPitches]);
 
+  const statusText = {
+    pending: t('status.pendingReview'),
+    approved: t('status.approved'),
+    declined: t('status.declined'),
+    under_review: t('status.underReview'),
+    completed: t('status.completed'),
+    in_progress: t('status.inProgress'),
+    application_sent: t('status.applicationSent'),
+  };
+
   const allCollabs = useMemo(() => {
     const base = collabs.filter((c) => !c.is_sample || !dismissedSamples.includes(c.id));
 
@@ -236,8 +249,8 @@ export default function Collabs() {
         image: c.image || '',
         status: pitchStatusMap[String(c.listing_id)] || c.status || 'pending',
         status_text: pitchStatusMap[String(c.listing_id)]
-          ? { pending: 'Pending Review', approved: 'Approved!', declined: 'Declined' }[pitchStatusMap[String(c.listing_id)]] || 'In Progress'
-          : c.status_text || 'Application Sent',
+          ? statusText[pitchStatusMap[String(c.listing_id)]] || statusText.in_progress
+          : c.status_text || statusText.application_sent,
         dates: c.dates || '',
         deliverables: c.deliverables || '',
         days_left: c.days_left,
@@ -251,8 +264,7 @@ export default function Collabs() {
     const merged = base.map((c) => {
       const realStatus = pitchStatusMap[String(c.listing_id)];
       if (!realStatus || realStatus === c.status) return c;
-      const statusTextMap = { pending: 'Pending Review', approved: 'Approved!', declined: 'Declined', under_review: 'Under Review', completed: 'Completed' };
-      return { ...c, status: realStatus, status_text: statusTextMap[realStatus] || c.status_text };
+      return { ...c, status: realStatus, status_text: statusText[realStatus] || c.status_text };
     });
 
     const withReal = [...realCollabs, ...merged];
@@ -323,23 +335,23 @@ export default function Collabs() {
           {
             key: 'status', value: statusFilter, onChange: setStatusFilter,
             options: [
-              { value: 'all', label: 'All statuses' },
-              { value: 'pending', label: 'Pending' },
-              { value: 'uploaded_tagged', label: 'Uploaded' },
-              { value: 'closed', label: 'Closed' },
+              { value: 'all', label: t('filters.allStatuses') },
+              { value: 'pending', label: t('filters.pending') },
+              { value: 'uploaded_tagged', label: t('filters.uploaded') },
+              { value: 'closed', label: t('filters.closed') },
             ],
           },
           {
             key: 'listing', value: listingFilter, onChange: setListingFilter,
-            options: listingOptions.map((name) => ({ value: name, label: name === 'all' ? 'All listings' : name })),
+            options: listingOptions.map((name) => ({ value: name, label: name === 'all' ? t('filters.allListings') : name })),
           },
           {
             key: 'due', value: dueFilter, onChange: setDueFilter,
             options: [
-              { value: 'all', label: 'Any due date' },
-              { value: 'week', label: 'Due this week' },
-              { value: 'month', label: 'Due this month' },
-              { value: 'none', label: 'No deadline' },
+              { value: 'all', label: t('filters.anyDueDate') },
+              { value: 'week', label: t('filters.dueThisWeek') },
+              { value: 'month', label: t('filters.dueThisMonth') },
+              { value: 'none', label: t('filters.noDeadline') },
             ],
           },
         ]}
@@ -355,7 +367,7 @@ export default function Collabs() {
                   filter === f ? 'bg-white text-ink shadow-sm' : 'text-slate hover:text-ink'
                 }`}
               >
-                {f}
+                {t(f === 'active' ? 'filterActive' : 'filterArchived')}
               </button>
             ))}
           </div>
@@ -366,17 +378,17 @@ export default function Collabs() {
             <div className="text-center pt-16">
               <p className="text-4xl mb-4">✦</p>
               <h3 className="font-display font-bold text-ink text-lg mb-2">
-                {baseList.length === 0 ? 'No collabs yet' : 'No matches'}
+                {baseList.length === 0 ? t('emptyTitleNoCollabs') : t('emptyTitleNoMatches')}
               </h3>
               <p className="text-sage text-sm mb-6">
-                {baseList.length === 0 ? 'Apply to a stay to get started' : 'Try adjusting your search or filters'}
+                {baseList.length === 0 ? t('emptyBodyStart') : t('emptyBodyAdjust')}
               </p>
               {baseList.length === 0 && (
                 <button
                   onClick={() => navigate('/explore')}
                   className="btn-ink"
                 >
-                  Discover Stays
+                  {t('discoverStays')}
                 </button>
               )}
             </div>
@@ -406,7 +418,7 @@ export default function Collabs() {
                 await new Promise(r => setTimeout(r, 100));
                 const toast = document.createElement('div');
                 toast.style.cssText = 'position:fixed;bottom:5rem;left:50%;transform:translateX(-50%);z-index:9999;background:rgba(25,37,36,0.92);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);color:#EFECE9;padding:0.75rem 1.5rem;border-radius:9999px;font-size:0.875rem;font-weight:600;font-family:var(--font-body);box-shadow:0 8px 24px rgba(25,37,36,0.25);display:flex;align-items:center;gap:0.5rem;animation:fadeUp 300ms cubic-bezier(0.16,1,0.3,1) forwards;max-width:calc(100vw - 2rem);';
-                toast.innerHTML = 'Demo tour closed — find it again in <strong>Settings</strong> or the <strong>Help Center (? icon)</strong>';
+                toast.innerHTML = t('demoToast');
                 document.body.appendChild(toast);
                 setTimeout(() => {
                   toast.style.transition = 'opacity 300ms, transform 300ms';

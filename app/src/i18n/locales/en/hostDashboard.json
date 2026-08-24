@@ -1,0 +1,94 @@
+{
+  "reachChart": {
+    "tooltipLine1": "Feature coming soon —",
+    "tooltipLine2": "Instagram integration in progress."
+  },
+  "statusLabels": {
+    "active": "Active",
+    "paused": "Paused",
+    "draft": "Draft"
+  },
+  "filters": {
+    "all": "All"
+  },
+  "normalizedListing": {
+    "cashOnly": "${{amount}} cash",
+    "hybridCashStay": "${{amount}} + stay",
+    "seeListing": "See listing",
+    "deliverablesMore": " +{{count}} more",
+    "deliverableCount": "{{count}} deliverables",
+    "defaultCollabType": "Collab"
+  },
+  "charts": {
+    "totalCollabs": "Total Collabs",
+    "creatorsWorkedWith": "Creators Worked With",
+    "contentPieces": "Content Pieces",
+    "estReach": "Est. Reach"
+  },
+  "chartModal": {
+    "allTimeLabel": "{{title}} · All time",
+    "previewDataNote": "Preview data · Live tracking activates with production backend",
+    "close": "Close"
+  },
+  "listingCard": {
+    "stats": {
+      "applied": "Applied",
+      "confirmed": "Confirmed",
+      "done": "Done"
+    },
+    "menu": {
+      "deleteSample": "Delete sample",
+      "edit": "Edit",
+      "pause": "Pause",
+      "unpause": "Unpause",
+      "duplicate": "Duplicate"
+    }
+  },
+  "browse": {
+    "backToDashboard": "Back to dashboard",
+    "title": "The marketplace",
+    "subtitle": "Browse other properties for inspiration — this is what creators see when they explore listings.",
+    "hideMap": "Hide map",
+    "showMap": "Show map",
+    "emptyArea": "No listings in this area — try moving the map.",
+    "emptyNone": "No listings to browse yet.",
+    "emptySearch": "No listings match your search.",
+    "close": "Close"
+  },
+  "greeting": {
+    "morning": "Good morning",
+    "afternoon": "Good afternoon",
+    "evening": "Good evening"
+  },
+  "header": {
+    "dashboardTitle": "{{firstName}}'s Dashboard",
+    "newListing": "New listing"
+  },
+  "compensationBanner": {
+    "title_one": "1 listing needs compensation added",
+    "title_other": "{{count}} listings need compensation added",
+    "body_one": "Every collaboration now includes creator payment. This listing is hidden from Explore until you edit it and add a compensation amount: {{titles}}.",
+    "body_other": "Every collaboration now includes creator payment. These listings are hidden from Explore until you edit them and add a compensation amount: {{titles}}."
+  },
+  "myListings": {
+    "heading": "My Listings",
+    "total": "{{count}} total",
+    "browseMarketplace": "Browse marketplace",
+    "emptyTitle": "No {{filter}} listings",
+    "emptyAll": "Create your first listing to start attracting creators.",
+    "emptyFiltered": "You have no {{filter}} listings right now."
+  },
+  "activity": {
+    "heading": "Activity",
+    "subtitle": "What needs your attention",
+    "empty": "No activity. All caught up."
+  },
+  "impact": {
+    "heading": "Your Impact",
+    "subtitle": "All time"
+  },
+  "pricingWidget": {
+    "label": "Pricing",
+    "ariaLabel": "What does a collab cost?"
+  }
+}

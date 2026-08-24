@@ -1,0 +1,13 @@
+{
+  "stepOf": "Paso {{step}} de {{total}}",
+  "saving": "Guardando...",
+  "saveExit": "Guardar y salir",
+  "helpHeading": "Tu progreso está guardado",
+  "helpBodyPrefix": "Cada cambio se guarda automáticamente en este navegador. Pulsa ",
+  "helpBodySuffix": " para volver a tu panel — tu borrador te estará esperando justo donde lo dejaste.",
+  "saveFallbackError": "No se pudo guardar tu borrador — inténtalo de nuevo.",
+  "saveErrorSuffix": " Tu progreso sigue guardado en este navegador — vuelve y termina de completarlo, o sal de todos modos desde aquí.",
+  "exitWithoutSaving": "Salir sin guardar como borrador",
+  "back": "Atrás",
+  "next": "Siguiente"
+}

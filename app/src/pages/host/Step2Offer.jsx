@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus, X, Sparkles, Search, Wand2, RefreshCw } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import WizardShell from "../../components/host/WizardShell";
 import { useListingDraft } from "../../contexts/ListingDraftContext";
 import { AMENITY_ICONS, ICON_PALETTE } from "../../lib/amenityIcons";
@@ -152,6 +153,7 @@ function generateCollabCode(title) {
 }
 
 export default function Step2Offer() {
+  const { t } = useTranslation('step2Offer');
   const navigate = useNavigate();
   const { draft, updateDraft } = useListingDraft();
 
@@ -214,17 +216,17 @@ export default function Step2Offer() {
       onNext={() => navigate("/host/listings/create/deliverables")}
     >
       <h2 style={{ fontFamily: "Cabinet Grotesk, serif", fontWeight: 800, fontSize: 28, color: "var(--ink)", margin: "0 0 6px" }}>
-        What's the offer?
+        {t('heading')}
       </h2>
       <p style={{ fontFamily: "Satoshi, sans-serif", fontSize: 14, color: "var(--slate)", margin: "0 0 32px" }}>
-        Tell creators what makes your listing special and what perks they'll get.
+        {t('subtitle')}
       </p>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 32 }}>
         {/* Amenities */}
         <div>
-          <SectionLabel>Property amenities</SectionLabel>
-          <SectionDesc>Search and select what your property offers. These appear on your listing page.</SectionDesc>
+          <SectionLabel>{t('amenities.label')}</SectionLabel>
+          <SectionDesc>{t('amenities.desc')}</SectionDesc>
 
           {/* Search */}
           <div style={{ position: "relative", marginBottom: 12 }}>
@@ -232,14 +234,14 @@ export default function Step2Offer() {
             <input
               value={amenitySearch}
               onChange={(e) => setAmenitySearch(e.target.value)}
-              placeholder="Search amenities (e.g., WiFi, pool, hot tub)"
+              placeholder={t('amenities.searchPlaceholder')}
               style={{ width: "100%", padding: "11px 14px 11px 40px", border: "1.5px solid rgba(25,37,36,0.15)", borderRadius: "0.875rem", fontFamily: "Satoshi, sans-serif", fontSize: 14, color: "var(--ink)", background: "#fff", outline: "none", boxSizing: "border-box" }}
             />
           </div>
 
           {!amenityQuery && (
             <div style={{ fontFamily: "Satoshi, sans-serif", fontSize: 12, color: "var(--sage)", marginBottom: 8 }}>
-              {showAllAmenities ? "All amenities" : "Most common"}
+              {showAllAmenities ? t('amenities.allAmenities') : t('amenities.mostCommon')}
             </div>
           )}
 
@@ -268,7 +270,7 @@ export default function Step2Offer() {
           </div>
 
           {amenityQuery && visibleAmenities.length === 0 && (
-            <div style={{ fontFamily: "Satoshi, sans-serif", fontSize: 13, color: "var(--sage)", padding: "8px 2px" }}>No amenities match "{amenitySearch}".</div>
+            <div style={{ fontFamily: "Satoshi, sans-serif", fontSize: 13, color: "var(--sage)", padding: "8px 2px" }}>{t('amenities.noMatch', { query: amenitySearch })}</div>
           )}
 
           {!amenityQuery && (
@@ -276,14 +278,14 @@ export default function Step2Offer() {
               onClick={() => setShowAllAmenities((v) => !v)}
               style={{ marginTop: 10, background: "none", border: "none", cursor: "pointer", fontFamily: "Satoshi, sans-serif", fontSize: 13, fontWeight: 600, color: "var(--slate)", textDecoration: "underline", padding: 0 }}
             >
-              {showAllAmenities ? "Show common only" : "Show all amenities"}
+              {showAllAmenities ? t('amenities.showCommonOnly') : t('amenities.showAllAmenities')}
             </button>
           )}
 
           {/* Selected amenities (standard + custom) */}
           {amenities.length > 0 && (
             <div style={{ marginTop: 18 }}>
-              <div style={{ fontFamily: "Satoshi, sans-serif", fontSize: 12, fontWeight: 700, color: "var(--ink)", marginBottom: 8 }}>Selected ({amenities.length})</div>
+              <div style={{ fontFamily: "Satoshi, sans-serif", fontSize: 12, fontWeight: 700, color: "var(--ink)", marginBottom: 8 }}>{t('amenities.selected', { count: amenities.length })}</div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                 {amenities.map((a, i) => {
                   const IconC = ICON_PALETTE.find((p) => p.key === a.icon)?.Icon;
@@ -308,18 +310,18 @@ export default function Step2Offer() {
                 onClick={() => setCreatingAmenity(true)}
                 style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "9px 14px", borderRadius: 9999, border: "1.5px dashed rgba(25,37,36,0.25)", background: "transparent", cursor: "pointer", fontFamily: "Satoshi, sans-serif", fontSize: 13, fontWeight: 600, color: "var(--ink)" }}
               >
-                <Wand2 size={15} /> Create your own amenity
+                <Wand2 size={15} /> {t('amenities.createOwn')}
               </button>
             ) : (
               <div style={{ background: "rgba(255,255,255,0.7)", border: "1.5px solid rgba(25,37,36,0.12)", borderRadius: "0.875rem", padding: 16 }}>
-                <div style={{ fontFamily: "Satoshi, sans-serif", fontSize: 13, fontWeight: 700, color: "var(--ink)", marginBottom: 8 }}>Create a custom amenity</div>
+                <div style={{ fontFamily: "Satoshi, sans-serif", fontSize: 13, fontWeight: 700, color: "var(--ink)", marginBottom: 8 }}>{t('amenities.createCustomHeading')}</div>
                 <input
                   value={customLabel}
                   onChange={(e) => setCustomLabel(e.target.value)}
-                  placeholder="Name your amenity (e.g., Rooftop Hammock)"
+                  placeholder={t('amenities.namePlaceholder')}
                   style={{ width: "100%", padding: "11px 14px", border: "1.5px solid rgba(25,37,36,0.15)", borderRadius: "0.75rem", fontFamily: "Satoshi, sans-serif", fontSize: 14, color: "var(--ink)", background: "#fff", outline: "none", boxSizing: "border-box", marginBottom: 12 }}
                 />
-                <div style={{ fontFamily: "Satoshi, sans-serif", fontSize: 12, fontWeight: 600, color: "var(--slate)", marginBottom: 8 }}>Choose a graphic</div>
+                <div style={{ fontFamily: "Satoshi, sans-serif", fontSize: 12, fontWeight: 600, color: "var(--slate)", marginBottom: 8 }}>{t('amenities.chooseGraphic')}</div>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 8, maxHeight: 168, overflowY: "auto", paddingRight: 2 }}>
                   {ICON_PALETTE.map(({ key, label, Icon }) => {
                     const sel = customIcon === key;

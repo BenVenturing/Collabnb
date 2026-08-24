@@ -7,6 +7,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useSubscription } from '../contexts/SubscriptionContext';
 import { getPitchCount } from '../lib/pitchCount';
 import { reopenChecklist } from '../components/OnboardingChecklist';
+import ReceiptCheckoutOverlay from '../components/ReceiptCheckoutOverlay';
 
 const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL;
 
@@ -190,6 +191,7 @@ export default function Settings() {
   const [policyExpanded, setPolicyExpanded] = useState(false);
   const [cardBusy, setCardBusy] = useState(false);
   const [cardError, setCardError] = useState('');
+  const [checkoutReceipt, setCheckoutReceipt] = useState(null);
   const [connectStatus, setConnectStatus] = useState(null);
   const [connectBusy, setConnectBusy] = useState(false);
   const [blockQuery, setBlockQuery] = useState('');
@@ -252,6 +254,9 @@ export default function Settings() {
     if (p.get('card') === 'success' && sessionId) {
       setCardBusy(true);
       verifyHostCardSetupSession({ sessionId })
+        .then(({ cardBrand, cardLast4, orderId }) => {
+          setCheckoutReceipt({ type: 'host', orderId, cardBrand, cardLast4 });
+        })
         .catch((err) => setCardError(err?.message || "Couldn't confirm your card — please try again."))
         .finally(() => setCardBusy(false));
       navigate('/settings?tab=payments', { replace: true });
@@ -709,6 +714,8 @@ export default function Settings() {
           </div>
         )}
       </div>
+
+      <ReceiptCheckoutOverlay receipt={checkoutReceipt} onClose={() => setCheckoutReceipt(null)} />
     </div>
   );
 }

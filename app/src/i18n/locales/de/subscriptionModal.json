@@ -1,0 +1,19 @@
+{
+  "heading": "Weiter kollaborieren",
+  "body": "Deine 30-tägige kostenlose Testphase ist beendet. Abonniere, um weiterhin Gastgebern zu schreiben, dich für Kollaborationen zu bewerben und die vollständige Karte zu erkunden.",
+  "plans": {
+    "monthly": "10 $ / Monat",
+    "yearly": "60 $ / Jahr",
+    "yearlySavings": "50 % sparen"
+  },
+  "finePrint": "Jederzeit kündbar. Gründungsmitglieder sind immer kostenlos.",
+  "errors": {
+    "profileNotFound": "Profil nicht gefunden. Stelle sicher, dass du angemeldet bist.",
+    "stripeNotConfigured": "Stripe ist nicht konfiguriert. Führe aus: npx convex env set STRIPE_SECRET_KEY sk_test_...",
+    "checkoutFailed": "Der Checkout konnte nicht gestartet werden. Bitte versuche es erneut."
+  },
+  "cta": {
+    "redirecting": "Weiterleitung…",
+    "later": "Vielleicht später"
+  }
+}

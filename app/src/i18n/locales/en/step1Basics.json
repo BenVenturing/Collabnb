@@ -1,0 +1,31 @@
+{
+  "nextHint": {
+    "needTitle": "Give your listing a title.",
+    "needLocation": "Fill in the city and state/country."
+  },
+  "uploadErrorFallback": "One of your photos couldn't be uploaded.",
+  "heading": "Tell us the basics",
+  "subtitle": "Start with the essential details about your collaboration opportunity.",
+  "labels": {
+    "listingTitle": "Listing title",
+    "location": "Location",
+    "propertyUrl": "Property listing URL",
+    "propertyImages": "Property images",
+    "collaborationBrief": "Collaboration brief"
+  },
+  "placeholders": {
+    "listingTitle": "e.g., Cozy Lake Tahoe Cabin",
+    "city": "City",
+    "stateCountry": "State / Country",
+    "propertyUrl": "https://your-stay-or-booking-link.com",
+    "collaborationBrief": "e.g., Looking for authentic content that highlights the mountain views and cozy cabin vibe..."
+  },
+  "uploading": "Uploading...",
+  "uploadImages": "Upload images",
+  "selectMultipleHint": "Select multiple images from your library (up to {{max}})",
+  "addPhotos": "Add photos",
+  "imagesCount": "{{count}} of {{max}} added",
+  "limitReached": " — limit reached",
+  "briefHint": "Describe what you're looking for from creators (optional)",
+  "footerNote": "Creator tier, compensation, and deliverables are set on the next step, with live pricing guidance."
+}

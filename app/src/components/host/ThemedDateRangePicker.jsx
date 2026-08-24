@@ -1,13 +1,11 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { formatDate } from "../../lib/dateUtils";
 
-const MONTHS = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December",
-];
-const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-
 function CalendarMonth({ year, month, startDate, endDate, onDayClick }) {
+  const { t } = useTranslation('themedDateRangePicker');
+  const MONTHS = t('months', { returnObjects: true });
+  const WEEKDAYS = t('weekdays', { returnObjects: true });
   const firstDay = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const today = new Date();
@@ -80,6 +78,8 @@ function CalendarMonth({ year, month, startDate, endDate, onDayClick }) {
 // Inline two-month range picker themed to match the creator search calendar.
 // Reads/writes ISO YYYY-MM-DD strings via value={{ start, end }} and onChange(start, end).
 export default function ThemedDateRangePicker({ start, end, onChange }) {
+  const { t } = useTranslation('themedDateRangePicker');
+  const MONTHS = t('months', { returnObjects: true });
   const today = new Date();
   const [baseMonth, setBaseMonth] = useState(today.getMonth());
   const [baseYear, setBaseYear] = useState(today.getFullYear());
@@ -155,7 +155,7 @@ export default function ThemedDateRangePicker({ start, end, onChange }) {
             onClick={() => onChange("", "")}
             style={{ fontSize: "0.72rem", color: "var(--sage)", background: "none", border: "none", cursor: "pointer", textDecoration: "underline", fontFamily: "var(--font-body)" }}
           >
-            Clear
+            {t('clear')}
           </button>
         </div>
       )}

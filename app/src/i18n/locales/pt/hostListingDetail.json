@@ -1,0 +1,95 @@
+{
+  "statusLabels": {
+    "pending": "Pendente",
+    "under_review": "Em análise",
+    "approved": "Aprovado",
+    "completed": "Concluído",
+    "declined": "Recusado"
+  },
+  "tierDefs": {
+    "UGC Beginner": "0–5K seguidores — Novos criadores construindo seu portfólio",
+    "UGC Pro": "5K–10K seguidores — Criadores de conteúdo, não alcance de influenciador",
+    "Micro Influencer": "10K–50K seguidores — Conteúdo estilo influenciador, público engajado",
+    "Influencer": "50K+ seguidores — Amplo alcance, público estabelecido",
+    "Macro": "100K+ seguidores — Criadores de ponta com grande alcance"
+  },
+  "listingStatusLabels": {
+    "active": "Ativo",
+    "paused": "Pausado",
+    "draft": "Rascunho"
+  },
+  "photoModal": {
+    "close": "Fechar"
+  },
+  "applicantRow": {
+    "pitch": "PROPOSTA",
+    "meta": "@{{username}} · {{followers}} seguidores · {{applied}}",
+    "proposedChanges": "Alterações propostas",
+    "review": "Revisar",
+    "openProposal": "Abrir proposta",
+    "message": "Mensagem"
+  },
+  "loading": "Carregando…",
+  "notFound": "Anúncio não encontrado.",
+  "header": {
+    "myListings": "Meus anúncios",
+    "creatorView": "Visão de criador",
+    "editListing": "Editar anúncio",
+    "changeStatusTitle": "Clique para mudar o status"
+  },
+  "photos": {
+    "title": "Fotos",
+    "subtitle_one": "{{count}} foto — clique para ampliar",
+    "subtitle_other": "{{count}} fotos — clique para ampliar",
+    "view": "Ver",
+    "cover": "Capa"
+  },
+  "details": {
+    "title": "Detalhes do anúncio",
+    "compensation": "Compensação",
+    "deliverables": "Entregáveis",
+    "creatorTier": "Nível do criador",
+    "available": "Disponível",
+    "deliverableLoad": "Carga de entregáveis",
+    "dueIn": "Vence em",
+    "dueInDays": "{{days}} dias",
+    "whatYoureOffering": "O que você está oferecendo"
+  },
+  "affiliate": {
+    "title": "Código de afiliado",
+    "subtitle": "Os criadores podem usar este código para ganhar comissão em reservas",
+    "copied": "Copiado!",
+    "copy": "Copiar",
+    "shareCode": "Compartilhe este código com criadores aprovados",
+    "noCode": "Nenhum código de afiliado definido para este anúncio.",
+    "addCode": "Adicionar código"
+  },
+  "applicants": {
+    "heading": "Candidatos",
+    "subtitle_one": "{{total}} no total · {{pitchCount}} proposta",
+    "subtitle_other": "{{total}} no total · {{pitchCount}} propostas",
+    "allChip": "Todos ({{count}})",
+    "statusChip": "{{status}} ({{count}})",
+    "emptyNone": "Ainda não há candidaturas — compartilhe seu anúncio para atrair criadores.",
+    "emptyFiltered": "Nenhum candidato {{status}}."
+  },
+  "statusModal": {
+    "blockedTitle": "Não é possível mudar para rascunho",
+    "blockedBody": "Este anúncio tem criadores em um contrato ativo. Você deve concluir ou cancelar todas as colaborações ativas antes de mudar o status para rascunho.",
+    "gotIt": "Entendido",
+    "publishTitle": "Publicar este anúncio?",
+    "publishBody": "Ele ficará ativo e visível para os criadores no Collabnb imediatamente.",
+    "cancel": "Cancelar",
+    "publish": "Publicar",
+    "publishing": "Publicando…",
+    "toDraftTitle": "Mudar para rascunho?",
+    "pendingWarning_one": "{{count}} criador com consultas pendentes ou em análise receberá uma mensagem: ",
+    "pendingWarning_other": "{{count}} criadores com consultas pendentes ou em análise receberão uma mensagem: ",
+    "pauseMessage": "Desculpe o transtorno — este anúncio foi pausado temporariamente. Entraremos em contato se ele voltar a ficar ativo.",
+    "typeToConfirmPrefix": "Digite ",
+    "typeToConfirmSuffix": " para confirmar:",
+    "noPendingBody": "O anúncio ficará oculto para os criadores e nenhuma nova candidatura será aceita.",
+    "moveToDraft": "Mudar para rascunho",
+    "saving": "Salvando…"
+  }
+}

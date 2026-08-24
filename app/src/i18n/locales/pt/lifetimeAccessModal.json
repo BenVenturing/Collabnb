@@ -1,0 +1,27 @@
+{
+  "heading": {
+    "available": "Acesso vitalício disponível",
+    "soldOut": "Vagas vitalícias esgotadas"
+  },
+  "body": {
+    "available": "A rodada gratuita de fundadores está completa. Você ainda pode obter acesso permanente com um pagamento único.",
+    "soldOut": "Todas as vagas vitalícias acabaram. Escolha um plano mensal ou anual para começar."
+  },
+  "tiers": {
+    "earlyAdopter": "Early Adopter",
+    "community": "Comunidade",
+    "standardLifetime": "Vitalício padrão"
+  },
+  "spotsLeft_one": "{{count}} vaga a este preço — depois ele sobe",
+  "spotsLeft_other": "{{count}} vagas a este preço — depois ele sobe",
+  "errors": {
+    "loginRequired": "Faça login para continuar.",
+    "checkoutFailed": "Não foi possível iniciar o checkout. Tente novamente."
+  },
+  "cta": {
+    "redirecting": "Redirecionando…",
+    "claim": "Obter acesso vitalício — US$ {{price}}",
+    "later": "Talvez mais tarde",
+    "close": "Fechar"
+  }
+}

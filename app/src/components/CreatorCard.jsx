@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import CreatorAvatar from './CreatorAvatar';
 
 const TIER_COLORS = {
@@ -15,10 +16,11 @@ function fmtNum(n) {
   return String(n);
 }
 
-function fmtDate(iso) {
+const MONTH_SHORT_KEYS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+function fmtDate(iso, t) {
   if (!iso) return '';
   const [, m, d] = iso.split('-').map(Number);
-  return `${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][m - 1]} ${d}`;
+  return `${t(`monthsShort.${MONTH_SHORT_KEYS[m - 1]}`)} ${d}`;
 }
 
 const IconMsg = () => (
@@ -79,7 +81,8 @@ function CreatorModal({ creator, onClose, onMessage, saved, onSave }) {
     return () => { document.body.style.overflow = ''; };
   }, []);
 
-  const t = TIER_COLORS[creator.tier] || TIER_COLORS['UGC Beginner'];
+  const tc = TIER_COLORS[creator.tier] || TIER_COLORS['UGC Beginner'];
+  const { t } = useTranslation('creatorCard');
   const city = creator.location?.split(',')[0] ?? creator.location ?? '';
 
   const upcomingTrips = (creator.travelCalendar || [])
@@ -102,7 +105,7 @@ function CreatorModal({ creator, onClose, onMessage, saved, onSave }) {
   if (yt && creator.platforms?.includes('YouTube'))
     socialLinks.push({ icon: <IconYouTube />, label: 'YouTube', url: `https://youtube.com/@${yt}` });
   if (creator.portfolioUrl)
-    socialLinks.push({ icon: <IconExt />, label: 'Portfolio', url: creator.portfolioUrl });
+    socialLinks.push({ icon: <IconExt />, label: t('portfolio'), url: creator.portfolioUrl });
 
   return (
     <div
@@ -130,7 +133,7 @@ function CreatorModal({ creator, onClose, onMessage, saved, onSave }) {
         {/* Save heart */}
         <button
           onClick={(e) => { e.stopPropagation(); onSave(); }}
-          title={saved ? 'Saved' : 'Save creator'}
+          title={saved ? t('saved') : t('saveCreator')}
           style={{
             position: 'absolute', top: 14, right: 14, zIndex: 10,
             width: 36, height: 36, borderRadius: '50%',
@@ -158,7 +161,7 @@ function CreatorModal({ creator, onClose, onMessage, saved, onSave }) {
             padding: '3px 10px', borderRadius: 9999,
             fontSize: 9, fontWeight: 700, letterSpacing: '0.06em',
             background: 'rgba(149,157,144,0.15)', color: '#959D90',
-          }}>SAMPLE</span>
+          }}>{t('sample')}</span>
         )}
 
         {/* Horizontal layout */}
@@ -181,7 +184,7 @@ function CreatorModal({ creator, onClose, onMessage, saved, onSave }) {
               </div>
               {creator.isFounder && (
                 <div
-                  title="Founder — one of the first 100 on Collabnb"
+                  title={t('founderTitle')}
                   style={{
                     position: 'absolute', bottom: 4, right: 0,
                     width: 28, height: 28, borderRadius: '50%',
@@ -216,7 +219,7 @@ function CreatorModal({ creator, onClose, onMessage, saved, onSave }) {
                 <IconPin />
                 <span style={{ fontSize: 11, color: 'var(--slate)' }}>{city}</span>
               </div>
-              <span style={{ padding: '4px 14px', borderRadius: 9999, fontSize: 11, fontWeight: 700, background: t.bg, color: t.color }}>
+              <span style={{ padding: '4px 14px', borderRadius: 9999, fontSize: 11, fontWeight: 700, background: tc.bg, color: tc.color }}>
                 {creator.tier}
               </span>
             </div>
@@ -237,9 +240,9 @@ function CreatorModal({ creator, onClose, onMessage, saved, onSave }) {
               borderRadius: '0.875rem', overflow: 'hidden',
             }}>
               {[
-                { label: 'Avg. Reach',       value: fmtNum(creator.avg_reach_30d ?? creator.followers), tooltip: 'Average number of people who saw this creator\'s posts in the last 30 days.' },
-                { label: '30-Day Eng. Rate', value: `${creator.er_30d ?? creator.engagement}%`,         tooltip: 'Percentage of followers who liked, commented, or shared posts in the last 30 days. Higher = more active, loyal audience.' },
-                { label: 'Collabs',          value: creator.collab_count ?? '—',                        tooltip: 'Number of completed collaborations with properties on Collabnb.' },
+                { label: t('stats.avgReach'),       value: fmtNum(creator.avg_reach_30d ?? creator.followers), tooltip: t('stats.avgReachTooltip') },
+                { label: t('stats.engRate'), value: `${creator.er_30d ?? creator.engagement}%`,         tooltip: t('stats.engRateTooltip') },
+                { label: t('stats.collabs'),          value: creator.collab_count ?? '—',                        tooltip: t('stats.collabsTooltip') },
               ].map(({ label, value, tooltip }) => (
                 <div
                   key={label}
@@ -260,7 +263,7 @@ function CreatorModal({ creator, onClose, onMessage, saved, onSave }) {
               <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {creator.platforms?.length > 0 && (
                   <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: 10.5, fontWeight: 600, color: 'var(--sage)', minWidth: 58, flexShrink: 0 }}>Platforms</span>
+                    <span style={{ fontSize: 10.5, fontWeight: 600, color: 'var(--sage)', minWidth: 58, flexShrink: 0 }}>{t('platforms')}</span>
                     <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
                       {creator.platforms.map(p => (
                         <span key={p} style={{ padding: '3px 10px', borderRadius: 9999, fontSize: 11, fontWeight: 600, background: 'rgba(60,87,89,0.09)', color: 'var(--ink)' }}>{p}</span>
@@ -270,7 +273,7 @@ function CreatorModal({ creator, onClose, onMessage, saved, onSave }) {
                 )}
                 {creator.niches?.length > 0 && (
                   <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: 10.5, fontWeight: 600, color: 'var(--sage)', minWidth: 58, flexShrink: 0 }}>Niches</span>
+                    <span style={{ fontSize: 10.5, fontWeight: 600, color: 'var(--sage)', minWidth: 58, flexShrink: 0 }}>{t('niches')}</span>
                     <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
                       {creator.niches.map(n => (
                         <span key={n} style={{ padding: '3px 9px', borderRadius: 9999, fontSize: 10.5, fontWeight: 600, background: 'var(--bone)', color: 'var(--slate)' }}>{n}</span>
@@ -285,7 +288,7 @@ function CreatorModal({ creator, onClose, onMessage, saved, onSave }) {
             {upcomingTrips.length > 0 && (
               <div style={{ margin: '16px 0 0', padding: '12px 14px', borderRadius: '1rem', background: 'rgba(209,235,219,0.22)', border: '1px solid rgba(209,235,219,0.65)' }}>
                 <div style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--ink)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>
-                  Upcoming Trips
+                  {t('upcomingTrips')}
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
                   {upcomingTrips.map(trip => (
@@ -295,7 +298,7 @@ function CreatorModal({ creator, onClose, onMessage, saved, onSave }) {
                         {trip.city}{trip.country && trip.country !== 'USA' ? `, ${trip.country}` : ''}
                       </span>
                       <span style={{ fontSize: 11, color: 'var(--sage)', flexShrink: 0 }}>
-                        {fmtDate(trip.startDate)}–{fmtDate(trip.endDate)}
+                        {fmtDate(trip.startDate, t)}–{fmtDate(trip.endDate, t)}
                       </span>
                     </div>
                   ))}
@@ -309,7 +312,7 @@ function CreatorModal({ creator, onClose, onMessage, saved, onSave }) {
                 <svg width="12" height="12" viewBox="0 0 10 10" fill="none">
                   <path d="M1.5 5l2.5 2.5 4.5-4.5" stroke="#2d7d5e" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
-                <span style={{ fontSize: 12, fontWeight: 600, color: '#2d7d5e' }}>You've collaborated with this person before</span>
+                <span style={{ fontSize: 12, fontWeight: 600, color: '#2d7d5e' }}>{t('pastCollabNotice')}</span>
               </div>
             )}
 
@@ -356,7 +359,7 @@ function CreatorModal({ creator, onClose, onMessage, saved, onSave }) {
               onMouseEnter={e => { e.currentTarget.style.opacity = '0.87'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
               onMouseLeave={e => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.transform = 'none'; }}
             >
-              <IconMsg />Message {creator.name?.split(' ')[0]}
+              <IconMsg />{t('messageCreator', { name: creator.name?.split(' ')[0] })}
             </button>
           </div>
         </div>
@@ -368,7 +371,8 @@ function CreatorModal({ creator, onClose, onMessage, saved, onSave }) {
 // ─── Chip variant ─────────────────────────────────────────────────────────────
 function ChipCard({ creator, onMessage, onHide }) {
   const [hovered, setHovered] = useState(false);
-  const t = TIER_COLORS[creator.tier] || TIER_COLORS['UGC Beginner'];
+  const tc = TIER_COLORS[creator.tier] || TIER_COLORS['UGC Beginner'];
+  const { t } = useTranslation('creatorCard');
 
   return (
     <div
@@ -391,12 +395,12 @@ function ChipCard({ creator, onMessage, onHide }) {
           <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 13, color: 'var(--ink)', whiteSpace: 'nowrap' }}>
             {creator.name}
           </span>
-          <span style={{ padding: '1px 7px', borderRadius: 9999, fontSize: 9, fontWeight: 700, background: t.bg, color: t.color, whiteSpace: 'nowrap' }}>
+          <span style={{ padding: '1px 7px', borderRadius: 9999, fontSize: 9, fontWeight: 700, background: tc.bg, color: tc.color, whiteSpace: 'nowrap' }}>
             {creator.tier}
           </span>
         </div>
         <div style={{ fontSize: 10.5, color: 'var(--sage)', marginTop: 1 }}>
-          @{creator.username} · {fmtNum(creator.avg_reach_30d ?? creator.followers)} reach · {creator.er_30d ?? creator.engagement}% ER
+          {t('chipStats', { username: creator.username, reach: fmtNum(creator.avg_reach_30d ?? creator.followers), er: creator.er_30d ?? creator.engagement })}
         </div>
       </div>
       {onMessage && (
@@ -404,7 +408,7 @@ function ChipCard({ creator, onMessage, onHide }) {
           onClick={(e) => { e.stopPropagation(); onMessage(creator); }}
           style={{ flexShrink: 0, padding: '5px 12px', borderRadius: 9999, background: 'var(--ink)', color: 'var(--bone)', fontFamily: 'var(--font-body)', fontSize: 11, fontWeight: 700, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}
         >
-          <IconMsg /> Message
+          <IconMsg /> {t('message')}
         </button>
       )}
       {onHide && creator.isSample && (
@@ -464,13 +468,13 @@ function FullCard({ creator, narrow = false, large = false, onMessage, onHide, v
         >
           {/* SAMPLE badge */}
           {creator.isSample && (
-            <span style={{ position: 'absolute', top: 10, left: 10, padding: '2px 7px', borderRadius: 9999, fontSize: 8, fontWeight: 700, letterSpacing: '0.06em', background: 'rgba(149,157,144,0.15)', color: '#959D90', lineHeight: 1.8, pointerEvents: 'none' }}>SAMPLE</span>
+            <span style={{ position: 'absolute', top: 10, left: 10, padding: '2px 7px', borderRadius: 9999, fontSize: 8, fontWeight: 700, letterSpacing: '0.06em', background: 'rgba(149,157,144,0.15)', color: '#959D90', lineHeight: 1.8, pointerEvents: 'none' }}>{t('sample')}</span>
           )}
           {/* Trash */}
           {creator.isSample && onHide && (
             <button
               onClick={(e) => { e.stopPropagation(); onHide(creator.id); }}
-              title="Hide this creator"
+              title={t('hideCreator')}
               style={{ position: 'absolute', top: 8, right: 8, background: 'transparent', border: 'none', cursor: 'pointer', padding: 4, color: 'rgba(149,157,144,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
               onMouseEnter={e => e.currentTarget.style.color = '#dc2626'}
               onMouseLeave={e => e.currentTarget.style.color = 'rgba(149,157,144,0.55)'}
@@ -483,7 +487,7 @@ function FullCard({ creator, narrow = false, large = false, onMessage, onHide, v
           {onToggleSave && (
             <button
               onClick={(e) => { e.stopPropagation(); onToggleSave(creator.id); }}
-              title={saved ? 'Saved' : 'Save creator'}
+              title={saved ? t('saved') : t('saveCreator')}
               style={{
                 position: 'absolute', top: 8, right: creator.isSample && onHide ? 38 : 8,
                 background: saved ? 'rgba(74,155,127,0.12)' : 'rgba(255,255,255,0.85)',
@@ -518,7 +522,7 @@ function FullCard({ creator, narrow = false, large = false, onMessage, onHide, v
                 </div>
                 {creator.isFounder && (
                   <div
-                    title="Founder — one of the first 100 on Collabnb"
+                    title={t('founderTitle')}
                     style={{
                       position: 'absolute', top: large ? 3 : 2, right: large ? -8 : -5,
                       width: large ? 30 : 18, height: large ? 30 : 18, borderRadius: '50%',
@@ -547,7 +551,7 @@ function FullCard({ creator, narrow = false, large = false, onMessage, onHide, v
                 <span style={{ fontSize: large ? 12.5 : 10, color: 'var(--slate)' }}>{city}</span>
               </div>
               <div style={{ marginTop: large ? 12 : 8 }}>
-                <span style={{ display: 'inline-block', padding: large ? '5px 14px' : '3px 10px', borderRadius: 9999, fontSize: large ? 12 : 9.5, fontWeight: 700, background: t.bg, color: t.color }}>
+                <span style={{ display: 'inline-block', padding: large ? '5px 14px' : '3px 10px', borderRadius: 9999, fontSize: large ? 12 : 9.5, fontWeight: 700, background: tc.bg, color: tc.color }}>
                   {creator.tier}
                 </span>
               </div>
@@ -558,9 +562,9 @@ function FullCard({ creator, narrow = false, large = false, onMessage, onHide, v
           <div style={{ padding: large ? '20px 26px 0' : narrow ? '10px 13px 0' : '12px 16px 0' }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1, background: 'rgba(25,37,36,0.06)', borderRadius: '0.625rem', overflow: 'hidden' }}>
               {[
-                { label: 'Avg. Reach',       value: fmtNum(creator.avg_reach_30d ?? creator.followers), tooltip: 'Average number of people who saw this creator\'s posts in the last 30 days.' },
-                { label: '30-Day Eng. Rate', value: `${creator.er_30d ?? creator.engagement}%`,         tooltip: 'Percentage of followers who liked, commented, or shared posts in the last 30 days. Higher = more active, loyal audience.' },
-                { label: 'Collabs',          value: creator.collab_count ?? '—',                        tooltip: 'Number of completed collaborations with properties on Collabnb.' },
+                { label: t('stats.avgReach'),       value: fmtNum(creator.avg_reach_30d ?? creator.followers), tooltip: t('stats.avgReachTooltip') },
+                { label: t('stats.engRate'), value: `${creator.er_30d ?? creator.engagement}%`,         tooltip: t('stats.engRateTooltip') },
+                { label: t('stats.collabs'),          value: creator.collab_count ?? '—',                        tooltip: t('stats.collabsTooltip') },
               ].map(({ label, value, tooltip }) => (
                 <div key={label} title={tooltip} style={{ padding: large ? '15px 0' : '9px 0', background: 'rgba(255,255,255,0.78)', textAlign: 'center', cursor: 'help' }}>
                   <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: large ? 19 : narrow ? 12 : 13, color: 'var(--ink)', lineHeight: 1 }}>{value}</div>
@@ -597,7 +601,7 @@ function FullCard({ creator, narrow = false, large = false, onMessage, onHide, v
               onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
               onMouseLeave={e => e.currentTarget.style.opacity = '1'}
             >
-              <IconMsg />Message
+              <IconMsg />{t('message')}
             </button>
           </div>
         </div>

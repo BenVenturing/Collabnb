@@ -1,0 +1,10 @@
+{
+  "weekdays": ["D", "L", "M", "M", "J", "V", "S"],
+  "stageColors": {
+    "deadline": "Date limite du contenu",
+    "pending_action": "Action en attente",
+    "stay_date": "Date de séjour"
+  },
+  "previousMonth": "Mois précédent",
+  "nextMonth": "Mois suivant"
+}

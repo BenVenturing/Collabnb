@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { Search, MapPin } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 const TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
 if (TOKEN) mapboxgl.accessToken = TOKEN;
@@ -49,6 +50,7 @@ function parsePlace(feature) {
 // wizard's location step. Reports back { city, country, lat, lng } — the host's
 // existing city/country text inputs stay editable independently of the pin.
 export default function LocationPicker({ lat, lng, onChange }) {
+  const { t } = useTranslation('locationPicker');
   const containerRef = useRef(null);
   const mapRef = useRef(null);
   const markerRef = useRef(null);
@@ -121,7 +123,7 @@ export default function LocationPicker({ lat, lng, onChange }) {
   if (!TOKEN) {
     return (
       <div style={{ padding: 14, borderRadius: "0.875rem", background: "rgba(255,255,255,0.6)", border: "1px solid rgba(25,37,36,0.1)", fontFamily: "Satoshi, sans-serif", fontSize: 12.5, color: "var(--sage)" }}>
-        Map pin picker isn't available in this environment — the city/state fields above are still used.
+        {t('unavailable')}
       </div>
     );
   }
@@ -135,7 +137,7 @@ export default function LocationPicker({ lat, lng, onChange }) {
           onChange={(e) => handleQueryChange(e.target.value)}
           onFocus={() => setFocused(true)}
           onBlur={() => setTimeout(() => setFocused(false), 150)}
-          placeholder="Search an address or city to drop a pin"
+          placeholder={t('searchPlaceholder')}
           style={{ width: "100%", padding: "11px 14px 11px 40px", border: "1.5px solid rgba(25,37,36,0.15)", borderRadius: "0.875rem", fontFamily: "Satoshi, sans-serif", fontSize: 14, color: "var(--ink)", background: "#fff", outline: "none", boxSizing: "border-box" }}
         />
         {focused && results.length > 0 && (
@@ -149,7 +151,7 @@ export default function LocationPicker({ lat, lng, onChange }) {
         )}
       </div>
       <div style={{ fontFamily: "Satoshi, sans-serif", fontSize: 11.5, color: "var(--sage)", marginBottom: 8, display: "flex", alignItems: "center", gap: 5 }}>
-        <MapPin size={12} /> Or click the map, or drag the pin, to place it exactly.
+        <MapPin size={12} /> {t('clickHint')}
       </div>
       <div style={{ position: "relative", height: 260, borderRadius: "0.875rem", overflow: "hidden", border: "1.5px solid rgba(25,37,36,0.12)" }}>
         <div ref={containerRef} style={{ position: "absolute", inset: 0 }} />

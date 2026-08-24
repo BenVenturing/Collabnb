@@ -1,0 +1,221 @@
+{
+  "header": {
+    "title": "Einstellungen",
+    "done": "Fertig"
+  },
+  "navGroups": {
+    "account": "Konto",
+    "membership": "Mitgliedschaft",
+    "preferences": "Einstellungen"
+  },
+  "nav": {
+    "personalInfo": "Persönliche Informationen",
+    "security": "Anmeldung und Sicherheit",
+    "privacy": "Datenschutz",
+    "notifications": "Benachrichtigungen",
+    "billing": "Plan und Abrechnung",
+    "payments": "Zahlungen und Steuern",
+    "language": "Sprache und Region"
+  },
+  "quickLinks": {
+    "adminDashboard": "Admin-Dashboard",
+    "setupChecklist": "Einrichtungscheckliste",
+    "aiAssistant": "KI-Assistent",
+    "demoTour": "Demo-Kollaborationstour"
+  },
+  "logout": "Abmelden",
+  "comingSoon": "Demnächst verfügbar",
+  "roles": {
+    "host": "Gastgeber",
+    "creator": "Creator"
+  },
+  "roleAction": {
+    "pendingReview": "{{role}}-Zugang wird geprüft",
+    "switchToCreator": "Zur Creator-Ansicht wechseln",
+    "signUpAsCreator": "Als Creator registrieren",
+    "switchToHost": "Zur Gastgeber-Ansicht wechseln",
+    "signUpAsHost": "Als Gastgeber registrieren"
+  },
+  "account": {
+    "legalName": "Vollständiger Name",
+    "notSet": "Nicht angegeben",
+    "edit": "Bearbeiten",
+    "email": "E-Mail",
+    "manage": "Verwalten",
+    "accountType": "Kontotyp — {{role}}",
+    "verifiedHost": "Verifizierter Gastgeber",
+    "notVerifiedHost": "Noch nicht als Gastgeber verifiziert",
+    "verifiedCreator": "Verifizierter Creator",
+    "notVerifiedCreator": "Noch nicht als Creator verifiziert",
+    "verification": "Verifizierung",
+    "verificationValue": "Erneute Verifizierung beantragen",
+    "request": "Anfragen",
+    "contracts": "Verträge",
+    "contractsValue": "Deine gespeicherten Verträge ansehen und verwalten",
+    "open": "Öffnen",
+    "myMetrics": "Meine Kennzahlen",
+    "myMetricsValue": "Aktualisiere deine Follower- und Engagement-Statistiken",
+    "creatorTier": "Creator-Stufe",
+    "creatorTierPending": "{{tier}} — wird vom Team geprüft",
+    "creatorTierCurrent": "Aktuell {{tier}} — beantrage eine Änderung, wenn du gewachsen bist",
+    "requestChange": "Änderung beantragen",
+    "locationSettings": "Standorteinstellungen",
+    "locationSettingsValue": "Lege deine Stadt und dein Land für die Globuskarte fest"
+  },
+  "security": {
+    "sectionLogin": "Anmeldung",
+    "loginCardTitle": "Passwort, Passkeys und Zwei-Faktor-Authentifizierung",
+    "loginCardDesc": "Verwalte, wie du dich anmeldest, einschließlich Passwort, Passkeys und aktiver Sitzungen.",
+    "openSecurity": "Kontosicherheit öffnen",
+    "sectionSession": "Sitzung",
+    "logoutValue": "Von Collabnb auf diesem Gerät abmelden"
+  },
+  "privacy": {
+    "sectionVisibility": "Sichtbarkeit",
+    "profileVisible": "Dein Profil ist für Gastgeber sichtbar",
+    "profileHidden": "Dein Profil ist ausgeblendet",
+    "profileVisibleSub": "Gastgeber können dich auf der Creators-Seite finden und dir Nachrichten schreiben.",
+    "profileHiddenSub": "Du erscheinst nicht in der Gastgeber-Suche und Gastgeber können dir keine Nachrichten schreiben. Bestehende Unterhaltungen bleiben geöffnet.",
+    "sectionControls": "Kontrollen",
+    "showActivity": "Meine Aktivität für Gastgeber anzeigen",
+    "showActivitySub": "Bewerbungen, Antwortzeit und letzte Aktivität",
+    "sectionBlocked": "Blockierte Personen",
+    "blockSearchPlaceholder": "Nach Namen suchen, um jemanden zu blockieren…",
+    "block": "Blockieren",
+    "noBlocked": "Du hast niemanden blockiert. Blockierte Personen können dir keine Nachrichten schreiben oder dein Profil sehen.",
+    "blockedValue": "Blockiert — kann dir keine Nachrichten schreiben oder dein Profil sehen",
+    "unblock": "Entblocken",
+    "sectionPolicy": "Datenschutzerklärung",
+    "collapsePolicy": "Richtlinie einklappen",
+    "readPolicy": "Datenschutzerklärung lesen",
+    "policy": {
+      "effectiveDate": "Gültig ab: 15. Juli 2026",
+      "intro": "Collabnb („wir“, „uns“) verpflichtet sich zum Schutz deiner Privatsphäre. Diese Datenschutzerklärung erläutert, wie wir deine Informationen bei der Nutzung unserer Plattform erheben, verwenden, offenlegen und schützen.",
+      "collectHeading": "Informationen, die wir erheben",
+      "collectBody": "Wir erheben personenbezogene Daten, die du direkt angibst, z. B. Name, E-Mail-Adresse, Profildaten und Social-Media-Handles. Außerdem erfassen wir automatisch Nutzungsdaten, Cookies und Geräteinformationen, wenn du mit unserer Plattform interagierst.",
+      "useHeading": "Wie wir deine Informationen verwenden",
+      "useBody": "Deine Informationen werden verwendet, um Collabnb zu betreiben und zu verbessern, Kollaborationen zwischen Creators und Gastgebern zu ermöglichen, Benachrichtigungen und Updates zu senden und die Sicherheit der Plattform zu gewährleisten. Wir verkaufen deine persönlichen Daten niemals an Dritte.",
+      "sharingHeading": "Weitergabe von Daten",
+      "sharingBody": "Wir können deine Informationen an Dienstleister weitergeben, die uns beim Betrieb der Plattform unterstützen (z. B. Hosting, Analyse), wenn dies gesetzlich vorgeschrieben ist oder mit deiner ausdrücklichen Zustimmung.",
+      "rightsHeading": "Deine Rechte",
+      "rightsBody": "Du kannst jederzeit über diese Einstellungen auf deine persönlichen Daten zugreifen, sie aktualisieren oder löschen. Kontaktiere uns unter support@collabnb.com für Unterstützung.",
+      "fullPolicy": "Die vollständige Datenschutzerklärung findest du unter <a>{{link}}</a>."
+    }
+  },
+  "notifications": {
+    "sectionPreferences": "Einstellungen",
+    "messages": "Nachrichten",
+    "messagesDesc": "Neue Nachrichten und Antworten in deinem Posteingang",
+    "contractUpdates": "Vertragsaktualisierungen",
+    "contractUpdatesDesc": "Wenn ein Vertrag unterschrieben, aktualisiert wird oder eine Aktion erfordert",
+    "newListings": "Neue Angebote",
+    "newListingsDesc": "Objekte, die deinen Präferenzen entsprechen",
+    "collabReminders": "Kollaborations-Erinnerungen",
+    "collabRemindersDesc": "Bevorstehende Fristen und ausstehende Leistungen",
+    "marketing": "Marketing",
+    "marketingDesc": "Produktneuigkeiten, Tipps und Collabnb-News"
+  },
+  "billing": {
+    "sectionPlan": "Plan",
+    "sectionReferralCode": "Empfehlungscode",
+    "copy": "Kopieren",
+    "signupsUsed": "<strong>{{used}}</strong> / {{max}} Anmeldungen genutzt",
+    "collabBonus_one": "Kollaborationsbonus erhalten",
+    "collabBonus_other": "Kollaborationsboni erhalten",
+    "freeMonthsBalance_one": "+{{count}} Gratismonat Guthaben",
+    "freeMonthsBalance_other": "+{{count}} Gratismonate Guthaben",
+    "referralDesc": "Teile deinen Code. Du und neue Mitglieder erhaltet bei der Anmeldung 1 Gratismonat, plus 1 weiteren, sobald sie ihre erste Kollaboration abschließen.",
+    "sectionPitches": "Pitches",
+    "sectionBillingHistory": "Abrechnungsverlauf",
+    "subscription": {
+      "founderTitle": "Gründungsmitglied",
+      "founderSub": "Lebenslanger kostenloser Zugang — alle Funktionen freigeschaltet",
+      "founderSavings": "Du hast als Gründungsmitglied {{amount}} $ an Abogebühren gespart",
+      "planAnnual": "Creator Plus · Jährlich",
+      "planMonthly": "Creator Plus · Monatlich",
+      "priceAnnual": "60 $/Jahr",
+      "priceMonthly": "10 $/Monat",
+      "renews": " · Verlängert sich am {{date}}",
+      "upgradeYearly": "Auf Jahresabo upgraden — 50 % sparen",
+      "manageBilling": "Abrechnung verwalten",
+      "opening": "Wird geöffnet…",
+      "planExpired": "Plan abgelaufen",
+      "planExpiredDesc": "Erneuere, um weiterhin Nachrichten zu senden und dich zu bewerben",
+      "renew": "Erneuern",
+      "pastDue": "Zahlung überfällig",
+      "pastDueDesc": "Deine letzte Zahlung ist fehlgeschlagen — aktualisiere deine Karte, um deinen Plan aktiv zu halten.",
+      "updatePayment": "Zahlung aktualisieren",
+      "freeTrial": "Kostenlose Testphase",
+      "freeTrialDays_one": " · noch {{count}} Tag",
+      "freeTrialDays_other": " · noch {{count}} Tage",
+      "trialDesc": "Voller Zugang inklusive — wähle einen Plan, bevor deine Testphase endet.",
+      "viewPlans": "Pläne ansehen",
+      "noPlan": "Kein aktiver Plan",
+      "noPlanDesc": "Abonniere, um weiter zu kollaborieren",
+      "subscribe": "Abonnieren"
+    },
+    "pitchCounter": {
+      "title": "Diesen Monat genutzte Pitches",
+      "footer": "Setzt sich am 1. jedes Monats zurück. Standardbewerbungen sind unbegrenzt."
+    },
+    "status": {
+      "paid": "Bezahlt",
+      "pending": "Ausstehend",
+      "failed": "Fehlgeschlagen",
+      "waived": "Erlassen"
+    },
+    "ledger": {
+      "outstanding": "{{amount}} $ ausstehend",
+      "collab": "Kollaboration",
+      "fee": "Gebühr",
+      "status": "Status"
+    }
+  },
+  "payments": {
+    "sectionPayouts": "Auszahlungen",
+    "payoutMethod": "Auszahlungsmethode",
+    "payoutMethodCreatorValue": "Verbinde Stripe oder Wise, um Auszahlungen zu erhalten",
+    "payoutMethodHostValue": "Auszahlungsmethoden sind für Creators, die Zahlungen erhalten",
+    "sectionPaymentMethods": "Zahlungsmethoden",
+    "noCardOnFile": "Keine Karte hinterlegt",
+    "cardValue": "Wird automatisch abgebucht, wenn eine von dir organisierte Kollaboration abgeschlossen ist",
+    "working": "Wird bearbeitet…",
+    "update": "Aktualisieren",
+    "addCard": "Karte hinzufügen",
+    "removeCard": "Karte entfernen",
+    "removeCardValue": "Du musst eine neue hinzufügen, bevor du ein weiteres Angebot veröffentlichst",
+    "remove": "Entfernen",
+    "savedCardsCreator": "Gespeicherte Karten",
+    "savedCardsCreatorValue": "Creators werden ausgezahlt, nicht belastet — hier gibt es nichts zu speichern",
+    "sectionTax": "Steuern",
+    "taxInfo": "Steuerinformationen",
+    "taxSetupFirstValue": "Richte zuerst eine Stripe-Auszahlungsmethode ein — Steuerinformationen werden im Rahmen dieser Einrichtung erfasst",
+    "setUpPayoutMethod": "Auszahlungsmethode einrichten",
+    "taxNeedsInfoValue": "Stripe benötigt weitere Informationen, um die Verifizierung deines Kontos abzuschließen",
+    "completeTaxInfo": "Steuerinformationen vervollständigen",
+    "taxOnFileValue": "Bei Stripe im Rahmen deines Auszahlungskontos hinterlegt",
+    "review": "Überprüfen",
+    "taxCheckingValue": "Status deines Stripe-Kontos wird überprüft…",
+    "taxHostValue": "1099-Formulare gelten für Creators, die Auszahlungen erhalten, nicht für Gastgeber"
+  },
+  "language": {
+    "sectionPreferences": "Einstellungen",
+    "preferredLanguage": "Bevorzugte Sprache",
+    "currency": "Währung",
+    "timezone": "Zeitzone",
+    "languages": {
+      "en": "English",
+      "es": "Español",
+      "fr": "Français",
+      "de": "Deutsch",
+      "pt": "Português"
+    },
+    "currencies": {
+      "USD": "US-Dollar ($)",
+      "EUR": "Euro (€)",
+      "GBP": "Britisches Pfund (£)",
+      "CAD": "Kanadischer Dollar (C$)",
+      "AUD": "Australischer Dollar (A$)"
+    }
+  }
+}

@@ -427,7 +427,8 @@ function ChipCard({ creator, onMessage, onHide }) {
 function FullCard({ creator, narrow = false, large = false, onMessage, onHide, visitingBadge, delay = 0, saved = false, onToggleSave }) {
   const [open, setOpen]       = useState(false);
   const [hovered, setHovered] = useState(false);
-  const t    = TIER_COLORS[creator.tier] || TIER_COLORS['UGC Beginner'];
+  const tc   = TIER_COLORS[creator.tier] || TIER_COLORS['UGC Beginner'];
+  const { t } = useTranslation('creatorCard');
   const city = creator.location?.split(',')[0] ?? creator.location ?? '';
   const avatarSize = narrow ? 68 : large ? 116 : 72;
 

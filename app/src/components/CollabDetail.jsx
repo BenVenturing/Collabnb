@@ -798,7 +798,7 @@ function ClosedPanel({ collab, toggleCloseCollab }) {
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
                 <CheckIcon />
                 <p style={{ fontSize: '0.82rem', fontWeight: 600, color: '#4A9B7F', margin: 0 }}>
-                  <Trans i18nKey="closed.metricsSaved" t={t} values={{ er: computedER }}>Metrics saved! Collabnb Content ER: <strong>{{er}}%</strong></Trans>
+                  <Trans i18nKey="closed.metricsSaved" t={t} values={{ er: computedER }}>Metrics saved! Collabnb Content ER: <strong>{{ er: computedER }}%</strong></Trans>
                 </p>
               </div>
               <p style={{ fontSize: '0.7rem', color: 'var(--stone)', margin: 0, fontStyle: 'italic' }}>
@@ -1342,7 +1342,7 @@ export default function CollabDetail({ collab, onClose }) {
                   dates: collab.dates,
                   deliverables: collab.deliverables,
                   payment: collab.payment || t('contractSummary.stayComp'),
-                }}>This collaboration agreement is between <strong>{{hostName}}</strong> and <strong>{{creatorName}}</strong> regarding <strong>{{propertyName}}</strong> located in <strong>{{location}}</strong> from <strong>{{dates}}</strong>. The creator agrees to deliver <strong>{{deliverables}}</strong> as compensation for <strong>{{payment}}</strong>.</Trans>
+                }}>This collaboration agreement is between <strong>{{ hostName: collab.host_name || t('contractSummary.theHost') }}</strong> and <strong>{{ creatorName: 'Ben Venturing' }}</strong> regarding <strong>{{ propertyName: collab.property_name }}</strong> located in <strong>{{ location: collab.location }}</strong> from <strong>{{ dates: collab.dates }}</strong>. The creator agrees to deliver <strong>{{ deliverables: collab.deliverables }}</strong> as compensation for <strong>{{ payment: collab.payment || t('contractSummary.stayComp') }}</strong>.</Trans>
               </p>
             </div>
 

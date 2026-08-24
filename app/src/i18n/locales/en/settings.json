@@ -1,0 +1,221 @@
+{
+  "header": {
+    "title": "Settings",
+    "done": "Done"
+  },
+  "navGroups": {
+    "account": "Account",
+    "membership": "Membership",
+    "preferences": "Preferences"
+  },
+  "nav": {
+    "personalInfo": "Personal info",
+    "security": "Login & security",
+    "privacy": "Privacy",
+    "notifications": "Notifications",
+    "billing": "Plan & billing",
+    "payments": "Payments & tax",
+    "language": "Language & region"
+  },
+  "quickLinks": {
+    "adminDashboard": "Admin dashboard",
+    "setupChecklist": "Setup checklist",
+    "aiAssistant": "AI Assistant",
+    "demoTour": "Demo collab tour"
+  },
+  "logout": "Log out",
+  "comingSoon": "Coming soon",
+  "roles": {
+    "host": "Host",
+    "creator": "Creator"
+  },
+  "roleAction": {
+    "pendingReview": "{{role}} access pending review",
+    "switchToCreator": "Switch to Creator View",
+    "signUpAsCreator": "Sign up as Creator",
+    "switchToHost": "Switch to Host View",
+    "signUpAsHost": "Sign up as Host"
+  },
+  "account": {
+    "legalName": "Legal name",
+    "notSet": "Not set",
+    "edit": "Edit",
+    "email": "Email",
+    "manage": "Manage",
+    "accountType": "Account type — {{role}}",
+    "verifiedHost": "Verified host",
+    "notVerifiedHost": "Not yet verified as host",
+    "verifiedCreator": "Verified creator",
+    "notVerifiedCreator": "Not yet verified as creator",
+    "verification": "Verification",
+    "verificationValue": "Submit a re-verification request",
+    "request": "Request",
+    "contracts": "Contracts",
+    "contractsValue": "View and manage your saved contracts",
+    "open": "Open",
+    "myMetrics": "My metrics",
+    "myMetricsValue": "Update your follower & engagement stats",
+    "creatorTier": "Creator tier",
+    "creatorTierPending": "{{tier}} — pending admin review",
+    "creatorTierCurrent": "Currently {{tier}} — request a change if you've grown",
+    "requestChange": "Request change",
+    "locationSettings": "Location settings",
+    "locationSettingsValue": "Set your city & country for the globe map"
+  },
+  "security": {
+    "sectionLogin": "Login",
+    "loginCardTitle": "Password, passkeys & two-factor authentication",
+    "loginCardDesc": "Manage how you sign in, including your password, passkeys, and active sessions.",
+    "openSecurity": "Open account security",
+    "sectionSession": "Session",
+    "logoutValue": "Sign out of Collabnb on this device"
+  },
+  "privacy": {
+    "sectionVisibility": "Visibility",
+    "profileVisible": "Profile is visible to hosts",
+    "profileHidden": "Profile is hidden",
+    "profileVisibleSub": "Hosts can find you on the Creators page and message you.",
+    "profileHiddenSub": "You won't appear in host search and hosts can't message you. Existing conversations stay open.",
+    "sectionControls": "Controls",
+    "showActivity": "Show my activity to hosts",
+    "showActivitySub": "Applications, response time, and recent activity",
+    "sectionBlocked": "Blocked people",
+    "blockSearchPlaceholder": "Search by name to block someone…",
+    "block": "Block",
+    "noBlocked": "You haven't blocked anyone. Blocked people can't message you or see your profile.",
+    "blockedValue": "Blocked — can't message you or view your profile",
+    "unblock": "Unblock",
+    "sectionPolicy": "Privacy Policy",
+    "collapsePolicy": "Collapse policy",
+    "readPolicy": "Read privacy policy",
+    "policy": {
+      "effectiveDate": "Effective Date: July 15, 2026",
+      "intro": "Collabnb (\"we,\" \"our,\" \"us\") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our platform.",
+      "collectHeading": "Information We Collect",
+      "collectBody": "We collect personal information you provide directly, such as your name, email address, profile details, and social media handles. We also automatically collect usage data, cookies, and device information when you interact with our platform.",
+      "useHeading": "How We Use Your Information",
+      "useBody": "Your information is used to operate and improve Collabnb, facilitate collaborations between creators and hosts, send notifications and updates, and ensure platform safety. We never sell your personal data to third parties.",
+      "sharingHeading": "Data Sharing",
+      "sharingBody": "We may share your information with service providers who help us operate the platform (e.g., hosting, analytics), as required by law, or with your explicit consent.",
+      "rightsHeading": "Your Rights",
+      "rightsBody": "You may access, update, or delete your personal information at any time through these settings. Contact us at support@collabnb.com for assistance.",
+      "fullPolicy": "For the full Privacy Policy, visit <a>{{link}}</a>."
+    }
+  },
+  "notifications": {
+    "sectionPreferences": "Preferences",
+    "messages": "Messages",
+    "messagesDesc": "New messages and replies in your inbox",
+    "contractUpdates": "Contract updates",
+    "contractUpdatesDesc": "When a contract is signed, updated, or needs action",
+    "newListings": "New listings",
+    "newListingsDesc": "Properties that match your preferences",
+    "collabReminders": "Collab reminders",
+    "collabRemindersDesc": "Upcoming deadlines and pending deliverables",
+    "marketing": "Marketing",
+    "marketingDesc": "Product updates, tips, and Collabnb news"
+  },
+  "billing": {
+    "sectionPlan": "Plan",
+    "sectionReferralCode": "Referral code",
+    "copy": "Copy",
+    "signupsUsed": "<strong>{{used}}</strong> / {{max}} signups used",
+    "collabBonus_one": "collab bonus earned",
+    "collabBonus_other": "collab bonuses earned",
+    "freeMonthsBalance_one": "+{{count}} free month balance",
+    "freeMonthsBalance_other": "+{{count}} free months balance",
+    "referralDesc": "Share your code. Both you and new members get 1 free month on signup, +1 more when they complete their first collab.",
+    "sectionPitches": "Pitches",
+    "sectionBillingHistory": "Billing history",
+    "subscription": {
+      "founderTitle": "Founding Member",
+      "founderSub": "Lifetime free access — all features unlocked",
+      "founderSavings": "You've saved ${{amount}} in subscription fees as a Founding Member",
+      "planAnnual": "Creator Plus · Annual",
+      "planMonthly": "Creator Plus · Monthly",
+      "priceAnnual": "$60/year",
+      "priceMonthly": "$10/month",
+      "renews": " · Renews {{date}}",
+      "upgradeYearly": "Upgrade to Yearly — save 50%",
+      "manageBilling": "Manage billing",
+      "opening": "Opening…",
+      "planExpired": "Plan expired",
+      "planExpiredDesc": "Renew to keep messaging and applying",
+      "renew": "Renew",
+      "pastDue": "Payment past due",
+      "pastDueDesc": "Your last payment failed — update your card to keep your plan active.",
+      "updatePayment": "Update payment",
+      "freeTrial": "Free trial",
+      "freeTrialDays_one": " · {{count}} day left",
+      "freeTrialDays_other": " · {{count}} days left",
+      "trialDesc": "Full access included — choose a plan before your trial ends.",
+      "viewPlans": "View plans",
+      "noPlan": "No active plan",
+      "noPlanDesc": "Subscribe to keep collaborating",
+      "subscribe": "Subscribe"
+    },
+    "pitchCounter": {
+      "title": "Pitches used this month",
+      "footer": "Resets on the 1st of each month. Standard applications are unlimited."
+    },
+    "status": {
+      "paid": "Paid",
+      "pending": "Pending",
+      "failed": "Failed",
+      "waived": "Waived"
+    },
+    "ledger": {
+      "outstanding": "${{amount}} outstanding",
+      "collab": "Collab",
+      "fee": "Fee",
+      "status": "Status"
+    }
+  },
+  "payments": {
+    "sectionPayouts": "Payouts",
+    "payoutMethod": "Payout method",
+    "payoutMethodCreatorValue": "Connect Stripe or Wise to receive payouts",
+    "payoutMethodHostValue": "Payout methods are for creators receiving payments",
+    "sectionPaymentMethods": "Payment methods",
+    "noCardOnFile": "No card on file",
+    "cardValue": "Charged automatically when a collab you host completes",
+    "working": "Working…",
+    "update": "Update",
+    "addCard": "Add card",
+    "removeCard": "Remove card",
+    "removeCardValue": "You'll need to add a new one before publishing another listing",
+    "remove": "Remove",
+    "savedCardsCreator": "Saved cards",
+    "savedCardsCreatorValue": "Creators are paid out, not charged — nothing to save here",
+    "sectionTax": "Tax",
+    "taxInfo": "Tax info",
+    "taxSetupFirstValue": "Set up a Stripe payout method first — tax info is collected as part of that setup",
+    "setUpPayoutMethod": "Set up payout method",
+    "taxNeedsInfoValue": "Stripe needs more information to finish verifying your account",
+    "completeTaxInfo": "Complete tax info",
+    "taxOnFileValue": "On file with Stripe as part of your payout account",
+    "review": "Review",
+    "taxCheckingValue": "Checking your Stripe account status…",
+    "taxHostValue": "1099s apply to creators receiving payouts, not hosts"
+  },
+  "language": {
+    "sectionPreferences": "Preferences",
+    "preferredLanguage": "Preferred language",
+    "currency": "Currency",
+    "timezone": "Timezone",
+    "languages": {
+      "en": "English",
+      "es": "Español",
+      "fr": "Français",
+      "de": "Deutsch",
+      "pt": "Português"
+    },
+    "currencies": {
+      "USD": "US Dollar ($)",
+      "EUR": "Euro (€)",
+      "GBP": "British Pound (£)",
+      "CAD": "Canadian Dollar (C$)",
+      "AUD": "Australian Dollar (A$)"
+    }
+  }
+}

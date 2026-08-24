@@ -1221,7 +1221,7 @@ export default function Profile() {
                   {dp.pending_tier && !tierRequested && (
                     <div style={{ background: 'rgba(234,179,8,0.08)', border: '1px solid rgba(234,179,8,0.25)', borderRadius: '0.5rem', padding: '0.5rem 0.625rem', marginBottom: '0.625rem' }}>
                       <p style={{ fontSize: '0.7rem', color: '#92400e', margin: 0 }}>
-                        <Trans i18nKey="creatorType.pendingApproval" t={t} values={{ tier: dp.pending_tier }}>Tier change to <strong>{{tier}}</strong> is pending admin approval.</Trans>
+                        <Trans i18nKey="creatorType.pendingApproval" t={t} values={{ tier: dp.pending_tier }}>Tier change to <strong>{{ tier: dp.pending_tier }}</strong> is pending admin approval.</Trans>
                       </p>
                     </div>
                   )}
@@ -1267,7 +1267,7 @@ export default function Profile() {
                           {isExpanded && (
                             <div style={{ padding: '8px 10px', background: 'rgba(60,87,89,0.04)', borderRadius: '0 0 0.75rem 0.75rem', border: '1px solid var(--slate)', borderTop: 'none' }}>
                               <p style={{ fontSize: '0.68rem', color: 'var(--slate)', margin: '0 0 6px' }}>
-                                <Trans i18nKey="creatorType.requestChange" t={t} values={{ label: t(`tiers.${tierKey}.label`) }}>Request a change to <strong>{{label}}</strong>? Admin will review before it takes effect.</Trans>
+                                <Trans i18nKey="creatorType.requestChange" t={t} values={{ label: t(`tiers.${tierKey}.label`) }}>Request a change to <strong>{{ label: t(`tiers.${tierKey}.label`) }}</strong>? Admin will review before it takes effect.</Trans>
                               </p>
                               <div style={{ display: 'flex', gap: 6 }}>
                                 <button
@@ -1456,11 +1456,11 @@ export default function Profile() {
                 <p style={{ fontSize: '0.8rem', color: 'var(--slate)', margin: 0, lineHeight: 1.5 }}>
                   {referralStats.use_count > 0 ? (
                     <Trans i18nKey="switchConfirm.referralNote" t={t} count={referralStats.use_count} values={{ code: referralStats.code }}>
-                      Your referral code <strong style={{ color: 'var(--ink)', fontFamily: 'monospace', letterSpacing: '0.04em' }}>{{code}}</strong> and {{count}} referral will carry over.
+                      Your referral code <strong style={{ color: 'var(--ink)', fontFamily: 'monospace', letterSpacing: '0.04em' }}>{{ code: referralStats.code }}</strong> and {{ count: referralStats.use_count }} referral will carry over.
                     </Trans>
                   ) : (
                     <Trans i18nKey="switchConfirm.referralNoteZero" t={t} values={{ code: referralStats.code }}>
-                      Your referral code <strong style={{ color: 'var(--ink)', fontFamily: 'monospace', letterSpacing: '0.04em' }}>{{code}}</strong> will carry over.
+                      Your referral code <strong style={{ color: 'var(--ink)', fontFamily: 'monospace', letterSpacing: '0.04em' }}>{{ code: referralStats.code }}</strong> will carry over.
                     </Trans>
                   )}
                 </p>
@@ -2208,7 +2208,7 @@ function PayoutMethodPanel({ profile: profileProp, onClose, createConnectOnboard
             </p>
             <p style={{ fontSize: '0.75rem', color: 'var(--slate)', margin: '0 0 0.75rem', lineHeight: 1.5 }}>
               <Trans i18nKey="payout.switchConfirmBody" t={t} values={{ to: switchTarget === 'stripe_connect' ? 'Stripe' : 'Wise', from: switchTarget === 'stripe_connect' ? 'Wise' : 'Stripe' }}>
-                Your next payout will go to {{to}} instead of {{from}}. Type <strong>SWITCH</strong> to confirm.
+                Your next payout will go to {{ to: switchTarget === 'stripe_connect' ? 'Stripe' : 'Wise' }} instead of {{ from: switchTarget === 'stripe_connect' ? 'Wise' : 'Stripe' }}. Type <strong>SWITCH</strong> to confirm.
               </Trans>
             </p>
             <input

@@ -527,7 +527,7 @@ Let's make something great together.`;
               {t('apply.sentTitle')}
             </h2>
             <p style={{ color: 'var(--sage)', fontSize: '0.9rem', marginBottom: '0.5rem' }}>
-              <Trans i18nKey="apply.sentPitch" t={t} values={{ title: listing.title }}>Your pitch for <strong style={{ color: 'var(--slate)' }}>{{ title }}</strong> has been sent.</Trans>
+              <Trans i18nKey="apply.sentPitch" t={t} values={{ title: listing.title }}>Your pitch for <strong style={{ color: 'var(--slate)' }}>{{ title: listing.title }}</strong> has been sent.</Trans>
             </p>
             <p style={{ color: 'var(--sage)', fontSize: '0.85rem', marginBottom: '2rem' }}>
               <Trans i18nKey="apply.sentTrack" t={t}>Check <strong style={{ color: 'var(--slate)' }}>Collabs</strong> to track your application and <strong style={{ color: 'var(--slate)' }}>Inbox</strong> for the host's reply.</Trans>

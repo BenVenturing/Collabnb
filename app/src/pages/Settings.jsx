@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useQuery, useAction, useMutation } from 'convex/react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation, Trans } from 'react-i18next';
 import { api } from '../../convex/_generated/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useSubscription } from '../contexts/SubscriptionContext';
@@ -113,6 +113,7 @@ function NavRow({ icon, label, active, badge, onClick, showChevron }) {
 }
 
 function FieldRow({ label, value, action, onAction, comingSoon, danger }) {
+  const { t } = useTranslation('settings');
   return (
     <div style={{ padding: '1.1rem 0', borderBottom: '1px solid var(--hairline)', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem' }}>
       <div style={{ minWidth: 0 }}>
@@ -120,7 +121,7 @@ function FieldRow({ label, value, action, onAction, comingSoon, danger }) {
         {value && <p style={{ fontSize: '0.8rem', color: 'var(--sage)', margin: 0, lineHeight: 1.5 }}>{value}</p>}
       </div>
       {comingSoon ? (
-        <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#A87820', background: 'rgba(212,168,67,0.16)', borderRadius: 999, padding: '0.28rem 0.65rem', whiteSpace: 'nowrap', flexShrink: 0 }}>Coming soon</span>
+        <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#A87820', background: 'rgba(212,168,67,0.16)', borderRadius: 999, padding: '0.28rem 0.65rem', whiteSpace: 'nowrap', flexShrink: 0 }}>{t('comingSoon')}</span>
       ) : action ? (
         <button
           onClick={onAction}
@@ -176,7 +177,7 @@ function SectionLabel({ children }) {
 export default function Settings() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation('settings');
   const { profile, updateProfile, signOut, openUserProfile } = useAuth();
   const { openModal: openSubModal } = useSubscription();
   const createBillingPortalSession = useAction(api.stripe.createBillingPortalSession);
@@ -334,49 +335,49 @@ export default function Settings() {
   }
 
   const roleAction = pendingRole
-    ? { label: `${pendingRole === 'host' ? 'Host' : 'Creator'} access pending review`, disabled: true }
+    ? { label: t('roleAction.pendingReview', { role: pendingRole === 'host' ? t('roles.host') : t('roles.creator') }), disabled: true }
     : profile?.role === 'host'
       ? ((isAdmin || isCreatorVerified)
-        ? { label: 'Switch to Creator View', onClick: async () => { await updateProfile({ role: 'creator' }); navigate('/explore'); } }
-        : { label: 'Sign up as Creator', onClick: () => goProfile('switchrole') })
+        ? { label: t('roleAction.switchToCreator'), onClick: async () => { await updateProfile({ role: 'creator' }); navigate('/explore'); } }
+        : { label: t('roleAction.signUpAsCreator'), onClick: () => goProfile('switchrole') })
       : (isAdmin || isHostVerified)
-        ? { label: 'Switch to Host View', onClick: async () => { await updateProfile({ role: 'host' }); navigate('/host'); } }
-        : { label: 'Sign up as Host', onClick: () => goProfile('switchrole') };
+        ? { label: t('roleAction.switchToHost'), onClick: async () => { await updateProfile({ role: 'host' }); navigate('/host'); } }
+        : { label: t('roleAction.signUpAsHost'), onClick: () => goProfile('switchrole') };
 
   const NAV_GROUPS = [
     {
-      label: 'Account',
+      label: t('navGroups.account'),
       items: [
-        { id: 'account', label: 'Personal info', icon: <UserIcon /> },
-        { id: 'security', label: 'Login & security', icon: <ShieldIcon /> },
-        { id: 'privacy', label: 'Privacy', icon: <HandIcon /> },
-        { id: 'notifications', label: 'Notifications', icon: <BellIcon /> },
+        { id: 'account', label: t('nav.personalInfo'), icon: <UserIcon /> },
+        { id: 'security', label: t('nav.security'), icon: <ShieldIcon /> },
+        { id: 'privacy', label: t('nav.privacy'), icon: <HandIcon /> },
+        { id: 'notifications', label: t('nav.notifications'), icon: <BellIcon /> },
       ],
     },
     {
-      label: 'Membership',
+      label: t('navGroups.membership'),
       items: [
-        { id: 'billing', label: 'Plan & billing', icon: <SparkleIcon /> },
-        { id: 'payments', label: 'Payments & tax', icon: <CreditCardIcon /> },
+        { id: 'billing', label: t('nav.billing'), icon: <SparkleIcon /> },
+        { id: 'payments', label: t('nav.payments'), icon: <CreditCardIcon /> },
       ],
     },
     {
-      label: 'Preferences',
+      label: t('navGroups.preferences'),
       items: [
-        { id: 'language', label: 'Language & region', icon: <GlobeIcon /> },
+        { id: 'language', label: t('nav.language'), icon: <GlobeIcon /> },
       ],
     },
   ];
 
   const QUICK_LINKS = [
     isAdmin
-      ? { label: 'Admin dashboard', onClick: () => navigate('/admin') }
-      : { label: 'Setup checklist', onClick: reopenChecklist },
-    { label: 'AI Assistant', onClick: () => goProfile('aiassistant') },
-    { label: 'Demo collab tour', onClick: () => { localStorage.removeItem('collabnb_demo_dismissed'); navigate('/collabs'); } },
+      ? { label: t('quickLinks.adminDashboard'), onClick: () => navigate('/admin') }
+      : { label: t('quickLinks.setupChecklist'), onClick: reopenChecklist },
+    { label: t('quickLinks.aiAssistant'), onClick: () => goProfile('aiassistant') },
+    { label: t('quickLinks.demoTour'), onClick: () => { localStorage.removeItem('collabnb_demo_dismissed'); navigate('/collabs'); } },
   ].filter(Boolean);
 
-  const activeLabel = NAV_GROUPS.flatMap(g => g.items).find(i => i.id === activeTab)?.label || 'Settings';
+  const activeLabel = NAV_GROUPS.flatMap(g => g.items).find(i => i.id === activeTab)?.label || t('header.title');
 
   const showSidebar = !isNarrow || !activeTab;
   const showContent = !isNarrow || !!activeTab;
@@ -393,13 +394,13 @@ export default function Settings() {
             <ChevronL /> {activeLabel}
           </button>
         ) : (
-          <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.5rem', color: 'var(--ink)', margin: 0, letterSpacing: '-0.02em' }}>Settings</h1>
+          <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.5rem', color: 'var(--ink)', margin: 0, letterSpacing: '-0.02em' }}>{t('header.title')}</h1>
         )}
         <button
           onClick={() => navigate('/profile')}
           style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--slate)', background: 'rgba(255,255,255,0.6)', border: '1px solid rgba(60,87,89,0.15)', borderRadius: 999, padding: '0.5rem 1.1rem', cursor: 'pointer', fontFamily: 'var(--font-body)' }}
         >
-          Done
+          {t('header.done')}
         </button>
       </div>
 
@@ -437,7 +438,7 @@ export default function Settings() {
                 onClick={signOut}
                 style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.6rem 0', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', fontFamily: 'var(--font-body)', fontSize: '0.8rem', fontWeight: 600, color: '#ef4444' }}
               >
-                <SignOutIcon /> Log out
+                <SignOutIcon /> {t('logout')}
               </button>
             </div>
           </div>
@@ -448,43 +449,43 @@ export default function Settings() {
           <div className="glass-card" style={{ padding: '1.75rem clamp(1.25rem, 4vw, 2rem)' }}>
             {activeTab === 'account' && (
               <>
-                <FieldRow label="Legal name" value={profile?.full_name || 'Not set'} action="Edit" onAction={() => goProfile()} />
-                <FieldRow label="Email" value={profile?.email} action="Manage" onAction={() => openUserProfile?.()} />
+                <FieldRow label={t('account.legalName')} value={profile?.full_name || t('account.notSet')} action={t('account.edit')} onAction={() => goProfile()} />
+                <FieldRow label={t('account.email')} value={profile?.email} action={t('account.manage')} onAction={() => openUserProfile?.()} />
                 <FieldRow
-                  label={`Account type — ${profile?.role === 'host' ? 'Host' : 'Creator'}`}
-                  value={profile?.role === 'host' ? (isHostVerified ? 'Verified host' : 'Not yet verified as host') : (isCreatorVerified ? 'Verified creator' : 'Not yet verified as creator')}
+                  label={t('account.accountType', { role: profile?.role === 'host' ? t('roles.host') : t('roles.creator') })}
+                  value={profile?.role === 'host' ? (isHostVerified ? t('account.verifiedHost') : t('account.notVerifiedHost')) : (isCreatorVerified ? t('account.verifiedCreator') : t('account.notVerifiedCreator'))}
                   action={roleAction.disabled ? undefined : roleAction.label}
                   onAction={roleAction.onClick}
                   comingSoon={roleAction.disabled}
                 />
-                <FieldRow label="Verification" value="Submit a re-verification request" action="Request" onAction={() => goProfile('verification')} />
-                <FieldRow label="Contracts" value="View and manage your saved contracts" action="Open" onAction={() => goProfile('contracts')} />
+                <FieldRow label={t('account.verification')} value={t('account.verificationValue')} action={t('account.request')} onAction={() => goProfile('verification')} />
+                <FieldRow label={t('account.contracts')} value={t('account.contractsValue')} action={t('account.open')} onAction={() => goProfile('contracts')} />
                 {profile?.role === 'creator' && (
-                  <FieldRow label="My metrics" value="Update your follower & engagement stats" action="Open" onAction={() => goProfile('metrics')} />
+                  <FieldRow label={t('account.myMetrics')} value={t('account.myMetricsValue')} action={t('account.open')} onAction={() => goProfile('metrics')} />
                 )}
                 {profile?.role === 'creator' && (
                   <FieldRow
-                    label="Creator tier"
-                    value={profile?.pending_tier ? `${profile.pending_tier} — pending admin review` : `Currently ${profile?.tier || 'unset'} — request a change if you've grown`}
-                    action={profile?.pending_tier ? undefined : 'Request change'}
+                    label={t('account.creatorTier')}
+                    value={profile?.pending_tier ? t('account.creatorTierPending', { tier: profile.pending_tier }) : t('account.creatorTierCurrent', { tier: profile?.tier || 'unset' })}
+                    action={profile?.pending_tier ? undefined : t('account.requestChange')}
                     onAction={() => goProfile()}
                     comingSoon={!!profile?.pending_tier}
                   />
                 )}
-                <FieldRow label="Location settings" value="Set your city & country for the globe map" action="Edit" onAction={() => goProfile('location')} />
+                <FieldRow label={t('account.locationSettings')} value={t('account.locationSettingsValue')} action={t('account.edit')} onAction={() => goProfile('location')} />
               </>
             )}
 
             {activeTab === 'security' && (
               <>
-                <SectionLabel>Login</SectionLabel>
+                <SectionLabel>{t('security.sectionLogin')}</SectionLabel>
                 <div style={{ background: 'rgba(209,235,219,0.15)', border: '1px solid rgba(74,155,127,0.15)', borderRadius: '1rem', padding: '1.1rem 1.25rem', marginBottom: '0.5rem' }}>
-                  <p style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--ink)', margin: '0 0 0.35rem' }}>Password, passkeys & two-factor authentication</p>
-                  <p style={{ fontSize: '0.8rem', color: 'var(--sage)', margin: '0 0 0.9rem', lineHeight: 1.5 }}>Manage how you sign in, including your password, passkeys, and active sessions.</p>
-                  <button className="btn-primary" style={{ fontSize: '0.82rem', padding: '0.55rem 1.25rem' }} onClick={() => openUserProfile?.()}>Open account security</button>
+                  <p style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--ink)', margin: '0 0 0.35rem' }}>{t('security.loginCardTitle')}</p>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--sage)', margin: '0 0 0.9rem', lineHeight: 1.5 }}>{t('security.loginCardDesc')}</p>
+                  <button className="btn-primary" style={{ fontSize: '0.82rem', padding: '0.55rem 1.25rem' }} onClick={() => openUserProfile?.()}>{t('security.openSecurity')}</button>
                 </div>
-                <SectionLabel>Session</SectionLabel>
-                <FieldRow label="Log out" value="Sign out of Collabnb on this device" action="Log out" onAction={signOut} danger />
+                <SectionLabel>{t('security.sectionSession')}</SectionLabel>
+                <FieldRow label={t('logout')} value={t('security.logoutValue')} action={t('logout')} onAction={signOut} danger />
               </>
             )}
 
@@ -492,31 +493,31 @@ export default function Settings() {
               <>
                 {profile?.role === 'creator' && (
                   <>
-                    <SectionLabel>Visibility</SectionLabel>
+                    <SectionLabel>{t('privacy.sectionVisibility')}</SectionLabel>
                     <ToggleRow
-                      label={profile?.profile_visible !== false ? 'Profile is visible to hosts' : 'Profile is hidden'}
+                      label={profile?.profile_visible !== false ? t('privacy.profileVisible') : t('privacy.profileHidden')}
                       sublabel={profile?.profile_visible !== false
-                        ? 'Hosts can find you on the Creators page and message you.'
-                        : "You won't appear in host search and hosts can't message you. Existing conversations stay open."}
+                        ? t('privacy.profileVisibleSub')
+                        : t('privacy.profileHiddenSub')}
                       checked={profile?.profile_visible !== false}
                       onChange={() => updateProfile({ profile_visible: !(profile?.profile_visible !== false) })}
                     />
                   </>
                 )}
-                <SectionLabel>Controls</SectionLabel>
+                <SectionLabel>{t('privacy.sectionControls')}</SectionLabel>
                 <ToggleRow
-                  label="Show my activity to hosts"
-                  sublabel="Applications, response time, and recent activity"
+                  label={t('privacy.showActivity')}
+                  sublabel={t('privacy.showActivitySub')}
                   checked={profile?.show_activity_to_hosts !== false}
                   onChange={() => updateProfile({ show_activity_to_hosts: !(profile?.show_activity_to_hosts !== false) })}
                 />
-                <SectionLabel>Blocked people</SectionLabel>
+                <SectionLabel>{t('privacy.sectionBlocked')}</SectionLabel>
                 <div style={{ position: 'relative', marginBottom: '0.75rem' }}>
                   <input
                     type="text"
                     value={blockQuery}
                     onChange={(e) => setBlockQuery(e.target.value)}
-                    placeholder="Search by name to block someone…"
+                    placeholder={t('privacy.blockSearchPlaceholder')}
                     style={{ width: '100%', boxSizing: 'border-box', padding: '0.6rem 0.85rem', border: '1px solid rgba(60,87,89,0.18)', borderRadius: '0.75rem', fontSize: '0.85rem', color: 'var(--ink)', background: 'rgba(247,245,242,0.7)', fontFamily: 'var(--font-body)', outline: 'none' }}
                   />
                   {blockResults.length > 0 && (
@@ -529,26 +530,26 @@ export default function Settings() {
                         >
                           {p.avatar_url && <img src={p.avatar_url} alt="" style={{ width: 24, height: 24, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />}
                           <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--ink)' }}>{p.full_name}</span>
-                          <span style={{ fontSize: '0.7rem', color: 'var(--sage)', marginLeft: 'auto' }}>Block</span>
+                          <span style={{ fontSize: '0.7rem', color: 'var(--sage)', marginLeft: 'auto' }}>{t('privacy.block')}</span>
                         </button>
                       ))}
                     </div>
                   )}
                 </div>
                 {blockedProfiles.length === 0 ? (
-                  <p style={{ fontSize: '0.8rem', color: 'var(--sage)', margin: '0 0 0.5rem' }}>You haven't blocked anyone. Blocked people can't message you or see your profile.</p>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--sage)', margin: '0 0 0.5rem' }}>{t('privacy.noBlocked')}</p>
                 ) : (
                   blockedProfiles.map((p) => (
-                    <FieldRow key={p._id} label={p.full_name} value="Blocked — can't message you or view your profile" action="Unblock" onAction={() => handleUnblock(String(p._id))} danger />
+                    <FieldRow key={p._id} label={p.full_name} value={t('privacy.blockedValue')} action={t('privacy.unblock')} onAction={() => handleUnblock(String(p._id))} danger />
                   ))
                 )}
-                <SectionLabel>Privacy Policy</SectionLabel>
+                <SectionLabel>{t('privacy.sectionPolicy')}</SectionLabel>
                 <button
                   onClick={() => setPolicyExpanded((e) => !e)}
                   style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(60,87,89,0.06)', border: '1px solid rgba(60,87,89,0.12)', borderRadius: '999px', padding: '0.3rem 0.75rem 0.3rem 0.6rem', margin: '0 0 0.75rem', cursor: 'pointer', fontFamily: 'var(--font-body)' }}
                 >
                   <span style={{ fontSize: '0.7rem', color: 'var(--slate)', transform: policyExpanded ? 'rotate(90deg)' : 'none', transition: 'transform 200ms ease', display: 'inline-flex' }}><ChevronR /></span>
-                  <span style={{ fontSize: '0.76rem', fontWeight: 700, color: 'var(--slate)' }}>{policyExpanded ? 'Collapse policy' : 'Read privacy policy'}</span>
+                  <span style={{ fontSize: '0.76rem', fontWeight: 700, color: 'var(--slate)' }}>{policyExpanded ? t('privacy.collapsePolicy') : t('privacy.readPolicy')}</span>
                 </button>
                 <div style={{ position: 'relative' }}>
                   <div
@@ -559,17 +560,21 @@ export default function Settings() {
                       transition: 'max-height 420ms var(--ease-out-quart, ease)',
                     }}
                   >
-                    <p><strong>Effective Date:</strong> July 15, 2026</p>
-                    <p>Collabnb ("we," "our," "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our platform.</p>
-                    <h5 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.9rem', color: 'var(--ink)', margin: '1.1rem 0 0.4rem' }}>Information We Collect</h5>
-                    <p>We collect personal information you provide directly, such as your name, email address, profile details, and social media handles. We also automatically collect usage data, cookies, and device information when you interact with our platform.</p>
-                    <h5 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.9rem', color: 'var(--ink)', margin: '1.1rem 0 0.4rem' }}>How We Use Your Information</h5>
-                    <p>Your information is used to operate and improve Collabnb, facilitate collaborations between creators and hosts, send notifications and updates, and ensure platform safety. We never sell your personal data to third parties.</p>
-                    <h5 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.9rem', color: 'var(--ink)', margin: '1.1rem 0 0.4rem' }}>Data Sharing</h5>
-                    <p>We may share your information with service providers who help us operate the platform (e.g., hosting, analytics), as required by law, or with your explicit consent.</p>
-                    <h5 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.9rem', color: 'var(--ink)', margin: '1.1rem 0 0.4rem' }}>Your Rights</h5>
-                    <p>You may access, update, or delete your personal information at any time through these settings. Contact us at support@collabnb.com for assistance.</p>
-                    <p style={{ marginTop: '0.9rem' }}>For the full Privacy Policy, visit <a href="https://collabnb.com/privacy" style={{ color: 'var(--slate)', fontWeight: 600, textDecoration: 'underline' }} target="_blank" rel="noopener noreferrer">collabnb.com/privacy</a>.</p>
+                    <p><strong>{t('privacy.policy.effectiveDate')}</strong></p>
+                    <p>{t('privacy.policy.intro')}</p>
+                    <h5 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.9rem', color: 'var(--ink)', margin: '1.1rem 0 0.4rem' }}>{t('privacy.policy.collectHeading')}</h5>
+                    <p>{t('privacy.policy.collectBody')}</p>
+                    <h5 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.9rem', color: 'var(--ink)', margin: '1.1rem 0 0.4rem' }}>{t('privacy.policy.useHeading')}</h5>
+                    <p>{t('privacy.policy.useBody')}</p>
+                    <h5 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.9rem', color: 'var(--ink)', margin: '1.1rem 0 0.4rem' }}>{t('privacy.policy.sharingHeading')}</h5>
+                    <p>{t('privacy.policy.sharingBody')}</p>
+                    <h5 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.9rem', color: 'var(--ink)', margin: '1.1rem 0 0.4rem' }}>{t('privacy.policy.rightsHeading')}</h5>
+                    <p>{t('privacy.policy.rightsBody')}</p>
+                    <p style={{ marginTop: '0.9rem' }}>
+                      <Trans i18nKey="settings:privacy.policy.fullPolicy" t={t} values={{ link: 'collabnb.com/privacy' }}>
+                        For the full Privacy Policy, visit <a href="https://collabnb.com/privacy" style={{ color: 'var(--slate)', fontWeight: 600, textDecoration: 'underline' }} target="_blank" rel="noopener noreferrer">{{ link: 'collabnb.com/privacy' }}</a>.
+                      </Trans>
+                    </p>
                   </div>
                   {!policyExpanded && (
                     <div
@@ -583,13 +588,13 @@ export default function Settings() {
 
             {activeTab === 'notifications' && (
               <>
-                <SectionLabel>Preferences</SectionLabel>
+                <SectionLabel>{t('notifications.sectionPreferences')}</SectionLabel>
                 {[
-                  { key: 'messages', label: 'Messages', desc: 'New messages and replies in your inbox' },
-                  { key: 'contractUpdates', label: 'Contract updates', desc: 'When a contract is signed, updated, or needs action' },
-                  { key: 'newListings', label: 'New listings', desc: 'Properties that match your preferences' },
-                  { key: 'collabReminders', label: 'Collab reminders', desc: 'Upcoming deadlines and pending deliverables' },
-                  { key: 'marketing', label: 'Marketing', desc: 'Product updates, tips, and Collabnb news' },
+                  { key: 'messages', label: t('notifications.messages'), desc: t('notifications.messagesDesc') },
+                  { key: 'contractUpdates', label: t('notifications.contractUpdates'), desc: t('notifications.contractUpdatesDesc') },
+                  { key: 'newListings', label: t('notifications.newListings'), desc: t('notifications.newListingsDesc') },
+                  { key: 'collabReminders', label: t('notifications.collabReminders'), desc: t('notifications.collabRemindersDesc') },
+                  { key: 'marketing', label: t('notifications.marketing'), desc: t('notifications.marketingDesc') },
                 ].map((item) => (
                   <ToggleRow
                     key={item.key}
@@ -604,7 +609,7 @@ export default function Settings() {
 
             {activeTab === 'billing' && (
               <>
-                <SectionLabel>Plan</SectionLabel>
+                <SectionLabel>{t('billing.sectionPlan')}</SectionLabel>
                 <SubscriptionCard
                   profile={profile}
                   hasActiveSub={hasActiveSub}
@@ -614,30 +619,41 @@ export default function Settings() {
                 />
                 {profile?.role !== 'host' && referralStats?.code && (
                   <>
-                    <SectionLabel>Referral code</SectionLabel>
+                    <SectionLabel>{t('billing.sectionReferralCode')}</SectionLabel>
                     <div style={{ background: 'rgba(209,235,219,0.15)', border: '1px solid rgba(74,155,127,0.2)', borderRadius: '1rem', padding: '1rem 1.1rem' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.6rem' }}>
                         <span style={{ fontFamily: 'monospace', fontSize: '1rem', fontWeight: 700, color: 'var(--ink)', letterSpacing: '0.08em', background: 'rgba(25,37,36,0.05)', padding: '0.3rem 0.75rem', borderRadius: '0.5rem' }}>{referralStats.code}</span>
-                        <button onClick={() => navigator.clipboard?.writeText(referralStats.code)} style={{ background: 'none', border: '1.5px solid rgba(25,37,36,0.15)', borderRadius: '0.5rem', cursor: 'pointer', padding: '0.3rem 0.6rem', fontSize: '0.72rem', color: 'var(--slate)', fontWeight: 600, fontFamily: 'var(--font-body)' }}>Copy</button>
+                        <button onClick={() => navigator.clipboard?.writeText(referralStats.code)} style={{ background: 'none', border: '1.5px solid rgba(25,37,36,0.15)', borderRadius: '0.5rem', cursor: 'pointer', padding: '0.3rem 0.6rem', fontSize: '0.72rem', color: 'var(--slate)', fontWeight: 600, fontFamily: 'var(--font-body)' }}>{t('billing.copy')}</button>
                       </div>
                       <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', fontSize: '0.78rem', color: 'var(--sage)' }}>
-                        <span><strong style={{ color: 'var(--ink)' }}>{referralStats.signups_rewarded || 0}</strong> / {referralStats.max_uses || 12} signups used</span>
-                        {(referralStats.collab_bonuses_earned || 0) > 0 && <span><strong style={{ color: '#4A9B7F' }}>{referralStats.collab_bonuses_earned}</strong> collab bonus{referralStats.collab_bonuses_earned !== 1 ? 'es' : ''} earned</span>}
-                        {(profile?.free_months_balance || 0) > 0 && <span style={{ color: '#4A9B7F', fontWeight: 600 }}>+{profile.free_months_balance} free month{profile.free_months_balance !== 1 ? 's' : ''} balance</span>}
+                        <span>
+                          <Trans i18nKey="settings:billing.signupsUsed" t={t} values={{ used: referralStats.signups_rewarded || 0, max: referralStats.max_uses || 12 }}>
+                            <strong style={{ color: 'var(--ink)' }}>{{ used: referralStats.signups_rewarded || 0 }}</strong> / {{ max: referralStats.max_uses || 12 }} signups used
+                          </Trans>
+                        </span>
+                        {(referralStats.collab_bonuses_earned || 0) > 0 && (
+                          <span>
+                            <strong style={{ color: '#4A9B7F' }}>{referralStats.collab_bonuses_earned}</strong>{' '}
+                            {t('billing.collabBonus', { count: referralStats.collab_bonuses_earned })}
+                          </span>
+                        )}
+                        {(profile?.free_months_balance || 0) > 0 && (
+                          <span style={{ color: '#4A9B7F', fontWeight: 600 }}>{t('billing.freeMonthsBalance', { count: profile.free_months_balance })}</span>
+                        )}
                       </div>
-                      <p style={{ fontSize: '0.74rem', color: 'var(--sage)', margin: '0.6rem 0 0', lineHeight: 1.5 }}>Share your code. Both you and new members get 1 free month on signup, +1 more when they complete their first collab.</p>
+                      <p style={{ fontSize: '0.74rem', color: 'var(--sage)', margin: '0.6rem 0 0', lineHeight: 1.5 }}>{t('billing.referralDesc')}</p>
                     </div>
                   </>
                 )}
                 {profile?.role === 'creator' && (
                   <>
-                    <SectionLabel>Pitches</SectionLabel>
+                    <SectionLabel>{t('billing.sectionPitches')}</SectionLabel>
                     <PitchCounter serverPitchCount={serverPitchCount} />
                   </>
                 )}
                 {profile?.role === 'host' && (hostBilling?.length ?? 0) > 0 && (
                   <>
-                    <SectionLabel>Billing history</SectionLabel>
+                    <SectionLabel>{t('billing.sectionBillingHistory')}</SectionLabel>
                     <HostBillingLedger ledger={hostBilling} />
                   </>
                 )}
@@ -646,65 +662,77 @@ export default function Settings() {
 
             {activeTab === 'payments' && (
               <>
-                <SectionLabel>Payouts</SectionLabel>
+                <SectionLabel>{t('payments.sectionPayouts')}</SectionLabel>
                 {profile?.role === 'creator' ? (
-                  <FieldRow label="Payout method" value="Connect Stripe or Wise to receive payouts" action="Manage" onAction={() => goProfile('payout')} />
+                  <FieldRow label={t('payments.payoutMethod')} value={t('payments.payoutMethodCreatorValue')} action={t('account.manage')} onAction={() => goProfile('payout')} />
                 ) : (
-                  <FieldRow label="Payout method" value="Payout methods are for creators receiving payments" comingSoon />
+                  <FieldRow label={t('payments.payoutMethod')} value={t('payments.payoutMethodHostValue')} comingSoon />
                 )}
-                <SectionLabel>Payment methods</SectionLabel>
+                <SectionLabel>{t('payments.sectionPaymentMethods')}</SectionLabel>
                 {profile?.role === 'host' ? (
                   <>
                     <FieldRow
                       label={profile?.stripe_default_payment_method_id
                         ? `${profile.stripe_card_brand ? profile.stripe_card_brand[0].toUpperCase() + profile.stripe_card_brand.slice(1) : 'Card'} •••• ${profile.stripe_card_last4 || '····'}`
-                        : 'No card on file'}
-                      value="Charged automatically when a collab you host completes"
-                      action={cardBusy ? 'Working…' : (profile?.stripe_default_payment_method_id ? 'Update' : 'Add card')}
+                        : t('payments.noCardOnFile')}
+                      value={t('payments.cardValue')}
+                      action={cardBusy ? t('payments.working') : (profile?.stripe_default_payment_method_id ? t('payments.update') : t('payments.addCard'))}
                       onAction={cardBusy ? undefined : handleAddCard}
                     />
                     {profile?.stripe_default_payment_method_id && (
-                      <FieldRow label="Remove card" value="You'll need to add a new one before publishing another listing" action={cardBusy ? 'Working…' : 'Remove'} onAction={cardBusy ? undefined : handleRemoveCard} danger />
+                      <FieldRow label={t('payments.removeCard')} value={t('payments.removeCardValue')} action={cardBusy ? t('payments.working') : t('payments.remove')} onAction={cardBusy ? undefined : handleRemoveCard} danger />
                     )}
                     {cardError && <p style={{ fontSize: '0.76rem', color: '#dc2626', margin: '0.4rem 0 0' }}>{cardError}</p>}
                   </>
                 ) : (
-                  <FieldRow label="Saved cards" value="Creators are paid out, not charged — nothing to save here" comingSoon />
+                  <FieldRow label={t('payments.savedCardsCreator')} value={t('payments.savedCardsCreatorValue')} comingSoon />
                 )}
-                <SectionLabel>Tax</SectionLabel>
+                <SectionLabel>{t('payments.sectionTax')}</SectionLabel>
                 {profile?.role === 'creator' ? (
                   !profile?.stripe_connect_account_id ? (
-                    <FieldRow label="Tax info" value="Set up a Stripe payout method first — tax info is collected as part of that setup" action="Set up payout method" onAction={() => goProfile('payout')} />
+                    <FieldRow label={t('payments.taxInfo')} value={t('payments.taxSetupFirstValue')} action={t('payments.setUpPayoutMethod')} onAction={() => goProfile('payout')} />
                   ) : connectStatus && (connectStatus.currentlyDue.length > 0 || connectStatus.pastDue.length > 0) ? (
-                    <FieldRow label="Tax info" value="Stripe needs more information to finish verifying your account" action={connectBusy ? 'Opening…' : 'Complete tax info'} onAction={connectBusy ? undefined : handleCompleteTaxInfo} />
+                    <FieldRow label={t('payments.taxInfo')} value={t('payments.taxNeedsInfoValue')} action={connectBusy ? t('billing.subscription.opening') : t('payments.completeTaxInfo')} onAction={connectBusy ? undefined : handleCompleteTaxInfo} />
                   ) : connectStatus ? (
-                    <FieldRow label="Tax info" value="On file with Stripe as part of your payout account" action="Review" onAction={connectBusy ? undefined : handleCompleteTaxInfo} />
+                    <FieldRow label={t('payments.taxInfo')} value={t('payments.taxOnFileValue')} action={t('payments.review')} onAction={connectBusy ? undefined : handleCompleteTaxInfo} />
                   ) : (
-                    <FieldRow label="Tax info" value="Checking your Stripe account status…" comingSoon />
+                    <FieldRow label={t('payments.taxInfo')} value={t('payments.taxCheckingValue')} comingSoon />
                   )
                 ) : (
-                  <FieldRow label="Tax info" value="1099s apply to creators receiving payouts, not hosts" comingSoon />
+                  <FieldRow label={t('payments.taxInfo')} value={t('payments.taxHostValue')} comingSoon />
                 )}
               </>
             )}
 
             {activeTab === 'language' && (
               <>
-                <SectionLabel>Preferences</SectionLabel>
+                <SectionLabel>{t('language.sectionPreferences')}</SectionLabel>
                 <SelectRow
-                  label="Preferred language"
+                  label={t('language.preferredLanguage')}
                   value={profile?.preferred_language || 'en'}
-                  options={[['en', 'English'], ['es', 'Español'], ['fr', 'Français'], ['de', 'Deutsch'], ['pt', 'Português']]}
+                  options={[
+                    ['en', `🇺🇸 ${t('language.languages.en')}`],
+                    ['es', `🇪🇸 ${t('language.languages.es')}`],
+                    ['fr', `🇫🇷 ${t('language.languages.fr')}`],
+                    ['de', `🇩🇪 ${t('language.languages.de')}`],
+                    ['pt', `🇵🇹 ${t('language.languages.pt')}`],
+                  ]}
                   onChange={(v) => { i18n.changeLanguage(v); updateProfile({ preferred_language: v }); }}
                 />
                 <SelectRow
-                  label="Currency"
+                  label={t('language.currency')}
                   value={profile?.preferred_currency || 'USD'}
-                  options={[['USD', 'US Dollar ($)'], ['EUR', 'Euro (€)'], ['GBP', 'British Pound (£)'], ['CAD', 'Canadian Dollar (C$)'], ['AUD', 'Australian Dollar (A$)']]}
+                  options={[
+                    ['USD', t('language.currencies.USD')],
+                    ['EUR', t('language.currencies.EUR')],
+                    ['GBP', t('language.currencies.GBP')],
+                    ['CAD', t('language.currencies.CAD')],
+                    ['AUD', t('language.currencies.AUD')],
+                  ]}
                   onChange={(v) => updateProfile({ preferred_currency: v })}
                 />
                 <SelectRow
-                  label="Timezone"
+                  label={t('language.timezone')}
                   value={profile?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone}
                   options={Array.from(new Set([Intl.DateTimeFormat().resolvedOptions().timeZone, 'America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles', 'Europe/London', 'Europe/Paris', 'Asia/Tokyo', 'Australia/Sydney'])).map((tz) => [tz, tz])}
                   onChange={(v) => updateProfile({ timezone: v })}
@@ -722,6 +750,7 @@ export default function Settings() {
 
 // ─── Plan & billing sub-components ──────────────────────────────────────────
 function SubscriptionCard({ profile, hasActiveSub, portalLoading, onUpgrade, onManage }) {
+  const { t } = useTranslation('settings');
   const isFounder = profile?.is_founder === true;
   const expiresAt = profile?.subscription_expires_at;
   const isActive = profile?.subscription_status === 'active' && (!expiresAt || Date.now() < expiresAt);
@@ -745,13 +774,13 @@ function SubscriptionCard({ profile, hasActiveSub, portalLoading, onUpgrade, onM
             <svg viewBox="0 0 16 16" width="15" height="15" fill="#D4A843"><path d="M8 1.5l1.67 3.38 3.73.54-2.7 2.63.64 3.72L8 9.77l-3.34 1.76.64-3.72L2.6 5.42l3.73-.54z"/></svg>
           </div>
           <div>
-            <p style={{ fontSize: '0.86rem', fontWeight: 700, color: '#A87820', margin: 0 }}>Founding Member</p>
-            <p style={{ fontSize: '0.76rem', color: '#C4921A', margin: '0.1rem 0 0' }}>Lifetime free access — all features unlocked</p>
+            <p style={{ fontSize: '0.86rem', fontWeight: 700, color: '#A87820', margin: 0 }}>{t('billing.subscription.founderTitle')}</p>
+            <p style={{ fontSize: '0.76rem', color: '#C4921A', margin: '0.1rem 0 0' }}>{t('billing.subscription.founderSub')}</p>
           </div>
         </div>
         {lifetimeSavings > 0 && (
           <p style={{ fontSize: '0.76rem', color: '#A87820', fontWeight: 600, margin: '0.75rem 0 0', paddingTop: '0.75rem', borderTop: '1px solid rgba(212,168,67,0.2)' }}>
-            You've saved ${lifetimeSavings} in subscription fees as a Founding Member
+            {t('billing.subscription.founderSavings', { amount: lifetimeSavings })}
           </p>
         )}
       </div>
@@ -764,17 +793,17 @@ function SubscriptionCard({ profile, hasActiveSub, portalLoading, onUpgrade, onM
       <div style={{ borderRadius: '1rem', padding: '1.1rem 1.25rem', background: 'rgba(74,155,127,0.06)', border: '1px solid rgba(74,155,127,0.15)', textAlign: 'center' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
           <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#4A9B7F', flexShrink: 0, display: 'inline-block' }} />
-          <p style={{ fontSize: '0.86rem', fontWeight: 700, color: '#2D7A5F', margin: 0 }}>Creator Plus &middot; {isYearly ? 'Annual' : 'Monthly'}</p>
+          <p style={{ fontSize: '0.86rem', fontWeight: 700, color: '#2D7A5F', margin: 0 }}>{isYearly ? t('billing.subscription.planAnnual') : t('billing.subscription.planMonthly')}</p>
         </div>
-        <p style={{ fontSize: '0.76rem', color: 'var(--sage)', margin: 0 }}>{isYearly ? '$60/year' : '$10/month'}{nextDate ? ` · Renews ${nextDate}` : ''}</p>
+        <p style={{ fontSize: '0.76rem', color: 'var(--sage)', margin: 0 }}>{isYearly ? t('billing.subscription.priceAnnual') : t('billing.subscription.priceMonthly')}{nextDate ? t('billing.subscription.renews', { date: nextDate }) : ''}</p>
         <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', marginTop: '0.75rem', flexWrap: 'wrap' }}>
           {!isYearly && (
             <button onClick={onUpgrade} style={{ fontSize: '0.72rem', fontWeight: 600, color: '#A87820', background: 'rgba(212,168,67,0.1)', border: '1px solid rgba(212,168,67,0.25)', borderRadius: '999px', padding: '0.3rem 0.85rem', cursor: 'pointer' }}>
-              Upgrade to Yearly — save 50%
+              {t('billing.subscription.upgradeYearly')}
             </button>
           )}
           <button onClick={onManage} disabled={portalLoading} style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--slate)', background: 'rgba(60,87,89,0.08)', border: 'none', borderRadius: '999px', padding: '0.3rem 0.85rem', cursor: portalLoading ? 'wait' : 'pointer' }}>
-            {portalLoading ? 'Opening…' : 'Manage billing'}
+            {portalLoading ? t('billing.subscription.opening') : t('billing.subscription.manageBilling')}
           </button>
         </div>
       </div>
@@ -785,10 +814,10 @@ function SubscriptionCard({ profile, hasActiveSub, portalLoading, onUpgrade, onM
     return (
       <div style={{ borderRadius: '1rem', padding: '1.1rem 1.25rem', background: 'rgba(239,68,68,0.04)', border: '1px solid rgba(239,68,68,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem' }}>
         <div>
-          <p style={{ fontSize: '0.86rem', fontWeight: 700, color: '#dc2626', margin: 0 }}>Plan expired</p>
-          <p style={{ fontSize: '0.76rem', color: 'var(--sage)', margin: '0.1rem 0 0' }}>Renew to keep messaging and applying</p>
+          <p style={{ fontSize: '0.86rem', fontWeight: 700, color: '#dc2626', margin: 0 }}>{t('billing.subscription.planExpired')}</p>
+          <p style={{ fontSize: '0.76rem', color: 'var(--sage)', margin: '0.1rem 0 0' }}>{t('billing.subscription.planExpiredDesc')}</p>
         </div>
-        <button onClick={onUpgrade} style={{ fontSize: '0.78rem', fontWeight: 700, color: 'white', background: '#dc2626', border: 'none', borderRadius: '999px', padding: '0.4rem 1rem', cursor: 'pointer', flexShrink: 0 }}>Renew</button>
+        <button onClick={onUpgrade} style={{ fontSize: '0.78rem', fontWeight: 700, color: 'white', background: '#dc2626', border: 'none', borderRadius: '999px', padding: '0.4rem 1rem', cursor: 'pointer', flexShrink: 0 }}>{t('billing.subscription.renew')}</button>
       </div>
     );
   }
@@ -797,11 +826,11 @@ function SubscriptionCard({ profile, hasActiveSub, portalLoading, onUpgrade, onM
     return (
       <div style={{ borderRadius: '1rem', padding: '1.1rem 1.25rem', background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem' }}>
         <div>
-          <p style={{ fontSize: '0.86rem', fontWeight: 700, color: '#dc2626', margin: 0 }}>Payment past due</p>
-          <p style={{ fontSize: '0.76rem', color: 'var(--sage)', margin: '0.1rem 0 0' }}>Your last payment failed — update your card to keep your plan active.</p>
+          <p style={{ fontSize: '0.86rem', fontWeight: 700, color: '#dc2626', margin: 0 }}>{t('billing.subscription.pastDue')}</p>
+          <p style={{ fontSize: '0.76rem', color: 'var(--sage)', margin: '0.1rem 0 0' }}>{t('billing.subscription.pastDueDesc')}</p>
         </div>
         <button onClick={onManage} disabled={portalLoading} style={{ fontSize: '0.78rem', fontWeight: 700, color: 'white', background: '#dc2626', border: 'none', borderRadius: '999px', padding: '0.4rem 1rem', cursor: portalLoading ? 'wait' : 'pointer', flexShrink: 0, opacity: portalLoading ? 0.6 : 1 }}>
-          {portalLoading ? 'Opening…' : 'Update payment'}
+          {portalLoading ? t('billing.subscription.opening') : t('billing.subscription.updatePayment')}
         </button>
       </div>
     );
@@ -812,11 +841,11 @@ function SubscriptionCard({ profile, hasActiveSub, portalLoading, onUpgrade, onM
       <div style={{ borderRadius: '1rem', padding: '1.1rem 1.25rem', background: 'rgba(209,235,219,0.15)', border: '1px solid rgba(74,155,127,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem' }}>
         <div>
           <p style={{ fontSize: '0.86rem', fontWeight: 600, color: 'var(--ink)', margin: '0 0 0.1rem' }}>
-            Free trial{trialDaysLeft !== null ? ` · ${trialDaysLeft} day${trialDaysLeft === 1 ? '' : 's'} left` : ''}
+            {t('billing.subscription.freeTrial')}{trialDaysLeft !== null ? t('billing.subscription.freeTrialDays', { count: trialDaysLeft }) : ''}
           </p>
-          <p style={{ fontSize: '0.76rem', color: 'var(--sage)', margin: 0 }}>Full access included — choose a plan before your trial ends.</p>
+          <p style={{ fontSize: '0.76rem', color: 'var(--sage)', margin: 0 }}>{t('billing.subscription.trialDesc')}</p>
         </div>
-        <button onClick={onUpgrade} style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--slate)', background: 'rgba(60,87,89,0.08)', border: 'none', borderRadius: '999px', padding: '0.4rem 1rem', cursor: 'pointer', flexShrink: 0 }}>View plans</button>
+        <button onClick={onUpgrade} style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--slate)', background: 'rgba(60,87,89,0.08)', border: 'none', borderRadius: '999px', padding: '0.4rem 1rem', cursor: 'pointer', flexShrink: 0 }}>{t('billing.subscription.viewPlans')}</button>
       </div>
     );
   }
@@ -824,50 +853,51 @@ function SubscriptionCard({ profile, hasActiveSub, portalLoading, onUpgrade, onM
   return (
     <div style={{ borderRadius: '1rem', padding: '1.1rem 1.25rem', border: '1px solid var(--hairline)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem' }}>
       <div>
-        <p style={{ fontSize: '0.86rem', fontWeight: 600, color: 'var(--ink)', margin: 0 }}>No active plan</p>
-        <p style={{ fontSize: '0.76rem', color: 'var(--sage)', margin: '0.1rem 0 0' }}>Subscribe to keep collaborating</p>
+        <p style={{ fontSize: '0.86rem', fontWeight: 600, color: 'var(--ink)', margin: 0 }}>{t('billing.subscription.noPlan')}</p>
+        <p style={{ fontSize: '0.76rem', color: 'var(--sage)', margin: '0.1rem 0 0' }}>{t('billing.subscription.noPlanDesc')}</p>
       </div>
-      <button onClick={onUpgrade} style={{ fontSize: '0.78rem', fontWeight: 700, color: 'white', background: 'var(--slate)', border: 'none', borderRadius: '999px', padding: '0.4rem 1rem', cursor: 'pointer', flexShrink: 0 }}>Subscribe</button>
+      <button onClick={onUpgrade} style={{ fontSize: '0.78rem', fontWeight: 700, color: 'white', background: 'var(--slate)', border: 'none', borderRadius: '999px', padding: '0.4rem 1rem', cursor: 'pointer', flexShrink: 0 }}>{t('billing.subscription.subscribe')}</button>
     </div>
   );
 }
 
 function PitchCounter({ serverPitchCount }) {
+  const { t } = useTranslation('settings');
   const count = serverPitchCount ?? getPitchCount().count;
   return (
     <div style={{ borderRadius: '1rem', padding: '1rem 1.1rem', background: 'rgba(209,235,219,0.1)', border: '1px solid var(--hairline)' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-        <p style={{ fontSize: '0.84rem', fontWeight: 600, color: 'var(--ink)', margin: 0 }}>Pitches used this month</p>
+        <p style={{ fontSize: '0.84rem', fontWeight: 600, color: 'var(--ink)', margin: 0 }}>{t('billing.pitchCounter.title')}</p>
         <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.9rem', color: count >= 10 ? '#ef4444' : 'var(--ink)', margin: 0 }}>{count} / 10</p>
       </div>
       <div style={{ height: '4px', borderRadius: '999px', background: 'rgba(25,37,36,0.08)', overflow: 'hidden' }}>
         <div style={{ height: '100%', borderRadius: '999px', width: `${Math.min((count / 10) * 100, 100)}%`, background: count >= 10 ? '#ef4444' : count >= 7 ? '#D4A843' : '#4A9B7F', transition: 'width 400ms ease' }} />
       </div>
-      <p style={{ fontSize: '0.72rem', color: 'var(--sage)', margin: '0.4rem 0 0' }}>Resets on the 1st of each month. Standard applications are unlimited.</p>
+      <p style={{ fontSize: '0.72rem', color: 'var(--sage)', margin: '0.4rem 0 0' }}>{t('billing.pitchCounter.footer')}</p>
     </div>
   );
 }
 
-const BILLING_STATUS = {
-  paid: { label: 'Paid', color: '#2D7A5F', bg: 'rgba(74,155,127,0.14)' },
-  pending: { label: 'Pending', color: '#A87820', bg: 'rgba(212,168,67,0.16)' },
-  failed: { label: 'Failed', color: '#dc2626', bg: 'rgba(239,68,68,0.12)' },
-  waived: { label: 'Waived', color: 'var(--sage)', bg: 'rgba(60,87,89,0.1)' },
-};
-
 function HostBillingLedger({ ledger }) {
+  const { t } = useTranslation('settings');
+  const BILLING_STATUS = {
+    paid: { label: t('billing.status.paid'), color: '#2D7A5F', bg: 'rgba(74,155,127,0.14)' },
+    pending: { label: t('billing.status.pending'), color: '#A87820', bg: 'rgba(212,168,67,0.16)' },
+    failed: { label: t('billing.status.failed'), color: '#dc2626', bg: 'rgba(239,68,68,0.12)' },
+    waived: { label: t('billing.status.waived'), color: 'var(--sage)', bg: 'rgba(60,87,89,0.1)' },
+  };
   const outstanding = ledger.filter((f) => f.status === 'pending' || f.status === 'failed').reduce((sum, f) => sum + (f.amount || 0), 0);
   return (
     <div>
       {outstanding > 0 && (
-        <p style={{ fontSize: '0.76rem', fontWeight: 700, color: '#dc2626', margin: '0 0 0.6rem' }}>${outstanding.toFixed(2)} outstanding</p>
+        <p style={{ fontSize: '0.76rem', fontWeight: 700, color: '#dc2626', margin: '0 0 0.6rem' }}>{t('billing.ledger.outstanding', { amount: outstanding.toFixed(2) })}</p>
       )}
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
         <thead>
           <tr style={{ borderBottom: '1px solid var(--hairline)' }}>
-            <th style={{ textAlign: 'left', padding: '0.3rem 0', fontWeight: 600, color: 'var(--sage)', paddingRight: '1rem' }}>Collab</th>
-            <th style={{ textAlign: 'right', padding: '0.3rem 0', fontWeight: 600, color: 'var(--sage)', paddingRight: '1rem' }}>Fee</th>
-            <th style={{ textAlign: 'right', padding: '0.3rem 0', fontWeight: 600, color: 'var(--sage)' }}>Status</th>
+            <th style={{ textAlign: 'left', padding: '0.3rem 0', fontWeight: 600, color: 'var(--sage)', paddingRight: '1rem' }}>{t('billing.ledger.collab')}</th>
+            <th style={{ textAlign: 'right', padding: '0.3rem 0', fontWeight: 600, color: 'var(--sage)', paddingRight: '1rem' }}>{t('billing.ledger.fee')}</th>
+            <th style={{ textAlign: 'right', padding: '0.3rem 0', fontWeight: 600, color: 'var(--sage)' }}>{t('billing.ledger.status')}</th>
           </tr>
         </thead>
         <tbody>

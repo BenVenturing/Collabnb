@@ -1,0 +1,221 @@
+{
+  "header": {
+    "title": "Configurações",
+    "done": "Concluído"
+  },
+  "navGroups": {
+    "account": "Conta",
+    "membership": "Assinatura",
+    "preferences": "Preferências"
+  },
+  "nav": {
+    "personalInfo": "Informações pessoais",
+    "security": "Login e segurança",
+    "privacy": "Privacidade",
+    "notifications": "Notificações",
+    "billing": "Plano e faturamento",
+    "payments": "Pagamentos e impostos",
+    "language": "Idioma e região"
+  },
+  "quickLinks": {
+    "adminDashboard": "Painel do administrador",
+    "setupChecklist": "Checklist de configuração",
+    "aiAssistant": "Assistente de IA",
+    "demoTour": "Tour de demonstração"
+  },
+  "logout": "Sair",
+  "comingSoon": "Em breve",
+  "roles": {
+    "host": "Anfitrião",
+    "creator": "Criador"
+  },
+  "roleAction": {
+    "pendingReview": "Acesso de {{role}} pendente de revisão",
+    "switchToCreator": "Mudar para visão de Criador",
+    "signUpAsCreator": "Cadastrar-se como criador",
+    "switchToHost": "Mudar para visão de Anfitrião",
+    "signUpAsHost": "Cadastrar-se como anfitrião"
+  },
+  "account": {
+    "legalName": "Nome legal",
+    "notSet": "Não definido",
+    "edit": "Editar",
+    "email": "E-mail",
+    "manage": "Gerenciar",
+    "accountType": "Tipo de conta — {{role}}",
+    "verifiedHost": "Anfitrião verificado",
+    "notVerifiedHost": "Ainda não verificado como anfitrião",
+    "verifiedCreator": "Criador verificado",
+    "notVerifiedCreator": "Ainda não verificado como criador",
+    "verification": "Verificação",
+    "verificationValue": "Envie uma solicitação de reverificação",
+    "request": "Solicitar",
+    "contracts": "Contratos",
+    "contractsValue": "Veja e gerencie seus contratos salvos",
+    "open": "Abrir",
+    "myMetrics": "Minhas métricas",
+    "myMetricsValue": "Atualize suas estatísticas de seguidores e engajamento",
+    "creatorTier": "Nível de criador",
+    "creatorTierPending": "{{tier}} — pendente de revisão da equipe",
+    "creatorTierCurrent": "Atualmente {{tier}} — solicite uma mudança se você cresceu",
+    "requestChange": "Solicitar mudança",
+    "locationSettings": "Configurações de localização",
+    "locationSettingsValue": "Defina sua cidade e país para o mapa global"
+  },
+  "security": {
+    "sectionLogin": "Login",
+    "loginCardTitle": "Senha, chaves de acesso e autenticação em duas etapas",
+    "loginCardDesc": "Gerencie como você faz login, incluindo sua senha, chaves de acesso e sessões ativas.",
+    "openSecurity": "Abrir segurança da conta",
+    "sectionSession": "Sessão",
+    "logoutValue": "Saia do Collabnb neste dispositivo"
+  },
+  "privacy": {
+    "sectionVisibility": "Visibilidade",
+    "profileVisible": "Seu perfil está visível para anfitriões",
+    "profileHidden": "Seu perfil está oculto",
+    "profileVisibleSub": "Anfitriões podem te encontrar na página de Criadores e enviar mensagens.",
+    "profileHiddenSub": "Você não aparecerá nas buscas de anfitriões e eles não poderão te enviar mensagens. Conversas existentes continuam abertas.",
+    "sectionControls": "Controles",
+    "showActivity": "Mostrar minha atividade aos anfitriões",
+    "showActivitySub": "Candidaturas, tempo de resposta e atividade recente",
+    "sectionBlocked": "Pessoas bloqueadas",
+    "blockSearchPlaceholder": "Busque por nome para bloquear alguém…",
+    "block": "Bloquear",
+    "noBlocked": "Você não bloqueou ninguém. Pessoas bloqueadas não podem te enviar mensagens nem ver seu perfil.",
+    "blockedValue": "Bloqueado — não pode te enviar mensagens nem ver seu perfil",
+    "unblock": "Desbloquear",
+    "sectionPolicy": "Política de privacidade",
+    "collapsePolicy": "Recolher política",
+    "readPolicy": "Ler política de privacidade",
+    "policy": {
+      "effectiveDate": "Data de vigência: 15 de julho de 2026",
+      "intro": "A Collabnb (\"nós\", \"nosso\") está comprometida em proteger sua privacidade. Esta Política de Privacidade explica como coletamos, usamos, divulgamos e protegemos suas informações quando você usa nossa plataforma.",
+      "collectHeading": "Informações que coletamos",
+      "collectBody": "Coletamos as informações pessoais que você fornece diretamente, como nome, e-mail, dados de perfil e identificadores de redes sociais. Também coletamos automaticamente dados de uso, cookies e informações do dispositivo quando você interage com nossa plataforma.",
+      "useHeading": "Como usamos suas informações",
+      "useBody": "Suas informações são usadas para operar e melhorar a Collabnb, facilitar colaborações entre criadores e anfitriões, enviar notificações e atualizações, e garantir a segurança da plataforma. Nunca vendemos seus dados pessoais a terceiros.",
+      "sharingHeading": "Compartilhamento de dados",
+      "sharingBody": "Podemos compartilhar suas informações com prestadores de serviços que nos ajudam a operar a plataforma (por exemplo, hospedagem, análise), conforme exigido por lei, ou com seu consentimento explícito.",
+      "rightsHeading": "Seus direitos",
+      "rightsBody": "Você pode acessar, atualizar ou excluir suas informações pessoais a qualquer momento nestas configurações. Entre em contato pelo support@collabnb.com para obter ajuda.",
+      "fullPolicy": "Para ler a Política de Privacidade completa, acesse <a>{{link}}</a>."
+    }
+  },
+  "notifications": {
+    "sectionPreferences": "Preferências",
+    "messages": "Mensagens",
+    "messagesDesc": "Novas mensagens e respostas na sua caixa de entrada",
+    "contractUpdates": "Atualizações de contrato",
+    "contractUpdatesDesc": "Quando um contrato é assinado, atualizado ou precisa de ação",
+    "newListings": "Novos anúncios",
+    "newListingsDesc": "Propriedades que combinam com suas preferências",
+    "collabReminders": "Lembretes de colaboração",
+    "collabRemindersDesc": "Prazos futuros e entregas pendentes",
+    "marketing": "Marketing",
+    "marketingDesc": "Novidades do produto, dicas e notícias da Collabnb"
+  },
+  "billing": {
+    "sectionPlan": "Plano",
+    "sectionReferralCode": "Código de indicação",
+    "copy": "Copiar",
+    "signupsUsed": "<strong>{{used}}</strong> / {{max}} cadastros usados",
+    "collabBonus_one": "bônus de colaboração ganho",
+    "collabBonus_other": "bônus de colaboração ganhos",
+    "freeMonthsBalance_one": "+{{count}} mês grátis de saldo",
+    "freeMonthsBalance_other": "+{{count}} meses grátis de saldo",
+    "referralDesc": "Compartilhe seu código. Você e os novos membros ganham 1 mês grátis ao se cadastrar, e mais 1 quando completarem sua primeira colaboração.",
+    "sectionPitches": "Propostas",
+    "sectionBillingHistory": "Histórico de faturamento",
+    "subscription": {
+      "founderTitle": "Membro Fundador",
+      "founderSub": "Acesso gratuito vitalício — todos os recursos desbloqueados",
+      "founderSavings": "Você economizou ${{amount}} em taxas de assinatura como Membro Fundador",
+      "planAnnual": "Creator Plus · Anual",
+      "planMonthly": "Creator Plus · Mensal",
+      "priceAnnual": "$60/ano",
+      "priceMonthly": "$10/mês",
+      "renews": " · Renova em {{date}}",
+      "upgradeYearly": "Mudar para anual — economize 50%",
+      "manageBilling": "Gerenciar faturamento",
+      "opening": "Abrindo…",
+      "planExpired": "Plano expirado",
+      "planExpiredDesc": "Renove para continuar enviando mensagens e se candidatando",
+      "renew": "Renovar",
+      "pastDue": "Pagamento atrasado",
+      "pastDueDesc": "Seu último pagamento falhou — atualize seu cartão para manter seu plano ativo.",
+      "updatePayment": "Atualizar pagamento",
+      "freeTrial": "Teste grátis",
+      "freeTrialDays_one": " · falta {{count}} dia",
+      "freeTrialDays_other": " · faltam {{count}} dias",
+      "trialDesc": "Acesso completo incluído — escolha um plano antes que seu teste termine.",
+      "viewPlans": "Ver planos",
+      "noPlan": "Nenhum plano ativo",
+      "noPlanDesc": "Assine para continuar colaborando",
+      "subscribe": "Assinar"
+    },
+    "pitchCounter": {
+      "title": "Propostas usadas este mês",
+      "footer": "Reinicia no dia 1º de cada mês. Candidaturas padrão são ilimitadas."
+    },
+    "status": {
+      "paid": "Pago",
+      "pending": "Pendente",
+      "failed": "Falhou",
+      "waived": "Isento"
+    },
+    "ledger": {
+      "outstanding": "${{amount}} pendente",
+      "collab": "Colaboração",
+      "fee": "Taxa",
+      "status": "Status"
+    }
+  },
+  "payments": {
+    "sectionPayouts": "Repasses",
+    "payoutMethod": "Método de repasse",
+    "payoutMethodCreatorValue": "Conecte o Stripe ou o Wise para receber seus repasses",
+    "payoutMethodHostValue": "Métodos de repasse são para criadores que recebem pagamentos",
+    "sectionPaymentMethods": "Métodos de pagamento",
+    "noCardOnFile": "Nenhum cartão cadastrado",
+    "cardValue": "Cobrado automaticamente quando uma colaboração que você organiza é concluída",
+    "working": "Processando…",
+    "update": "Atualizar",
+    "addCard": "Adicionar cartão",
+    "removeCard": "Remover cartão",
+    "removeCardValue": "Você precisará adicionar um novo antes de publicar outro anúncio",
+    "remove": "Remover",
+    "savedCardsCreator": "Cartões salvos",
+    "savedCardsCreatorValue": "Criadores recebem repasses, não são cobrados — nada para salvar aqui",
+    "sectionTax": "Impostos",
+    "taxInfo": "Informações fiscais",
+    "taxSetupFirstValue": "Configure primeiro um método de repasse com o Stripe — as informações fiscais são coletadas como parte dessa configuração",
+    "setUpPayoutMethod": "Configurar método de repasse",
+    "taxNeedsInfoValue": "O Stripe precisa de mais informações para concluir a verificação da sua conta",
+    "completeTaxInfo": "Completar informações fiscais",
+    "taxOnFileValue": "Registradas no Stripe como parte da sua conta de repasse",
+    "review": "Revisar",
+    "taxCheckingValue": "Verificando o status da sua conta Stripe…",
+    "taxHostValue": "Formulários 1099 se aplicam a criadores que recebem repasses, não a anfitriões"
+  },
+  "language": {
+    "sectionPreferences": "Preferências",
+    "preferredLanguage": "Idioma preferido",
+    "currency": "Moeda",
+    "timezone": "Fuso horário",
+    "languages": {
+      "en": "English",
+      "es": "Español",
+      "fr": "Français",
+      "de": "Deutsch",
+      "pt": "Português"
+    },
+    "currencies": {
+      "USD": "Dólar americano ($)",
+      "EUR": "Euro (€)",
+      "GBP": "Libra esterlina (£)",
+      "CAD": "Dólar canadense (C$)",
+      "AUD": "Dólar australiano (A$)"
+    }
+  }
+}

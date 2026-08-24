@@ -5,6 +5,62 @@ import { api } from "./_generated/api";
 const ADMIN_TO = "hellocollabnb@gmail.com";
 const FROM = "Collabnb <hello@collabnb.com>";
 
+// Shared receipt-style HTML shell for post-checkout confirmation emails —
+// mirrors the torn-paper ReceiptPrinter UI shown in the app right after
+// Stripe redirects back, so the email and the in-app animation tell the
+// same story.
+function receiptEmailHtml({ heading, leadText, orderId, dateStr, cardLine, itemLabel, itemDetail, totalLabel, amountStr, footNote }) {
+  return `
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  body { margin:0; padding:0; background:#EFECE9; font-family:'Helvetica Neue',Helvetica,Arial,sans-serif; }
+  .wrap { max-width:480px; margin:0 auto; padding:32px 20px; }
+  .card { background:#fff; border-radius:20px; overflow:hidden; box-shadow:0 4px 24px rgba(25,37,36,0.07); }
+  .header { background:linear-gradient(135deg,#192524,#2d4a3e); padding:30px 32px 24px; text-align:center; }
+  .logo-text { color:#fff; font-size:1.2rem; font-weight:800; letter-spacing:-0.02em; }
+  .body { padding:28px 32px 8px; }
+  h1 { font-size:1.3rem; font-weight:800; color:#192524; margin:0 0 8px; }
+  p.lead { font-size:0.875rem; color:#4a6670; line-height:1.6; margin:0 0 20px; }
+  .receipt { border:1px dashed rgba(25,37,36,0.25); border-radius:12px; padding:18px 20px; margin:0 0 20px; font-family:'SF Mono',Menlo,monospace; }
+  .receipt .row { display:flex; justify-content:space-between; font-size:0.75rem; color:#3C5759; padding:3px 0; }
+  .receipt .row.item span:first-child { color:#192524; }
+  .receipt .row.item span:last-child { font-weight:700; }
+  .receipt hr { border:none; border-top:1px dashed rgba(25,37,36,0.25); margin:10px 0; }
+  .receipt .total { display:flex; justify-content:space-between; font-size:0.9rem; font-weight:800; color:#192524; border-top:1px solid #192524; padding-top:8px; margin-top:4px; }
+  .footer { padding:16px 32px 28px; text-align:center; }
+  .footer p { font-size:0.72rem; color:#8faea6; margin:0; line-height:1.6; }
+</style></head>
+<body>
+<div class="wrap"><div class="card">
+  <div class="header"><span class="logo-text">Collabnb</span></div>
+  <div class="body">
+    <h1>${heading}</h1>
+    <p class="lead">${leadText}</p>
+    <div class="receipt">
+      <div class="row"><span>Order</span><span>${orderId}</span></div>
+      <div class="row"><span>Date</span><span>${dateStr}</span></div>
+      <div class="row"><span>Payment</span><span>${cardLine}</span></div>
+      <hr />
+      <div class="row item"><span>${itemLabel}<br /><span style="font-weight:400;color:#8faea6;font-size:0.68rem;">${itemDetail}</span></span><span>${amountStr}</span></div>
+      <hr />
+      <div class="total"><span>${totalLabel}</span><span>${amountStr}</span></div>
+    </div>
+  </div>
+  <div class="footer"><p>${footNote}<br />Collabnb · collabnb.com</p></div>
+</div></div>
+</body></html>`;
+}
+
+function shortOrderId(sessionId) {
+  return `CB-${sessionId.replace(/[^a-zA-Z0-9]/g, "").slice(-8).toUpperCase()}`;
+}
+
+function todayLabel() {
+  return new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
 // ─── Internal action — sends welcome email to a new waitlist member ───────────
 export const sendWelcomeEmail = internalAction({
   args: {
@@ -223,6 +279,99 @@ export const sendPayoutReceiptEmail = internalAction({
       });
     } catch (err) {
       console.warn("Payout receipt email send failed:", err);
+    }
+  },
+});
+
+// ─── Internal action — creator subscription receipt ────────────────────────
+// Fired from stripe.verifySubscriptionSession right after a monthly/yearly
+// Creator Pro Checkout completes. amount is the real amount_total Stripe
+// charged on the session (in dollars) — never a hardcoded tier price — so
+// this always matches whatever STRIPE_PRICE_MONTHLY_ID/YEARLY_ID actually bill.
+export const sendSubscriptionReceiptEmail = internalAction({
+  args: {
+    to: v.string(),
+    name: v.string(),
+    tier: v.string(),
+    amount: v.number(),
+    sessionId: v.string(),
+    cardBrand: v.optional(v.string()),
+    cardLast4: v.optional(v.string()),
+  },
+  handler: async (_ctx, { to, name, tier, amount, sessionId, cardBrand, cardLast4 }) => {
+    const apiKey = process.env.RESEND_API_KEY;
+    if (!apiKey) return;
+
+    const firstName = name.split(" ")[0];
+    const tierLabel = tier === "yearly" ? "Yearly" : "Monthly";
+    const amountStr = `$${amount.toFixed(2)}`;
+    const cardLine = cardLast4 ? `${cardBrand ? cardBrand[0].toUpperCase() + cardBrand.slice(1) : "Card"} •••• ${cardLast4}` : "Card on file";
+
+    const html = receiptEmailHtml({
+      heading: `Welcome to Creator Pro, ${firstName}!`,
+      leadText: "Your subscription is active. Here's your receipt for today's charge.",
+      orderId: shortOrderId(sessionId),
+      dateStr: todayLabel(),
+      cardLine,
+      itemLabel: "Creator Pro membership",
+      itemDetail: `billed ${tierLabel.toLowerCase()}`,
+      totalLabel: "Charged today",
+      amountStr,
+      footNote: `Renews ${tierLabel.toLowerCase()} until cancelled. Manage anytime from Settings → Billing.`,
+    });
+
+    try {
+      await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ from: FROM, to: [to], subject: `You're on Creator Pro — receipt inside`, html }),
+      });
+    } catch (err) {
+      console.warn("Subscription receipt email send failed:", err);
+    }
+  },
+});
+
+// ─── Internal action — host card-on-file confirmation ──────────────────────
+// Fired from stripe.verifyHostCardSetupSession once a host saves a card via
+// the SetupIntent Checkout. No charge happens here ($0.00) — the card is
+// only charged later, automatically, when a collab is marked complete.
+export const sendCardSavedEmail = internalAction({
+  args: {
+    to: v.string(),
+    name: v.string(),
+    sessionId: v.string(),
+    cardBrand: v.optional(v.string()),
+    cardLast4: v.optional(v.string()),
+  },
+  handler: async (_ctx, { to, name, sessionId, cardBrand, cardLast4 }) => {
+    const apiKey = process.env.RESEND_API_KEY;
+    if (!apiKey) return;
+
+    const firstName = name.split(" ")[0];
+    const cardLine = cardLast4 ? `${cardBrand ? cardBrand[0].toUpperCase() + cardBrand.slice(1) : "Card"} •••• ${cardLast4}` : "Card on file";
+
+    const html = receiptEmailHtml({
+      heading: `You're ready to host, ${firstName}`,
+      leadText: "We saved your card on file. It's only charged once a collab wraps up.",
+      orderId: shortOrderId(sessionId),
+      dateStr: todayLabel(),
+      cardLine,
+      itemLabel: "Card verification hold",
+      itemDetail: "released immediately",
+      totalLabel: "Charged today",
+      amountStr: "$0.00",
+      footNote: "This card will be charged automatically once a collab is marked complete.",
+    });
+
+    try {
+      await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ from: FROM, to: [to], subject: "Your payment method is saved", html }),
+      });
+    } catch (err) {
+      console.warn("Card saved email send failed:", err);
     }
   },
 });

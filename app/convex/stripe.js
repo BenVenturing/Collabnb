@@ -151,7 +151,35 @@ export const verifySubscriptionSession = action({
       stripeCustomerId: stripeCustomerId ?? undefined,
     });
 
-    return { success: true, tier, expiresAt };
+    // amount_total is Stripe's own record of what this session actually
+    // charged — reading it here (rather than hardcoding a per-tier price)
+    // keeps the receipt/email correct even if STRIPE_PRICE_MONTHLY_ID or
+    // STRIPE_PRICE_YEARLY_ID's price is changed in the Stripe dashboard.
+    const amount = typeof session.amount_total === 'number' ? session.amount_total / 100 : 0;
+
+    let cardBrand, cardLast4;
+    if (stripeCustomerId) {
+      try {
+        const pms = await stripe.paymentMethods.list({ customer: stripeCustomerId, type: 'card', limit: 1 });
+        cardBrand = pms.data[0]?.card?.brand;
+        cardLast4 = pms.data[0]?.card?.last4;
+      } catch { /* display-only — subscription already activated above */ }
+    }
+
+    const profile = await ctx.runQuery(api.profiles.getById, { id: profileId });
+    if (profile?.email) {
+      await ctx.runAction(internal.email.sendSubscriptionReceiptEmail, {
+        to: profile.email,
+        name: profile.full_name || 'there',
+        tier,
+        amount,
+        sessionId: session.id,
+        cardBrand,
+        cardLast4,
+      });
+    }
+
+    return { success: true, tier, expiresAt, amount, cardBrand, cardLast4, orderId: session.id };
   },
 });
 
@@ -437,7 +465,17 @@ export const verifyHostCardSetupSession = action({
 
     await ctx.runMutation(internal.profiles.setHostCard, { profileId, customerId, paymentMethodId, cardBrand, cardLast4 });
 
-    return { success: true };
+    if (caller.email) {
+      await ctx.runAction(internal.email.sendCardSavedEmail, {
+        to: caller.email,
+        name: caller.full_name || 'there',
+        sessionId: session.id,
+        cardBrand,
+        cardLast4,
+      });
+    }
+
+    return { success: true, cardBrand, cardLast4, orderId: session.id };
   },
 });
 

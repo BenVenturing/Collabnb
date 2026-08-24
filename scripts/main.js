@@ -287,7 +287,7 @@ function initCountdown() {
   const els = document.querySelectorAll('[data-countdown]');
   if (!els.length) return;
 
-  const target = new Date('2026-07-15T00:00:00+07:00');
+  const target = new Date('2026-10-23T00:00:00+07:00');
 
   function update() {
     const now = new Date();

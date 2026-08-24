@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useTranslation, Trans } from 'react-i18next';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../convex/_generated/api';
@@ -26,23 +27,23 @@ function tierLabel(tier) {
   return TIERS[normalizeTierId(tier)]?.label || tier;
 }
 
-function normalizeConvexListingDetail(l) {
+function normalizeConvexListingDetail(l, t) {
   const images = l.gallery_images?.length ? l.gallery_images : (l.image ? [l.image] : []);
 
   let compensation = l.compensation || '';
   if (!compensation) {
-    if (l.compensation_type === 'paid') compensation = `$${l.cash_amount || '?'} cash`;
-    else if (l.compensation_type === 'hybrid') compensation = `$${l.cash_amount || '?'} + stay`;
-    else compensation = 'See listing';
+    if (l.compensation_type === 'paid') compensation = t('detail.cashComp', { amount: l.cash_amount || '?' });
+    else if (l.compensation_type === 'hybrid') compensation = t('detail.hybridComp', { amount: l.cash_amount || '?' });
+    else compensation = t('detail.seeListing');
   }
 
   let deliverables = typeof l.deliverables === 'string' ? l.deliverables : '';
   if (!deliverables && l.deliverables_list?.length) {
     const parts = l.deliverables_list.slice(0, 2).map((d) => `${d.quantity}× ${d.type}`);
     deliverables = parts.join(', ');
-    if (l.deliverables_list.length > 2) deliverables += ` +${l.deliverables_list.length - 2} more`;
+    if (l.deliverables_list.length > 2) deliverables += t('detail.moreCount', { count: l.deliverables_list.length - 2 });
   } else if (!deliverables && l.deliverable_count) {
-    deliverables = `${l.deliverable_count} deliverables`;
+    deliverables = t('detail.deliverablesCount', { count: l.deliverable_count });
   }
 
   return {
@@ -53,14 +54,14 @@ function normalizeConvexListingDetail(l) {
     compensation,
     deliverables,
     about: l.about || l.collaboration_brief || '',
-    collab_type: l.collab_type || l.deliverable_load || 'Collab',
+    collab_type: l.collab_type || l.deliverable_load || t('detail.collab'),
     dates_available: (l.date_ranges?.length
       ? l.date_ranges.map((r) => formatDateRange(r.startDate, r.endDate)).join(' · ')
       : l.dates_available || (l.collab_start && l.collab_end ? formatDateRange(l.collab_start, l.collab_end) : '')),
     due_days: l.due_days ?? l.turnaround_days,
     amenities: l.amenities || [],
     what_you_get: l.what_you_get || [],
-    what_you_deliver: l.what_you_deliver || (l.deliverable_count ? `${l.deliverable_count} total deliverables` : ''),
+    what_you_deliver: l.what_you_deliver || (l.deliverable_count ? t('detail.totalDeliverables', { count: l.deliverable_count }) : ''),
     requirements: l.requirements || [],
     is_featured: l.is_featured ?? false,
   };
@@ -141,17 +142,18 @@ function Divider() {
 // (compensation / deliverables / dates) stay visible to drive FOMO, while the
 // photos, name, and description are blurred behind a subscribe CTA.
 function RedactedListingDetail({ listing, onBack, onSubscribe }) {
+  const { t } = useTranslation('listingDetail');
   const hero = listing.image || listing.gallery_images?.[0] || IMG_FALLBACK;
   const area = listing.location
     || [listing.location_city, listing.location_country].filter(Boolean).join(', ')
-    || 'Location hidden';
+    || t('redacted.locationHidden');
   const comp = listing.compensation
     || (listing.cash_amount ? `$${Number(listing.cash_amount).toLocaleString()}` : '');
   const deliv = listing.deliverables
     || (listing.deliverables_list?.length
         ? listing.deliverables_list.map((d) => `${d.quantity}× ${d.type}`).join(', ')
         : '')
-    || (listing.deliverable_count ? `${listing.deliverable_count} deliverables` : '');
+    || (listing.deliverable_count ? t('redacted.deliverablesCount', { count: listing.deliverable_count }) : '');
 
   const Stat = ({ label, value }) => (
     <div style={{ flex: '1 1 150px', minWidth: 150, background: 'rgba(255,255,255,0.6)', border: '1px solid rgba(25,37,36,0.08)', borderRadius: '1rem', padding: '0.9rem 1rem' }}>
@@ -165,7 +167,7 @@ function RedactedListingDetail({ listing, onBack, onSubscribe }) {
       <button
         onClick={onBack}
         style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', margin: '0 0 1.25rem', fontFamily: 'var(--font-body)', fontSize: '0.9rem', fontWeight: 600, color: 'var(--slate)', background: 'rgba(255,255,255,0.65)', border: '1px solid rgba(25,37,36,0.1)', borderRadius: '999px', padding: '0.5rem 1rem', cursor: 'pointer' }}
-      >← Back</button>
+      >{t('redacted.back')}</button>
 
       {/* Blurred hero */}
       <div style={{ position: 'relative', borderRadius: '1.25rem', overflow: 'hidden', height: 300, marginBottom: '1.5rem' }}>
@@ -175,7 +177,7 @@ function RedactedListingDetail({ listing, onBack, onSubscribe }) {
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" style={{ width: 30, height: 30, opacity: 0.85 }}>
             <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
           </svg>
-          <p style={{ fontWeight: 700, fontSize: '0.9rem' }}>Photos hidden — subscribe to view</p>
+          <p style={{ fontWeight: 700, fontSize: '0.9rem' }}>{t('redacted.photosHidden')}</p>
         </div>
       </div>
 
@@ -189,9 +191,9 @@ function RedactedListingDetail({ listing, onBack, onSubscribe }) {
 
       {/* The offer — visible */}
       <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1.75rem' }}>
-        {comp && <Stat label="Compensation" value={comp} />}
-        {deliv && <Stat label="Deliverables" value={deliv} />}
-        {listing.dates_available && <Stat label="Dates" value={listing.dates_available} />}
+        {comp && <Stat label={t('redacted.compensation')} value={comp} />}
+        {deliv && <Stat label={t('redacted.deliverables')} value={deliv} />}
+        {listing.dates_available && <Stat label={t('redacted.dates')} value={listing.dates_available} />}
       </div>
 
       {/* Blurred description */}
@@ -206,7 +208,7 @@ function RedactedListingDetail({ listing, onBack, onSubscribe }) {
         onClick={onSubscribe}
         style={{ width: '100%', maxWidth: 380, display: 'block', margin: '0 auto', padding: '0.95rem 1.25rem', borderRadius: '999px', border: 'none', cursor: 'pointer', background: 'var(--ink)', color: '#fff', fontFamily: 'var(--font-body)', fontWeight: 800, fontSize: '0.95rem', boxShadow: '0 8px 24px rgba(25,37,36,0.25)' }}
       >
-        Subscribe to unlock full details →
+        {t('redacted.subscribeCta')}
       </button>
     </div>
   );
@@ -264,12 +266,13 @@ function ReviewCard({ rating, comment, reviewer_name, blurred }) {
 }
 
 function ReviewsCarousel({ reviews }) {
+  const { t } = useTranslation('listingDetail');
   const hasReviews = reviews && reviews.length > 0;
   const shown = hasReviews ? reviews : PLACEHOLDER_REVIEWS;
   return (
     <div style={{ position: 'relative' }}>
       <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.2rem', color: 'var(--ink)', marginBottom: '1.25rem' }}>
-        What creators are saying
+        {t('reviews.title')}
       </h2>
       <div style={{ display: 'flex', gap: '1rem', overflowX: 'auto', scrollSnapType: 'x proximity', paddingBottom: '0.5rem' }}>
         {shown.map((r, i) => (
@@ -287,7 +290,7 @@ function ReviewsCarousel({ reviews }) {
             background: 'rgba(255,255,255,0.85)', padding: '0.5rem 1rem', borderRadius: '999px',
             border: '1px solid rgba(25,37,36,0.1)',
           }}>
-            No reviews yet for this stay
+            {t('reviews.empty')}
           </span>
         </div>
       )}
@@ -297,6 +300,7 @@ function ReviewsCarousel({ reviews }) {
 
 // ─── Photo Gallery Overlay ────────────────────────────────────────────────────
 function PhotoGallery({ images, title, onClose }) {
+  const { t } = useTranslation('listingDetail');
   return (
     <div
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
@@ -318,14 +322,14 @@ function PhotoGallery({ images, title, onClose }) {
           display: 'flex', alignItems: 'center', gap: '0.5rem',
         }}
       >
-        ← Close
+        {t('gallery.close')}
       </button>
       <p style={{ color: 'rgba(239,236,233,0.6)', fontSize: '0.9rem', fontFamily: 'var(--font-display)', fontWeight: 700, textAlign: 'center', marginBottom: '2rem' }}>
-        {title} — All Photos
+        {t('gallery.allPhotos', { title })}
       </p>
       <div style={{ maxWidth: '900px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
         {images.map((src, i) => (
-          <img key={i} src={src} alt={`Photo ${i + 1}`}
+          <img key={i} src={src} alt={t('gallery.photoAlt', { n: i + 1 })}
             onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = IMG_FALLBACK; }}
             style={{ width: '100%', borderRadius: '1rem', objectFit: 'cover', display: 'block' }}
           />
@@ -337,6 +341,7 @@ function PhotoGallery({ images, title, onClose }) {
 
 // ─── Apply Now Modal ──────────────────────────────────────────────────────────
 function ApplyModal({ listing, userId, creatorProfile, onClose, onApply, isPreview, navigate, isVerified, onVerificationRequired, isSubscribed, onSubscriptionRequired }) {
+  const { t } = useTranslation('listingDetail');
   const checkAndIncrementCvx = useMutation(api.pitches.checkAndIncrement);
 
   const handle = creatorProfile?.instagram_handle || creatorProfile?.tiktok_handle || creatorProfile?.username;
@@ -362,6 +367,8 @@ Let's make something great together.`;
   const [submitted, setSubmitted] = useState(false);
   const [pitchBlocked, setPitchBlocked] = useState(false);
   const [previewBlocked, setPreviewBlocked] = useState(false);
+  const [applyError, setApplyError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   const isPitch = pitch.trim() !== defaultPitch.trim();
 
@@ -387,7 +394,13 @@ Let's make something great together.`;
         incrementPitchCount();
       }
     }
-    onApply(listing, pitch, creatorProfile);
+    setSubmitting(true);
+    const result = await onApply(listing, pitch, creatorProfile);
+    setSubmitting(false);
+    if (result && result.ok === false) {
+      setApplyError(result.error);
+      return;
+    }
     setSubmitted(true);
   };
 
@@ -411,7 +424,7 @@ Let's make something great together.`;
         animation: 'detailSlideUp 300ms cubic-bezier(0.32,0.72,0,1) forwards',
         maxHeight: '90dvh', overflowY: 'auto',
       }}>
-        {previewBlocked ? (
+        {applyError ? (
           <div style={{ textAlign: 'center', padding: '1.5rem 0' }}>
             <div style={{
               width: 64, height: 64, borderRadius: '50%',
@@ -422,10 +435,41 @@ Let's make something great together.`;
               ✕
             </div>
             <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.4rem', color: 'var(--ink)', marginBottom: '0.75rem' }}>
-              This is a preview
+              {t('apply.errorTitle')}
             </h2>
             <p style={{ color: 'var(--slate)', fontSize: '0.9rem', lineHeight: 1.65, marginBottom: '2rem' }}>
-              Applications can't be sent until this listing is actually published — creators won't be able to see or apply to it until then either.
+              {applyError}
+            </p>
+            <button onClick={() => setApplyError('')} style={{
+              width: '100%', padding: '0.875rem', marginBottom: '0.625rem',
+              background: 'var(--ink)', color: 'var(--bone)',
+              borderRadius: '999px', fontWeight: 700,
+              fontSize: '0.9rem', fontFamily: 'var(--font-body)',
+              border: 'none', cursor: 'pointer',
+            }}>{t('apply.backToApplication')}</button>
+            <button onClick={onClose} style={{
+              width: '100%', padding: '0.875rem',
+              background: 'transparent', color: 'var(--sage)',
+              borderRadius: '999px', fontWeight: 600,
+              fontSize: '0.875rem', fontFamily: 'var(--font-body)',
+              border: '1.5px solid rgba(25,37,36,0.12)', cursor: 'pointer',
+            }}>{t('apply.close')}</button>
+          </div>
+        ) : previewBlocked ? (
+          <div style={{ textAlign: 'center', padding: '1.5rem 0' }}>
+            <div style={{
+              width: 64, height: 64, borderRadius: '50%',
+              background: 'rgba(255,220,210,0.8)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              margin: '0 auto 1.25rem', fontSize: '1.6rem', color: '#8b2500',
+            }}>
+              ✕
+            </div>
+            <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.4rem', color: 'var(--ink)', marginBottom: '0.75rem' }}>
+              {t('apply.previewTitle')}
+            </h2>
+            <p style={{ color: 'var(--slate)', fontSize: '0.9rem', lineHeight: 1.65, marginBottom: '2rem' }}>
+              {t('apply.previewBody')}
             </p>
             <button onClick={onClose} style={{
               width: '100%', padding: '0.875rem',
@@ -433,7 +477,7 @@ Let's make something great together.`;
               borderRadius: '999px', fontWeight: 700,
               fontSize: '0.9rem', fontFamily: 'var(--font-body)',
               border: 'none', cursor: 'pointer',
-            }}>Close</button>
+            }}>{t('apply.close')}</button>
           </div>
         ) : pitchBlocked ? (
           <div style={{ textAlign: 'center', padding: '1.5rem 0' }}>
@@ -446,13 +490,13 @@ Let's make something great together.`;
               ✕
             </div>
             <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.4rem', color: 'var(--ink)', marginBottom: '0.75rem' }}>
-              Pitch Limit Reached
+              {t('apply.pitchLimitTitle')}
             </h2>
             <p style={{ color: 'var(--slate)', fontSize: '0.9rem', lineHeight: 1.65, marginBottom: '0.75rem' }}>
-              You've used all 10 pitches this month. Pitches reset on the 1st of next month. You can still submit standard applications anytime.
+              {t('apply.pitchLimitBody')}
             </p>
             <p style={{ color: 'var(--sage)', fontSize: '0.8rem', marginBottom: '2rem' }}>
-              To send a standard application, restore your pitch message to the default template.
+              {t('apply.pitchLimitHint')}
             </p>
             <button onClick={() => setPitchBlocked(false)} style={{
               width: '100%', padding: '0.875rem', marginBottom: '0.625rem',
@@ -460,14 +504,14 @@ Let's make something great together.`;
               borderRadius: '999px', fontWeight: 700,
               fontSize: '0.9rem', fontFamily: 'var(--font-body)',
               border: 'none', cursor: 'pointer',
-            }}>Back to Application</button>
+            }}>{t('apply.backToApplication')}</button>
             <button onClick={onClose} style={{
               width: '100%', padding: '0.875rem',
               background: 'transparent', color: 'var(--sage)',
               borderRadius: '999px', fontWeight: 600,
               fontSize: '0.875rem', fontFamily: 'var(--font-body)',
               border: '1.5px solid rgba(25,37,36,0.12)', cursor: 'pointer',
-            }}>Close</button>
+            }}>{t('apply.close')}</button>
           </div>
         ) : submitted ? (
           <div style={{ textAlign: 'center', padding: '1.5rem 0' }}>
@@ -480,13 +524,13 @@ Let's make something great together.`;
               ✓
             </div>
             <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.5rem', color: 'var(--ink)', marginBottom: '0.5rem' }}>
-              Application Sent!
+              {t('apply.sentTitle')}
             </h2>
             <p style={{ color: 'var(--sage)', fontSize: '0.9rem', marginBottom: '0.5rem' }}>
-              Your pitch for <strong style={{ color: 'var(--slate)' }}>{listing.title}</strong> has been sent.
+              <Trans i18nKey="apply.sentPitch" t={t} values={{ title: listing.title }}>Your pitch for <strong style={{ color: 'var(--slate)' }}>{{ title }}</strong> has been sent.</Trans>
             </p>
             <p style={{ color: 'var(--sage)', fontSize: '0.85rem', marginBottom: '2rem' }}>
-              Check <strong style={{ color: 'var(--slate)' }}>Collabs</strong> to track your application and <strong style={{ color: 'var(--slate)' }}>Inbox</strong> for the host's reply.
+              <Trans i18nKey="apply.sentTrack" t={t}>Check <strong style={{ color: 'var(--slate)' }}>Collabs</strong> to track your application and <strong style={{ color: 'var(--slate)' }}>Inbox</strong> for the host's reply.</Trans>
             </p>
             <button
               onClick={() => {
@@ -518,7 +562,7 @@ Let's make something great together.`;
                 <line x1="16" y1="13" x2="8" y2="13"/>
                 <line x1="16" y1="17" x2="8" y2="17"/>
               </svg>
-              Create Contract
+              {t('apply.createContract')}
             </button>
             <button onClick={onClose} style={{
               width: '100%', padding: '0.875rem',
@@ -526,7 +570,7 @@ Let's make something great together.`;
               borderRadius: '999px', fontWeight: 700,
               fontSize: '0.9rem', fontFamily: 'var(--font-body)',
               border: 'none', cursor: 'pointer',
-            }}>Done</button>
+            }}>{t('apply.done')}</button>
           </div>
         ) : (
           <>
@@ -537,7 +581,7 @@ Let's make something great together.`;
                 />
                 <div>
                   <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1rem', color: 'var(--ink)', lineHeight: 1.2 }}>
-                    Apply to {listing.title}
+                    {t('apply.applyTo', { title: listing.title })}
                   </p>
                   <p style={{ fontSize: '0.78rem', color: 'var(--sage)', marginTop: '0.1rem' }}>{listing.location}</p>
                 </div>
@@ -552,10 +596,10 @@ Let's make something great together.`;
             </div>
 
             <p style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--sage)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.4rem' }}>
-              Your Pitch
+              {t('apply.yourPitch')}
             </p>
             <p style={{ fontSize: '0.78rem', color: 'var(--sage)', marginBottom: '0.75rem' }}>
-              Auto-filled from your profile — personalize as you like.
+              {t('apply.autoFilled')}
             </p>
 
             <textarea
@@ -577,7 +621,7 @@ Let's make something great together.`;
             />
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '0.4rem 0 1.25rem' }}>
-              <p style={{ fontSize: '0.72rem', color: 'var(--sage)', margin: 0 }}>{pitch.length} characters</p>
+              <p style={{ fontSize: '0.72rem', color: 'var(--sage)', margin: 0 }}>{t('apply.charCount', { count: pitch.length })}</p>
               <span style={{
                 fontSize: '0.68rem', fontWeight: 700, padding: '0.18rem 0.6rem',
                 borderRadius: '999px',
@@ -586,24 +630,26 @@ Let's make something great together.`;
                 border: isPitch ? '1px solid rgba(74,155,127,0.3)' : 'none',
                 transition: 'all 200ms',
               }}>
-                {isPitch ? 'Pitch' : 'Application'}
+                {isPitch ? t('apply.pitch') : t('apply.application')}
               </span>
             </div>
 
             <button
               onClick={handleSubmit}
+              disabled={submitting}
               style={{
                 width: '100%', padding: '0.9rem',
                 background: 'var(--ink)', color: 'var(--bone)',
                 borderRadius: '999px', fontWeight: 700,
                 fontSize: '0.95rem', fontFamily: 'var(--font-body)',
-                border: 'none', cursor: 'pointer',
+                border: 'none', cursor: submitting ? 'default' : 'pointer',
+                opacity: submitting ? 0.7 : 1,
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
               }}
-              onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.88'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; }}
+              onMouseEnter={(e) => { if (!submitting) e.currentTarget.style.opacity = '0.88'; }}
+              onMouseLeave={(e) => { if (!submitting) e.currentTarget.style.opacity = '1'; }}
             >
-              {isPitch ? 'Send Pitch' : 'Send Application'} <ArrowRight />
+              {submitting ? t('apply.sending') : <>{isPitch ? t('apply.sendPitch') : t('apply.sendApplication')} <ArrowRight /></>}
             </button>
           </>
         )}
@@ -614,8 +660,9 @@ Let's make something great together.`;
 
 // ─── Share Modal ─────────────────────────────────────────────────────────────
 function ShareModal({ listing, onClose, onCopied }) {
+  const { t } = useTranslation('listingDetail');
   const url = window.location.href;
-  const text = `Check out this collab listing: ${listing.title} in ${listing.location}`;
+  const text = t('share.text', { title: listing.title, location: listing.location });
   const tweetUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(text + ' ')}&url=${encodeURIComponent(url)}`;
   const waUrl = `https://wa.me/?text=${encodeURIComponent(text + ' ' + url)}`;
 
@@ -626,7 +673,7 @@ function ShareModal({ listing, onClose, onCopied }) {
           <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
         </svg>
       ),
-      label: 'Copy link',
+      label: t('share.copyLink'),
       action: async () => {
         try { await navigator.clipboard.writeText(url); } catch { /* fallback */ const el = document.createElement('textarea'); el.value = url; document.body.appendChild(el); el.select(); document.execCommand('copy'); document.body.removeChild(el); }
         onCopied();
@@ -639,7 +686,7 @@ function ShareModal({ listing, onClose, onCopied }) {
           <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
         </svg>
       ),
-      label: 'Share on X',
+      label: t('share.onX'),
       action: () => { window.open(tweetUrl, '_blank', 'noopener'); onClose(); },
     },
     {
@@ -648,7 +695,7 @@ function ShareModal({ listing, onClose, onCopied }) {
           <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
         </svg>
       ),
-      label: 'Share on WhatsApp',
+      label: t('share.onWhatsApp'),
       action: () => { window.open(waUrl, '_blank', 'noopener'); onClose(); },
     },
   ];
@@ -674,7 +721,7 @@ function ShareModal({ listing, onClose, onCopied }) {
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
-          <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1rem', color: 'var(--ink)' }}>Share listing</p>
+          <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1rem', color: 'var(--ink)' }}>{t('share.title')}</p>
           <button onClick={onClose} style={{ width: 30, height: 30, borderRadius: '50%', background: 'rgba(25,37,36,0.07)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.9rem', color: 'var(--slate)' }}>✕</button>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
@@ -704,6 +751,7 @@ function ShareModal({ listing, onClose, onCopied }) {
 
 // ─── Save Collection Modal ────────────────────────────────────────────────────
 function SaveCollectionModal({ listing, collections, onMoveToCollection, onRemove, onCreateAndSave, onClose }) {
+  const { t } = useTranslation('listingDetail');
   const [newName, setNewName] = useState('');
   const [creating, setCreating] = useState(false);
   const savedIn = collections.find((c) => c.listingIds.includes(listing.id));
@@ -738,7 +786,7 @@ function SaveCollectionModal({ listing, collections, onMoveToCollection, onRemov
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
-          <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1rem', color: 'var(--ink)' }}>Save to collection</p>
+          <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1rem', color: 'var(--ink)' }}>{t('save.title')}</p>
           <button onClick={onClose} style={{ width: 30, height: 30, borderRadius: '50%', background: 'rgba(25,37,36,0.07)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.9rem', color: 'var(--slate)' }}>✕</button>
         </div>
 
@@ -769,7 +817,7 @@ function SaveCollectionModal({ listing, collections, onMoveToCollection, onRemov
                   </div>
                   <div>
                     <p style={{ fontSize: '0.9rem', fontWeight: 600, color: isInThis ? '#2d6a4f' : 'var(--ink)', marginBottom: '0.05rem' }}>{col.name}</p>
-                    <p style={{ fontSize: '0.72rem', color: 'var(--sage)' }}>{col.listingIds.length} saved</p>
+                    <p style={{ fontSize: '0.72rem', color: 'var(--sage)' }}>{t('save.savedCount', { count: col.listingIds.length })}</p>
                   </div>
                 </div>
                 {isInThis && (
@@ -790,7 +838,7 @@ function SaveCollectionModal({ listing, collections, onMoveToCollection, onRemov
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') handleCreate(); if (e.key === 'Escape') { setCreating(false); setNewName(''); } }}
-              placeholder="Collection name"
+              placeholder={t('save.collectionNamePlaceholder')}
               style={{
                 flex: 1, padding: '0.65rem 0.875rem',
                 borderRadius: '0.75rem', border: '1.5px solid rgba(25,37,36,0.15)',
@@ -808,11 +856,11 @@ function SaveCollectionModal({ listing, collections, onMoveToCollection, onRemov
                 border: 'none', cursor: newName.trim() ? 'pointer' : 'default',
                 fontFamily: 'var(--font-body)', fontSize: '0.875rem', fontWeight: 700,
               }}
-            >Create</button>
+            >{t('save.create')}</button>
             <button
               onClick={() => { setCreating(false); setNewName(''); }}
               style={{ padding: '0.65rem 0.875rem', borderRadius: '0.75rem', background: 'none', border: '1.5px solid rgba(25,37,36,0.12)', cursor: 'pointer', fontFamily: 'var(--font-body)', fontSize: '0.875rem', color: 'var(--sage)' }}
-            >Cancel</button>
+            >{t('save.cancel')}</button>
           </div>
         ) : (
           <button
@@ -830,7 +878,7 @@ function SaveCollectionModal({ listing, collections, onMoveToCollection, onRemov
             <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ width: 15, height: 15 }}>
               <line x1="10" y1="4" x2="10" y2="16"/><line x1="4" y1="10" x2="16" y2="10"/>
             </svg>
-            New collection
+            {t('save.newCollection')}
           </button>
         )}
       </div>
@@ -839,7 +887,8 @@ function SaveCollectionModal({ listing, collections, onMoveToCollection, onRemov
 }
 
 // ─── Sample listing hover tooltip ────────────────────────────────────────────
-function SampleTooltip({ active, label = 'Sample listing · interactions disabled', children }) {
+function SampleTooltip({ active, label = null, children }) {
+  const { t } = useTranslation('listingDetail');
   const [visible, setVisible] = useState(false);
   if (!active) return children;
   return (
@@ -860,7 +909,7 @@ function SampleTooltip({ active, label = 'Sample listing · interactions disable
           fontFamily: 'var(--font-body)', letterSpacing: '0.01em',
           boxShadow: '0 4px 16px rgba(25,37,36,0.2)',
         }}>
-          {label}
+          {label ?? t('sampleTooltip')}
           <div style={{
             position: 'absolute', top: '100%', left: '50%',
             transform: 'translateX(-50%)',
@@ -875,6 +924,7 @@ function SampleTooltip({ active, label = 'Sample listing · interactions disable
 
 // ─── Host Profile Modal ───────────────────────────────────────────────────────
 function HostProfileModal({ host, listing, onClose, onMessage, isSample, hostView }) {
+  const { t } = useTranslation('listingDetail');
   const blocked = isSample || hostView;
   const [imgError, setImgError]   = useState(false);
   const [flipped, setFlipped]     = useState(false);
@@ -1000,7 +1050,7 @@ function HostProfileModal({ host, listing, onClose, onMessage, isSample, hostVie
               </div>
             </div>
             <div style={{ fontSize: 10, color: 'var(--sage)', textAlign: 'center', lineHeight: 1.4 }}>
-              Hover to see the listing
+              {t('hostModal.hoverHint')}
             </div>
           </div>
 
@@ -1013,7 +1063,7 @@ function HostProfileModal({ host, listing, onClose, onMessage, isSample, hostVie
               <div style={{ fontSize: 12.5, color: 'var(--sage)', marginTop: 4 }}>{host.role}</div>
             )}
             <div style={{ fontSize: 12, color: 'var(--sage)', marginTop: 4 }}>
-              Hosting in {listing.location}
+              {t('hostModal.hostingIn', { location: listing.location })}
             </div>
 
             <div style={{ height: 1, background: 'rgba(25,37,36,0.07)', margin: '14px 0' }} />
@@ -1021,9 +1071,9 @@ function HostProfileModal({ host, listing, onClose, onMessage, isSample, hostVie
             {/* Stats */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1, background: 'rgba(25,37,36,0.06)', borderRadius: '0.875rem', overflow: 'hidden', marginBottom: 16 }}>
               {[
-                { val: `${host.rating}★`, label: 'Rating' },
-                { val: `${host.years_hosting}`, label: 'Yrs Hosting' },
-                { val: `${host.response_rate}%`, label: 'Response' },
+                { val: `${host.rating}★`, label: t('hostModal.rating') },
+                { val: `${host.years_hosting}`, label: t('hostModal.yearsHosting') },
+                { val: `${host.response_rate}%`, label: t('hostModal.response') },
               ].map(({ val, label }) => (
                 <div key={label} style={{ padding: '12px 0', background: 'rgba(255,255,255,0.78)', textAlign: 'center' }}>
                   <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 16, color: 'var(--ink)', lineHeight: 1 }}>{val}</div>
@@ -1037,11 +1087,11 @@ function HostProfileModal({ host, listing, onClose, onMessage, isSample, hostVie
             )}
             {host.response_time && (
               <p style={{ fontSize: 12, color: 'var(--sage)', marginBottom: 16 }}>
-                <strong style={{ color: 'var(--slate)' }}>Responds</strong> {host.response_time}
+                <strong style={{ color: 'var(--slate)' }}>{t('hostModal.responds')}</strong> {host.response_time}
               </p>
             )}
 
-            <SampleTooltip active={blocked} label={isSample ? undefined : "Hosts can't message other hosts"}>
+            <SampleTooltip active={blocked} label={isSample ? undefined : t('hostModal.hostCantMessage')}>
               <button
                 onClick={blocked ? undefined : onMessage}
                 disabled={blocked}
@@ -1057,7 +1107,7 @@ function HostProfileModal({ host, listing, onClose, onMessage, isSample, hostVie
                 onMouseEnter={(e) => { if (!blocked) e.currentTarget.style.opacity = '0.88'; }}
                 onMouseLeave={(e) => { e.currentTarget.style.opacity = blocked ? '0.5' : '1'; }}
               >
-                Message {host.name.split(' ')[0]} <ArrowRight />
+                {t('hostModal.message', { name: host.name.split(' ')[0] })} <ArrowRight />
               </button>
             </SampleTooltip>
           </div>
@@ -1069,6 +1119,7 @@ function HostProfileModal({ host, listing, onClose, onMessage, isSample, hostVie
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function ListingDetail({ previewListing = null, preview = false }) {
+  const { t } = useTranslation('listingDetail');
   const { id: routeId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
@@ -1083,8 +1134,8 @@ export default function ListingDetail({ previewListing = null, preview = false }
   const sampleListing = previewListing ? null : SAMPLE_LISTINGS.find((l) => l.id === id);
   // Only query Convex if this is a live route that didn't match a sample listing
   const convexListing = useQuery(api.listings.getById, (sampleListing || isPreview) ? 'skip' : { id });
-  const convexNormalized = convexListing ? normalizeConvexListingDetail(convexListing) : undefined;
-  const previewNormalized = previewListing ? normalizeConvexListingDetail(previewListing) : undefined;
+  const convexNormalized = convexListing ? normalizeConvexListingDetail(convexListing, t) : undefined;
+  const previewNormalized = previewListing ? normalizeConvexListingDetail(previewListing, t) : undefined;
 
   // Cache Convex listing details per id (5 min TTL) to avoid re-fetch on back-navigation
   const listingCacheKey = `listing_detail_${id}`;
@@ -1171,7 +1222,7 @@ export default function ListingDetail({ previewListing = null, preview = false }
   const handleShare = useCallback(async () => {
     if (navigator.share) {
       try {
-        await navigator.share({ title: listing.title, text: `Check out this collab listing: ${listing.title} in ${listing.location}`, url: window.location.href });
+        await navigator.share({ title: listing.title, text: t('share.text', { title: listing.title, location: listing.location }), url: window.location.href });
         return;
       } catch {}
     }
@@ -1182,14 +1233,14 @@ export default function ListingDetail({ previewListing = null, preview = false }
     if (!listing) return;
     moveToCollection(listing.id, collectionId);
     const col = collections.find((c) => c.id === collectionId);
-    showToast(`Saved to "${col?.name || 'collection'}"`);
+    showToast(t('toast.savedTo', { name: col?.name || t('toast.collection') }));
     setShowSaveModal(false);
   }, [listing, moveToCollection, collections, showToast]);
 
   const handleRemoveFromCollection = useCallback((collectionId) => {
     if (!listing) return;
     toggleSave(listing.id);
-    showToast('Removed from collection');
+    showToast(t('toast.removedFromCollection'));
     setShowSaveModal(false);
   }, [listing, toggleSave, showToast]);
 
@@ -1197,7 +1248,7 @@ export default function ListingDetail({ previewListing = null, preview = false }
     if (!listing) return;
     const newCol = await createCollection(name);
     moveToCollection(listing.id, newCol.id);
-    showToast(`Saved to "${name}"`);
+    showToast(t('toast.savedTo', { name }));
     setShowSaveModal(false);
   }, [listing, createCollection, moveToCollection, showToast]);
 
@@ -1228,11 +1279,11 @@ export default function ListingDetail({ previewListing = null, preview = false }
   if (!listing) {
     return (
       <div style={{ textAlign: 'center', padding: '4rem 2rem' }}>
-        <p style={{ color: 'var(--sage)', marginBottom: '1rem' }}>Listing not found.</p>
+        <p style={{ color: 'var(--sage)', marginBottom: '1rem' }}>{t('notFound')}</p>
         <button onClick={() => navigate('/explore')} style={{
           padding: '0.75rem 1.5rem', background: 'var(--ink)', color: 'var(--bone)',
           borderRadius: '999px', fontFamily: 'var(--font-body)', fontWeight: 600, cursor: 'pointer', border: 'none',
-        }}>Back to Explore</button>
+        }}>{t('backToExplore')}</button>
       </div>
     );
   }
@@ -1286,7 +1337,7 @@ export default function ListingDetail({ previewListing = null, preview = false }
           onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.9)'; }}
           onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.65)'; }}
         >
-          ← Back
+          {t('back')}
         </button>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
           {/* Share */}
@@ -1303,7 +1354,7 @@ export default function ListingDetail({ previewListing = null, preview = false }
               <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
               <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
             </svg>
-            Share
+            {t('shareBtn')}
           </button>
 
           {/* Save */}
@@ -1326,7 +1377,7 @@ export default function ListingDetail({ previewListing = null, preview = false }
                 <svg viewBox="0 0 24 24" fill={saved ? '#c0392b' : 'none'} stroke={saved ? '#c0392b' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 13, height: 13 }}>
                   <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
                 </svg>
-                {saved ? 'Saved' : 'Save'}
+                {saved ? t('saved') : t('save')}
               </button>
             );
           })()}
@@ -1388,7 +1439,7 @@ export default function ListingDetail({ previewListing = null, preview = false }
               <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
               <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
             </svg>
-            Show all photos
+            {t('showAllPhotos')}
           </button>
         </div>
       </div>
@@ -1419,7 +1470,7 @@ export default function ListingDetail({ previewListing = null, preview = false }
                 background: 'none', marginBottom: '-1px',
               }}
             >
-              {s}
+              {t(`sections.${s}`)}
             </button>
           ))}
         </div>
@@ -1449,8 +1500,8 @@ export default function ListingDetail({ previewListing = null, preview = false }
               {[
                 { label: tierLabel(listing.creator_tier), bg: 'rgba(25,37,36,0.07)', color: 'var(--slate)' },
                 { label: listing.compensation, bg: listing.compensation_type === 'paid' ? 'rgba(209,235,219,0.8)' : 'rgba(25,37,36,0.07)', color: listing.compensation_type === 'paid' ? '#2d6a4f' : 'var(--slate)' },
-                { label: `${listing.deliverable_load} Load`, bg: loadStyle.bg, color: loadStyle.text },
-                { label: `Due in ${listing.due_days} days`, bg: 'rgba(255,220,210,0.7)', color: '#8b3a00' },
+                { label: t('tag.load', { load: listing.deliverable_load }), bg: loadStyle.bg, color: loadStyle.text },
+                { label: t('tag.dueIn', { days: listing.due_days }), bg: 'rgba(255,220,210,0.7)', color: '#8b3a00' },
               ].map(({ label, bg, color }) => (
                 <span key={label} style={{ padding: '0.3rem 0.75rem', borderRadius: '999px', background: bg, fontSize: '0.78rem', fontWeight: 600, color, fontFamily: 'var(--font-body)' }}>
                   {label}
@@ -1478,7 +1529,7 @@ export default function ListingDetail({ previewListing = null, preview = false }
               </button>
               <div>
                 <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1rem', color: 'var(--ink)', lineHeight: 1.2 }}>
-                  Listed by {SAMPLE_HOST.name}
+                  {t('listedBy', { name: SAMPLE_HOST.name })}
                 </p>
                 <p style={{ fontSize: '0.82rem', color: 'var(--sage)' }}>{SAMPLE_HOST.role}</p>
               </div>
@@ -1495,20 +1546,20 @@ export default function ListingDetail({ previewListing = null, preview = false }
               {[
                 {
                   icon: <TierIcon tier={listing.creator_tier} size={20} />,
-                  label: 'Creator Tier',
+                  label: t('stats.creatorTier'),
                   value: tierLabel(listing.creator_tier),
                 },
                 {
                   icon: <CompIcon type={listing.compensation_type} size={20} />,
-                  label: 'Compensation',
-                  value: listing.compensation_type === 'paid' ? `$${listing.cash_amount} Cash`
-                       : listing.compensation_type === 'hybrid' ? `$${listing.cash_amount} + Stay`
-                       : 'Complimentary Stay',
+                  label: t('stats.compensation'),
+                  value: listing.compensation_type === 'paid' ? t('stats.cashComp', { amount: listing.cash_amount })
+                       : listing.compensation_type === 'hybrid' ? t('stats.hybridComp', { amount: listing.cash_amount })
+                       : t('stats.compStay'),
                 },
                 {
                   icon: <Package size={20} strokeWidth={1.75} color="var(--slate)" />,
-                  label: 'Deliverables',
-                  value: `${listing.deliverable_load} load`,
+                  label: t('stats.deliverables'),
+                  value: t('stats.load', { load: listing.deliverable_load }),
                 },
               ].map(({ icon, label, value }) => (
                 <div key={label} style={{ textAlign: 'center' }}>
@@ -1523,7 +1574,7 @@ export default function ListingDetail({ previewListing = null, preview = false }
 
             {/* About */}
             <div style={{ marginBottom: '2rem' }}>
-              <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.2rem', color: 'var(--ink)', marginBottom: '0.875rem' }}>About this stay</h2>
+              <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.2rem', color: 'var(--ink)', marginBottom: '0.875rem' }}>{t('aboutThisStay')}</h2>
               {listing.about.split('\n\n').map((para, i) => (
                 <p key={i} style={{ fontSize: '0.95rem', color: 'var(--slate)', lineHeight: 1.75, marginBottom: '1rem' }}>{para}</p>
               ))}
@@ -1533,7 +1584,7 @@ export default function ListingDetail({ previewListing = null, preview = false }
 
             {/* Amenities */}
             <div style={{ marginBottom: '2rem' }}>
-              <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.2rem', color: 'var(--ink)', marginBottom: '1rem' }}>What this place offers</h2>
+              <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.2rem', color: 'var(--ink)', marginBottom: '1rem' }}>{t('whatThisPlaceOffers')}</h2>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.875rem' }}>
                 {listing.amenities.map(({ icon, label }) => (
                   <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
@@ -1550,13 +1601,13 @@ export default function ListingDetail({ previewListing = null, preview = false }
 
             {/* THE OFFER */}
             <div ref={offerRef} style={{ marginBottom: '2rem', scrollMarginTop: '80px' }}>
-              <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.2rem', color: 'var(--ink)', marginBottom: '1.25rem' }}>The Offer</h2>
+              <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.2rem', color: 'var(--ink)', marginBottom: '1.25rem' }}>{t('offer.title')}</h2>
               <div style={{
                 background: 'rgba(255,255,255,0.6)', backdropFilter: 'blur(16px)',
                 border: '1px solid rgba(255,255,255,0.65)', borderRadius: '1.25rem', padding: '1.5rem',
                 boxShadow: '0 4px 16px rgba(25,37,36,0.05)',
               }}>
-                <p style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--sage)', marginBottom: '0.875rem' }}>What you get</p>
+                <p style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--sage)', marginBottom: '0.875rem' }}>{t('offer.whatYouGet')}</p>
                 <ul style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginBottom: '1.5rem' }}>
                   {listing.what_you_get.map((item) => (
                     <li key={item} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.625rem' }}>
@@ -1568,7 +1619,7 @@ export default function ListingDetail({ previewListing = null, preview = false }
                   ))}
                 </ul>
                 <div style={{ borderTop: '1px solid rgba(25,37,36,0.08)', paddingTop: '1.25rem' }}>
-                  <p style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--sage)', marginBottom: '0.75rem' }}>What you deliver</p>
+                  <p style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--sage)', marginBottom: '0.75rem' }}>{t('offer.whatYouDeliver')}</p>
                   {listing.deliverables_list?.length > 0 ? (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '0.5rem' }}>
                       {listing.deliverables_list.map((d, i) => (
@@ -1598,9 +1649,9 @@ export default function ListingDetail({ previewListing = null, preview = false }
 
             {/* REQUIREMENTS */}
             <div ref={reqRef} style={{ marginBottom: '2rem', scrollMarginTop: '80px' }}>
-              <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.2rem', color: 'var(--ink)', marginBottom: '0.4rem' }}>Requirements</h2>
+              <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.2rem', color: 'var(--ink)', marginBottom: '0.4rem' }}>{t('requirements.title')}</h2>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
-                <span style={{ fontSize: '0.85rem', color: 'var(--sage)' }}>Creator tier required:</span>
+                <span style={{ fontSize: '0.85rem', color: 'var(--sage)' }}>{t('requirements.tierRequired')}</span>
                 <span style={{
                   display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
                   padding: '3px 10px 3px 7px', borderRadius: 9999,
@@ -1624,7 +1675,7 @@ export default function ListingDetail({ previewListing = null, preview = false }
 
             {/* LOCATION */}
             <div ref={locationRef} style={{ marginBottom: '2rem', scrollMarginTop: '80px' }}>
-              <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.2rem', color: 'var(--ink)', marginBottom: '0.4rem' }}>Location</h2>
+              <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.2rem', color: 'var(--ink)', marginBottom: '0.4rem' }}>{t('location.title')}</h2>
               <p style={{ fontSize: '0.85rem', color: 'var(--sage)', marginBottom: '1.25rem' }}>{listing.location_full}</p>
               <div style={{ position: 'relative', borderRadius: '1.25rem', overflow: 'hidden', height: 320, border: '1px solid rgba(25,37,36,0.08)' }}>
                 <ListingLocationMap lat={listing.lat} lng={listing.lng} />
@@ -1635,7 +1686,7 @@ export default function ListingDetail({ previewListing = null, preview = false }
 
             {/* MEET YOUR HOST */}
             <div style={{ marginBottom: '2rem' }}>
-              <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.2rem', color: 'var(--ink)', marginBottom: '1.25rem' }}>Meet your host</h2>
+              <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.2rem', color: 'var(--ink)', marginBottom: '1.25rem' }}>{t('meetYourHost')}</h2>
               <div style={{
                 background: 'rgba(255,255,255,0.6)', backdropFilter: 'blur(16px)',
                 border: '1px solid rgba(255,255,255,0.65)', borderRadius: '1.25rem', padding: '1.75rem',
@@ -1659,8 +1710,8 @@ export default function ListingDetail({ previewListing = null, preview = false }
                     </div>
                   </button>
                   <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1rem', color: 'var(--ink)', marginBottom: '0.15rem' }}>{SAMPLE_HOST.name}</p>
-                  <p style={{ fontSize: '0.75rem', color: 'var(--sage)', marginBottom: '0.875rem' }}>Collabnb Host</p>
-                  {[{ val: `${SAMPLE_HOST.years_hosting}`, label: 'Years hosting' }].map(({ val, label }) => (
+                  <p style={{ fontSize: '0.75rem', color: 'var(--sage)', marginBottom: '0.875rem' }}>{t('collabnbHost')}</p>
+                  {[{ val: `${SAMPLE_HOST.years_hosting}`, label: t('yearsHosting') }].map(({ val, label }) => (
                     <div key={label} style={{ borderTop: '1px solid rgba(25,37,36,0.07)', paddingTop: '0.5rem', marginTop: '0.5rem' }}>
                       <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.05rem', color: 'var(--ink)' }}>{val}</p>
                       <p style={{ fontSize: '0.7rem', color: 'var(--sage)' }}>{label}</p>
@@ -1674,9 +1725,9 @@ export default function ListingDetail({ previewListing = null, preview = false }
                     {SAMPLE_HOST.name}
                   </p>
                   <p style={{ fontSize: '0.9rem', color: 'var(--slate)', lineHeight: 1.7, marginBottom: '1.25rem' }}>{SAMPLE_HOST.bio}</p>
-                  <p style={{ fontSize: '0.85rem', color: 'var(--slate)', marginBottom: '0.35rem' }}><strong>Response rate:</strong> {SAMPLE_HOST.response_rate}%</p>
-                  <p style={{ fontSize: '0.85rem', color: 'var(--slate)', marginBottom: '1.25rem' }}><strong>Responds</strong> {SAMPLE_HOST.response_time}</p>
-                  <SampleTooltip active={blockActions} label={isSampleListing ? undefined : "Hosts can't message other hosts"}>
+                  <p style={{ fontSize: '0.85rem', color: 'var(--slate)', marginBottom: '0.35rem' }}><strong>{t('responseRate')}</strong> {SAMPLE_HOST.response_rate}%</p>
+                  <p style={{ fontSize: '0.85rem', color: 'var(--slate)', marginBottom: '1.25rem' }}><strong>{t('hostModal.responds')}</strong> {SAMPLE_HOST.response_time}</p>
+                  <SampleTooltip active={blockActions} label={isSampleListing ? undefined : t('hostModal.hostCantMessage')}>
                     <button
                       onClick={blockActions ? undefined : handleMessageHost}
                       disabled={blockActions}
@@ -1691,7 +1742,7 @@ export default function ListingDetail({ previewListing = null, preview = false }
                       onMouseEnter={(e) => { if (!blockActions) e.currentTarget.style.background = 'rgba(25,37,36,0.07)'; }}
                       onMouseLeave={(e) => { if (!blockActions) e.currentTarget.style.background = 'var(--bone)'; }}
                     >
-                      Message host
+                      {t('messageHost')}
                     </button>
                   </SampleTooltip>
                 </div>
@@ -1718,23 +1769,23 @@ export default function ListingDetail({ previewListing = null, preview = false }
                   )}
                   <p style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.5rem', color: 'var(--ink)', margin: 0 }}>
                     {listing.compensation_type === 'paid' ? formatCash(listing.cash_amount, listing.currency)
-                   : listing.compensation_type === 'hybrid' ? `${formatCash(listing.cash_amount, listing.currency)} + Stay`
+                   : listing.compensation_type === 'hybrid' ? t('plusStay', { amount: formatCash(listing.cash_amount, listing.currency) })
                    : listing.compensation || '—'}
                   </p>
                 </div>
                 <p style={{ fontSize: '0.82rem', color: 'var(--sage)', marginBottom: '1.25rem' }}>
-                  {listing.compensation_type === 'paid' ? `· ${listing.deliverable_count} deliverables`
-                 : listing.compensation_type === 'hybrid' ? `stay included · ${listing.deliverable_count} deliverables`
-                 : `${listing.deliverable_count} deliverables`}
+                  {listing.compensation_type === 'paid' ? t('sidebar.paidDeliverables', { count: listing.deliverable_count })
+                 : listing.compensation_type === 'hybrid' ? t('sidebar.stayIncludedDeliverables', { count: listing.deliverable_count })
+                 : t('sidebar.deliverablesCount', { count: listing.deliverable_count })}
                 </p>
 
                 {/* Details grid */}
                 <div style={{ border: '1.5px solid rgba(25,37,36,0.1)', borderRadius: '1rem', overflow: 'hidden', marginBottom: '1rem' }}>
                   {[
-                    { label: 'Availability', value: listing.dates_available },
-                    { label: 'Creator tier', value: tierLabel(listing.creator_tier) },
-                    { label: 'Deliverables', value: listing.deliverables },
-                    { label: 'Due in',        value: `${listing.due_days} days of checkout` },
+                    { label: t('sidebar.availability'), value: listing.dates_available },
+                    { label: t('sidebar.creatorTier'), value: tierLabel(listing.creator_tier) },
+                    { label: t('sidebar.deliverables'), value: listing.deliverables },
+                    { label: t('sidebar.dueIn'),        value: t('sidebar.dueInDays', { days: listing.due_days }) },
                   ].map(({ label, value }, i, arr) => (
                     <div key={label} style={{ padding: '0.875rem', borderBottom: i < arr.length - 1 ? '1px solid rgba(25,37,36,0.08)' : 'none' }}>
                       <p style={{ fontSize: '0.67rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--sage)', marginBottom: '0.15rem' }}>{label}</p>
@@ -1743,7 +1794,7 @@ export default function ListingDetail({ previewListing = null, preview = false }
                   ))}
                 </div>
 
-                <SampleTooltip active={blockActions} label={isSampleListing ? undefined : "Hosts can't apply to other listings"}>
+                <SampleTooltip active={blockActions} label={isSampleListing ? undefined : t('hostCantApply')}>
                   <button
                     onClick={(applied || blockActions) ? undefined : (!isVerified ? openModal : !isSubscribed ? openSubModal : () => setShowApplyModal(true))}
                     disabled={applied || blockActions}
@@ -1762,12 +1813,12 @@ export default function ListingDetail({ previewListing = null, preview = false }
                     onMouseEnter={(e) => { if (!applied && !blockActions) e.currentTarget.style.opacity = '0.88'; }}
                     onMouseLeave={(e) => { e.currentTarget.style.opacity = blockActions ? '0.5' : '1'; }}
                   >
-                    {applied ? '✓ Applied' : (!isVerified || !isSubscribed) ? <><LockIcon /><span>Apply Now</span></> : <><span>Apply Now</span><ArrowRight /></>}
+                    {applied ? t('applied') : (!isVerified || !isSubscribed) ? <><LockIcon /><span>{t('applyNow')}</span></> : <><span>{t('applyNow')}</span><ArrowRight /></>}
                   </button>
                 </SampleTooltip>
 
                 <p style={{ fontSize: '0.75rem', color: 'var(--sage)', textAlign: 'center' }}>
-                  {hostView ? 'Viewing as host — read-only.' : 'Collabnb is free for creators.'}
+                  {hostView ? t('hostViewNote') : t('freeNote')}
                 </p>
               </div>
             </div>
@@ -1793,11 +1844,11 @@ export default function ListingDetail({ previewListing = null, preview = false }
         }}>
           <div>
             <p style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.2rem', color: 'var(--ink)', lineHeight: 1.1 }}>
-              {listing.compensation_type === 'paid' ? formatCash(listing.cash_amount, listing.currency) : `${formatCash(listing.cash_amount, listing.currency)} + Stay`}
+              {listing.compensation_type === 'paid' ? formatCash(listing.cash_amount, listing.currency) : t('plusStay', { amount: formatCash(listing.cash_amount, listing.currency) })}
             </p>
-            <p style={{ fontSize: '0.75rem', color: 'var(--sage)' }}>{listing.deliverable_count} deliverables</p>
+            <p style={{ fontSize: '0.75rem', color: 'var(--sage)' }}>{t('sidebar.deliverablesCount', { count: listing.deliverable_count })}</p>
           </div>
-          <SampleTooltip active={blockActions} label={isSampleListing ? undefined : "Hosts can't apply to other listings"}>
+          <SampleTooltip active={blockActions} label={isSampleListing ? undefined : t('hostCantApply')}>
             <button
               onClick={(applied || blockActions) ? undefined : (!isVerified ? openModal : !isSubscribed ? openSubModal : () => setShowApplyModal(true))}
               disabled={applied || blockActions}
@@ -1862,7 +1913,7 @@ export default function ListingDetail({ previewListing = null, preview = false }
         <ShareModal
           listing={listing}
           onClose={() => setShowShareModal(false)}
-          onCopied={() => showToast('Link copied!')}
+          onCopied={() => showToast(t('toast.linkCopied'))}
         />
       )}
 

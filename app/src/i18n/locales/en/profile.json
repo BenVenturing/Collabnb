@@ -224,13 +224,22 @@
   },
   "ai": {
     "title": "AI Assistant",
-    "body": "\"Draft with AI\" in Inbox already works for everyone, powered by Collabnb. Connect your own OpenAI or Anthropic API key here only if you want your drafts to use your own model/budget instead. Drafts always require you to review and hit Send — nothing sends automatically.",
+    "body": "\"Draft with AI\" in Inbox already works for everyone, powered by Collabnb. Connect your own OpenAI, Anthropic, or OpenRouter API key here only if you want your drafts to use your own model/budget instead. Drafts always require you to review and hit Send — nothing sends automatically.",
     "connected": "Connected — {{provider}}",
+    "connectedSecurityNote": "Your key stays encrypted — see how below.",
     "disconnect": "Disconnect",
     "provider": "Provider",
     "apiKey": "API Key",
     "connect": "Connect",
-    "errorSave": "Could not save key — try again."
+    "errorSave": "Could not save key — try again.",
+    "securityToggle": "How we keep your key safe",
+    "securityIntro": "We designed this so your key is never just sitting there in plain text:",
+    "securityPoint1": "Encrypted before it's ever saved — using AES-256-GCM, the same standard banks and password managers use, not a homemade scheme.",
+    "securityPoint2": "The encryption key that unlocks it lives only in our server's private configuration — never in our codebase, never in the database next to your key, never sent to any browser.",
+    "securityPoint3": "Decrypted only for a split second, on our server, right before it's used to ask your provider (OpenAI, Anthropic, or OpenRouter) to draft a reply — then it's gone. Never sent back to your device, never shown on screen again, never written to a log.",
+    "securityPoint4": "Automatically rate-limited, so even if something went wrong, it couldn't be hammered into runaway usage.",
+    "securityPoint5": "Deleted immediately and permanently the moment you hit Disconnect.",
+    "securityCaveat": "One honest caveat: this protects your key from ever appearing in the app, in transit, or in our logs — but it isn't end-to-end encryption, so it doesn't protect against a compromise of the server infrastructure itself. If you'd rather not connect a key at all, you don't have to — the default \"Draft with AI\" already works for everyone without one."
   },
   "exitConfirm": {
     "title": "Unsaved Changes",

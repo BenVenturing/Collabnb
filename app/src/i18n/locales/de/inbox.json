@@ -1,0 +1,58 @@
+{
+  "filters": {
+    "All": "Alle",
+    "Applications": "Bewerbungen",
+    "Collabs": "Collabs",
+    "Pitches": "Angebote"
+  },
+  "tagLabels": {
+    "Collab": "Collab",
+    "Application": "Bewerbung",
+    "Pitch": "Angebot",
+    "Contract": "Vertrag",
+    "Archived": "Archiviert",
+    "Collabnb": "Collabnb"
+  },
+  "threadRow": {
+    "deleteTitle": "Unterhaltung löschen",
+    "sample": "Beispiel"
+  },
+  "threadMenu": {
+    "archive": "Archivieren",
+    "changeStage": "Phase ändern"
+  },
+  "conversation": {
+    "viewProfile": "Profil ansehen",
+    "viewCollaboration": "Kollaboration ansehen",
+    "moreOptions": "Weitere Optionen",
+    "noMessages": "Noch keine Nachrichten. Sag Hallo!",
+    "aiDraftTitle": "Antwort mit KI entwerfen (vor dem Senden prüfen)",
+    "aiDraftError": "Antwort konnte nicht entworfen werden — versuche es erneut.",
+    "sendError": "Nachricht konnte nicht gesendet werden — versuche es erneut.",
+    "messagePlaceholder": "Nachricht schreiben…",
+    "attachTitle": "Datei anhängen (max. 100 KB)",
+    "contractBuilderTitle": "Vertragsersteller öffnen",
+    "sendHint": "Eingabe zum Senden · Umschalt+Eingabe für neue Zeile",
+    "filesAttached_one": "{{count}} Datei angehängt (wird nach 30 Min. automatisch entfernt)",
+    "filesAttached_other": "{{count}} Dateien angehängt (werden nach 30 Min. automatisch entfernt)"
+  },
+  "emptyState": {
+    "heading": "Wähle eine Unterhaltung",
+    "body": "Wähle links einen Thread aus, um Nachrichten zu lesen und zu beantworten."
+  },
+  "main": {
+    "heading": "Nachrichten",
+    "searchPlaceholder": "Suchen oder neuen Chat starten…",
+    "clearTitle": "Löschen",
+    "newMessageTitle": "Neue Nachricht",
+    "conversationsLabel": "Unterhaltungen",
+    "newConversationLabel": "Neue Unterhaltung",
+    "noListingsMatch": "Keine Angebote gefunden. Versuche es mit einem Gastgebernamen, Ort oder Angebotstitel.",
+    "savedStartChat": "Gespeichert — Chat starten",
+    "suggestedForYou": "Für dich vorgeschlagen",
+    "saveToMessage": "Speichere ein Angebot, um dem Gastgeber sofort zu schreiben, oder tippe, um zu suchen.",
+    "noConversationsYet": "Deine Unterhaltungen erscheinen hier, sobald du dich für ein Angebot beworben hast und mit einem Gastgeber chattest.",
+    "yourConversations": "Deine Unterhaltungen",
+    "noCollabFound": "Keine Kollaboration für diesen Thread gefunden"
+  }
+}

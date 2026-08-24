@@ -1,0 +1,58 @@
+{
+  "filters": {
+    "All": "Todo",
+    "Applications": "Solicitudes",
+    "Collabs": "Colabs",
+    "Pitches": "Propuestas"
+  },
+  "tagLabels": {
+    "Collab": "Colab",
+    "Application": "Solicitud",
+    "Pitch": "Propuesta",
+    "Contract": "Contrato",
+    "Archived": "Archivado",
+    "Collabnb": "Collabnb"
+  },
+  "threadRow": {
+    "deleteTitle": "Eliminar conversación",
+    "sample": "Muestra"
+  },
+  "threadMenu": {
+    "archive": "Archivar",
+    "changeStage": "Cambiar etapa"
+  },
+  "conversation": {
+    "viewProfile": "Ver perfil",
+    "viewCollaboration": "Ver colaboración",
+    "moreOptions": "Más opciones",
+    "noMessages": "Aún no hay mensajes. ¡Saluda!",
+    "aiDraftTitle": "Redactar una respuesta con IA (revisa antes de enviar)",
+    "aiDraftError": "No se pudo redactar una respuesta — inténtalo de nuevo.",
+    "sendError": "No se pudo enviar el mensaje — inténtalo de nuevo.",
+    "messagePlaceholder": "Escribe un mensaje…",
+    "attachTitle": "Adjuntar un archivo (máx. 100KB)",
+    "contractBuilderTitle": "Abrir creador de contratos",
+    "sendHint": "Enter para enviar · Shift+Enter para nueva línea",
+    "filesAttached_one": "{{count}} archivo adjunto (se elimina automáticamente tras 30 min)",
+    "filesAttached_other": "{{count}} archivos adjuntos (se eliminan automáticamente tras 30 min)"
+  },
+  "emptyState": {
+    "heading": "Selecciona una conversación",
+    "body": "Elige un hilo a la izquierda para leer y responder mensajes."
+  },
+  "main": {
+    "heading": "Mensajes",
+    "searchPlaceholder": "Buscar o iniciar un nuevo chat…",
+    "clearTitle": "Borrar",
+    "newMessageTitle": "Nuevo mensaje",
+    "conversationsLabel": "Conversaciones",
+    "newConversationLabel": "Nueva conversación",
+    "noListingsMatch": "Ningún anuncio coincide. Prueba con el nombre de un anfitrión, lugar o título de anuncio.",
+    "savedStartChat": "Guardado — iniciar un chat",
+    "suggestedForYou": "Sugerido para ti",
+    "saveToMessage": "Guarda un anuncio para enviar mensajes a su anfitrión al instante, o escribe para buscar.",
+    "noConversationsYet": "Tus conversaciones aparecerán aquí una vez que te postules a un anuncio y empieces a chatear con un anfitrión.",
+    "yourConversations": "Tus conversaciones",
+    "noCollabFound": "No se encontró ninguna colaboración para este hilo"
+  }
+}

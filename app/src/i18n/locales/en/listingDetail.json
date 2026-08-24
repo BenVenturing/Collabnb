@@ -1,0 +1,148 @@
+{
+  "notFound": "Listing not found.",
+  "backToExplore": "Back to Explore",
+  "back": "← Back",
+  "shareBtn": "Share",
+  "save": "Save",
+  "saved": "Saved",
+  "showAllPhotos": "Show all photos",
+  "listedBy": "Listed by {{name}}",
+  "aboutThisStay": "About this stay",
+  "whatThisPlaceOffers": "What this place offers",
+  "meetYourHost": "Meet your host",
+  "collabnbHost": "Collabnb Host",
+  "yearsHosting": "Years hosting",
+  "responseRate": "Response rate:",
+  "messageHost": "Message host",
+  "plusStay": "{{amount}} + Stay",
+  "applied": "✓ Applied",
+  "applyNow": "Apply Now",
+  "hostViewNote": "Viewing as host — read-only.",
+  "freeNote": "Collabnb is free for creators.",
+  "hostCantApply": "Hosts can't apply to other listings",
+  "sampleTooltip": "Sample listing · interactions disabled",
+  "sections": {
+    "Photos": "Photos",
+    "The Offer": "The Offer",
+    "Requirements": "Requirements",
+    "Location": "Location"
+  },
+  "tag": {
+    "load": "{{load}} Load",
+    "dueIn": "Due in {{days}} days"
+  },
+  "stats": {
+    "creatorTier": "Creator Tier",
+    "compensation": "Compensation",
+    "deliverables": "Deliverables",
+    "cashComp": "${{amount}} Cash",
+    "hybridComp": "${{amount}} + Stay",
+    "compStay": "Complimentary Stay",
+    "load": "{{load}} load"
+  },
+  "offer": {
+    "title": "The Offer",
+    "whatYouGet": "What you get",
+    "whatYouDeliver": "What you deliver"
+  },
+  "requirements": {
+    "title": "Requirements",
+    "tierRequired": "Creator tier required:"
+  },
+  "location": {
+    "title": "Location"
+  },
+  "sidebar": {
+    "availability": "Availability",
+    "creatorTier": "Creator tier",
+    "deliverables": "Deliverables",
+    "dueIn": "Due in",
+    "dueInDays": "{{days}} days of checkout",
+    "paidDeliverables": "· {{count}} deliverables",
+    "stayIncludedDeliverables": "stay included · {{count}} deliverables",
+    "deliverablesCount": "{{count}} deliverables"
+  },
+  "reviews": {
+    "title": "What creators are saying",
+    "empty": "No reviews yet for this stay"
+  },
+  "gallery": {
+    "close": "← Close",
+    "allPhotos": "{{title}} — All Photos",
+    "photoAlt": "Photo {{n}}"
+  },
+  "share": {
+    "title": "Share listing",
+    "text": "Check out this collab listing: {{title}} in {{location}}",
+    "copyLink": "Copy link",
+    "onX": "Share on X",
+    "onWhatsApp": "Share on WhatsApp"
+  },
+  "apply": {
+    "errorTitle": "Application didn't go through",
+    "previewTitle": "This is a preview",
+    "previewBody": "Applications can't be sent until this listing is actually published — creators won't be able to see or apply to it until then either.",
+    "close": "Close",
+    "pitchLimitTitle": "Pitch Limit Reached",
+    "pitchLimitBody": "You've used all 10 pitches this month. Pitches reset on the 1st of next month. You can still submit standard applications anytime.",
+    "pitchLimitHint": "To send a standard application, restore your pitch message to the default template.",
+    "backToApplication": "Back to Application",
+    "sentTitle": "Application Sent!",
+    "sentPitch": "Your pitch for <strong>{{title}}</strong> has been sent.",
+    "sentTrack": "Check <strong>Collabs</strong> to track your application and <strong>Inbox</strong> for the host's reply.",
+    "createContract": "Create Contract",
+    "done": "Done",
+    "applyTo": "Apply to {{title}}",
+    "yourPitch": "Your Pitch",
+    "autoFilled": "Auto-filled from your profile — personalize as you like.",
+    "charCount": "{{count}} characters",
+    "pitch": "Pitch",
+    "application": "Application",
+    "sendPitch": "Send Pitch",
+    "sendApplication": "Send Application",
+    "sending": "Sending…"
+  },
+  "save": {
+    "title": "Save to collection",
+    "savedCount": "{{count}} saved",
+    "collectionNamePlaceholder": "Collection name",
+    "create": "Create",
+    "cancel": "Cancel",
+    "newCollection": "New collection"
+  },
+  "hostModal": {
+    "hoverHint": "Hover to see the listing",
+    "hostingIn": "Hosting in {{location}}",
+    "rating": "Rating",
+    "yearsHosting": "Yrs Hosting",
+    "response": "Response",
+    "responds": "Responds",
+    "hostCantMessage": "Hosts can't message other hosts",
+    "message": "Message {{name}}"
+  },
+  "redacted": {
+    "locationHidden": "Location hidden",
+    "deliverablesCount": "{{count}} deliverables",
+    "back": "← Back",
+    "photosHidden": "Photos hidden — subscribe to view",
+    "compensation": "Compensation",
+    "deliverables": "Deliverables",
+    "dates": "Dates",
+    "subscribeCta": "Subscribe to unlock full details →"
+  },
+  "detail": {
+    "cashComp": "${{amount}} cash",
+    "hybridComp": "${{amount}} + stay",
+    "seeListing": "See listing",
+    "moreCount": " +{{count}} more",
+    "deliverablesCount": "{{count}} deliverables",
+    "totalDeliverables": "{{count}} total deliverables",
+    "collab": "Collab"
+  },
+  "toast": {
+    "savedTo": "Saved to \"{{name}}\"",
+    "collection": "collection",
+    "removedFromCollection": "Removed from collection",
+    "linkCopied": "Link copied!"
+  }
+}

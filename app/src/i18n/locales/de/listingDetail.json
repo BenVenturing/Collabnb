@@ -1,0 +1,148 @@
+{
+  "notFound": "Angebot nicht gefunden.",
+  "backToExplore": "Zurück zu Entdecken",
+  "back": "← Zurück",
+  "shareBtn": "Teilen",
+  "save": "Speichern",
+  "saved": "Gespeichert",
+  "showAllPhotos": "Alle Fotos anzeigen",
+  "listedBy": "Eingestellt von {{name}}",
+  "aboutThisStay": "Über diesen Aufenthalt",
+  "whatThisPlaceOffers": "Was dieser Ort bietet",
+  "meetYourHost": "Lerne deinen Gastgeber kennen",
+  "collabnbHost": "Collabnb-Gastgeber",
+  "yearsHosting": "Jahre als Gastgeber",
+  "responseRate": "Antwortrate:",
+  "messageHost": "Nachricht an Gastgeber",
+  "plusStay": "{{amount}} + Aufenthalt",
+  "applied": "✓ Beworben",
+  "applyNow": "Jetzt bewerben",
+  "hostViewNote": "Ansicht als Gastgeber — nur lesbar.",
+  "freeNote": "Collabnb ist für Creator kostenlos.",
+  "hostCantApply": "Gastgeber können sich nicht auf andere Angebote bewerben",
+  "sampleTooltip": "Beispielangebot · Interaktionen deaktiviert",
+  "sections": {
+    "Photos": "Fotos",
+    "The Offer": "Das Angebot",
+    "Requirements": "Anforderungen",
+    "Location": "Standort"
+  },
+  "tag": {
+    "load": "{{load}} Umfang",
+    "dueIn": "Fällig in {{days}} Tagen"
+  },
+  "stats": {
+    "creatorTier": "Creator-Stufe",
+    "compensation": "Vergütung",
+    "deliverables": "Deliverables",
+    "cashComp": "{{amount}} $ Bargeld",
+    "hybridComp": "{{amount}} $ + Aufenthalt",
+    "compStay": "Kostenloser Aufenthalt",
+    "load": "{{load}} Umfang"
+  },
+  "offer": {
+    "title": "Das Angebot",
+    "whatYouGet": "Was du bekommst",
+    "whatYouDeliver": "Was du lieferst"
+  },
+  "requirements": {
+    "title": "Anforderungen",
+    "tierRequired": "Erforderliche Creator-Stufe:"
+  },
+  "location": {
+    "title": "Standort"
+  },
+  "sidebar": {
+    "availability": "Verfügbarkeit",
+    "creatorTier": "Creator-Stufe",
+    "deliverables": "Deliverables",
+    "dueIn": "Fällig in",
+    "dueInDays": "{{days}} Tage nach Abreise",
+    "paidDeliverables": "· {{count}} Deliverables",
+    "stayIncludedDeliverables": "Aufenthalt inklusive · {{count}} Deliverables",
+    "deliverablesCount": "{{count}} Deliverables"
+  },
+  "reviews": {
+    "title": "Was Creator sagen",
+    "empty": "Noch keine Bewertungen für diesen Aufenthalt"
+  },
+  "gallery": {
+    "close": "← Schließen",
+    "allPhotos": "{{title}} — Alle Fotos",
+    "photoAlt": "Foto {{n}}"
+  },
+  "share": {
+    "title": "Angebot teilen",
+    "text": "Schau dir dieses Kollaborationsangebot an: {{title}} in {{location}}",
+    "copyLink": "Link kopieren",
+    "onX": "Auf X teilen",
+    "onWhatsApp": "Auf WhatsApp teilen"
+  },
+  "apply": {
+    "errorTitle": "Bewerbung konnte nicht gesendet werden",
+    "previewTitle": "Dies ist eine Vorschau",
+    "previewBody": "Bewerbungen können erst gesendet werden, sobald dieses Angebot tatsächlich veröffentlicht ist — Creator können es bis dahin auch nicht sehen oder sich darauf bewerben.",
+    "close": "Schließen",
+    "pitchLimitTitle": "Angebotslimit erreicht",
+    "pitchLimitBody": "Du hast alle 10 Angebote in diesem Monat genutzt. Angebote werden am 1. des nächsten Monats zurückgesetzt. Du kannst weiterhin jederzeit Standardbewerbungen einreichen.",
+    "pitchLimitHint": "Um eine Standardbewerbung zu senden, setze deine Angebotsnachricht auf die Standardvorlage zurück.",
+    "backToApplication": "Zurück zur Bewerbung",
+    "sentTitle": "Bewerbung gesendet!",
+    "sentPitch": "Dein Angebot für <strong>{{title}}</strong> wurde gesendet.",
+    "sentTrack": "Sieh in <strong>Collabs</strong> nach, um deine Bewerbung zu verfolgen, und in <strong>Nachrichten</strong> nach der Antwort des Gastgebers.",
+    "createContract": "Vertrag erstellen",
+    "done": "Fertig",
+    "applyTo": "Auf {{title}} bewerben",
+    "yourPitch": "Dein Angebot",
+    "autoFilled": "Automatisch aus deinem Profil ausgefüllt — passe es nach Belieben an.",
+    "charCount": "{{count}} Zeichen",
+    "pitch": "Angebot",
+    "application": "Bewerbung",
+    "sendPitch": "Angebot senden",
+    "sendApplication": "Bewerbung senden",
+    "sending": "Wird gesendet…"
+  },
+  "save": {
+    "title": "In Sammlung speichern",
+    "savedCount": "{{count}} gespeichert",
+    "collectionNamePlaceholder": "Sammlungsname",
+    "create": "Erstellen",
+    "cancel": "Abbrechen",
+    "newCollection": "Neue Sammlung"
+  },
+  "hostModal": {
+    "hoverHint": "Hover, um das Angebot zu sehen",
+    "hostingIn": "Gastgeber in {{location}}",
+    "rating": "Bewertung",
+    "yearsHosting": "Jahre als Gastgeber",
+    "response": "Antwort",
+    "responds": "Antwortet",
+    "hostCantMessage": "Gastgeber können anderen Gastgebern keine Nachrichten senden",
+    "message": "Nachricht an {{name}}"
+  },
+  "redacted": {
+    "locationHidden": "Standort ausgeblendet",
+    "deliverablesCount": "{{count}} Deliverables",
+    "back": "← Zurück",
+    "photosHidden": "Fotos ausgeblendet — abonnieren, um sie zu sehen",
+    "compensation": "Vergütung",
+    "deliverables": "Deliverables",
+    "dates": "Termine",
+    "subscribeCta": "Abonnieren, um alle Details freizuschalten →"
+  },
+  "detail": {
+    "cashComp": "{{amount}} $ Bargeld",
+    "hybridComp": "{{amount}} $ + Aufenthalt",
+    "seeListing": "Angebot ansehen",
+    "moreCount": " +{{count}} weitere",
+    "deliverablesCount": "{{count}} Deliverables",
+    "totalDeliverables": "{{count}} Deliverables insgesamt",
+    "collab": "Collab"
+  },
+  "toast": {
+    "savedTo": "Gespeichert in „{{name}}“",
+    "collection": "Sammlung",
+    "removedFromCollection": "Aus Sammlung entfernt",
+    "linkCopied": "Link kopiert!"
+  }
+}

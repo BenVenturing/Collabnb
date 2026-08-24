@@ -1,4 +1,4 @@
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { requireOwnerOrAdmin, getAuthedProfile } from "./lib/auth";
@@ -85,7 +85,23 @@ export const sendMessage = mutation({
     let sender: any = null;
     try { sender = await ctx.db.get(args.senderId as any); } catch { sender = null; }
     if (sender && sender.is_verified !== true && sender.is_admin !== true) {
-      throw new Error("Your account is pending verification. Messaging unlocks once you're approved.");
+      throw new ConvexError("Your account is pending verification. Messaging unlocks once you're approved.");
+    }
+    // A message can only be inserted into a thread that actually resolves to
+    // a real pitch/thread relationship the sender is a party to — mirrors the
+    // read-side check in getByThread. Without this, a client-side-only thread
+    // (e.g. an optimistic "applied to listing" thread whose pitch creation
+    // was rejected server-side, such as applying to an unpublished listing)
+    // would silently accept messages that then vanish, since getByThread
+    // would never be able to show them back. Fail loudly here instead.
+    if (!sender || sender.is_admin !== true) {
+      const parties = await resolveThreadParties(ctx, args.threadKey);
+      const isParty = parties ? (parties.a === args.senderId || parties.b === args.senderId) : false;
+      if (!isParty) {
+        throw new ConvexError(
+          "This conversation isn't linked to a real application yet — try reapplying from the listing page."
+        );
+      }
     }
     // Blocking is symmetric (Settings > Privacy > Blocked people) — either
     // party having blocked the other is enough to stop new messages both ways.
@@ -95,7 +111,7 @@ export const sendMessage = mutation({
       const blockedBySender = (sender?.blocked_user_ids ?? []).includes(args.recipientId);
       const blockedByRecipient = (recipient?.blocked_user_ids ?? []).includes(args.senderId);
       if (blockedBySender || blockedByRecipient) {
-        throw new Error("You can't message this user.");
+        throw new ConvexError("You can't message this user.");
       }
     }
     const id = await ctx.db.insert("thread_messages", {

@@ -1,0 +1,58 @@
+{
+  "filters": {
+    "All": "All",
+    "Applications": "Applications",
+    "Collabs": "Collabs",
+    "Pitches": "Pitches"
+  },
+  "tagLabels": {
+    "Collab": "Collab",
+    "Application": "Application",
+    "Pitch": "Pitch",
+    "Contract": "Contract",
+    "Archived": "Archived",
+    "Collabnb": "Collabnb"
+  },
+  "threadRow": {
+    "deleteTitle": "Delete conversation",
+    "sample": "Sample"
+  },
+  "threadMenu": {
+    "archive": "Archive",
+    "changeStage": "Change Stage"
+  },
+  "conversation": {
+    "viewProfile": "View profile",
+    "viewCollaboration": "View collaboration",
+    "moreOptions": "More options",
+    "noMessages": "No messages yet. Say hello!",
+    "aiDraftTitle": "Draft a reply with AI (review before sending)",
+    "aiDraftError": "Could not draft a reply — try again.",
+    "sendError": "Message failed to send — try again.",
+    "messagePlaceholder": "Write a message…",
+    "attachTitle": "Attach a file (max 100KB)",
+    "contractBuilderTitle": "Open Contract Builder",
+    "sendHint": "Enter to send · Shift+Enter for new line",
+    "filesAttached_one": "{{count}} file attached (auto-removed after 30 min)",
+    "filesAttached_other": "{{count}} files attached (auto-removed after 30 min)"
+  },
+  "emptyState": {
+    "heading": "Select a conversation",
+    "body": "Choose a thread on the left to read and reply to messages."
+  },
+  "main": {
+    "heading": "Messages",
+    "searchPlaceholder": "Search or start a new chat…",
+    "clearTitle": "Clear",
+    "newMessageTitle": "New message",
+    "conversationsLabel": "Conversations",
+    "newConversationLabel": "New conversation",
+    "noListingsMatch": "No listings match. Try a host name, place, or listing title.",
+    "savedStartChat": "Saved — start a chat",
+    "suggestedForYou": "Suggested for you",
+    "saveToMessage": "Save a listing to message its host instantly, or type to search.",
+    "noConversationsYet": "Your conversations will appear here once you apply to a listing and start chatting with a host.",
+    "yourConversations": "Your conversations",
+    "noCollabFound": "No collaboration found for this thread"
+  }
+}

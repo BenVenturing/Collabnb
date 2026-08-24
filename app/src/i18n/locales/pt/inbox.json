@@ -1,0 +1,58 @@
+{
+  "filters": {
+    "All": "Tudo",
+    "Applications": "Candidaturas",
+    "Collabs": "Colabs",
+    "Pitches": "Propostas"
+  },
+  "tagLabels": {
+    "Collab": "Colab",
+    "Application": "Candidatura",
+    "Pitch": "Proposta",
+    "Contract": "Contrato",
+    "Archived": "Arquivado",
+    "Collabnb": "Collabnb"
+  },
+  "threadRow": {
+    "deleteTitle": "Excluir conversa",
+    "sample": "Exemplo"
+  },
+  "threadMenu": {
+    "archive": "Arquivar",
+    "changeStage": "Mudar etapa"
+  },
+  "conversation": {
+    "viewProfile": "Ver perfil",
+    "viewCollaboration": "Ver colaboração",
+    "moreOptions": "Mais opções",
+    "noMessages": "Ainda não há mensagens. Diga olá!",
+    "aiDraftTitle": "Rascunhar uma resposta com IA (revise antes de enviar)",
+    "aiDraftError": "Não foi possível rascunhar uma resposta — tente novamente.",
+    "sendError": "Falha ao enviar a mensagem — tente novamente.",
+    "messagePlaceholder": "Escreva uma mensagem…",
+    "attachTitle": "Anexar um arquivo (máx. 100KB)",
+    "contractBuilderTitle": "Abrir criador de contratos",
+    "sendHint": "Enter para enviar · Shift+Enter para nova linha",
+    "filesAttached_one": "{{count}} arquivo anexado (removido automaticamente após 30 min)",
+    "filesAttached_other": "{{count}} arquivos anexados (removidos automaticamente após 30 min)"
+  },
+  "emptyState": {
+    "heading": "Selecione uma conversa",
+    "body": "Escolha uma conversa à esquerda para ler e responder mensagens."
+  },
+  "main": {
+    "heading": "Mensagens",
+    "searchPlaceholder": "Buscar ou iniciar um novo chat…",
+    "clearTitle": "Limpar",
+    "newMessageTitle": "Nova mensagem",
+    "conversationsLabel": "Conversas",
+    "newConversationLabel": "Nova conversa",
+    "noListingsMatch": "Nenhum anúncio corresponde. Tente o nome de um anfitrião, local ou título do anúncio.",
+    "savedStartChat": "Salvo — iniciar um chat",
+    "suggestedForYou": "Sugerido para você",
+    "saveToMessage": "Salve um anúncio para enviar mensagem ao anfitrião instantaneamente, ou digite para buscar.",
+    "noConversationsYet": "Suas conversas aparecerão aqui assim que você se candidatar a um anúncio e começar a conversar com um anfitrião.",
+    "yourConversations": "Suas conversas",
+    "noCollabFound": "Nenhuma colaboração encontrada para esta conversa"
+  }
+}

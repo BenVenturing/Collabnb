@@ -427,29 +427,48 @@ export function CollabProvider({ children }) {
       lastMessage: pitchMessage.slice(0, 100),
     }).catch(() => {});
 
-    // Write pitch record so host can see the application
+    // Write pitch record so host can see the application. Unlike the two
+    // syncs above, this one carries real rejection rules (listing not
+    // published, creator not verified, trial expired) — awaited and
+    // surfaced to the caller instead of fire-and-forget, so a rejected
+    // pitch doesn't leave behind a local "Application sent" thread that
+    // can never actually show messages (thread_key resolves to nothing on
+    // the server, see threadMessages.sendMessage's party check).
     if (creatorId) {
-      createPitchCvx({
-        listingId,
-        listingTitle: listing.title,
-        hostId: listing.host_id ? String(listing.host_id) : undefined,
-        creatorId,
-        creatorName: creatorProfile.full_name || creatorProfile.name || 'Creator',
-        creatorUsername: creatorProfile.username,
-        creatorAvatar: creatorProfile.avatar_url,
-        creatorTier: creatorProfile.tier,
-        creatorFollowers: creatorProfile.follower_count,
-        creatorEngagement: creatorProfile.engagement_rate,
-        creatorPlatforms: [
-          creatorProfile.instagram_handle && 'Instagram',
-          creatorProfile.tiktok_handle && 'TikTok',
-          creatorProfile.youtube_handle && 'YouTube',
-        ].filter(Boolean),
-        message: pitchMessage,
-        type: 'application',
-        threadKey,
-      }).catch(() => {});
+      try {
+        await createPitchCvx({
+          listingId,
+          listingTitle: listing.title,
+          hostId: listing.host_id ? String(listing.host_id) : undefined,
+          creatorId,
+          creatorName: creatorProfile.full_name || creatorProfile.name || 'Creator',
+          creatorUsername: creatorProfile.username,
+          creatorAvatar: creatorProfile.avatar_url,
+          creatorTier: creatorProfile.tier,
+          creatorFollowers: creatorProfile.follower_count,
+          creatorEngagement: creatorProfile.engagement_rate,
+          creatorPlatforms: [
+            creatorProfile.instagram_handle && 'Instagram',
+            creatorProfile.tiktok_handle && 'TikTok',
+            creatorProfile.youtube_handle && 'YouTube',
+          ].filter(Boolean),
+          message: pitchMessage,
+          type: 'application',
+          threadKey,
+        });
+      } catch (err) {
+        // Roll back the optimistic thread/collab — the application never
+        // actually went through, so don't leave a dead-end conversation.
+        setCollabs((prev) => {
+          const updated = prev.filter((c) => c.id !== newCollab.id);
+          saveCollabsToStorage(updated);
+          return updated;
+        });
+        setThreads((prev) => prev.filter((t) => t.thread_key !== threadKey));
+        return { ok: false, error: err?.data || err?.message || 'Could not submit your application — try again.' };
+      }
     }
+    return { ok: true };
   }, [applyCount, createCollabCvx, createThreadCvx, createPitchCvx]);
 
   const getCollabById = useCallback((id) =>

@@ -1,0 +1,148 @@
+{
+  "notFound": "Anuncio no encontrado.",
+  "backToExplore": "Volver a Explorar",
+  "back": "← Atrás",
+  "shareBtn": "Compartir",
+  "save": "Guardar",
+  "saved": "Guardado",
+  "showAllPhotos": "Mostrar todas las fotos",
+  "listedBy": "Publicado por {{name}}",
+  "aboutThisStay": "Sobre esta estancia",
+  "whatThisPlaceOffers": "Qué ofrece este lugar",
+  "meetYourHost": "Conoce a tu anfitrión",
+  "collabnbHost": "Anfitrión de Collabnb",
+  "yearsHosting": "Años como anfitrión",
+  "responseRate": "Tasa de respuesta:",
+  "messageHost": "Enviar mensaje al anfitrión",
+  "plusStay": "{{amount}} + Estancia",
+  "applied": "✓ Postulado",
+  "applyNow": "Postularme ahora",
+  "hostViewNote": "Viendo como anfitrión — solo lectura.",
+  "freeNote": "Collabnb es gratis para creadores.",
+  "hostCantApply": "Los anfitriones no pueden postularse a otros anuncios",
+  "sampleTooltip": "Anuncio de muestra · interacciones deshabilitadas",
+  "sections": {
+    "Photos": "Fotos",
+    "The Offer": "La oferta",
+    "Requirements": "Requisitos",
+    "Location": "Ubicación"
+  },
+  "tag": {
+    "load": "Carga {{load}}",
+    "dueIn": "Vence en {{days}} días"
+  },
+  "stats": {
+    "creatorTier": "Nivel de creador",
+    "compensation": "Compensación",
+    "deliverables": "Entregables",
+    "cashComp": "${{amount}} en efectivo",
+    "hybridComp": "${{amount}} + Estancia",
+    "compStay": "Estancia de cortesía",
+    "load": "Carga {{load}}"
+  },
+  "offer": {
+    "title": "La oferta",
+    "whatYouGet": "Qué recibes",
+    "whatYouDeliver": "Qué entregas"
+  },
+  "requirements": {
+    "title": "Requisitos",
+    "tierRequired": "Nivel de creador requerido:"
+  },
+  "location": {
+    "title": "Ubicación"
+  },
+  "sidebar": {
+    "availability": "Disponibilidad",
+    "creatorTier": "Nivel de creador",
+    "deliverables": "Entregables",
+    "dueIn": "Vence en",
+    "dueInDays": "{{days}} días después del checkout",
+    "paidDeliverables": "· {{count}} entregables",
+    "stayIncludedDeliverables": "estancia incluida · {{count}} entregables",
+    "deliverablesCount": "{{count}} entregables"
+  },
+  "reviews": {
+    "title": "Lo que dicen los creadores",
+    "empty": "Aún no hay reseñas para esta estancia"
+  },
+  "gallery": {
+    "close": "← Cerrar",
+    "allPhotos": "{{title}} — Todas las fotos",
+    "photoAlt": "Foto {{n}}"
+  },
+  "share": {
+    "title": "Compartir anuncio",
+    "text": "Mira este anuncio de colaboración: {{title}} en {{location}}",
+    "copyLink": "Copiar enlace",
+    "onX": "Compartir en X",
+    "onWhatsApp": "Compartir en WhatsApp"
+  },
+  "apply": {
+    "errorTitle": "La solicitud no se pudo enviar",
+    "previewTitle": "Esto es una vista previa",
+    "previewBody": "Las solicitudes no se pueden enviar hasta que este anuncio esté realmente publicado — los creadores tampoco podrán verlo ni postularse hasta entonces.",
+    "close": "Cerrar",
+    "pitchLimitTitle": "Límite de propuestas alcanzado",
+    "pitchLimitBody": "Has usado tus 10 propuestas este mes. Las propuestas se reinician el día 1 del próximo mes. Aún puedes enviar solicitudes estándar en cualquier momento.",
+    "pitchLimitHint": "Para enviar una solicitud estándar, restaura tu mensaje de propuesta a la plantilla predeterminada.",
+    "backToApplication": "Volver a la solicitud",
+    "sentTitle": "¡Solicitud enviada!",
+    "sentPitch": "Tu propuesta para <strong>{{title}}</strong> ha sido enviada.",
+    "sentTrack": "Consulta <strong>Colabs</strong> para seguir tu solicitud y <strong>Mensajes</strong> para la respuesta del anfitrión.",
+    "createContract": "Crear contrato",
+    "done": "Listo",
+    "applyTo": "Postularme a {{title}}",
+    "yourPitch": "Tu propuesta",
+    "autoFilled": "Autocompletado desde tu perfil — personalízalo como quieras.",
+    "charCount": "{{count}} caracteres",
+    "pitch": "Propuesta",
+    "application": "Solicitud",
+    "sendPitch": "Enviar propuesta",
+    "sendApplication": "Enviar solicitud",
+    "sending": "Enviando…"
+  },
+  "save": {
+    "title": "Guardar en colección",
+    "savedCount": "{{count}} guardados",
+    "collectionNamePlaceholder": "Nombre de la colección",
+    "create": "Crear",
+    "cancel": "Cancelar",
+    "newCollection": "Nueva colección"
+  },
+  "hostModal": {
+    "hoverHint": "Pasa el cursor para ver el anuncio",
+    "hostingIn": "Anfitrión en {{location}}",
+    "rating": "Calificación",
+    "yearsHosting": "Años como anfitrión",
+    "response": "Respuesta",
+    "responds": "Responde",
+    "hostCantMessage": "Los anfitriones no pueden enviar mensajes a otros anfitriones",
+    "message": "Mensaje a {{name}}"
+  },
+  "redacted": {
+    "locationHidden": "Ubicación oculta",
+    "deliverablesCount": "{{count}} entregables",
+    "back": "← Atrás",
+    "photosHidden": "Fotos ocultas — suscríbete para verlas",
+    "compensation": "Compensación",
+    "deliverables": "Entregables",
+    "dates": "Fechas",
+    "subscribeCta": "Suscríbete para desbloquear todos los detalles →"
+  },
+  "detail": {
+    "cashComp": "${{amount}} en efectivo",
+    "hybridComp": "${{amount}} + estancia",
+    "seeListing": "Ver anuncio",
+    "moreCount": " +{{count}} más",
+    "deliverablesCount": "{{count}} entregables",
+    "totalDeliverables": "{{count}} entregables en total",
+    "collab": "Colab"
+  },
+  "toast": {
+    "savedTo": "Guardado en \"{{name}}\"",
+    "collection": "colección",
+    "removedFromCollection": "Eliminado de la colección",
+    "linkCopied": "¡Enlace copiado!"
+  }
+}

@@ -1,0 +1,148 @@
+{
+  "notFound": "Annonce introuvable.",
+  "backToExplore": "Retour à Explorer",
+  "back": "← Retour",
+  "shareBtn": "Partager",
+  "save": "Enregistrer",
+  "saved": "Enregistré",
+  "showAllPhotos": "Afficher toutes les photos",
+  "listedBy": "Publié par {{name}}",
+  "aboutThisStay": "À propos de ce séjour",
+  "whatThisPlaceOffers": "Ce que propose ce logement",
+  "meetYourHost": "Rencontrez votre hôte",
+  "collabnbHost": "Hôte Collabnb",
+  "yearsHosting": "Années en tant qu'hôte",
+  "responseRate": "Taux de réponse :",
+  "messageHost": "Envoyer un message à l'hôte",
+  "plusStay": "{{amount}} + Séjour",
+  "applied": "✓ Candidature envoyée",
+  "applyNow": "Postuler maintenant",
+  "hostViewNote": "Vue en tant qu'hôte — lecture seule.",
+  "freeNote": "Collabnb est gratuit pour les créateurs.",
+  "hostCantApply": "Les hôtes ne peuvent pas postuler à d'autres annonces",
+  "sampleTooltip": "Annonce d'exemple · interactions désactivées",
+  "sections": {
+    "Photos": "Photos",
+    "The Offer": "L'offre",
+    "Requirements": "Exigences",
+    "Location": "Emplacement"
+  },
+  "tag": {
+    "load": "Charge {{load}}",
+    "dueIn": "Échéance dans {{days}} jours"
+  },
+  "stats": {
+    "creatorTier": "Niveau du créateur",
+    "compensation": "Rémunération",
+    "deliverables": "Livrables",
+    "cashComp": "{{amount}} $ en espèces",
+    "hybridComp": "{{amount}} $ + Séjour",
+    "compStay": "Séjour offert",
+    "load": "Charge {{load}}"
+  },
+  "offer": {
+    "title": "L'offre",
+    "whatYouGet": "Ce que vous recevez",
+    "whatYouDeliver": "Ce que vous livrez"
+  },
+  "requirements": {
+    "title": "Exigences",
+    "tierRequired": "Niveau de créateur requis :"
+  },
+  "location": {
+    "title": "Emplacement"
+  },
+  "sidebar": {
+    "availability": "Disponibilité",
+    "creatorTier": "Niveau du créateur",
+    "deliverables": "Livrables",
+    "dueIn": "Échéance dans",
+    "dueInDays": "{{days}} jours après le départ",
+    "paidDeliverables": "· {{count}} livrables",
+    "stayIncludedDeliverables": "séjour inclus · {{count}} livrables",
+    "deliverablesCount": "{{count}} livrables"
+  },
+  "reviews": {
+    "title": "Ce que disent les créateurs",
+    "empty": "Aucun avis pour l'instant sur ce séjour"
+  },
+  "gallery": {
+    "close": "← Fermer",
+    "allPhotos": "{{title}} — Toutes les photos",
+    "photoAlt": "Photo {{n}}"
+  },
+  "share": {
+    "title": "Partager l'annonce",
+    "text": "Découvrez cette annonce de collaboration : {{title}} à {{location}}",
+    "copyLink": "Copier le lien",
+    "onX": "Partager sur X",
+    "onWhatsApp": "Partager sur WhatsApp"
+  },
+  "apply": {
+    "errorTitle": "La candidature n'a pas abouti",
+    "previewTitle": "Ceci est un aperçu",
+    "previewBody": "Les candidatures ne peuvent pas être envoyées tant que cette annonce n'est pas réellement publiée — les créateurs ne pourront pas non plus la voir ou postuler avant cela.",
+    "close": "Fermer",
+    "pitchLimitTitle": "Limite de propositions atteinte",
+    "pitchLimitBody": "Vous avez utilisé vos 10 propositions ce mois-ci. Les propositions se réinitialisent le 1er du mois prochain. Vous pouvez toujours envoyer des candidatures standard à tout moment.",
+    "pitchLimitHint": "Pour envoyer une candidature standard, restaurez votre message de proposition au modèle par défaut.",
+    "backToApplication": "Retour à la candidature",
+    "sentTitle": "Candidature envoyée !",
+    "sentPitch": "Votre proposition pour <strong>{{title}}</strong> a été envoyée.",
+    "sentTrack": "Consultez <strong>Collabs</strong> pour suivre votre candidature et <strong>Messages</strong> pour la réponse de l'hôte.",
+    "createContract": "Créer un contrat",
+    "done": "Terminé",
+    "applyTo": "Postuler à {{title}}",
+    "yourPitch": "Votre proposition",
+    "autoFilled": "Pré-rempli à partir de votre profil — personnalisez à votre guise.",
+    "charCount": "{{count}} caractères",
+    "pitch": "Proposition",
+    "application": "Candidature",
+    "sendPitch": "Envoyer la proposition",
+    "sendApplication": "Envoyer la candidature",
+    "sending": "Envoi en cours…"
+  },
+  "save": {
+    "title": "Enregistrer dans une collection",
+    "savedCount": "{{count}} enregistrés",
+    "collectionNamePlaceholder": "Nom de la collection",
+    "create": "Créer",
+    "cancel": "Annuler",
+    "newCollection": "Nouvelle collection"
+  },
+  "hostModal": {
+    "hoverHint": "Survolez pour voir l'annonce",
+    "hostingIn": "Hôte à {{location}}",
+    "rating": "Note",
+    "yearsHosting": "Années en tant qu'hôte",
+    "response": "Réponse",
+    "responds": "Répond",
+    "hostCantMessage": "Les hôtes ne peuvent pas envoyer de messages à d'autres hôtes",
+    "message": "Message à {{name}}"
+  },
+  "redacted": {
+    "locationHidden": "Emplacement masqué",
+    "deliverablesCount": "{{count}} livrables",
+    "back": "← Retour",
+    "photosHidden": "Photos masquées — abonnez-vous pour les voir",
+    "compensation": "Rémunération",
+    "deliverables": "Livrables",
+    "dates": "Dates",
+    "subscribeCta": "Abonnez-vous pour débloquer tous les détails →"
+  },
+  "detail": {
+    "cashComp": "{{amount}} $ en espèces",
+    "hybridComp": "{{amount}} $ + séjour",
+    "seeListing": "Voir l'annonce",
+    "moreCount": " +{{count}} de plus",
+    "deliverablesCount": "{{count}} livrables",
+    "totalDeliverables": "{{count}} livrables au total",
+    "collab": "Collab"
+  },
+  "toast": {
+    "savedTo": "Enregistré dans « {{name}} »",
+    "collection": "collection",
+    "removedFromCollection": "Retiré de la collection",
+    "linkCopied": "Lien copié !"
+  }
+}

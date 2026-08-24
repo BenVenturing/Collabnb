@@ -1,0 +1,58 @@
+{
+  "filters": {
+    "All": "Tout",
+    "Applications": "Candidatures",
+    "Collabs": "Collabs",
+    "Pitches": "Propositions"
+  },
+  "tagLabels": {
+    "Collab": "Collab",
+    "Application": "Candidature",
+    "Pitch": "Proposition",
+    "Contract": "Contrat",
+    "Archived": "Archivé",
+    "Collabnb": "Collabnb"
+  },
+  "threadRow": {
+    "deleteTitle": "Supprimer la conversation",
+    "sample": "Exemple"
+  },
+  "threadMenu": {
+    "archive": "Archiver",
+    "changeStage": "Changer d'étape"
+  },
+  "conversation": {
+    "viewProfile": "Voir le profil",
+    "viewCollaboration": "Voir la collaboration",
+    "moreOptions": "Plus d'options",
+    "noMessages": "Pas encore de messages. Dites bonjour !",
+    "aiDraftTitle": "Rédiger une réponse avec l'IA (à relire avant l'envoi)",
+    "aiDraftError": "Impossible de rédiger une réponse — réessayez.",
+    "sendError": "Échec de l'envoi du message — réessayez.",
+    "messagePlaceholder": "Écrivez un message…",
+    "attachTitle": "Joindre un fichier (max 100 Ko)",
+    "contractBuilderTitle": "Ouvrir le générateur de contrat",
+    "sendHint": "Entrée pour envoyer · Maj+Entrée pour une nouvelle ligne",
+    "filesAttached_one": "{{count}} fichier joint (supprimé automatiquement après 30 min)",
+    "filesAttached_other": "{{count}} fichiers joints (supprimés automatiquement après 30 min)"
+  },
+  "emptyState": {
+    "heading": "Sélectionnez une conversation",
+    "body": "Choisissez un fil à gauche pour lire et répondre aux messages."
+  },
+  "main": {
+    "heading": "Messages",
+    "searchPlaceholder": "Rechercher ou démarrer une nouvelle discussion…",
+    "clearTitle": "Effacer",
+    "newMessageTitle": "Nouveau message",
+    "conversationsLabel": "Conversations",
+    "newConversationLabel": "Nouvelle conversation",
+    "noListingsMatch": "Aucune annonce ne correspond. Essayez un nom d'hôte, un lieu ou un titre d'annonce.",
+    "savedStartChat": "Enregistré — démarrer une discussion",
+    "suggestedForYou": "Suggéré pour vous",
+    "saveToMessage": "Enregistrez une annonce pour envoyer un message à son hôte instantanément, ou tapez pour rechercher.",
+    "noConversationsYet": "Vos conversations apparaîtront ici une fois que vous aurez postulé à une annonce et commencé à discuter avec un hôte.",
+    "yourConversations": "Vos conversations",
+    "noCollabFound": "Aucune collaboration trouvée pour ce fil"
+  }
+}

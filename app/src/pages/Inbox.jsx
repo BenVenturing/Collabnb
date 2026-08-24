@@ -8,6 +8,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { useVerification } from '../contexts/VerificationContext';
 import { useSubscription } from '../contexts/SubscriptionContext';
 import { useQuery, useMutation, useAction } from 'convex/react';
+import { useTranslation } from 'react-i18next';
+import i18nInstance from '../i18n';
 import { api } from '../../convex/_generated/api';
 import SkeletonCard from '../components/SkeletonCard';
 
@@ -21,6 +23,8 @@ const TAG_STYLES = {
 };
 
 const FILTERS = ['All', 'Applications', 'Collabs', 'Pitches'];
+function filterLabel(f) { return i18nInstance.t(`inbox:filters.${f}`); }
+function tagLabel(tag) { return i18nInstance.t(`inbox:tagLabels.${tag}`) || tag; }
 
 // ─── Avatar helper ────────────────────────────────────────────────────────────
 function Avatar({ name, src, size = 44, unread = 0, isFounder = false }) {
@@ -63,6 +67,7 @@ function Avatar({ name, src, size = 44, unread = 0, isFounder = false }) {
 
 // ─── Thread row (left panel) ──────────────────────────────────────────────────
 function ThreadRow({ thread, isActive, onClick, onDelete }) {
+  const { t } = useTranslation('inbox');
   const [showDelete, setShowDelete] = useState(false);
   const tagStyle = TAG_STYLES[thread.tag] || TAG_STYLES.Application;
 
@@ -85,10 +90,10 @@ function ThreadRow({ thread, isActive, onClick, onDelete }) {
           </div>
           <div className="flex items-center gap-1.5 mb-0.5">
             <span className={`inline-block text-[10px] font-semibold px-1.5 py-0.5 rounded ${tagStyle}`}>
-              {thread.tag}
+              {tagLabel(thread.tag)}
             </span>
             {thread.is_sample && (
-              <span className="inline-block text-[9px] font-bold px-1 py-0.5 rounded bg-amber-100 text-amber-600 uppercase tracking-wide">Sample</span>
+              <span className="inline-block text-[9px] font-bold px-1 py-0.5 rounded bg-amber-100 text-amber-600 uppercase tracking-wide">{t('threadRow.sample')}</span>
             )}
             <span className="text-sage text-[11px] truncate">{thread.host_name}</span>
           </div>
@@ -106,7 +111,7 @@ function ThreadRow({ thread, isActive, onClick, onDelete }) {
           style={{ background: 'rgba(200,60,60,0.1)', color: '#c0392b' }}
           onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(200,60,60,0.18)'; }}
           onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(200,60,60,0.1)'; }}
-          title="Delete conversation"
+          title={t('threadRow.deleteTitle')}
         >
           <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" width="13" height="13">
             <polyline points="2 4 14 4"/>
@@ -161,6 +166,7 @@ function Bubble({ msg }) {
 
 // ─── Three-dot dropdown menu ──────────────────────────────────────────────────
 function ThreadMenu({ thread, onClose, onArchive, onUpdateTag }) {
+  const { t } = useTranslation('inbox');
   const menuRef = useRef(null);
 
   useEffect(() => {
@@ -184,10 +190,10 @@ function ThreadMenu({ thread, onClose, onArchive, onUpdateTag }) {
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
           <polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/>
         </svg>
-        Archive
+        {t('threadMenu.archive')}
       </button>
       <div className="border-t border-stone/20 my-1" />
-      <p className="px-4 py-1 text-[10px] font-bold text-sage uppercase tracking-wider">Change Stage</p>
+      <p className="px-4 py-1 text-[10px] font-bold text-sage uppercase tracking-wider">{t('threadMenu.changeStage')}</p>
       {['Application', 'Collab', 'Pitch'].map((tag) => (
         <button
           key={tag}
@@ -197,7 +203,7 @@ function ThreadMenu({ thread, onClose, onArchive, onUpdateTag }) {
           }`}
         >
           <span className={`inline-block w-2 h-2 rounded-full ${(TAG_STYLES[tag] || '').split(' ')[0]}`} />
-          {tag}
+          {tagLabel(tag)}
         </button>
       ))}
     </div>
@@ -206,6 +212,7 @@ function ThreadMenu({ thread, onClose, onArchive, onUpdateTag }) {
 
 // ─── Conversation panel (right side) ─────────────────────────────────────────
 function ConversationPanel({ thread, onViewCollab, onArchive, onUpdateTag }) {
+  const { t } = useTranslation('inbox');
   const [draft, setDraft] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
   const [popupPerson, setPopupPerson] = useState(null);
@@ -227,6 +234,7 @@ function ConversationPanel({ thread, onViewCollab, onArchive, onUpdateTag }) {
   const draftAiReply = useAction(api.aiAssistant.draftReply);
   const [drafting, setDrafting] = useState(false);
   const [aiDraftError, setAiDraftError] = useState('');
+  const [sendError, setSendError] = useState('');
 
   // Use sample messages for the demo thread
   const sampleMessages = thread.is_sample && THREAD_MESSAGES[thread.id]
@@ -260,6 +268,7 @@ function ConversationPanel({ thread, onViewCollab, onArchive, onUpdateTag }) {
     setDraft('');
     setAttachments([]);
     setAiDraftError('');
+    setSendError('');
   }, [thread.id]);
 
   useEffect(() => {
@@ -301,7 +310,7 @@ function ConversationPanel({ thread, onViewCollab, onArchive, onUpdateTag }) {
     const text = draft.trim();
     if (!text || sending) return;
     setSending(true);
-    setDraft('');
+    setSendError('');
     try {
       const senderId = profile?._id ? String(profile._id) : (profile?.id ? String(profile.id) : 'unknown');
       await sendMutation({
@@ -312,8 +321,12 @@ function ConversationPanel({ thread, onViewCollab, onArchive, onUpdateTag }) {
         senderRole: 'creator',
         text,
       });
-    } catch {
-      // silently ignore send errors
+      // Only clear the composer once the send actually succeeds — clearing
+      // it optimistically made failed sends look like the message vanished,
+      // with no way to recover the typed text.
+      setDraft('');
+    } catch (err) {
+      setSendError(err?.data || err?.message || t('conversation.sendError'));
     } finally {
       setSending(false);
     }
@@ -327,7 +340,7 @@ function ConversationPanel({ thread, onViewCollab, onArchive, onUpdateTag }) {
       const { draft: suggested } = await draftAiReply({ threadKey });
       setDraft(suggested);
     } catch (err) {
-      setAiDraftError(err?.data || err?.message || 'Could not draft a reply — try again.');
+      setAiDraftError(err?.data || err?.message || t('conversation.aiDraftError'));
     } finally {
       setDrafting(false);
     }
@@ -347,7 +360,7 @@ function ConversationPanel({ thread, onViewCollab, onArchive, onUpdateTag }) {
         <button
           onClick={() => setPopupPerson({ name: thread.host_name, avatar: thread.host_avatar, isFounder: thread.is_founder })}
           style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', borderRadius: '50%', flexShrink: 0 }}
-          title="View profile"
+          title={t('conversation.viewProfile')}
         >
           <Avatar name={thread.host_name} src={thread.host_avatar} size={40} isFounder={thread.is_founder} />
         </button>
@@ -355,7 +368,7 @@ function ConversationPanel({ thread, onViewCollab, onArchive, onUpdateTag }) {
           <div className="flex items-center gap-2">
             <h2 className="font-display font-bold text-ink text-base truncate">{thread.listing_title}</h2>
             <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded flex-shrink-0 ${tagStyle}`}>
-              {thread.tag}
+              {tagLabel(thread.tag)}
             </span>
           </div>
           <p className="text-sage text-xs">{thread.host_name}</p>
@@ -365,7 +378,7 @@ function ConversationPanel({ thread, onViewCollab, onArchive, onUpdateTag }) {
           <button
             onClick={() => onViewCollab(thread)}
             className="w-8 h-8 rounded-full bg-bone hover:bg-stone/60 flex items-center justify-center transition-colors"
-            title="View collaboration"
+            title={t('conversation.viewCollaboration')}
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 text-slate">
               <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
@@ -377,7 +390,7 @@ function ConversationPanel({ thread, onViewCollab, onArchive, onUpdateTag }) {
             <button
               onClick={() => setMenuOpen(!menuOpen)}
               className="w-8 h-8 rounded-full bg-bone hover:bg-stone/60 flex items-center justify-center transition-colors"
-              title="More options"
+              title={t('conversation.moreOptions')}
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 text-slate">
                 <circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/>
@@ -403,7 +416,7 @@ function ConversationPanel({ thread, onViewCollab, onArchive, onUpdateTag }) {
           ))
         ) : messages.length === 0 ? (
           <div className="flex items-center justify-center h-full">
-            <p className="text-sage text-sm">No messages yet. Say hello!</p>
+            <p className="text-sage text-sm">{t('conversation.noMessages')}</p>
           </div>
         ) : (
           messages.map((msg) => (
@@ -418,12 +431,15 @@ function ConversationPanel({ thread, onViewCollab, onArchive, onUpdateTag }) {
         {aiDraftError && (
           <p className="text-xs text-red-600 mb-1.5 px-1">{aiDraftError}</p>
         )}
+        {sendError && (
+          <p className="text-xs text-red-600 mb-1.5 px-1">{sendError}</p>
+        )}
         <div className="flex items-end gap-2 bg-bone rounded-2xl px-4 py-2.5 border border-stone/40">
           <button
             onClick={handleDraftWithAi}
             disabled={drafting}
             className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-colors hover:bg-stone/30 disabled:opacity-50"
-            title="Draft a reply with AI (review before sending)"
+            title={t('conversation.aiDraftTitle')}
             style={{ background: 'rgba(60,87,89,0.12)' }}
           >
             {drafting ? (
@@ -441,7 +457,7 @@ function ConversationPanel({ thread, onViewCollab, onArchive, onUpdateTag }) {
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={handleKey}
-            placeholder="Write a message…"
+            placeholder={t('conversation.messagePlaceholder')}
             className="flex-1 bg-transparent text-sm text-ink placeholder-sage resize-none outline-none leading-relaxed max-h-28"
             style={{ minHeight: '1.4rem' }}
           />
@@ -449,7 +465,7 @@ function ConversationPanel({ thread, onViewCollab, onArchive, onUpdateTag }) {
           <button
             onClick={() => fileInputRef.current?.click()}
             className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-colors hover:bg-stone/30"
-            title="Attach a file (max 100KB)"
+            title={t('conversation.attachTitle')}
             style={{ background: 'rgba(60,87,89,0.12)' }}
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="var(--slate)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
@@ -468,7 +484,7 @@ function ConversationPanel({ thread, onViewCollab, onArchive, onUpdateTag }) {
           <button
             onClick={() => navigate('/contract')}
             className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-colors hover:bg-stone/30"
-            title="Open Contract Builder"
+            title={t('conversation.contractBuilderTitle')}
             style={{ background: 'rgba(60,87,89,0.12)' }}
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="var(--slate)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
@@ -500,10 +516,10 @@ function ConversationPanel({ thread, onViewCollab, onArchive, onUpdateTag }) {
           </button>
         </div>
         <div className="flex items-center justify-center gap-3 mt-1.5">
-          <p className="text-[10px] text-sage/60">Enter to send · Shift+Enter for new line</p>
+          <p className="text-[10px] text-sage/60">{t('conversation.sendHint')}</p>
           {attachments.length > 0 && (
             <p className="text-[10px] font-semibold text-slate/60">
-              {attachments.length} file{attachments.length > 1 ? 's' : ''} attached (auto-removed after 30 min)
+              {t('conversation.filesAttached', { count: attachments.length })}
             </p>
           )}
         </div>
@@ -522,6 +538,7 @@ function ConversationPanel({ thread, onViewCollab, onArchive, onUpdateTag }) {
 
 // ─── Empty state ──────────────────────────────────────────────────────────────
 function EmptyState() {
+  const { t } = useTranslation('inbox');
   return (
     <div className="flex flex-col items-center justify-center h-full gap-4 text-center px-8">
       <div className="w-16 h-16 rounded-full bg-mint/30 flex items-center justify-center">
@@ -530,8 +547,8 @@ function EmptyState() {
         </svg>
       </div>
       <div>
-        <p className="font-display font-bold text-ink text-base mb-1">Select a conversation</p>
-        <p className="text-sage text-sm">Choose a thread on the left to read and reply to messages.</p>
+        <p className="font-display font-bold text-ink text-base mb-1">{t('emptyState.heading')}</p>
+        <p className="text-sage text-sm">{t('emptyState.body')}</p>
       </div>
     </div>
   );
@@ -574,6 +591,7 @@ function ShimmerRow() {
 }
 
 export default function Inbox() {
+  const { t } = useTranslation('inbox');
   const { threads, collabs, archiveThread, deleteThread, updateThreadTag, createThread, savedIds } = useCollabs();
   const { profile } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -648,7 +666,7 @@ export default function Inbox() {
     if (collab) {
       setViewingCollab(collab);
     } else {
-      showToast('No collaboration found for this thread');
+      showToast(t('main.noCollabFound'));
     }
   }, [collabs, showToast]);
 
@@ -721,7 +739,7 @@ export default function Inbox() {
       >
         {/* Header */}
         <div className="px-5 pt-6 pb-0 border-b border-stone/20">
-          <h1 className="font-display font-bold text-ink text-xl mb-3">Messages</h1>
+          <h1 className="font-display font-bold text-ink text-xl mb-3">{t('main.heading')}</h1>
           <div className="flex items-center gap-2 mb-4">
             {/* Always-open search field */}
             <div className="flex-1 flex items-center gap-2 h-9 px-3 rounded-full bg-bone focus-within:ring-2 focus-within:ring-mint transition-shadow">
@@ -736,7 +754,7 @@ export default function Inbox() {
                 onFocus={() => setSearchFocused(true)}
                 onBlur={() => setSearchFocused(false)}
                 onKeyDown={(e) => { if (e.key === 'Escape') { setSearchQuery(''); e.currentTarget.blur(); } }}
-                placeholder="Search or start a new chat…"
+                placeholder={t('main.searchPlaceholder')}
                 className="flex-1 min-w-0 text-sm text-ink bg-transparent border-none outline-none placeholder-sage"
               />
               {searchQuery && (
@@ -744,7 +762,7 @@ export default function Inbox() {
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => { setSearchQuery(''); searchInputRef.current?.focus(); }}
                   className="flex-shrink-0 text-sage hover:text-slate transition-colors"
-                  title="Clear"
+                  title={t('main.clearTitle')}
                 >
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5">
                     <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
@@ -757,7 +775,7 @@ export default function Inbox() {
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => { searchInputRef.current?.focus(); setSearchFocused(true); }}
               className="w-9 h-9 rounded-full bg-ink text-bone hover:bg-slate flex items-center justify-center transition-colors flex-shrink-0"
-              title="New message"
+              title={t('main.newMessageTitle')}
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
                 <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
@@ -776,7 +794,7 @@ export default function Inbox() {
                     : 'bg-transparent text-slate border-stone hover:border-slate'
                 }`}
               >
-                {f}
+                {filterLabel(f)}
               </button>
             ))}
           </div>
@@ -792,7 +810,7 @@ export default function Inbox() {
             <>
               {matchedThreads.length > 0 && (
                 <>
-                  <p className="px-5 pt-4 pb-2 text-[11px] font-bold uppercase tracking-wide text-sage">Conversations</p>
+                  <p className="px-5 pt-4 pb-2 text-[11px] font-bold uppercase tracking-wide text-sage">{t('main.conversationsLabel')}</p>
                   {matchedThreads.map((t) => (
                     <ThreadRow
                       key={t.id}
@@ -807,14 +825,14 @@ export default function Inbox() {
                   ))}
                 </>
               )}
-              <p className="px-5 pt-4 pb-2 text-[11px] font-bold uppercase tracking-wide text-sage">New conversation</p>
+              <p className="px-5 pt-4 pb-2 text-[11px] font-bold uppercase tracking-wide text-sage">{t('main.newConversationLabel')}</p>
               {matchedListings.length > 0 ? (
                 matchedListings.map((l) => (
                   <ListingRow key={l.id} listing={l} onClick={() => handleStartFromListing(l)} />
                 ))
               ) : (
                 <p className="px-5 py-4 text-sage text-xs leading-relaxed">
-                  No listings match. Try a host name, place, or listing title.
+                  {t('main.noListingsMatch')}
                 </p>
               )}
             </>
@@ -825,7 +843,7 @@ export default function Inbox() {
               {searchFocused && (
                 <>
                   <p className="px-5 pt-4 pb-2 text-[11px] font-bold uppercase tracking-wide text-sage">
-                    {savedListings.length > 0 ? 'Saved — start a chat' : 'Suggested for you'}
+                    {savedListings.length > 0 ? t('main.savedStartChat') : t('main.suggestedForYou')}
                   </p>
                   {suggestedListings.length > 0 ? (
                     suggestedListings.map((l) => (
@@ -833,7 +851,7 @@ export default function Inbox() {
                     ))
                   ) : (
                     <p className="px-5 py-4 text-sage text-xs leading-relaxed">
-                      Save a listing to message its host instantly, or type to search.
+                      {t('main.saveToMessage')}
                     </p>
                   )}
                 </>
@@ -846,7 +864,7 @@ export default function Inbox() {
                     {[0, 1, 2].map((i) => <ShimmerRow key={i} />)}
                     <div className="px-4 py-5 text-center">
                       <p className="text-sage text-xs leading-relaxed">
-                        Your conversations will appear here once you apply to a listing and start chatting with a host.
+                        {t('main.noConversationsYet')}
                       </p>
                     </div>
                   </div>
@@ -854,7 +872,7 @@ export default function Inbox() {
               ) : (
                 <>
                   {searchFocused && (
-                    <p className="px-5 pt-4 pb-2 text-[11px] font-bold uppercase tracking-wide text-sage">Your conversations</p>
+                    <p className="px-5 pt-4 pb-2 text-[11px] font-bold uppercase tracking-wide text-sage">{t('main.yourConversations')}</p>
                   )}
                   {tagFiltered.map((t) => (
                     <ThreadRow

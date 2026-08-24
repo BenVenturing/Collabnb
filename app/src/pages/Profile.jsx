@@ -5,6 +5,7 @@ import { api } from '../../convex/_generated/api';
 import { ConvexError } from 'convex/values';
 import Confetti from '../components/Confetti';
 import BankInfoForm from '../components/BankInfoForm';
+import ReceiptCheckoutOverlay from '../components/ReceiptCheckoutOverlay';
 import { useTranslation, Trans } from 'react-i18next';
 
 // Convex storage URL prefix; used to construct public URLs from storage IDs
@@ -13,6 +14,22 @@ const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL;
 
 const AI_PROVIDER_LABELS = { openai: 'OpenAI', anthropic: 'Anthropic', openrouter: 'OpenRouter' };
 const AI_PROVIDER_KEY_PLACEHOLDER = { openai: 'sk-...', anthropic: 'sk-ant-...', openrouter: 'sk-or-...' };
+
+function AiSecurityInfo({ t }) {
+  return (
+    <div style={{ padding: '0.875rem 1rem', borderRadius: '0.875rem', background: 'rgba(60,87,89,0.05)', border: '1px solid rgba(25,37,36,0.08)', marginTop: '0.5rem' }}>
+      <p style={{ fontSize: '0.78rem', color: 'var(--slate)', fontWeight: 600, margin: '0 0 0.5rem' }}>{t('ai.securityIntro')}</p>
+      <ul style={{ margin: 0, padding: '0 0 0 1.1rem', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+        {['securityPoint1', 'securityPoint2', 'securityPoint3', 'securityPoint4', 'securityPoint5'].map((key) => (
+          <li key={key} style={{ fontSize: '0.78rem', color: 'var(--sage)', lineHeight: 1.5 }}>{t(`ai.${key}`)}</li>
+        ))}
+      </ul>
+      <p style={{ fontSize: '0.72rem', color: 'var(--sage)', lineHeight: 1.5, margin: '0.6rem 0 0', fontStyle: 'italic' }}>
+        {t('ai.securityCaveat')}
+      </p>
+    </div>
+  );
+}
 
 /**
  * Resize an image file via canvas, upload the resulting JPEG blob to Convex
@@ -579,6 +596,7 @@ export default function Profile() {
   const [aiKeyDraft,        setAiKeyDraft]        = useState('');
   const [aiSaving,          setAiSaving]          = useState(false);
   const [aiError,           setAiError]           = useState('');
+  const [showAiSecurityInfo, setShowAiSecurityInfo] = useState(false);
   const [toastMsg, setToastMsg]               = useState(null);
   const [exitConfirmDraft, setExitConfirmDraft] = useState(null);
   const [portalLoading, setPortalLoading]       = useState(false);
@@ -596,6 +614,7 @@ export default function Profile() {
   const [requestedTier,   setRequestedTier]   = useState(null);
   const [tierRequesting,  setTierRequesting]  = useState(false);
   const [tierRequested,   setTierRequested]   = useState(false);
+  const [checkoutReceipt, setCheckoutReceipt] = useState(null);
 
   // Notification toggles
   const [notifSettings, setNotifSettings] = useState({
@@ -631,7 +650,7 @@ export default function Profile() {
     if (subStatus === 'success' && sessionId) {
       navigate('/profile', { replace: true });
       verifySubscriptionSession({ sessionId })
-        .then(({ tier, expiresAt }) => {
+        .then(({ tier, expiresAt, amount, orderId, cardBrand, cardLast4 }) => {
           setProfileOverride((prev) => ({
             ...prev,
             subscription_status: 'active',
@@ -639,6 +658,7 @@ export default function Profile() {
             subscription_expires_at: expiresAt ?? undefined,
           }));
           setToastMsg(t('toast.subscriptionActivated'));
+          setCheckoutReceipt({ type: 'creator', tier, amount, orderId, cardBrand, cardLast4 });
         })
         .catch(() => setToastMsg(t('toast.paymentVerifyFailed')));
     } else if (subStatus === 'cancelled') {
@@ -1851,6 +1871,14 @@ export default function Profile() {
                   {t('ai.connected', { provider: AI_PROVIDER_LABELS[aiConnectionStatus.provider] || aiConnectionStatus.provider })}
                 </div>
                 <button
+                  type="button"
+                  onClick={() => setShowAiSecurityInfo((v) => !v)}
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: '0.78rem', color: 'var(--sage)', textAlign: 'left' }}
+                >
+                  🔒 {t('ai.connectedSecurityNote')}
+                </button>
+                {showAiSecurityInfo && <AiSecurityInfo t={t} />}
+                <button
                   className="btn-glass"
                   style={{ fontSize: '0.85rem' }}
                   onClick={async () => { await disconnectAiApiKey(); }}
@@ -1892,6 +1920,16 @@ export default function Profile() {
                     />
                   </div>
                   {aiError && <p style={{ fontSize: '0.78rem', color: '#b3261e', margin: 0 }}>{aiError}</p>}
+                  <div>
+                    <button
+                      type="button"
+                      onClick={() => setShowAiSecurityInfo((v) => !v)}
+                      style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: '0.78rem', color: 'var(--sage)', textAlign: 'left' }}
+                    >
+                      🔒 {t('ai.securityToggle')}
+                    </button>
+                    {showAiSecurityInfo && <AiSecurityInfo t={t} />}
+                  </div>
                 </div>
 
                 <div style={{ display: 'flex', gap: '0.75rem' }}>
@@ -1933,6 +1971,9 @@ export default function Profile() {
           disconnectPayoutMethodMutation={disconnectPayoutMethodMutation}
         />
       )}
+
+      {/* ── Post-checkout receipt animation ──────────────────────────── */}
+      <ReceiptCheckoutOverlay receipt={checkoutReceipt} onClose={() => setCheckoutReceipt(null)} />
 
       {/* ── Lifetime Access modal ────────────────────────────────────── */}
       <LifetimeAccessModal

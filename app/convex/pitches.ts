@@ -288,6 +288,8 @@ async function scheduleProposalEmail(
 ) {
   const profile = await ctx.db.get(recipientId as any);
   if (!(profile as any)?.email) return;
+  // Settings > Notifications > Contract updates.
+  if ((profile as any)?.notification_prefs?.contractUpdates === false) return;
   await ctx.scheduler.runAfter(0, internal.emails.sendContractEmail, {
     to: (profile as any).email,
     recipientName: (profile as any).full_name || "there",

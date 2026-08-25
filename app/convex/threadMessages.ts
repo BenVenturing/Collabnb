@@ -149,7 +149,9 @@ export const sendMessage = mutation({
 
       if (!hasPendingPing) {
         const recipient = await ctx.db.get(recipientId as any);
-        if ((recipient as any)?.email) {
+        // Settings > Notifications > Messages — gates the email only; the
+        // in-app notification above still fires either way.
+        if ((recipient as any)?.email && (recipient as any)?.notification_prefs?.messages !== false) {
           await ctx.scheduler.runAfter(0, internal.emails.sendNewMessageEmail, {
             recipientEmail: (recipient as any).email,
             recipientName: (recipient as any).full_name || "there",

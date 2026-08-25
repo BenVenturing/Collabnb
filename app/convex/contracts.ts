@@ -368,7 +368,9 @@ async function notifyParty(
 
   if (opts.email) {
     const profile = await ctx.db.get(recipientId as any);
-    if (profile?.email) {
+    // Settings > Notifications > Contract updates — gates the email only;
+    // the in-app notification + thread message above still fire either way.
+    if (profile?.email && (profile as any)?.notification_prefs?.contractUpdates !== false) {
       await ctx.scheduler.runAfter(0, internal.emails.sendContractEmail, {
         to: profile.email,
         recipientName:

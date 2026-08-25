@@ -235,6 +235,9 @@ function ConversationPanel({ thread, onViewCollab, onArchive, onUpdateTag }) {
   const [drafting, setDrafting] = useState(false);
   const [aiDraftError, setAiDraftError] = useState('');
   const [sendError, setSendError] = useState('');
+  const [aiPlaceholder, setAiPlaceholder] = useState('');
+  const aiPlaceholderTimerRef = useRef(null);
+  const aiTypingTimerRef = useRef(null);
 
   // Use sample messages for the demo thread
   const sampleMessages = thread.is_sample && THREAD_MESSAGES[thread.id]
@@ -265,11 +268,22 @@ function ConversationPanel({ thread, onViewCollab, onArchive, onUpdateTag }) {
     : messages;
 
   useEffect(() => {
+    clearInterval(aiPlaceholderTimerRef.current);
+    clearInterval(aiTypingTimerRef.current);
+    setAiPlaceholder('');
+    setDrafting(false);
     setDraft('');
     setAttachments([]);
     setAiDraftError('');
     setSendError('');
   }, [thread.id]);
+
+  // Stop both animation timers on unmount so they don't fire setState after
+  // the panel is gone.
+  useEffect(() => () => {
+    clearInterval(aiPlaceholderTimerRef.current);
+    clearInterval(aiTypingTimerRef.current);
+  }, []);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -332,16 +346,50 @@ function ConversationPanel({ thread, onViewCollab, onArchive, onUpdateTag }) {
     }
   };
 
+  // Reveals `text` into the composer a few characters at a time instead of
+  // snapping it in all at once — reads as the AI "writing" the reply live.
+  const typeOutDraft = (text) => {
+    clearInterval(aiTypingTimerRef.current);
+    if (!text) { setDrafting(false); return; }
+    let i = 0;
+    const step = Math.max(1, Math.ceil(text.length / 50)); // ~50 ticks regardless of length
+    aiTypingTimerRef.current = setInterval(() => {
+      i += step;
+      setDraft(text.slice(0, i));
+      if (i >= text.length) {
+        clearInterval(aiTypingTimerRef.current);
+        setDrafting(false);
+      }
+    }, 16);
+  };
+
   const handleDraftWithAi = async () => {
     if (drafting) return;
+    // Whatever's already typed becomes an instruction for the AI (e.g. "make
+    // it shorter", "ask about dates") instead of being discarded — an empty
+    // box still just drafts a reply from the conversation as before.
+    const instruction = draft.trim();
     setDrafting(true);
     setAiDraftError('');
+    setDraft('');
+    let phraseIdx = 0;
+    const phrases = t('conversation.aiThinkingPhrases', { returnObjects: true });
+    setAiPlaceholder(Array.isArray(phrases) ? phrases[0] : '');
+    clearInterval(aiPlaceholderTimerRef.current);
+    aiPlaceholderTimerRef.current = setInterval(() => {
+      if (!Array.isArray(phrases) || phrases.length === 0) return;
+      phraseIdx = (phraseIdx + 1) % phrases.length;
+      setAiPlaceholder(phrases[phraseIdx]);
+    }, 1100);
     try {
-      const { draft: suggested } = await draftAiReply({ threadKey });
-      setDraft(suggested);
+      const { draft: suggested } = await draftAiReply({ threadKey, instruction: instruction || undefined });
+      clearInterval(aiPlaceholderTimerRef.current);
+      setAiPlaceholder('');
+      typeOutDraft(suggested);
     } catch (err) {
+      clearInterval(aiPlaceholderTimerRef.current);
+      setAiPlaceholder('');
       setAiDraftError(err?.data || err?.message || t('conversation.aiDraftError'));
-    } finally {
       setDrafting(false);
     }
   };
@@ -457,7 +505,8 @@ function ConversationPanel({ thread, onViewCollab, onArchive, onUpdateTag }) {
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={handleKey}
-            placeholder={t('conversation.messagePlaceholder')}
+            readOnly={drafting}
+            placeholder={aiPlaceholder || t('conversation.messagePlaceholder')}
             className="flex-1 bg-transparent text-sm text-ink placeholder-sage resize-none outline-none leading-relaxed max-h-28"
             style={{ minHeight: '1.4rem' }}
           />
@@ -496,7 +545,7 @@ function ConversationPanel({ thread, onViewCollab, onArchive, onUpdateTag }) {
           </button>
           <button
             onClick={!isVerified ? openModal : !isSubscribed ? openSubModal : sendMessage}
-            disabled={isVerified && isSubscribed && (!draft.trim() || sending)}
+            disabled={isVerified && isSubscribed && (!draft.trim() || sending || drafting)}
             className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-colors"
             style={{
               background: (!isVerified || !isSubscribed) ? 'rgba(60,87,89,0.18)' : draft.trim() ? 'var(--slate)' : 'rgba(60,87,89,0.15)',

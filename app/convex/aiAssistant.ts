@@ -212,8 +212,8 @@ async function draftWithOpenAiCompatible(
 }
 
 export const draftReply = action({
-  args: { threadKey: v.string() },
-  handler: withSurfacedErrors(async (ctx, { threadKey }): Promise<{ draft: string; provider: Provider | "collabnb" }> => {
+  args: { threadKey: v.string(), instruction: v.optional(v.string()) },
+  handler: withSurfacedErrors(async (ctx, { threadKey, instruction }): Promise<{ draft: string; provider: Provider | "collabnb" }> => {
     const caller = await requireAuthedProfileAction(ctx, api.profiles.getByClerkUserId);
     if (caller.is_verified !== true && caller.is_admin !== true) {
       throw new ConvexError("Your account is pending verification. AI drafting unlocks once you're approved.");
@@ -223,7 +223,11 @@ export const draftReply = action({
 
     const messages: any[] = await ctx.runQuery(api.threadMessages.getByThread, { threadKey });
     if (messages.length === 0) throw new ConvexError("No messages in this thread yet.");
-    const prompt = `Conversation so far:\n\n${formatThreadForPrompt(messages.slice(-20))}\n\nDraft the next reply.`;
+    const trimmedInstruction = instruction?.trim().slice(0, 500);
+    const task = trimmedInstruction
+      ? `Draft the next reply. Follow this instruction from the user about what to say or how to say it: "${trimmedInstruction}"`
+      : "Draft the next reply.";
+    const prompt = `Conversation so far:\n\n${formatThreadForPrompt(messages.slice(-20))}\n\n${task}`;
 
     const keyRow: any = await ctx.runQuery(internal.aiAssistant.getKeyForOwner, { ownerId });
     if (keyRow) {

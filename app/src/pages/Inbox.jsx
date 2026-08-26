@@ -23,6 +23,8 @@ const TAG_STYLES = {
 };
 
 const FILTERS = ['All', 'Applications', 'Collabs', 'Pitches'];
+// Composer grows with its content up to this height (~6 lines), then scrolls.
+const MAX_COMPOSER_HEIGHT = 160;
 function filterLabel(f) { return i18nInstance.t(`inbox:filters.${f}`); }
 function tagLabel(tag) { return i18nInstance.t(`inbox:tagLabels.${tag}`) || tag; }
 
@@ -220,6 +222,7 @@ function ConversationPanel({ thread, onViewCollab, onArchive, onUpdateTag }) {
   const [attachments, setAttachments] = useState([]);
   const bottomRef = useRef(null);
   const fileInputRef = useRef(null);
+  const textareaRef = useRef(null);
   const tagStyle = TAG_STYLES[thread.tag] || TAG_STYLES.Application;
   const navigate = useNavigate();
   const { profile } = useAuth();
@@ -284,6 +287,17 @@ function ConversationPanel({ thread, onViewCollab, onArchive, onUpdateTag }) {
     clearInterval(aiPlaceholderTimerRef.current);
     clearInterval(aiTypingTimerRef.current);
   }, []);
+
+  // Auto-grow the composer with its content (typed or AI-typed-out) up to a
+  // cap, then let it scroll internally instead of growing further.
+  useEffect(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    const next = Math.min(el.scrollHeight, MAX_COMPOSER_HEIGHT);
+    el.style.height = `${next}px`;
+    el.style.overflowY = el.scrollHeight > MAX_COMPOSER_HEIGHT ? 'auto' : 'hidden';
+  }, [draft]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -482,7 +496,7 @@ function ConversationPanel({ thread, onViewCollab, onArchive, onUpdateTag }) {
         {sendError && (
           <p className="text-xs text-red-600 mb-1.5 px-1">{sendError}</p>
         )}
-        <div className="flex items-end gap-2 bg-bone rounded-2xl px-4 py-2.5 border border-stone/40">
+        <div className="flex items-center gap-2 bg-bone rounded-2xl px-4 py-2.5 border border-stone/40">
           <button
             onClick={handleDraftWithAi}
             disabled={drafting}
@@ -501,14 +515,15 @@ function ConversationPanel({ thread, onViewCollab, onArchive, onUpdateTag }) {
             )}
           </button>
           <textarea
+            ref={textareaRef}
             rows={1}
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={handleKey}
             readOnly={drafting}
             placeholder={aiPlaceholder || t('conversation.messagePlaceholder')}
-            className="flex-1 bg-transparent text-sm text-ink placeholder-sage resize-none outline-none leading-relaxed max-h-28"
-            style={{ minHeight: '1.4rem' }}
+            className="flex-1 bg-transparent text-sm text-ink placeholder-sage resize-none outline-none leading-relaxed"
+            style={{ minHeight: '1.4rem', maxHeight: `${MAX_COMPOSER_HEIGHT}px` }}
           />
           {/* Attachment button */}
           <button

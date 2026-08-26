@@ -138,7 +138,19 @@ const DRAFT_SYSTEM_PROMPT =
   "You write short, warm reply drafts for a user on Collabnb, a creator/host " +
   "collaboration platform. Read the conversation and draft the next reply — " +
   "natural, specific, zero marketing-speak. Output ONLY the message body text: " +
-  "no preamble, no quotes, no signature.";
+  "no preamble, no quotes, no signature. " +
+  "Never write square-bracket placeholders like [project name], [insert detail], " +
+  "or [specific theme, if mentioned] — you must never hand back a fill-in-the-blank " +
+  "template. If you don't have a real, specific detail from the conversation to use, " +
+  "write the sentence in a way that doesn't need one, or drop that sentence entirely. " +
+  "Avoid AI-sounding filler words and phrases — do not use: elevate, unlock, leverage, " +
+  "seamless, seamlessly, dive in, delve, game-changer, game-changing, revolutionize, " +
+  "cutting-edge, next-level, unparalleled, robust, holistic, synergy, circle back, " +
+  "touch base, at the end of the day, needless to say, it's worth noting, embark, " +
+  "journey (as a metaphor for a process), tapestry, testament, boasts, bustling, " +
+  "vibrant (as filler), landscape (as a metaphor for an industry), realm, myriad, " +
+  "plethora, \"whether you're X or Y\" constructions, \"not only... but also\", " +
+  "\"I'm thrilled\", \"I'm stoked\", or back-to-back exclamation marks.";
 
 function formatThreadForPrompt(messages: Array<{ sender_role: string; text: string }>): string {
   return messages
@@ -152,7 +164,16 @@ function cleanDraftText(raw: string): string {
   if (lines.length > 1 && /^(here('s| is)|sure|below is)/i.test(lines[0]) && lines[0].length < 90) {
     out = lines.slice(1).join("\n").trim();
   }
-  return out.replace(/^["'“”]+|["'“”]+$/g, "").trim();
+  out = out.replace(/^["'“”]+|["'“”]+$/g, "").trim();
+  // Defensive: the prompt tells the model never to leave a [placeholder]
+  // like [project name], but strip any that slip through anyway — a
+  // slightly awkward sentence beats a literal bracket in a sent message.
+  out = out
+    .replace(/\s*\[[^\]]*\]\s*/g, " ")
+    .replace(/ {2,}/g, " ")
+    .replace(/\s+([.,!?;:])/g, "$1")
+    .trim();
+  return out;
 }
 
 async function draftWithAnthropic(apiKey: string, prompt: string): Promise<string> {

@@ -469,6 +469,82 @@ export const checkContractReminders = internalMutation({
   },
 });
 
+// Cron: nudge the creator ~3 days before their deliverable deadline. Fires
+// once per contract. Deadline = later signature date + the linked listing's
+// turnaround_days — neither contracts nor collaborations store a deadline
+// directly, so this walks contract -> collaboration (fuzzy-linked at signing,
+// see linkContractToCollab) -> listing to find it. Contracts with no
+// resolvable listing/turnaround_days are silently skipped (nothing to remind
+// about) rather than treated as an error.
+export const checkCollabReminders = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const now = Date.now();
+    const day = 24 * 60 * 60 * 1000;
+    const reminderWindow = 3 * day;
+    const staleCutoff = 14 * day; // don't keep nudging long-abandoned contracts
+
+    const contracts = await ctx.db.query("contracts").collect();
+    const collabs = await ctx.db.query("collaborations").collect();
+
+    for (const c of contracts) {
+      const status = (c.status || "").toLowerCase();
+      if (status === "completed" || status === "cancelled" || status === "draft") continue;
+      if (!c.creator_signed || !c.host_signed) continue;
+      if (c.collab_reminder_sent_at) continue;
+      if (!c.creator_signed_at || !c.host_signed_at) continue;
+
+      const collab = collabs.find((cl: any) => String(cl.contract_id) === String(c._id));
+      if (!collab || !collab.listing_id) continue;
+      if (collab.is_active === false || collab.current_stage === "completed") continue;
+
+      const listing = await ctx.db.get(collab.listing_id as any);
+      const turnaroundDays = (listing as any)?.turnaround_days;
+      if (!turnaroundDays || turnaroundDays <= 0) continue;
+
+      const signedAt = Math.max(new Date(c.creator_signed_at).getTime(), new Date(c.host_signed_at).getTime());
+      if (Number.isNaN(signedAt)) continue;
+      const deadline = signedAt + turnaroundDays * day;
+
+      if (now < deadline - reminderWindow) continue; // not yet time
+      if (now > deadline + staleCutoff) continue; // too stale, don't bother
+
+      const recipientId = await resolvePartyId(ctx, c, "creator");
+      if (!recipientId) continue;
+      const propertyLabel = c.property_name || c.location || "your collab";
+      const daysLeft = Math.max(0, Math.ceil((deadline - now) / day));
+      const dueLabel = daysLeft === 0 ? "today" : `in ${daysLeft} day${daysLeft === 1 ? "" : "s"}`;
+      const body = `Your deliverables for ${propertyLabel} are due ${dueLabel}.`;
+
+      await ctx.runMutation(internal.notifications.create, {
+        userId: recipientId,
+        type: "collab_reminder",
+        title: "Deliverables due soon",
+        body,
+        link: `/contract?open=${String(c._id)}`,
+      });
+      await postContractThreadMessage(ctx, c, "creator", body);
+
+      const profile = await ctx.db.get(recipientId as any);
+      // Settings > Notifications > Collab reminders — gates the email only;
+      // the in-app notification + thread message above still fire either way.
+      if ((profile as any)?.email && (profile as any)?.notification_prefs?.collabReminders !== false) {
+        await ctx.scheduler.runAfter(0, internal.emails.sendContractEmail, {
+          to: (profile as any).email,
+          recipientName: (profile as any).full_name || c.creator_name || "there",
+          subject: `Deliverables due ${dueLabel} — ${propertyLabel}`,
+          heading: "Hey {name} 👋",
+          message: `Just a heads up — your deliverables for <strong>${propertyLabel}</strong> are due ${dueLabel}, based on the turnaround time for this collab.`,
+          calloutLabel: "Wrap up",
+          calloutText: "Open Collabnb to upload or confirm your deliverables.",
+        });
+      }
+
+      await ctx.db.patch(c._id, { collab_reminder_sent_at: now });
+    }
+  },
+});
+
 // ─── Deferred platform-fee charging (save card at signing, charge on completion) ──
 
 // Stores the host's saved Stripe card + the fee to charge later.

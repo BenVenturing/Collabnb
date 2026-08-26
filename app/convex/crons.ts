@@ -62,6 +62,15 @@ crons.daily(
   {}
 );
 
+// Daily at 9am UTC — nudge creators ~3 days before their deliverable
+// deadline (signed date + listing turnaround_days). Fires once per contract.
+crons.daily(
+  "collab deliverable reminders",
+  { hourUTC: 9, minuteUTC: 0 },
+  internal.contracts.checkCollabReminders,
+  {}
+);
+
 // Daily at midnight UTC — expire creator trials and flip to limited access.
 crons.daily(
   "expire creator trials",

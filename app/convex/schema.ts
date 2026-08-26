@@ -281,6 +281,11 @@ export default defineSchema({
     fee_charge_failed: v.optional(v.boolean()),
     sent_at: v.optional(v.number()),
     last_reminder_at: v.optional(v.number()),
+    // Settings > Notifications > Collab reminders — fires once, ~3 days
+    // before the deliverable deadline (turnaround_days from the linked
+    // listing, counted from when both parties signed). See
+    // contracts.checkCollabReminders.
+    collab_reminder_sent_at: v.optional(v.number()),
     admin_dismissed: v.optional(v.boolean()),
     admin_dismissed_at: v.optional(v.number()),
     // Collect & forward: host is charged cash_value + fee_amount in one PaymentIntent

@@ -447,15 +447,20 @@ export function CollabProvider({ children }) {
       pitchMessage,
     }).catch(() => {});
 
-    createThreadCvx({
-      listingTitle: listing.title,
-      hostName: listing.host_name || MOCK_CREATOR.full_name,
-      hostAvatar: listing.host_avatar || undefined,
-      tag: 'Application',
-      lastMessage: pitchMessage.slice(0, 100),
-      participantId: listing.host_id ? String(listing.host_id) : undefined,
-      threadKey,
-    }).catch(() => {});
+    // If reusing an already-synced pre-apply thread, don't create a second
+    // Convex row for the same thread_key — just leave the existing one (the
+    // pitch record below becomes the authoritative party link for it).
+    if (!existingPremsgThread) {
+      createThreadCvx({
+        listingTitle: listing.title,
+        hostName: listing.host_name || MOCK_CREATOR.full_name,
+        hostAvatar: listing.host_avatar || undefined,
+        tag: 'Application',
+        lastMessage: pitchMessage.slice(0, 100),
+        participantId: listing.host_id ? String(listing.host_id) : undefined,
+        threadKey,
+      }).catch(() => {});
+    }
 
     // Write pitch record so host can see the application. Unlike the two
     // syncs above, this one carries real rejection rules (listing not
@@ -487,19 +492,23 @@ export function CollabProvider({ children }) {
           threadKey,
         });
       } catch (err) {
-        // Roll back the optimistic thread/collab — the application never
-        // actually went through, so don't leave a dead-end conversation.
+        // Roll back the optimistic collab — the application never actually
+        // went through. Only delete the thread if we created it fresh; a
+        // reused pre-apply thread predates this attempt and should survive,
+        // just back to its pre-apply "Message" state.
         setCollabs((prev) => {
           const updated = prev.filter((c) => c.id !== newCollab.id);
           saveCollabsToStorage(updated);
           return updated;
         });
-        setThreads((prev) => prev.filter((t) => t.thread_key !== threadKey));
+        setThreads((prev) => existingPremsgThread
+          ? prev.map((t) => t.thread_key === threadKey ? { ...t, tag: 'Message', collab_id: undefined } : t)
+          : prev.filter((t) => t.thread_key !== threadKey));
         return { ok: false, error: err?.data || err?.message || 'Could not submit your application — try again.' };
       }
     }
     return { ok: true };
-  }, [applyCount, createCollabCvx, createThreadCvx, createPitchCvx]);
+  }, [applyCount, createCollabCvx, createThreadCvx, createPitchCvx, threads]);
 
   const getCollabById = useCallback((id) =>
     collabs.find((c) => c.id === id) || null,

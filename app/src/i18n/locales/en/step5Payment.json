@@ -21,7 +21,7 @@
     "saveChanges": "Save changes",
     "publish": "Publish listing"
   },
-  "heading": "How will you get paid?",
+  "heading": "How is the creator compensated?",
   "subtitle": "This decides how the creator's payment moves — review it carefully, it's locked once the listing goes live.",
   "lockedBanner": "This listing is already published, so payment method is locked to avoid disrupting active collaborations.",
   "payoutSwitch": {

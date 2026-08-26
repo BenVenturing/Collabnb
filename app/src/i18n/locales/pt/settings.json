@@ -196,7 +196,8 @@
     "taxOnFileValue": "Registradas no Stripe como parte da sua conta de repasse",
     "review": "Revisar",
     "taxCheckingValue": "Verificando o status da sua conta Stripe…",
-    "taxHostValue": "Formulários 1099 se aplicam a criadores que recebem repasses, não a anfitriões"
+    "taxHostValue": "Formulários 1099 se aplicam a criadores que recebem repasses, não a anfitriões",
+    "sectionHistory": "Histórico de pagamentos"
   },
   "language": {
     "sectionPreferences": "Preferências",

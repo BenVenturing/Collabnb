@@ -233,8 +233,8 @@ async function draftWithOpenAiCompatible(
 }
 
 export const draftReply = action({
-  args: { threadKey: v.string(), instruction: v.optional(v.string()) },
-  handler: withSurfacedErrors(async (ctx, { threadKey, instruction }): Promise<{ draft: string; provider: Provider | "collabnb" }> => {
+  args: { threadKey: v.string(), instruction: v.optional(v.string()), recipientName: v.optional(v.string()) },
+  handler: withSurfacedErrors(async (ctx, { threadKey, instruction, recipientName }): Promise<{ draft: string; provider: Provider | "collabnb" }> => {
     const caller = await requireAuthedProfileAction(ctx, api.profiles.getByClerkUserId);
     if (caller.is_verified !== true && caller.is_admin !== true) {
       throw new ConvexError("Your account is pending verification. AI drafting unlocks once you're approved.");
@@ -243,12 +243,22 @@ export const draftReply = action({
     await ctx.runMutation(internal.aiAssistant.checkDraftRateLimit, { key: `ai_draft:${ownerId}` });
 
     const messages: any[] = await ctx.runQuery(api.threadMessages.getByThread, { threadKey });
-    if (messages.length === 0) throw new ConvexError("No messages in this thread yet.");
     const trimmedInstruction = instruction?.trim().slice(0, 500);
-    const task = trimmedInstruction
-      ? `Draft the next reply. Follow this instruction from the user about what to say or how to say it: "${trimmedInstruction}"`
-      : "Draft the next reply.";
-    const prompt = `Conversation so far:\n\n${formatThreadForPrompt(messages.slice(-20))}\n\n${task}`;
+    const who = recipientName?.trim() ? ` to ${recipientName.trim()}` : "";
+
+    let task: string;
+    if (messages.length === 0) {
+      task = trimmedInstruction
+        ? `This is the very first message${who} — there's no conversation yet. Write the opening message. Follow this instruction: "${trimmedInstruction}"`
+        : `This is the very first message${who} — there's no conversation yet. Write a short, warm opening message: introduce yourself, say hello, and express interest in collaborating. Keep it casual and general since there are no specific details to reference yet.`;
+    } else {
+      task = trimmedInstruction
+        ? `Draft the next reply. Follow this instruction from the user about what to say or how to say it: "${trimmedInstruction}"`
+        : "Draft the next reply.";
+    }
+    const prompt = messages.length > 0
+      ? `Conversation so far:\n\n${formatThreadForPrompt(messages.slice(-20))}\n\n${task}`
+      : task;
 
     const keyRow: any = await ctx.runQuery(internal.aiAssistant.getKeyForOwner, { ownerId });
     if (keyRow) {

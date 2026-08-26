@@ -34,6 +34,36 @@ function computeContractFee(contract) {
   return { cash: basis, fee, isFreeStay };
 }
 
+// ─── Live-testing safety valve ─────────────────────────────────────────────
+// Discounts real, live-mode purchases down to $1 for exactly one account, so
+// the founder can smoke-test live Stripe flows without paying full price.
+// Unset TEST_DOLLAR_EMAIL in Convex env (`npx convex env remove
+// TEST_DOLLAR_EMAIL --prod`) to disable instantly, no redeploy required.
+const TEST_DOLLAR_EMAIL = process.env.TEST_DOLLAR_EMAIL;
+const isTestDollarAccount = (email) => Boolean(TEST_DOLLAR_EMAIL) && email === TEST_DOLLAR_EMAIL;
+
+// Builds (or reuses) a Stripe Coupon that discounts a given persisted Price
+// down to exactly $1. Deterministic id keyed to the price's current amount,
+// so a future live price change creates a fresh coupon instead of silently
+// reusing a stale discount.
+async function getOneDollarCoupon(stripe, priceId) {
+  const price = await stripe.prices.retrieve(priceId);
+  const amountOff = (price.unit_amount ?? 0) - 100;
+  if (amountOff <= 0) return null;
+  const couponId = `test1_${priceId}_${price.unit_amount}`;
+  try {
+    return await stripe.coupons.retrieve(couponId);
+  } catch {
+    return await stripe.coupons.create({
+      id: couponId,
+      amount_off: amountOff,
+      currency: 'usd',
+      duration: 'forever',
+      name: 'Internal live-test discount ($1)',
+    });
+  }
+}
+
 // One-time Checkout for host platform fee.
 // Requires: npx convex env set STRIPE_SECRET_KEY sk_test_...
 export const createCheckoutSession = action({
@@ -54,7 +84,11 @@ export const createCheckoutSession = action({
 
     const stripe = new Stripe(secretKey);
     const { isFreeStay, cash, fee } = computeContractFee(contract);
-    const amountInCents = Math.round(fee * 100);
+    const host = contract.host_id
+      ? await ctx.runQuery(api.profiles.getById, { id: String(contract.host_id) })
+      : null;
+    const testDiscount = isTestDollarAccount(host?.email);
+    const amountInCents = testDiscount ? Math.min(100, Math.round(fee * 100)) : Math.round(fee * 100);
     const description = isFreeStay
       ? 'Flat platform fee for free-stay collaboration'
       : `5% of $${cash.toFixed(0)} collaboration value (min. $20)`;
@@ -72,7 +106,7 @@ export const createCheckoutSession = action({
       }],
       success_url: args.successUrl,
       cancel_url: args.cancelUrl,
-      metadata: { contractId: args.contractId },
+      metadata: { contractId: args.contractId, ...(testDiscount ? { testDiscount: 'true' } : {}) },
     });
 
     return { url: session.url, sessionId: session.id };
@@ -90,7 +124,7 @@ export const createSubscriptionSession = action({
     successUrl: v.string(),
     cancelUrl: v.string(),
   },
-  handler: async (_ctx, args) => {
+  handler: async (ctx, args) => {
     const secretKey = process.env.STRIPE_SECRET_KEY;
     if (!secretKey) throw new Error('STRIPE_SECRET_KEY is not set in Convex environment variables');
 
@@ -99,13 +133,22 @@ export const createSubscriptionSession = action({
     const priceId = isYearly ? process.env.STRIPE_PRICE_YEARLY_ID : process.env.STRIPE_PRICE_MONTHLY_ID;
     if (!priceId) throw new Error('STRIPE_PRICE_MONTHLY_ID/STRIPE_PRICE_YEARLY_ID are not set in Convex environment variables');
 
+    const buyer = await ctx.runQuery(api.profiles.getById, { id: args.profileId });
+    const testDiscount = isTestDollarAccount(buyer?.email);
+    let discounts;
+    if (testDiscount) {
+      const coupon = await getOneDollarCoupon(stripe, priceId);
+      if (coupon) discounts = [{ coupon: coupon.id }];
+    }
+
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       mode: 'subscription',
       line_items: [{ price: priceId, quantity: 1 }],
+      ...(discounts ? { discounts } : {}),
       success_url: args.successUrl,
       cancel_url: args.cancelUrl,
-      metadata: { profileId: args.profileId, tier: args.tier },
+      metadata: { profileId: args.profileId, tier: args.tier, ...(testDiscount ? { testDiscount: 'true' } : {}) },
       custom_text: {
         submit: { message: 'You can cancel anytime from your profile settings.' },
       },
@@ -183,6 +226,38 @@ export const verifySubscriptionSession = action({
   },
 });
 
+// Lists the signed-in subscriber's past paid invoices, for the Payments tab
+// history list. Customer resolved server-side from the caller's own profile —
+// never from a client-supplied id — same IDOR-safe pattern as the billing
+// portal above.
+export const listBillingHistory = action({
+  args: {},
+  handler: async (ctx) => {
+    const secretKey = process.env.STRIPE_SECRET_KEY;
+    if (!secretKey) throw new Error('STRIPE_SECRET_KEY is not set in Convex environment variables');
+
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity?.subject) throw new Error('You must be signed in to view billing history');
+    const profile = await ctx.runQuery(api.profiles.getByClerkUserId, { clerk_user_id: identity.subject });
+    const customerId = profile?.stripe_customer_id;
+    if (!customerId) return [];
+
+    const stripe = new Stripe(secretKey);
+    const invoices = await stripe.invoices.list({ customer: customerId, limit: 24 });
+
+    return invoices.data
+      .filter((inv) => inv.status === 'paid')
+      .map((inv) => ({
+        id: inv.id,
+        amount: (inv.amount_paid ?? 0) / 100,
+        periodStart: inv.period_start ? inv.period_start * 1000 : null,
+        periodEnd: inv.period_end ? inv.period_end * 1000 : null,
+        created: inv.created * 1000,
+        description: inv.lines?.data?.[0]?.description || 'Creator Pro membership',
+      }));
+  },
+});
+
 // Opens the Stripe Customer Portal for an active subscriber to manage their plan.
 // The customer ID is resolved server-side from the signed-in user's own profile —
 // never accepted from the client — so a caller can only ever open the portal for
@@ -230,8 +305,12 @@ export const createLifetimeSession = action({
     if (!secretKey) throw new Error('STRIPE_SECRET_KEY is not set in Convex environment variables');
 
     const lifetimeCount = await ctx.runQuery(api.profiles.countLifetimeMembers);
-    const tier = getLifetimeTier(lifetimeCount);
+    let tier = getLifetimeTier(lifetimeCount);
     if (!tier) throw new Error('All lifetime spots are sold out. Please choose a monthly or annual plan.');
+
+    const buyer = await ctx.runQuery(api.profiles.getById, { id: args.profileId });
+    const testDiscount = isTestDollarAccount(buyer?.email);
+    if (testDiscount) tier = { ...tier, price: 1 };
 
     const stripe = new Stripe(secretKey);
     const session = await stripe.checkout.sessions.create({
@@ -256,6 +335,7 @@ export const createLifetimeSession = action({
         type: 'lifetime',
         lifetimeTier: tier.label,
         lifetimePrice: String(tier.price),
+        ...(testDiscount ? { testDiscount: 'true' } : {}),
       },
       custom_text: {
         submit: { message: 'One-time payment — no recurring charges, ever.' },
@@ -376,7 +456,29 @@ export const verifyFeeSetupSession = action({
       feeAmount,
     });
 
-    return { success: true };
+    let cardBrand, cardLast4;
+    try {
+      const pm = await stripe.paymentMethods.retrieve(paymentMethodId);
+      cardBrand = pm.card?.brand;
+      cardLast4 = pm.card?.last4;
+    } catch { /* display-only — card save already succeeded above */ }
+
+    const contract = await ctx.runQuery(internal.contracts.getByIdInternal, { id: contractId });
+    const host = contract?.host_id
+      ? await ctx.runQuery(api.profiles.getById, { id: String(contract.host_id) })
+      : null;
+    if (host?.email) {
+      await ctx.runAction(internal.email.sendCardSavedEmail, {
+        to: host.email,
+        name: host.full_name || 'there',
+        sessionId: session.id,
+        cardBrand,
+        cardLast4,
+        feeAmount,
+      });
+    }
+
+    return { success: true, cardBrand, cardLast4, orderId: session.id, feeAmount };
   },
 });
 
@@ -541,9 +643,23 @@ export const chargeContractFee = internalAction({
     // "Pay in person": host pays the creator directly, off-platform — Collabnb
     // still auto-charges its own fee, but never collects or forwards the cash.
     const isInPerson = contract.payout_handling === 'in_person';
-    const creatorPayout = (isFreeStay || isInPerson) ? 0 : cash;
-    const grossCharge = fee + creatorPayout;
+    let creatorPayout = (isFreeStay || isInPerson) ? 0 : cash;
+    let grossCharge = fee + creatorPayout;
     if (grossCharge <= 0) return { skipped: 'nothing_to_charge' };
+
+    // Live-testing safety valve — shrink this one collab's charge to $1 total,
+    // keeping fee/payout proportional in whole cents so the amount forwarded
+    // to the creator can never exceed what was actually collected from the host.
+    const testDiscount = isTestDollarAccount(host?.email);
+    if (testDiscount && grossCharge > 1) {
+      const originalFeeCents = Math.round(fee * 100);
+      const originalGrossCents = Math.round(grossCharge * 100);
+      const testFeeCents = Math.min(100, Math.round((originalFeeCents / originalGrossCents) * 100));
+      fee = testFeeCents / 100;
+      creatorPayout = (100 - testFeeCents) / 100;
+      grossCharge = 1;
+    }
+
     const amountInCents = Math.round(grossCharge * 100);
 
     const stripe = new Stripe(secretKey);
@@ -558,7 +674,7 @@ export const chargeContractFee = internalAction({
         description: creatorPayout > 0
           ? 'Collabnb collaboration payment (platform fee + creator payout)'
           : 'Collabnb platform fee — completed collaboration',
-        metadata: { contractId: args.contractId, type: 'collab_payment', feeAmount: String(fee), creatorPayout: String(creatorPayout) },
+        metadata: { contractId: args.contractId, type: 'collab_payment', feeAmount: String(fee), creatorPayout: String(creatorPayout), ...(testDiscount ? { testDiscount: 'true' } : {}) },
       });
 
       if (intent.status === 'succeeded') {

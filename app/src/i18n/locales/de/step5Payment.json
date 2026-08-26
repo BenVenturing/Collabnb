@@ -21,7 +21,7 @@
     "saveChanges": "Änderungen speichern",
     "publish": "Angebot veröffentlichen"
   },
-  "heading": "Wie wirst du bezahlt?",
+  "heading": "Wie wird der Creator bezahlt?",
   "subtitle": "Dies bestimmt, wie die Zahlung des Creators abläuft — prüfe es sorgfältig, es wird gesperrt, sobald das Angebot live geht.",
   "lockedBanner": "Dieses Angebot ist bereits veröffentlicht, daher ist die Zahlungsmethode gesperrt, um laufende Kollaborationen nicht zu stören.",
   "payoutSwitch": {

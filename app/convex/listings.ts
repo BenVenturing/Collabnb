@@ -453,7 +453,7 @@ export const create = mutation({
       if (host && host.is_verified !== true && host.is_admin !== true) {
         throw new ConvexError("Your account is pending verification. You can save this listing as a draft — publishing unlocks once you're approved.");
       }
-      if (host && !host.stripe_default_payment_method_id && host.is_admin !== true) {
+      if (host && !host.stripe_default_payment_method_id) {
         throw new ConvexError("Add a card before publishing — it's only used for Collabnb's platform fee once a collaboration completes. You can save this listing as a draft in the meantime.");
       }
     }
@@ -533,7 +533,7 @@ export const update = mutation({
       if (host && host.is_verified !== true && host.is_admin !== true) {
         throw new ConvexError("Your account is pending verification. You can save this listing as a draft — publishing unlocks once you're approved.");
       }
-      if (host && !host.stripe_default_payment_method_id && host.is_admin !== true) {
+      if (host && !host.stripe_default_payment_method_id) {
         throw new ConvexError("Add a card before publishing — it's only used for Collabnb's platform fee once a collaboration completes. You can save this listing as a draft in the meantime.");
       }
     }

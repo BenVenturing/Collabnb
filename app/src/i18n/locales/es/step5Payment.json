@@ -21,7 +21,7 @@
     "saveChanges": "Guardar cambios",
     "publish": "Publicar anuncio"
   },
-  "heading": "¿Cómo recibirás el pago?",
+  "heading": "¿Cómo se le paga al creador?",
   "subtitle": "Esto define cómo se mueve el pago del creador — revísalo con cuidado, se bloquea una vez que el anuncio esté publicado.",
   "lockedBanner": "Este anuncio ya está publicado, por lo que el método de pago está bloqueado para no interrumpir colaboraciones activas.",
   "payoutSwitch": {

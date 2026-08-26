@@ -196,7 +196,8 @@
     "taxOnFileValue": "On file with Stripe as part of your payout account",
     "review": "Review",
     "taxCheckingValue": "Checking your Stripe account status…",
-    "taxHostValue": "1099s apply to creators receiving payouts, not hosts"
+    "taxHostValue": "1099s apply to creators receiving payouts, not hosts",
+    "sectionHistory": "Payment history"
   },
   "language": {
     "sectionPreferences": "Preferences",

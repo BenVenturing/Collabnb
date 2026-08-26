@@ -186,6 +186,7 @@ export default function Settings() {
   const removeSavedCard = useAction(api.stripe.removeSavedCard);
   const createConnectOnboardingLink = useAction(api.stripe.createConnectOnboardingLink);
   const getConnectAccountStatus = useAction(api.stripe.getConnectAccountStatus);
+  const listBillingHistory = useAction(api.stripe.listBillingHistory);
   const blockUserMutation = useMutation(api.profiles.blockUser);
   const unblockUserMutation = useMutation(api.profiles.unblockUser);
   const [portalLoading, setPortalLoading] = useState(false);
@@ -195,6 +196,7 @@ export default function Settings() {
   const [checkoutReceipt, setCheckoutReceipt] = useState(null);
   const [connectStatus, setConnectStatus] = useState(null);
   const [connectBusy, setConnectBusy] = useState(false);
+  const [billingHistory, setBillingHistory] = useState(null);
   const [blockQuery, setBlockQuery] = useState('');
 
   const notifPrefs = {
@@ -301,6 +303,24 @@ export default function Settings() {
     getConnectAccountStatus({ profileId: userId }).then(setConnectStatus).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, profile?.stripe_connect_account_id]);
+
+  // ── Payment history: past paid Stripe invoices (subscription renewals) ──
+  useEffect(() => {
+    if (activeTab !== 'payments' || !profile?.stripe_customer_id) return;
+    listBillingHistory({}).then(setBillingHistory).catch(() => setBillingHistory([]));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, profile?.stripe_customer_id]);
+
+  function handleViewPastReceipt(invoice) {
+    setCheckoutReceipt({
+      type: 'creator',
+      tier: /year/i.test(invoice.description || '') ? 'yearly' : 'monthly',
+      amount: invoice.amount,
+      orderId: invoice.id,
+      date: invoice.created,
+      instant: true,
+    });
+  }
 
   async function handleCompleteTaxInfo() {
     setConnectBusy(true);
@@ -700,6 +720,29 @@ export default function Settings() {
                   )
                 ) : (
                   <FieldRow label={t('payments.taxInfo')} value={t('payments.taxHostValue')} comingSoon />
+                )}
+                {(billingHistory?.length ?? 0) > 0 && (
+                  <>
+                    <SectionLabel>{t('payments.sectionHistory')}</SectionLabel>
+                    <div>
+                      {billingHistory.map((inv, i) => (
+                        <button
+                          key={inv.id}
+                          onClick={() => handleViewPastReceipt(inv)}
+                          style={{
+                            display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%',
+                            background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left',
+                            padding: '0.6rem 0', borderBottom: i < billingHistory.length - 1 ? '1px solid rgba(60,87,89,0.06)' : 'none',
+                          }}
+                        >
+                          <span style={{ fontSize: '0.82rem', color: 'var(--ink)', fontWeight: 600 }}>
+                            {new Date(inv.periodStart || inv.created).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                          </span>
+                          <span style={{ fontSize: '0.82rem', color: 'var(--slate)', fontWeight: 600 }}>${inv.amount.toFixed(2)}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </>
                 )}
               </>
             )}

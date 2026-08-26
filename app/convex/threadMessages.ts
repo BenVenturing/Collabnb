@@ -94,21 +94,33 @@ export const sendMessage = mutation({
     // was rejected server-side, such as applying to an unpublished listing)
     // would silently accept messages that then vanish, since getByThread
     // would never be able to show them back. Fail loudly here instead.
+    let resolvedParties: { a?: string; b?: string } | null = null;
     if (!sender || sender.is_admin !== true) {
-      const parties = await resolveThreadParties(ctx, args.threadKey);
-      const isParty = parties ? (parties.a === args.senderId || parties.b === args.senderId) : false;
+      resolvedParties = await resolveThreadParties(ctx, args.threadKey);
+      const isParty = resolvedParties ? (resolvedParties.a === args.senderId || resolvedParties.b === args.senderId) : false;
       if (!isParty) {
         throw new ConvexError(
           "This conversation isn't linked to a real application yet — try reapplying from the listing page."
         );
       }
     }
+    // Callers (AdminInbox) may pass recipientId explicitly; otherwise derive
+    // it from the thread's resolved parties — "whichever side isn't me" —
+    // so notifications/emails fire for ordinary Inbox sends too, not just
+    // the admin-persona composer.
+    let effectiveRecipientId = args.recipientId;
+    if (!effectiveRecipientId) {
+      const parties = resolvedParties ?? (await resolveThreadParties(ctx, args.threadKey));
+      if (parties) {
+        effectiveRecipientId = parties.a === args.senderId ? parties.b : parties.a;
+      }
+    }
     // Blocking is symmetric (Settings > Privacy > Blocked people) — either
     // party having blocked the other is enough to stop new messages both ways.
-    if (args.recipientId && args.recipientId !== args.senderId) {
+    if (effectiveRecipientId && effectiveRecipientId !== args.senderId) {
       let recipient: any = null;
-      try { recipient = await ctx.db.get(args.recipientId as any); } catch { recipient = null; }
-      const blockedBySender = (sender?.blocked_user_ids ?? []).includes(args.recipientId);
+      try { recipient = await ctx.db.get(effectiveRecipientId as any); } catch { recipient = null; }
+      const blockedBySender = (sender?.blocked_user_ids ?? []).includes(effectiveRecipientId);
       const blockedByRecipient = (recipient?.blocked_user_ids ?? []).includes(args.senderId);
       if (blockedBySender || blockedByRecipient) {
         throw new ConvexError("You can't message this user.");
@@ -124,8 +136,8 @@ export const sendMessage = mutation({
       created_at: Date.now(),
     });
 
-    if (args.recipientId && args.recipientId !== args.senderId) {
-      const recipientId = args.recipientId;
+    if (effectiveRecipientId && effectiveRecipientId !== args.senderId) {
+      const recipientId = effectiveRecipientId;
       const notifType = args.senderRole === "host" ? "host_reply" : "new_message";
 
       // Throttle email: if the recipient already has an unread message notification,

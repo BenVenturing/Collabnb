@@ -16,6 +16,7 @@ import SkeletonCard from '../components/SkeletonCard';
 const TAG_STYLES = {
   Collab:      'bg-mint text-slate',
   Application: 'bg-stone text-slate',
+  Message:     'bg-stone/60 text-sage',
   Pitch:       'bg-red-100 text-red-500',
   Contract:    'bg-amber-100 text-amber-700',
   Archived:    'bg-stone/40 text-sage',
@@ -385,7 +386,7 @@ function ConversationPanel({ thread, onViewCollab, onArchive, onUpdateTag }) {
     setAiDraftError('');
     try {
       const instruction = aiPrompt.trim();
-      const { draft: suggested } = await draftAiReply({ threadKey, instruction: instruction || undefined });
+      const { draft: suggested } = await draftAiReply({ threadKey, instruction: instruction || undefined, recipientName: thread.host_name || undefined });
       setDraft(suggested);
       setAiMode(false);
       setAiPrompt('');
@@ -733,7 +734,7 @@ export default function Inbox() {
   const searchInputRef = useRef(null);
   const creatorParamHandled = useRef(false);
   const markThreadNotifsRead = useMutation(api.notifications.markReadForThread);
-  const markAdminThreadRead = useMutation(api.adminThreads.markReadByParticipant);
+  const markThreadReadByMe = useMutation(api.threads.markReadByMe);
 
   // Real listings power the "start a new conversation" search (mirrors Explore)
   const realRaw   = useQuery(api.listings.getAll, profile?._id ? { viewerId: String(profile._id) } : {}) ?? [];
@@ -787,11 +788,9 @@ export default function Inbox() {
     const thread = threads.find((t) => t.id === id);
     if (thread?.thread_key && profile?._id) {
       markThreadNotifsRead({ userId: String(profile._id), threadKey: thread.thread_key }).catch(() => {});
-      if (thread.tag === 'Collabnb') {
-        markAdminThreadRead({ threadKey: thread.thread_key }).catch(() => {});
-      }
+      markThreadReadByMe({ threadKey: thread.thread_key }).catch(() => {});
     }
-  }, [threads, profile, markThreadNotifsRead, markAdminThreadRead]);
+  }, [threads, profile, markThreadNotifsRead, markThreadReadByMe]);
 
   // Show a brief toast message
   const showToast = useCallback((msg) => {

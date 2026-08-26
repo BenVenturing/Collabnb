@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { useMutation, useAction } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { useEditor, EditorContent } from '@tiptap/react';
@@ -7,6 +8,7 @@ import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
 import ImageSwapField from '../../components/admin/ImageSwapField';
 import BlogArticle from '../../components/BlogArticle';
+import Confetti from '../../components/Confetti';
 
 // ─── Shared meta store ─────────────────────────────────────────────────────────
 // TipTap node views are plain DOM (not React), so image/pull-quote data flows
@@ -187,10 +189,12 @@ export default function BlogEditor({ post, onClose, onReopen }) {
   const [regenDirection, setRegenDirection] = useState('');
   const [regenBusy, setRegenBusy] = useState(false);
   const [regenErr, setRegenErr] = useState('');
+  const [justPublished, setJustPublished] = useState(false);
 
   const contentRef  = useRef(post.content || '');
   const saveTimer   = useRef(null);
   const stateRef    = useRef(null);
+  const scrollRef   = useRef(null);
   const isDraft     = post.status !== 'published';
 
   const editor = useEditor({
@@ -297,6 +301,16 @@ export default function BlogEditor({ post, onClose, onReopen }) {
     onClose();
   }
 
+  // Opened synchronously (before the awaits below) so popup blockers don't
+  // swallow it — it's still a direct result of the confirm-button click.
+  async function handlePublishConfirm(liveTab) {
+    if (saveState !== 'clean') await doSave();
+    await updateStatus({ id: post._id, status: 'published' });
+    if (liveTab) liveTab.location.href = `/blog/${post.slug}`;
+    setJustPublished(true);
+    setTimeout(() => { setJustPublished(false); onClose(); }, 3200);
+  }
+
   async function handleDelete() {
     await deletePost({ id: post._id });
     onClose();
@@ -363,7 +377,7 @@ export default function BlogEditor({ post, onClose, onReopen }) {
           </a>
         )}
         {isDraft
-          ? <button onClick={() => setConfirm('publish')} style={{ padding: '0.45rem 1.1rem', borderRadius: 9999, border: 'none', background: '#192524', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 700, color: '#fff' }}>Publish</button>
+          ? <button onClick={() => { scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' }); setConfirm('publish'); }} style={{ padding: '0.45rem 1.1rem', borderRadius: 9999, border: 'none', background: '#192524', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 700, color: '#fff' }}>Publish</button>
           : <button onClick={() => setConfirm('unpublish')} style={{ padding: '0.45rem 0.9rem', borderRadius: 9999, border: '1px solid rgba(25,37,36,0.2)', background: 'transparent', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 600, color: 'var(--slate)' }}>Unpublish</button>
         }
       </div>
@@ -372,7 +386,7 @@ export default function BlogEditor({ post, onClose, onReopen }) {
       <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
 
         {/* Center column — document or preview */}
-        <div style={{ flex: 1, overflowY: 'auto', minWidth: 0 }}>
+        <div ref={scrollRef} style={{ flex: 1, overflowY: 'auto', minWidth: 0 }}>
           {preview ? (
             <div data-blog-theme="light" style={{ background: 'var(--blog-bg)', minHeight: '100%' }}>
               <div style={{ maxWidth: 680, margin: '0 auto', padding: '3rem clamp(1.25rem, 4vw, 2rem) 5rem' }}>
@@ -536,8 +550,9 @@ export default function BlogEditor({ post, onClose, onReopen }) {
         </div>
       )}
 
-      {/* Confirm dialog */}
-      {confirm && (
+      {/* Confirm dialog + publish success — portaled straight to <body> so they're
+          always fixed to the real viewport, never to some ancestor's scroll box. */}
+      {confirm && createPortal(
         <div style={{ position: 'fixed', inset: 0, zIndex: 600, background: 'rgba(25,37,36,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div style={{ background: '#fff', borderRadius: '1rem', padding: '1.5rem', maxWidth: 380, width: '90%', textAlign: 'center', boxShadow: '0 16px 40px rgba(25,37,36,0.2)' }}>
             <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1rem', color: 'var(--ink)', marginBottom: '0.5rem' }}>
@@ -551,7 +566,10 @@ export default function BlogEditor({ post, onClose, onReopen }) {
               <button
                 onClick={() => {
                   const c = confirm; setConfirm(null);
-                  if (c === 'publish') handleStatus('published');
+                  if (c === 'publish') {
+                    const liveTab = window.open('', '_blank', 'noopener,noreferrer');
+                    handlePublishConfirm(liveTab);
+                  }
                   else if (c === 'unpublish') handleStatus('draft');
                   else if (c === 'reject') handleStatus('rejected');
                   else handleDelete();
@@ -562,7 +580,18 @@ export default function BlogEditor({ post, onClose, onReopen }) {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
+      )}
+
+      {justPublished && createPortal(
+        <>
+          <Confetti show={justPublished} />
+          <div style={{ position: 'fixed', top: '18%', left: '50%', transform: 'translateX(-50%)', zIndex: 998, display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.9rem 1.75rem', borderRadius: 9999, background: '#192524', color: '#fff', fontWeight: 700, fontSize: '0.92rem', boxShadow: '0 16px 40px rgba(25,37,36,0.28)' }}>
+            ✓ Published — opened on the Journal in a new tab
+          </div>
+        </>,
+        document.body
       )}
     </div>
   );

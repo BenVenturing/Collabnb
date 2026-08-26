@@ -54,7 +54,7 @@ export default function Step5Payment() {
   const editingId = typeof window !== 'undefined' ? localStorage.getItem('collabnb_editing_listing_id_v1') : null;
   const existingListing = useQuery(api.listings.getById, editingId ? { id: editingId } : "skip");
 
-  const [feesOpen, setFeesOpen] = useState(true);
+  const [feesOpen, setFeesOpen] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [confetti, setConfetti] = useState(false);
   const [publishError, setPublishError] = useState("");
@@ -66,8 +66,9 @@ export default function Step5Payment() {
   const payoutHandling = draft.payout_handling || "platform";
 
   // A draft can always be saved with no card — this only ever gates Publish
-  // (also enforced server-side in listings.create/update).
-  const needsCard = !!profile && profile.is_admin !== true && !profile.stripe_default_payment_method_id;
+  // (also enforced server-side in listings.create/update). Applies to every
+  // host, admins included — no exceptions, so the flow is always exercised.
+  const needsCard = !!profile && !profile.stripe_default_payment_method_id;
 
   // Handle the return trip from the Stripe card-setup Checkout redirect.
   useEffect(() => {
@@ -201,27 +202,29 @@ export default function Step5Payment() {
 
         {/* Payout switch */}
         <div style={{ background: "rgba(255,255,255,0.85)", backdropFilter: "blur(14px) saturate(130%)", WebkitBackdropFilter: "blur(14px) saturate(130%)", borderRadius: "1rem", border: "1px solid rgba(255,255,255,0.88)", padding: "22px", marginBottom: 18, boxShadow: "0 2px 12px rgba(25,37,36,0.05)" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 20 }}>
+          <div style={{ marginBottom: 18 }}>
+            <div style={{ fontFamily: "Satoshi, sans-serif", fontWeight: 800, fontSize: 17, color: "var(--ink)" }}>
+              {t('payoutSwitch.platform')}
+            </div>
+            <div style={{ fontFamily: "Satoshi, sans-serif", fontSize: 11, fontWeight: 700, color: "#2d6a4f", textTransform: "uppercase", letterSpacing: "0.05em", marginTop: 2 }}>
+              {t('payoutSwitch.recommended')}
+            </div>
+          </div>
+
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 20, paddingBottom: 18, borderBottom: "1px solid rgba(25,37,36,0.08)" }}>
+            <InfoCol title={t('infoCol.forHost')} text={info.host} />
+            <InfoCol title={t('infoCol.forCreator')} text={info.creator} />
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 18 }}>
             <PayoutSwitch
               value={payoutHandling}
               disabled={isLive}
               onChange={(v) => updateDraft({ payout_handling: v })}
             />
-            <div>
-              <div style={{ fontFamily: "Satoshi, sans-serif", fontWeight: 800, fontSize: 17, color: "var(--ink)" }}>
-                {payoutHandling === "in_person" ? t('payoutSwitch.inPerson') : t('payoutSwitch.platform')}
-              </div>
-              {payoutHandling !== "in_person" && (
-                <div style={{ fontFamily: "Satoshi, sans-serif", fontSize: 11, fontWeight: 700, color: "#2d6a4f", textTransform: "uppercase", letterSpacing: "0.05em", marginTop: 2 }}>
-                  {t('payoutSwitch.recommended')}
-                </div>
-              )}
+            <div style={{ fontFamily: "Satoshi, sans-serif", fontWeight: 700, fontSize: 14, color: "var(--ink)" }}>
+              {t('payoutSwitch.inPerson')}
             </div>
-          </div>
-
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 20, paddingTop: 18, borderTop: "1px solid rgba(25,37,36,0.08)" }}>
-            <InfoCol title={t('infoCol.forHost')} text={info.host} />
-            <InfoCol title={t('infoCol.forCreator')} text={info.creator} />
           </div>
         </div>
 

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ReceiptPrinter } from "./ReceiptPrinter";
 import ReceiptContent from "./ReceiptContent";
+import Confetti from "./Confetti";
 import collabnbLogo from "../assets/collabnb-logo.png";
 
 // Full-screen animation shown right after a user is redirected back from a
@@ -17,6 +18,13 @@ export default function ReceiptCheckoutOverlay({ receipt, onClose }) {
 
   useEffect(() => {
     if (!receipt) return undefined;
+    // Historical receipts (Payment history → click a past invoice) skip the
+    // fake processing/printing wait — nothing is actually happening, so jump
+    // straight to the finished paper.
+    if (receipt.instant) {
+      setStage("complete");
+      return undefined;
+    }
     setStage("processing");
     timers.current.forEach(clearTimeout);
     timers.current = [
@@ -31,18 +39,25 @@ export default function ReceiptCheckoutOverlay({ receipt, onClose }) {
   const cardLabel = receipt.cardLast4
     ? `${receipt.cardBrand ? receipt.cardBrand[0].toUpperCase() + receipt.cardBrand.slice(1) : "Card"} •••• ${receipt.cardLast4}`
     : "Card on file";
-  const dateLabel = new Date().toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+  const dateLabel = new Date(receipt.date ?? Date.now()).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
   const orderLabel = receipt.orderId ? `CB-${receipt.orderId.replace(/[^a-zA-Z0-9]/g, "").slice(-8).toUpperCase()}` : "CB-PENDING";
 
   const isHost = receipt.type === "host";
   const amountStr = `$${(receipt.amount ?? 0).toFixed(2)}`;
   const tierLabel = receipt.tier === "yearly" ? "Yearly" : "Monthly";
 
+  const knownFee = typeof receipt.feeAmount === "number" && receipt.feeAmount > 0;
+  const feeAmountStr = knownFee ? `$${receipt.feeAmount.toFixed(2)}` : "$0.00";
+
   const contentProps = isHost
     ? {
         kicker: "PAYMENT METHOD SAVED",
-        items: [{ label: "Card verification hold", detail: "released immediately", amount: "$0.00" }],
-        subtotal: "$0.00",
+        items: [
+          knownFee
+            ? { label: "Platform fee — this collaboration", detail: "charged automatically when completed", amount: feeAmountStr }
+            : { label: "Card verification hold", detail: "released immediately", amount: "$0.00" },
+        ],
+        subtotal: feeAmountStr,
         tax: "$0.00",
         total: "$0.00",
         totalLabel: "Charged today",
@@ -61,6 +76,9 @@ export default function ReceiptCheckoutOverlay({ receipt, onClose }) {
       };
 
   const canClose = stage === "complete";
+  // Real money moved (subscription), not just a $0 card-verification hold —
+  // confetti starts as the receipt begins printing and rides through completion.
+  const showConfetti = !isHost && !receipt.instant && (stage === "printing" || stage === "complete");
 
   return (
     <div
@@ -80,6 +98,7 @@ export default function ReceiptCheckoutOverlay({ receipt, onClose }) {
         padding: "1.5rem",
       }}
     >
+      <Confetti show={showConfetti} />
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "1.25rem" }}>
         <ReceiptPrinter.Root stage={stage} className="pt-2">
           <ReceiptPrinter.Machine>

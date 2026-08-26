@@ -7,6 +7,7 @@ import { useCollabs } from '../contexts/CollabContext';
 import { useAuth } from '../contexts/AuthContext';
 import { SAMPLE_HOST } from '../lib/mockData';
 import PaymentModal from './PaymentModal';
+import ReceiptCheckoutOverlay from './ReceiptCheckoutOverlay';
 
 const CURRENCIES = ['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'JPY'];
 const FREE_STAY_VALUE = 'free_stay';
@@ -141,6 +142,7 @@ export default function ContractBuilder() {
   const [paymentCancelled, setPaymentCancelled] = useState(false);
   const [cardSaved, setCardSaved] = useState(false);
   const [founderToast, setFounderToast] = useState(false);
+  const [checkoutReceipt, setCheckoutReceipt] = useState(null);
   const verifyFeeSetupSession = useAction(api.stripe.verifyFeeSetupSession);
 
   // ── Auto-generated summary paragraph ──
@@ -378,7 +380,13 @@ export default function ContractBuilder() {
       // automatically when the collaboration completes.
       setCardSaved(true);
       setShowPaymentModal(false);
-      if (sessionId) verifyFeeSetupSession({ sessionId }).catch(() => {});
+      if (sessionId) {
+        verifyFeeSetupSession({ sessionId })
+          .then(({ cardBrand, cardLast4, orderId, feeAmount }) => {
+            setCheckoutReceipt({ type: 'host', orderId, cardBrand, cardLast4, feeAmount });
+          })
+          .catch(() => {});
+      }
       navigate('/contract', { replace: true });
     } else if (setupStatus === 'cancelled') {
       setPaymentCancelled(true);
@@ -1002,6 +1010,9 @@ export default function ContractBuilder() {
           {t('founderToast')}
         </div>
       )}
+
+      {/* ── Post-checkout receipt animation ── */}
+      <ReceiptCheckoutOverlay receipt={checkoutReceipt} onClose={() => setCheckoutReceipt(null)} />
 
       {/* ── Payment modal ── */}
       <PaymentModal

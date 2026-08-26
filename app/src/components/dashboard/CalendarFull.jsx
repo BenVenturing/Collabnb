@@ -17,6 +17,56 @@ function stageColors() {
   return Object.fromEntries(Object.keys(STAGE_COLOR_HEX).map((k) => [k, { color: STAGE_COLOR_HEX[k], label: labels[k] }]));
 }
 
+function DayCell({ d, ds, isToday, isSelected, dayItems, STAGE_COLORS, onSelectDate, i18n }) {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <div style={{ position: 'relative' }} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>
+      <button
+        onClick={() => onSelectDate(isSelected ? null : ds)}
+        style={{
+          width: '100%', aspectRatio: '1', borderRadius: '0.5rem', border: 'none', cursor: 'pointer',
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2,
+          background: isToday ? 'var(--ink)' : isSelected ? 'rgba(60,87,89,0.14)' : 'transparent',
+          color: isToday ? 'var(--bone)' : 'var(--ink)',
+          fontSize: '0.68rem', fontWeight: isToday ? 800 : 600, fontFamily: 'var(--font-body)',
+          boxShadow: isSelected && !isToday ? 'inset 0 0 0 1.5px var(--slate)' : 'none',
+        }}
+      >
+        {d}
+        {dayItems.length > 0 && (
+          <span style={{ display: 'flex', gap: 2 }}>
+            {dayItems.slice(0, 3).map((t, j) => (
+              <span key={j} style={{ width: 4, height: 4, borderRadius: '50%', background: isToday ? 'var(--bone)' : (STAGE_COLORS[t.type]?.color || 'var(--slate)') }} />
+            ))}
+          </span>
+        )}
+      </button>
+
+      {hovered && dayItems.length > 0 && (
+        <div style={{
+          position: 'absolute', bottom: 'calc(100% + 6px)', left: '50%', transform: 'translateX(-50%)',
+          background: 'var(--ink)', color: 'var(--bone)', borderRadius: '0.65rem', padding: '0.5rem 0.65rem',
+          boxShadow: '0 8px 24px rgba(25,37,36,0.3)', zIndex: 30, minWidth: 180, maxWidth: 240,
+          pointerEvents: 'none',
+        }}>
+          <p style={{ fontSize: '0.62rem', fontWeight: 700, opacity: 0.65, margin: '0 0 0.35rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            {new Date(`${ds}T00:00:00`).toLocaleDateString(i18n.language, { month: 'short', day: 'numeric' })}
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+            {dayItems.map((item, j) => (
+              <div key={j} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: STAGE_COLORS[item.type]?.color || 'var(--stone)', flexShrink: 0 }} />
+                <span style={{ fontSize: '0.72rem', fontWeight: 600, lineHeight: 1.3 }}>{item.title}</span>
+              </div>
+            ))}
+          </div>
+          <div style={{ position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '5px solid transparent', borderRight: '5px solid transparent', borderTop: '5px solid var(--ink)' }} />
+        </div>
+      )}
+    </div>
+  );
+}
+
 function MonthGrid({ year, month, itemsByDate, selectedDate, onSelectDate }) {
   const { t, i18n } = useTranslation('calendarFull');
   const WEEKDAYS = t('weekdays', { returnObjects: true });
@@ -47,27 +97,17 @@ function MonthGrid({ year, month, itemsByDate, selectedDate, onSelectDate }) {
           const isSelected = selectedDate === ds;
           const dayItems = itemsByDate[ds] || [];
           return (
-            <button
+            <DayCell
               key={i}
-              onClick={() => onSelectDate(isSelected ? null : ds)}
-              style={{
-                aspectRatio: '1', borderRadius: '0.5rem', border: 'none', cursor: 'pointer',
-                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2,
-                background: isToday ? 'var(--ink)' : isSelected ? 'rgba(60,87,89,0.14)' : 'transparent',
-                color: isToday ? 'var(--bone)' : 'var(--ink)',
-                fontSize: '0.68rem', fontWeight: isToday ? 800 : 600, fontFamily: 'var(--font-body)',
-                boxShadow: isSelected && !isToday ? 'inset 0 0 0 1.5px var(--slate)' : 'none',
-              }}
-            >
-              {d}
-              {dayItems.length > 0 && (
-                <span style={{ display: 'flex', gap: 2 }}>
-                  {dayItems.slice(0, 3).map((t, j) => (
-                    <span key={j} style={{ width: 4, height: 4, borderRadius: '50%', background: isToday ? 'var(--bone)' : (STAGE_COLORS[t.type]?.color || 'var(--slate)') }} />
-                  ))}
-                </span>
-              )}
-            </button>
+              d={d}
+              ds={ds}
+              isToday={isToday}
+              isSelected={isSelected}
+              dayItems={dayItems}
+              STAGE_COLORS={STAGE_COLORS}
+              onSelectDate={onSelectDate}
+              i18n={i18n}
+            />
           );
         })}
       </div>

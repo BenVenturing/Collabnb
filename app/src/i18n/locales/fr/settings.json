@@ -196,7 +196,8 @@
     "taxOnFileValue": "Enregistrées chez Stripe dans le cadre de votre compte de versement",
     "review": "Vérifier",
     "taxCheckingValue": "Vérification du statut de votre compte Stripe…",
-    "taxHostValue": "Les formulaires 1099 concernent les créateurs recevant des versements, pas les hôtes"
+    "taxHostValue": "Les formulaires 1099 concernent les créateurs recevant des versements, pas les hôtes",
+    "sectionHistory": "Historique des paiements"
   },
   "language": {
     "sectionPreferences": "Préférences",

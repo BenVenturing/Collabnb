@@ -13,7 +13,8 @@
     },
     "calendar": "Kalender",
     "activity": "Aktivität",
-    "contract": "Vertrag"
+    "contract": "Vertrag",
+    "archived": "Archiviert"
   },
   "sidebarTip": {
     "creator": "Regelmäßige Uploads sorgen dafür, dass Gastgeber dich wieder einladen.",
@@ -34,16 +35,32 @@
   },
   "stat": {
     "creator": {
-      "active": { "label": "Aktive Collabs" },
-      "pending": { "label": "Ausstehende Bewerbungen" },
-      "earned": { "label": "Gesamteinnahmen" },
-      "due": { "label": "Content fällig" }
+      "active": {
+        "label": "Aktive Collabs"
+      },
+      "pending": {
+        "label": "Ausstehende Bewerbungen"
+      },
+      "earned": {
+        "label": "Gesamteinnahmen"
+      },
+      "due": {
+        "label": "Content fällig"
+      }
     },
     "host": {
-      "new": { "label": "Neue Bewerbungen" },
-      "review": { "label": "Prüfung ausstehend" },
-      "active": { "label": "Aktive Collabs" },
-      "spend": { "label": "Gesamtausgaben" }
+      "new": {
+        "label": "Neue Bewerbungen"
+      },
+      "review": {
+        "label": "Prüfung ausstehend"
+      },
+      "active": {
+        "label": "Aktive Collabs"
+      },
+      "spend": {
+        "label": "Gesamtausgaben"
+      }
     }
   },
   "upcoming": "Bevorstehend",
@@ -55,5 +72,6 @@
     "stay_date": "Aufenthaltsdatum"
   },
   "searchCreator": "Deine Collabs durchsuchen…",
-  "searchHost": "Creator, Angebote durchsuchen…"
+  "searchHost": "Creator, Angebote durchsuchen…",
+  "openFilters": "Filter"
 }

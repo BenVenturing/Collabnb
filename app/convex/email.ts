@@ -9,7 +9,8 @@ const FROM = "Collabnb <hello@collabnb.com>";
 // mirrors the torn-paper ReceiptPrinter UI shown in the app right after
 // Stripe redirects back, so the email and the in-app animation tell the
 // same story.
-function receiptEmailHtml({ heading, leadText, orderId, dateStr, cardLine, itemLabel, itemDetail, totalLabel, amountStr, footNote }) {
+function receiptEmailHtml({ heading, leadText, orderId, dateStr, cardLine, itemLabel, itemDetail, itemAmountStr, totalLabel, amountStr, footNote }) {
+  const itemAmount = itemAmountStr ?? amountStr;
   return `
 <!DOCTYPE html>
 <html lang="en">
@@ -43,7 +44,7 @@ function receiptEmailHtml({ heading, leadText, orderId, dateStr, cardLine, itemL
       <div class="row"><span>Date</span><span>${dateStr}</span></div>
       <div class="row"><span>Payment</span><span>${cardLine}</span></div>
       <hr />
-      <div class="row item"><span>${itemLabel}<br /><span style="font-weight:400;color:#8faea6;font-size:0.68rem;">${itemDetail}</span></span><span>${amountStr}</span></div>
+      <div class="row item"><span>${itemLabel}<br /><span style="font-weight:400;color:#8faea6;font-size:0.68rem;">${itemDetail}</span></span><span>${itemAmount}</span></div>
       <hr />
       <div class="total"><span>${totalLabel}</span><span>${amountStr}</span></div>
     </div>
@@ -333,9 +334,12 @@ export const sendSubscriptionReceiptEmail = internalAction({
 });
 
 // ─── Internal action — host card-on-file confirmation ──────────────────────
-// Fired from stripe.verifyHostCardSetupSession once a host saves a card via
-// the SetupIntent Checkout. No charge happens here ($0.00) — the card is
-// only charged later, automatically, when a collab is marked complete.
+// Fired from stripe.verifyHostCardSetupSession (account-level card, amount
+// unknown yet) and stripe.verifyFeeSetupSession (per-contract card saved at
+// signing, where the eventual fee is already known). Either way $0.00 is
+// charged right now — the card is only charged later, automatically, when
+// a collab is marked complete. When feeAmount is passed in, the receipt
+// previews that known future charge instead of a generic placeholder line.
 export const sendCardSavedEmail = internalAction({
   args: {
     to: v.string(),
@@ -343,22 +347,27 @@ export const sendCardSavedEmail = internalAction({
     sessionId: v.string(),
     cardBrand: v.optional(v.string()),
     cardLast4: v.optional(v.string()),
+    feeAmount: v.optional(v.number()),
   },
-  handler: async (_ctx, { to, name, sessionId, cardBrand, cardLast4 }) => {
+  handler: async (_ctx, { to, name, sessionId, cardBrand, cardLast4, feeAmount }) => {
     const apiKey = process.env.RESEND_API_KEY;
     if (!apiKey) return;
 
     const firstName = name.split(" ")[0];
     const cardLine = cardLast4 ? `${cardBrand ? cardBrand[0].toUpperCase() + cardBrand.slice(1) : "Card"} •••• ${cardLast4}` : "Card on file";
+    const knownFee = typeof feeAmount === "number" && feeAmount > 0;
 
     const html = receiptEmailHtml({
       heading: `You're ready to host, ${firstName}`,
-      leadText: "We saved your card on file. It's only charged once a collab wraps up.",
+      leadText: knownFee
+        ? "We saved your card for this collaboration. It's only charged once the collab wraps up."
+        : "We saved your card on file. It's only charged once a collab wraps up.",
       orderId: shortOrderId(sessionId),
       dateStr: todayLabel(),
       cardLine,
-      itemLabel: "Card verification hold",
-      itemDetail: "released immediately",
+      itemLabel: knownFee ? "Platform fee — this collaboration" : "Card verification hold",
+      itemDetail: knownFee ? "charged automatically when completed" : "released immediately",
+      itemAmountStr: knownFee ? `$${feeAmount.toFixed(2)}` : "$0.00",
       totalLabel: "Charged today",
       amountStr: "$0.00",
       footNote: "This card will be charged automatically once a collab is marked complete.",

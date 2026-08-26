@@ -5,6 +5,7 @@ import { useCollabs } from '../contexts/CollabContext';
 import { DEMO_COLLAB } from '../lib/mockData';
 import CollabDetail from '../components/CollabDetail';
 import ProposalsOverview from '../components/dashboard/ProposalsOverview';
+import { bucketByMonth, toMonthSeries, isoDate } from '../lib/monthSeries';
 import { useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { useAuth } from '../contexts/AuthContext';
@@ -181,7 +182,7 @@ function CollabCard({ collab, onClick, onDismissDemo, onDismissSample }) {
 export default function Collabs() {
   const { t } = useTranslation('collabs');
   const navigate = useNavigate();
-  const { collabs } = useCollabs();
+  const { collabs, contracts } = useCollabs();
   const [filter, setFilter] = useState('active');
   const [selectedCollab, setSelectedCollab] = useState(null);
   const [statusFilter, setStatusFilter] = useState('all');
@@ -312,6 +313,55 @@ export default function Collabs() {
     })
     .filter((c) => !search.trim() || c.property_name?.toLowerCase().includes(search.trim().toLowerCase()));
 
+  // Real dashboard data — replaces ProposalsOverview's mock defaults wherever
+  // we have a clean, honest mapping onto existing Convex records.
+  const realActive = useMemo(() => active.filter((c) => !c.is_demo && !c.is_sample), [active]);
+
+  const statValues = useMemo(() => {
+    const uniqueListings = new Set(realActive.map((c) => c.property_name).filter(Boolean));
+    const realPendingCount = (convexPitches || []).filter((p) => p.status === 'pending').length;
+    const paidContracts = (contracts || []).filter((c) => c.paid);
+    const totalEarned = paidContracts.reduce((sum, c) => sum + (c.payment_amount ?? c.cash_value ?? 0), 0);
+    const dueCollabs = realActive.filter((c) => c.days_left != null && !['uploaded_tagged', 'closed', 'archived'].includes(c.current_stage));
+    const minDue = dueCollabs.length ? Math.min(...dueCollabs.map((c) => c.days_left)) : null;
+
+    return {
+      active:  { value: String(realActive.length), sub: `Across ${uniqueListings.size} listing${uniqueListings.size === 1 ? '' : 's'}` },
+      pending: { value: String(realPendingCount), sub: 'Awaiting host reply' },
+      earned:  { value: `$${totalEarned.toLocaleString()}`, sub: `${paidContracts.length} contract${paidContracts.length === 1 ? '' : 's'} paid` },
+      due:     { value: String(dueCollabs.length), sub: minDue !== null ? `Next due in ${minDue} day${minDue === 1 ? '' : 's'}` : 'Nothing due' },
+    };
+  }, [realActive, convexPitches, contracts]);
+
+  const chartData = useMemo(() => {
+    const year = new Date().getFullYear();
+    const volume = bucketByMonth(convexPitches || [], (p) => new Date(p.created_at ?? p._creationTime), () => 1, year);
+    const money = bucketByMonth(
+      (contracts || []).filter((c) => c.paid),
+      (c) => new Date(c.created_at),
+      (c) => c.payment_amount ?? c.cash_value ?? 0,
+      year
+    );
+    return { money: toMonthSeries(money), volume: toMonthSeries(volume) };
+  }, [convexPitches, contracts]);
+
+  const todoItems = useMemo(() => {
+    const items = [];
+    realActive.forEach((c) => {
+      if (c.days_left != null && !['uploaded_tagged', 'closed', 'archived'].includes(c.current_stage)) {
+        const d = new Date();
+        d.setDate(d.getDate() + c.days_left);
+        items.push({ type: 'deadline', title: `Upload content — ${c.property_name}`, date: isoDate(d) });
+      }
+    });
+    (convexPitches || []).forEach((p) => {
+      if (p.counter_pending === 'creator') {
+        items.push({ type: 'pending_action', title: `Respond to counter-pitch — ${p.listing_title || 'listing'}`, date: isoDate(new Date(p.created_at ?? Date.now())) });
+      }
+    });
+    return items;
+  }, [realActive, convexPitches]);
+
   const handleStatClick = (presetKey) => {
     switch (presetKey) {
       case 'active':               setFilter('active'); setStatusFilter('all'); break;
@@ -331,6 +381,9 @@ export default function Collabs() {
         search={search}
         onSearchChange={setSearch}
         onStatClick={handleStatClick}
+        statValues={statValues}
+        chartData={chartData}
+        todoItems={todoItems}
         filters={[
           {
             key: 'status', value: statusFilter, onChange: setStatusFilter,

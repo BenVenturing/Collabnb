@@ -557,42 +557,84 @@ export const searchUnsplash = action({
   },
 });
 
-// Fallback rotation for the daily cron when the LLM topic pick fails.
-const TOPIC_POOL = [
-  "how boutique hosts should brief UGC creators before a content-for-stay collab",
-  "what a creator's media kit should include when pitching boutique stays",
-  "pricing a content-for-stay deal: nights, deliverables, and usage rights",
-  "why boutique hotels win on Instagram while chains win on search",
-  "how creators can turn one stay into a month of content",
-  "usage rights explained for hosts licensing creator content",
-  "the shoulder-season playbook: filling quiet weeks with creator collabs",
-  "red flags hosts should watch for when vetting creator pitches",
-  "how micro-creators out-convert big influencers for boutique bookings",
-  "building a repeatable UGC pipeline for a small property",
-  "what makes hotel content actually convert: hooks, pacing, and proof",
-  "from DMs to contracts: professionalizing creator outreach",
-  "how boutique hosts should measure the ROI of a creator collab",
-  "the difference between UGC, influencer posts, and brand content for stays",
-  "how creators should scout properties that fit their audience",
-  "negotiating deliverables: what a host can reasonably ask for one night",
-];
+// The Journal rotates evenly through these four categories for automatic
+// (cron / no-explicit-topic) posts — see nextCategoryInRotation below.
+const CATEGORY_CYCLE = ["creators", "hosts", "industry", "stats"] as const;
 
-async function pickFreshTopic(ctx: any, headlines: { title: string; source: string }[]): Promise<string> {
-  const recent: any[] = await ctx.runQuery(internal.blog.getAllInternal, {});
-  const recentTitles = recent.slice(0, 12).map((p: any) => p.title).filter(Boolean).join("; ");
+const CATEGORY_AUDIENCE: Record<string, string> = {
+  creators: "UGC travel creators — pitching hosts, portfolio-building, deliverables, negotiating collabs",
+  hosts: "boutique hospitality hosts running content-for-stay collabs — briefing creators, vetting pitches, measuring ROI",
+  industry: "the broader creator-economy-meets-hospitality industry — trends, platforms, and what's changing, not addressed to either side specifically",
+  stats: "a Collabnb platform data/performance post — grounded in Collabnb's own creator, host, and collab numbers",
+};
+
+// Fallback rotation per category, used only when the LLM topic pick fails.
+const TOPIC_POOL_BY_CATEGORY: Record<string, string[]> = {
+  creators: [
+    "what a creator's media kit should include when pitching boutique stays",
+    "how creators can turn one stay into a month of content",
+    "how micro-creators out-convert big influencers for boutique bookings",
+    "how creators should scout properties that fit their audience",
+  ],
+  hosts: [
+    "how boutique hosts should brief UGC creators before a content-for-stay collab",
+    "red flags hosts should watch for when vetting creator pitches",
+    "how boutique hosts should measure the ROI of a creator collab",
+    "negotiating deliverables: what a host can reasonably ask for one night",
+    "pricing a content-for-stay deal: nights, deliverables, and usage rights",
+    "building a repeatable UGC pipeline for a small property",
+    "the shoulder-season playbook: filling quiet weeks with creator collabs",
+  ],
+  industry: [
+    "why boutique hotels win on Instagram while chains win on search",
+    "usage rights explained for hosts licensing creator content",
+    "what makes hotel content actually convert: hooks, pacing, and proof",
+    "the difference between UGC, influencer posts, and brand content for stays",
+    "from DMs to contracts: professionalizing creator outreach",
+  ],
+  stats: [
+    "what a season of completed collabs reveals about content ROI for boutique hosts",
+    "creator earnings on Collabnb: what the numbers actually show",
+    "how fast boutique hosts fill their calendar once they start running collabs",
+    "the state of the creator-hospitality economy on Collabnb right now",
+  ],
+};
+
+// Best-effort label for a human-typed topic (admin manually entered a hint) —
+// automatic runs use nextCategoryInRotation instead, see below.
+function inferCategoryFromTopic(topic: string): string {
+  const t = topic.toLowerCase();
+  if (t.includes("host")) return "hosts";
+  if (t.includes("creator")) return "creators";
+  return "industry";
+}
+
+// Cycles creators → hosts → industry → stats → creators… based on the most
+// recent post's category, so automatic posts stop clustering on whichever
+// category the topic-picker's word choice happens to favor.
+function nextCategoryInRotation(recentPosts: any[]): string {
+  const last = recentPosts.find((p) => CATEGORY_CYCLE.includes(p.category))?.category;
+  const lastIndex = last ? CATEGORY_CYCLE.indexOf(last) : -1;
+  return CATEGORY_CYCLE[(lastIndex + 1) % CATEGORY_CYCLE.length];
+}
+
+async function pickFreshTopic(recentPosts: any[], headlines: { title: string; source: string }[], category: string): Promise<string> {
+  const recentTitles = recentPosts.slice(0, 12).map((p: any) => p.title).filter(Boolean).join("; ");
   const news = headlines.slice(0, 12).map((h) => `- [${h.source}] ${h.title}`).join("\n");
+  const audience = CATEGORY_AUDIENCE[category] || CATEGORY_AUDIENCE.industry;
   try {
     const raw = await llmChat([
       { role: "system", content: "You are a content strategist for Collabnb — a creator-first hospitality marketing platform connecting boutique properties with vetted creators for professional content campaigns. Be specific, never generic." },
-      { role: "user", content: `Industry headlines this week:\n${news || "(none available)"}\n\nRecent Collabnb Journal posts (do NOT overlap with these): ${recentTitles || "none yet"}.\n\nSuggest ONE fresh, specific blog post topic for boutique hosts or UGC travel creators that reacts to what the industry is talking about this week. Return only the topic itself as a single lowercase phrase, no quotes, no commentary.` },
+      { role: "user", content: `Industry headlines this week:\n${news || "(none available)"}\n\nRecent Collabnb Journal posts (do NOT overlap with these): ${recentTitles || "none yet"}.\n\nSuggest ONE fresh, specific blog post topic written for ${audience}, that reacts to what the industry is talking about this week. Return only the topic itself as a single lowercase phrase, no quotes, no commentary.` },
     ], 100);
     const topic = raw.trim().split("\n")[0].replace(/^["'\-\s]+|["'\s]+$/g, "");
     if (topic.length >= 20 && topic.length <= 200) return topic;
   } catch {
     // fall through to the rotation pool
   }
+  const pool = TOPIC_POOL_BY_CATEGORY[category] || TOPIC_POOL_BY_CATEGORY.industry;
   const day = Math.floor(Date.now() / 86_400_000);
-  return TOPIC_POOL[day % TOPIC_POOL.length];
+  return pool[day % pool.length];
 }
 
 // Parse the writer model's structured response into post fields.
@@ -645,10 +687,10 @@ EXCERPT: [one conversational sentence, under 120 chars — renders as the deck u
 SEO_DESC: [155 chars max, human-sounding]
 TAGS: [3-5 lowercase comma-separated, specific]
 PULL_QUOTE: [the single most resonant sentence from the post, lightly polished]
-IMAGE_QUERY_HERO: [black and white editorial photo subject matching the hook scene — 5-7 words]
-IMAGE_QUERY_1: [black and white editorial — 5-7 words, a DIFFERENT subject than hero]
-IMAGE_QUERY_2: [black and white editorial — 5-7 words, a DIFFERENT subject than above]
-IMAGE_QUERY_3: [black and white editorial — 5-7 words, a DIFFERENT subject than above]
+IMAGE_QUERY_HERO: [black and white editorial photo — 5-7 words depicting the literal subject of the TITLE above, not a generic hospitality scene]
+IMAGE_QUERY_1: [black and white editorial — 5-7 words depicting the concrete subject/scene of the article's FIRST <h2> section (the one %%INLINE_IMAGE_1%% sits under) — read that section's heading and content, not the hero]
+IMAGE_QUERY_2: [black and white editorial — 5-7 words depicting the concrete subject/scene of the article's SECOND <h2> section (the one %%INLINE_IMAGE_2%% sits under)]
+IMAGE_QUERY_3: [black and white editorial — 5-7 words depicting the concrete subject/scene of the article's THIRD <h2> section (the one %%INLINE_IMAGE_3%% sits under)]
 CONTENT:
 [the full HTML following the style guide skeleton, with %%INLINE_IMAGE_1%%, %%INLINE_IMAGE_2%%, %%INLINE_IMAGE_3%% and %%PULL_QUOTE%% markers in place]`;
 
@@ -709,18 +751,32 @@ async function runGeneratePost(ctx: any, { isStatsPost = false, topicHint }: { i
       throw new Error("Missing UNSPLASH_ACCESS_KEY in Convex env.");
     }
 
+    const recentPosts: any[] = await ctx.runQuery(internal.blog.getAllInternal, {});
+
+    // Category comes first — everything downstream (topic pick, stats
+    // research) follows from it. Explicit isStatsPost (monthly cron) always
+    // wins; a human-typed topicHint gets a best-effort label; otherwise
+    // (daily cron / "Generate" with no hint) rotate the four categories so
+    // posts don't cluster on whichever one the topic-picker's wording favors.
+    const category = isStatsPost
+      ? "stats"
+      : topicHint
+        ? inferCategoryFromTopic(topicHint)
+        : nextCategoryInRotation(recentPosts);
+    const effectiveIsStatsPost = isStatsPost || category === "stats";
+
     // ── 1. Research phase — real headlines + scraped articles + stats ────────
     // No LLM "research brief" pass anymore: the writer only sees genuinely
     // scraped material, so it cannot launder invented facts through research.
     let statsContext = "";
-    if (isStatsPost) {
+    if (effectiveIsStatsPost) {
       const stats: any = await ctx.runQuery(api.blog.getPlatformStats_internal, {});
       statsContext = `\n\nCOLLABNB PLATFORM STATS (cite freely, attribute to Collabnb): ${stats.creators} creators, ${stats.hosts} hosts, ${stats.approvedCollabs} completed collabs, ${stats.activeListings} active listings.`;
     }
 
     const headlines = await fetchHeadlines();
-    const topic = topicHint || (await pickFreshTopic(ctx, headlines));
-    console.log(`generatePost step 1 ok — topic: ${topic.slice(0, 80)}`);
+    const topic = topicHint || (await pickFreshTopic(recentPosts, headlines, category));
+    console.log(`generatePost step 1 ok — category: ${category} — topic: ${topic.slice(0, 80)}`);
 
     const brief = await buildResearchBrief(topic, headlines);
     console.log(`generatePost research ok — ${brief.sources.length} sources, ${brief.context.length} chars`);
@@ -729,11 +785,6 @@ async function runGeneratePost(ctx: any, { isStatsPost = false, topicHint }: { i
       statsContext;
 
     // ── 2. Write, lint, and review ────────────────────────────────────────────
-    const category = isStatsPost ? "stats" : (
-      topic.toLowerCase().includes("host") ? "hosts" :
-      topic.toLowerCase().includes("creator") ? "creators" : "industry"
-    );
-
     const { title, excerpt, seoDesc, tags, pullQuote, imgHero, img1, img2, img3, content, reviewNotes, reviewScore } =
       await composePost(topic, research, brief.context);
 
@@ -802,7 +853,7 @@ async function runGeneratePost(ctx: any, { isStatsPost = false, topicHint }: { i
       sources: brief.sources,
       seo_description: seoDesc,
       reading_time: readingTime(content),
-      is_stats_post: isStatsPost,
+      is_stats_post: effectiveIsStatsPost,
       topic,
       review_notes: reviewNotes,
       review_score: reviewScore,

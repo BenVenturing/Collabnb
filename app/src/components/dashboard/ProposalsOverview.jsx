@@ -9,7 +9,7 @@ import CalendarFull from './CalendarFull';
 import collabnbLogo from '../../assets/collabnb-logo.png';
 import {
   Search, Menu, X, LayoutDashboard, Calendar as CalendarIcon,
-  DollarSign, CheckCircle2, Users, Clock, Upload, ChevronDown, FileText,
+  DollarSign, CheckCircle2, Users, Clock, Upload, ChevronDown, FileText, SlidersHorizontal,
 } from 'lucide-react';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -71,15 +71,15 @@ const TODO_META = {
 
 const sidebarItems = (moneyLabelKey) => [
   { key: 'overview', labelKey: 'nav.overview', icon: LayoutDashboard, action: 'tab' },
-  { key: 'chart',    labelKey: moneyLabelKey,  icon: DollarSign,      action: 'modal-chart' },
-  { key: 'calendar', labelKey: 'nav.calendar', icon: CalendarIcon,    action: 'modal-calendar' },
   { key: 'activity', labelKey: 'nav.activity', icon: CheckCircle2,    action: 'tab' },
+  { key: 'calendar', labelKey: 'nav.calendar', icon: CalendarIcon,    action: 'modal-calendar' },
   { key: 'contract', labelKey: 'nav.contract', icon: FileText,        action: 'nav' },
+  { key: 'chart',    labelKey: moneyLabelKey,  icon: DollarSign,      action: 'modal-chart' },
 ];
 
-export default function ProposalsOverview({ role, search, onSearchChange, filters = [], onStatClick, children }) {
+export default function ProposalsOverview({ role, search, onSearchChange, filters = [], onStatClick, children, statValues, chartData, todoItems, archiveToggle }) {
   const cfg = ROLE_CONFIG[role];
-  const { t } = useTranslation('proposalsOverview');
+  const { t, i18n } = useTranslation('proposalsOverview');
   const { profile } = useAuth();
   const navigate = useNavigate();
   const isPending = profile?.tier === 'waitlist' && !profile?.is_verified;
@@ -89,17 +89,27 @@ export default function ProposalsOverview({ role, search, onSearchChange, filter
   const [chartModalOpen, setChartModalOpen] = useState(false);
   const [calendarModalOpen, setCalendarModalOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState(null);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const activeFilterCount = filters.filter((f) => f.value && f.value !== 'all').length;
+
+  // Real data overrides mock defaults where the caller has it wired up; when a
+  // prop is left undefined (still loading, or not wired for this page), the
+  // sample ROLE_CONFIG value shows instead so the layout never looks broken.
+  const resolvedTodo = todoItems ?? cfg.todo;
+  const resolvedStatCards = cfg.statCards.map((c) =>
+    statValues?.[c.key] ? { ...c, ...statValues[c.key] } : c
+  );
 
   const visibleTodo = selectedDate
-    ? cfg.todo.filter((t) => t.date === selectedDate)
-    : cfg.todo;
+    ? resolvedTodo.filter((t) => t.date === selectedDate)
+    : resolvedTodo;
 
   const firstName = profile?.full_name?.split(' ')[0] || t('there');
 
   const chartTitle = t(role === 'host' ? 'chartTitle.host' : 'chartTitle.creator');
   const chartDatasets = {
-    money: { ...cfg.chart.money, label: t(role === 'host' ? 'chart.money.host' : 'chart.money.creator') },
-    volume: { ...cfg.chart.volume, label: t('chart.volume') },
+    money: { ...cfg.chart.money, data: chartData?.money ?? cfg.chart.money.data, label: t(role === 'host' ? 'chart.money.host' : 'chart.money.creator') },
+    volume: { ...cfg.chart.volume, data: chartData?.volume ?? cfg.chart.volume.data, label: t('chart.volume') },
   };
 
   const handleSidebarClick = (item) => {
@@ -116,7 +126,7 @@ export default function ProposalsOverview({ role, search, onSearchChange, filter
   };
 
   return (
-    <div style={{ display: 'flex', gap: '1.25rem', padding: '1.25rem clamp(1rem, 2vw, 1.5rem) 0' }}>
+    <div style={{ display: 'flex', gap: '1.25rem', maxWidth: 1360, margin: '0 auto', padding: '1.25rem clamp(1rem, 2vw, 1.5rem) 0' }}>
       <style>{`
         .dbo-hamburger { display: none; }
         .dbo-stats-grid { grid-template-columns: repeat(4, 1fr); }
@@ -166,23 +176,42 @@ export default function ProposalsOverview({ role, search, onSearchChange, filter
             const Icon = item.icon;
             const selected = item.action === 'tab' && activeTab === item.key;
             return (
-              <button
-                key={item.key}
-                onClick={() => handleSidebarClick(item)}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: '0.7rem', width: '100%', textAlign: 'left',
-                  padding: '0.65rem 0.75rem', borderRadius: '0.75rem', border: 'none', cursor: 'pointer',
-                  background: selected ? 'rgba(255,255,255,0.12)' : 'transparent',
-                  color: selected ? 'var(--bone)' : 'rgba(239,236,233,0.75)',
-                  fontSize: '0.85rem', fontWeight: 600, fontFamily: 'var(--font-body)',
-                  transition: 'background 150ms, color 150ms',
-                }}
-                onMouseEnter={(e) => { if (!selected) { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = 'var(--bone)'; } }}
-                onMouseLeave={(e) => { if (!selected) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(239,236,233,0.75)'; } }}
-              >
-                <Icon size={16} />
-                {t(item.labelKey)}
-              </button>
+              <div key={item.key}>
+                <button
+                  onClick={() => handleSidebarClick(item)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '0.7rem', width: '100%', textAlign: 'left',
+                    padding: '0.65rem 0.75rem', borderRadius: '0.75rem', border: 'none', cursor: 'pointer',
+                    background: selected ? 'rgba(255,255,255,0.12)' : 'transparent',
+                    color: selected ? 'var(--bone)' : 'rgba(239,236,233,0.75)',
+                    fontSize: '0.85rem', fontWeight: 600, fontFamily: 'var(--font-body)',
+                    transition: 'background 150ms, color 150ms',
+                  }}
+                  onMouseEnter={(e) => { if (!selected) { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = 'var(--bone)'; } }}
+                  onMouseLeave={(e) => { if (!selected) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(239,236,233,0.75)'; } }}
+                >
+                  <Icon size={16} />
+                  {t(item.labelKey)}
+                </button>
+
+                {item.key === 'activity' && archiveToggle && (
+                  <label style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem',
+                    padding: '0.4rem 0.5rem 0.4rem 2.35rem', cursor: 'pointer',
+                  }}>
+                    <span style={{ fontSize: '0.74rem', fontWeight: 600, color: 'rgba(239,236,233,0.55)' }}>{t('nav.archived')}</span>
+                    <span style={{ position: 'relative', width: 30, height: 17, borderRadius: 9999, background: archiveToggle.value ? 'var(--sage)' : 'rgba(255,255,255,0.15)', transition: 'background 150ms', flexShrink: 0 }}>
+                      <input
+                        type="checkbox"
+                        checked={archiveToggle.value}
+                        onChange={(e) => archiveToggle.onChange(e.target.checked)}
+                        style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', margin: 0, cursor: 'pointer' }}
+                      />
+                      <span style={{ position: 'absolute', top: 2, left: archiveToggle.value ? 15 : 2, width: 13, height: 13, borderRadius: '50%', background: 'var(--bone)', transition: 'left 150ms' }} />
+                    </span>
+                  </label>
+                )}
+              </div>
             );
           })}
         </div>
@@ -218,7 +247,7 @@ export default function ProposalsOverview({ role, search, onSearchChange, filter
           <>
             {/* Stat cards — click to jump into Activity, pre-filtered */}
             <div className="dbo-stats-grid" style={{ display: 'grid', gap: '1rem' }}>
-              {cfg.statCards.map(({ key, value, sub, icon: Icon, presetKey }) => (
+              {resolvedStatCards.map(({ key, value, sub, icon: Icon, presetKey }) => (
                 <button
                   key={key}
                   onClick={() => handleStatClick(presetKey)}
@@ -242,7 +271,7 @@ export default function ProposalsOverview({ role, search, onSearchChange, filter
             {/* Chart + Calendar (compact previews — full views open from the sidebar) */}
             <div className="dbo-charts-grid" style={{ display: 'grid', gap: '1rem', alignItems: 'stretch' }}>
               <DashboardChart datasets={chartDatasets} title={chartTitle} />
-              <DashboardCalendar todoItems={cfg.todo} selectedDate={selectedDate} onSelectDate={setSelectedDate} />
+              <DashboardCalendar todoItems={resolvedTodo} selectedDate={selectedDate} onSelectDate={setSelectedDate} />
             </div>
 
             {/* Upcoming — nested under Overview */}
@@ -273,7 +302,7 @@ export default function ProposalsOverview({ role, search, onSearchChange, filter
                           <p style={{ fontSize: '0.68rem', color: 'var(--sage)', margin: '0.1rem 0 0' }}>{t(`todoMeta.${todo.type}`)}</p>
                         </div>
                         <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--slate)', flexShrink: 0 }}>
-                          {d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                          {d.toLocaleDateString(i18n.language, { month: 'short', day: 'numeric' })}
                         </span>
                       </div>
                     );
@@ -286,10 +315,10 @@ export default function ProposalsOverview({ role, search, onSearchChange, filter
 
         {activeTab === 'activity' && (
           <>
-            {/* Search + filters — scoped to Activity */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
+            {/* Search + filters — scoped to Activity; filters collapse into a popover to keep this row light */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <div style={{
-                flex: '1 1 200px', maxWidth: 340, display: 'flex', alignItems: 'center', gap: '0.5rem',
+                flex: '1 1 auto', maxWidth: 420, display: 'flex', alignItems: 'center', gap: '0.5rem',
                 background: 'rgba(255,255,255,0.75)', border: '1px solid rgba(25,37,36,0.1)',
                 borderRadius: '9999px', padding: '0.5rem 0.9rem',
               }}>
@@ -302,26 +331,65 @@ export default function ProposalsOverview({ role, search, onSearchChange, filter
                 />
               </div>
 
-              {filters.map((f) => (
-                <div key={f.key} style={{ position: 'relative', flexShrink: 0 }}>
-                  <select
-                    value={f.value}
-                    onChange={(e) => f.onChange(e.target.value)}
+              {filters.length > 0 && (
+                <div style={{ position: 'relative', flexShrink: 0 }}>
+                  <button
+                    onClick={() => setFiltersOpen((v) => !v)}
+                    aria-label={t('openFilters')}
                     style={{
-                      appearance: 'none', WebkitAppearance: 'none',
-                      background: 'rgba(255,255,255,0.75)', border: '1px solid rgba(25,37,36,0.1)',
-                      borderRadius: '9999px', padding: '0.5rem 1.8rem 0.5rem 0.9rem',
-                      fontSize: '0.78rem', fontWeight: 600, color: 'var(--ink)', cursor: 'pointer',
-                      fontFamily: 'var(--font-body)', maxWidth: 160,
+                      position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      width: 38, height: 38, borderRadius: '50%', cursor: 'pointer',
+                      background: filtersOpen ? 'var(--ink)' : 'rgba(255,255,255,0.75)',
+                      color: filtersOpen ? 'var(--bone)' : 'var(--ink)',
+                      border: '1px solid rgba(25,37,36,0.1)',
                     }}
                   >
-                    {f.options.map((o) => (
-                      <option key={o.value} value={o.value}>{o.label}</option>
-                    ))}
-                  </select>
-                  <ChevronDown size={13} style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: 'var(--sage)' }} />
+                    <SlidersHorizontal size={15} />
+                    {activeFilterCount > 0 && (
+                      <span style={{
+                        position: 'absolute', top: -2, right: -2, width: 15, height: 15, borderRadius: '50%',
+                        background: 'var(--sage)', color: 'var(--bone)', fontSize: '0.58rem', fontWeight: 700,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1.5px solid var(--bone)',
+                      }}>
+                        {activeFilterCount}
+                      </span>
+                    )}
+                  </button>
+
+                  {filtersOpen && (
+                    <>
+                      <div onClick={() => setFiltersOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 40 }} />
+                      <div style={{
+                        position: 'absolute', top: 'calc(100% + 0.5rem)', right: 0, zIndex: 41,
+                        background: 'var(--bone)', border: '1px solid rgba(25,37,36,0.1)', borderRadius: '1rem',
+                        padding: '0.75rem', boxShadow: '0 12px 32px rgba(25,37,36,0.18)',
+                        display: 'flex', flexDirection: 'column', gap: '0.5rem', minWidth: 200,
+                      }}>
+                        {filters.map((f) => (
+                          <div key={f.key} style={{ position: 'relative' }}>
+                            <select
+                              value={f.value}
+                              onChange={(e) => f.onChange(e.target.value)}
+                              style={{
+                                appearance: 'none', WebkitAppearance: 'none', width: '100%',
+                                background: 'rgba(255,255,255,0.9)', border: '1px solid rgba(25,37,36,0.1)',
+                                borderRadius: '0.7rem', padding: '0.5rem 1.8rem 0.5rem 0.75rem',
+                                fontSize: '0.78rem', fontWeight: 600, color: 'var(--ink)', cursor: 'pointer',
+                                fontFamily: 'var(--font-body)',
+                              }}
+                            >
+                              {f.options.map((o) => (
+                                <option key={o.value} value={o.value}>{o.label}</option>
+                              ))}
+                            </select>
+                            <ChevronDown size={13} style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: 'var(--sage)' }} />
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
                 </div>
-              ))}
+              )}
             </div>
 
             {children}
@@ -337,7 +405,7 @@ export default function ProposalsOverview({ role, search, onSearchChange, filter
 
       {calendarModalOpen && (
         <DashboardModal title={t('nav.calendar')} onClose={() => setCalendarModalOpen(false)} maxWidth={920}>
-          <CalendarFull todoItems={cfg.todo} selectedDate={selectedDate} onSelectDate={setSelectedDate} />
+          <CalendarFull todoItems={resolvedTodo} selectedDate={selectedDate} onSelectDate={setSelectedDate} />
         </DashboardModal>
       )}
     </div>

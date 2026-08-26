@@ -1208,10 +1208,21 @@ export default function ListingDetail({ previewListing = null, preview = false }
     if (isPreview || hostView) return;
     if (!isVerified) { openModal(); setShowHostModal(false); return; }
     if (!isSubscribed) { openSubModal(); setShowHostModal(false); return; }
-    const existing = threads.find((t) => !t.archived && t.host_name === SAMPLE_HOST.name);
-    const threadId = existing ? existing.id : createThread(listing.title, SAMPLE_HOST.name, 'Application');
+    const creatorId = profile?._id ? String(profile._id) : null;
+    const hostId = listing.host_id ? String(listing.host_id) : null;
+    // Deterministic per listing+creator, and namespaced apart from the
+    // application thread key (thread_<listing>_<creator>) so a later real
+    // application doesn't collide with a pre-apply message thread.
+    const threadKey = hostId && creatorId ? `premsg_${listing.id}_${creatorId}` : null;
+    const existing = threads.find((t) => !t.archived && (threadKey ? t.thread_key === threadKey : t.host_name === SAMPLE_HOST.name));
+    const threadId = existing ? existing.id : createThread(
+      listing.title,
+      hostProfile?.full_name || SAMPLE_HOST.name,
+      'Message',
+      { hostAvatar: hostProfile?.avatar_url || SAMPLE_HOST.avatar_fallback, participantId: hostId, threadKey }
+    );
     navigate('/inbox', { state: { selectedThreadId: threadId } });
-  }, [isPreview, hostView, isVerified, openModal, threads, createThread, listing, navigate]);
+  }, [isPreview, hostView, isVerified, isSubscribed, openModal, openSubModal, threads, createThread, listing, profile, hostProfile, navigate]);
 
   const showToast = useCallback((msg) => {
     setToast(msg);
@@ -1873,7 +1884,7 @@ export default function ListingDetail({ previewListing = null, preview = false }
       {/* ── Apply modal ───────────────────────────────────────────────────────── */}
       {showApplyModal && (
         <ApplyModal
-          listing={listing}
+          listing={{ ...listing, host_name: hostProfile?.full_name || listing.host_name, host_avatar: hostProfile?.avatar_url || listing.host_avatar }}
           userId={profile?._id || profile?.id}
           creatorProfile={profile}
           onClose={() => setShowApplyModal(false)}

@@ -13,7 +13,8 @@
     },
     "calendar": "Calendario",
     "activity": "Actividad",
-    "contract": "Contrato"
+    "contract": "Contrato",
+    "archived": "Archivados"
   },
   "sidebarTip": {
     "creator": "Las subidas constantes hacen que los anfitriones te vuelvan a invitar.",
@@ -34,16 +35,32 @@
   },
   "stat": {
     "creator": {
-      "active": { "label": "Colabs activas" },
-      "pending": { "label": "Solicitudes pendientes" },
-      "earned": { "label": "Total ganado" },
-      "due": { "label": "Contenido pendiente" }
+      "active": {
+        "label": "Colabs activas"
+      },
+      "pending": {
+        "label": "Solicitudes pendientes"
+      },
+      "earned": {
+        "label": "Total ganado"
+      },
+      "due": {
+        "label": "Contenido pendiente"
+      }
     },
     "host": {
-      "new": { "label": "Nuevas solicitudes" },
-      "review": { "label": "Revisión pendiente" },
-      "active": { "label": "Colabs activas" },
-      "spend": { "label": "Gasto total" }
+      "new": {
+        "label": "Nuevas solicitudes"
+      },
+      "review": {
+        "label": "Revisión pendiente"
+      },
+      "active": {
+        "label": "Colabs activas"
+      },
+      "spend": {
+        "label": "Gasto total"
+      }
     }
   },
   "upcoming": "Próximos",
@@ -55,5 +72,6 @@
     "stay_date": "Fecha de estancia"
   },
   "searchCreator": "Busca tus colabs…",
-  "searchHost": "Busca creadores, anuncios…"
+  "searchHost": "Busca creadores, anuncios…",
+  "openFilters": "Filtros"
 }

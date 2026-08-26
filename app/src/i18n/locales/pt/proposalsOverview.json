@@ -13,7 +13,8 @@
     },
     "calendar": "Calendário",
     "activity": "Atividade",
-    "contract": "Contrato"
+    "contract": "Contrato",
+    "archived": "Arquivados"
   },
   "sidebarTip": {
     "creator": "Uploads consistentes fazem os anfitriões te chamarem de novo.",
@@ -34,16 +35,32 @@
   },
   "stat": {
     "creator": {
-      "active": { "label": "Colabs ativas" },
-      "pending": { "label": "Candidaturas pendentes" },
-      "earned": { "label": "Total ganho" },
-      "due": { "label": "Conteúdo pendente" }
+      "active": {
+        "label": "Colabs ativas"
+      },
+      "pending": {
+        "label": "Candidaturas pendentes"
+      },
+      "earned": {
+        "label": "Total ganho"
+      },
+      "due": {
+        "label": "Conteúdo pendente"
+      }
     },
     "host": {
-      "new": { "label": "Novas candidaturas" },
-      "review": { "label": "Análise pendente" },
-      "active": { "label": "Colabs ativas" },
-      "spend": { "label": "Gasto total" }
+      "new": {
+        "label": "Novas candidaturas"
+      },
+      "review": {
+        "label": "Análise pendente"
+      },
+      "active": {
+        "label": "Colabs ativas"
+      },
+      "spend": {
+        "label": "Gasto total"
+      }
     }
   },
   "upcoming": "Próximos",
@@ -55,5 +72,6 @@
     "stay_date": "Data da estadia"
   },
   "searchCreator": "Buscar suas colabs…",
-  "searchHost": "Buscar criadores, anúncios…"
+  "searchHost": "Buscar criadores, anúncios…",
+  "openFilters": "Filtros"
 }

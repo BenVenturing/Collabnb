@@ -196,7 +196,8 @@
     "taxOnFileValue": "Bei Stripe im Rahmen deines Auszahlungskontos hinterlegt",
     "review": "Überprüfen",
     "taxCheckingValue": "Status deines Stripe-Kontos wird überprüft…",
-    "taxHostValue": "1099-Formulare gelten für Creators, die Auszahlungen erhalten, nicht für Gastgeber"
+    "taxHostValue": "1099-Formulare gelten für Creators, die Auszahlungen erhalten, nicht für Gastgeber",
+    "sectionHistory": "Zahlungsverlauf"
   },
   "language": {
     "sectionPreferences": "Einstellungen",

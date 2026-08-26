@@ -1,7 +1,7 @@
 import { useState } from 'react';
 
 // datasets: { [key]: { label, unit: '$'|'', data: [{ month, value }] } }
-export default function DashboardChart({ datasets, title, defaultView }) {
+export default function DashboardChart({ datasets, title, defaultView, bare = false }) {
   const keys = Object.keys(datasets);
   const [view, setView] = useState(defaultView || keys[0]);
   const [hoverIdx, setHoverIdx] = useState(null);
@@ -9,9 +9,9 @@ export default function DashboardChart({ datasets, title, defaultView }) {
   const max = Math.max(...active.data.map((d) => d.value), 1);
 
   return (
-    <div className="glass-card" style={{ padding: '1.5rem', height: '100%' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.75rem' }}>
-        <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.05rem', color: 'var(--ink)', margin: 0 }}>{title}</h3>
+    <div className={bare ? undefined : 'glass-card'} style={bare ? { height: '100%' } : { padding: '1.5rem', height: '100%' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: title ? 'space-between' : 'flex-end', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+        {title && <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.05rem', color: 'var(--ink)', margin: 0 }}>{title}</h3>}
         <div style={{ display: 'flex', gap: '0.2rem', background: 'rgba(25,37,36,0.06)', borderRadius: '9999px', padding: '0.2rem' }}>
           {keys.map((key) => (
             <button

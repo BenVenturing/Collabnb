@@ -196,7 +196,8 @@
     "taxOnFileValue": "Registrada en Stripe como parte de tu cuenta de pagos",
     "review": "Revisar",
     "taxCheckingValue": "Verificando el estado de tu cuenta de Stripe…",
-    "taxHostValue": "Los formularios 1099 aplican a creadores que reciben pagos, no a anfitriones"
+    "taxHostValue": "Los formularios 1099 aplican a creadores que reciben pagos, no a anfitriones",
+    "sectionHistory": "Historial de pagos"
   },
   "language": {
     "sectionPreferences": "Preferencias",

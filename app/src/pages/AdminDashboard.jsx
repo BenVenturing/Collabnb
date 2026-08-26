@@ -26,6 +26,7 @@ import CreatorAlgorithmLab from './admin/CreatorAlgorithmLab';
 import ModerationQueue from './admin/ModerationQueue';
 import AdminInbox from './admin/AdminInbox';
 import CrashReports from './admin/CrashReports';
+import { TOP_SECTIONS, SETTINGS_SECTION, GROUPS, HIDDEN_SECTIONS, flatTabs, groupContains, ALL_LABELS, NAV_INDEX, NAV_ITEMS_BY_ID, resolveNavOrder } from '../lib/adminNav';
 
 const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL;
 
@@ -85,74 +86,8 @@ const ICONS = {
 };
 
 // ─── Sidebar nav items ────────────────────────────────────────────────────────
-// Flat items shown above the collapsible groups.
-const TOP_SECTIONS = [
-  { id: 'overview',    label: 'Overview' },
-  { id: 'admin-inbox', label: 'Inbox'    },
-  { id: 'crashes',     label: 'Crash Reports' },
-];
-
-// Pinned to the footer — always visible.
-const SETTINGS_SECTION = { id: 'settings', label: 'Settings' };
-
-// Collapsible groups. `icon` keys into ICONS; each group opens its first tab.
-const GROUPS = [
-  { id: 'users', label: 'Users', icon: 'users', tabs: [
-    { id: 'users',          label: 'All Users'           },
-    { id: 'messages',       label: 'User Messages'       },
-    { id: 'founders',       label: 'Founder Tracker'     },
-    { id: 'algo-simulator', label: 'Listing Feed Algorithm Simulator', children: [
-      { id: 'algo-reference', label: 'How It Works' },
-    ] },
-    { id: 'creator-algo-simulator', label: 'Creator Ranking Algorithm Simulator', children: [
-      { id: 'creator-algo-reference', label: 'How It Works' },
-    ] },
-  ] },
-  { id: 'collabs', label: 'Collab Oversight', icon: 'collabs', tabs: [
-    { id: 'collabs',   label: 'Oversight'          },
-    { id: 'listings',  label: 'Listing Management' },
-    { id: 'contracts', label: 'Contracts'          },
-  ] },
-  { id: 'money', label: 'Money', icon: 'money', tabs: [
-    { id: 'money-overview', label: 'Overview'   },
-    { id: 'payouts',        label: 'Payouts'    },
-    { id: 'ambassadors',    label: 'Affiliates' },
-  ] },
-  { id: 'marketing', label: 'Marketing', icon: 'marketing', tabs: [
-    { id: 'discovery', label: 'Discovery' },
-    { id: 'blog',      label: 'Blog'      },
-    { id: 'broadcast', label: 'Emails'    },
-    { id: 'social',    label: 'Social'    },
-  ] },
-  { id: 'suggestions', label: 'Suggestions / Beta', icon: 'suggestions', tabs: [
-    { id: 'suggestions', label: 'Suggestions'        },
-    { id: 'moderation',  label: 'Moderation'         },
-    { id: 'audit',       label: 'Audit Log'          },
-  ] },
-];
-
-// Panels reachable outside the sidebar (e.g. Overview widgets) — kept here so
-// the breadcrumb can still resolve their label.
-const HIDDEN_SECTIONS = [
-  { id: 'analytics', label: 'Platform Analytics' },
-];
-
-// A group's tabs, flattened to include any nested children.
-const flatTabs = (group) => group.tabs.flatMap(t => [t, ...(t.children || [])]);
-const groupContains = (group, id) => flatTabs(group).some(t => t.id === id);
-
-const ALL_LABELS = [
-  ...TOP_SECTIONS, SETTINGS_SECTION, ...HIDDEN_SECTIONS,
-  ...GROUPS.flatMap(flatTabs),
-];
-
-// Flat, searchable index of every navigable destination in the admin panel.
-const NAV_INDEX = [
-  ...TOP_SECTIONS.map(s => ({ id: s.id, label: s.label })),
-  ...GROUPS.flatMap(g => flatTabs(g).map(t => ({ id: t.id, label: t.label, group: g.label }))),
-  { id: SETTINGS_SECTION.id, label: SETTINGS_SECTION.label },
-  ...HIDDEN_SECTIONS.map(s => ({ id: s.id, label: s.label })),
-];
+// Structure + reorder logic live in lib/adminNav.js (shared with AdminSettings,
+// which lets Ben drag the top-level order — Settings → Customize navigation).
 
 function UsersPanel()        { return <Users />;                }
 function ListingsPanel()     { return <ListingManager />;       }
@@ -220,6 +155,7 @@ export default function AdminDashboard() {
   const unreadCount = useQuery(api.messages.getUnreadCount);
   const adminUnread = useQuery(api.adminThreads.unreadCount) ?? 0;
   const crashUnresolved = useQuery(api.crashReports.unresolvedCount) ?? 0;
+  const adminSettings = useQuery(api.admin.getSettings);
 
   // Manual nav clears any deep-linked Users sub-view (e.g. Overview → pending).
   const selectSection = (id) => { setUsersInitialView(null); setActiveSection(id); };
@@ -245,6 +181,7 @@ export default function AdminDashboard() {
 
   const ActivePanel = PANEL_MAP[activeSection] || PANEL_MAP['overview'];
   const badges = { messages: unreadCount || 0, 'admin-inbox': adminUnread || 0, crashes: crashUnresolved || 0 };
+  const orderedNavItems = resolveNavOrder(adminSettings?.nav_order).map(id => NAV_ITEMS_BY_ID[id]).filter(Boolean);
   const q = navSearch.trim().toLowerCase();
   const navResults = q
     ? NAV_INDEX.filter(it => it.label.toLowerCase().includes(q) || (it.group || '').toLowerCase().includes(q))
@@ -490,8 +427,9 @@ export default function AdminDashboard() {
             /* ── Collapsed icon rail ── */
             <>
               <nav style={{ padding: '0.75rem 0.5rem', flex: 1 }}>
-                {TOP_SECTIONS.map(s => renderRailIcon(s.id, s.label, activeSection === s.id, () => selectSection(s.id), badges[s.id]))}
-                {GROUPS.map(g => renderRailIcon(g.icon, g.label, groupContains(g, activeSection), () => selectSection(g.tabs[0].id)))}
+                {orderedNavItems.map(item => item.type === 'flat'
+                  ? renderRailIcon(item.id, item.label, activeSection === item.id, () => selectSection(item.id), badges[item.id])
+                  : renderRailIcon(item.icon, item.label, groupContains(item, activeSection), () => selectSection(item.tabs[0].id)))}
               </nav>
               <div style={{ padding: '0.5rem', borderTop: '1px solid rgba(25,37,36,0.07)' }}>
                 {renderRailIcon('settings', 'Settings', activeSection === 'settings', () => selectSection('settings'))}
@@ -578,8 +516,7 @@ export default function AdminDashboard() {
                   )
                 ) : (
                   <>
-                    {TOP_SECTIONS.map(renderSection)}
-                    {GROUPS.map(renderGroup)}
+                    {orderedNavItems.map(item => (item.type === 'flat' ? renderSection(item) : renderGroup(item)))}
                   </>
                 )}
               </nav>

@@ -9,6 +9,7 @@ import ProfilePopupCard from '../../components/ProfilePopupCard';
 import CreatorAvatar from '../../components/CreatorAvatar';
 import SkeletonCard from '../../components/SkeletonCard';
 import ProposalsOverview from '../../components/dashboard/ProposalsOverview';
+import { bucketByMonth, toMonthSeries, isoDate } from '../../lib/monthSeries';
 import {
   MessageSquare, ChevronDown, ChevronUp, ExternalLink, Check, Sparkles,
   GripVertical, Lock, Download, Pen, CheckCircle2, Trash2,
@@ -941,6 +942,10 @@ export default function HostProposals() {
     api.pitches.getByHost,
     hostId ? { hostId: String(hostId) } : 'skip'
   );
+  const hostBilling = useQuery(
+    api.fees.getBilling,
+    hostId ? { hostId: String(hostId) } : 'skip'
+  );
 
   const [tab, setTab]               = useState(location.state?.filter ?? 'all');
   const [typeFilter, setTypeFilter] = useState('all');
@@ -1150,6 +1155,52 @@ export default function HostProposals() {
 
   function resetTypeOnTabChange(newTab) { setTab(newTab); setExpanded(null); }
 
+  // Real dashboard data — replaces ProposalsOverview's mock defaults wherever
+  // we have a clean, honest mapping onto existing Convex records.
+  const statValues = useMemo(() => {
+    const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    const newThisWeek = (rawPitches || []).filter((p) => p.created_at >= weekAgo).length;
+    const approvedListings = new Set(allProposals.filter((p) => p.status === 'approved').map((p) => p.listing).filter(Boolean));
+    const paidFees = (hostBilling || []).filter((f) => f.status === 'paid');
+    const now = new Date();
+    const paidThisMonth = paidFees.filter((f) => {
+      const d = new Date(f.paid_at ?? f.created_at);
+      return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+    });
+    const spendThisMonth = paidThisMonth.reduce((sum, f) => sum + (f.amount || 0), 0);
+
+    return {
+      new:    { value: String(stageCounts.pending ?? 0), sub: `+${newThisWeek} this week` },
+      review: { value: String(stageCounts.under_review ?? 0), sub: 'Awaiting your review' },
+      active: { value: String(stageCounts.approved ?? 0), sub: `Across ${approvedListings.size} listing${approvedListings.size === 1 ? '' : 's'}` },
+      spend:  { value: `$${spendThisMonth.toLocaleString()}`, sub: 'This month' },
+    };
+  }, [rawPitches, allProposals, stageCounts, hostBilling]);
+
+  const chartData = useMemo(() => {
+    const year = new Date().getFullYear();
+    const volume = bucketByMonth(rawPitches || [], (p) => new Date(p.created_at), () => 1, year);
+    const money = bucketByMonth(
+      (hostBilling || []).filter((f) => f.status === 'paid'),
+      (f) => new Date(f.paid_at ?? f.created_at),
+      (f) => f.amount || 0,
+      year
+    );
+    return { money: toMonthSeries(money), volume: toMonthSeries(volume) };
+  }, [rawPitches, hostBilling]);
+
+  const todoItems = useMemo(() => {
+    const items = [];
+    (rawPitches || []).forEach((p) => {
+      if (p.status === 'pending') {
+        items.push({ type: 'pending_action', title: `Review ${p.creator_name || 'a creator'}'s application — ${p.listing_title || 'your listing'}`, date: isoDate(new Date(p.created_at)) });
+      } else if (p.counter_pending === 'host') {
+        items.push({ type: 'pending_action', title: `Respond to counter-pitch — ${p.creator_name || 'a creator'}`, date: isoDate(new Date(p.created_at)) });
+      }
+    });
+    return items;
+  }, [rawPitches]);
+
   function handleStatClick(presetKey) {
     const stageByPreset = {
       new_applications: 'pending',
@@ -1171,7 +1222,7 @@ export default function HostProposals() {
           @keyframes tab-flash { 0%{box-shadow:0 0 0 3px rgba(25,37,36,0.18)} 60%{box-shadow:0 0 0 5px rgba(25,37,36,0.1)} 100%{box-shadow:none} }
         `}</style>
 
-        <ProposalsOverview role="host" search={search} onSearchChange={setSearch} onStatClick={handleStatClick}>
+        <ProposalsOverview role="host" search={search} onSearchChange={setSearch} onStatClick={handleStatClick} statValues={statValues} chartData={chartData} todoItems={todoItems}>
 
         <div style={{ maxWidth: 860, margin: '0 auto', padding: '2rem 1.5rem 5rem' }}>
 

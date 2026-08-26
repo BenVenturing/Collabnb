@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, useMemo } from 'react';
+import { createContext, useContext, useState, useCallback, useMemo, useEffect } from 'react';
 import { useMutation, useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { useAuth } from './AuthContext';
@@ -48,7 +48,18 @@ export function CollabProvider({ children }) {
     } catch {}
     return [];
   });
-  const [threads, setThreads] = useState(SAMPLE_THREADS);
+  const [threads, setThreads] = useState(() => {
+    try {
+      const raw = localStorage.getItem('collabnb_threads');
+      if (raw) return JSON.parse(raw);
+    } catch {}
+    return SAMPLE_THREADS;
+  });
+  // Persist so a deleted sample thread (or any locally-created thread) stays
+  // gone instead of repopulating from SAMPLE_THREADS on the next load.
+  useEffect(() => {
+    try { localStorage.setItem('collabnb_threads', JSON.stringify(threads)); } catch {}
+  }, [threads]);
   const [applyCount, setApplyCount] = useState(() =>
     parseInt(localStorage.getItem('collabnb_apply_count') || '0', 10)
   );
@@ -93,6 +104,11 @@ export function CollabProvider({ children }) {
   // stored server-side by AdminInbox, but never otherwise loaded into this
   // context's local `threads` state, so it wouldn't reach the user's Inbox.
   const myAdminThread = useQuery(api.adminThreads.getMineAsUser, ownerId ? {} : 'skip');
+
+  // Real threads someone else started with me directly (e.g. a creator
+  // messaging a host before applying) — same "not otherwise loaded" gap as
+  // the admin thread above, generalized to any real 1:1 thread.
+  const incomingThreadsRaw = useQuery(api.threads.getIncomingForMe, ownerId ? {} : 'skip') ?? [];
   const convexContracts = useMemo(() => {
     if (!convexContractsRaw?.length) return null;
     return convexContractsRaw.map((c) => ({
@@ -106,6 +122,8 @@ export function CollabProvider({ children }) {
       deliverables: c.deliverables,
       currency: c.currency,
       payment: c.payment,
+      cash_value: c.cash_value,
+      payment_amount: c.payment_amount,
       usage_rights: c.usage_rights,
       status: c.status,
       creator_signed: c.creator_signed,
@@ -386,8 +404,8 @@ export function CollabProvider({ children }) {
     const newThread = {
       id: `t_${listing.id}_${Date.now()}`,
       listing_title: listing.title,
-      host_name: MOCK_CREATOR.full_name,
-      host_avatar: null,
+      host_name: listing.host_name || MOCK_CREATOR.full_name,
+      host_avatar: listing.host_avatar || null,
       tag: 'Application',
       last_message: pitchMessage.slice(0, 100),
       timestamp: 'Just now',
@@ -422,9 +440,12 @@ export function CollabProvider({ children }) {
 
     createThreadCvx({
       listingTitle: listing.title,
-      hostName: MOCK_CREATOR.full_name,
+      hostName: listing.host_name || MOCK_CREATOR.full_name,
+      hostAvatar: listing.host_avatar || undefined,
       tag: 'Application',
       lastMessage: pitchMessage.slice(0, 100),
+      participantId: listing.host_id ? String(listing.host_id) : undefined,
+      threadKey,
     }).catch(() => {});
 
     // Write pitch record so host can see the application. Unlike the two
@@ -577,12 +598,13 @@ export function CollabProvider({ children }) {
     collabs.some((c) => c.listing_id === listingId),
   [collabs]);
 
-  const createThread = useCallback((listingTitle, hostName, tag = 'Application') => {
-    const newId = `t${Date.now()}`;
-    const newThread = { id: newId, listing_title: listingTitle, host_name: hostName, host_avatar: null, tag, last_message: 'Start a conversation...', timestamp: 'Just now', unread: 0, is_founder: false };
+  const createThread = useCallback((listingTitle, hostName, tag = 'Application', opts = {}) => {
+    const { hostAvatar = null, participantId, threadKey } = opts;
+    const newId = threadKey || `t${Date.now()}`;
+    const newThread = { id: newId, listing_title: listingTitle, host_name: hostName, host_avatar: hostAvatar, tag, last_message: 'Start a conversation...', timestamp: 'Just now', unread: 0, is_founder: false, thread_key: threadKey };
     setThreads((prev) => [newThread, ...prev]);
 
-    createThreadCvx({ listingTitle, hostName, tag, lastMessage: 'Start a conversation...' }).catch(() => {});
+    createThreadCvx({ listingTitle, hostName, hostAvatar: hostAvatar || undefined, tag, lastMessage: 'Start a conversation...', participantId, threadKey }).catch(() => {});
     return newId;
   }, [createThreadCvx]);
 
@@ -602,10 +624,15 @@ export function CollabProvider({ children }) {
   const effectiveContracts = convexContracts ?? contracts;
 
   const threadsWithAdmin = useMemo(() => {
-    if (!myAdminThread) return threads;
-    if (threads.some((t) => t.thread_key === myAdminThread.thread_key)) return threads;
-    return [myAdminThread, ...threads];
-  }, [threads, myAdminThread]);
+    let result = threads;
+    if (myAdminThread && !result.some((t) => t.thread_key === myAdminThread.thread_key)) {
+      result = [myAdminThread, ...result];
+    }
+    const knownKeys = new Set(result.map((t) => t.thread_key).filter(Boolean));
+    const newIncoming = incomingThreadsRaw.filter((t) => !knownKeys.has(t.thread_key));
+    if (newIncoming.length) result = [...newIncoming, ...result];
+    return result;
+  }, [threads, myAdminThread, incomingThreadsRaw]);
 
   return (
     <CollabContext.Provider value={{ collabs, threads: threadsWithAdmin, contracts: effectiveContracts, ownerId, applyCount, savedIds, collections, activeCollectionId, toggleSave, isSaved, createCollection, setActiveCollection, moveToCollection, renameCollection, deleteCollection, applyToListing, hasApplied, saveContract, updateContract, markContractSent, getContracts, sendContractMessage, getCollabById, advanceStage, updateStageData, toggleCloseCollab, removeCollab, submitContentMetrics, createThread, archiveThread, deleteThread, updateThreadTag }}>

@@ -21,7 +21,7 @@
     "saveChanges": "Enregistrer les modifications",
     "publish": "Publier l'annonce"
   },
-  "heading": "Comment serez-vous payé ?",
+  "heading": "Comment le créateur est-il rémunéré ?",
   "subtitle": "Ceci détermine comment le paiement du créateur circule — vérifiez-le attentivement, il est verrouillé dès que l'annonce est publiée.",
   "lockedBanner": "Cette annonce est déjà publiée, le mode de paiement est donc verrouillé pour éviter de perturber les collaborations actives.",
   "payoutSwitch": {

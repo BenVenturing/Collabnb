@@ -13,7 +13,8 @@
     },
     "calendar": "Calendar",
     "activity": "Activity",
-    "contract": "Contract"
+    "contract": "Contract",
+    "archived": "Archived"
   },
   "sidebarTip": {
     "creator": "Consistent uploads keep hosts inviting you back.",
@@ -34,16 +35,32 @@
   },
   "stat": {
     "creator": {
-      "active": { "label": "Active Collabs" },
-      "pending": { "label": "Pending Applications" },
-      "earned": { "label": "Total Earned" },
-      "due": { "label": "Content Due" }
+      "active": {
+        "label": "Active Collabs"
+      },
+      "pending": {
+        "label": "Pending Applications"
+      },
+      "earned": {
+        "label": "Total Earned"
+      },
+      "due": {
+        "label": "Content Due"
+      }
     },
     "host": {
-      "new": { "label": "New Applications" },
-      "review": { "label": "Pending Review" },
-      "active": { "label": "Active Collabs" },
-      "spend": { "label": "Total Spend" }
+      "new": {
+        "label": "New Applications"
+      },
+      "review": {
+        "label": "Pending Review"
+      },
+      "active": {
+        "label": "Active Collabs"
+      },
+      "spend": {
+        "label": "Total Spend"
+      }
     }
   },
   "upcoming": "Upcoming",
@@ -55,5 +72,6 @@
     "stay_date": "Stay date"
   },
   "searchCreator": "Search your collabs…",
-  "searchHost": "Search creators, listings…"
+  "searchHost": "Search creators, listings…",
+  "openFilters": "Filters"
 }

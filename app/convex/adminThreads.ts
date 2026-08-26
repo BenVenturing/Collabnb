@@ -201,23 +201,6 @@ export const markRead = mutation({
   },
 });
 
-// The signed-in participant has opened their thread with the Collabnb persona
-// — stamp participant_read_at so the "1" badge clears across the app (Inbox
-// list + notifications) instead of persisting until they reply.
-export const markReadByParticipant = mutation({
-  args: { threadKey: v.string() },
-  handler: async (ctx, { threadKey }) => {
-    const profile = await getAuthedProfile(ctx);
-    if (!profile) return false;
-    const row = await ctx.db
-      .query("threads")
-      .filter((q: any) => q.eq(q.field("thread_key"), threadKey))
-      .first();
-    if (!row || row.participant_id !== String(profile._id)) return false;
-    await ctx.db.patch(row._id, { participant_read_at: Date.now() });
-    return true;
-  },
-});
 
 // AI-draft an admin message to a specific user via the writer LLM (NVIDIA chain).
 // `prompt` is Ben's short intent ("welcome them", "ask about their niche"); the

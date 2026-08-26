@@ -120,7 +120,9 @@
     "application": "Candidature",
     "locked": "Verrouillé",
     "listingStats": "{{listing}} · {{followers}} abonnés · {{engagement}} % ER",
-    "dragToMoveStage": "Glisser pour changer d'étape"
+    "dragToMoveStage": "Glisser pour changer d'étape",
+    "dragLocked": "Passez à l'étape suivante dans l'ordre — impossible de sauter des étapes",
+    "dragLockedPending": "Approuvez ou refusez cette candidature avant de la faire passer en production"
   },
   "header": {
     "heading": "Propositions",

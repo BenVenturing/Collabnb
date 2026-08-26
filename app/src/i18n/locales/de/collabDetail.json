@@ -133,5 +133,11 @@
     "editContract": "Vertrag bearbeiten",
     "createContract": "Vertrag erstellen",
     "viewAll": "Alle ansehen"
+  },
+  "terminate": {
+    "title": "Kollaboration beenden?",
+    "body": "Dadurch wird diese Kollaboration dauerhaft aus Ihrem Dashboard entfernt. Dies kann nicht rückgängig gemacht werden.",
+    "confirm": "Ja, beenden",
+    "cancel": "Abbrechen"
   }
 }

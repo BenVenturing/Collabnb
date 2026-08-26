@@ -285,7 +285,7 @@ function PendingPanel({ collab, advanceStage, onRemove }) {
 }
 
 /* ─── Withdraw confirmation popup ─────────────────────────────────────────── */
-function WithdrawConfirmModal({ onConfirm, onCancel }) {
+function WithdrawConfirmModal({ onConfirm, onCancel, titleKey = 'withdraw.title', bodyKey = 'withdraw.body', confirmKey = 'withdraw.confirm', cancelKey = 'withdraw.cancel' }) {
   const { t } = useTranslation('collabDetail');
   useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape') onCancel(); };
@@ -321,10 +321,10 @@ function WithdrawConfirmModal({ onConfirm, onCancel }) {
           <Trash2 size={19} color="#c0392b" />
         </div>
         <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1rem', color: 'var(--ink)', margin: '0 0 0.5rem' }}>
-          {t('withdraw.title')}
+          {t(titleKey)}
         </h3>
         <p style={{ fontSize: '0.82rem', color: 'var(--slate)', lineHeight: 1.55, margin: '0 0 1.25rem' }}>
-          {t('withdraw.body')}
+          {t(bodyKey)}
         </p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
           <button
@@ -335,14 +335,14 @@ function WithdrawConfirmModal({ onConfirm, onCancel }) {
               fontFamily: 'var(--font-body)', fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer',
             }}
           >
-            {t('withdraw.confirm')}
+            {t(confirmKey)}
           </button>
           <button
             onClick={onCancel}
             className="btn-glass"
             style={{ width: '100%', padding: '0.7rem', fontSize: '0.85rem', fontWeight: 600 }}
           >
-            {t('withdraw.cancel')}
+            {t(cancelKey)}
           </button>
         </div>
       </div>
@@ -938,6 +938,7 @@ export default function CollabDetail({ collab, onClose }) {
   const { advanceStage, updateStageData, toggleCloseCollab, removeCollab, contracts } = useCollabs();
   const { profile } = useAuth();
   const [driveUrl, setDriveUrl] = useState(collab.drive_url || '');
+  const [confirmTerminate, setConfirmTerminate] = useState(false);
   const listing = SAMPLE_LISTINGS.find((l) => l.id === collab.listing_id);
   const host = SAMPLE_HOST;
   const hostProfile = useQuery(api.profiles.getByUsername, { username: host.username });
@@ -1012,7 +1013,7 @@ export default function CollabDetail({ collab, onClose }) {
     const panel = STAGES.find((s) => s.key === stageKey);
     if (!panel) return null;
     const panels = {
-      pending:         <PendingPanel collab={collab} advanceStage={advanceStage} onRemove={() => { removeCollab(collab.id); onClose(); }} />,
+      pending:         <PendingPanel collab={collab} advanceStage={advanceStage} onRemove={() => { removeCollab(collab); onClose(); }} />,
       accepted:        <AcceptedPanel collab={collab} updateStageData={updateStageData} advanceStage={advanceStage} />,
       updated:         <AdjustmentsPanel collab={collab} updateStageData={updateStageData} advanceStage={advanceStage} />,
       uploaded_tagged: <UploadedPanel collab={collab} advanceStage={advanceStage} />,
@@ -1101,6 +1102,20 @@ export default function CollabDetail({ collab, onClose }) {
                 {demoPlaying ? '⏸' : '▶'}
               </button>
             )}
+            {!isDemo && (
+              <button
+                onClick={() => setConfirmTerminate(true)}
+                style={{
+                  width: '32px', height: '32px', borderRadius: '50%',
+                  background: 'rgba(192,57,43,0.08)', border: 'none', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  color: '#c0392b', flexShrink: 0,
+                }}
+                title={t('terminate.title')}
+              >
+                <Trash2 size={15} />
+              </button>
+            )}
             <button
               onClick={onClose}
               style={{
@@ -1114,6 +1129,16 @@ export default function CollabDetail({ collab, onClose }) {
             </button>
           </div>
         </div>
+        {confirmTerminate && (
+          <WithdrawConfirmModal
+            titleKey="terminate.title"
+            bodyKey="terminate.body"
+            confirmKey="terminate.confirm"
+            cancelKey="terminate.cancel"
+            onConfirm={() => { removeCollab(collab); onClose(); }}
+            onCancel={() => setConfirmTerminate(false)}
+          />
+        )}
 
         {/* ── Stage progress bar ───────────────────────────────────────── */}
         <div style={{ padding: '0.75rem 1.5rem', borderBottom: '1px solid rgba(25,37,36,0.06)' }}>

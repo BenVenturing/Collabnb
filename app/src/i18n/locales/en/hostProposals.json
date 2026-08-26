@@ -120,7 +120,9 @@
     "application": "Application",
     "locked": "Locked",
     "listingStats": "{{listing}} · {{followers}} followers · {{engagement}}% ER",
-    "dragToMoveStage": "Drag to move stage"
+    "dragToMoveStage": "Drag to move stage",
+    "dragLocked": "Move to the next stage in order — you can't skip ahead",
+    "dragLockedPending": "Approve or decline this from the card before moving it into production"
   },
   "header": {
     "heading": "Proposals",

@@ -133,5 +133,11 @@
     "editContract": "Editar contrato",
     "createContract": "Criar contrato",
     "viewAll": "Ver tudo"
+  },
+  "terminate": {
+    "title": "Encerrar colaboração?",
+    "body": "Isso remove permanentemente esta colaboração do seu painel. Isso não pode ser desfeito.",
+    "confirm": "Sim, encerrar",
+    "cancel": "Cancelar"
   }
 }

@@ -140,6 +140,8 @@ export function CollabProvider({ children }) {
   const markSentCvx = useMutation(api.contracts.markSent);
   const createCollabCvx = useMutation(api.collaborations.create);
   const markCollabCompletedCvx = useMutation(api.collaborations.markCompleted);
+  const advanceStageCvx = useMutation(api.collaborations.advanceStage);
+  const removeCollabCvx = useMutation(api.collaborations.remove);
   const createThreadCvx = useMutation(api.threads.create);
   const createPitchCvx = useMutation(api.pitches.create);
   const createCollectionCvx = useMutation(api.collections.create);
@@ -452,6 +454,16 @@ export function CollabProvider({ children }) {
       });
     } catch { /* non-fatal — the pitch below is still the source of truth for the host */ }
 
+    // Stamp the real Convex id onto the local (optimistic) collab record so
+    // later stage advances can sync back to the same row the host reads.
+    if (collaborationId) {
+      setCollabs((prev) => {
+        const updated = prev.map((c) => c.id === newCollab.id ? { ...c, convex_id: String(collaborationId) } : c);
+        saveCollabsToStorage(updated);
+        return updated;
+      });
+    }
+
     // If reusing an already-synced pre-apply thread, don't create a second
     // Convex row for the same thread_key — just leave the existing one (the
     // pitch record below becomes the authoritative party link for it).
@@ -536,6 +548,13 @@ export function CollabProvider({ children }) {
       );
       saveCollabsToStorage(updated);
 
+      // Sync the real stage transition to Convex so the host's board (which
+      // reads collaborations.current_stage) reflects it — this was previously
+      // local-only, meaning hosts never saw stage progress at all.
+      if (collab.convex_id) {
+        advanceStageCvx({ id: collab.convex_id, nextStage: nextKey }).catch(() => {});
+      }
+
       setThreads((tPrev) => {
         const tagMap = { pending: 'Application', accepted: 'Collab', updated: 'Collab', uploaded_tagged: 'Collab', closed: 'Collab', archived: 'Archived' };
         const stageLabel = STAGES.find((s) => s.key === nextKey)?.label || nextKey;
@@ -560,15 +579,18 @@ export function CollabProvider({ children }) {
       saveCollabsToStorage(updated);
       return updated;
     });
-  }, []);
+  }, [advanceStageCvx]);
 
-  const removeCollab = useCallback((id) => {
+  const removeCollab = useCallback((collab) => {
+    const id = typeof collab === 'string' ? collab : collab?.id;
+    const cvxId = (typeof collab === 'object' && (collab?.convex_id || collab?.id)) || undefined;
+    if (cvxId) removeCollabCvx({ id: String(cvxId) }).catch(() => {});
     setCollabs((prev) => {
       const updated = prev.filter((c) => c.id !== id);
       saveCollabsToStorage(updated);
       return updated;
     });
-  }, []);
+  }, [removeCollabCvx]);
 
   const toggleCloseCollab = useCallback((id, party) => {
     setCollabs((prev) => {
@@ -598,11 +620,14 @@ export function CollabProvider({ children }) {
             contractId: collab.contract_id ? String(collab.contract_id) : undefined,
           }).catch(() => {});
         }
+        if (collab.convex_id) {
+          advanceStageCvx({ id: collab.convex_id, nextStage: 'archived' }).catch(() => {});
+        }
       }
 
       return updated;
     });
-  }, [ownerId, markCollabCompletedCvx]);
+  }, [ownerId, markCollabCompletedCvx, advanceStageCvx]);
 
   // TODO: Replace manual entry with Instagram Graph API / TikTok Research API when approved. Target: post-launch v2.
   const submitContentMetrics = useCallback((id, { post_url, views, likes, comments, saves }) => {

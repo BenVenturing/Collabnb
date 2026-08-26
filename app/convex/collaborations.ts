@@ -236,6 +236,28 @@ export const advanceStage = mutation({
   },
 });
 
+export const remove = mutation({
+  args: {
+    id: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const profile = await requireAuthedProfile(ctx);
+    const collab = await ctx.db
+      .query("collaborations")
+      .filter((q) => q.eq(q.field("_id"), args.id))
+      .first();
+    if (!collab) return;
+
+    const isParty = String(profile._id) === String(collab.creator_id)
+      || (collab.host_id && String(profile._id) === String(collab.host_id));
+    if (profile.is_admin !== true && !isParty) {
+      throw new ConvexError("You don't have permission to do that.");
+    }
+
+    await ctx.db.delete(collab._id);
+  },
+});
+
 // One-time seed: create one sample collaboration per sample listing so the admin
 // Collaboration Oversight is populated with clearly-labelled demo data. Idempotent —
 // wipes existing is_sample collaborations first. Attributed to fake sample creator

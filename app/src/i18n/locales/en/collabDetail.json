@@ -133,5 +133,11 @@
     "editContract": "Edit Contract",
     "createContract": "Create Contract",
     "viewAll": "View All"
+  },
+  "terminate": {
+    "title": "Terminate collaboration?",
+    "body": "This permanently removes this collaboration from your dashboard. This can't be undone.",
+    "confirm": "Yes, Terminate",
+    "cancel": "Cancel"
   }
 }

@@ -133,5 +133,11 @@
     "editContract": "Modifier le contrat",
     "createContract": "Créer un contrat",
     "viewAll": "Voir tout"
+  },
+  "terminate": {
+    "title": "Mettre fin à la collaboration ?",
+    "body": "Cela supprime définitivement cette collaboration de votre tableau de bord. Cette action est irréversible.",
+    "confirm": "Oui, mettre fin",
+    "cancel": "Annuler"
   }
 }

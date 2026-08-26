@@ -10,7 +10,7 @@ import collabnbLogo from '../../assets/collabnb-logo.png';
 import {
   Search, Menu, X, LayoutDashboard, Calendar as CalendarIcon,
   DollarSign, CheckCircle2, Users, Clock, Upload, ChevronDown, FileText, SlidersHorizontal,
-  MessageCircle, ChevronUp, ArrowLeft,
+  MessageCircle, ArrowLeft,
 } from 'lucide-react';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -103,10 +103,6 @@ export default function ProposalsOverview({ role, search, onSearchChange, filter
     const timer = setInterval(() => setTipIndex((i) => (i + 1) % tipList.length), SIDEBAR_TIP_ROTATE_MS);
     return () => clearInterval(timer);
   }, [tipList.length]);
-
-  // Collapsible mini-widget at the bottom of the sidebar — Calendar or Spend,
-  // collapsed by default.
-  const [miniWidget, setMiniWidget] = useState(null); // null | 'calendar' | 'spend'
 
   // Real data overrides mock defaults where the caller has it wired up; when a
   // prop is left undefined (still loading, or not wired for this page), the
@@ -226,12 +222,9 @@ export default function ProposalsOverview({ role, search, onSearchChange, filter
                 </button>
 
                 {item.key === 'activity' && archiveToggle && (
-                  <label style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem',
-                    padding: '0.4rem 0.5rem 0.4rem 2.35rem', cursor: 'pointer',
-                  }}>
-                    <span style={{ fontSize: '0.74rem', fontWeight: 600, color: 'rgba(239,236,233,0.55)' }}>{t('nav.archived')}</span>
-                    <span style={{ position: 'relative', width: 30, height: 17, borderRadius: 9999, background: archiveToggle.value ? 'var(--sage)' : 'rgba(255,255,255,0.15)', transition: 'background 150ms', flexShrink: 0 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '0.3rem', padding: '0.35rem 0.5rem 0.5rem 2.35rem' }}>
+                    <label style={{ position: 'relative', width: 30, height: 17, cursor: 'pointer', display: 'block' }}>
+                      <span style={{ position: 'absolute', inset: 0, borderRadius: 9999, background: archiveToggle.value ? 'var(--sage)' : 'rgba(255,255,255,0.15)', transition: 'background 150ms' }} />
                       <input
                         type="checkbox"
                         checked={archiveToggle.value}
@@ -239,60 +232,20 @@ export default function ProposalsOverview({ role, search, onSearchChange, filter
                         style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', margin: 0, cursor: 'pointer' }}
                       />
                       <span style={{ position: 'absolute', top: 2, left: archiveToggle.value ? 15 : 2, width: 13, height: 13, borderRadius: '50%', background: 'var(--bone)', transition: 'left 150ms' }} />
-                    </span>
-                  </label>
+                    </label>
+                    <span style={{ fontSize: '0.68rem', fontWeight: 600, color: 'rgba(239,236,233,0.45)' }}>{t('nav.archived')}</span>
+                  </div>
                 )}
               </div>
             );
           })}
         </div>
 
-        {miniWidget && (
-          <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: '0.9rem', padding: '0.6rem', maxHeight: 260, overflow: 'hidden' }}>
-            <div style={{ transform: 'scale(0.92)', transformOrigin: 'top left', width: '108.7%' }}>
-              {miniWidget === 'calendar'
-                ? <DashboardCalendar todoItems={resolvedTodo} selectedDate={selectedDate} onSelectDate={setSelectedDate} />
-                : <DashboardChart datasets={chartDatasets} title={chartTitle} bare />}
-            </div>
-          </div>
-        )}
-
-        <div style={{ marginTop: miniWidget ? 0 : 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+        <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
           <div style={{ padding: '0.85rem', borderRadius: '0.9rem', background: 'rgba(255,255,255,0.06)', position: 'relative', minHeight: '2.6rem' }}>
             <p key={tipIndex} className="dbo-tip-fade" style={{ fontSize: '0.72rem', color: 'rgba(239,236,233,0.6)', margin: 0, lineHeight: 1.5 }}>
               {tipList[tipIndex]}
             </p>
-          </div>
-
-          <div style={{ display: 'flex', gap: '0.4rem' }}>
-            <button
-              onClick={() => setMiniWidget((w) => w === 'calendar' ? null : 'calendar')}
-              aria-label={t('nav.calendar')}
-              title={t('nav.calendar')}
-              style={{
-                flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem',
-                padding: '0.45rem 0', borderRadius: '0.6rem', border: 'none', cursor: 'pointer',
-                background: miniWidget === 'calendar' ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.06)',
-                color: 'rgba(239,236,233,0.8)', fontSize: '0.68rem', fontWeight: 600, fontFamily: 'var(--font-body)',
-              }}
-            >
-              <CalendarIcon size={12} />
-              {miniWidget === 'calendar' ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
-            </button>
-            <button
-              onClick={() => setMiniWidget((w) => w === 'spend' ? null : 'spend')}
-              aria-label={role === 'host' ? t('nav.money.host') : t('nav.money.creator')}
-              title={role === 'host' ? t('nav.money.host') : t('nav.money.creator')}
-              style={{
-                flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem',
-                padding: '0.45rem 0', borderRadius: '0.6rem', border: 'none', cursor: 'pointer',
-                background: miniWidget === 'spend' ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.06)',
-                color: 'rgba(239,236,233,0.8)', fontSize: '0.68rem', fontWeight: 600, fontFamily: 'var(--font-body)',
-              }}
-            >
-              <DollarSign size={12} />
-              {miniWidget === 'spend' ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
-            </button>
           </div>
         </div>
       </div>
@@ -325,12 +278,14 @@ export default function ProposalsOverview({ role, search, onSearchChange, filter
             >
               <Menu size={18} />
             </button>
-            <div>
-              <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 'clamp(1.4rem, 2.4vw, 1.8rem)', color: 'var(--ink)', margin: '0 0 0.3rem' }}>
-                {t('hello', { name: firstName })}
-              </h1>
-              <p style={{ fontSize: '0.88rem', color: 'var(--slate)', margin: 0 }}>{t(`greeting.${role}`)}</p>
-            </div>
+            {activeTab === 'overview' && (
+              <div>
+                <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 'clamp(1.4rem, 2.4vw, 1.8rem)', color: 'var(--ink)', margin: '0 0 0.3rem' }}>
+                  {t('hello', { name: firstName })}
+                </h1>
+                <p style={{ fontSize: '0.88rem', color: 'var(--slate)', margin: 0 }}>{t(`greeting.${role}`)}</p>
+              </div>
+            )}
           </div>
         )}
 

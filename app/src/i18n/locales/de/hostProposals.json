@@ -120,7 +120,9 @@
     "application": "Bewerbung",
     "locked": "Gesperrt",
     "listingStats": "{{listing}} · {{followers}} Follower · {{engagement}} % ER",
-    "dragToMoveStage": "Ziehen, um die Phase zu ändern"
+    "dragToMoveStage": "Ziehen, um die Phase zu ändern",
+    "dragLocked": "Der Reihe nach zur nächsten Phase — Überspringen nicht möglich",
+    "dragLockedPending": "Erst über die Karte annehmen oder ablehnen, bevor es in die Produktion geht"
   },
   "header": {
     "heading": "Vorschläge",

@@ -120,7 +120,9 @@
     "application": "Solicitud",
     "locked": "Bloqueado",
     "listingStats": "{{listing}} · {{followers}} seguidores · {{engagement}}% ER",
-    "dragToMoveStage": "Arrastra para cambiar de etapa"
+    "dragToMoveStage": "Arrastra para cambiar de etapa",
+    "dragLocked": "Muévela a la siguiente etapa en orden — no puedes saltar etapas",
+    "dragLockedPending": "Aprueba o rechaza esta tarjeta antes de pasarla a producción"
   },
   "header": {
     "heading": "Propuestas",

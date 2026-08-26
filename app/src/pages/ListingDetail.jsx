@@ -1427,7 +1427,16 @@ export default function ListingDetail({ previewListing = null, preview = false }
       {/* ── Photo grid ───────────────────────────────────────────────────────── */}
       <div ref={photoGridRef} style={{ padding: '0 1.5rem', marginBottom: '2rem' }}>
         <div style={{ position: 'relative', borderRadius: '1.25rem', overflow: 'hidden', maxWidth: '1120px', margin: '0 auto' }}>
-          {isMd ? (
+          {listing.gallery_images.length <= 1 ? (
+            /* Single photo — full-width hero, rounded on every side (the
+               5-photo grid below would otherwise leave 4 blank cells). */
+            <div style={{ height: isMd ? 460 : 280 }}>
+              <img src={listing.gallery_images[0]} alt={listing.title}
+                onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = IMG_FALLBACK; }}
+                style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+              />
+            </div>
+          ) : isMd ? (
             /* Desktop 5-photo grid */
             <div style={{ display: 'grid', gridTemplateColumns: '3fr 2fr', gap: 6, height: 460 }}>
               <div style={{ overflow: 'hidden' }}>
@@ -1462,25 +1471,27 @@ export default function ListingDetail({ previewListing = null, preview = false }
           )}
 
           {/* Show all photos */}
-          <button
-            onClick={() => setShowGallery(true)}
-            style={{
-              position: 'absolute', bottom: '1rem', right: '1rem',
-              display: 'flex', alignItems: 'center', gap: '0.375rem',
-              background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(12px)',
-              border: '1px solid rgba(25,37,36,0.12)',
-              borderRadius: '0.75rem', padding: '0.5rem 0.875rem',
-              fontFamily: 'var(--font-body)', fontSize: '0.82rem', fontWeight: 700,
-              color: 'var(--ink)', cursor: 'pointer',
-              boxShadow: '0 4px 16px rgba(25,37,36,0.12)',
-            }}
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 13, height: 13 }}>
-              <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
-              <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
-            </svg>
-            {t('showAllPhotos')}
-          </button>
+          {listing.gallery_images.length > 1 && (
+            <button
+              onClick={() => setShowGallery(true)}
+              style={{
+                position: 'absolute', bottom: '1rem', right: '1rem',
+                display: 'flex', alignItems: 'center', gap: '0.375rem',
+                background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(12px)',
+                border: '1px solid rgba(25,37,36,0.12)',
+                borderRadius: '0.75rem', padding: '0.5rem 0.875rem',
+                fontFamily: 'var(--font-body)', fontSize: '0.82rem', fontWeight: 700,
+                color: 'var(--ink)', cursor: 'pointer',
+                boxShadow: '0 4px 16px rgba(25,37,36,0.12)',
+              }}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 13, height: 13 }}>
+                <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+                <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+              </svg>
+              {t('showAllPhotos')}
+            </button>
+          )}
         </div>
       </div>
 

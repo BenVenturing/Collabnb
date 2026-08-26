@@ -60,17 +60,17 @@
       }
     },
     "host": {
-      "new": {
-        "label": "Novas candidaturas"
-      },
-      "review": {
-        "label": "Análise pendente"
-      },
       "active": {
         "label": "Colabs ativas"
       },
-      "spend": {
-        "label": "Gasto total"
+      "new": {
+        "label": "Novas candidaturas"
+      },
+      "messages": {
+        "label": "Mensagens não lidas"
+      },
+      "stays": {
+        "label": "Próximas estadias"
       }
     }
   },

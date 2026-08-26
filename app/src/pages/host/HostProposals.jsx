@@ -10,6 +10,8 @@ import CreatorAvatar from '../../components/CreatorAvatar';
 import SkeletonCard from '../../components/SkeletonCard';
 import ProposalsOverview from '../../components/dashboard/ProposalsOverview';
 import { bucketByMonth, toMonthSeries, isoDate } from '../../lib/monthSeries';
+import { STAGES } from '../../lib/mockData';
+import { canAdvanceStage, STAGE_KEYS } from '../../lib/collabStages';
 import {
   MessageSquare, ChevronDown, ChevronUp, ExternalLink, Sparkles,
   GripVertical, Lock, Download, Pen, CheckCircle2, Trash2,
@@ -101,6 +103,8 @@ const TIER_COLORS = {
 
 function tierDef(tier) { return i18nInstance.t(`hostProposals:tierDefs.${tier}`); }
 
+// Pitch-status buckets — still used to compute stat-card sub-counts (the
+// board itself groups by collaboration stage, not pitch status).
 const STAGE_TABS = [
   { key: 'all' },
   { key: 'pending' },
@@ -109,7 +113,6 @@ const STAGE_TABS = [
   { key: 'completed' },
   { key: 'declined' },
 ];
-function stageLabel(key) { return key === 'all' ? i18nInstance.t('hostProposals:stageAll') : statusLabel(key); }
 
 const TYPE_TABS = [
   { key: 'all' },
@@ -428,36 +431,6 @@ function SignatureModal({ proposal, party, onSign, onClose }) {
         </div>
       </div>
     </div>
-  );
-}
-
-// ─── Droppable stage tab ──────────────────────────────────────────────────────
-function DroppableTab({ stageKey, label, count, active, isFlashing, dragging, currentDragStatus, onClick }) {
-  const isAll = stageKey === 'all';
-  const { isOver, setNodeRef } = useDroppable({ id: stageKey, disabled: isAll || !dragging });
-  const s = STATUS_CFG[stageKey];
-  const isSameStage = stageKey === currentDragStatus;
-  return (
-    <button ref={setNodeRef} onClick={onClick} style={{
-      display: 'flex', alignItems: 'center', gap: 5,
-      padding: dragging ? '0.65rem 1.25rem' : '0.4rem 0.875rem',
-      borderRadius: 9999, fontSize: dragging ? '0.84rem' : '0.78rem', fontWeight: 600,
-      background: isOver && s ? s.bg : (isFlashing && s) ? s.bg : active ? 'var(--ink)' : (dragging && !isAll && !isSameStage) ? 'rgba(255,255,255,0.88)' : 'rgba(255,255,255,0.65)',
-      color: isOver && s ? s.color : active ? 'var(--bone)' : 'var(--slate)',
-      border: '1px solid',
-      borderColor: isOver && s ? s.border : (isFlashing && s) ? s.border : active ? 'var(--ink)' : (dragging && !isAll && !isSameStage) ? 'rgba(25,37,36,0.18)' : 'rgba(25,37,36,0.12)',
-      backdropFilter: 'blur(12px)', cursor: 'pointer',
-      transform: isOver ? 'translateY(-2px) scale(1.04)' : 'translateY(0) scale(1)',
-      boxShadow: isOver && s ? `0 4px 14px ${s.bg}, 0 0 0 2px ${s.border}` : 'none',
-      opacity: dragging && !isAll && isSameStage ? 0.45 : 1,
-      animation: isFlashing ? 'tab-flash 600ms ease forwards' : undefined,
-      transition: 'all 200ms cubic-bezier(0.32,0.72,0,1)', fontFamily: 'var(--font-body)', whiteSpace: 'nowrap',
-    }}>
-      {label}
-      {count > 0 && (
-        <span style={{ padding: '1px 6px', borderRadius: 9999, fontSize: '0.65rem', fontWeight: 700, lineHeight: 1.5, background: active ? 'rgba(255,255,255,0.2)' : 'rgba(25,37,36,0.08)', color: active ? '#fff' : 'var(--slate)' }}>{count}</span>
-      )}
-    </button>
   );
 }
 
@@ -805,7 +778,7 @@ function ProposalDrawer({ proposal, onStatusChange, onCounter, onSign }) {
 }
 
 // ─── Proposal card ────────────────────────────────────────────────────────────
-function ProposalCard({ proposal, expanded, onToggle, onStatusChange, onCounter, onSign, onCreatorClick, dragHandleListeners, dragHandleAttributes }) {
+function ProposalCard({ proposal, expanded, onToggle, onStatusChange, onCounter, onSign, onCreatorClick, dragHandleListeners, dragHandleAttributes, dragLocked, dragLockReason }) {
   const { t: tr } = useTranslation('hostProposals');
   const s = STATUS_CFG[proposal.status] || STATUS_CFG.pending;
   const tierColor = TIER_COLORS[proposal.creator.tier] || TIER_COLORS['UGC Beginner'];
@@ -820,13 +793,14 @@ function ProposalCard({ proposal, expanded, onToggle, onStatusChange, onCounter,
     : isPitch ? PITCH_SHADOW_CLOSED   : '0 2px 10px rgba(25,37,36,0.05)';
 
   return (
-    <div style={{ marginBottom: 10 }}>
+    <div style={{ marginBottom: 10, opacity: dragLocked ? 0.55 : 1, transition: 'opacity 150ms' }}>
       <div onClick={onToggle} style={{ background: expanded ? 'rgba(255,255,255,0.98)' : 'rgba(255,255,255,0.82)', backdropFilter: 'blur(20px) saturate(135%)', WebkitBackdropFilter: 'blur(20px) saturate(135%)', border: cardBorder, borderRadius: expanded ? '1rem 1rem 0 0' : '1rem', padding: '14px 18px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, boxShadow: cardShadow, transition: 'all 200ms var(--ease-out-quart)' }}>
-        <div {...dragHandleListeners} {...dragHandleAttributes} onClick={(e) => e.stopPropagation()}
-          style={{ flexShrink: 0, color: 'var(--stone)', cursor: 'grab', padding: '4px 2px', borderRadius: '0.375rem', touchAction: 'none', userSelect: 'none', transition: 'color 150ms' }}
-          onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--slate)'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--stone)'; }} title={tr('card.dragToMoveStage')}>
-          <GripVertical size={15} />
+        <div {...(dragLocked ? {} : dragHandleListeners)} {...(dragLocked ? {} : dragHandleAttributes)} onClick={(e) => e.stopPropagation()}
+          style={{ flexShrink: 0, color: dragLocked ? 'rgba(149,157,144,0.5)' : 'var(--stone)', cursor: dragLocked ? 'not-allowed' : 'grab', padding: '4px 2px', borderRadius: '0.375rem', touchAction: 'none', userSelect: 'none', transition: 'color 150ms' }}
+          onMouseEnter={(e) => { if (!dragLocked) e.currentTarget.style.color = 'var(--slate)'; }}
+          onMouseLeave={(e) => { if (!dragLocked) e.currentTarget.style.color = 'var(--stone)'; }}
+          title={dragLocked ? (dragLockReason || tr('card.dragLocked')) : tr('card.dragToMoveStage')}>
+          {dragLocked ? <Lock size={14} /> : <GripVertical size={15} />}
         </div>
         <CreatorAvatar
           src={proposal.creator.avatar} name={proposal.creator.name}
@@ -870,10 +844,36 @@ function ProposalCard({ proposal, expanded, onToggle, onStatusChange, onCounter,
 
 // ─── Draggable wrapper ────────────────────────────────────────────────────────
 function DraggableProposalCard(props) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: props.proposal.id });
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: props.proposal.id, disabled: props.dragLocked });
   return (
     <div ref={setNodeRef} style={{ transform: transform ? `translate3d(${transform.x}px,${transform.y}px,0)` : undefined, opacity: isDragging ? 0.3 : 1, position: 'relative', zIndex: isDragging ? 50 : 'auto', transition: isDragging ? undefined : 'opacity 200ms' }}>
       <ProposalCard {...props} dragHandleListeners={listeners} dragHandleAttributes={attributes} />
+    </div>
+  );
+}
+
+// ─── Board column ─────────────────────────────────────────────────────────────
+function DroppableColumn({ stageKey, label, count, isFlashing, children }) {
+  const { isOver, setNodeRef } = useDroppable({ id: stageKey });
+  return (
+    <div
+      ref={setNodeRef}
+      style={{
+        flex: '1 1 0', minWidth: 250, maxWidth: 320, display: 'flex', flexDirection: 'column', gap: 10,
+        background: isOver ? 'rgba(74,155,127,0.08)' : 'rgba(255,255,255,0.35)',
+        border: `1.5px solid ${isOver ? 'rgba(74,155,127,0.35)' : 'rgba(25,37,36,0.06)'}`,
+        borderRadius: '1.25rem', padding: '0.75rem',
+        animation: isFlashing ? 'tab-flash 600ms ease forwards' : undefined,
+        transition: 'background 150ms, border-color 150ms',
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.25rem 0.35rem' }}>
+        <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '0.85rem', color: 'var(--ink)', margin: 0 }}>{label}</h3>
+        <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--sage)', background: 'rgba(25,37,36,0.06)', padding: '1px 8px', borderRadius: 9999, flexShrink: 0 }}>{count}</span>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, minHeight: 48 }}>
+        {children}
+      </div>
     </div>
   );
 }
@@ -925,25 +925,37 @@ export default function HostProposals() {
   const updateStatusCvx = useMutation(api.pitches.updateStatus);
   const sendCounterCvx  = useMutation(api.pitches.sendCounter);
   const signContractCvx = useMutation(api.pitches.signContract);
+  const advanceStageCvx = useMutation(api.collaborations.advanceStage);
   const rawPitches = useQuery(
     api.pitches.getByHost,
+    hostId ? { hostId: String(hostId) } : 'skip'
+  );
+  const rawCollaborations = useQuery(
+    api.collaborations.getByHost,
     hostId ? { hostId: String(hostId) } : 'skip'
   );
   const hostBilling = useQuery(
     api.fees.getBilling,
     hostId ? { hostId: String(hostId) } : 'skip'
   );
+  const pitchThreadKeys = useMemo(
+    () => (rawPitches || []).filter((p) => p.thread_key).map((p) => p.thread_key),
+    [rawPitches],
+  );
+  const hostUnreadMessages = useQuery(
+    api.threadMessages.getHostUnreadCount,
+    pitchThreadKeys.length > 0 ? { threadKeys: pitchThreadKeys } : { threadKeys: [] },
+  ) ?? 0;
 
-  const [tab, setTab]               = useState(location.state?.filter ?? 'all');
   const [typeFilter, setTypeFilter] = useState('all');
   const [listingFilter, setListingFilter] = useState('All Listings');
   const [expanded, setExpanded]     = useState(null);
-  const [dropOpen, setDropOpen]     = useState(false);
   const [activeId, setActiveId]     = useState(null);
   const [flashStage, setFlashStage] = useState(null);
   const [counterModal, setCounterModal] = useState(null);
   const [signModal, setSignModal]       = useState(null);
   const [showClearDeclined, setShowClearDeclined] = useState(false);
+  const [declinedOpen, setDeclinedOpen] = useState(false);
   const [hiddenTick, setHiddenTick] = useState(0);
   const [popupCreator, setPopupCreator] = useState(null);
   const [search, setSearch] = useState('');
@@ -965,6 +977,14 @@ export default function HostProposals() {
     });
   });
 
+  // Real collaboration rows (production-stage tracking), keyed by their Convex
+  // id so each pitch can look up its own via pitch.collaboration_id.
+  const collabByConvexId = useMemo(() => {
+    const map = {};
+    (rawCollaborations || []).forEach((c) => { map[String(c._id)] = c; });
+    return map;
+  }, [rawCollaborations]);
+
   // Use only real Convex pitches once loaded; show empty state instead of mock data
   const allProposals = useMemo(() => {
     if (rawPitches === undefined) return []; // still loading
@@ -980,20 +1000,26 @@ export default function HostProposals() {
         !!normalized.counterPending ||
         !!normalized.signatures.hostSignature ||
         !!normalized.signatures.creatorSignature;
-      if (hasConvexNegotiation) {
-        return { ...normalized, hidden: s.hidden ?? false };
-      }
-      return {
-        ...normalized,
-        contractHistory: s.contractHistory ?? normalized.contractHistory,
-        signatures:      s.signatures      ?? normalized.signatures,
-        locked:          s.locked          ?? normalized.locked,
-        counterPending:  s.counterPending  ?? normalized.counterPending,
-        hidden:          s.hidden          ?? false,
-      };
+      const base = hasConvexNegotiation
+        ? { ...normalized, hidden: s.hidden ?? false }
+        : {
+            ...normalized,
+            contractHistory: s.contractHistory ?? normalized.contractHistory,
+            signatures:      s.signatures      ?? normalized.signatures,
+            locked:          s.locked          ?? normalized.locked,
+            counterPending:  s.counterPending  ?? normalized.counterPending,
+            hidden:          s.hidden          ?? false,
+          };
+      // Board column placement — driven by the linked collaboration's real
+      // current_stage (kept in sync by CollabContext.advanceStage). Pitches
+      // without a linked collaboration yet (pre-dates this feature) default
+      // to Pending rather than being lost.
+      const convexCollabId = p.collaboration_id ? String(p.collaboration_id) : null;
+      const collab = convexCollabId ? collabByConvexId[convexCollabId] : null;
+      return { ...base, convexCollabId, collabStage: collab?.current_stage || 'pending' };
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rawPitches, hiddenTick]);
+  }, [rawPitches, hiddenTick, collabByConvexId]);
 
   // Deep-link from notifications, or clicking an Upcoming row on the Overview
   // tab: /host/proposals?pitch=<pitchId> expands that proposal and jumps to
@@ -1006,7 +1032,6 @@ export default function HostProposals() {
     if (!pitchParam) return;
     const match = allProposals.find((p) => String(p.id) === pitchParam);
     if (match) {
-      setTab('all');
       setTypeFilter('all');
       setListingFilter('All Listings');
       setExpanded(match.id);
@@ -1014,6 +1039,18 @@ export default function HostProposals() {
       setSearchParams({}, { replace: true });
     }
   }, [searchParams, allProposals, setSearchParams]);
+
+  // One-time consumption of router state from HostDashboard's stat-card links
+  // (/host/proposals with state:{filter:'pending'|'approved'}) — jumps to the
+  // board and flashes the closest matching column.
+  useEffect(() => {
+    const f = location.state?.filter;
+    if (!f) return;
+    setActivityJump((j) => j + 1);
+    setFlashStage(f === 'pending' ? 'pending' : 'accepted');
+    setTimeout(() => setFlashStage(null), 1500);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const listingNames = useMemo(() => (
     ['All Listings', ...Array.from(new Set(allProposals.map((p) => p.listing)))]
@@ -1122,37 +1159,50 @@ export default function HostProposals() {
     setActiveId(null);
     if (!over) return;
     const proposal = allProposals.find((p) => p.id === active.id);
-    if (!proposal || proposal.status === over.id) return;
-    handleStatusChange(active.id, over.id);
-    setFlashStage(over.id);
+    if (!proposal) return;
+    const fromKey = proposal.collabStage;
+    const toKey = over.id;
+    if (fromKey === toKey) return;
+    // Sequential-only — dropping anywhere except the immediate next column is
+    // a no-op (card visually returns to its column, standard dnd-kit behavior
+    // when we don't apply a state change).
+    if (!canAdvanceStage(fromKey, toKey)) return;
+    if (!proposal.convexCollabId) return;
+    advanceStageCvx({ id: proposal.convexCollabId, nextStage: toKey }).catch(() => {});
+    setFlashStage(toKey);
     setTimeout(() => setFlashStage(null), 600);
   }
 
   const activeProposal = activeId ? allProposals.find((p) => p.id === activeId) : null;
-  const dragging = !!activeId;
 
   // Filtering (hidden proposals excluded everywhere)
   const visible    = allProposals.filter((p) => !p.hidden);
   const byListing  = visible.filter((p) => listingFilter === 'All Listings' || p.listing === listingFilter);
-  const byStage    = tab === 'all'        ? byListing : byListing.filter((p) => p.status === tab);
-  const byType     = typeFilter === 'all' ? byStage   : byStage.filter((p) => p.type === typeFilter);
-  const filtered   = search.trim()
+  const byType     = typeFilter === 'all' ? byListing : byListing.filter((p) => p.type === typeFilter);
+  const searched   = search.trim()
     ? byType.filter((p) => {
         const q = search.trim().toLowerCase();
         return p.creator?.name?.toLowerCase().includes(q) || p.listing?.toLowerCase().includes(q);
       })
     : byType;
 
+  // Declined sits outside the 6-stage production board (decline isn't a
+  // production stage) — everything else is grouped into its real stage column.
+  const declinedList = searched.filter((p) => p.status === 'declined');
+  const boardList     = searched.filter((p) => p.status !== 'declined');
+  const columnCards = STAGE_KEYS.reduce((acc, key) => {
+    acc[key] = boardList.filter((p) => p.collabStage === key);
+    return acc;
+  }, {});
+
   const stageCounts = STAGE_TABS.reduce((acc, t) => {
     acc[t.key] = t.key === 'all' ? byListing.length : byListing.filter((p) => p.status === t.key).length;
     return acc;
   }, {});
 
-  const typeCounts = { all: byStage.length, application: byStage.filter((p) => p.type === 'application').length, pitch: byStage.filter((p) => p.type === 'pitch').length };
+  const typeCounts = { all: byListing.length, application: byListing.filter((p) => p.type === 'application').length, pitch: byListing.filter((p) => p.type === 'pitch').length };
   const pendingCount = visible.filter((p) => p.status === 'pending').length;
-  const declinedCount = byListing.filter((p) => p.status === 'declined').length;
-
-  function resetTypeOnTabChange(newTab) { setTab(newTab); setExpanded(null); }
+  const declinedCount = declinedList.length;
 
   // Real dashboard data — replaces ProposalsOverview's mock defaults wherever
   // we have a clean, honest mapping onto existing Convex records.
@@ -1160,21 +1210,17 @@ export default function HostProposals() {
     const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
     const newThisWeek = (rawPitches || []).filter((p) => p.created_at >= weekAgo).length;
     const approvedListings = new Set(allProposals.filter((p) => p.status === 'approved').map((p) => p.listing).filter(Boolean));
-    const paidFees = (hostBilling || []).filter((f) => f.status === 'paid');
-    const now = new Date();
-    const paidThisMonth = paidFees.filter((f) => {
-      const d = new Date(f.paid_at ?? f.created_at);
-      return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
-    });
-    const spendThisMonth = paidThisMonth.reduce((sum, f) => sum + (f.amount || 0), 0);
 
     return {
-      new:    { value: String(stageCounts.pending ?? 0), sub: `+${newThisWeek} this week` },
-      review: { value: String(stageCounts.under_review ?? 0), sub: 'Awaiting your review' },
-      active: { value: String(stageCounts.approved ?? 0), sub: `Across ${approvedListings.size} listing${approvedListings.size === 1 ? '' : 's'}` },
-      spend:  { value: `$${spendThisMonth.toLocaleString()}`, sub: 'This month' },
+      new:      { value: String(stageCounts.pending ?? 0), sub: `+${newThisWeek} this week` },
+      active:   { value: String(stageCounts.approved ?? 0), sub: `Across ${approvedListings.size} listing${approvedListings.size === 1 ? '' : 's'}` },
+      messages: { value: String(hostUnreadMessages), sub: hostUnreadMessages > 0 ? `${hostUnreadMessages} conversation${hostUnreadMessages === 1 ? '' : 's'}` : 'All caught up' },
+      // Same underlying count as Active Collabs for now — we don't yet track a
+      // distinct agreed check-in date separate from "approved", so this is an
+      // honest proxy (stays still ahead) rather than a fabricated date.
+      stays:    { value: String(stageCounts.approved ?? 0), sub: `Across ${approvedListings.size} listing${approvedListings.size === 1 ? '' : 's'}` },
     };
-  }, [rawPitches, allProposals, stageCounts, hostBilling]);
+  }, [rawPitches, allProposals, stageCounts, hostUnreadMessages]);
 
   const chartData = useMemo(() => {
     const year = new Date().getFullYear();
@@ -1205,17 +1251,17 @@ export default function HostProposals() {
   }
 
   function handleStatClick(presetKey) {
-    const stageByPreset = {
-      new_applications: 'pending',
-      pending_review:   'under_review',
-      active_collabs:   'approved',
-      completed:        'completed',
-    };
-    const stage = stageByPreset[presetKey];
-    if (stage) setTab(stage);
+    // The board shows every column at once now — jump there and flash the
+    // column closest to what was clicked, rather than filtering to one stage.
+    const columnByPreset = { new_applications: 'pending', active_collabs: 'accepted' };
+    const column = columnByPreset[presetKey];
     setTypeFilter('all');
     setListingFilter('All Listings');
     setExpanded(null);
+    if (column) {
+      setFlashStage(column);
+      setTimeout(() => setFlashStage(null), 1500);
+    }
   }
 
   return (
@@ -1225,46 +1271,27 @@ export default function HostProposals() {
           @keyframes tab-flash { 0%{box-shadow:0 0 0 3px rgba(25,37,36,0.18)} 60%{box-shadow:0 0 0 5px rgba(25,37,36,0.1)} 100%{box-shadow:none} }
         `}</style>
 
-        <ProposalsOverview role="host" search={search} onSearchChange={setSearch} onStatClick={handleStatClick} statValues={statValues} chartData={chartData} todoItems={todoItems} onTodoClick={handleTodoClick} activityJump={activityJump}>
+        <ProposalsOverview
+          role="host" search={search} onSearchChange={setSearch} onStatClick={handleStatClick}
+          statValues={statValues} chartData={chartData} todoItems={todoItems}
+          onTodoClick={handleTodoClick} activityJump={activityJump}
+          filters={[{
+            key: 'listing', value: listingFilter,
+            onChange: (v) => { setListingFilter(v); setExpanded(null); },
+            options: listingNames.map((name) => ({ value: name, label: name })),
+          }]}
+        >
 
-        <div style={{ maxWidth: 860, margin: '0 auto', padding: '2rem 1.5rem 5rem' }}>
+        <div style={{ maxWidth: 1400, margin: '0 auto', padding: '0.5rem 1.5rem 5rem' }}>
 
           {/* Header */}
-          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem', marginBottom: '1.75rem', flexWrap: 'wrap' }}>
-            <div>
-              <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 'clamp(1.6rem,4vw,2rem)', color: 'var(--ink)', margin: 0, lineHeight: 1.1 }}>{t('header.heading')}</h1>
-              <p style={{ fontSize: '0.82rem', color: 'var(--sage)', marginTop: '0.25rem' }}>{t('header.subtitle', { total: visible.length, pending: pendingCount })}</p>
-            </div>
-            <div style={{ position: 'relative' }}>
-              <button onClick={() => setDropOpen(!dropOpen)}
-                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0.5rem 1rem', borderRadius: 9999, background: 'rgba(255,255,255,0.75)', border: '1px solid rgba(25,37,36,0.12)', fontSize: '0.8rem', fontWeight: 600, color: 'var(--ink)', cursor: 'pointer', backdropFilter: 'blur(12px)', fontFamily: 'var(--font-body)' }}>
-                <span style={{ maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{listingFilter}</span>
-                <ChevronDown size={13} />
-              </button>
-              {dropOpen && (
-                <div style={{ position: 'absolute', right: 0, top: 'calc(100% + 6px)', background: 'rgba(255,255,255,0.96)', backdropFilter: 'blur(24px) saturate(140%)', border: '1px solid rgba(255,255,255,0.7)', borderRadius: '0.875rem', boxShadow: '0 12px 40px rgba(25,37,36,0.14)', zIndex: 40, minWidth: 200, overflow: 'hidden' }}>
-                  {listingNames.map((name) => (
-                    <button key={name} onClick={() => { setListingFilter(name); setDropOpen(false); setExpanded(null); }}
-                      style={{ width: '100%', textAlign: 'left', padding: '10px 16px', background: listingFilter === name ? 'var(--mint)' : 'transparent', border: 'none', cursor: 'pointer', fontSize: '0.82rem', fontWeight: listingFilter === name ? 700 : 500, color: 'var(--ink)', fontFamily: 'var(--font-body)' }}
-                      onMouseEnter={(e) => { if (listingFilter !== name) e.currentTarget.style.background = 'rgba(25,37,36,0.04)'; }}
-                      onMouseLeave={(e) => { if (listingFilter !== name) e.currentTarget.style.background = 'transparent'; }}>
-                      {name}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Stage tabs */}
-          <div style={{ display: 'flex', gap: 6, marginBottom: '0.75rem', flexWrap: 'wrap', padding: dragging ? '0.5rem 0.625rem' : '0', background: dragging ? 'rgba(255,255,255,0.55)' : 'transparent', backdropFilter: dragging ? 'blur(16px) saturate(140%)' : undefined, WebkitBackdropFilter: dragging ? 'blur(16px) saturate(140%)' : undefined, border: `1.5px solid ${dragging ? 'rgba(255,255,255,0.75)' : 'transparent'}`, borderRadius: '1.25rem', boxShadow: dragging ? '0 4px 20px rgba(25,37,36,0.07)' : 'none', transition: 'all 250ms cubic-bezier(0.32,0.72,0,1)' }}>
-            {STAGE_TABS.map((st) => (
-              <DroppableTab key={st.key} stageKey={st.key} label={stageLabel(st.key)} count={stageCounts[st.key]} active={tab === st.key} isFlashing={flashStage === st.key} dragging={dragging} currentDragStatus={activeProposal?.status} onClick={() => resetTypeOnTabChange(st.key)} />
-            ))}
+          <div style={{ marginBottom: '1rem' }}>
+            <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 'clamp(1.6rem,4vw,2rem)', color: 'var(--ink)', margin: 0, lineHeight: 1.1 }}>{t('header.heading')}</h1>
+            <p style={{ fontSize: '0.82rem', color: 'var(--sage)', marginTop: '0.25rem' }}>{t('header.subtitle', { total: visible.length, pending: pendingCount })}</p>
           </div>
 
           {/* Type filter */}
-          <div style={{ display: 'flex', gap: 6, marginBottom: '1.5rem', alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: 6, marginBottom: '1.25rem', alignItems: 'center' }}>
             {TYPE_TABS.map((tt) => {
               const active = typeFilter === tt.key;
               const count  = typeCounts[tt.key];
@@ -1280,48 +1307,78 @@ export default function HostProposals() {
             })}
           </div>
 
-          {/* Clear All Declined header */}
-          {tab === 'declined' && declinedCount > 0 && (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-              <span style={{ fontSize: 12, color: 'var(--sage)', fontWeight: 600 }}>{t('declinedHeader.count', { count: declinedCount })}</span>
-              <button onClick={() => setShowClearDeclined(true)}
-                style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 9999, border: '1px solid rgba(200,104,104,0.3)', background: 'transparent', fontSize: 11, fontWeight: 700, color: '#9b2d2d', cursor: 'pointer', fontFamily: 'var(--font-body)' }}>
-                <Trash2 size={11} /> {t('declinedHeader.clearAll')}
-              </button>
-            </div>
-          )}
-
-          {/* List */}
+          {/* Board */}
           {rawPitches === undefined ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
               {Array.from({ length: 4 }).map((_, i) => (
                 <SkeletonCard key={i} variant="proposal" />
               ))}
             </div>
-          ) : filtered.length === 0 ? (
+          ) : allProposals.length === 0 ? (
             <div style={{ background: 'rgba(255,255,255,0.6)', backdropFilter: 'blur(20px)', border: '1.5px solid rgba(255,255,255,0.7)', borderRadius: '1.25rem', padding: '3rem', textAlign: 'center' }}>
-              <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1rem', color: 'var(--ink)', marginBottom: '0.4rem' }}>
-                {allProposals.length === 0
-                  ? t('empty.noProposalsYet')
-                  : t('empty.noFilteredProposals', { filters: [typeFilter !== 'all' ? typeLabel(typeFilter).toLowerCase() : '', tab !== 'all' ? stageLabel(tab).toLowerCase() : ''].filter(Boolean).join(' ') + (typeFilter !== 'all' || tab !== 'all' ? ' ' : '') })}
-              </p>
-              <p style={{ fontSize: '0.82rem', color: 'var(--sage)', margin: 0 }}>
-                {allProposals.length === 0
-                  ? t('empty.onceCreatorsApply')
-                  : t('empty.tryDifferentFilter')}
-              </p>
+              <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1rem', color: 'var(--ink)', marginBottom: '0.4rem' }}>{t('empty.noProposalsYet')}</p>
+              <p style={{ fontSize: '0.82rem', color: 'var(--sage)', margin: 0 }}>{t('empty.onceCreatorsApply')}</p>
             </div>
           ) : (
-            filtered.map((p) => (
-              <DraggableProposalCard key={p.id} proposal={p}
-                expanded={expanded === p.id}
-                onToggle={() => setExpanded(expanded === p.id ? null : p.id)}
-                onStatusChange={handleStatusChange}
-                onCounter={(proposalId, fromParty) => setCounterModal({ proposalId, fromParty })}
-                onSign={(proposalId, party) => setSignModal({ proposalId, party })}
-                onCreatorClick={(creator) => setPopupCreator(creator)}
-              />
-            ))
+            <div style={{ display: 'flex', gap: '0.75rem', overflowX: 'auto', paddingBottom: '0.5rem' }}>
+              {STAGE_KEYS.map((key) => {
+                const stageDef = STAGES.find((s) => s.key === key);
+                const cards = columnCards[key] || [];
+                return (
+                  <DroppableColumn key={key} stageKey={key} label={stageDef?.label || key} count={cards.length} isFlashing={flashStage === key}>
+                    {cards.map((p) => {
+                      const dragLocked = p.collabStage === 'pending' || p.collabStage === 'archived';
+                      return (
+                        <DraggableProposalCard key={p.id} proposal={p}
+                          dragLocked={dragLocked}
+                          dragLockReason={p.collabStage === 'pending' ? t('card.dragLockedPending') : undefined}
+                          expanded={expanded === p.id}
+                          onToggle={() => setExpanded(expanded === p.id ? null : p.id)}
+                          onStatusChange={handleStatusChange}
+                          onCounter={(proposalId, fromParty) => setCounterModal({ proposalId, fromParty })}
+                          onSign={(proposalId, party) => setSignModal({ proposalId, party })}
+                          onCreatorClick={(creator) => setPopupCreator(creator)}
+                        />
+                      );
+                    })}
+                  </DroppableColumn>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Declined — outside the production board */}
+          {declinedList.length > 0 && (
+            <div style={{ marginTop: '1.5rem' }}>
+              <div
+                onClick={() => setDeclinedOpen((v) => !v)}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', padding: '0.5rem 0.25rem' }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  {declinedOpen ? <ChevronUp size={14} color="var(--sage)" /> : <ChevronDown size={14} color="var(--sage)" />}
+                  <span style={{ fontSize: 12, color: 'var(--sage)', fontWeight: 600 }}>{t('declinedHeader.count', { count: declinedCount })}</span>
+                </div>
+                <button onClick={(e) => { e.stopPropagation(); setShowClearDeclined(true); }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 9999, border: '1px solid rgba(200,104,104,0.3)', background: 'transparent', fontSize: 11, fontWeight: 700, color: '#9b2d2d', cursor: 'pointer', fontFamily: 'var(--font-body)' }}>
+                  <Trash2 size={11} /> {t('declinedHeader.clearAll')}
+                </button>
+              </div>
+              {declinedOpen && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: '0.5rem' }}>
+                  {declinedList.map((p) => (
+                    <DraggableProposalCard key={p.id} proposal={p}
+                      dragLocked
+                      expanded={expanded === p.id}
+                      onToggle={() => setExpanded(expanded === p.id ? null : p.id)}
+                      onStatusChange={handleStatusChange}
+                      onCounter={(proposalId, fromParty) => setCounterModal({ proposalId, fromParty })}
+                      onSign={(proposalId, party) => setSignModal({ proposalId, party })}
+                      onCreatorClick={(creator) => setPopupCreator(creator)}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
           )}
         </div>
 

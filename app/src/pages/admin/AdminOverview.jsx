@@ -68,7 +68,7 @@ export default function AdminOverview() {
   };
 
   return (
-    <div>
+    <div style={{ position: 'relative', overflow: 'hidden', background: '#192524', isolation: 'isolate', minHeight: '100%' }}>
       <style>{`
         @keyframes hazyDrift1 { 0% { transform: translate(-12%, -8%) scale(1); } 50% { transform: translate(10%, 6%) scale(1.15); } 100% { transform: translate(-12%, -8%) scale(1); } }
         @keyframes hazyDrift2 { 0% { transform: translate(15%, 10%) scale(1.1); } 50% { transform: translate(-8%, -12%) scale(0.95); } 100% { transform: translate(15%, 10%) scale(1.1); } }
@@ -79,12 +79,13 @@ export default function AdminOverview() {
         .admin-focusable:focus-visible { outline: 2px solid #3C5759; outline-offset: 2px; }
       `}</style>
 
-      {/* Liquid iridescent hero: the one chromatic gesture on this page */}
-      <div style={{ position: 'relative', overflow: 'hidden', background: '#192524', padding: '3.5rem 2.5rem 3rem', isolation: 'isolate' }}>
-        <div className="hazy-blob" style={{ position: 'absolute', top: '-40%', left: '-10%', width: '70%', height: '160%', borderRadius: '50%', background: 'radial-gradient(circle, rgba(149,157,144,0.85), transparent 65%)', filter: 'blur(70px)', animation: 'hazyDrift1 26s cubic-bezier(0.19,1,0.22,1) infinite', zIndex: -1 }} />
-        <div className="hazy-blob" style={{ position: 'absolute', top: '-20%', right: '-15%', width: '65%', height: '150%', borderRadius: '50%', background: 'radial-gradient(circle, rgba(255,172,46,0.38), transparent 60%)', filter: 'blur(80px)', animation: 'hazyDrift2 32s cubic-bezier(0.19,1,0.22,1) infinite', zIndex: -1 }} />
-        <div className="hazy-blob" style={{ position: 'absolute', bottom: '-50%', left: '30%', width: '55%', height: '140%', borderRadius: '50%', background: 'radial-gradient(circle, rgba(209,235,219,0.5), transparent 62%)', filter: 'blur(60px)', animation: 'hazyDrift3 24s cubic-bezier(0.19,1,0.22,1) infinite', zIndex: -1 }} />
+      {/* Liquid iridescent haze — now spans the whole page, not just the hero strip */}
+      <div className="hazy-blob" style={{ position: 'absolute', top: '-25%', left: '-10%', width: '70%', height: '90%', borderRadius: '50%', background: 'radial-gradient(circle, rgba(149,157,144,0.85), transparent 65%)', filter: 'blur(70px)', animation: 'hazyDrift1 26s cubic-bezier(0.19,1,0.22,1) infinite', zIndex: 0 }} />
+      <div className="hazy-blob" style={{ position: 'absolute', top: '-15%', right: '-15%', width: '65%', height: '85%', borderRadius: '50%', background: 'radial-gradient(circle, rgba(255,172,46,0.38), transparent 60%)', filter: 'blur(80px)', animation: 'hazyDrift2 32s cubic-bezier(0.19,1,0.22,1) infinite', zIndex: 0 }} />
+      <div className="hazy-blob" style={{ position: 'absolute', bottom: '-10%', left: '20%', width: '55%', height: '70%', borderRadius: '50%', background: 'radial-gradient(circle, rgba(209,235,219,0.5), transparent 62%)', filter: 'blur(60px)', animation: 'hazyDrift3 24s cubic-bezier(0.19,1,0.22,1) infinite', zIndex: 0 }} />
 
+      {/* Hero content */}
+      <div style={{ position: 'relative', zIndex: 1, padding: '3.5rem 2.5rem 3rem' }}>
         <p style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.65)', letterSpacing: '0.08em', textTransform: 'uppercase', margin: '0 0 0.75rem', fontFamily: 'Satoshi, sans-serif' }}>{today}</p>
         <h1 style={{ fontFamily: 'Cabinet Grotesk, sans-serif', fontWeight: 500, fontSize: 'clamp(1.9rem, 4vw, 2.9rem)', color: '#fff', margin: '0 0 1.75rem', letterSpacing: '-0.02em', lineHeight: 1.05 }}>
         {greeting()}, {firstName}.
@@ -111,7 +112,7 @@ export default function AdminOverview() {
         </div>
       </div>
 
-      <div style={{ padding: '1.75rem 2rem 2rem' }}>
+      <div style={{ position: 'relative', zIndex: 1, padding: '1.75rem 2rem 2rem' }}>
         {/* Stat tiles */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.75rem', marginBottom: '1.75rem' }}>
           {tiles.map(t => (
@@ -159,9 +160,9 @@ export default function AdminOverview() {
         </button>
 
         {/* Needs attention */}
-        <p style={{ fontFamily: 'Cabinet Grotesk, sans-serif', fontWeight: 700, fontSize: '0.95rem', color: '#192524', margin: '0 0 0.75rem' }}>Needs attention</p>
+        <p style={{ fontFamily: 'Cabinet Grotesk, sans-serif', fontWeight: 700, fontSize: '0.95rem', color: '#fff', margin: '0 0 0.75rem' }}>Needs attention</p>
         {attention.length === 0 ? (
-          <div style={{ padding: '1.5rem', borderRadius: '1.25rem', background: 'rgba(209,235,219,0.3)', border: '1px solid rgba(209,235,219,0.7)', fontSize: '0.85rem', color: '#166534', fontFamily: 'Satoshi, sans-serif' }}>
+          <div style={{ padding: '1.5rem', borderRadius: '1.25rem', background: 'rgba(209,235,219,0.85)', border: '1px solid rgba(209,235,219,0.9)', fontSize: '0.85rem', color: '#166534', fontFamily: 'Satoshi, sans-serif' }}>
             All clear. Nothing is waiting on you right now.
           </div>
         ) : (

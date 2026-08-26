@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
+import { NAV_ITEMS_BY_ID, NAV_ORDER_DEFAULT, resolveNavOrder } from '../../lib/adminNav';
 
 const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL;
 const FOUNDER_LIMIT = 100;
@@ -69,6 +70,59 @@ function SaveBtn({ onClick, saved, label = 'Save' }) {
     >
       {saved ? '✓ Saved' : label}
     </button>
+  );
+}
+
+// ─── Customize navigation — drag the sidebar's top-level order ────────────────
+function NavOrderEditor() {
+  const settings = useQuery(api.admin.getSettings);
+  const setSetting = useMutation(api.admin.setSetting);
+  const saved = resolveNavOrder(settings?.nav_order);
+  const [order, setOrder] = useState(saved);
+  const [dragId, setDragId] = useState(null);
+  const savedKey = saved.join(',');
+
+  useEffect(() => { setOrder(saved); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [savedKey]);
+
+  function persist(next) {
+    setOrder(next);
+    setSetting({ key: 'nav_order', value: JSON.stringify(next) });
+  }
+
+  function handleDrop(targetId) {
+    if (dragId && dragId !== targetId) {
+      const next = [...order];
+      next.splice(next.indexOf(dragId), 1);
+      next.splice(next.indexOf(targetId), 0, dragId);
+      persist(next);
+    }
+    setDragId(null);
+  }
+
+  return (
+    <div>
+      <p style={{ fontSize: '0.78rem', color: '#3C5759', margin: '0 0 0.75rem', lineHeight: 1.5 }}>
+        Drag to reorder the sidebar's top-level sections. Settings always stays pinned to the bottom.
+      </p>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+        {order.map((id) => {
+          const item = NAV_ITEMS_BY_ID[id];
+          if (!item) return null;
+          return (
+            <div key={id} draggable onDragStart={() => setDragId(id)} onDragEnd={() => setDragId(null)}
+              onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); handleDrop(id); }}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.5rem 0.75rem', borderRadius: '0.6rem', background: 'rgba(25,37,36,0.03)', border: '1px solid rgba(25,37,36,0.07)', cursor: 'grab' }}>
+              <span style={{ color: '#959D90', fontSize: '0.85rem', userSelect: 'none' }}>⠿</span>
+              <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#192524' }}>{item.label}</span>
+            </div>
+          );
+        })}
+      </div>
+      <button onClick={() => persist(NAV_ORDER_DEFAULT)}
+        style={{ marginTop: '0.75rem', padding: '0.4rem 0.9rem', borderRadius: 9999, border: '1px solid rgba(25,37,36,0.15)', background: 'transparent', color: '#3C5759', fontSize: '0.74rem', fontWeight: 600, cursor: 'pointer' }}>
+        Reset to default order
+      </button>
+    </div>
   );
 }
 
@@ -292,6 +346,12 @@ export default function AdminSettings() {
             <Toggle label="Email on new user message"     checked={notifyMessage} onChange={(v) => { setNotifyMessage(v); setNotifSaved(false); }} />
             <Toggle label="Email on collab completed"     checked={notifyCollab}  onChange={(v) => { setNotifyCollab(v);  setNotifSaved(false); }} />
             <SaveBtn onClick={saveNotifications} saved={notifSaved} />
+          </div>
+
+          {/* ── Navigation ── */}
+          <SectionTitle>Customize Navigation</SectionTitle>
+          <div style={CARD}>
+            <NavOrderEditor />
           </div>
         </>
       )}

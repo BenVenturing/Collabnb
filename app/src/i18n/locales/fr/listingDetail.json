@@ -118,7 +118,9 @@
     "response": "Réponse",
     "responds": "Répond",
     "hostCantMessage": "Les hôtes ne peuvent pas envoyer de messages à d'autres hôtes",
-    "message": "Message à {{name}}"
+    "message": "Message à {{name}}",
+    "hostFallbackName": "Hôte",
+    "defaultRole": "Hôte Collabnb"
   },
   "redacted": {
     "locationHidden": "Emplacement masqué",

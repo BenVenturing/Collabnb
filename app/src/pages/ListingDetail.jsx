@@ -1011,11 +1011,17 @@ function HostProfileModal({ host, listing, onClose, onMessage, isSample, hostVie
                   boxShadow: '0 6px 28px rgba(25,37,36,0.14)',
                 }}>
                   <div style={{ position: 'relative' }}>
-                    <img
-                      src={avatar} alt={host.name}
-                      onError={() => setImgError(true)}
-                      style={{ width: 100, height: 100, borderRadius: '50%', objectFit: 'cover', display: 'block', border: '4px solid rgba(255,255,255,0.97)', boxShadow: '0 4px 18px rgba(25,37,36,0.18)' }}
-                    />
+                    {avatar ? (
+                      <img
+                        src={avatar} alt={host.name}
+                        onError={() => setImgError(true)}
+                        style={{ width: 100, height: 100, borderRadius: '50%', objectFit: 'cover', display: 'block', border: '4px solid rgba(255,255,255,0.97)', boxShadow: '0 4px 18px rgba(25,37,36,0.18)' }}
+                      />
+                    ) : (
+                      <div style={{ width: 100, height: 100, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--mint)', color: 'var(--slate)', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.75rem', border: '4px solid rgba(255,255,255,0.97)', boxShadow: '0 4px 18px rgba(25,37,36,0.18)' }}>
+                        {(host.name || '?').slice(0, 1).toUpperCase()}
+                      </div>
+                    )}
                     {host.verified && (
                       <div style={{ position: 'absolute', bottom: 2, right: 0, width: 24, height: 24, borderRadius: '50%', background: '#192524', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2.5px solid white' }}>
                         <svg viewBox="0 0 12 12" fill="none" style={{ width: 10, height: 10 }}>
@@ -1066,21 +1072,28 @@ function HostProfileModal({ host, listing, onClose, onMessage, isSample, hostVie
               {t('hostModal.hostingIn', { location: listing.location })}
             </div>
 
-            <div style={{ height: 1, background: 'rgba(25,37,36,0.07)', margin: '14px 0' }} />
-
-            {/* Stats */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1, background: 'rgba(25,37,36,0.06)', borderRadius: '0.875rem', overflow: 'hidden', marginBottom: 16 }}>
-              {[
-                { val: `${host.rating}★`, label: t('hostModal.rating') },
-                { val: `${host.years_hosting}`, label: t('hostModal.yearsHosting') },
-                { val: `${host.response_rate}%`, label: t('hostModal.response') },
-              ].map(({ val, label }) => (
-                <div key={label} style={{ padding: '12px 0', background: 'rgba(255,255,255,0.78)', textAlign: 'center' }}>
-                  <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 16, color: 'var(--ink)', lineHeight: 1 }}>{val}</div>
-                  <div style={{ fontSize: 10, color: 'var(--sage)', marginTop: 3 }}>{label}</div>
-                </div>
-              ))}
-            </div>
+            {/* Stats — only fields we actually have real data for (sample host has all three) */}
+            {(() => {
+              const stats = [
+                host.rating != null && { val: `${host.rating}★`, label: t('hostModal.rating') },
+                host.years_hosting != null && { val: `${host.years_hosting}`, label: t('hostModal.yearsHosting') },
+                host.response_rate != null && { val: `${host.response_rate}%`, label: t('hostModal.response') },
+              ].filter(Boolean);
+              if (stats.length === 0) return null;
+              return (
+                <>
+                  <div style={{ height: 1, background: 'rgba(25,37,36,0.07)', margin: '14px 0' }} />
+                  <div style={{ display: 'grid', gridTemplateColumns: `repeat(${stats.length}, 1fr)`, gap: 1, background: 'rgba(25,37,36,0.06)', borderRadius: '0.875rem', overflow: 'hidden', marginBottom: 16 }}>
+                    {stats.map(({ val, label }) => (
+                      <div key={label} style={{ padding: '12px 0', background: 'rgba(255,255,255,0.78)', textAlign: 'center' }}>
+                        <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 16, color: 'var(--ink)', lineHeight: 1 }}>{val}</div>
+                        <div style={{ fontSize: 10, color: 'var(--sage)', marginTop: 3 }}>{label}</div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              );
+            })()}
 
             {host.bio && (
               <p style={{ fontSize: 13, color: 'var(--slate)', lineHeight: 1.7, marginBottom: 12 }}>{host.bio}</p>
@@ -1325,6 +1338,22 @@ export default function ListingDetail({ previewListing = null, preview = false }
   const resolvedHostAvatarUrl = hostProfile?.avatar_url || SAMPLE_HOST.avatar_fallback;
   const hostAvatar  = hostImgError ? SAMPLE_HOST.avatar_fallback : resolvedHostAvatarUrl;
 
+  // Real listings must show the real host, not the mock persona used for
+  // sample listings — profiles don't track rating/years-hosting/response
+  // stats yet, so those simply don't render rather than showing fake numbers.
+  const isRealHostListing = !isSampleListing && !!hostProfile;
+  const hostDisplayName = isRealHostListing ? (hostProfile.full_name || listing.host_name || t('hostModal.hostFallbackName')) : SAMPLE_HOST.name;
+  const hostDisplayBio = isRealHostListing ? (hostProfile.bio || '') : SAMPLE_HOST.bio;
+  const hostModalData = isRealHostListing ? {
+    name: hostDisplayName,
+    username: hostProfile.username,
+    avatar_url: hostProfile.avatar_url || null,
+    avatar_fallback: null,
+    role: t('hostModal.defaultRole'),
+    verified: hostProfile.is_verified === true,
+    bio: hostDisplayBio,
+  } : SAMPLE_HOST;
+
   return (
     <div style={{ paddingBottom: isDesktop ? '2rem' : '7rem' }}>
 
@@ -1528,7 +1557,7 @@ export default function ListingDetail({ previewListing = null, preview = false }
                 onClick={() => setShowHostModal(true)}
                 style={{ position: 'relative', flexShrink: 0, background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
               >
-                <img src={hostAvatar} alt={SAMPLE_HOST.name}
+                <img src={hostAvatar} alt={hostDisplayName}
                   onError={() => setHostImgError(true)}
                   style={{ width: 52, height: 52, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(255,255,255,0.8)', boxShadow: '0 2px 8px rgba(25,37,36,0.12)', display: 'block' }}
                 />
@@ -1540,9 +1569,9 @@ export default function ListingDetail({ previewListing = null, preview = false }
               </button>
               <div>
                 <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1rem', color: 'var(--ink)', lineHeight: 1.2 }}>
-                  {t('listedBy', { name: SAMPLE_HOST.name })}
+                  {t('listedBy', { name: hostDisplayName })}
                 </p>
-                <p style={{ fontSize: '0.82rem', color: 'var(--sage)' }}>{SAMPLE_HOST.role}</p>
+                <p style={{ fontSize: '0.82rem', color: 'var(--sage)' }}>{isRealHostListing ? t('hostModal.defaultRole') : SAMPLE_HOST.role}</p>
               </div>
             </div>
 
@@ -1710,7 +1739,7 @@ export default function ListingDetail({ previewListing = null, preview = false }
                     onClick={() => setShowHostModal(true)}
                     style={{ position: 'relative', display: 'inline-block', marginBottom: '0.75rem', background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
                   >
-                    <img src={hostAvatar} alt={SAMPLE_HOST.name}
+                    <img src={hostAvatar} alt={hostDisplayName}
                       onError={() => setHostImgError(true)}
                       style={{ width: 72, height: 72, borderRadius: '50%', objectFit: 'cover', display: 'block' }}
                     />
@@ -1720,9 +1749,9 @@ export default function ListingDetail({ previewListing = null, preview = false }
                       </svg>
                     </div>
                   </button>
-                  <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1rem', color: 'var(--ink)', marginBottom: '0.15rem' }}>{SAMPLE_HOST.name}</p>
+                  <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1rem', color: 'var(--ink)', marginBottom: '0.15rem' }}>{hostDisplayName}</p>
                   <p style={{ fontSize: '0.75rem', color: 'var(--sage)', marginBottom: '0.875rem' }}>{t('collabnbHost')}</p>
-                  {[{ val: `${SAMPLE_HOST.years_hosting}`, label: t('yearsHosting') }].map(({ val, label }) => (
+                  {!isRealHostListing && [{ val: `${SAMPLE_HOST.years_hosting}`, label: t('yearsHosting') }].map(({ val, label }) => (
                     <div key={label} style={{ borderTop: '1px solid rgba(25,37,36,0.07)', paddingTop: '0.5rem', marginTop: '0.5rem' }}>
                       <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.05rem', color: 'var(--ink)' }}>{val}</p>
                       <p style={{ fontSize: '0.7rem', color: 'var(--sage)' }}>{label}</p>
@@ -1733,11 +1762,17 @@ export default function ListingDetail({ previewListing = null, preview = false }
                 {/* Host bio + details */}
                 <div style={{ flex: 1, minWidth: 180 }}>
                   <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1rem', color: 'var(--ink)', marginBottom: '0.75rem' }}>
-                    {SAMPLE_HOST.name}
+                    {hostDisplayName}
                   </p>
-                  <p style={{ fontSize: '0.9rem', color: 'var(--slate)', lineHeight: 1.7, marginBottom: '1.25rem' }}>{SAMPLE_HOST.bio}</p>
-                  <p style={{ fontSize: '0.85rem', color: 'var(--slate)', marginBottom: '0.35rem' }}><strong>{t('responseRate')}</strong> {SAMPLE_HOST.response_rate}%</p>
-                  <p style={{ fontSize: '0.85rem', color: 'var(--slate)', marginBottom: '1.25rem' }}><strong>{t('hostModal.responds')}</strong> {SAMPLE_HOST.response_time}</p>
+                  {hostDisplayBio && (
+                    <p style={{ fontSize: '0.9rem', color: 'var(--slate)', lineHeight: 1.7, marginBottom: '1.25rem' }}>{hostDisplayBio}</p>
+                  )}
+                  {!isRealHostListing && (
+                    <>
+                      <p style={{ fontSize: '0.85rem', color: 'var(--slate)', marginBottom: '0.35rem' }}><strong>{t('responseRate')}</strong> {SAMPLE_HOST.response_rate}%</p>
+                      <p style={{ fontSize: '0.85rem', color: 'var(--slate)', marginBottom: '1.25rem' }}><strong>{t('hostModal.responds')}</strong> {SAMPLE_HOST.response_time}</p>
+                    </>
+                  )}
                   <SampleTooltip active={blockActions} label={isSampleListing ? undefined : t('hostModal.hostCantMessage')}>
                     <button
                       onClick={blockActions ? undefined : handleMessageHost}
@@ -1910,7 +1945,7 @@ export default function ListingDetail({ previewListing = null, preview = false }
       {/* ── Host profile modal ────────────────────────────────────────────────── */}
       {showHostModal && (
         <HostProfileModal
-          host={SAMPLE_HOST}
+          host={hostModalData}
           listing={listing}
           onClose={() => setShowHostModal(false)}
           onMessage={() => { setShowHostModal(false); handleMessageHost(); }}

@@ -785,7 +785,8 @@ function SwipeView({ creators, onBack, savedIds, onToggleSaved }) {
 
   function goToInbox(creator) {
     setHideNav(false);
-    navigate(`/inbox?creatorName=${encodeURIComponent(creator.name)}&creatorAvatar=${encodeURIComponent(creator.avatar ?? '')}`);
+    const creatorId = creator.id ? `&creatorId=${encodeURIComponent(creator.id)}` : '';
+    navigate(`/inbox?creatorName=${encodeURIComponent(creator.name)}&creatorAvatar=${encodeURIComponent(creator.avatar ?? '')}${creatorId}`);
   }
 
   // Awaits the real Convex mutation and checks the returned saved-ids list to
@@ -1125,7 +1126,8 @@ export default function HostCreators() {
   }
 
   function handleMessage(creator) {
-    navigate(`/inbox?creatorName=${encodeURIComponent(creator.name)}&creatorAvatar=${encodeURIComponent(creator.avatar)}`);
+    const creatorId = creator.id ? `&creatorId=${encodeURIComponent(creator.id)}` : '';
+    navigate(`/inbox?creatorName=${encodeURIComponent(creator.name)}&creatorAvatar=${encodeURIComponent(creator.avatar)}${creatorId}`);
   }
 
   function hideGridCreator(id) {

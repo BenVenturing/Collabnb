@@ -101,5 +101,7 @@
     "compensation": " en rémunération de {{payment}}",
     "usage": " selon les droits d'utilisation suivants : {{usage}}",
     "suffix": "."
-  }
+  },
+  "groupActive": "Actifs",
+  "groupArchived": "Archivés"
 }

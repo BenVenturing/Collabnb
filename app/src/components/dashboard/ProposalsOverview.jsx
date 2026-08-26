@@ -399,7 +399,7 @@ export default function ProposalsOverview({ role, search, onSearchChange, filter
 
       {chartModalOpen && (
         <DashboardModal title={chartTitle} onClose={() => setChartModalOpen(false)} maxWidth={640}>
-          <DashboardChart datasets={chartDatasets} title="" />
+          <DashboardChart datasets={chartDatasets} title="" bare />
         </DashboardModal>
       )}
 

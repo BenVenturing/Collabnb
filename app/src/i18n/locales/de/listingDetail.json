@@ -118,7 +118,9 @@
     "response": "Antwort",
     "responds": "Antwortet",
     "hostCantMessage": "Gastgeber können anderen Gastgebern keine Nachrichten senden",
-    "message": "Nachricht an {{name}}"
+    "message": "Nachricht an {{name}}",
+    "hostFallbackName": "Gastgeber",
+    "defaultRole": "Collabnb-Gastgeber"
   },
   "redacted": {
     "locationHidden": "Standort ausgeblendet",

@@ -118,7 +118,9 @@
     "response": "Respuesta",
     "responds": "Responde",
     "hostCantMessage": "Los anfitriones no pueden enviar mensajes a otros anfitriones",
-    "message": "Mensaje a {{name}}"
+    "message": "Mensaje a {{name}}",
+    "hostFallbackName": "Anfitrión",
+    "defaultRole": "Anfitrión de Collabnb"
   },
   "redacted": {
     "locationHidden": "Ubicación oculta",

@@ -63,7 +63,6 @@ export default function ContractBuilder() {
 
   const [editingId, setEditingId] = useState(null);
   const [contractList, setContractList] = useState([]);
-  const [showList, setShowList] = useState(false);
   const [selectedHost, setSelectedHost] = useState(null);
 
   const FORM_DRAFT_KEY = 'collabnb_contract_form_draft';
@@ -295,7 +294,6 @@ export default function ContractBuilder() {
     setHostSig(c.host_signed ? (c.host_name || profile?.full_name || t('role.host')) : '');
     setSummaryNote(c.summary_note || generateSummary());
     setEditingId(c.id);
-    setShowList(false);
     setSendSuccess(false);
     setIsSent(Boolean(c.sent_at));
   };
@@ -487,10 +485,33 @@ export default function ContractBuilder() {
     { key: 'deliverables' },
   ];
 
+  const archivedContracts = contractList.filter((c) => c.paid);
+  const activeContracts = contractList.filter((c) => !c.paid);
+
+  const ContractRow = ({ c }) => {
+    const sc = STATUS_CONFIG[c.status] || STATUS_CONFIG.draft;
+    return (
+      <button
+        onClick={() => loadContract(c)}
+        className={`w-full flex items-center justify-between p-3 rounded-xl border text-left transition-all ${
+          editingId === c.id ? 'bg-white border-mint shadow-sm' : 'bg-white/60 border-stone/30 hover:bg-white/90 hover:border-mint'
+        }`}
+      >
+        <div className="min-w-0 flex-1">
+          <p className="font-semibold text-ink text-sm truncate">{c.property_name || c.creator_name || t('untitled')}</p>
+          <p className="text-xs text-sage mt-0.5 truncate">{c.dates || c.location || t('noDetails')}</p>
+        </div>
+        <span className={`ml-2 text-xs font-semibold px-2.5 py-1 rounded-full flex-shrink-0 ${sc.bg}`}>
+          {t(`statusName.${c.status}`)}
+        </span>
+      </button>
+    );
+  };
+
   return (
     <div className="min-h-dvh bg-bone px-4 py-6 lg:px-8">
-      <div className="max-w-6xl mx-auto">
-        {/* Back + contract list toggle */}
+      <div className="max-w-7xl mx-auto">
+        {/* Back */}
         <div className="flex items-center justify-between mb-4">
           <button
             onClick={() => navigate(-1)}
@@ -499,49 +520,44 @@ export default function ContractBuilder() {
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
             {t('back')}
           </button>
-          <button
-            onClick={() => { setShowList(!showList); resetForm(); }}
-            className="text-sm text-sage hover:text-ink transition-colors font-semibold"
-          >
-            {showList ? t('newContract') : t('savedContracts', { count: contractList.length })}
-          </button>
         </div>
 
-        {/* ── SAVED CONTRACTS LIST ── */}
-        {showList && (
-          <div className="mb-6">
-            <div className="glass-card p-6">
-              <h2 className="font-display font-bold text-ink text-lg mb-4">{t('yourContracts')}</h2>
+        <div className="flex flex-col lg:flex-row gap-6">
+          {/* ── CONTRACTS LIST (persistent, off to the side) ── */}
+          <div className="w-full lg:w-64 flex-shrink-0">
+            <div className="glass-card p-4 lg:sticky lg:top-6">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="font-display font-bold text-ink text-sm">{t('yourContracts')}</h2>
+                <button onClick={resetForm} className="text-xs text-sage hover:text-ink transition-colors font-semibold">
+                  + {t('newContract')}
+                </button>
+              </div>
               {contractList.length === 0 ? (
-                <p className="text-sage text-sm">{t('noContractsSaved')}</p>
+                <p className="text-sage text-xs">{t('noContractsSaved')}</p>
               ) : (
-                <div className="space-y-3">
-                  {contractList.map((c) => {
-                    const sc = STATUS_CONFIG[c.status] || STATUS_CONFIG.draft;
-                    return (
-                      <button
-                        key={c.id}
-                        onClick={() => loadContract(c)}
-                        className="w-full flex items-center justify-between p-4 rounded-xl bg-white/60 border border-stone/30 hover:bg-white/90 hover:border-mint transition-all text-left"
-                      >
-                        <div className="min-w-0 flex-1">
-                          <p className="font-semibold text-ink text-sm truncate">{c.property_name || c.creator_name || t('untitled')}</p>
-                          <p className="text-xs text-sage mt-0.5">{c.dates || c.location || t('noDetails')}</p>
-                        </div>
-                        <span className={`ml-3 text-xs font-semibold px-3 py-1 rounded-full flex-shrink-0 ${sc.bg}`}>
-                          {t(`statusName.${c.status}`)}
-                        </span>
-                      </button>
-                    );
-                  })}
+                <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-0.5">
+                  {activeContracts.length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-[0.65rem] font-bold uppercase tracking-wider text-sage">{t('groupActive')}</p>
+                      <div className="space-y-2">
+                        {activeContracts.map((c) => <ContractRow key={c.id} c={c} />)}
+                      </div>
+                    </div>
+                  )}
+                  {archivedContracts.length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-[0.65rem] font-bold uppercase tracking-wider text-sage">{t('groupArchived')}</p>
+                      <div className="space-y-2">
+                        {archivedContracts.map((c) => <ContractRow key={c.id} c={c} />)}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
           </div>
-        )}
 
-        {!showList && (
-          <div className="flex flex-col lg:flex-row gap-6">
+          <div className="flex-1 min-w-0 flex flex-col lg:flex-row gap-6">
             {/* ── FORM SIDE (1/3) ── */}
             <div className="w-full lg:w-1/3">
               <div className="glass-card p-6">
@@ -982,10 +998,11 @@ export default function ContractBuilder() {
               </div>
             </div>
           </div>
-        )}
-      </div>
+          </div>
+        </div>
 
       {/* ── Founder toast (auto-dismisses) ── */}
+
       {founderToast && (
         <div style={{
           position: 'fixed', bottom: '5.5rem', left: '50%',

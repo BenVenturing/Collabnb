@@ -408,25 +408,9 @@ export default function Collabs() {
             ],
           },
         ]}
+        archiveToggle={{ value: filter === 'archived', onChange: (v) => setFilter(v ? 'archived' : 'active') }}
       >
-        {/* Active / Archived toggle */}
-        <div style={{ paddingBottom: '0.5rem' }}>
-          <div className="flex bg-bone rounded-xl p-1 gap-1 max-w-xs">
-            {['active', 'archived'].map((f) => (
-              <button
-                key={f}
-                onClick={() => setFilter(f)}
-                className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-colors capitalize ${
-                  filter === f ? 'bg-white text-ink shadow-sm' : 'text-slate hover:text-ink'
-                }`}
-              >
-                {t(f === 'active' ? 'filterActive' : 'filterArchived')}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="max-w-2xl space-y-4">
+        <div className="w-full max-w-2xl mx-auto space-y-4">
           {shown.length === 0 ? (
             <div className="text-center pt-16">
               <p className="text-4xl mb-4">✦</p>

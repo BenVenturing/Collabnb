@@ -118,7 +118,9 @@
     "response": "Response",
     "responds": "Responds",
     "hostCantMessage": "Hosts can't message other hosts",
-    "message": "Message {{name}}"
+    "message": "Message {{name}}",
+    "hostFallbackName": "Host",
+    "defaultRole": "Collabnb Host"
   },
   "redacted": {
     "locationHidden": "Location hidden",

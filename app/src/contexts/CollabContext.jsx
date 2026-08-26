@@ -377,8 +377,13 @@ export function CollabProvider({ children }) {
 
     const creatorId = creatorProfile?._id ? String(creatorProfile._id) : (creatorProfile?.id ? String(creatorProfile.id) : null);
     const listingId = String(listing._id || listing.id);
+    // If the creator already messaged this host before applying (see
+    // ListingDetail's handleMessageHost), continue that same conversation
+    // instead of opening a second, disconnected one.
+    const premsgKey = creatorId ? `premsg_${listingId}_${creatorId}` : null;
+    const existingPremsgThread = premsgKey ? threads.find((t) => !t.archived && t.thread_key === premsgKey) : null;
     // Stable shared key both creator and host can derive from pitch record
-    const threadKey = creatorId ? `thread_${listingId}_${creatorId}` : `thread_${listingId}_${Date.now()}`;
+    const threadKey = existingPremsgThread ? existingPremsgThread.thread_key : (creatorId ? `thread_${listingId}_${creatorId}` : `thread_${listingId}_${Date.now()}`);
 
     const newCollab = {
       id: Date.now(),
@@ -401,26 +406,30 @@ export function CollabProvider({ children }) {
       listing_description: listing.about || '',
     };
 
-    const newThread = {
-      id: `t_${listing.id}_${Date.now()}`,
-      listing_title: listing.title,
-      host_name: listing.host_name || MOCK_CREATOR.full_name,
-      host_avatar: listing.host_avatar || null,
-      tag: 'Application',
-      last_message: pitchMessage.slice(0, 100),
-      timestamp: 'Just now',
-      unread: 0,
-      is_founder: false,
-      collab_id: newCollab.id,
-      thread_key: threadKey,
-    };
+    const newThread = existingPremsgThread
+      ? { ...existingPremsgThread, tag: 'Application', collab_id: newCollab.id, last_message: pitchMessage.slice(0, 100), timestamp: 'Just now' }
+      : {
+          id: `t_${listing.id}_${Date.now()}`,
+          listing_title: listing.title,
+          host_name: listing.host_name || MOCK_CREATOR.full_name,
+          host_avatar: listing.host_avatar || null,
+          tag: 'Application',
+          last_message: pitchMessage.slice(0, 100),
+          timestamp: 'Just now',
+          unread: 0,
+          is_founder: false,
+          collab_id: newCollab.id,
+          thread_key: threadKey,
+        };
 
     setCollabs((prev) => {
       const updated = [newCollab, ...prev];
       saveCollabsToStorage(updated);
       return updated;
     });
-    setThreads((prev) => [newThread, ...prev]);
+    setThreads((prev) => existingPremsgThread
+      ? prev.map((t) => t.thread_key === threadKey ? newThread : t)
+      : [newThread, ...prev]);
 
     const next = applyCount + 1;
     setApplyCount(next);

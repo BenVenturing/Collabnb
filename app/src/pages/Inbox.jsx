@@ -758,21 +758,24 @@ export default function Inbox() {
     if (creatorParamHandled.current) return;
     const creatorName   = searchParams.get('creatorName');
     const creatorAvatar = searchParams.get('creatorAvatar');
+    const creatorId      = searchParams.get('creatorId');
     if (!creatorName) return;
     creatorParamHandled.current = true;
 
-    const existing = threads.find(t => !t.archived && t.host_name === creatorName);
+    const myId = profile?._id ? String(profile._id) : null;
+    // Deterministic per host+creator so re-opening the same person's thread
+    // (or them messaging back) resolves to the same conversation.
+    const threadKey = creatorId && myId ? `thread_host_${myId}_${creatorId}` : null;
+    const existing = threads.find(t => !t.archived && (threadKey ? t.thread_key === threadKey : t.host_name === creatorName));
     if (existing) {
-      setSelectedId(existing.id);
+      openThread(existing.id);
     } else {
-      const newId = createThread(creatorName, creatorName, 'Collab');
-      // Patch the avatar onto the new thread (createThread doesn't support it yet)
-      // The thread will show initials; avatar is best-effort
-      setSelectedId(newId);
-      if (creatorAvatar) {
-        // Store avatar in session so ConversationPanel can pick it up if needed
-        try { sessionStorage.setItem(`inbox_avatar_${newId}`, creatorAvatar); } catch {}
-      }
+      const newId = createThread(creatorName, creatorName, 'Collab', {
+        hostAvatar: creatorAvatar || null,
+        participantId: creatorId || undefined,
+        threadKey: threadKey || undefined,
+      });
+      openThread(newId);
     }
     setSearchParams({}, { replace: true });
   // eslint-disable-next-line react-hooks/exhaustive-deps

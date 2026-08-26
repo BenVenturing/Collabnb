@@ -66,9 +66,8 @@ export default function Step5Payment() {
   const payoutHandling = draft.payout_handling || "platform";
 
   // A draft can always be saved with no card — this only ever gates Publish
-  // (also enforced server-side in listings.create/update). Applies to every
-  // host, admins included — no exceptions, so the flow is always exercised.
-  const needsCard = !!profile && !profile.stripe_default_payment_method_id;
+  // (also enforced server-side in listings.create/update). Admins are exempt.
+  const needsCard = !!profile && profile.is_admin !== true && !profile.stripe_default_payment_method_id;
 
   // Handle the return trip from the Stripe card-setup Checkout redirect.
   useEffect(() => {

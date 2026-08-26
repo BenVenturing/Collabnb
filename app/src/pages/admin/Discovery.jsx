@@ -809,12 +809,15 @@ function HostOutreachCampaign() {
 }
 
 // ─── Host CRM board — kanban across the full lifecycle ─────────────────────────
+// "queued" is what Host Outreach's Confirm sets — displayed here as
+// "Confirmed" since that's the lifecycle stage it actually represents.
+// Plain "new" (unconfirmed pool candidates) live only in Host Outreach, not
+// on this board.
 const CRM_COLUMNS = [
-  { id: 'new', label: 'New' },
-  { id: 'queued', label: 'Queued' },
+  { id: 'queued', label: 'Confirmed' },
   { id: 'contacted', label: 'Contacted' },
   { id: 'replied', label: 'Replied' },
-  { id: 'signed', label: 'Signed' },
+  { id: 'signed', label: 'Signed // Onboarding' },
   { id: 'declined', label: 'Declined' },
 ];
 
@@ -910,38 +913,29 @@ function HostCrmBoard() {
         {bulkMsg && <span style={{ fontSize: '0.72rem', color: '#166534' }}>{bulkMsg}</span>}
       </div>
 
-      <div style={{ display: 'flex', gap: '0.75rem', overflowX: 'auto', paddingBottom: '0.5rem' }}>
+      <div style={{ display: 'flex', gap: '1.25rem', overflowX: 'auto', paddingBottom: '0.5rem', alignItems: 'flex-start' }}>
         {CRM_COLUMNS.map((col) => (
           <div key={col.id}
             onDragOver={(e) => { e.preventDefault(); setDragOverCol(col.id); }}
             onDragLeave={() => setDragOverCol((c) => (c === col.id ? null : c))}
             onDrop={(e) => { e.preventDefault(); handleDrop(col.id); }}
             style={{
-              flex: '0 0 280px', width: 280, borderRadius: '0.875rem',
-              background: dragOverCol === col.id ? 'rgba(123,104,200,0.08)' : 'rgba(255,255,255,0.5)',
-              border: dragOverCol === col.id ? '1.5px dashed rgba(123,104,200,0.4)' : '1px solid rgba(25,37,36,0.08)',
-              padding: '0.6rem', minHeight: '20rem',
+              flex: '0 0 280px', width: 280, borderRadius: dragOverCol === col.id ? '0.875rem' : 0,
+              background: dragOverCol === col.id ? 'rgba(123,104,200,0.06)' : 'transparent',
+              outline: dragOverCol === col.id ? '1.5px dashed rgba(123,104,200,0.4)' : 'none',
+              padding: dragOverCol === col.id ? '0.5rem' : 0,
             }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.6rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.6rem', padding: '0 0.1rem' }}>
               <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#192524' }}>{col.label}</span>
               <span style={{ fontSize: '0.7rem', color: '#959D90' }}>{byColumn[col.id].length}</span>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '72vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', maxHeight: '75vh', overflowY: 'auto', minHeight: '2rem' }}>
               {byColumn[col.id].map((p) => (
-                <div key={String(p._id)} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.3rem' }}>
-                  <div draggable onDragStart={() => setDragId(p._id)} onDragEnd={() => setDragId(null)}
-                    title="Drag to move to another column"
-                    style={{ cursor: 'grab', color: '#959D90', fontSize: '0.85rem', lineHeight: 1, paddingTop: '0.9rem', flexShrink: 0, userSelect: 'none' }}>
-                    ⠿
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <ProspectCard prospect={p} selected={selected.has(String(p._id))} onToggleSelect={toggleOne} />
-                  </div>
+                <div key={String(p._id)} draggable onDragStart={() => setDragId(p._id)} onDragEnd={() => setDragId(null)}
+                  title="Drag to move to another column" style={{ cursor: 'grab' }}>
+                  <ProspectCard prospect={p} selected={selected.has(String(p._id))} onToggleSelect={toggleOne} crm />
                 </div>
               ))}
-              {byColumn[col.id].length === 0 && (
-                <p style={{ fontSize: '0.7rem', color: '#959D90', textAlign: 'center', margin: '1rem 0' }}>Empty</p>
-              )}
             </div>
           </div>
         ))}

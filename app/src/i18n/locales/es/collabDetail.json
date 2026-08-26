@@ -12,7 +12,6 @@
   "pastStageNotice": "Viendo una etapa pasada — las acciones están deshabilitadas. Haz clic en la etapa actual o futuras para interactuar.",
   "listingDetails": "Detalles del anuncio",
   "viewFullListing": "Ver anuncio completo",
-  "contractSummary": "Resumen del contrato",
   "demoBypass": "Este es un recorrido de demostración — los detalles del anuncio y las secciones del contrato están ocultos. Usa el recorrido de etapas de arriba para explorar el ciclo de vida de la colaboración.",
   "footer": "Collabnb — Plataforma de colaboración con creadores",
   "pending": {
@@ -112,6 +111,7 @@
     "trustpilot": "★ Reseña Collabnb en Trustpilot"
   },
   "contractSummary": {
+    "heading": "Resumen del contrato",
     "creatorAlt": "Creador",
     "hostAlt": "Anfitrión",
     "creatorLabel": "Creador",

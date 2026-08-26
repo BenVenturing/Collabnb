@@ -141,6 +141,31 @@ function fmtFollowers(n) {
   return String(n);
 }
 
+// Real Convex pitch → the same applicant shape ApplicantRow expects (mirrors
+// normalizePitch() in HostProposals.jsx).
+function normalizePitchToApplicant(p) {
+  const elapsed = Date.now() - p.created_at;
+  const hours = Math.floor(elapsed / 3600000);
+  const days  = Math.floor(elapsed / 86400000);
+  const applied = hours < 1 ? 'Just now' : hours < 24 ? `${hours}h ago` : `${days}d ago`;
+  return {
+    id: String(p._id),
+    type: p.type || 'application',
+    status: p.status,
+    applied,
+    message: p.message,
+    creator: {
+      name: p.creator_name,
+      username: p.creator_username || '',
+      tier: p.creator_tier || 'UGC Pro',
+      avatar: p.creator_avatar || null,
+      followers: p.creator_followers || 0,
+      platforms: p.creator_platforms || [],
+      verified: false,
+    },
+  };
+}
+
 function getListingStatus(id) {
   try {
     const stored = JSON.parse(localStorage.getItem('@collabnb_host_listings_local_v1') || '{}');
@@ -463,6 +488,7 @@ export default function HostListingDetail() {
 
   const isSampleId = SAMPLE_LISTINGS.some((l) => l.id === id);
   const convexRaw = useQuery(api.listings.getById, !isSampleId ? { id } : 'skip');
+  const rawApplicantPitches = useQuery(api.pitches.getByListing, !isSampleId ? { listingId: id } : 'skip');
   const updateListing = useMutation(api.listings.update);
 
   const sampleListing = isSampleId ? SAMPLE_LISTINGS.find((l) => l.id === id) : null;
@@ -492,7 +518,9 @@ export default function HostListingDetail() {
   const [copiedCode, setCopiedCode] = useState(false);
   const [statusFilter, setStatusFilter] = useState('all');
 
-  const applicants = MOCK_APPLICANTS[id] || [];
+  const applicants = isSampleId
+    ? (MOCK_APPLICANTS[id] || [])
+    : (rawApplicantPitches || []).map(normalizePitchToApplicant);
   const affiliateCode = isSampleId
     ? (AFFILIATE_CODES[id] || null)
     : (listing?.affiliate_code || null);
@@ -854,7 +882,7 @@ export default function HostListingDetail() {
                 {t('applicants.heading')}
               </h2>
               <p style={{ fontSize: '0.75rem', color: 'var(--sage)', marginTop: '0.15rem' }}>
-                {t('applicants.subtitle', { total: applicants.length, pitchCount })}
+                {t('applicants.subtitle', { count: applicants.length, total: applicants.length, pitchCount })}
               </p>
             </div>
             {/* Status filter chips */}

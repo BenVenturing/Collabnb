@@ -7,6 +7,10 @@ import { api } from '../../convex/_generated/api';
 import { useCollabs } from '../contexts/CollabContext';
 import { useAuth } from '../contexts/AuthContext';
 import { SAMPLE_LISTINGS, SAMPLE_HOST, STAGES, DEMO_STAGE_CARDS } from '../lib/mockData';
+import {
+  Clock, Trash2, ClipboardCheck, RefreshCw, Clapperboard, Camera, PenLine,
+  Upload, CheckCircle2, BarChart3, Archive,
+} from 'lucide-react';
 
 /* ── Brand stage colors ──────────────────────────────────────────────────── */
 const STAGE_COLORS = {
@@ -50,6 +54,21 @@ const DollarSmall = () => (
     <line x1="8" y1="1" x2="8" y2="15"/><path d="M11 4.5c0-1.5-3-2-3-.5s3 2 3 3.5-3 2-3 .5"/><path d="M5 11.5c0 1.5 3 2 3 .5s-3-2-3-3.5 3-2 3-.5"/>
   </svg>
 );
+const PinSmall = () => (
+  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" width="12" height="12">
+    <path d="M8 0C5.24 0 3 2.24 3 5c0 3.75 5 11 5 11s5-7.25 5-11c0-2.76-2.24-5-5-5z"/><circle cx="8" cy="5" r="2"/>
+  </svg>
+);
+
+/* ─── Small panel-header icon + title row (shared across stage panels) ────── */
+function PanelHeading({ icon: Icon, children }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+      <Icon size={16} color="var(--slate)" />
+      <h4 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.9rem', color: 'var(--ink)', margin: 0 }}>{children}</h4>
+    </div>
+  );
+}
 
 /* ─── Stage progress bar (redesigned) ────────────────────────────────────── */
 /* Pulse keyframes for demo auto-advance */
@@ -218,10 +237,7 @@ function PendingPanel({ collab, advanceStage, onRemove }) {
   const [confirmWithdraw, setConfirmWithdraw] = useState(false);
   return (
     <div style={{ background: 'rgba(255,255,255,0.65)', borderRadius: '1rem', padding: '1.25rem', border: '1px solid rgba(255,255,255,0.8)' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
-        <span style={{ fontSize: '1rem' }}>🟡</span>
-        <h4 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.9rem', color: 'var(--ink)', margin: 0 }}>{t('pending.title')}</h4>
-      </div>
+      <PanelHeading icon={Clock}>{t('pending.title')}</PanelHeading>
       <p style={{ color: 'var(--slate)', fontSize: '0.85rem', margin: '0 0 1rem', lineHeight: 1.6 }}>
         {t('pending.body')}
       </p>
@@ -301,9 +317,8 @@ function WithdrawConfirmModal({ onConfirm, onCancel }) {
         <div style={{
           width: 44, height: 44, borderRadius: '50%', margin: '0 auto 0.875rem',
           background: 'rgba(192,57,43,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: '1.25rem',
         }}>
-          🗑
+          <Trash2 size={19} color="#c0392b" />
         </div>
         <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1rem', color: 'var(--ink)', margin: '0 0 0.5rem' }}>
           {t('withdraw.title')}
@@ -353,10 +368,7 @@ function AcceptedPanel({ collab, updateStageData, advanceStage }) {
 
   return (
     <div style={{ background: 'rgba(255,255,255,0.65)', borderRadius: '1rem', padding: '1.25rem', border: '1px solid rgba(255,255,255,0.8)' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
-        <span style={{ fontSize: '1rem' }}>📋</span>
-        <h4 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.9rem', color: 'var(--ink)', margin: 0 }}>{t('accepted.title')}</h4>
-      </div>
+      <PanelHeading icon={ClipboardCheck}>{t('accepted.title')}</PanelHeading>
       <p style={{ color: 'var(--slate)', fontSize: '0.85rem', margin: '0 0 1rem', lineHeight: 1.6 }}>
         {t('accepted.body')}
       </p>
@@ -454,10 +466,7 @@ function AdjustmentsPanel({ collab, updateStageData, advanceStage }) {
 
   return (
     <div style={{ background: 'rgba(255,255,255,0.65)', borderRadius: '1rem', padding: '1.25rem', border: '1px solid rgba(255,255,255,0.8)' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
-        <span style={{ fontSize: '1rem' }}>🔄</span>
-        <h4 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.9rem', color: 'var(--ink)', margin: 0 }}>{t('adjustments.title')}</h4>
-      </div>
+      <PanelHeading icon={RefreshCw}>{t('adjustments.title')}</PanelHeading>
       <p style={{ color: 'var(--slate)', fontSize: '0.85rem', margin: '0 0 0.75rem', lineHeight: 1.6 }}>
         {t('adjustments.body')}
       </p>
@@ -478,13 +487,13 @@ function AdjustmentsPanel({ collab, updateStageData, advanceStage }) {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem', marginBottom: '1rem' }}>
         {[
-          { key: 'reels', icon: '🎬' },
-          { key: 'photos', icon: '📸' },
-          { key: 'blog_posts', icon: '✍️' },
-        ].map(({ key, icon }) => (
+          { key: 'reels', icon: Clapperboard },
+          { key: 'photos', icon: Camera },
+          { key: 'blog_posts', icon: PenLine },
+        ].map(({ key, icon: FieldIcon }) => (
           <div key={key} style={{ textAlign: 'center' }}>
-            <p style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--sage)', margin: '0 0 0.35rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-              {icon} {t(`adjustments.types.${key}`)}
+            <p style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem', fontSize: '0.65rem', fontWeight: 700, color: 'var(--sage)', margin: '0 0 0.35rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              <FieldIcon size={12} /> {t(`adjustments.types.${key}`)}
             </p>
             <input
               type="number" min="0"
@@ -528,10 +537,7 @@ function UploadedPanel({ collab, advanceStage }) {
   const allChecked = Object.values(checklist).every(Boolean);
   return (
     <div style={{ background: 'rgba(255,255,255,0.65)', borderRadius: '1rem', padding: '1.25rem', border: '1px solid rgba(255,255,255,0.8)' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
-        <span style={{ fontSize: '1rem' }}>🔵</span>
-        <h4 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.9rem', color: 'var(--ink)', margin: 0 }}>{t('uploaded.title')}</h4>
-      </div>
+      <PanelHeading icon={Upload}>{t('uploaded.title')}</PanelHeading>
 
       {/* Stats display */}
       {stats && (
@@ -695,10 +701,7 @@ function ClosedPanel({ collab, toggleCloseCollab }) {
 
   return (
     <div style={{ background: 'rgba(255,255,255,0.65)', borderRadius: '1rem', padding: '1.25rem', border: '1px solid rgba(255,255,255,0.8)' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
-        <span style={{ fontSize: '1rem' }}>🟢</span>
-        <h4 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.9rem', color: 'var(--ink)', margin: 0 }}>{t('closed.title')}</h4>
-      </div>
+      <PanelHeading icon={CheckCircle2}>{t('closed.title')}</PanelHeading>
 
       {/* Dual-close progress */}
       <div style={{ marginBottom: '1.25rem' }}>
@@ -789,7 +792,7 @@ function ClosedPanel({ collab, toggleCloseCollab }) {
       {creatorDone && (
         <div style={{ marginBottom: '1.25rem', padding: '1rem', borderRadius: '0.875rem', background: 'rgba(255,255,255,0.5)', border: '1px solid rgba(25,37,36,0.08)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
-            <span style={{ fontSize: '0.9rem' }}>📊</span>
+            <BarChart3 size={14} color="var(--slate)" />
             <h5 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.85rem', color: 'var(--ink)', margin: 0 }}>{t('closed.sharePerformance')}</h5>
           </div>
 
@@ -900,10 +903,7 @@ function ArchivedPanel({ collab }) {
   const { t } = useTranslation('collabDetail');
   return (
     <div style={{ background: 'rgba(255,255,255,0.65)', borderRadius: '1rem', padding: '1.25rem', border: '1px solid rgba(255,255,255,0.8)' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
-        <span style={{ fontSize: '1rem' }}>📦</span>
-        <h4 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.9rem', color: 'var(--ink)', margin: 0 }}>{t('archived.title')}</h4>
-      </div>
+      <PanelHeading icon={Archive}>{t('archived.title')}</PanelHeading>
       <p style={{ color: 'var(--slate)', fontSize: '0.85rem', margin: 0, lineHeight: 1.6 }}>
         {t('archived.body')}
       </p>
@@ -944,6 +944,14 @@ export default function CollabDetail({ collab, onClose }) {
   const contract = collab.contract_id
     ? contracts.find((c) => c.id === collab.contract_id)
     : null;
+
+  // Auto-generated contract name — property + the two parties; edit any of
+  // those three fields on the contract itself and this updates to match.
+  const creatorDisplayName = profile?.full_name || t('contractSummary.creatorLabel');
+  const hostDisplayName = collab.host_name || t('contractSummary.hostLabel');
+  const contractName = collab.property_name
+    ? `${collab.property_name} — ${creatorDisplayName} × ${hostDisplayName}`
+    : `${creatorDisplayName} × ${hostDisplayName}`;
 
   // Stage viewing & demo state
   const isDemo = collab.is_demo;
@@ -1129,7 +1137,12 @@ export default function CollabDetail({ collab, onClose }) {
               border: '1px solid rgba(209,235,221,0.6)',
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
-                <span style={{ fontSize: '1.25rem' }}>{DEMO_STAGE_CARDS[demoCardKey].icon}</span>
+                <div style={{
+                  width: 34, height: 34, borderRadius: '0.65rem', flexShrink: 0,
+                  background: 'rgba(255,255,255,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  {(() => { const StageIcon = DEMO_STAGE_CARDS[demoCardKey].icon; return <StageIcon size={17} color="var(--slate)" />; })()}
+                </div>
                 <div>
                   <p style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--ink)', margin: 0 }}>
                     {DEMO_STAGE_CARDS[demoCardKey].title}
@@ -1199,8 +1212,8 @@ export default function CollabDetail({ collab, onClose }) {
             <h5 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.95rem', color: 'var(--ink)', margin: '0 0 0.25rem' }}>
               {collab.property_name}
             </h5>
-            <p style={{ fontSize: '0.75rem', color: 'var(--sage)', margin: '0 0 0.75rem' }}>
-              📍 {collab.location}
+            <p style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.75rem', color: 'var(--sage)', margin: '0 0 0.75rem' }}>
+              <PinSmall /> {collab.location}
             </p>
 
             {/* Quick info chips */}
@@ -1264,7 +1277,7 @@ export default function CollabDetail({ collab, onClose }) {
           {collab.is_active && (
           <div style={{ flex: '1 1 50%', padding: '1.5rem', minWidth: 0 }}>
             <h4 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.85rem', color: 'var(--sage)', margin: '0 0 0.75rem', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-              {t('contractSummary')}
+              {contractName}
             </h4>
 
             {/* Creator × Host */}
@@ -1336,13 +1349,13 @@ export default function CollabDetail({ collab, onClose }) {
               <p style={{ fontSize: '0.7rem', color: 'var(--slate)', lineHeight: 1.6, margin: 0 }}>
                 <Trans i18nKey="contractSummary.body" t={t} values={{
                   hostName: collab.host_name || t('contractSummary.theHost'),
-                  creatorName: 'Ben Venturing',
+                  creatorName: creatorDisplayName,
                   propertyName: collab.property_name,
                   location: collab.location,
                   dates: collab.dates,
                   deliverables: collab.deliverables,
                   payment: collab.payment || t('contractSummary.stayComp'),
-                }}>This collaboration agreement is between <strong>{{ hostName: collab.host_name || t('contractSummary.theHost') }}</strong> and <strong>{{ creatorName: 'Ben Venturing' }}</strong> regarding <strong>{{ propertyName: collab.property_name }}</strong> located in <strong>{{ location: collab.location }}</strong> from <strong>{{ dates: collab.dates }}</strong>. The creator agrees to deliver <strong>{{ deliverables: collab.deliverables }}</strong> as compensation for <strong>{{ payment: collab.payment || t('contractSummary.stayComp') }}</strong>.</Trans>
+                }}>This collaboration agreement is between <strong>{{ hostName: collab.host_name || t('contractSummary.theHost') }}</strong> and <strong>{{ creatorName: creatorDisplayName }}</strong> regarding <strong>{{ propertyName: collab.property_name }}</strong> located in <strong>{{ location: collab.location }}</strong> from <strong>{{ dates: collab.dates }}</strong>. The creator agrees to deliver <strong>{{ deliverables: collab.deliverables }}</strong> as compensation for <strong>{{ payment: collab.payment || t('contractSummary.stayComp') }}</strong>.</Trans>
               </p>
             </div>
 
@@ -1350,7 +1363,7 @@ export default function CollabDetail({ collab, onClose }) {
             <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '0.75rem' }}>
               <div style={{ flex: 1, padding: '0.5rem 0.625rem', borderRadius: '0.5rem', background: 'rgba(255,255,255,0.5)' }}>
                 <p style={{ fontSize: '0.6rem', fontWeight: 700, color: 'var(--sage)', margin: '0 0 0.2rem', textTransform: 'uppercase' }}>{t('contractSummary.creatorSignature')}</p>
-                <p style={{ fontFamily: "'Pacifico', cursive", fontSize: '0.85rem', color: 'var(--ink)', margin: 0 }}>Ben Venturing</p>
+                <p style={{ fontFamily: "'Pacifico', cursive", fontSize: '0.85rem', color: 'var(--ink)', margin: 0 }}>{creatorDisplayName}</p>
               </div>
               <div style={{ flex: 1, padding: '0.5rem 0.625rem', borderRadius: '0.5rem', background: 'rgba(255,255,255,0.5)' }}>
                 <p style={{ fontSize: '0.6rem', fontWeight: 700, color: 'var(--sage)', margin: '0 0 0.2rem', textTransform: 'uppercase' }}>{t('contractSummary.hostSignature')}</p>
@@ -1369,7 +1382,7 @@ export default function CollabDetail({ collab, onClose }) {
                   className="btn-primary"
                   style={{ flex: 1, fontSize: '0.75rem', padding: '0.5rem' }}
                   onClick={() => navigate('/contract', { state: { prefill: {
-                    creator: 'Ben Venturing',
+                    creator: creatorDisplayName,
                     host: collab.host_name,
                     property_name: collab.property_name,
                     location: collab.location,

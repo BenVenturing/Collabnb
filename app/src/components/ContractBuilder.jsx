@@ -887,15 +887,15 @@ export default function ContractBuilder() {
 
                 {/* ── Action buttons ── */}
                 <div className="mt-6 flex flex-wrap gap-3">
-                  {/* Creator signs */}
-                  {!creatorSig && (
+                  {/* Creator signs — only the account viewing as creator can do this */}
+                  {!creatorSig && profile?.role !== 'host' && (
                     <button onClick={signAsCreator} className="btn-primary">
                       {t('signAsCreator')}
                     </button>
                   )}
 
-                  {/* Host signs (only when contract has been sent to them / is pending) */}
-                  {(status === 'pending' || status === 'draft') && !hostSig && creatorSig && (
+                  {/* Host signs (only when contract has been sent to them / is pending) — only the account viewing as host can do this */}
+                  {(status === 'pending' || status === 'draft') && !hostSig && creatorSig && profile?.role === 'host' && (
                     <button onClick={signAsHost} className="btn-glass">
                       {t('signAccept')}
                     </button>

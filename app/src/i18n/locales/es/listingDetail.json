@@ -3,7 +3,6 @@
   "backToExplore": "Volver a Explorar",
   "back": "← Atrás",
   "shareBtn": "Compartir",
-  "save": "Guardar",
   "saved": "Guardado",
   "showAllPhotos": "Mostrar todas las fotos",
   "listedBy": "Publicado por {{name}}",
@@ -103,6 +102,7 @@
     "sending": "Enviando…"
   },
   "save": {
+    "cta": "Guardar",
     "title": "Guardar en colección",
     "savedCount": "{{count}} guardados",
     "collectionNamePlaceholder": "Nombre de la colección",

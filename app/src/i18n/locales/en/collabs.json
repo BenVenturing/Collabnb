@@ -37,5 +37,7 @@
   "emptyBodyStart": "Apply to a stay to get started",
   "emptyBodyAdjust": "Try adjusting your search or filters",
   "discoverStays": "Discover Stays",
-  "demoToast": "Demo tour closed — find it again in <strong>Settings</strong> or the <strong>Help Center (? icon)</strong>"
+  "demoToast": "Demo tour closed — find it again in <strong>Settings</strong> or the <strong>Help Center (? icon)</strong>",
+  "payoutLabel": "Payout",
+  "contractLabel": "Contract"
 }

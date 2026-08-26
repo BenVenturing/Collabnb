@@ -435,17 +435,22 @@ export function CollabProvider({ children }) {
     setApplyCount(next);
     localStorage.setItem('collabnb_apply_count', String(next));
 
-    // Sync to Convex
-    createCollabCvx({
-      listingId: listing.id,
-      propertyName: listing.title,
-      location: listing.location,
-      hostName: MOCK_CREATOR.full_name,
-      image: listing.image,
-      deliverables: listing.deliverables,
-      listingDescription: listing.about,
-      pitchMessage,
-    }).catch(() => {});
+    // Sync to Convex — awaited (not fire-and-forget) so the resulting id can be
+    // threaded onto the pitch below, linking the two rows together.
+    let collaborationId;
+    try {
+      collaborationId = await createCollabCvx({
+        listingId: listing.id,
+        propertyName: listing.title,
+        location: listing.location,
+        hostName: MOCK_CREATOR.full_name,
+        image: listing.image,
+        deliverables: listing.deliverables,
+        listingDescription: listing.about,
+        pitchMessage,
+        hostId: listing.host_id ? String(listing.host_id) : undefined,
+      });
+    } catch { /* non-fatal — the pitch below is still the source of truth for the host */ }
 
     // If reusing an already-synced pre-apply thread, don't create a second
     // Convex row for the same thread_key — just leave the existing one (the
@@ -490,6 +495,7 @@ export function CollabProvider({ children }) {
           message: pitchMessage,
           type: 'application',
           threadKey,
+          collaborationId: collaborationId ? String(collaborationId) : undefined,
         });
       } catch (err) {
         // Roll back the optimistic collab — the application never actually

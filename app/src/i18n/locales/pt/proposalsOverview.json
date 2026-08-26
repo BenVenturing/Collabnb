@@ -17,9 +17,20 @@
     "archived": "Arquivados"
   },
   "sidebarTip": {
-    "creator": "Uploads consistentes fazem os anfitriões te chamarem de novo.",
-    "host": "Revisar candidaturas mais rápido mantém os criadores engajados."
+    "creator": [
+      "Uploads consistentes fazem os anfitriões te chamarem de novo.",
+      "Uma mensagem de candidatura personalizada triplica a taxa de aceitação.",
+      "Marque @collabnb e a propriedade — isso ajuda seu alcance.",
+      "Respostas rápidas geram confiança e mais colabs."
+    ],
+    "host": [
+      "Revisar candidaturas mais rápido mantém os criadores engajados.",
+      "Expectativas claras sobre entregáveis evitam idas e vindas depois.",
+      "Uma mensagem de boas-vindas dá o tom de uma ótima colaboração.",
+      "Criadores que se sentem valorizados voltam a colaborar."
+    ]
   },
+  "backToDashboard": "Voltar ao painel",
   "closeSidebar": "Fechar barra lateral",
   "openSidebar": "Abrir barra lateral",
   "chartTitle": {

@@ -17,9 +17,20 @@
     "archived": "Archived"
   },
   "sidebarTip": {
-    "creator": "Consistent uploads keep hosts inviting you back.",
-    "host": "Reviewing applications faster keeps creators engaged."
+    "creator": [
+      "Consistent uploads keep hosts inviting you back.",
+      "A personalized pitch message increases acceptance rates by 3x.",
+      "Tag @collabnb and the property — it helps your reach.",
+      "Fast replies build trust and lead to repeat collabs."
+    ],
+    "host": [
+      "Reviewing applications faster keeps creators engaged.",
+      "Clear deliverable expectations avoid back-and-forth later.",
+      "A quick welcome message sets the tone for a great collab.",
+      "Approved creators who feel appreciated come back for more."
+    ]
   },
+  "backToDashboard": "Back to Dashboard",
   "closeSidebar": "Close sidebar",
   "openSidebar": "Open sidebar",
   "chartTitle": {
@@ -49,17 +60,17 @@
       }
     },
     "host": {
-      "new": {
-        "label": "New Applications"
-      },
-      "review": {
-        "label": "Pending Review"
-      },
       "active": {
         "label": "Active Collabs"
       },
-      "spend": {
-        "label": "Total Spend"
+      "new": {
+        "label": "New Applications"
+      },
+      "messages": {
+        "label": "Unread Messages"
+      },
+      "stays": {
+        "label": "Upcoming Stays"
       }
     }
   },

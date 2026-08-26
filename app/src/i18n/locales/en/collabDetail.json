@@ -12,7 +12,6 @@
   "pastStageNotice": "Viewing past stage — actions are disabled. Click current or future stages to interact.",
   "listingDetails": "Listing Details",
   "viewFullListing": "View Full Listing",
-  "contractSummary": "Contract Summary",
   "demoBypass": "This is a demo tour — listing details and contract sections are hidden. Use the stage walkthrough above to explore the collaboration lifecycle.",
   "footer": "Collabnb — Creator Collaboration Platform",
   "pending": {
@@ -112,6 +111,7 @@
     "trustpilot": "★ Review Collabnb on Trustpilot"
   },
   "contractSummary": {
+    "heading": "Contract Summary",
     "creatorAlt": "Creator",
     "hostAlt": "Host",
     "creatorLabel": "Creator",

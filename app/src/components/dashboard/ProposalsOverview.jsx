@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
@@ -10,6 +10,7 @@ import collabnbLogo from '../../assets/collabnb-logo.png';
 import {
   Search, Menu, X, LayoutDashboard, Calendar as CalendarIcon,
   DollarSign, CheckCircle2, Users, Clock, Upload, ChevronDown, FileText, SlidersHorizontal,
+  MessageCircle, ChevronUp, ArrowLeft,
 } from 'lucide-react';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -44,10 +45,10 @@ const ROLE_CONFIG = {
     sidebarMoneyLabel: 'Spend',
     chartTitle: 'Spend Overview',
     statCards: [
-      { key: 'new',     label: 'New Applications', value: '7',      sub: '+3 this week',           icon: Users,       presetKey: 'new_applications' },
-      { key: 'review',  label: 'Pending Review',   value: '3',      sub: 'Avg 1.2 day response',   icon: Clock,       presetKey: 'pending_review' },
-      { key: 'active',  label: 'Active Collabs',   value: '5',      sub: 'Across 4 listings',       icon: CheckCircle2, presetKey: 'active_collabs' },
-      { key: 'spend',   label: 'Total Spend',      value: '$3,800', sub: 'This month',              icon: DollarSign, presetKey: 'completed' },
+      { key: 'active',   label: 'Active Collabs',   value: '5', sub: 'Across 4 listings',   icon: CheckCircle2, presetKey: 'active_collabs' },
+      { key: 'new',      label: 'New Applications', value: '7', sub: '+3 this week',        icon: Users,        presetKey: 'new_applications' },
+      { key: 'messages', label: 'Unread Messages',  value: '0', sub: 'All caught up',       icon: MessageCircle, presetKey: 'unread_messages' },
+      { key: 'stays',    label: 'Upcoming Stays',   value: '0', sub: 'Across 0 listings',   icon: CalendarIcon, presetKey: 'upcoming_stays' },
     ],
     chart: {
       money:  { label: 'Spend',        unit: '$', data: seriesFor([300, 450, 220, 600, 780, 540, 690, 940, 0, 0, 0, 0]) },
@@ -72,12 +73,14 @@ const TODO_META = {
 const sidebarItems = (moneyLabelKey) => [
   { key: 'overview', labelKey: 'nav.overview', icon: LayoutDashboard, action: 'tab' },
   { key: 'activity', labelKey: 'nav.activity', icon: CheckCircle2,    action: 'tab' },
-  { key: 'calendar', labelKey: 'nav.calendar', icon: CalendarIcon,    action: 'modal-calendar' },
+  { key: 'calendar', labelKey: 'nav.calendar', icon: CalendarIcon,    action: 'tab' },
   { key: 'contract', labelKey: 'nav.contract', icon: FileText,        action: 'nav' },
   { key: 'chart',    labelKey: moneyLabelKey,  icon: DollarSign,      action: 'modal-chart' },
 ];
 
-export default function ProposalsOverview({ role, search, onSearchChange, filters = [], onStatClick, children, statValues, chartData, todoItems, archiveToggle }) {
+const SIDEBAR_TIP_ROTATE_MS = 8000;
+
+export default function ProposalsOverview({ role, search, onSearchChange, filters = [], onStatClick, children, statValues, chartData, todoItems, archiveToggle, onTodoClick, activityJump }) {
   const cfg = ROLE_CONFIG[role];
   const { t, i18n } = useTranslation('proposalsOverview');
   const { profile } = useAuth();
@@ -87,10 +90,23 @@ export default function ProposalsOverview({ role, search, onSearchChange, filter
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
   const [chartModalOpen, setChartModalOpen] = useState(false);
-  const [calendarModalOpen, setCalendarModalOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const activeFilterCount = filters.filter((f) => f.value && f.value !== 'all').length;
+
+  // Rotating sidebar tip
+  const tips = t(role === 'host' ? 'sidebarTip.host' : 'sidebarTip.creator', { returnObjects: true });
+  const tipList = Array.isArray(tips) ? tips : [tips];
+  const [tipIndex, setTipIndex] = useState(0);
+  useEffect(() => {
+    if (tipList.length < 2) return;
+    const timer = setInterval(() => setTipIndex((i) => (i + 1) % tipList.length), SIDEBAR_TIP_ROTATE_MS);
+    return () => clearInterval(timer);
+  }, [tipList.length]);
+
+  // Collapsible mini-widget at the bottom of the sidebar — Calendar or Spend,
+  // collapsed by default.
+  const [miniWidget, setMiniWidget] = useState(null); // null | 'calendar' | 'spend'
 
   // Real data overrides mock defaults where the caller has it wired up; when a
   // prop is left undefined (still loading, or not wired for this page), the
@@ -115,20 +131,33 @@ export default function ProposalsOverview({ role, search, onSearchChange, filter
   const handleSidebarClick = (item) => {
     if (item.action === 'tab') setActiveTab(item.key);
     else if (item.action === 'modal-chart') setChartModalOpen(true);
-    else if (item.action === 'modal-calendar') setCalendarModalOpen(true);
     else if (item.action === 'nav') navigate('/contract');
     setSidebarOpen(false);
   };
 
   const handleStatClick = (presetKey) => {
+    if (presetKey === 'unread_messages') { navigate('/inbox'); return; }
+    if (presetKey === 'upcoming_stays') { setActiveTab('calendar'); return; }
     onStatClick?.(presetKey);
     setActiveTab('activity');
+  };
+
+  // External signal (e.g. clicking an Upcoming row, or a ?pitch= deep link)
+  // asking this component to jump to the Activity tab. 0/undefined = no-op.
+  useEffect(() => {
+    if (activityJump) setActiveTab('activity');
+  }, [activityJump]);
+
+  const handleTodoClick = (todo) => {
+    onTodoClick?.(todo);
   };
 
   return (
     <div style={{ display: 'flex', gap: '1.25rem', maxWidth: 1360, margin: '0 auto', padding: '1.25rem clamp(1rem, 2vw, 1.5rem) 0' }}>
       <style>{`
         .dbo-hamburger { display: none; }
+        .dbo-tip-fade { animation: dbo-tip-fade-in 400ms ease both; }
+        @keyframes dbo-tip-fade-in { from { opacity: 0; transform: translateY(2px); } to { opacity: 1; transform: translateY(0); } }
         .dbo-stats-grid { grid-template-columns: repeat(4, 1fr); }
         .dbo-charts-grid { grid-template-columns: 2fr 1fr; }
         @media (max-width: 980px) {
@@ -145,11 +174,13 @@ export default function ProposalsOverview({ role, search, onSearchChange, filter
         }
       `}</style>
 
-      {sidebarOpen && (
+      {activeTab !== 'activity' && sidebarOpen && (
         <div onClick={() => setSidebarOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.35)', zIndex: 190 }} />
       )}
 
-      {/* ── Sidebar (page-local) — sticky, but always clear of the floating glass nav ── */}
+      {/* ── Sidebar (page-local) — sticky, but always clear of the floating glass nav ──
+           Hidden entirely on the Activity (board) tab, which runs full-canvas instead. */}
+      {activeTab !== 'activity' && (
       <div className={`dbo-sidebar ${sidebarOpen ? 'open' : ''}`} style={{
         width: 220, flexShrink: 0, background: 'var(--ink)', color: 'var(--bone)',
         borderRadius: '1.25rem', padding: '1.5rem 1rem', display: 'flex', flexDirection: 'column', gap: '1.5rem',
@@ -216,32 +247,92 @@ export default function ProposalsOverview({ role, search, onSearchChange, filter
           })}
         </div>
 
-        <div style={{ marginTop: 'auto', padding: '0.85rem', borderRadius: '0.9rem', background: 'rgba(255,255,255,0.06)' }}>
-          <p style={{ fontSize: '0.72rem', color: 'rgba(239,236,233,0.6)', margin: 0, lineHeight: 1.5 }}>
-            {t(role === 'host' ? 'sidebarTip.host' : 'sidebarTip.creator')}
-          </p>
+        {miniWidget && (
+          <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: '0.9rem', padding: '0.6rem', maxHeight: 260, overflow: 'hidden' }}>
+            <div style={{ transform: 'scale(0.92)', transformOrigin: 'top left', width: '108.7%' }}>
+              {miniWidget === 'calendar'
+                ? <DashboardCalendar todoItems={resolvedTodo} selectedDate={selectedDate} onSelectDate={setSelectedDate} />
+                : <DashboardChart datasets={chartDatasets} title={chartTitle} bare />}
+            </div>
+          </div>
+        )}
+
+        <div style={{ marginTop: miniWidget ? 0 : 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          <div style={{ padding: '0.85rem', borderRadius: '0.9rem', background: 'rgba(255,255,255,0.06)', position: 'relative', minHeight: '2.6rem' }}>
+            <p key={tipIndex} className="dbo-tip-fade" style={{ fontSize: '0.72rem', color: 'rgba(239,236,233,0.6)', margin: 0, lineHeight: 1.5 }}>
+              {tipList[tipIndex]}
+            </p>
+          </div>
+
+          <div style={{ display: 'flex', gap: '0.4rem' }}>
+            <button
+              onClick={() => setMiniWidget((w) => w === 'calendar' ? null : 'calendar')}
+              aria-label={t('nav.calendar')}
+              title={t('nav.calendar')}
+              style={{
+                flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem',
+                padding: '0.45rem 0', borderRadius: '0.6rem', border: 'none', cursor: 'pointer',
+                background: miniWidget === 'calendar' ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.06)',
+                color: 'rgba(239,236,233,0.8)', fontSize: '0.68rem', fontWeight: 600, fontFamily: 'var(--font-body)',
+              }}
+            >
+              <CalendarIcon size={12} />
+              {miniWidget === 'calendar' ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
+            </button>
+            <button
+              onClick={() => setMiniWidget((w) => w === 'spend' ? null : 'spend')}
+              aria-label={role === 'host' ? t('nav.money.host') : t('nav.money.creator')}
+              title={role === 'host' ? t('nav.money.host') : t('nav.money.creator')}
+              style={{
+                flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem',
+                padding: '0.45rem 0', borderRadius: '0.6rem', border: 'none', cursor: 'pointer',
+                background: miniWidget === 'spend' ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.06)',
+                color: 'rgba(239,236,233,0.8)', fontSize: '0.68rem', fontWeight: 600, fontFamily: 'var(--font-body)',
+              }}
+            >
+              <DollarSign size={12} />
+              {miniWidget === 'spend' ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
+            </button>
+          </div>
         </div>
       </div>
+      )}
 
       {/* ── Main content ─────────────────────────────────────────────────── */}
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '1.25rem', paddingBottom: '1.25rem' }}>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+        {activeTab === 'activity' ? (
           <button
-            className="dbo-hamburger"
-            onClick={() => setSidebarOpen(true)}
-            aria-label={t('openSidebar')}
-            style={{ background: 'rgba(255,255,255,0.7)', border: '1px solid rgba(25,37,36,0.1)', borderRadius: '0.75rem', width: 38, height: 38, alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--ink)', flexShrink: 0 }}
+            onClick={() => setActiveTab('overview')}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: '0.45rem', alignSelf: 'flex-start',
+              padding: '0.45rem 1rem', borderRadius: 9999,
+              background: 'rgba(255,255,255,0.72)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
+              border: '1px solid rgba(25,37,36,0.12)', cursor: 'pointer',
+              fontSize: '0.8rem', fontWeight: 600, color: 'var(--ink)', fontFamily: 'var(--font-body)',
+            }}
           >
-            <Menu size={18} />
+            <ArrowLeft size={14} />
+            {t('backToDashboard')}
           </button>
-          <div>
-            <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 'clamp(1.4rem, 2.4vw, 1.8rem)', color: 'var(--ink)', margin: '0 0 0.3rem' }}>
-              {t('hello', { name: firstName })}
-            </h1>
-            <p style={{ fontSize: '0.88rem', color: 'var(--slate)', margin: 0 }}>{t(`greeting.${role}`)}</p>
+        ) : (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+            <button
+              className="dbo-hamburger"
+              onClick={() => setSidebarOpen(true)}
+              aria-label={t('openSidebar')}
+              style={{ background: 'rgba(255,255,255,0.7)', border: '1px solid rgba(25,37,36,0.1)', borderRadius: '0.75rem', width: 38, height: 38, alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--ink)', flexShrink: 0 }}
+            >
+              <Menu size={18} />
+            </button>
+            <div>
+              <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 'clamp(1.4rem, 2.4vw, 1.8rem)', color: 'var(--ink)', margin: '0 0 0.3rem' }}>
+                {t('hello', { name: firstName })}
+              </h1>
+              <p style={{ fontSize: '0.88rem', color: 'var(--slate)', margin: 0 }}>{t(`greeting.${role}`)}</p>
+            </div>
           </div>
-        </div>
+        )}
 
         {activeTab === 'overview' && (
           <>
@@ -292,8 +383,22 @@ export default function ProposalsOverview({ role, search, onSearchChange, filter
                     const meta = TODO_META[todo.type];
                     const Icon = meta.icon;
                     const d = new Date(`${todo.date}T00:00:00`);
+                    const clickable = !!(todo.id && onTodoClick);
                     return (
-                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.6rem 0.7rem', borderRadius: '0.85rem', background: 'rgba(25,37,36,0.03)' }}>
+                      <div
+                        key={i}
+                        onClick={clickable ? () => handleTodoClick(todo) : undefined}
+                        role={clickable ? 'button' : undefined}
+                        tabIndex={clickable ? 0 : undefined}
+                        onKeyDown={clickable ? (e) => { if (e.key === 'Enter') handleTodoClick(todo); } : undefined}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.6rem 0.7rem', borderRadius: '0.85rem',
+                          background: 'rgba(25,37,36,0.03)', cursor: clickable ? 'pointer' : 'default',
+                          transition: 'background 150ms',
+                        }}
+                        onMouseEnter={clickable ? (e) => { e.currentTarget.style.background = 'rgba(25,37,36,0.06)'; } : undefined}
+                        onMouseLeave={clickable ? (e) => { e.currentTarget.style.background = 'rgba(25,37,36,0.03)'; } : undefined}
+                      >
                         <div style={{ width: 32, height: 32, borderRadius: '0.6rem', background: meta.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                           <Icon size={14} color={meta.color} />
                         </div>
@@ -395,17 +500,17 @@ export default function ProposalsOverview({ role, search, onSearchChange, filter
             {children}
           </>
         )}
+
+        {activeTab === 'calendar' && (
+          <div style={{ minHeight: 480 }}>
+            <CalendarFull todoItems={resolvedTodo} selectedDate={selectedDate} onSelectDate={setSelectedDate} />
+          </div>
+        )}
       </div>
 
       {chartModalOpen && (
         <DashboardModal title={chartTitle} onClose={() => setChartModalOpen(false)} maxWidth={640}>
           <DashboardChart datasets={chartDatasets} title="" bare />
-        </DashboardModal>
-      )}
-
-      {calendarModalOpen && (
-        <DashboardModal title={t('nav.calendar')} onClose={() => setCalendarModalOpen(false)} maxWidth={920}>
-          <CalendarFull todoItems={resolvedTodo} selectedDate={selectedDate} onSelectDate={setSelectedDate} />
         </DashboardModal>
       )}
     </div>

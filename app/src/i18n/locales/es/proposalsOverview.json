@@ -17,9 +17,20 @@
     "archived": "Archivados"
   },
   "sidebarTip": {
-    "creator": "Las subidas constantes hacen que los anfitriones te vuelvan a invitar.",
-    "host": "Revisar las solicitudes más rápido mantiene a los creadores interesados."
+    "creator": [
+      "Las subidas constantes hacen que los anfitriones te vuelvan a invitar.",
+      "Un mensaje de propuesta personalizado triplica la tasa de aceptación.",
+      "Etiqueta a @collabnb y la propiedad — ayuda a tu alcance.",
+      "Responder rápido genera confianza y más colabs repetidas."
+    ],
+    "host": [
+      "Revisar las solicitudes más rápido mantiene a los creadores interesados.",
+      "Unas expectativas claras evitan idas y vueltas más adelante.",
+      "Un mensaje de bienvenida marca el tono de una gran colaboración.",
+      "Los creadores que se sienten valorados vuelven a colaborar."
+    ]
   },
+  "backToDashboard": "Volver al panel",
   "closeSidebar": "Cerrar barra lateral",
   "openSidebar": "Abrir barra lateral",
   "chartTitle": {
@@ -49,17 +60,17 @@
       }
     },
     "host": {
-      "new": {
-        "label": "Nuevas solicitudes"
-      },
-      "review": {
-        "label": "Revisión pendiente"
-      },
       "active": {
         "label": "Colabs activas"
       },
-      "spend": {
-        "label": "Gasto total"
+      "new": {
+        "label": "Nuevas solicitudes"
+      },
+      "messages": {
+        "label": "Mensajes sin leer"
+      },
+      "stays": {
+        "label": "Próximas estancias"
       }
     }
   },

@@ -223,7 +223,12 @@ export default defineSchema({
     creator_id: v.optional(v.string()),
     creator_name: v.optional(v.string()),
     is_sample: v.optional(v.boolean()),
-  }).index("by_creator", ["creator_id"]),
+    host_id: v.optional(v.string()),
+    pitch_id: v.optional(v.string()), // links back to the pitches row created in the same apply()
+  })
+    .index("by_creator", ["creator_id"])
+    .index("by_host", ["host_id"])
+    .index("by_listing", ["listing_id"]),
 
   threads: defineTable({
     listing_title: v.string(),
@@ -412,6 +417,7 @@ export default defineSchema({
     signatures: v.optional(v.string()),       // JSON: {hostSignature, hostSignedAt, hostSignedVersion, creatorSignature, ...}
     counter_pending: v.optional(v.string()),  // 'host' | 'creator' | null
     contract_locked: v.optional(v.boolean()),
+    collaboration_id: v.optional(v.string()), // links to the collaborations row created at apply-time
   })
     .index("by_listing", ["listing_id"])
     .index("by_creator", ["creator_id"])

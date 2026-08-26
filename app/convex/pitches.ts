@@ -72,6 +72,7 @@ export const create = mutation({
     message: v.string(),
     type: v.optional(v.string()),
     threadKey: v.optional(v.string()),
+    collaborationId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     await requireOwnerOrAdmin(ctx, args.creatorId);
@@ -126,6 +127,7 @@ export const create = mutation({
       type: args.type ?? "application",
       created_at: Date.now(),
       thread_key: args.threadKey,
+      collaboration_id: args.collaborationId,
     });
 
     // The pitch message is shown as the thread's preview text (see

@@ -37,5 +37,7 @@
   "emptyBodyStart": "Postulez à un séjour pour commencer",
   "emptyBodyAdjust": "Essayez d'ajuster votre recherche ou vos filtres",
   "discoverStays": "Découvrir des séjours",
-  "demoToast": "Visite guidée fermée — retrouvez-la dans <strong>Paramètres</strong> ou dans le <strong>Centre d'aide (icône ?)</strong>"
+  "demoToast": "Visite guidée fermée — retrouvez-la dans <strong>Paramètres</strong> ou dans le <strong>Centre d'aide (icône ?)</strong>",
+  "payoutLabel": "Paiement",
+  "contractLabel": "Contrat"
 }

@@ -147,6 +147,17 @@ export const update = mutation({
       if (caller.is_admin !== true && !isParty) {
         throw new Error("You don't have permission to do that.");
       }
+      // A party to the contract may only sign their own side — being a party
+      // (owner/host/creator) grants edit access to the shared fields above,
+      // not the ability to sign on the other party's behalf.
+      if (caller.is_admin !== true) {
+        if (args.updates.creator_signed !== undefined && caller.role === "host") {
+          throw new Error("Only the creator can sign as creator.");
+        }
+        if (args.updates.host_signed !== undefined && caller.role !== "host") {
+          throw new Error("Only the host can sign as host.");
+        }
+      }
     }
     const cleanUpdates: Record<string, any> = Object.fromEntries(
       Object.entries(args.updates).filter(([, val]) => val !== undefined)

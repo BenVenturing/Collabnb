@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Clock, FileText } from 'lucide-react';
 import { useCollabs } from '../contexts/CollabContext';
 import { DEMO_COLLAB } from '../lib/mockData';
 import CollabDetail from '../components/CollabDetail';
@@ -26,7 +27,7 @@ const STATUS_STYLES = {
   demo:     { bg: 'rgba(212,168,67,0.12)', text: '#B8922A', icon: '▶' },
 };
 
-function CollabCard({ collab, onClick, onDismissDemo, onDismissSample }) {
+function CollabCard({ collab, onClick, onDismissDemo, onDismissSample, onOpenContract }) {
   const { t } = useTranslation('collabs');
   const style = STATUS_STYLES[collab.status] || STATUS_STYLES.pending;
   const canDismiss = collab.is_demo || collab.is_sample;
@@ -133,47 +134,62 @@ function CollabCard({ collab, onClick, onDismissDemo, onDismissSample }) {
           </p>
         )}
 
-        {/* Status + chevron */}
+        {/* Status + due badge + chevron */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem', paddingBottom: '0.75rem', borderBottom: '1px solid rgba(25,37,36,0.07)' }}>
-          <span style={{
-            display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
-            padding: '0.3rem 0.75rem', borderRadius: '9999px',
-            background: style.bg, color: style.text,
-            fontSize: '0.74rem', fontWeight: 600,
-            backdropFilter: 'blur(8px)',
-          }}>
-            <span style={{ fontSize: '0.6rem' }}>{style.icon}</span> {collab.status_text}
-          </span>
-          <svg viewBox="0 0 16 16" fill="none" stroke="var(--stone)" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" style={{ width: 16, height: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+            <span style={{
+              display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
+              padding: '0.3rem 0.75rem', borderRadius: '9999px',
+              background: style.bg, color: style.text,
+              fontSize: '0.74rem', fontWeight: 600,
+              backdropFilter: 'blur(8px)',
+            }}>
+              <span style={{ fontSize: '0.6rem' }}>{style.icon}</span> {collab.status_text}
+            </span>
+            {collab.days_left != null && (
+              <span style={{
+                display: 'inline-flex', alignItems: 'center', gap: '0.25rem',
+                padding: '0.3rem 0.65rem', borderRadius: '9999px',
+                background: 'rgba(212,168,67,0.14)', color: '#8a6d1f',
+                fontSize: '0.68rem', fontWeight: 600,
+              }}>
+                <Clock size={11} /> {t('daysCount', { count: collab.days_left })}
+              </span>
+            )}
+          </div>
+          <svg viewBox="0 0 16 16" fill="none" stroke="var(--stone)" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" style={{ width: 16, height: 16, flexShrink: 0 }}>
             <polyline points="6 3 11 8 6 13"/>
           </svg>
         </div>
 
-        {/* Deliverables + due/payment */}
+        {/* Deliverables + payout — always both, per collab */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
           <div>
             <p style={{ fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--sage)', marginBottom: '0.2rem' }}>{t('deliverablesLabel')}</p>
             <p style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--ink)' }}>{collab.deliverables}</p>
           </div>
-          {collab.days_left && (
-            <div style={{ textAlign: 'right' }}>
-              <p style={{ fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--sage)', marginBottom: '0.2rem' }}>{t('dueInLabel')}</p>
-              <p style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--slate)' }}>{t('daysCount', { count: collab.days_left })}</p>
-            </div>
-          )}
-          {collab.payment && !collab.days_left && (
-            <div style={{ textAlign: 'right' }}>
-              <p style={{ fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--sage)', marginBottom: '0.2rem' }}>{t('paymentLabel')}</p>
-              <p style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--slate)' }}>{collab.payment}</p>
-            </div>
-          )}
-          {!collab.days_left && !collab.payment && (
-            <div style={{ textAlign: 'right' }}>
-              <p style={{ fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--sage)', marginBottom: '0.2rem' }}>{t('stayLabel')}</p>
-              <p style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--slate)' }}>{t('complimentary')}</p>
-            </div>
-          )}
+          <div style={{ textAlign: 'right' }}>
+            <p style={{ fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--sage)', marginBottom: '0.2rem' }}>{t('payoutLabel')}</p>
+            <p style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--slate)' }}>{collab.payment || t('complimentary')}</p>
+          </div>
         </div>
+
+        {/* Quick access to the linked contract, always reachable from the card */}
+        {collab.contract_id && (
+          <div style={{ marginTop: '0.75rem' }}>
+            <button
+              onClick={(e) => { e.stopPropagation(); onOpenContract?.(collab.contract_id); }}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
+                fontSize: '0.7rem', fontWeight: 600, color: 'var(--slate)', cursor: 'pointer',
+                padding: '0.35rem 0.7rem', borderRadius: '9999px', background: 'rgba(25,37,36,0.04)',
+                border: 'none', fontFamily: 'var(--font-body)',
+              }}
+            >
+              <FileText size={12} /> {t('contractLabel')}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -301,6 +317,7 @@ export default function Collabs() {
     return ['all', ...Array.from(names)];
   }, [allCollabs]);
 
+  // Soonest-due collabs surface first; collabs with no due date sink to the bottom.
   const shown = stageFiltered
     .filter((c) => listingFilter === 'all' || c.property_name === listingFilter)
     .filter((c) => {
@@ -311,7 +328,13 @@ export default function Collabs() {
       if (dueFilter === 'month') return c.days_left <= 30;
       return true;
     })
-    .filter((c) => !search.trim() || c.property_name?.toLowerCase().includes(search.trim().toLowerCase()));
+    .filter((c) => !search.trim() || c.property_name?.toLowerCase().includes(search.trim().toLowerCase()))
+    .sort((a, b) => {
+      if (a.days_left == null && b.days_left == null) return 0;
+      if (a.days_left == null) return 1;
+      if (b.days_left == null) return -1;
+      return a.days_left - b.days_left;
+    });
 
   // Real dashboard data — replaces ProposalsOverview's mock defaults wherever
   // we have a clean, honest mapping onto existing Convex records.
@@ -437,6 +460,7 @@ export default function Collabs() {
                 onClick={setSelectedCollab}
                 onDismissDemo={dismissDemo}
                 onDismissSample={() => dismissSample(c.id)}
+                onOpenContract={(contractId) => navigate(`/contract?open=${contractId}`)}
               />
             ))
           )}

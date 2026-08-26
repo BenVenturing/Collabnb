@@ -3,7 +3,6 @@
   "backToExplore": "Back to Explore",
   "back": "← Back",
   "shareBtn": "Share",
-  "save": "Save",
   "saved": "Saved",
   "showAllPhotos": "Show all photos",
   "listedBy": "Listed by {{name}}",
@@ -103,6 +102,7 @@
     "sending": "Sending…"
   },
   "save": {
+    "cta": "Save",
     "title": "Save to collection",
     "savedCount": "{{count}} saved",
     "collectionNamePlaceholder": "Collection name",

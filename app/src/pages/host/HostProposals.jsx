@@ -11,7 +11,7 @@ import SkeletonCard from '../../components/SkeletonCard';
 import ProposalsOverview from '../../components/dashboard/ProposalsOverview';
 import { bucketByMonth, toMonthSeries, isoDate } from '../../lib/monthSeries';
 import {
-  MessageSquare, ChevronDown, ChevronUp, ExternalLink, Check, Sparkles,
+  MessageSquare, ChevronDown, ChevronUp, ExternalLink, Sparkles,
   GripVertical, Lock, Download, Pen, CheckCircle2, Trash2,
 } from 'lucide-react';
 import {
@@ -563,10 +563,9 @@ function HostMessagePanel({ threadKey, creatorName }) {
 }
 
 // ─── Proposal drawer ──────────────────────────────────────────────────────────
-function ProposalDrawer({ proposal, onStatusChange, onCounter, onSign, onCreatorClick }) {
+function ProposalDrawer({ proposal, onStatusChange, onCounter, onSign }) {
   const { t } = useTranslation('hostProposals');
   const navigate = useNavigate();
-  const tierColor = TIER_COLORS[proposal.creator.tier] || TIER_COLORS['UGC Beginner'];
   const isPitch = proposal.type === 'pitch';
   const { signatures = emptySignatures(), contractHistory = [], locked } = proposal;
 
@@ -574,45 +573,33 @@ function ProposalDrawer({ proposal, onStatusChange, onCounter, onSign, onCreator
   const hostSigned    = !!signatures.hostSignature    && signatures.hostSignedVersion    === version;
   const creatorSigned = !!signatures.creatorSignature && signatures.creatorSignedVersion === version;
 
+  // Full profile (name/avatar/tier/stats/platforms) already lives on the
+  // card face above and one tap away via ProfilePopupCard — don't repeat it
+  // here, go straight into pitch/contract/message content.
   return (
     <div style={{ background: '#fff', border: isPitch ? PITCH_BORDER_EXPANDED : '1.5px solid rgba(25,37,36,0.08)', borderTop: 'none', borderRadius: '0 0 1rem 1rem', overflow: 'hidden' }}>
 
-      {/* Creator header */}
-      <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid rgba(25,37,36,0.07)' }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16 }}>
-          <CreatorAvatar
-            src={proposal.creator.avatar} name={proposal.creator.name}
-            size={60}
-            onClick={() => onCreatorClick(proposal.creator)}
-            title={t('drawer.viewProfile')}
-            style={{ border: '2px solid rgba(25,37,36,0.08)', cursor: 'pointer' }}
-          />
-          <div style={{ flex: 1 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-              <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 15, color: 'var(--ink)' }}>{proposal.creator.name}</span>
-              {proposal.creator.verified && (
-                <span style={{ display: 'flex', alignItems: 'center', gap: 3, padding: '2px 7px', borderRadius: 9999, background: 'rgba(74,155,127,0.12)', border: '1px solid rgba(74,155,127,0.3)', fontSize: 10, fontWeight: 700, color: '#2d7d5e' }}><Check size={9} />{t('drawer.verified')}</span>
-              )}
-              <span style={{ padding: '2px 8px', borderRadius: 9999, fontSize: 10, fontWeight: 700, background: tierColor.bg, color: tierColor.color }}>{proposal.creator.tier}</span>
-              <span title={tierDef(proposal.creator.tier)} style={{ fontSize: 9, color: 'var(--sage)', cursor: 'help', lineHeight: 1 }}>ⓘ</span>
+      {/* Contract terms — visible once any negotiation/acceptance has happened */}
+      {contractHistory.length > 0 && (() => {
+        const latestFields = getLatestFields(proposal);
+        const rows = CONTRACT_FIELDS.filter((f) => latestFields[f.key]);
+        if (rows.length === 0) return null;
+        return (
+          <div style={{ padding: '16px 24px', borderBottom: '1px solid rgba(25,37,36,0.07)' }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--sage)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 8 }}>
+              {t('drawer.contractTerms')}
             </div>
-            <div style={{ fontSize: 12, color: 'var(--sage)', marginTop: 3 }}>@{proposal.creator.username} · {proposal.creator.location}</div>
-            <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
-              {proposal.creator.platforms.map((p) => (
-                <span key={p} style={{ padding: '3px 9px', borderRadius: 9999, fontSize: 11, fontWeight: 600, background: 'var(--bone)', color: 'var(--slate)' }}>{p}</span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {rows.map(({ key }) => (
+                <div key={key} style={{ display: 'flex', gap: 8, fontSize: 12 }}>
+                  <span style={{ color: 'var(--sage)', minWidth: 110 }}>{contractFieldLabel(key)}</span>
+                  <span style={{ color: 'var(--ink)', fontWeight: 600 }}>{latestFields[key]}</span>
+                </div>
               ))}
             </div>
           </div>
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 1, marginTop: 16, background: 'rgba(25,37,36,0.06)', borderRadius: '0.75rem', overflow: 'hidden' }}>
-          {[{ label: t('drawer.followers'), value: fmtFollowers(proposal.creator.followers) }, { label: t('drawer.engagement'), value: `${proposal.creator.engagement}%` }, { label: t('drawer.collabs'), value: proposal.creator.collab_count }].map(({ label, value }) => (
-            <div key={label} style={{ padding: '12px 0', background: '#fff', textAlign: 'center' }}>
-              <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 17, color: 'var(--ink)', lineHeight: 1 }}>{value}</div>
-              <div style={{ fontSize: 11, color: 'var(--sage)', marginTop: 3 }}>{label}</div>
-            </div>
-          ))}
-        </div>
-      </div>
+        );
+      })()}
 
       {/* Pitch: original modified terms */}
       {isPitch && proposal.pitch_details && (
@@ -876,7 +863,7 @@ function ProposalCard({ proposal, expanded, onToggle, onStatusChange, onCounter,
           {expanded ? <ChevronUp size={14} color="var(--sage)" /> : <ChevronDown size={14} color="var(--sage)" />}
         </div>
       </div>
-      {expanded && <ProposalDrawer proposal={proposal} onStatusChange={onStatusChange} onCounter={onCounter} onSign={onSign} onCreatorClick={onCreatorClick} />}
+      {expanded && <ProposalDrawer proposal={proposal} onStatusChange={onStatusChange} onCounter={onCounter} onSign={onSign} />}
     </div>
   );
 }
@@ -957,6 +944,7 @@ export default function HostProposals() {
   const [counterModal, setCounterModal] = useState(null);
   const [signModal, setSignModal]       = useState(null);
   const [showClearDeclined, setShowClearDeclined] = useState(false);
+  const [hiddenTick, setHiddenTick] = useState(0);
   const [popupCreator, setPopupCreator] = useState(null);
   const [search, setSearch] = useState('');
 
@@ -1004,10 +992,15 @@ export default function HostProposals() {
         hidden:          s.hidden          ?? false,
       };
     });
-  }, [rawPitches]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rawPitches, hiddenTick]);
 
-  // Deep-link from notifications: /host/proposals?pitch=<pitchId> expands that proposal
+  // Deep-link from notifications, or clicking an Upcoming row on the Overview
+  // tab: /host/proposals?pitch=<pitchId> expands that proposal and jumps to
+  // the Activity tab (ProposalsOverview's tab state is internal, so a
+  // changing "jump token" is the signal it watches for).
   const [searchParams, setSearchParams] = useSearchParams();
+  const [activityJump, setActivityJump] = useState(0);
   useEffect(() => {
     const pitchParam = searchParams.get('pitch');
     if (!pitchParam) return;
@@ -1017,6 +1010,7 @@ export default function HostProposals() {
       setTypeFilter('all');
       setListingFilter('All Listings');
       setExpanded(match.id);
+      setActivityJump((j) => j + 1);
       setSearchParams({}, { replace: true });
     }
   }, [searchParams, allProposals, setSearchParams]);
@@ -1108,12 +1102,17 @@ export default function HostProposals() {
   }
 
   // ── Clear declined ──
+  // Operates on allProposals (the real Convex-backed data actually shown),
+  // not the unused legacy `proposals` mock state. Merges into the existing
+  // stored blob (never overwrite it wholesale — that would wipe negotiation
+  // state for every other pitch) and bumps hiddenTick so the allProposals
+  // memo (keyed only on rawPitches) actually recomputes.
   function handleClearDeclined() {
-    setProposals((prev) => {
-      const next = prev.map((p) => p.status === 'declined' ? { ...p, hidden: true } : p);
-      saveApplications(next);
-      return next;
-    });
+    const declinedIds = allProposals.filter((p) => p.status === 'declined' && !p.hidden).map((p) => String(p.id));
+    const saved = loadApplications();
+    declinedIds.forEach((id) => { saved[id] = { ...(saved[id] || {}), hidden: true }; });
+    try { localStorage.setItem(APPS_KEY, JSON.stringify(saved)); } catch {}
+    setHiddenTick((v) => v + 1);
     setShowClearDeclined(false);
   }
 
@@ -1193,13 +1192,17 @@ export default function HostProposals() {
     const items = [];
     (rawPitches || []).forEach((p) => {
       if (p.status === 'pending') {
-        items.push({ type: 'pending_action', title: `Review ${p.creator_name || 'a creator'}'s application — ${p.listing_title || 'your listing'}`, date: isoDate(new Date(p.created_at)) });
+        items.push({ id: String(p._id), type: 'pending_action', title: `Review ${p.creator_name || 'a creator'}'s application — ${p.listing_title || 'your listing'}`, date: isoDate(new Date(p.created_at)) });
       } else if (p.counter_pending === 'host') {
-        items.push({ type: 'pending_action', title: `Respond to counter-pitch — ${p.creator_name || 'a creator'}`, date: isoDate(new Date(p.created_at)) });
+        items.push({ id: String(p._id), type: 'pending_action', title: `Respond to counter-pitch — ${p.creator_name || 'a creator'}`, date: isoDate(new Date(p.created_at)) });
       }
     });
     return items;
   }, [rawPitches]);
+
+  function handleTodoClick(todo) {
+    if (todo.id) setSearchParams({ pitch: todo.id });
+  }
 
   function handleStatClick(presetKey) {
     const stageByPreset = {
@@ -1222,7 +1225,7 @@ export default function HostProposals() {
           @keyframes tab-flash { 0%{box-shadow:0 0 0 3px rgba(25,37,36,0.18)} 60%{box-shadow:0 0 0 5px rgba(25,37,36,0.1)} 100%{box-shadow:none} }
         `}</style>
 
-        <ProposalsOverview role="host" search={search} onSearchChange={setSearch} onStatClick={handleStatClick} statValues={statValues} chartData={chartData} todoItems={todoItems}>
+        <ProposalsOverview role="host" search={search} onSearchChange={setSearch} onStatClick={handleStatClick} statValues={statValues} chartData={chartData} todoItems={todoItems} onTodoClick={handleTodoClick} activityJump={activityJump}>
 
         <div style={{ maxWidth: 860, margin: '0 auto', padding: '2rem 1.5rem 5rem' }}>
 

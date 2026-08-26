@@ -4,6 +4,7 @@ import vineyard3 from '../assets/vineyard-3.jpg';
 import vineyard4 from '../assets/vineyard-4.jpg';
 import vineyard5 from '../assets/vineyard-5.jpg';
 import benVenturingPhoto from '../assets/ben-venturing.png';
+import { Mail, Handshake, RefreshCw, Upload, CheckCircle2, Archive } from 'lucide-react';
 
 // Fallback for broken/missing listing images — warm gray placeholder
 export const IMG_FALLBACK = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='600'%3E%3Crect fill='%23EFECE9' width='800' height='600'/%3E%3C/svg%3E";
@@ -450,48 +451,48 @@ export const SAMPLE_LISTINGS = [
 
 // ─── Collaboration lifecycle stages ────────────────────────────────────────────
 export const STAGES = [
-  { key: 'pending',         label: 'Pending',           icon: '🟡' },
-  { key: 'accepted',        label: 'Accepted',          icon: '📋' },
-  { key: 'updated',         label: 'Adjustments',       icon: '🔄' },
-  { key: 'uploaded_tagged', label: 'Uploaded',          icon: '🔵' },
-  { key: 'closed',          label: 'Closed',            icon: '🟢' },
-  { key: 'archived',        label: 'Archived',          icon: '📦' },
+  { key: 'pending',         label: 'Pending' },
+  { key: 'accepted',        label: 'Accepted' },
+  { key: 'updated',         label: 'Adjustments' },
+  { key: 'uploaded_tagged', label: 'Uploaded' },
+  { key: 'closed',          label: 'Closed' },
+  { key: 'archived',        label: 'Archived' },
 ];
 
 // ─── Demo stage explanations (graphic icon cards for the demo collab) ─────────
 export const DEMO_STAGE_CARDS = {
   pending: {
-    icon: '✉️',
+    icon: Mail,
     title: 'Application Sent',
     description: 'Your pitch has been submitted to the host. They\'ll review your profile, portfolio, and message before deciding.',
     tip: 'Tip: A personalized message with specific content ideas increases acceptance rates by 3x.',
   },
   accepted: {
-    icon: '🤝',
+    icon: Handshake,
     title: 'Collaboration Accepted',
     description: 'The host loved your pitch! Now it\'s time to share your drive link and start planning your content.',
     tip: 'Tip: Share a Google Drive folder early so the host can follow along with your progress.',
   },
   updated: {
-    icon: '🔄',
+    icon: RefreshCw,
     title: 'Adjustments Requested',
     description: 'Review and adjust the agreed deliverables — reels, photos, blog posts. Changes are shared with the host for approval.',
     tip: 'Tip: Clear communication about changes builds trust. Explain why each adjustment helps the content perform better.',
   },
   uploaded_tagged: {
-    icon: '📸',
+    icon: Upload,
     title: 'Uploaded',
     description: 'All content is uploaded and ready for host review. Cross-check the deliverable list one more time before requesting approval.',
     tip: 'Tip: Always tag @collabnb and the property — it helps both parties\' reach.',
   },
   closed: {
-    icon: '✅',
+    icon: CheckCircle2,
     title: 'Collaboration Complete',
     description: 'Both parties confirmed everything looks great. Payment is released and the collab is wrapped up.',
     tip: 'Tip: A happy host = future referrals. Send a thank-you note after closing.',
   },
   archived: {
-    icon: '📦',
+    icon: Archive,
     title: 'Archived',
     description: 'This collaboration is safely stored in your archive. You can revisit any stage details anytime.',
     tip: 'Tip: Archived collabs make great portfolio pieces for future applications.',

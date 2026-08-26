@@ -17,9 +17,20 @@
     "archived": "Archiviert"
   },
   "sidebarTip": {
-    "creator": "Regelmäßige Uploads sorgen dafür, dass Gastgeber dich wieder einladen.",
-    "host": "Schnellere Bewerbungsprüfung hält Creator engagiert."
+    "creator": [
+      "Regelmäßige Uploads sorgen dafür, dass Gastgeber dich wieder einladen.",
+      "Eine persönliche Bewerbungsnachricht verdreifacht die Annahmequote.",
+      "Markiere @collabnb und die Unterkunft — das hilft deiner Reichweite.",
+      "Schnelle Antworten schaffen Vertrauen und mehr Collabs."
+    ],
+    "host": [
+      "Schnellere Bewerbungsprüfung hält Creator engagiert.",
+      "Klare Erwartungen an Leistungen ersparen späteres Hin und Her.",
+      "Eine kurze Willkommensnachricht setzt den Ton für die Zusammenarbeit.",
+      "Creator, die sich wertgeschätzt fühlen, kommen gerne wieder."
+    ]
   },
+  "backToDashboard": "Zurück zum Dashboard",
   "closeSidebar": "Seitenleiste schließen",
   "openSidebar": "Seitenleiste öffnen",
   "chartTitle": {
@@ -49,17 +60,17 @@
       }
     },
     "host": {
-      "new": {
-        "label": "Neue Bewerbungen"
-      },
-      "review": {
-        "label": "Prüfung ausstehend"
-      },
       "active": {
         "label": "Aktive Collabs"
       },
-      "spend": {
-        "label": "Gesamtausgaben"
+      "new": {
+        "label": "Neue Bewerbungen"
+      },
+      "messages": {
+        "label": "Ungelesene Nachrichten"
+      },
+      "stays": {
+        "label": "Bevorstehende Aufenthalte"
       }
     }
   },

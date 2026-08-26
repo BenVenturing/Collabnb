@@ -1,4 +1,4 @@
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { query, mutation, internalMutation } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { requireOwnerOrAdmin, requireAuthedProfile, canAccessOwner, getAuthedProfile } from "./lib/auth";
@@ -25,6 +25,42 @@ export const getById = query({
   },
 });
 
+export const getByHost = query({
+  args: { hostId: v.string() },
+  handler: async (ctx, { hostId }) => {
+    if (!(await canAccessOwner(ctx, hostId))) return [];
+    // Primary: collaborations that already have host_id stamped
+    const byHostId = await ctx.db
+      .query("collaborations")
+      .withIndex("by_host", (q) => q.eq("host_id", hostId))
+      .collect();
+
+    // Fallback: find collaborations via the host's listings (covers rows
+    // created before host_id was stamped on the collaboration itself)
+    const hostListings = await ctx.db
+      .query("listings")
+      .withIndex("by_host", (q) => q.eq("host_id", hostId))
+      .collect();
+
+    if (hostListings.length === 0) return byHostId;
+
+    const seen = new Set(byHostId.map((c) => String(c._id)));
+    const extra: (typeof byHostId[0])[] = [];
+
+    for (const listing of hostListings) {
+      const collabs = await ctx.db
+        .query("collaborations")
+        .withIndex("by_listing", (q) => q.eq("listing_id", String(listing._id)))
+        .collect();
+      collabs.forEach((c) => {
+        if (!seen.has(String(c._id))) { seen.add(String(c._id)); extra.push(c); }
+      });
+    }
+
+    return [...byHostId, ...extra];
+  },
+});
+
 export const create = mutation({
   args: {
     listingId: v.string(),
@@ -36,6 +72,8 @@ export const create = mutation({
     deliverables: v.optional(v.string()),
     listingDescription: v.optional(v.string()),
     pitchMessage: v.optional(v.string()),
+    hostId: v.optional(v.string()),
+    pitchId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     if (args.creatorId) await requireOwnerOrAdmin(ctx, args.creatorId);
@@ -69,6 +107,8 @@ export const create = mutation({
       stages: JSON.stringify(stages),
       creator_id: args.creatorId,
       listing_description: args.listingDescription,
+      host_id: args.hostId,
+      pitch_id: args.pitchId,
     });
 
     return collabId;
@@ -163,12 +203,18 @@ export const advanceStage = mutation({
     nextStage: v.string(),
   },
   handler: async (ctx, args) => {
-    await requireAuthedProfile(ctx);
+    const profile = await requireAuthedProfile(ctx);
     const collab = await ctx.db
       .query("collaborations")
       .filter((q) => q.eq(q.field("_id"), args.id))
       .first();
     if (!collab) return;
+
+    const isParty = String(profile._id) === String(collab.creator_id)
+      || (collab.host_id && String(profile._id) === String(collab.host_id));
+    if (profile.is_admin !== true && !isParty) {
+      throw new ConvexError("You don't have permission to do that.");
+    }
 
     const now = new Date().toLocaleDateString("en-US", {
       month: "short",

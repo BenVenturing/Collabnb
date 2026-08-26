@@ -694,17 +694,6 @@ export const resetToPool = mutation({
   },
 });
 
-// Confirmed hosts (published === true), across all days — the CRM export set.
-export const getConfirmedHosts = query({
-  args: {},
-  handler: async (ctx) => {
-    if (!(await canAccessAdmin(ctx))) return [];
-    const rows = await ctx.db.query("prospects").collect();
-    return rows
-      .filter((r) => r.kind === "host" && r.published)
-      .sort((a, b) => (b.contacted_at ?? b.created_at) - (a.contacted_at ?? a.created_at));
-  },
-});
 
 export const confirmDraft = internalMutation({
   args: { id: v.id("prospects"), dmDraft: v.string(), dmAngle: v.string() },

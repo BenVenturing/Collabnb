@@ -436,9 +436,9 @@ function ProspectPanel({ kind, title }) {
 }
 
 // ─── Add prospect form ────────────────────────────────────────────────────────
-function AddProspectForm({ onDone }) {
+function AddProspectForm({ onDone, defaultKind = 'creator' }) {
   const add = useMutation(api.prospects.add);
-  const [kind, setKind] = useState('creator');
+  const [kind, setKind] = useState(defaultKind);
   const [handle, setHandle] = useState('');
   const [name, setName] = useState('');
   const [followers, setFollowers] = useState('');
@@ -687,76 +687,16 @@ function HostSearchImport() {
   );
 }
 
-function ConfirmedRow({ prospect, update, updateStatus, resetToPool }) {
-  const [draft, setDraft] = useState(prospect.dm_draft || '');
-  const [copied, setCopied] = useState(false);
-  const [resetting, setResetting] = useState(false);
-  const isContacted = prospect.status !== 'queued';
-
-  async function copyAndOpen() {
-    try { await navigator.clipboard.writeText(draft); } catch { /* clipboard unavailable */ }
-    window.open(`https://ig.me/m/${prospect.instagram_handle}`, '_blank', 'noopener');
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
-  }
-
-  async function doReset() {
-    setResetting(true);
-    try { await resetToPool({ id: prospect._id }); } catch { /* shown inline via panel-level error if needed */ }
-    finally { setResetting(false); }
-  }
-
-  return (
-    <div style={{ padding: '0.6rem 0.75rem', borderRadius: '0.75rem', background: 'rgba(255,255,255,0.72)', border: '1px solid rgba(25,37,36,0.07)' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.35rem' }}>
-        <a href={`https://instagram.com/${prospect.instagram_handle}`} target="_blank" rel="noopener noreferrer" style={{ fontWeight: 700, color: '#192524', fontSize: '0.8rem', textDecoration: 'none' }}>@{prospect.instagram_handle}</a>
-        <span style={{ fontSize: '0.62rem', padding: '0.15rem 0.45rem', borderRadius: 9999, background: 'rgba(123,104,200,0.12)', color: '#5b4aa8', fontWeight: 600 }}>
-          {ANGLE_LABELS[prospect.dm_angle] || prospect.dm_angle}
-        </span>
-        <span style={{ fontSize: '0.62rem', padding: '0.15rem 0.45rem', borderRadius: 9999, background: isContacted ? 'rgba(209,235,219,0.8)' : 'rgba(212,168,67,0.15)', color: isContacted ? '#166534' : '#b45309', fontWeight: 700 }}>
-          {isContacted ? 'Contacted' : 'Ready'}
-        </span>
-      </div>
-      <textarea value={draft} onChange={e => setDraft(e.target.value)}
-        onBlur={() => draft !== (prospect.dm_draft || '') && update({ id: prospect._id, dmDraft: draft })}
-        rows={2} style={{ ...input, width: '100%', resize: 'vertical' }} />
-      <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.35rem' }}>
-        <button onClick={copyAndOpen}
-          style={{ padding: '0.3rem 0.8rem', borderRadius: 9999, border: '1px solid rgba(123,104,200,0.35)', background: copied ? 'rgba(123,104,200,0.16)' : 'rgba(123,104,200,0.08)', color: '#5b4aa8', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer' }}>
-          {copied ? 'Copied — opening Instagram…' : 'Copy + open Instagram DM ↗'}
-        </button>
-        {!isContacted && (
-          <button onClick={() => updateStatus({ id: prospect._id, status: 'contacted' })}
-            style={{ padding: '0.3rem 0.8rem', borderRadius: 9999, border: 'none', background: '#192524', color: '#fff', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer' }}>
-            Mark contacted
-          </button>
-        )}
-        {prospect.status !== 'signed' && (
-          <button onClick={doReset} disabled={resetting}
-            title="Back to a fresh pool candidate — keeps the draft, clears status/queue"
-            style={{ padding: '0.3rem 0.8rem', borderRadius: 9999, border: '1px solid rgba(25,37,36,0.15)', background: 'transparent', color: '#3C5759', fontSize: '0.7rem', fontWeight: 600, cursor: 'pointer', opacity: resetting ? 0.5 : 1 }}>
-            {resetting ? 'Resetting…' : 'Reset'}
-          </button>
-        )}
-      </div>
-    </div>
-  );
-}
 
 function HostOutreachCampaign() {
   const pool = useQuery(api.prospects.getHostPool) || [];
-  const confirmed = useQuery(api.prospects.getConfirmedHosts) || [];
   const confirmBatch = useAction(api.prospects.confirmHostBatch);
-  const update = useMutation(api.prospects.update);
-  const updateStatus = useMutation(api.prospects.updateStatus);
-  const resetToPool = useMutation(api.prospects.resetToPool);
 
   const [filterText, setFilterText] = useState('');
   const [selected, setSelected] = useState(() => new Set());
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
   const [err, setErr] = useState('');
-  const [confirmedFilter, setConfirmedFilter] = useState('');
 
   const filteredPool = pool.filter((p) => {
     if (!filterText.trim()) return true;
@@ -786,7 +726,7 @@ function HostOutreachCampaign() {
     setBusy(true); setErr(''); setMsg('');
     try {
       const r = await confirmBatch({ ids: [...selected] });
-      setMsg(`Confirmed ${r.confirmed} — drafted with the NVIDIA model. Copy + send each manually below.`);
+      setMsg(`Confirmed ${r.confirmed} — drafted with the NVIDIA model. Find them in Host CRM → Queued to copy + send.`);
       setSelected(new Set());
     } catch (e) {
       setErr(e.message?.replace(/^.*Error:\s*/, '') || 'Confirm failed');
@@ -794,12 +734,6 @@ function HostOutreachCampaign() {
       setBusy(false);
     }
   }
-
-  const filteredConfirmed = confirmed.filter((p) => {
-    if (confirmedFilter === 'contacted') return p.status !== 'queued';
-    if (confirmedFilter === 'pending') return p.status === 'queued';
-    return true;
-  });
 
   return (
     <div>
@@ -870,32 +804,147 @@ function HostOutreachCampaign() {
           </div>
         )}
       </div>
+    </div>
+  );
+}
 
-      <div style={{ marginTop: '1.25rem' }}>
-        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
-          <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#192524' }}>Confirmed ({filteredConfirmed.length})</span>
-          <select aria-label="Filter confirmed" value={confirmedFilter} onChange={(e) => setConfirmedFilter(e.target.value)}
-            style={{ ...input, padding: '0.35rem 0.6rem', fontSize: '0.74rem' }}>
-            <option value="">All confirmed</option>
-            <option value="pending">Not yet contacted</option>
-            <option value="contacted">Contacted</option>
-          </select>
-          <button onClick={() => downloadHostsCsv(filteredConfirmed, `collabnb-host-outreach-${new Date().toISOString().slice(0, 10)}.csv`)}
-            disabled={filteredConfirmed.length === 0}
-            style={{ padding: '0.35rem 0.9rem', borderRadius: 9999, border: '1.5px solid rgba(25,37,36,0.2)', background: 'transparent', color: '#192524', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer', opacity: filteredConfirmed.length === 0 ? 0.5 : 1 }}>
-            Download CSV
-          </button>
-        </div>
+// ─── Host CRM board — kanban across the full lifecycle ─────────────────────────
+const CRM_COLUMNS = [
+  { id: 'new', label: 'New' },
+  { id: 'queued', label: 'Queued' },
+  { id: 'contacted', label: 'Contacted' },
+  { id: 'replied', label: 'Replied' },
+  { id: 'signed', label: 'Signed' },
+  { id: 'declined', label: 'Declined' },
+];
 
-        {filteredConfirmed.length === 0 ? (
-          <p style={{ fontSize: '0.76rem', color: '#959D90' }}>Nothing confirmed yet.</p>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '22rem', overflowY: 'auto', paddingRight: '0.25rem' }}>
-            {filteredConfirmed.map((p) => (
-              <ConfirmedRow key={String(p._id)} prospect={p} update={update} updateStatus={updateStatus} resetToPool={resetToPool} />
-            ))}
+function HostCrmBoard() {
+  const [tier, setTier] = useState('');
+  const [location, setLocation] = useState('');
+  const [filterText, setFilterText] = useState('');
+  const [selected, setSelected] = useState(() => new Set());
+  const [dragId, setDragId] = useState(null);
+  const [dragOverCol, setDragOverCol] = useState(null);
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkMsg, setBulkMsg] = useState('');
+
+  const generateDrafts = useAction(api.prospects.generateDraftsForSelected);
+  const updateStatus = useMutation(api.prospects.updateStatus);
+
+  const hosts = useQuery(api.prospects.getByKind, {
+    kind: 'host',
+    tier: tier || undefined,
+    location: location || undefined,
+  }) || [];
+
+  const filtered = hosts.filter((p) => {
+    if (!filterText.trim()) return true;
+    const t = filterText.toLowerCase();
+    return p.instagram_handle.toLowerCase().includes(t)
+      || (p.display_name || '').toLowerCase().includes(t)
+      || (p.location || '').toLowerCase().includes(t)
+      || (p.niche || '').toLowerCase().includes(t);
+  });
+
+  const byColumn = {};
+  for (const col of CRM_COLUMNS) byColumn[col.id] = [];
+  for (const p of filtered) (byColumn[p.status] || byColumn.new).push(p);
+
+  const allSelected = filtered.length > 0 && filtered.every((p) => selected.has(String(p._id)));
+  function toggleSelectAll() {
+    setSelected(allSelected ? new Set() : new Set(filtered.map((p) => String(p._id))));
+  }
+  function toggleOne(id) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      const key = String(id);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  }
+
+  async function bulkGenerate() {
+    if (selected.size === 0) return;
+    setBulkBusy(true); setBulkMsg('');
+    try {
+      const r = await generateDrafts({ ids: [...selected] });
+      setBulkMsg(`Drafted ${r.drafted} of ${selected.size} selected.`);
+      setSelected(new Set());
+    } catch (e) {
+      setBulkMsg(e.message?.replace(/^.*Error:\s*/, '') || 'Bulk draft failed');
+    } finally {
+      setBulkBusy(false);
+    }
+  }
+
+  function handleDrop(colId) {
+    setDragOverCol(null);
+    if (dragId) updateStatus({ id: dragId, status: colId }).catch(() => {});
+    setDragId(null);
+  }
+
+  return (
+    <div>
+      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center', marginBottom: '0.85rem' }}>
+        <input aria-label="Search hosts" value={filterText} onChange={(e) => setFilterText(e.target.value)}
+          placeholder="Search by name, location, niche…" style={{ ...input, width: 220, padding: '0.4rem 0.65rem', fontSize: '0.76rem' }} />
+        <select aria-label="Filter by tier" value={tier} onChange={(e) => setTier(e.target.value)} style={{ ...input, padding: '0.4rem 0.6rem', fontSize: '0.76rem' }}>
+          <option value="">All tiers</option>
+          {TIERS.map((t) => <option key={t} value={t}>{t}</option>)}
+        </select>
+        <input aria-label="Filter by location" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Location" style={{ ...input, width: 130, padding: '0.4rem 0.6rem', fontSize: '0.76rem' }} />
+        <button onClick={toggleSelectAll}
+          style={{ padding: '0.35rem 0.8rem', borderRadius: 9999, border: '1px solid rgba(25,37,36,0.15)', background: allSelected ? '#192524' : 'transparent', color: allSelected ? '#fff' : '#3C5759', fontSize: '0.74rem', fontWeight: 600, cursor: 'pointer' }}>
+          {allSelected ? 'Deselect all' : 'Select all'}
+        </button>
+        <button onClick={bulkGenerate} disabled={bulkBusy || selected.size === 0}
+          title="Drafts a message for each selected host, rotating through the 5 angle templates"
+          style={{ padding: '0.35rem 0.8rem', borderRadius: 9999, border: 'none', background: '#192524', color: '#fff', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer', opacity: (bulkBusy || selected.size === 0) ? 0.5 : 1 }}>
+          {bulkBusy ? 'Drafting…' : `Draft DMs for selected (${selected.size})`}
+        </button>
+        <button onClick={() => downloadHostsCsv(filtered, `collabnb-hosts-${new Date().toISOString().slice(0, 10)}.csv`)}
+          disabled={filtered.length === 0}
+          style={{ padding: '0.35rem 0.9rem', borderRadius: 9999, border: '1.5px solid rgba(25,37,36,0.2)', background: 'transparent', color: '#192524', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer', opacity: filtered.length === 0 ? 0.5 : 1 }}>
+          Download CSV
+        </button>
+        {bulkMsg && <span style={{ fontSize: '0.72rem', color: '#166534' }}>{bulkMsg}</span>}
+      </div>
+
+      <div style={{ display: 'flex', gap: '0.75rem', overflowX: 'auto', paddingBottom: '0.5rem' }}>
+        {CRM_COLUMNS.map((col) => (
+          <div key={col.id}
+            onDragOver={(e) => { e.preventDefault(); setDragOverCol(col.id); }}
+            onDragLeave={() => setDragOverCol((c) => (c === col.id ? null : c))}
+            onDrop={(e) => { e.preventDefault(); handleDrop(col.id); }}
+            style={{
+              flex: '0 0 280px', width: 280, borderRadius: '0.875rem',
+              background: dragOverCol === col.id ? 'rgba(123,104,200,0.08)' : 'rgba(255,255,255,0.5)',
+              border: dragOverCol === col.id ? '1.5px dashed rgba(123,104,200,0.4)' : '1px solid rgba(25,37,36,0.08)',
+              padding: '0.6rem', minHeight: '20rem',
+            }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.6rem' }}>
+              <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#192524' }}>{col.label}</span>
+              <span style={{ fontSize: '0.7rem', color: '#959D90' }}>{byColumn[col.id].length}</span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '72vh', overflowY: 'auto' }}>
+              {byColumn[col.id].map((p) => (
+                <div key={String(p._id)} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.3rem' }}>
+                  <div draggable onDragStart={() => setDragId(p._id)} onDragEnd={() => setDragId(null)}
+                    title="Drag to move to another column"
+                    style={{ cursor: 'grab', color: '#959D90', fontSize: '0.85rem', lineHeight: 1, paddingTop: '0.9rem', flexShrink: 0, userSelect: 'none' }}>
+                    ⠿
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <ProspectCard prospect={p} selected={selected.has(String(p._id))} onToggleSelect={toggleOne} />
+                  </div>
+                </div>
+              ))}
+              {byColumn[col.id].length === 0 && (
+                <p style={{ fontSize: '0.7rem', color: '#959D90', textAlign: 'center', margin: '1rem 0' }}>Empty</p>
+              )}
+            </div>
           </div>
-        )}
+        ))}
       </div>
     </div>
   );
@@ -951,10 +1000,6 @@ function AutoDiscoveryCard() {
 // Toggle-panel buttons, scoped per side so only relevant tools show — hosts
 // have their own dedicated search inside Host outreach, so the older
 // generic creator tools (Find/Auto/Import/Build queue) only apply to creators.
-const HOST_TOOLS = [
-  { id: 'outreach', label: 'Host outreach', title: 'Search, select, draft, and track your daily host outreach batch — this is the main host workflow.' },
-  { id: 'add', label: 'Add manually', title: 'Add one specific host you already know the handle for, without running a search.' },
-];
 const CREATOR_TOOLS = [
   { id: 'find', label: 'Find creators', title: 'Search Instagram by niche/location, auto-imports and scores the top 10 creators.' },
   { id: 'auto', label: 'Auto-discovery', title: 'Runs that same creator search automatically every morning at 7am.' },
@@ -966,7 +1011,8 @@ export default function Discovery({ sidebarCollapsed, setSidebarCollapsed }) {
   const stats = useQuery(api.prospects.getStats);
   const buildQueue = useMutation(api.prospects.buildTodayQueue);
   const [side, setSide] = useState('hosts'); // 'hosts' | 'creators'
-  const [openPanel, setOpenPanel] = useState('outreach');
+  const [hostView, setHostView] = useState('outreach'); // 'outreach' | 'crm'
+  const [openPanel, setOpenPanel] = useState(null);
   const [queueMsg, setQueueMsg] = useState('');
   const togglePanel = (p) => setOpenPanel(cur => (cur === p ? null : p));
 
@@ -975,10 +1021,7 @@ export default function Discovery({ sidebarCollapsed, setSidebarCollapsed }) {
 
   function switchSide(next) {
     setSide(next);
-    // Hosts opens straight into its main workflow panel; Creators starts
-    // collapsed so the search tool doesn't eat space above the list —
-    // click "Find creators" to open it when needed.
-    setOpenPanel(next === 'hosts' ? 'outreach' : null);
+    setOpenPanel(null);
   }
 
   async function handleBuildQueue() {
@@ -987,8 +1030,6 @@ export default function Discovery({ sidebarCollapsed, setSidebarCollapsed }) {
     setTimeout(() => setQueueMsg(''), 4000);
   }
 
-  const tools = side === 'hosts' ? HOST_TOOLS : CREATOR_TOOLS;
-
   return (
     <div style={{ padding: '1.75rem 2rem 2rem' }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
@@ -996,7 +1037,9 @@ export default function Discovery({ sidebarCollapsed, setSidebarCollapsed }) {
           <h2 style={{ fontFamily: 'Cabinet Grotesk, sans-serif', fontWeight: 700, fontSize: '1.25rem', color: '#192524', margin: '0 0 0.2rem' }}>Discovery</h2>
           <p style={{ fontSize: '0.78rem', color: '#959D90', margin: 0 }}>
             {side === 'hosts'
-              ? 'Search, select ~20, draft, and track your daily host outreach batch. Instagram DMs stay manual — this board preps and tracks everything else.'
+              ? (hostView === 'outreach'
+                ? 'Search, select ~20, and draft your daily host outreach batch. Instagram DMs stay manual.'
+                : 'Every host across its lifecycle — drag a card to a new column, or use Mark ... to advance it.')
               : `Today's outreach: ${contactedCreators}/20 creators contacted. Instagram DMs stay manual (20/day is the safe limit); this board preps and tracks everything else.`}
           </p>
         </div>
@@ -1026,12 +1069,28 @@ export default function Discovery({ sidebarCollapsed, setSidebarCollapsed }) {
             Build today's queue
           </button>
         )}
-        {tools.map(({ id, label: l, title: t }) => (
-          <button key={id} onClick={() => togglePanel(id)} title={t}
-            style={{ padding: '0.5rem 1.1rem', borderRadius: 9999, border: '1.5px solid rgba(25,37,36,0.2)', background: openPanel === id ? 'rgba(25,37,36,0.06)' : 'transparent', color: '#192524', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}>
-            {l}
-          </button>
-        ))}
+        {side === 'hosts' ? (
+          <>
+            <button onClick={() => setHostView(v => (v === 'outreach' ? 'crm' : 'outreach'))}
+              title={hostView === 'outreach' ? 'Switch to the full host CRM board' : 'Switch back to the search/select/confirm workflow'}
+              style={{ padding: '0.5rem 1.1rem', borderRadius: 9999, border: 'none', background: '#192524', color: '#fff', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}>
+              {hostView === 'outreach' ? 'Host CRM' : 'Host outreach'}
+            </button>
+            {hostView === 'outreach' && (
+              <button onClick={() => togglePanel('add')} title="Add one specific host you already know the handle for, without running a search"
+                style={{ padding: '0.5rem 1.1rem', borderRadius: 9999, border: '1.5px solid rgba(25,37,36,0.2)', background: openPanel === 'add' ? 'rgba(25,37,36,0.06)' : 'transparent', color: '#192524', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}>
+                Add manually
+              </button>
+            )}
+          </>
+        ) : (
+          CREATOR_TOOLS.map(({ id, label: l, title: t }) => (
+            <button key={id} onClick={() => togglePanel(id)} title={t}
+              style={{ padding: '0.5rem 1.1rem', borderRadius: 9999, border: '1.5px solid rgba(25,37,36,0.2)', background: openPanel === id ? 'rgba(25,37,36,0.06)' : 'transparent', color: '#192524', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}>
+              {l}
+            </button>
+          ))
+        )}
       </div>
 
       {queueMsg && (
@@ -1040,18 +1099,21 @@ export default function Discovery({ sidebarCollapsed, setSidebarCollapsed }) {
         </div>
       )}
 
-      {openPanel && (
+      {openPanel === 'add' && (
         <div style={{ marginBottom: '1.25rem', padding: '1rem', borderRadius: '1rem', background: 'rgba(255,255,255,0.6)', border: '1px solid rgba(25,37,36,0.08)' }}>
-          {openPanel === 'outreach' && <HostOutreachCampaign />}
+          <AddProspectForm onDone={() => setOpenPanel(null)} defaultKind={side === 'hosts' ? 'host' : 'creator'} />
+        </div>
+      )}
+      {side === 'creators' && openPanel && openPanel !== 'add' && (
+        <div style={{ marginBottom: '1.25rem', padding: '1rem', borderRadius: '1rem', background: 'rgba(255,255,255,0.6)', border: '1px solid rgba(25,37,36,0.08)' }}>
           {openPanel === 'find' && <FindCreators />}
           {openPanel === 'auto' && <AutoDiscoveryCard />}
-          {openPanel === 'add' && <AddProspectForm onDone={() => setOpenPanel(null)} />}
           {openPanel === 'import' && <ApifyImport />}
         </div>
       )}
 
       {side === 'hosts'
-        ? <ProspectPanel kind="host" title="Hosts" />
+        ? (hostView === 'outreach' ? <HostOutreachCampaign /> : <HostCrmBoard />)
         : <ProspectPanel kind="creator" title="Creators" />}
     </div>
   );

@@ -36,6 +36,26 @@ export const markRead = mutation({
   },
 });
 
+// Opening a conversation in the Inbox should clear any pending "new message"
+// pings for that thread — not just the bell dropdown/notifications tab, which
+// previously only cleared on its own separate markAllRead action.
+export const markReadForThread = mutation({
+  args: { userId: v.string(), threadKey: v.string() },
+  handler: async (ctx, { userId, threadKey }) => {
+    if (!(await canAccessOwner(ctx, userId))) return;
+    const link = `#/inbox?thread=${encodeURIComponent(threadKey)}`;
+    const all = await ctx.db
+      .query("notifications")
+      .withIndex("by_user", (q) => q.eq("user_id", userId))
+      .collect();
+    await Promise.all(
+      all
+        .filter((n) => !n.read && n.link === link)
+        .map((n) => ctx.db.patch(n._id, { read: true }))
+    );
+  },
+});
+
 export const markAllRead = mutation({
   args: { userId: v.string() },
   handler: async (ctx, { userId }) => {

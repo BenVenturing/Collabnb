@@ -49,11 +49,13 @@ export const list = query({
           .order("desc")
           .take(1);
         const last = msgs[0];
-        const unread = await ctx.db
+        const incoming = await ctx.db
           .query("thread_messages")
           .withIndex("by_thread", (q) => q.eq("thread_key", key))
           .filter((q: any) => q.eq(q.field("sender_id"), r.participant_id))
           .collect();
+        const ownerReadAt = r.owner_read_at ?? 0;
+        const unread = incoming.filter((m: any) => m.created_at > ownerReadAt).length;
         const p = r.participant_id ? pMap.get(r.participant_id) : null;
         return {
           _id: String(r._id),
@@ -67,7 +69,7 @@ export const list = query({
           last_message: last?.text ?? r.last_message ?? "",
           last_at: last?.created_at ?? r._creationTime,
           last_sender_id: last?.sender_id ?? null,
-          unread: unread.length,
+          unread,
           _creationTime: r._creationTime,
         };
       })
@@ -104,6 +106,7 @@ export const getMineAsUser = query({
       .order("desc")
       .take(1);
     const last = msgs[0];
+    const participantReadAt = thread.participant_read_at ?? 0;
 
     return {
       id: key,
@@ -116,7 +119,7 @@ export const getMineAsUser = query({
       timestamp: last?.created_at
         ? new Date(last.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })
         : "New",
-      unread: last && last.sender_id === personaId ? 1 : 0,
+      unread: last && last.sender_id === personaId && last.created_at > participantReadAt ? 1 : 0,
       is_founder: false,
     };
   },
@@ -136,12 +139,13 @@ export const unreadCount = query({
     let total = 0;
     for (const r of rows) {
       const key = r.thread_key || threadKeyFor(r.participant_id);
+      const ownerReadAt = r.owner_read_at ?? 0;
       const incoming = await ctx.db
         .query("thread_messages")
         .withIndex("by_thread", (q) => q.eq("thread_key", key))
         .filter((q: any) => q.eq(q.field("sender_id"), r.participant_id))
         .collect();
-      total += incoming.length;
+      total += incoming.filter((m: any) => m.created_at > ownerReadAt).length;
     }
     return total;
   },
@@ -182,14 +186,35 @@ export const startWithUser = mutation({
   },
 });
 
-// Mark a thread's incoming messages as read (currently a no-op marker — unread
-// is computed live from thread_messages, so "read" is implied once the admin
-// opens the thread. Kept as a hook for future server-side read receipts.)
+// Admin has opened this thread — stamp owner_read_at so the participant's
+// past messages stop counting as unread in the admin's own thread list.
 export const markRead = mutation({
   args: { threadKey: v.string() },
   handler: async (ctx, { threadKey }) => {
     await requireAdmin(ctx);
-    // Intentionally empty: unread is derived, not stored, for admin threads.
+    const row = await ctx.db
+      .query("threads")
+      .filter((q: any) => q.eq(q.field("thread_key"), threadKey))
+      .first();
+    if (row) await ctx.db.patch(row._id, { owner_read_at: Date.now() });
+    return true;
+  },
+});
+
+// The signed-in participant has opened their thread with the Collabnb persona
+// — stamp participant_read_at so the "1" badge clears across the app (Inbox
+// list + notifications) instead of persisting until they reply.
+export const markReadByParticipant = mutation({
+  args: { threadKey: v.string() },
+  handler: async (ctx, { threadKey }) => {
+    const profile = await getAuthedProfile(ctx);
+    if (!profile) return false;
+    const row = await ctx.db
+      .query("threads")
+      .filter((q: any) => q.eq(q.field("thread_key"), threadKey))
+      .first();
+    if (!row || row.participant_id !== String(profile._id)) return false;
+    await ctx.db.patch(row._id, { participant_read_at: Date.now() });
     return true;
   },
 });

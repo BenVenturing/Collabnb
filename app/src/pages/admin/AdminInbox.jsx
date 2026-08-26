@@ -154,7 +154,7 @@ function SenderChip({ name, photo, uploading, onFileSelected }) {
   );
 }
 
-const SIGN = 'Cheers,\nThe Collabnb team';
+const SIGN = 'Cheers,\nThe Collabnb Team';
 const SIGN_BLOCK = '\n\n' + SIGN;
 
 // Rotating "flickering" prompt ideas shown as the composer placeholder.
@@ -393,7 +393,7 @@ function Conversation({ thread, persona }) {
           </div>
         )}
         <p style={{ textAlign: 'center', fontSize: 10, color: 'var(--sage)', opacity: 0.7, margin: '4px 0 0' }}>
-          {aiMode ? 'AI draft mode · Enter to generate' : 'Signed “Cheers, The Collabnb team” · ✨ to draft with AI · Enter to send'}
+          {aiMode ? 'AI draft mode · Enter to generate' : 'Signed “Cheers, The Collabnb Team” · ✨ to draft with AI · Enter to send'}
         </p>
       </div>
     </div>
@@ -409,6 +409,7 @@ export default function AdminInbox() {
   const threads = useQuery(api.adminThreads.list) ?? [];
   const messagable = useQuery(api.profiles.listMessagable) ?? [];
   const startThread = useMutation(api.adminThreads.startWithUser);
+  const markThreadRead = useMutation(api.adminThreads.markRead);
 
   const [selectedKey, setSelectedKey] = useState(null);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -417,6 +418,11 @@ export default function AdminInbox() {
 
   // Ensure the persona exists on first mount (idempotent server-side).
   useEffect(() => { if (persona === null) ensurePersona({}).catch(() => {}); }, [persona, ensurePersona]);
+
+  // Opening a thread clears its unread badge (both here and in the user's own Inbox).
+  useEffect(() => {
+    if (selectedKey) markThreadRead({ threadKey: selectedKey }).catch(() => {});
+  }, [selectedKey, markThreadRead]);
 
   // Uploads a new photo directly to the Collabnb persona's own Convex profile —
   // independent of whichever admin is signed in, since this is a shared brand

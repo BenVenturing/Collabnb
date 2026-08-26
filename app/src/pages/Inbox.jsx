@@ -732,6 +732,8 @@ export default function Inbox() {
   const [toastMsg, setToastMsg] = useState('');
   const searchInputRef = useRef(null);
   const creatorParamHandled = useRef(false);
+  const markThreadNotifsRead = useMutation(api.notifications.markReadForThread);
+  const markAdminThreadRead = useMutation(api.adminThreads.markReadByParticipant);
 
   // Real listings power the "start a new conversation" search (mirrors Explore)
   const realRaw   = useQuery(api.listings.getAll, profile?._id ? { viewerId: String(profile._id) } : {}) ?? [];
@@ -744,9 +746,10 @@ export default function Inbox() {
     if (!threadParam) return;
     const match = threads.find((t) => t.thread_key === threadParam || t.id === threadParam);
     if (match) {
-      setSelectedId(match.id);
+      openThread(match.id);
       setSearchParams({}, { replace: true });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams, threads, setSearchParams]);
 
   // Open or create a thread when navigated from HostCreators with ?creatorName=
@@ -780,7 +783,15 @@ export default function Inbox() {
     setSearchQuery('');
     setSearchFocused(false);
     searchInputRef.current?.blur();
-  }, []);
+
+    const thread = threads.find((t) => t.id === id);
+    if (thread?.thread_key && profile?._id) {
+      markThreadNotifsRead({ userId: String(profile._id), threadKey: thread.thread_key }).catch(() => {});
+      if (thread.tag === 'Collabnb') {
+        markAdminThreadRead({ threadKey: thread.thread_key }).catch(() => {});
+      }
+    }
+  }, [threads, profile, markThreadNotifsRead, markAdminThreadRead]);
 
   // Show a brief toast message
   const showToast = useCallback((msg) => {

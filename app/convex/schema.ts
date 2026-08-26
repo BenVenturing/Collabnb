@@ -241,6 +241,10 @@ export default defineSchema({
     owner_id: v.optional(v.string()),
     participant_id: v.optional(v.string()),
     thread_key: v.optional(v.string()),
+    // Read-tracking: last time each side actually opened this thread, so
+    // "unread" reflects real read state instead of just "who sent last".
+    owner_read_at: v.optional(v.number()),
+    participant_read_at: v.optional(v.number()),
   })
     .index("by_collab", ["collab_id"])
     .index("by_owner", ["owner_id"])

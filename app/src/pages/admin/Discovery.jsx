@@ -92,7 +92,7 @@ function bestPost(p) {
 }
 
 // ─── Single prospect card ─────────────────────────────────────────────────────
-function ProspectCard({ prospect, selected, onToggleSelect }) {
+function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
   const updateStatus = useMutation(api.prospects.updateStatus);
   const update = useMutation(api.prospects.update);
   const remove = useMutation(api.prospects.remove);
@@ -162,7 +162,11 @@ function ProspectCard({ prospect, selected, onToggleSelect }) {
     window.open(`https://ig.me/m/${prospect.instagram_handle}`, '_blank', 'noopener');
   }
 
-  const nextStatus = STATUS_FLOW[STATUS_FLOW.indexOf(prospect.status) + 1];
+  // Declined isn't part of the forward flow — indexOf returns -1 there, which
+  // would otherwise wrap around to STATUS_FLOW[0] ("new") and offer a
+  // nonsensical "Mark new" button.
+  const flowIdx = STATUS_FLOW.indexOf(prospect.status);
+  const nextStatus = flowIdx === -1 ? undefined : STATUS_FLOW[flowIdx + 1];
 
   async function copyDm() {
     try {
@@ -190,7 +194,7 @@ function ProspectCard({ prospect, selected, onToggleSelect }) {
               style={{ fontSize: '0.84rem', fontWeight: 700, color: '#192524', textDecoration: 'none' }}>
               @{prospect.instagram_handle}
             </a>
-            <StatusBadge status={prospect.status} />
+            {!crm && <StatusBadge status={prospect.status} />}
             {prospect.tier && <span style={{ fontSize: '0.62rem', padding: '0.15rem 0.45rem', borderRadius: 9999, background: 'rgba(209,235,219,0.6)', color: '#166534', fontWeight: 600, textTransform: 'capitalize' }}>{prospect.tier}</span>}
             {prospect.dm_angle && (
               <span title="Outreach copy angle" style={{ fontSize: '0.62rem', padding: '0.15rem 0.45rem', borderRadius: 9999, background: 'rgba(123,104,200,0.12)', color: '#5b4aa8', fontWeight: 600 }}>
@@ -214,32 +218,60 @@ function ProspectCard({ prospect, selected, onToggleSelect }) {
       </div>
 
       {/* Quick status advance */}
-      <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.6rem', flexWrap: 'wrap' }}>
-        {nextStatus && (
-          <button onClick={() => updateStatus({ id: prospect._id, status: nextStatus })}
-            style={{ padding: '0.32rem 0.8rem', borderRadius: 9999, border: 'none', background: '#192524', color: '#fff', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer' }}>
-            Mark {STATUS_CFG[nextStatus].label.toLowerCase()}
-          </button>
-        )}
-        {prospect.status !== 'declined' && prospect.status !== 'signed' && (
-          <button onClick={() => updateStatus({ id: prospect._id, status: 'declined' })}
-            style={{ padding: '0.32rem 0.7rem', borderRadius: 9999, border: '1px solid rgba(200,104,104,0.3)', background: 'transparent', color: '#9b2d2d', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer' }}>
-            Declined
-          </button>
-        )}
-        {prospect.status !== 'new' && prospect.status !== 'signed' && (
-          <button onClick={doReset} disabled={resetting}
-            title="Back to a fresh pool candidate — keeps the draft, clears status/queue"
-            style={{ padding: '0.32rem 0.7rem', borderRadius: 9999, border: '1px solid rgba(25,37,36,0.15)', background: 'transparent', color: '#3C5759', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer', opacity: resetting ? 0.5 : 1 }}>
-            {resetting ? 'Resetting…' : 'Reset'}
-          </button>
-        )}
-        {prospect.email && (
-          <a href={`mailto:${prospect.email}`} style={{ padding: '0.32rem 0.7rem', borderRadius: 9999, border: '1px solid rgba(25,37,36,0.15)', color: '#3C5759', fontSize: '0.72rem', fontWeight: 600, textDecoration: 'none' }}>
-            Email
-          </a>
-        )}
-      </div>
+      {crm ? (
+        <div style={{ marginTop: '0.6rem' }}>
+          {nextStatus && (
+            <div style={{ display: 'flex', justifyContent: 'center' }}>
+              <button onClick={() => updateStatus({ id: prospect._id, status: nextStatus })}
+                style={{ padding: '0.32rem 0.8rem', borderRadius: 9999, border: 'none', background: '#192524', color: '#fff', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer' }}>
+                Mark {STATUS_CFG[nextStatus].label.toLowerCase()}
+              </button>
+            </div>
+          )}
+          {prospect.status !== 'signed' && (
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '0.4rem', marginTop: '0.4rem' }}>
+              {prospect.status !== 'declined' && (
+                <button onClick={() => updateStatus({ id: prospect._id, status: 'declined' })}
+                  style={{ padding: '0.32rem 0.7rem', borderRadius: 9999, border: '1px solid rgba(200,104,104,0.3)', background: 'transparent', color: '#9b2d2d', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer' }}>
+                  Declined
+                </button>
+              )}
+              <button onClick={doReset} disabled={resetting}
+                title="Back to a fresh pool candidate — keeps the draft, clears status/queue"
+                style={{ padding: '0.32rem 0.7rem', borderRadius: 9999, border: '1px solid rgba(25,37,36,0.15)', background: 'transparent', color: '#3C5759', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer', opacity: resetting ? 0.5 : 1 }}>
+                {resetting ? 'Resetting…' : 'Reset'}
+              </button>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.6rem', flexWrap: 'wrap' }}>
+          {nextStatus && (
+            <button onClick={() => updateStatus({ id: prospect._id, status: nextStatus })}
+              style={{ padding: '0.32rem 0.8rem', borderRadius: 9999, border: 'none', background: '#192524', color: '#fff', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer' }}>
+              Mark {STATUS_CFG[nextStatus].label.toLowerCase()}
+            </button>
+          )}
+          {prospect.status !== 'declined' && prospect.status !== 'signed' && (
+            <button onClick={() => updateStatus({ id: prospect._id, status: 'declined' })}
+              style={{ padding: '0.32rem 0.7rem', borderRadius: 9999, border: '1px solid rgba(200,104,104,0.3)', background: 'transparent', color: '#9b2d2d', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer' }}>
+              Declined
+            </button>
+          )}
+          {prospect.status !== 'new' && prospect.status !== 'signed' && (
+            <button onClick={doReset} disabled={resetting}
+              title="Back to a fresh pool candidate — keeps the draft, clears status/queue"
+              style={{ padding: '0.32rem 0.7rem', borderRadius: 9999, border: '1px solid rgba(25,37,36,0.15)', background: 'transparent', color: '#3C5759', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer', opacity: resetting ? 0.5 : 1 }}>
+              {resetting ? 'Resetting…' : 'Reset'}
+            </button>
+          )}
+          {prospect.email && (
+            <a href={`mailto:${prospect.email}`} style={{ padding: '0.32rem 0.7rem', borderRadius: 9999, border: '1px solid rgba(25,37,36,0.15)', color: '#3C5759', fontSize: '0.72rem', fontWeight: 600, textDecoration: 'none' }}>
+              Email
+            </a>
+          )}
+        </div>
+      )}
 
       {open && (
         <div style={{ marginTop: '0.7rem', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
@@ -691,10 +723,12 @@ function HostSearchImport() {
 function HostOutreachCampaign() {
   const pool = useQuery(api.prospects.getHostPool) || [];
   const confirmBatch = useAction(api.prospects.confirmHostBatch);
+  const remove = useMutation(api.prospects.remove);
 
   const [filterText, setFilterText] = useState('');
   const [selected, setSelected] = useState(() => new Set());
   const [busy, setBusy] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [msg, setMsg] = useState('');
   const [err, setErr] = useState('');
 
@@ -708,8 +742,9 @@ function HostOutreachCampaign() {
       || (p.bio || '').toLowerCase().includes(t);
   });
 
-  function selectTop(n) {
-    setSelected(new Set(filteredPool.slice(0, n).map((p) => String(p._id))));
+  const allSelected = filteredPool.length > 0 && filteredPool.every((p) => selected.has(String(p._id)));
+  function toggleSelectAll() {
+    setSelected(allSelected ? new Set() : new Set(filteredPool.map((p) => String(p._id))));
   }
 
   function toggle(id) {
@@ -726,12 +761,28 @@ function HostOutreachCampaign() {
     setBusy(true); setErr(''); setMsg('');
     try {
       const r = await confirmBatch({ ids: [...selected] });
-      setMsg(`Confirmed ${r.confirmed} — drafted with the NVIDIA model. Find them in Host CRM → Queued to copy + send.`);
+      setMsg(`Confirmed ${r.confirmed} — drafted with the NVIDIA model. Find them in Host CRM → Confirmed to copy + send.`);
       setSelected(new Set());
     } catch (e) {
       setErr(e.message?.replace(/^.*Error:\s*/, '') || 'Confirm failed');
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function doDelete() {
+    if (selected.size === 0) return;
+    if (!window.confirm(`Remove ${selected.size} selected candidate${selected.size === 1 ? '' : 's'} from the pool?`)) return;
+    setDeleting(true); setErr(''); setMsg('');
+    try {
+      const ids = [...selected];
+      await Promise.all(ids.map((id) => remove({ id })));
+      setMsg(`Removed ${ids.length} from the pool.`);
+      setSelected(new Set());
+    } catch (e) {
+      setErr(e.message?.replace(/^.*Error:\s*/, '') || 'Delete failed');
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -748,21 +799,17 @@ function HostOutreachCampaign() {
           <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#192524' }}>Candidate pool ({filteredPool.length})</span>
           <input aria-label="Filter pool" value={filterText} onChange={(e) => setFilterText(e.target.value)}
             placeholder="Filter by name, location, niche…" style={{ ...input, width: 220, padding: '0.35rem 0.6rem', fontSize: '0.74rem' }} />
-          <button onClick={() => selectTop(20)}
-            style={{ padding: '0.3rem 0.8rem', borderRadius: 9999, border: '1px solid rgba(25,37,36,0.15)', background: 'transparent', color: '#3C5759', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer' }}>
-            Select top 20
-          </button>
-          <button onClick={() => setSelected(new Set(filteredPool.map((p) => String(p._id))))}
-            style={{ padding: '0.3rem 0.8rem', borderRadius: 9999, border: '1px solid rgba(25,37,36,0.15)', background: 'transparent', color: '#3C5759', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer' }}>
-            Select all
-          </button>
-          <button onClick={() => setSelected(new Set())} disabled={selected.size === 0}
-            style={{ padding: '0.3rem 0.8rem', borderRadius: 9999, border: '1px solid rgba(25,37,36,0.15)', background: 'transparent', color: '#3C5759', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer', opacity: selected.size === 0 ? 0.5 : 1 }}>
-            Select none
+          <button onClick={toggleSelectAll}
+            style={{ padding: '0.3rem 0.8rem', borderRadius: 9999, border: '1px solid rgba(25,37,36,0.15)', background: allSelected ? '#192524' : 'transparent', color: allSelected ? '#fff' : '#3C5759', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer' }}>
+            {allSelected ? 'Deselect all' : 'Select all'}
           </button>
           <button onClick={doConfirm} disabled={busy || selected.size === 0}
             style={{ padding: '0.4rem 1rem', borderRadius: 9999, border: 'none', background: '#192524', color: '#fff', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', opacity: (busy || selected.size === 0) ? 0.5 : 1 }}>
             {busy ? 'Confirming…' : `Confirm (${selected.size})`}
+          </button>
+          <button onClick={doDelete} disabled={deleting || selected.size === 0}
+            style={{ padding: '0.4rem 1rem', borderRadius: 9999, border: '1.5px solid rgba(200,104,104,0.35)', background: 'transparent', color: '#9b2d2d', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', opacity: (deleting || selected.size === 0) ? 0.5 : 1 }}>
+            {deleting ? 'Deleting…' : `Delete (${selected.size})`}
           </button>
         </div>
         {msg && <p style={{ fontSize: '0.74rem', color: '#166534', margin: '0 0 0.5rem' }}>{msg}</p>}
@@ -841,6 +888,7 @@ function HostCrmBoard() {
   }) || [];
 
   const filtered = hosts.filter((p) => {
+    if (p.status === 'new') return false; // pool candidates live in Host Outreach only
     if (!filterText.trim()) return true;
     const t = filterText.toLowerCase();
     return p.instagram_handle.toLowerCase().includes(t)
@@ -851,7 +899,7 @@ function HostCrmBoard() {
 
   const byColumn = {};
   for (const col of CRM_COLUMNS) byColumn[col.id] = [];
-  for (const p of filtered) (byColumn[p.status] || byColumn.new).push(p);
+  for (const p of filtered) (byColumn[p.status] || byColumn.queued).push(p);
 
   const allSelected = filtered.length > 0 && filtered.every((p) => selected.has(String(p._id)));
   function toggleSelectAll() {

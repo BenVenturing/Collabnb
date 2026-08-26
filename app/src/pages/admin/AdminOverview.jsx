@@ -68,7 +68,7 @@ export default function AdminOverview() {
   };
 
   return (
-    <div style={{ position: 'relative', overflow: 'hidden', background: '#192524', isolation: 'isolate', minHeight: '100%' }}>
+    <div style={{ position: 'relative', overflow: 'hidden', background: '#192524', isolation: 'isolate', minHeight: 'calc(100dvh - 52px - 3rem)' }}>
       <style>{`
         @keyframes hazyDrift1 { 0% { transform: translate(-12%, -8%) scale(1); } 50% { transform: translate(10%, 6%) scale(1.15); } 100% { transform: translate(-12%, -8%) scale(1); } }
         @keyframes hazyDrift2 { 0% { transform: translate(15%, 10%) scale(1.1); } 50% { transform: translate(-8%, -12%) scale(0.95); } 100% { transform: translate(15%, 10%) scale(1.1); } }
@@ -122,15 +122,15 @@ export default function AdminOverview() {
               onClick={() => goToTab(t.tab, t.view)}
               style={{
                 textAlign: 'left', padding: '1rem 1.1rem', borderRadius: '1.25rem',
-                background: 'rgba(255,255,255,0.72)', border: '1px solid rgba(255,255,255,0.8)',
-                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.9), 0 4px 16px rgba(25,37,36,0.05)',
-                cursor: 'pointer', transition: 'transform 0.8s cubic-bezier(0.19,1,0.22,1), box-shadow 0.8s cubic-bezier(0.19,1,0.22,1)',
+                background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.45)',
+                backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
+                cursor: 'pointer', transition: 'transform 0.8s cubic-bezier(0.19,1,0.22,1), background 0.8s cubic-bezier(0.19,1,0.22,1)',
               }}
-              onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = 'inset 0 1px 0 rgba(255,255,255,0.9), 0 10px 28px rgba(25,37,36,0.1)'; }}
-              onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = 'inset 0 1px 0 rgba(255,255,255,0.9), 0 4px 16px rgba(25,37,36,0.05)'; }}
+              onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.background = 'rgba(255,255,255,0.2)'; }}
+              onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.background = 'rgba(255,255,255,0.12)'; }}
             >
-              <div style={{ fontFamily: 'Cabinet Grotesk, sans-serif', fontWeight: 700, fontSize: '1.6rem', color: '#192524', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{t.value}</div>
-              <div style={{ fontSize: '0.72rem', color: '#959D90', marginTop: '0.4rem', fontFamily: 'Satoshi, sans-serif' }}>{t.label}</div>
+              <div style={{ fontFamily: 'Cabinet Grotesk, sans-serif', fontWeight: 700, fontSize: '1.6rem', color: '#fff', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{t.value}</div>
+              <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.65)', marginTop: '0.4rem', fontFamily: 'Satoshi, sans-serif' }}>{t.label}</div>
             </button>
           ))}
         </div>
@@ -142,21 +142,21 @@ export default function AdminOverview() {
           style={{
             display: 'flex', alignItems: 'center', gap: '0.9rem', width: '100%',
             textAlign: 'left', padding: '1rem 1.25rem', borderRadius: '1.25rem', marginBottom: '1.75rem',
-            background: 'rgba(255,255,255,0.72)', border: '1px solid rgba(255,255,255,0.8)',
-            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.9), 0 4px 16px rgba(25,37,36,0.05)',
-            cursor: 'pointer', transition: 'transform 0.8s cubic-bezier(0.19,1,0.22,1), box-shadow 0.8s cubic-bezier(0.19,1,0.22,1)',
+            background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.45)',
+            backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
+            cursor: 'pointer', transition: 'transform 0.8s cubic-bezier(0.19,1,0.22,1), background 0.8s cubic-bezier(0.19,1,0.22,1)',
           }}
-          onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = 'inset 0 1px 0 rgba(255,255,255,0.9), 0 10px 28px rgba(25,37,36,0.1)'; }}
-          onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = 'inset 0 1px 0 rgba(255,255,255,0.9), 0 4px 16px rgba(25,37,36,0.05)'; }}
+          onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.background = 'rgba(255,255,255,0.2)'; }}
+          onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.background = 'rgba(255,255,255,0.12)'; }}
         >
-          <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 40, height: 40, flexShrink: 0, borderRadius: '0.875rem', background: 'rgba(209,235,219,0.5)', color: '#166534' }}>
+          <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 40, height: 40, flexShrink: 0, borderRadius: '0.875rem', background: 'rgba(209,235,219,0.85)', color: '#166534' }}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
           </span>
           <span style={{ flex: 1 }}>
-            <div style={{ fontFamily: 'Cabinet Grotesk, sans-serif', fontWeight: 700, fontSize: '1rem', color: '#192524' }}>Platform analytics</div>
-            <div style={{ fontSize: '0.75rem', color: '#959D90', marginTop: '0.15rem', fontFamily: 'Satoshi, sans-serif' }}>Open the full dashboard</div>
+            <div style={{ fontFamily: 'Cabinet Grotesk, sans-serif', fontWeight: 700, fontSize: '1rem', color: '#fff' }}>Platform analytics</div>
+            <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.65)', marginTop: '0.15rem', fontFamily: 'Satoshi, sans-serif' }}>Open the full dashboard</div>
           </span>
-          <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#959D90" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+          <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.65)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
         </button>
 
         {/* Needs attention */}

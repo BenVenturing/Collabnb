@@ -465,11 +465,10 @@ export default function AdminInbox() {
   }
 
   return (
-    <div style={{ padding: '1.5rem', height: 'calc(100dvh - 52px)', boxSizing: 'border-box' }}>
+    <div style={{ display: 'flex', height: '100%', minHeight: 'calc(100dvh - 52px - 3rem)', overflow: 'hidden' }}>
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-      <div style={{ display: 'flex', height: '100%', background: 'rgba(255,255,255,0.58)', borderRadius: '1.25rem', border: '1px solid rgba(255,255,255,0.72)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.9), 0 8px 32px rgba(25,37,36,0.08)', overflow: 'hidden' }}>
 
-        {/* Left: thread list */}
+      {/* Left: thread list */}
         <div style={{ width: 320, flexShrink: 0, borderRight: '1px solid rgba(25,37,36,0.08)', display: 'flex', flexDirection: 'column' }}>
           <div style={{ padding: '16px 16px 12px', borderBottom: '1px solid rgba(25,37,36,0.08)' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
@@ -534,6 +533,5 @@ export default function AdminInbox() {
           )}
         </div>
       </div>
-    </div>
   );
 }

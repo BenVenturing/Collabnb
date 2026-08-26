@@ -72,6 +72,9 @@ function ThreadRow({ thread, isActive, onClick, onDelete }) {
   const { t } = useTranslation('inbox');
   const [showDelete, setShowDelete] = useState(false);
   const tagStyle = TAG_STYLES[thread.tag] || TAG_STYLES.Application;
+  // The Collabnb admin persona thread: title, tag, and sender name are all
+  // "Collabnb" — show it once (the bold title) instead of three times.
+  const isCollabnb = thread.tag === 'Collabnb';
 
   return (
     <div
@@ -90,15 +93,17 @@ function ThreadRow({ thread, isActive, onClick, onDelete }) {
             </p>
             <p className="text-sage text-[11px] flex-shrink-0">{thread.timestamp}</p>
           </div>
-          <div className="flex items-center gap-1.5 mb-0.5">
-            <span className={`inline-block text-[10px] font-semibold px-1.5 py-0.5 rounded ${tagStyle}`}>
-              {tagLabel(thread.tag)}
-            </span>
-            {thread.is_sample && (
-              <span className="inline-block text-[9px] font-bold px-1 py-0.5 rounded bg-amber-100 text-amber-600 uppercase tracking-wide">{t('threadRow.sample')}</span>
-            )}
-            <span className="text-sage text-[11px] truncate">{thread.host_name}</span>
-          </div>
+          {!isCollabnb && (
+            <div className="flex items-center gap-1.5 mb-0.5">
+              <span className={`inline-block text-[10px] font-semibold px-1.5 py-0.5 rounded ${tagStyle}`}>
+                {tagLabel(thread.tag)}
+              </span>
+              {thread.is_sample && (
+                <span className="inline-block text-[9px] font-bold px-1 py-0.5 rounded bg-amber-100 text-amber-600 uppercase tracking-wide">{t('threadRow.sample')}</span>
+              )}
+              <span className="text-sage text-[11px] truncate">{thread.host_name}</span>
+            </div>
+          )}
           <p className={`text-xs truncate ${thread.unread ? 'text-ink/70' : 'text-sage'}`}>
             {thread.last_message}
           </p>
@@ -157,7 +162,7 @@ function Bubble({ msg }) {
             <span className={`text-[10px] ${isMe ? 'text-bone/50' : 'text-sage'}`}>{msg.fileSize}</span>
           </div>
         )}
-        {msg.text && <p>{msg.text}</p>}
+        {msg.text && <p className="whitespace-pre-wrap">{msg.text}</p>}
         <p className={`text-[10px] mt-1 ${isMe ? 'text-bone/50 text-right' : 'text-sage'}`}>
           {msg.time}
         </p>
@@ -224,6 +229,7 @@ function ConversationPanel({ thread, onViewCollab, onArchive, onUpdateTag }) {
   const fileInputRef = useRef(null);
   const textareaRef = useRef(null);
   const tagStyle = TAG_STYLES[thread.tag] || TAG_STYLES.Application;
+  const isCollabnb = thread.tag === 'Collabnb';
   const navigate = useNavigate();
   const { profile } = useAuth();
   const { openModal } = useVerification();
@@ -238,9 +244,12 @@ function ConversationPanel({ thread, onViewCollab, onArchive, onUpdateTag }) {
   const [drafting, setDrafting] = useState(false);
   const [aiDraftError, setAiDraftError] = useState('');
   const [sendError, setSendError] = useState('');
-  const [aiPlaceholder, setAiPlaceholder] = useState('');
-  const aiPlaceholderTimerRef = useRef(null);
-  const aiTypingTimerRef = useRef(null);
+  const [aiMode, setAiMode] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [aiHintIdx, setAiHintIdx] = useState(0);
+  const counterpartFirstName = (thread.host_name || '').split(' ')[0] || t('conversation.someone');
+  const aiSuggestionChips = t('conversation.aiSuggestionChips', { returnObjects: true });
+  const aiPlaceholderHints = t('conversation.aiPlaceholderHints', { returnObjects: true });
 
   // Use sample messages for the demo thread
   const sampleMessages = thread.is_sample && THREAD_MESSAGES[thread.id]
@@ -271,24 +280,31 @@ function ConversationPanel({ thread, onViewCollab, onArchive, onUpdateTag }) {
     : messages;
 
   useEffect(() => {
-    clearInterval(aiPlaceholderTimerRef.current);
-    clearInterval(aiTypingTimerRef.current);
-    setAiPlaceholder('');
     setDrafting(false);
     setDraft('');
     setAttachments([]);
     setAiDraftError('');
     setSendError('');
+    setAiMode(false);
+    setAiPrompt('');
   }, [thread.id]);
 
-  // Stop both animation timers on unmount so they don't fire setState after
-  // the panel is gone.
-  useEffect(() => () => {
-    clearInterval(aiPlaceholderTimerRef.current);
-    clearInterval(aiTypingTimerRef.current);
-  }, []);
+  // While the AI panel is open, cycle the prompt box's placeholder through a
+  // few example prompts (first one nudges "just hit Generate, no prompt
+  // needed") so it reads as alive rather than a single static hint.
+  useEffect(() => {
+    if (!aiMode) return;
+    setAiHintIdx(0);
+    const hints = Array.isArray(aiPlaceholderHints) ? aiPlaceholderHints : [];
+    if (hints.length < 2) return;
+    const id = setInterval(() => {
+      setAiHintIdx((i) => (i + 1) % hints.length);
+    }, 2200);
+    return () => clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [aiMode]);
 
-  // Auto-grow the composer with its content (typed or AI-typed-out) up to a
+  // Auto-grow the composer with its content up to a
   // cap, then let it scroll internally instead of growing further.
   useEffect(() => {
     const el = textareaRef.current;
@@ -360,50 +376,22 @@ function ConversationPanel({ thread, onViewCollab, onArchive, onUpdateTag }) {
     }
   };
 
-  // Reveals `text` into the composer a few characters at a time instead of
-  // snapping it in all at once — reads as the AI "writing" the reply live.
-  const typeOutDraft = (text) => {
-    clearInterval(aiTypingTimerRef.current);
-    if (!text) { setDrafting(false); return; }
-    let i = 0;
-    const step = Math.max(1, Math.ceil(text.length / 50)); // ~50 ticks regardless of length
-    aiTypingTimerRef.current = setInterval(() => {
-      i += step;
-      setDraft(text.slice(0, i));
-      if (i >= text.length) {
-        clearInterval(aiTypingTimerRef.current);
-        setDrafting(false);
-      }
-    }, 16);
-  };
-
-  const handleDraftWithAi = async () => {
+  // AI mode: an empty prompt still just drafts generically from the
+  // conversation (same as before); typing a prompt first steers it (e.g.
+  // "ask about dates", "keep it short").
+  const runDraft = async () => {
     if (drafting) return;
-    // Whatever's already typed becomes an instruction for the AI (e.g. "make
-    // it shorter", "ask about dates") instead of being discarded — an empty
-    // box still just drafts a reply from the conversation as before.
-    const instruction = draft.trim();
     setDrafting(true);
     setAiDraftError('');
-    setDraft('');
-    let phraseIdx = 0;
-    const phrases = t('conversation.aiThinkingPhrases', { returnObjects: true });
-    setAiPlaceholder(Array.isArray(phrases) ? phrases[0] : '');
-    clearInterval(aiPlaceholderTimerRef.current);
-    aiPlaceholderTimerRef.current = setInterval(() => {
-      if (!Array.isArray(phrases) || phrases.length === 0) return;
-      phraseIdx = (phraseIdx + 1) % phrases.length;
-      setAiPlaceholder(phrases[phraseIdx]);
-    }, 1100);
     try {
+      const instruction = aiPrompt.trim();
       const { draft: suggested } = await draftAiReply({ threadKey, instruction: instruction || undefined });
-      clearInterval(aiPlaceholderTimerRef.current);
-      setAiPlaceholder('');
-      typeOutDraft(suggested);
+      setDraft(suggested);
+      setAiMode(false);
+      setAiPrompt('');
     } catch (err) {
-      clearInterval(aiPlaceholderTimerRef.current);
-      setAiPlaceholder('');
       setAiDraftError(err?.data || err?.message || t('conversation.aiDraftError'));
+    } finally {
       setDrafting(false);
     }
   };
@@ -429,11 +417,13 @@ function ConversationPanel({ thread, onViewCollab, onArchive, onUpdateTag }) {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <h2 className="font-display font-bold text-ink text-base truncate">{thread.listing_title}</h2>
-            <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded flex-shrink-0 ${tagStyle}`}>
-              {tagLabel(thread.tag)}
-            </span>
+            {!isCollabnb && (
+              <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded flex-shrink-0 ${tagStyle}`}>
+                {tagLabel(thread.tag)}
+              </span>
+            )}
           </div>
-          <p className="text-sage text-xs">{thread.host_name}</p>
+          {!isCollabnb && <p className="text-sage text-xs">{thread.host_name}</p>}
         </div>
         {/* Action icons */}
         <div className="flex gap-2">
@@ -490,98 +480,172 @@ function ConversationPanel({ thread, onViewCollab, onArchive, onUpdateTag }) {
 
       {/* Compose bar */}
       <div className="px-4 py-3 border-t border-stone/30 bg-white/60 backdrop-blur-sm flex-shrink-0">
-        {aiDraftError && (
-          <p className="text-xs text-red-600 mb-1.5 px-1">{aiDraftError}</p>
-        )}
         {sendError && (
           <p className="text-xs text-red-600 mb-1.5 px-1">{sendError}</p>
         )}
-        <div className="flex items-center gap-2 bg-bone rounded-2xl px-4 py-2.5 border border-stone/40">
-          <button
-            onClick={handleDraftWithAi}
-            disabled={drafting}
-            className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-colors hover:bg-stone/30 disabled:opacity-50"
-            title={t('conversation.aiDraftTitle')}
-            style={{ background: 'rgba(60,87,89,0.12)' }}
+        {aiMode ? (
+          /* ── AI draft mode ── */
+          <div
+            className="rounded-2xl p-3 border"
+            style={{ background: 'linear-gradient(135deg, rgba(209,235,219,0.55), rgba(219,234,254,0.5))', borderColor: 'rgba(22,101,52,0.22)' }}
           >
-            {drafting ? (
-              <svg viewBox="0 0 24 24" fill="none" stroke="var(--slate)" strokeWidth="1.8" strokeLinecap="round" className="w-4 h-4 animate-spin">
-                <path d="M21 12a9 9 0 1 1-9-9" />
+            <div className="flex items-center gap-2 mb-2">
+              <span className="flex items-center gap-1.5 text-xs font-bold flex-shrink-0" style={{ color: '#166534' }}>
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5z"/>
+                  <path d="M19 14l0.7 2.1L22 17l-2.3 0.9L19 20l-0.7-2.1L16 17l2.3-0.9z"/>
+                </svg>
+                {t('conversation.aiPanelTitle')}
+              </span>
+              <span className="text-[11px] text-slate flex-1 min-w-0 truncate">
+                {t('conversation.aiPanelBody', { name: counterpartFirstName })}
+              </span>
+              <button
+                onClick={() => { setAiMode(false); setAiPrompt(''); setAiDraftError(''); }}
+                aria-label={t('conversation.aiPanelClose')}
+                className="w-[22px] h-[22px] flex-shrink-0 rounded-full flex items-center justify-center text-slate"
+                style={{ background: 'rgba(255,255,255,0.7)' }}
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Quick prompt ideas */}
+            {Array.isArray(aiSuggestionChips) && (
+              <div className="flex gap-1.5 flex-wrap mb-2">
+                {aiSuggestionChips.map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => setAiPrompt(s)}
+                    className="text-[11px] text-slate rounded-full px-2.5 py-1 border"
+                    style={{ background: 'rgba(255,255,255,0.7)', borderColor: 'rgba(25,37,36,0.08)' }}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <div className="flex items-end gap-2 rounded-xl px-3 py-2 border" style={{ background: 'rgba(255,255,255,0.85)', borderColor: 'rgba(25,37,36,0.08)' }}>
+              <textarea
+                autoFocus
+                rows={1}
+                value={aiPrompt}
+                onChange={(e) => setAiPrompt(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); runDraft(); } }}
+                placeholder={Array.isArray(aiPlaceholderHints) ? aiPlaceholderHints[aiHintIdx % aiPlaceholderHints.length] : ''}
+                className="flex-1 bg-transparent text-sm text-ink placeholder-sage resize-none outline-none leading-relaxed"
+                style={{ minHeight: '1.4rem', maxHeight: '90px' }}
+              />
+              <button
+                onClick={runDraft}
+                disabled={drafting}
+                className="flex items-center gap-1.5 h-8 px-3.5 rounded-full flex-shrink-0 text-white text-xs font-bold disabled:opacity-70"
+                style={{ background: 'var(--slate)' }}
+              >
+                {drafting ? (
+                  <>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.8" strokeLinecap="round" className="w-3.5 h-3.5 animate-spin">
+                      <path d="M21 12a9 9 0 1 1-9-9" />
+                    </svg>
+                    {t('conversation.generating')}
+                  </>
+                ) : (
+                  <>
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5z"/>
+                    </svg>
+                    {t('conversation.generate')}
+                  </>
+                )}
+              </button>
+            </div>
+            {aiDraftError && <p className="text-xs text-red-600 mt-1.5 px-1">{aiDraftError}</p>}
+          </div>
+        ) : (
+          /* ── Message mode ── */
+          <div className="flex items-center gap-2 bg-bone rounded-2xl px-4 py-2.5 border border-stone/40">
+            <textarea
+              ref={textareaRef}
+              rows={1}
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={handleKey}
+              placeholder={t('conversation.messagePlaceholder')}
+              className="flex-1 bg-transparent text-sm text-ink placeholder-sage resize-none outline-none leading-relaxed"
+              style={{ minHeight: '1.4rem', maxHeight: `${MAX_COMPOSER_HEIGHT}px` }}
+            />
+            {/* Attachment button */}
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-colors hover:bg-stone/30"
+              title={t('conversation.attachTitle')}
+              style={{ background: 'rgba(60,87,89,0.12)' }}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="var(--slate)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+                <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
               </svg>
-            ) : (
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.txt"
+              onChange={handleAttach}
+              style={{ display: 'none' }}
+              multiple
+            />
+            {/* Contract builder shortcut */}
+            <button
+              onClick={() => navigate('/contract')}
+              className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-colors hover:bg-stone/30"
+              title={t('conversation.contractBuilderTitle')}
+              style={{ background: 'rgba(60,87,89,0.12)' }}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="var(--slate)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+                <line x1="16" y1="13" x2="8" y2="13"/>
+                <line x1="16" y1="17" x2="8" y2="17"/>
+              </svg>
+            </button>
+            {/* AI draft mode toggle */}
+            <button
+              onClick={() => setAiMode(true)}
+              className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-colors hover:bg-stone/30"
+              title={t('conversation.aiDraftTitle')}
+              style={{ background: 'rgba(60,87,89,0.12)' }}
+            >
               <svg viewBox="0 0 24 24" fill="none" stroke="var(--slate)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
                 <path d="M12 3l1.9 5.6a3 3 0 0 0 1.9 1.9L21.4 12l-5.6 1.9a3 3 0 0 0-1.9 1.9L12 21.4l-1.9-5.6a3 3 0 0 0-1.9-1.9L2.6 12l5.6-1.9a3 3 0 0 0 1.9-1.9L12 3z" />
               </svg>
-            )}
-          </button>
-          <textarea
-            ref={textareaRef}
-            rows={1}
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            onKeyDown={handleKey}
-            readOnly={drafting}
-            placeholder={aiPlaceholder || t('conversation.messagePlaceholder')}
-            className="flex-1 bg-transparent text-sm text-ink placeholder-sage resize-none outline-none leading-relaxed"
-            style={{ minHeight: '1.4rem', maxHeight: `${MAX_COMPOSER_HEIGHT}px` }}
-          />
-          {/* Attachment button */}
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-colors hover:bg-stone/30"
-            title={t('conversation.attachTitle')}
-            style={{ background: 'rgba(60,87,89,0.12)' }}
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="var(--slate)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
-              <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
-            </svg>
-          </button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.txt"
-            onChange={handleAttach}
-            style={{ display: 'none' }}
-            multiple
-          />
-          {/* Contract builder shortcut */}
-          <button
-            onClick={() => navigate('/contract')}
-            className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-colors hover:bg-stone/30"
-            title={t('conversation.contractBuilderTitle')}
-            style={{ background: 'rgba(60,87,89,0.12)' }}
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="var(--slate)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-              <polyline points="14 2 14 8 20 8"/>
-              <line x1="16" y1="13" x2="8" y2="13"/>
-              <line x1="16" y1="17" x2="8" y2="17"/>
-            </svg>
-          </button>
-          <button
-            onClick={!isVerified ? openModal : !isSubscribed ? openSubModal : sendMessage}
-            disabled={isVerified && isSubscribed && (!draft.trim() || sending || drafting)}
-            className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-colors"
-            style={{
-              background: (!isVerified || !isSubscribed) ? 'rgba(60,87,89,0.18)' : draft.trim() ? 'var(--slate)' : 'rgba(60,87,89,0.15)',
-            }}
-          >
-            {(!isVerified || !isSubscribed) ? (
-              <svg viewBox="0 0 16 16" fill="none" stroke="var(--sage)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5">
-                <rect x="3" y="8" width="10" height="6" rx="1"/>
-                <path d="M5 8V5.5a3 3 0 0 1 6 0V8"/>
-              </svg>
-            ) : (
-              <svg viewBox="0 0 24 24" fill="none" stroke={draft.trim() ? 'white' : 'var(--sage)'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
-                <line x1="22" y1="2" x2="11" y2="13"/>
-                <polygon points="22 2 15 22 11 13 2 9 22 2"/>
-              </svg>
-            )}
-          </button>
-        </div>
+            </button>
+            <button
+              onClick={!isVerified ? openModal : !isSubscribed ? openSubModal : sendMessage}
+              disabled={isVerified && isSubscribed && (!draft.trim() || sending)}
+              className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-colors"
+              style={{
+                background: (!isVerified || !isSubscribed) ? 'rgba(60,87,89,0.18)' : draft.trim() ? 'var(--slate)' : 'rgba(60,87,89,0.15)',
+              }}
+            >
+              {(!isVerified || !isSubscribed) ? (
+                <svg viewBox="0 0 16 16" fill="none" stroke="var(--sage)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5">
+                  <rect x="3" y="8" width="10" height="6" rx="1"/>
+                  <path d="M5 8V5.5a3 3 0 0 1 6 0V8"/>
+                </svg>
+              ) : (
+                <svg viewBox="0 0 24 24" fill="none" stroke={draft.trim() ? 'white' : 'var(--sage)'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+                  <line x1="22" y1="2" x2="11" y2="13"/>
+                  <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                </svg>
+              )}
+            </button>
+          </div>
+        )}
         <div className="flex items-center justify-center gap-3 mt-1.5">
-          <p className="text-[10px] text-sage/60">{t('conversation.sendHint')}</p>
-          {attachments.length > 0 && (
+          <p className="text-[10px] text-sage/60">
+            {aiMode ? t('conversation.aiPanelFooter') : t('conversation.sendHint')}
+          </p>
+          {!aiMode && attachments.length > 0 && (
             <p className="text-[10px] font-semibold text-slate/60">
               {t('conversation.filesAttached', { count: attachments.length })}
             </p>

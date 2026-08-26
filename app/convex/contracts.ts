@@ -295,9 +295,26 @@ async function resolvePartyId(ctx: any, contract: any, party: string): Promise<s
 // Best-effort: associate a contract with the creator's matching collaboration so
 // inbox thread messages have a thread to post into. No-op if already linked or no
 // confident match (same creator + same property/location).
-async function linkContractToCollab(ctx: any, contract: any) {
+// Returns the linked collaboration doc, establishing/backfilling the link
+// (both directions) if it can, or null if no confident match exists yet.
+// Safe to call repeatedly — cheap no-ops once linked, and callers that only
+// need the id can skip straight to contract.linked_collaboration_id without
+// paying for the scan below.
+async function linkContractToCollab(ctx: any, contract: any): Promise<any | null> {
+  if (contract.linked_collaboration_id) {
+    const existing = await ctx.db.get(contract.linked_collaboration_id as any);
+    if (existing) return existing;
+    // Stale reference (collab deleted) — fall through and try to re-resolve.
+  }
+
   const collabs = await ctx.db.query("collaborations").collect();
-  if (collabs.some((cl: any) => String(cl.contract_id) === String(contract._id))) return;
+  const byContractId = collabs.find((cl: any) => String(cl.contract_id) === String(contract._id));
+  if (byContractId) {
+    if (contract.linked_collaboration_id !== String(byContractId._id)) {
+      await ctx.db.patch(contract._id, { linked_collaboration_id: String(byContractId._id) });
+    }
+    return byContractId;
+  }
 
   const creatorId =
     contract.creator_id ||
@@ -317,7 +334,12 @@ async function linkContractToCollab(ctx: any, contract: any) {
     return propMatch || locMatch;
   });
 
-  if (match) await ctx.db.patch(match._id, { contract_id: String(contract._id) });
+  if (match) {
+    await ctx.db.patch(match._id, { contract_id: String(contract._id) });
+    await ctx.db.patch(contract._id, { linked_collaboration_id: String(match._id) });
+    return match;
+  }
+  return null;
 }
 
 // Best-effort: drop a message into the contract's inbox thread (via the linked collab).
@@ -469,13 +491,25 @@ export const checkContractReminders = internalMutation({
   },
 });
 
+// Used only when a contract can't be linked to a collaboration/listing at
+// all (see the fallback branch below) — a reasonable generic UGC turnaround,
+// not meant to be precise.
+const DEFAULT_TURNAROUND_DAYS = 7;
+
 // Cron: nudge the creator ~3 days before their deliverable deadline. Fires
 // once per contract. Deadline = later signature date + the linked listing's
 // turnaround_days — neither contracts nor collaborations store a deadline
-// directly, so this walks contract -> collaboration (fuzzy-linked at signing,
-// see linkContractToCollab) -> listing to find it. Contracts with no
-// resolvable listing/turnaround_days are silently skipped (nothing to remind
-// about) rather than treated as an error.
+// directly, so this walks contract -> collaboration (fuzzy-linked at
+// signing, see linkContractToCollab) -> listing to find it.
+//
+// Safety net: the contract<->collaboration link is best-effort fuzzy
+// matching, not a hard foreign key, so it can fail to form at signing time
+// (e.g. the collaboration row didn't exist yet). Rather than silently never
+// reminding those contracts, this retries the link on every run (cheap,
+// idempotent — see linkContractToCollab), and if it still can't resolve a
+// listing/turnaround_days, falls back to DEFAULT_TURNAROUND_DAYS from the
+// signing date so the creator still gets *a* reminder. collab_reminder_used_fallback
+// records which reminders were estimates so it's visible, not hidden.
 export const checkCollabReminders = internalMutation({
   args: {},
   handler: async (ctx) => {
@@ -485,7 +519,6 @@ export const checkCollabReminders = internalMutation({
     const staleCutoff = 14 * day; // don't keep nudging long-abandoned contracts
 
     const contracts = await ctx.db.query("contracts").collect();
-    const collabs = await ctx.db.query("collaborations").collect();
 
     for (const c of contracts) {
       const status = (c.status || "").toLowerCase();
@@ -494,13 +527,21 @@ export const checkCollabReminders = internalMutation({
       if (c.collab_reminder_sent_at) continue;
       if (!c.creator_signed_at || !c.host_signed_at) continue;
 
-      const collab = collabs.find((cl: any) => String(cl.contract_id) === String(c._id));
-      if (!collab || !collab.listing_id) continue;
-      if (collab.is_active === false || collab.current_stage === "completed") continue;
+      const collab = await linkContractToCollab(ctx, c);
+      let turnaroundDays: number | undefined;
+      let usedFallback = false;
 
-      const listing = await ctx.db.get(collab.listing_id as any);
-      const turnaroundDays = (listing as any)?.turnaround_days;
-      if (!turnaroundDays || turnaroundDays <= 0) continue;
+      if (collab) {
+        if (collab.is_active === false || collab.current_stage === "completed") continue; // already wrapped up
+        const listing = collab.listing_id ? await ctx.db.get(collab.listing_id as any) : null;
+        turnaroundDays = (listing as any)?.turnaround_days;
+      }
+      if (!turnaroundDays || turnaroundDays <= 0) {
+        // No collab match, no listing, or no turnaround set on the listing —
+        // can't get a precise deadline. Fall back rather than skip silently.
+        turnaroundDays = DEFAULT_TURNAROUND_DAYS;
+        usedFallback = true;
+      }
 
       const signedAt = Math.max(new Date(c.creator_signed_at).getTime(), new Date(c.host_signed_at).getTime());
       if (Number.isNaN(signedAt)) continue;
@@ -514,12 +555,14 @@ export const checkCollabReminders = internalMutation({
       const propertyLabel = c.property_name || c.location || "your collab";
       const daysLeft = Math.max(0, Math.ceil((deadline - now) / day));
       const dueLabel = daysLeft === 0 ? "today" : `in ${daysLeft} day${daysLeft === 1 ? "" : "s"}`;
-      const body = `Your deliverables for ${propertyLabel} are due ${dueLabel}.`;
+      const body = usedFallback
+        ? `Your deliverables for ${propertyLabel} may be due around ${dueLabel === "today" ? "now" : dueLabel} — double check the agreed turnaround.`
+        : `Your deliverables for ${propertyLabel} are due ${dueLabel}.`;
 
       await ctx.runMutation(internal.notifications.create, {
         userId: recipientId,
         type: "collab_reminder",
-        title: "Deliverables due soon",
+        title: usedFallback ? "Deliverables may be due soon" : "Deliverables due soon",
         body,
         link: `/contract?open=${String(c._id)}`,
       });
@@ -532,15 +575,17 @@ export const checkCollabReminders = internalMutation({
         await ctx.scheduler.runAfter(0, internal.emails.sendContractEmail, {
           to: (profile as any).email,
           recipientName: (profile as any).full_name || c.creator_name || "there",
-          subject: `Deliverables due ${dueLabel} — ${propertyLabel}`,
+          subject: usedFallback ? `Deliverables check-in — ${propertyLabel}` : `Deliverables due ${dueLabel} — ${propertyLabel}`,
           heading: "Hey {name} 👋",
-          message: `Just a heads up — your deliverables for <strong>${propertyLabel}</strong> are due ${dueLabel}, based on the turnaround time for this collab.`,
+          message: usedFallback
+            ? `Just a heads up — based on a typical turnaround, your deliverables for <strong>${propertyLabel}</strong> may be coming due soon. Check the terms you agreed on to confirm the exact date.`
+            : `Just a heads up — your deliverables for <strong>${propertyLabel}</strong> are due ${dueLabel}, based on the turnaround time for this collab.`,
           calloutLabel: "Wrap up",
           calloutText: "Open Collabnb to upload or confirm your deliverables.",
         });
       }
 
-      await ctx.db.patch(c._id, { collab_reminder_sent_at: now });
+      await ctx.db.patch(c._id, { collab_reminder_sent_at: now, collab_reminder_used_fallback: usedFallback });
     }
   },
 });

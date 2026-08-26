@@ -286,6 +286,16 @@ export default defineSchema({
     // listing, counted from when both parties signed). See
     // contracts.checkCollabReminders.
     collab_reminder_sent_at: v.optional(v.number()),
+    // True when checkCollabReminders couldn't resolve a linked collaboration
+    // (fuzzy match failed) and fell back to a default turnaround instead of
+    // the listing's real one — a data-quality signal, not an error state.
+    collab_reminder_used_fallback: v.optional(v.boolean()),
+    // Direct back-reference to the matched collaboration — set by
+    // linkContractToCollab once a confident match is found, so later lookups
+    // (e.g. the reminder cron) don't have to repeat the fuzzy scan. The
+    // collaboration side (collaborations.contract_id) remains the primary
+    // link; this just mirrors it for O(1) reads from the contract side.
+    linked_collaboration_id: v.optional(v.string()),
     admin_dismissed: v.optional(v.boolean()),
     admin_dismissed_at: v.optional(v.number()),
     // Collect & forward: host is charged cash_value + fee_amount in one PaymentIntent

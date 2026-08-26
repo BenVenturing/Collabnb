@@ -163,6 +163,7 @@ export default function ContractManager() {
                   <td style={{ padding: '0.75rem' }}>
                     <StatusBadge status={c.status} />
                     {c.admin_dismissed && <HandledBadge />}
+                    {c.collab_reminder_used_fallback && <EstDeadlineBadge />}
                   </td>
                   <td style={{ padding: '0.75rem', color: SLATE, whiteSpace: 'nowrap' }}>{c.dates || '—'}</td>
                   <td style={{ padding: '0.75rem', whiteSpace: 'nowrap' }}>
@@ -275,6 +276,24 @@ function HandledBadge() {
   );
 }
 
+// Shown when checkCollabReminders couldn't link this contract to a
+// collaboration/listing and sent an estimated-turnaround reminder instead of
+// a precise one — a data-quality flag, not an error.
+function EstDeadlineBadge() {
+  return (
+    <span
+      title="Deliverable reminder used a default 7-day turnaround — this contract never linked to a collaboration/listing"
+      style={{
+        display: 'inline-block', marginLeft: '0.4rem', fontSize: '0.6rem', fontWeight: 700,
+        padding: '0.1rem 0.4rem', borderRadius: 99, background: '#FEF3C7', color: '#92400E',
+        textTransform: 'uppercase', letterSpacing: '0.04em', verticalAlign: 'middle',
+      }}
+    >
+      Est. deadline
+    </span>
+  );
+}
+
 function ManageButtons({ contract: c, size = 'md' }) {
   const removeContract = useMutation(api.contracts.remove);
   const setHandled = useMutation(api.contracts.setHandled);
@@ -382,6 +401,7 @@ function ContractDetailModal({ contract: c, onClose }) {
             {c.property_name || c.location || 'Contract'}
           </h2>
           <StatusBadge status={c.status} />
+          {c.collab_reminder_used_fallback && <EstDeadlineBadge />}
         </div>
         <p style={{ fontSize: '0.8rem', color: SAGE, margin: '0 0 1rem' }}>
           {c.creator_name} &nbsp;↔&nbsp; {c.host_name}

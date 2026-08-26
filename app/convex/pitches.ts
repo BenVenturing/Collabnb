@@ -128,6 +128,23 @@ export const create = mutation({
       thread_key: args.threadKey,
     });
 
+    // The pitch message is shown as the thread's preview text (see
+    // threads.create's lastMessage), which implies it's the conversation's
+    // first message — but nothing ever actually wrote it to thread_messages,
+    // so opening the thread showed "No messages yet" despite the preview.
+    // Write it for real so the host sees and can reply to it.
+    if (args.threadKey) {
+      await ctx.db.insert("thread_messages", {
+        thread_key: args.threadKey,
+        sender_id: args.creatorId,
+        sender_name: args.creatorName,
+        sender_avatar: args.creatorAvatar,
+        sender_role: "creator",
+        text: cleanPlainText(args.message, 3000),
+        created_at: Date.now(),
+      });
+    }
+
     // Notify host of new application (in-app + email)
     if (args.hostId && args.hostId !== args.creatorId) {
       await ctx.runMutation(internal.notifications.create, {

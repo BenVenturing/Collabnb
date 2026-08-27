@@ -50,7 +50,7 @@ The writer must produce exactly this shape (only \`h2\`, \`p\`, \`ul\`, \`li\`, 
 
 <h2>Synthesis heading</h2>
 <p>~150 words — the payoff and close.</p>
-<p><em>Collabnb is open for early access — <a href="https://collabnb.com/join">collabnb.com/join</a></em></p>
+<p><em>[one freshly worded closing line, specific to this post's angle, that folds in a link to <a href="https://collabnb.com/join">collabnb.com/join</a> — see the closing-line rule below]</em></p>
 \`\`\`
 
 Rules for the skeleton:
@@ -60,6 +60,7 @@ Rules for the skeleton:
 - \`%%PULL_QUOTE%%\` sits mid-article (after the second section), never at the end.
 - The pull quote is the single most resonant sentence of the post, lightly polished. It must exist in spirit in the body text.
 - Bullet lists (\`ul\`) allowed at most once per post, max 5 items, only when the content is genuinely enumerable (prices, deliverables, steps).
+- **Closing line must be freshly worded every time** — it must never repeat the exact sentence used in another post. Keep the intent (early access, understated, ties back to the post's specific subject) but vary the construction: sometimes an observation, sometimes a direct address to the host/creator, sometimes a wry aside — never the same sentence shape twice in a row. The banned "sales closers" in §6 apply here too.
 
 ## 3. Voice
 

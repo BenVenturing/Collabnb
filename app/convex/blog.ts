@@ -791,6 +791,17 @@ async function runGeneratePost(ctx: any, { isStatsPost = false, topicHint }: { i
     console.log(`generatePost review ok — score ${reviewScore ?? "n/a"}`);
 
     // ── 4. Fetch images from Unsplash (B&W filter) ────────────────────────────
+    // Recently-used photos (this post's own picks plus the last ~20 posts')
+    // are excluded so similar queries stop landing on the same handful of
+    // stock photos — compared by path, since Unsplash's query-string params
+    // (ixid etc.) can vary per request for the same underlying photo.
+    const baseUrl = (u?: string) => (u || "").split("?")[0];
+    const usedBaseUrls = new Set(
+      recentPosts.slice(0, 20).flatMap((p: any) => [
+        p.hero_image_url, p.inline_image_1_url, p.inline_image_2_url, p.inline_image_3_url,
+      ]).filter(Boolean).map(baseUrl)
+    );
+
     async function fetchUnsplashImage(query: string, fallback: string) {
       try {
         let photo: any = null;
@@ -798,15 +809,23 @@ async function runGeneratePost(ctx: any, { isStatsPost = false, topicHint }: { i
         // with the generic fallback before giving up.
         for (const attempt of [query || fallback, fallback]) {
           const res = await fetch(
-            `https://api.unsplash.com/search/photos?query=${encodeURIComponent(attempt)}&per_page=3&orientation=landscape&color=black_and_white&content_filter=high`,
+            `https://api.unsplash.com/search/photos?query=${encodeURIComponent(attempt)}&per_page=10&orientation=landscape&color=black_and_white&content_filter=high`,
             { headers: { "Authorization": `Client-ID ${unsplashKey}` } }
           );
           if (!res.ok) continue;
           const data = await res.json();
-          photo = data.results?.[0];
-          if (photo) break;
+          const results: any[] = data.results || [];
+          const fresh = results.filter((p) => !usedBaseUrls.has(baseUrl(p.urls?.regular)));
+          const pool = fresh.length ? fresh : results;
+          if (pool.length) {
+            // Random among the top handful rather than always index 0, so
+            // near-identical queries across posts don't repeat the same shot.
+            photo = pool[Math.floor(Math.random() * Math.min(pool.length, 5))];
+            break;
+          }
         }
         if (!photo) return null;
+        usedBaseUrls.add(baseUrl(photo.urls?.regular));
         await fetch(photo.links?.download_location, {
           headers: { "Authorization": `Client-ID ${unsplashKey}` }
         }).catch(() => {});
@@ -819,12 +838,13 @@ async function runGeneratePost(ctx: any, { isStatsPost = false, topicHint }: { i
       } catch { return null; }
     }
 
-    const [hero, inline1, inline2, inline3] = await Promise.all([
-      fetchUnsplashImage(imgHero, "black and white boutique hotel minimal"),
-      fetchUnsplashImage(img1,    "black and white travel editorial minimal"),
-      fetchUnsplashImage(img2,    "black and white hospitality interior minimal"),
-      fetchUnsplashImage(img3,    "black and white creator photographer travel"),
-    ]);
+    // Sequential, not Promise.all — each slot needs to see the previous
+    // slot's pick in usedBaseUrls so one post doesn't reuse a photo across
+    // its own hero/inline slots.
+    const hero    = await fetchUnsplashImage(imgHero, "black and white boutique hotel minimal");
+    const inline1 = await fetchUnsplashImage(img1,    "black and white travel editorial minimal");
+    const inline2 = await fetchUnsplashImage(img2,    "black and white hospitality interior minimal");
+    const inline3 = await fetchUnsplashImage(img3,    "black and white creator photographer travel");
 
     // ── 5. Store as draft ─────────────────────────────────────────────────────
     const slug = slugify(title);

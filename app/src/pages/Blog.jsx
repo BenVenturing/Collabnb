@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { useQuery } from 'convex/react';
 import { useTranslation } from 'react-i18next';
 import { api } from '../../convex/_generated/api';
@@ -303,6 +303,9 @@ function JournalGallery({ posts }) {
   const navigate = useNavigate();
   const [hovered, setHovered] = useState(null);   // focused card index
   const [exiting, setExiting] = useState(null);   // slug being opened
+  const scrollerRef = useRef(null);
+  const hoveredRef = useRef(null);
+  hoveredRef.current = hovered;
 
   const open = (post) => {
     if (exiting) return;
@@ -310,6 +313,35 @@ function JournalGallery({ posts }) {
     // Let the zoom-forward + fade play, then hand off to the reading view
     setTimeout(() => navigate(`/blog/${post.slug}`), 480);
   };
+
+  // Doubled list plays back to back so the loop can wrap invisibly — once the
+  // first copy has scrolled fully past, resetting scrollLeft by exactly half
+  // the track lands on pixel-identical content in the second copy.
+  const canLoop = posts.length > 2;
+  const track = canLoop ? [...posts, ...posts] : posts;
+
+  // Slow rightward drift, pausing the instant the pointer settles on a card
+  // so the existing hover "step forward" animation reads clearly.
+  useEffect(() => {
+    if (!canLoop) return;
+    const el = scrollerRef.current;
+    if (!el) return;
+    const PIXELS_PER_MS = 0.02;
+    let raf;
+    let last = performance.now();
+    const tick = (now) => {
+      const dt = now - last;
+      last = now;
+      if (hoveredRef.current === null && !document.hidden) {
+        el.scrollLeft += PIXELS_PER_MS * dt;
+        const half = el.scrollWidth / 2;
+        if (el.scrollLeft >= half) el.scrollLeft -= half;
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [canLoop]);
 
   return (
     <section style={{ marginBottom: '3.5rem' }}>
@@ -323,24 +355,27 @@ function JournalGallery({ posts }) {
       </div>
 
       <div
+        ref={scrollerRef}
         className="no-scrollbar"
         onMouseLeave={() => setHovered(null)}
         style={{
           display: 'flex', gap: '1.75rem', alignItems: 'flex-start',
           overflowX: 'auto', overflowY: 'visible',
           padding: '2.25rem 0.5rem 2.75rem',
-          scrollSnapType: 'x proximity', scrollbarWidth: 'none',
+          scrollSnapType: canLoop ? 'none' : 'x proximity', scrollbarWidth: 'none',
           perspective: 1600,
+          maskImage: canLoop ? 'linear-gradient(to right, transparent 0%, black 13%)' : 'none',
+          WebkitMaskImage: canLoop ? 'linear-gradient(to right, transparent 0%, black 13%)' : 'none',
         }}
       >
-        {posts.map((post, i) => {
+        {track.map((post, i) => {
           const isHovered = hovered === i;
           const dim = hovered !== null && !isHovered;
           const isExiting = exiting === post.slug;
           const othersExiting = exiting && exiting !== post.slug;
           return (
             <article
-              key={post._id}
+              key={`${post._id}-${i}`}
               onMouseEnter={() => !exiting && setHovered(i)}
               onClick={() => open(post)}
               role="button"
@@ -364,7 +399,7 @@ function JournalGallery({ posts }) {
               }}
             >
               <span style={{ position: 'absolute', top: -24, left: 2, fontFamily: 'var(--font-blog-body)', fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--sage)' }}>
-                {String(i + 1).padStart(3, '0')}
+                {String((i % posts.length) + 1).padStart(3, '0')}
               </span>
 
               <div style={{

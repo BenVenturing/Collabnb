@@ -301,12 +301,9 @@ export default function BlogEditor({ post, onClose, onReopen }) {
     onClose();
   }
 
-  // Opened synchronously (before the awaits below) so popup blockers don't
-  // swallow it — it's still a direct result of the confirm-button click.
-  async function handlePublishConfirm(liveTab) {
+  async function handlePublishConfirm() {
     if (saveState !== 'clean') await doSave();
     await updateStatus({ id: post._id, status: 'published' });
-    if (liveTab) liveTab.location.href = `/blog/${post.slug}`;
     setJustPublished(true);
     setTimeout(() => { setJustPublished(false); onClose(); }, 3200);
   }
@@ -567,8 +564,12 @@ export default function BlogEditor({ post, onClose, onReopen }) {
                 onClick={() => {
                   const c = confirm; setConfirm(null);
                   if (c === 'publish') {
-                    const liveTab = window.open('', '_blank', 'noopener,noreferrer');
-                    handlePublishConfirm(liveTab);
+                    // Real URL, opened synchronously in the same click tick —
+                    // the blank-tab-then-navigate trick gets silently dropped
+                    // by Safari once an await lands in between. The post's
+                    // slug is already final, so there's nothing to wait for.
+                    window.open(`/blog/${post.slug}`, '_blank', 'noopener,noreferrer');
+                    handlePublishConfirm();
                   }
                   else if (c === 'unpublish') handleStatus('draft');
                   else if (c === 'reject') handleStatus('rejected');

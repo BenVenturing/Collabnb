@@ -373,10 +373,15 @@ Let's make something great together.`;
   const isPitch = pitch.trim() !== defaultPitch.trim();
 
   const handleSubmit = async () => {
-    // Preview mode (host viewing their own not-yet-published listing) must
-    // never fire a real application — no rate-limit increment, no pitch
-    // saved, and no fake "sent" confirmation implying it went somewhere.
-    if (isPreview) { setPreviewBlocked(true); return; }
+    // Preview mode (host viewing their own not-yet-published listing via the
+    // wizard's "View as a creator" toggle) must never fire a real
+    // application — no rate-limit increment, no pitch saved, and no fake
+    // "sent" confirmation implying it went somewhere. Same block applies to
+    // a real listing document that just hasn't been published yet (e.g. a
+    // host previewing their own draft via its real /listing/:id URL) — the
+    // server rejects this anyway (pitches.create), but drafting the message
+    // and only then hitting a send error is worse UX than blocking upfront.
+    if (isPreview || listing.status !== 'published') { setPreviewBlocked(true); return; }
     if (!isVerified) { onVerificationRequired(); return; }
     if (!isSubscribed) { onSubscriptionRequired(); return; }
     if (isPitch) {
@@ -538,7 +543,7 @@ Let's make something great together.`;
                   state: {
                     prefill: {
                       creator: creatorProfile?.full_name || nameStr,
-                      host: listing.title.split(' ').slice(0, 2).join(' '),
+                      host: hostDisplayName,
                       property_name: listing.title,
                       location: listing.location,
                       dates: listing.dates_available,

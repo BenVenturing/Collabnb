@@ -41,7 +41,16 @@
       "edit": "Edit",
       "pause": "Pause",
       "unpause": "Unpause",
-      "duplicate": "Duplicate"
+      "duplicate": "Duplicate",
+      "delete": "Delete"
+    },
+    "deleteConfirm": {
+      "title": "Delete this listing?",
+      "body": "\"{{title}}\" will be permanently deleted, including its applications and history. This can't be undone.",
+      "cancel": "Cancel",
+      "confirm": "Yes, delete",
+      "deleting": "Deleting…",
+      "error": "Couldn't delete this listing — please try again."
     }
   },
   "browse": {

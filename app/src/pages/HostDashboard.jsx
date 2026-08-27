@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, MapPin, Users, Calendar, MessageSquare, MoreVertical, X, Trash2, ArrowLeft, Compass, Search } from 'lucide-react';
-import { useQuery } from 'convex/react';
+import { useQuery, useMutation } from 'convex/react';
 import { useTranslation } from 'react-i18next';
 import i18nInstance from '../i18n';
 import { api } from '../../convex/_generated/api';
@@ -323,12 +323,15 @@ function ExpandedChartModal({ cardKey, onClose, stats, chartData }) {
 }
 
 // ─── Host Listing Card ────────────────────────────────────────────────────────
-function HostListingCard({ listing, meta, delay, glowState, onToggleStatus, onDuplicate, onRemoveSample }) {
+function HostListingCard({ listing, meta, delay, glowState, onToggleStatus, onDuplicate, onRemoveSample, onDelete }) {
   const { t } = useTranslation('hostDashboard');
   const navigate = useNavigate();
   const { loadDraft } = useListingDraft();
   const [hovered, setHovered] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
   const status = STATUS_CFG[meta.status] || STATUS_CFG.draft;
   const statusLabel = t(`statusLabels.${meta.status in STATUS_CFG ? meta.status : 'draft'}`);
   const isActive = meta.status === 'active';
@@ -498,6 +501,7 @@ function HostListingCard({ listing, meta, delay, glowState, onToggleStatus, onDu
               } },
               { label: meta.status === 'paused' ? t('listingCard.menu.unpause') : t('listingCard.menu.pause'), action: (e) => { e.stopPropagation(); if (meta.status !== 'draft') onToggleStatus(listing.id); setMenuOpen(false); }, muted: meta.status === 'draft' },
               { label: t('listingCard.menu.duplicate'), action: (e) => { e.stopPropagation(); onDuplicate(listing); setMenuOpen(false); } },
+              { label: t('listingCard.menu.delete'), Icon: Trash2, danger: true, action: (e) => { e.stopPropagation(); setDeleteError(''); setConfirmDelete(true); setMenuOpen(false); } },
             ]).map(({ label, action, muted, danger, Icon }) => (
               <button
                 key={label}
@@ -521,6 +525,55 @@ function HostListingCard({ listing, meta, delay, glowState, onToggleStatus, onDu
           </div>
         )}
       </div>
+
+      {confirmDelete && (
+        <div
+          onClick={(e) => { if (e.target === e.currentTarget && !deleting) setConfirmDelete(false); }}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 300,
+            background: 'rgba(25,37,36,0.45)', backdropFilter: 'blur(6px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem',
+          }}
+        >
+          <div style={{ ...GC, width: '100%', maxWidth: 380, padding: '1.5rem' }} onClick={(e) => e.stopPropagation()}>
+            <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.05rem', color: 'var(--ink)', margin: '0 0 0.5rem' }}>
+              {t('listingCard.deleteConfirm.title')}
+            </h3>
+            <p style={{ fontSize: '0.85rem', color: 'var(--slate)', lineHeight: 1.5, marginBottom: '1.25rem' }}>
+              {t('listingCard.deleteConfirm.body', { title: listing.title })}
+            </p>
+            {deleteError && (
+              <p style={{ fontSize: '0.8rem', color: '#C86868', marginBottom: '1rem' }}>{deleteError}</p>
+            )}
+            <div style={{ display: 'flex', gap: '0.625rem' }}>
+              <button
+                onClick={() => setConfirmDelete(false)}
+                disabled={deleting}
+                style={{ flex: 1, padding: '0.65rem', borderRadius: 9999, background: 'transparent', border: '1.5px solid rgba(25,37,36,0.15)', color: 'var(--ink)', fontSize: '0.875rem', fontWeight: 600, cursor: deleting ? 'default' : 'pointer', fontFamily: 'var(--font-body)' }}
+              >
+                {t('listingCard.deleteConfirm.cancel')}
+              </button>
+              <button
+                onClick={async () => {
+                  setDeleting(true);
+                  setDeleteError('');
+                  const result = await onDelete(listing);
+                  if (result?.ok) {
+                    setConfirmDelete(false);
+                  } else {
+                    setDeleteError(result?.error || t('listingCard.deleteConfirm.error'));
+                  }
+                  setDeleting(false);
+                }}
+                disabled={deleting}
+                style={{ flex: 1, padding: '0.65rem', borderRadius: 9999, background: '#C86868', border: 'none', color: '#fff', fontSize: '0.875rem', fontWeight: 600, cursor: deleting ? 'default' : 'pointer', fontFamily: 'var(--font-body)', opacity: deleting ? 0.7 : 1 }}
+              >
+                {deleting ? t('listingCard.deleteConfirm.deleting') : t('listingCard.deleteConfirm.confirm')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -749,6 +802,7 @@ export default function HostDashboard() {
   const navigate = useNavigate();
   const { profile } = useAuth();
   const { loadDraft, clearDraft } = useListingDraft();
+  const deleteListingMutation = useMutation(api.listings.deleteListing);
 
   // ── Convex: fetch only this host's listings ──────────────────────────────────
   const hostId = profile?._id || profile?.id;
@@ -914,6 +968,18 @@ export default function HostDashboard() {
     localStorage.removeItem('collabnb_editing_listing_id_v1');
     loadDraft(copy);
     navigate('/host/listings/create/basics');
+  }
+
+  async function deleteListing(listing) {
+    const id = listing._id || listing.id;
+    if (!id || listing.is_sample) return { ok: false };
+    try {
+      await deleteListingMutation({ id });
+      return { ok: true };
+    } catch (err) {
+      console.error(err);
+      return { ok: false, error: err?.message || t('listingCard.deleteConfirm.error') };
+    }
   }
 
   // Global sample listings (canonical set owned by Ben) — shown when a host has
@@ -1160,7 +1226,7 @@ export default function HostDashboard() {
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1.25rem', alignItems: 'start' }}>
               {filtered.map((listing, i) => (
-                <HostListingCard key={listing.id} listing={listing} meta={listing.meta} delay={i * 55} glowState={glowState} onToggleStatus={toggleListingStatus} onDuplicate={duplicateListing} onRemoveSample={removeSampleListing} />
+                <HostListingCard key={listing.id} listing={listing} meta={listing.meta} delay={i * 55} glowState={glowState} onToggleStatus={toggleListingStatus} onDuplicate={duplicateListing} onRemoveSample={removeSampleListing} onDelete={deleteListing} />
               ))}
             </div>
           )}

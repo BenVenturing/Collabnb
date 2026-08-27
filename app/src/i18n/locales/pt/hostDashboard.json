@@ -41,7 +41,16 @@
       "edit": "Editar",
       "pause": "Pausar",
       "unpause": "Retomar",
-      "duplicate": "Duplicar"
+      "duplicate": "Duplicar",
+      "delete": "Excluir"
+    },
+    "deleteConfirm": {
+      "title": "Excluir este anúncio?",
+      "body": "\"{{title}}\" será excluído permanentemente, incluindo suas candidaturas e histórico. Isso não pode ser desfeito.",
+      "cancel": "Cancelar",
+      "confirm": "Sim, excluir",
+      "deleting": "Excluindo…",
+      "error": "Não foi possível excluir este anúncio — tente novamente."
     }
   },
   "browse": {

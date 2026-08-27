@@ -79,6 +79,9 @@
     "replyPlaceholder": "Responder a {{creatorName}}…"
   },
   "drawer": {
+    "close": "Cerrar",
+    "nextStep": "Siguiente: {{stage}}",
+    "contract": "Contrato",
     "viewProfile": "Ver perfil",
     "verified": "Verificado",
     "followers": "Seguidores",

@@ -41,7 +41,16 @@
       "edit": "Modifier",
       "pause": "Mettre en pause",
       "unpause": "Réactiver",
-      "duplicate": "Dupliquer"
+      "duplicate": "Dupliquer",
+      "delete": "Supprimer"
+    },
+    "deleteConfirm": {
+      "title": "Supprimer cette annonce ?",
+      "body": "« {{title}} » sera définitivement supprimée, y compris ses candidatures et son historique. Cette action est irréversible.",
+      "cancel": "Annuler",
+      "confirm": "Oui, supprimer",
+      "deleting": "Suppression…",
+      "error": "Impossible de supprimer cette annonce — veuillez réessayer."
     }
   },
   "browse": {

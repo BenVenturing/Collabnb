@@ -202,28 +202,28 @@ export default function ProposalsOverview({ role, search, onSearchChange, filter
           {sidebarItems(role === 'host' ? 'nav.money.host' : 'nav.money.creator').map((item) => {
             const Icon = item.icon;
             const selected = item.action === 'tab' && activeTab === item.key;
+            const showArchiveToggle = item.key === 'activity' && archiveToggle;
             return (
-              <div key={item.key}>
-                <button
-                  onClick={() => handleSidebarClick(item)}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: '0.7rem', width: '100%', textAlign: 'left',
-                    padding: '0.65rem 0.75rem', borderRadius: '0.75rem', border: 'none', cursor: 'pointer',
-                    background: selected ? 'rgba(255,255,255,0.12)' : 'transparent',
-                    color: selected ? 'var(--bone)' : 'rgba(239,236,233,0.75)',
-                    fontSize: '0.85rem', fontWeight: 600, fontFamily: 'var(--font-body)',
-                    transition: 'background 150ms, color 150ms',
-                  }}
-                  onMouseEnter={(e) => { if (!selected) { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = 'var(--bone)'; } }}
-                  onMouseLeave={(e) => { if (!selected) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(239,236,233,0.75)'; } }}
-                >
-                  <Icon size={16} />
-                  {t(item.labelKey)}
-                </button>
+              <button
+                key={item.key}
+                onClick={() => handleSidebarClick(item)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '0.7rem', width: '100%', textAlign: 'left',
+                  padding: '0.65rem 0.75rem', borderRadius: '0.75rem', border: 'none', cursor: 'pointer',
+                  background: selected ? 'rgba(255,255,255,0.12)' : 'transparent',
+                  color: selected ? 'var(--bone)' : 'rgba(239,236,233,0.75)',
+                  fontSize: '0.85rem', fontWeight: 600, fontFamily: 'var(--font-body)',
+                  transition: 'background 150ms, color 150ms',
+                }}
+                onMouseEnter={(e) => { if (!selected) { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = 'var(--bone)'; } }}
+                onMouseLeave={(e) => { if (!selected) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(239,236,233,0.75)'; } }}
+              >
+                <Icon size={16} />
+                {t(item.labelKey)}
 
-                {item.key === 'activity' && archiveToggle && (
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '0.3rem', padding: '0.35rem 0.5rem 0.5rem 2.35rem' }}>
-                    <label style={{ position: 'relative', width: 30, height: 17, cursor: 'pointer', display: 'block' }}>
+                {showArchiveToggle && (
+                  <span onClick={(e) => e.stopPropagation()} style={{ position: 'relative', width: 30, height: 17, flexShrink: 0 }}>
+                    <label style={{ position: 'absolute', inset: 0, cursor: 'pointer', display: 'block' }}>
                       <span style={{ position: 'absolute', inset: 0, borderRadius: 9999, background: archiveToggle.value ? 'var(--sage)' : 'rgba(255,255,255,0.15)', transition: 'background 150ms' }} />
                       <input
                         type="checkbox"
@@ -233,10 +233,15 @@ export default function ProposalsOverview({ role, search, onSearchChange, filter
                       />
                       <span style={{ position: 'absolute', top: 2, left: archiveToggle.value ? 15 : 2, width: 13, height: 13, borderRadius: '50%', background: 'var(--bone)', transition: 'left 150ms' }} />
                     </label>
-                    <span style={{ fontSize: '0.68rem', fontWeight: 600, color: 'rgba(239,236,233,0.45)' }}>{t('nav.archived')}</span>
-                  </div>
+                    <span style={{
+                      position: 'absolute', top: '100%', left: 0, width: 30, textAlign: 'center',
+                      fontSize: '0.5rem', lineHeight: 1, color: 'rgba(239,236,233,0.4)', whiteSpace: 'nowrap',
+                    }}>
+                      {t('nav.archived')}
+                    </span>
+                  </span>
                 )}
-              </div>
+              </button>
             );
           })}
         </div>

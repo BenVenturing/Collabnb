@@ -14,7 +14,7 @@ import { STAGES } from '../../lib/mockData';
 import { canAdvanceStage, STAGE_KEYS } from '../../lib/collabStages';
 import {
   MessageSquare, ChevronDown, ChevronUp, ExternalLink, Sparkles,
-  GripVertical, Lock, Download, Pen, CheckCircle2, Trash2,
+  GripVertical, Lock, Download, Pen, CheckCircle2, Trash2, X,
 } from 'lucide-react';
 import {
   DndContext, DragOverlay,
@@ -536,21 +536,97 @@ function HostMessagePanel({ threadKey, creatorName }) {
 }
 
 // ─── Proposal drawer ──────────────────────────────────────────────────────────
-function ProposalDrawer({ proposal, onStatusChange, onCounter, onSign }) {
+// ─── Compact "next steps" stepper — mirrors STAGES, no interactivity needed ──
+function MiniStageProgress({ currentStage }) {
+  const { t } = useTranslation('hostProposals');
+  const curIdx = STAGE_KEYS.indexOf(currentStage);
+  const currentLabel = STAGES.find((s) => s.key === currentStage)?.label || currentStage;
+  return (
+    <div>
+      <div style={{ display: 'flex', alignItems: 'center', padding: '2px 2px 8px' }}>
+        {STAGES.map((stage, i) => {
+          const done = i < curIdx;
+          const active = i === curIdx;
+          return (
+            <div key={stage.key} style={{ display: 'flex', alignItems: 'center', flex: i < STAGES.length - 1 ? 1 : '0 0 auto' }}>
+              <div title={stage.label} style={{
+                width: active ? 10 : 8, height: active ? 10 : 8, borderRadius: '50%', flexShrink: 0,
+                background: done || active ? '#4A9B7F' : 'rgba(25,37,36,0.15)',
+                boxShadow: active ? '0 0 0 3px rgba(74,155,127,0.22)' : 'none',
+                transition: 'all 150ms',
+              }} />
+              {i < STAGES.length - 1 && (
+                <div style={{ flex: 1, height: 2, background: done ? '#4A9B7F' : 'rgba(25,37,36,0.12)', margin: '0 3px' }} />
+              )}
+            </div>
+          );
+        })}
+      </div>
+      <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink)', margin: 0 }}>
+        {t('drawer.nextStep', { stage: currentLabel })}
+      </p>
+    </div>
+  );
+}
+
+function ProposalDrawer({ proposal, onStatusChange, onCounter, onSign, onClose, listingById }) {
   const { t } = useTranslation('hostProposals');
   const navigate = useNavigate();
   const isPitch = proposal.type === 'pitch';
   const { signatures = emptySignatures(), contractHistory = [], locked } = proposal;
+  const listing = proposal.listingId ? listingById?.[String(proposal.listingId)] : null;
 
   const version = contractHistory.length;
   const hostSigned    = !!signatures.hostSignature    && signatures.hostSignedVersion    === version;
   const creatorSigned = !!signatures.creatorSignature && signatures.creatorSignedVersion === version;
 
   // Full profile (name/avatar/tier/stats/platforms) already lives on the
-  // card face above and one tap away via ProfilePopupCard — don't repeat it
-  // here, go straight into pitch/contract/message content.
+  // card face in the board column — don't repeat it here.
   return (
-    <div style={{ background: '#fff', border: isPitch ? PITCH_BORDER_EXPANDED : '1.5px solid rgba(25,37,36,0.08)', borderTop: 'none', borderRadius: '0 0 1rem 1rem', overflow: 'hidden' }}>
+    <div style={{ background: '#fff', border: '1.5px solid rgba(25,37,36,0.1)', borderRadius: '1.25rem', overflow: 'hidden', boxShadow: '0 8px 32px rgba(25,37,36,0.1)' }}>
+
+      {/* Header: creator name (compact) + close */}
+      <div style={{ padding: '14px 20px', borderBottom: '1px solid rgba(25,37,36,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 14, color: 'var(--ink)' }}>{proposal.creator.name}</span>
+        {onClose && (
+          <button onClick={onClose} aria-label={t('drawer.close')}
+            style={{ width: 28, height: 28, borderRadius: '50%', border: 'none', background: 'rgba(25,37,36,0.06)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--ink)', flexShrink: 0 }}>
+            <X size={13} />
+          </button>
+        )}
+      </div>
+
+      {/* Next steps */}
+      {proposal.status !== 'declined' && (
+        <div style={{ padding: '14px 20px', borderBottom: '1px solid rgba(25,37,36,0.07)' }}>
+          <MiniStageProgress currentStage={proposal.collabStage} />
+        </div>
+      )}
+
+      {/* Collaboration overview — listing photo/link + deliverables */}
+      <div style={{ padding: '14px 20px', borderBottom: '1px solid rgba(25,37,36,0.07)', display: 'flex', gap: 12, alignItems: 'center' }}>
+        {listing?.image && (
+          <img src={listing.image} alt={proposal.listing}
+            style={{ width: 56, height: 56, borderRadius: '0.75rem', objectFit: 'cover', flexShrink: 0, border: '1px solid rgba(25,37,36,0.08)' }} />
+        )}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <button onClick={() => proposal.listingId && navigate(`/host/listing/${proposal.listingId}`)}
+            style={{ background: 'none', border: 'none', padding: 0, cursor: proposal.listingId ? 'pointer' : 'default', textAlign: 'left', display: 'block', width: '100%' }}>
+            <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 13, color: 'var(--ink)', textDecoration: proposal.listingId ? 'underline' : 'none', textDecorationColor: 'rgba(25,37,36,0.2)' }}>
+              {proposal.listing}
+            </span>
+          </button>
+          {listing?.deliverables && (
+            <p style={{ fontSize: 11.5, color: 'var(--sage)', margin: '2px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{listing.deliverables}</p>
+          )}
+        </div>
+        {locked && (
+          <button onClick={() => openContractPdf(proposal)}
+            style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 9999, border: '1.5px solid rgba(25,37,36,0.15)', background: 'transparent', fontFamily: 'var(--font-body)', fontSize: 11.5, fontWeight: 700, color: 'var(--ink)', cursor: 'pointer', flexShrink: 0, whiteSpace: 'nowrap' }}>
+            <Download size={11} /> {t('drawer.contract')}
+          </button>
+        )}
+      </div>
 
       {/* Contract terms — visible once any negotiation/acceptance has happened */}
       {contractHistory.length > 0 && (() => {
@@ -887,6 +963,7 @@ function normalizePitch(p) {
   return {
     id: p._id,
     listing: p.listing_title || 'Your Listing',
+    listingId: p.listing_id,
     status: p.status,
     type: p.type || 'application',
     applied,
@@ -938,6 +1015,15 @@ export default function HostProposals() {
     api.fees.getBilling,
     hostId ? { hostId: String(hostId) } : 'skip'
   );
+  const rawHostListings = useQuery(
+    api.listings.getByHost,
+    hostId ? { host_id: String(hostId) } : 'skip'
+  );
+  const listingById = useMemo(() => {
+    const map = {};
+    (rawHostListings || []).forEach((l) => { map[String(l._id)] = l; });
+    return map;
+  }, [rawHostListings]);
   const pitchThreadKeys = useMemo(
     () => (rawPitches || []).filter((p) => p.thread_key).map((p) => p.thread_key),
     [rawPitches],

@@ -41,7 +41,16 @@
       "edit": "Bearbeiten",
       "pause": "Pausieren",
       "unpause": "Fortsetzen",
-      "duplicate": "Duplizieren"
+      "duplicate": "Duplizieren",
+      "delete": "Löschen"
+    },
+    "deleteConfirm": {
+      "title": "Dieses Angebot löschen?",
+      "body": "\"{{title}}\" wird dauerhaft gelöscht, einschließlich Bewerbungen und Verlauf. Dies kann nicht rückgängig gemacht werden.",
+      "cancel": "Abbrechen",
+      "confirm": "Ja, löschen",
+      "deleting": "Wird gelöscht…",
+      "error": "Angebot konnte nicht gelöscht werden — bitte versuche es erneut."
     }
   },
   "browse": {

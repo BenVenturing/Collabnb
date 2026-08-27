@@ -41,7 +41,16 @@
       "edit": "Editar",
       "pause": "Pausar",
       "unpause": "Reanudar",
-      "duplicate": "Duplicar"
+      "duplicate": "Duplicar",
+      "delete": "Eliminar"
+    },
+    "deleteConfirm": {
+      "title": "¿Eliminar este anuncio?",
+      "body": "\"{{title}}\" se eliminará permanentemente, incluyendo sus postulaciones e historial. Esta acción no se puede deshacer.",
+      "cancel": "Cancelar",
+      "confirm": "Sí, eliminar",
+      "deleting": "Eliminando…",
+      "error": "No se pudo eliminar este anuncio — inténtalo de nuevo."
     }
   },
   "browse": {

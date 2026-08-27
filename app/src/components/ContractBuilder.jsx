@@ -401,9 +401,11 @@ export default function ContractBuilder() {
   }, []);
 
   // Show payment modal when both parties have signed and contract is unpaid.
-  // Founding member hosts skip the payment entirely.
+  // The platform fee is charged to the host, so only the host is prompted to
+  // save a card — the creator never sees this. Founding member hosts skip
+  // the payment entirely.
   useEffect(() => {
-    if (creatorSig && hostSig && !contractPaid && !cardSaved) {
+    if (creatorSig && hostSig && !contractPaid && !cardSaved && profile?.role === 'host') {
       if (profile?.is_founder) {
         setContractPaid(true);
         setFounderToast(true);
@@ -412,7 +414,7 @@ export default function ContractBuilder() {
         setShowPaymentModal(true);
       }
     }
-  }, [creatorSig, hostSig, contractPaid, cardSaved, profile?.is_founder]);
+  }, [creatorSig, hostSig, contractPaid, cardSaved, profile?.is_founder, profile?.role]);
 
   const downloadPDF = async () => {
     if (!previewRef.current) return;
@@ -938,8 +940,8 @@ export default function ContractBuilder() {
                     {t('downloadPdf')}
                   </button>
 
-                  {/* Save a card at signing; the platform fee is charged on completion */}
-                  {status === 'in_progress' && !contractPaid && !cardSaved && (
+                  {/* Save a card at signing; the platform fee is charged on completion — host only */}
+                  {status === 'in_progress' && !contractPaid && !cardSaved && profile?.role === 'host' && (
                     <button onClick={() => setShowPaymentModal(true)} className="btn-primary">
                       {t('saveCardForFee')}
                     </button>

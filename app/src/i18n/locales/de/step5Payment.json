@@ -36,8 +36,8 @@
   "fees": {
     "heading": "Nur für Gastgeber: Preise & Gebühren",
     "platformFee": "Plattformgebühr",
-    "percentDesc": "5 % der Bargeldauszahlung (mind. 25 $)",
-    "flatDesc": "Pauschale Plattformgebühr von 25 $",
+    "percentDesc": "5 % der Bargeldauszahlung (mind. 20 $)",
+    "flatDesc": "Pauschale Plattformgebühr von 20 $",
     "chargedOnlyOnce": "wird nur berechnet, sobald eine Kollaboration abgeschlossen ist",
     "chargedNoteSuffix": ". Du zahlst nie etwas im Voraus, um ein Angebot zu veröffentlichen.",
     "hiddenNote": "⚠ Creator sehen diese Gebühren nicht"

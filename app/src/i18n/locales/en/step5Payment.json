@@ -36,8 +36,8 @@
   "fees": {
     "heading": "Host-only: Pricing & Fees",
     "platformFee": "Platform fee",
-    "percentDesc": "5% of cash payout (min $25)",
-    "flatDesc": "Flat $25 platform fee",
+    "percentDesc": "5% of cash payout (min $20)",
+    "flatDesc": "Flat $20 platform fee",
     "chargedOnlyOnce": "charged only once a collaboration is completed",
     "chargedNoteSuffix": ". You never pay anything upfront to publish a listing.",
     "hiddenNote": "⚠ Creators don't see these fees"

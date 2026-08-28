@@ -36,8 +36,8 @@
   "fees": {
     "heading": "Solo anfitrión: precios y tarifas",
     "platformFee": "Tarifa de la plataforma",
-    "percentDesc": "5% del pago en efectivo (mín. $25)",
-    "flatDesc": "Tarifa fija de plataforma de $25",
+    "percentDesc": "5% del pago en efectivo (mín. $20)",
+    "flatDesc": "Tarifa fija de plataforma de $20",
     "chargedOnlyOnce": "se cobra solo una vez que se completa una colaboración",
     "chargedNoteSuffix": ". Nunca pagas nada por adelantado para publicar un anuncio.",
     "hiddenNote": "⚠ Los creadores no ven estas tarifas"

@@ -36,8 +36,8 @@
   "fees": {
     "heading": "Réservé à l'hôte : tarifs et frais",
     "platformFee": "Frais de plateforme",
-    "percentDesc": "5 % du paiement en espèces (min. 25 $)",
-    "flatDesc": "Frais de plateforme fixes de 25 $",
+    "percentDesc": "5 % du paiement en espèces (min. 20 $)",
+    "flatDesc": "Frais de plateforme fixes de 20 $",
     "chargedOnlyOnce": "facturés uniquement une fois la collaboration terminée",
     "chargedNoteSuffix": ". Vous ne payez jamais rien à l'avance pour publier une annonce.",
     "hiddenNote": "⚠ Les créateurs ne voient pas ces frais"

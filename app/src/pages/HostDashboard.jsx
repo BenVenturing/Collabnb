@@ -354,7 +354,7 @@ function HostListingCard({ listing, meta, delay, glowState, onToggleStatus, onDu
           borderRadius: '1.25rem',
           overflow: 'hidden',
           cursor: 'pointer',
-          transform: hovered ? 'translateY(-4px)' : 'none',
+          transform: hovered && !confirmDelete ? 'translateY(-4px)' : 'none',
           boxShadow: frozen
             ? '0 4px 16px rgba(25,37,36,0.07), 0 0 0 2.5px rgba(209,235,219,0.7), 0 0 18px rgba(74,155,127,0.22)'
             : hovered
@@ -530,8 +530,9 @@ function HostListingCard({ listing, meta, delay, glowState, onToggleStatus, onDu
         <div
           onClick={(e) => { if (e.target === e.currentTarget && !deleting) setConfirmDelete(false); }}
           style={{
-            position: 'fixed', inset: 0, zIndex: 300,
-            background: 'rgba(25,37,36,0.45)', backdropFilter: 'blur(6px)',
+            position: 'absolute', inset: 0, zIndex: 300,
+            borderRadius: '1.25rem', overflow: 'hidden',
+            background: 'rgba(25,37,36,0.45)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)',
             display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem',
           }}
         >

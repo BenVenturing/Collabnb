@@ -50,6 +50,8 @@
   "sendModalToHost": "Send Contract to Host",
   "sendModalBodyCreator": "Send this contract to {{name}}. It will appear in their Inbox.",
   "sendModalBodyHost": "Select a host to send this contract to. It will appear in your Inbox.",
+  "searchHostsPlaceholder": "Search hosts…",
+  "noHostsAvailable": "No hosts found yet. Check back once a host has published a listing.",
   "sendForReview": "Send contract for review & signature",
   "cancel": "Cancel",
   "contract": "Contract",

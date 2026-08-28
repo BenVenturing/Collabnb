@@ -50,6 +50,8 @@
   "sendModalToHost": "Vertrag an Gastgeber senden",
   "sendModalBodyCreator": "Sende diesen Vertrag an {{name}}. Er erscheint in dessen Posteingang.",
   "sendModalBodyHost": "Wähle einen Gastgeber aus, an den dieser Vertrag gesendet werden soll. Er erscheint in deinem Posteingang.",
+  "searchHostsPlaceholder": "Gastgeber suchen…",
+  "noHostsAvailable": "Noch keine Gastgeber gefunden. Schau später noch einmal vorbei, sobald ein Gastgeber ein Inserat veröffentlicht hat.",
   "sendForReview": "Vertrag zur Prüfung & Unterschrift senden",
   "cancel": "Abbrechen",
   "contract": "Vertrag",

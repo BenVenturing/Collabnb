@@ -122,9 +122,7 @@ const TYPE_TABS = [
 function typeLabel(key) { return i18nInstance.t(`hostProposals:typeLabels.${key}`); }
 
 const PITCH_BORDER_CLOSED   = '1.5px solid rgba(209,235,219,0.9)';
-const PITCH_BORDER_EXPANDED = '1.5px solid rgba(149,157,144,0.55)';
 const PITCH_SHADOW_CLOSED   = '0 2px 12px rgba(25,37,36,0.05), 0 0 0 1px rgba(209,235,219,0.5)';
-const PITCH_SHADOW_EXPANDED = '0 4px 20px rgba(25,37,36,0.08), 0 0 0 1px rgba(209,235,219,0.4)';
 
 function fmtFollowers(n) {
   if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M`;
@@ -435,7 +433,7 @@ function SignatureModal({ proposal, party, onSign, onClose }) {
 }
 
 // ─── Inline host → creator message panel ─────────────────────────────────────
-function HostMessagePanel({ threadKey, creatorName }) {
+function HostMessagePanel({ threadKey, creatorName, fill = false }) {
   const { t } = useTranslation('hostProposals');
   const { profile } = useAuth();
   const convexMessages = useQuery(api.threadMessages.getByThread, { threadKey });
@@ -470,13 +468,17 @@ function HostMessagePanel({ threadKey, creatorName }) {
   const hostId = profile?._id ? String(profile._id) : (profile?.id ? String(profile.id) : null);
 
   return (
-    <div style={{ padding: '16px 24px', borderTop: '1px solid rgba(25,37,36,0.07)', background: 'rgba(239,236,233,0.2)' }}>
-      <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--sage)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 10 }}>
+    <div style={{
+      padding: '16px 24px', background: 'rgba(239,236,233,0.2)',
+      borderTop: fill ? 'none' : '1px solid rgba(25,37,36,0.07)',
+      ...(fill ? { flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' } : {}),
+    }}>
+      <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--sage)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 10, flexShrink: 0 }}>
         {t('messagePanel.heading', { creatorName })}
       </div>
 
       {/* Message list */}
-      <div style={{ maxHeight: 200, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
+      <div style={{ ...(fill ? { flex: 1, minHeight: 0 } : { maxHeight: 200 }), overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
         {convexMessages === undefined ? (
           <SkeletonCard variant="message" />
         ) : convexMessages.length === 0 ? (
@@ -505,7 +507,7 @@ function HostMessagePanel({ threadKey, creatorName }) {
       </div>
 
       {/* Compose */}
-      <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
+      <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', flexShrink: 0 }}>
         <textarea
           rows={1}
           value={draft}
@@ -862,15 +864,15 @@ function ProposalCard({ proposal, expanded, onToggle, onStatusChange, onCounter,
   const isLocked = proposal.locked;
 
   const cardBorder = expanded
-    ? isPitch ? PITCH_BORDER_EXPANDED : '1.5px solid rgba(25,37,36,0.18)'
+    ? '1.5px solid rgba(74,155,127,0.45)'
     : isPitch ? PITCH_BORDER_CLOSED   : '1.5px solid rgba(255,255,255,0.85)';
   const cardShadow = expanded
-    ? isPitch ? PITCH_SHADOW_EXPANDED : '0 4px 20px rgba(25,37,36,0.08)'
+    ? '0 0 0 3px rgba(74,155,127,0.14), 0 4px 20px rgba(25,37,36,0.08)'
     : isPitch ? PITCH_SHADOW_CLOSED   : '0 2px 10px rgba(25,37,36,0.05)';
 
   return (
     <div style={{ marginBottom: 10, opacity: dragLocked ? 0.55 : 1, transition: 'opacity 150ms' }}>
-      <div onClick={onToggle} style={{ background: expanded ? 'rgba(255,255,255,0.98)' : 'rgba(255,255,255,0.82)', backdropFilter: 'blur(20px) saturate(135%)', WebkitBackdropFilter: 'blur(20px) saturate(135%)', border: cardBorder, borderRadius: expanded ? '1rem 1rem 0 0' : '1rem', padding: '14px 18px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, boxShadow: cardShadow, transition: 'all 200ms var(--ease-out-quart)' }}>
+      <div onClick={onToggle} style={{ background: expanded ? 'rgba(255,255,255,0.98)' : 'rgba(255,255,255,0.82)', backdropFilter: 'blur(20px) saturate(135%)', WebkitBackdropFilter: 'blur(20px) saturate(135%)', border: cardBorder, borderRadius: '1rem', padding: '14px 18px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, boxShadow: cardShadow, transition: 'all 200ms var(--ease-out-quart)' }}>
         <div {...(dragLocked ? {} : dragHandleListeners)} {...(dragLocked ? {} : dragHandleAttributes)} onClick={(e) => e.stopPropagation()}
           style={{ flexShrink: 0, color: dragLocked ? 'rgba(149,157,144,0.5)' : 'var(--stone)', cursor: dragLocked ? 'not-allowed' : 'grab', padding: '4px 2px', borderRadius: '0.375rem', touchAction: 'none', userSelect: 'none', transition: 'color 150ms' }}
           onMouseEnter={(e) => { if (!dragLocked) e.currentTarget.style.color = 'var(--slate)'; }}
@@ -910,10 +912,9 @@ function ProposalCard({ proposal, expanded, onToggle, onStatusChange, onCounter,
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
           <span style={{ padding: '3px 9px', borderRadius: 9999, fontSize: 10, fontWeight: 700, background: s.bg, border: `1px solid ${s.border}`, color: s.color, whiteSpace: 'nowrap' }}>{statusLabel(proposal.status)}</span>
           <span style={{ fontSize: 11, color: 'var(--sage)' }}>{proposal.applied}</span>
-          {expanded ? <ChevronUp size={14} color="var(--sage)" /> : <ChevronDown size={14} color="var(--sage)" />}
+          {expanded ? <ChevronUp size={14} color="#4A9B7F" /> : <ChevronDown size={14} color="var(--sage)" />}
         </div>
       </div>
-      {expanded && <ProposalDrawer proposal={proposal} onStatusChange={onStatusChange} onCounter={onCounter} onSign={onSign} />}
     </div>
   );
 }
@@ -1260,6 +1261,7 @@ export default function HostProposals() {
   }
 
   const activeProposal = activeId ? allProposals.find((p) => p.id === activeId) : null;
+  const openProposal = expanded ? allProposals.find((p) => p.id === expanded) : null;
 
   // Filtering (hidden proposals excluded everywhere)
   const visible    = allProposals.filter((p) => !p.hidden);
@@ -1393,31 +1395,70 @@ export default function HostProposals() {
             })}
           </div>
 
-          {/* Board */}
-          {rawPitches === undefined ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
-              {Array.from({ length: 4 }).map((_, i) => (
-                <SkeletonCard key={i} variant="proposal" />
-              ))}
-            </div>
-          ) : allProposals.length === 0 ? (
-            <div style={{ background: 'rgba(255,255,255,0.6)', backdropFilter: 'blur(20px)', border: '1.5px solid rgba(255,255,255,0.7)', borderRadius: '1.25rem', padding: '3rem', textAlign: 'center' }}>
-              <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1rem', color: 'var(--ink)', marginBottom: '0.4rem' }}>{t('empty.noProposalsYet')}</p>
-              <p style={{ fontSize: '0.82rem', color: 'var(--sage)', margin: 0 }}>{t('empty.onceCreatorsApply')}</p>
-            </div>
-          ) : (
-            <div style={{ display: 'flex', gap: '0.75rem', overflowX: 'auto', paddingBottom: '0.5rem' }}>
-              {STAGE_KEYS.map((key) => {
-                const stageDef = STAGES.find((s) => s.key === key);
-                const cards = columnCards[key] || [];
-                return (
-                  <DroppableColumn key={key} stageKey={key} label={stageDef?.label || key} count={cards.length} isFlashing={flashStage === key}>
-                    {cards.map((p) => {
-                      const dragLocked = p.collabStage === 'pending' || p.collabStage === 'archived';
-                      return (
+          {/* Board + open-card panel — the board compresses to the left and a
+              detail/chat panel docks on the right while a card is open. */}
+          <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
+            <div style={{ flex: openProposal ? '1 1 55%' : '1 1 auto', minWidth: 0 }}>
+              {rawPitches === undefined ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <SkeletonCard key={i} variant="proposal" />
+                  ))}
+                </div>
+              ) : allProposals.length === 0 ? (
+                <div style={{ background: 'rgba(255,255,255,0.6)', backdropFilter: 'blur(20px)', border: '1.5px solid rgba(255,255,255,0.7)', borderRadius: '1.25rem', padding: '3rem', textAlign: 'center' }}>
+                  <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1rem', color: 'var(--ink)', marginBottom: '0.4rem' }}>{t('empty.noProposalsYet')}</p>
+                  <p style={{ fontSize: '0.82rem', color: 'var(--sage)', margin: 0 }}>{t('empty.onceCreatorsApply')}</p>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', gap: '0.75rem', overflowX: 'auto', paddingBottom: '0.5rem' }}>
+                  {STAGE_KEYS.map((key) => {
+                    const stageDef = STAGES.find((s) => s.key === key);
+                    const cards = columnCards[key] || [];
+                    return (
+                      <DroppableColumn key={key} stageKey={key} label={stageDef?.label || key} count={cards.length} isFlashing={flashStage === key}>
+                        {cards.map((p) => {
+                          const dragLocked = p.collabStage === 'pending' || p.collabStage === 'archived';
+                          return (
+                            <DraggableProposalCard key={p.id} proposal={p}
+                              dragLocked={dragLocked}
+                              dragLockReason={p.collabStage === 'pending' ? t('card.dragLockedPending') : undefined}
+                              expanded={expanded === p.id}
+                              onToggle={() => setExpanded(expanded === p.id ? null : p.id)}
+                              onStatusChange={handleStatusChange}
+                              onCounter={(proposalId, fromParty) => setCounterModal({ proposalId, fromParty })}
+                              onSign={(proposalId, party) => setSignModal({ proposalId, party })}
+                              onCreatorClick={(creator) => setPopupCreator(creator)}
+                            />
+                          );
+                        })}
+                      </DroppableColumn>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Declined — outside the production board */}
+              {declinedList.length > 0 && (
+                <div style={{ marginTop: '1.5rem' }}>
+                  <div
+                    onClick={() => setDeclinedOpen((v) => !v)}
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', padding: '0.5rem 0.25rem' }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      {declinedOpen ? <ChevronUp size={14} color="var(--sage)" /> : <ChevronDown size={14} color="var(--sage)" />}
+                      <span style={{ fontSize: 12, color: 'var(--sage)', fontWeight: 600 }}>{t('declinedHeader.count', { count: declinedCount })}</span>
+                    </div>
+                    <button onClick={(e) => { e.stopPropagation(); setShowClearDeclined(true); }}
+                      style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 9999, border: '1px solid rgba(200,104,104,0.3)', background: 'transparent', fontSize: 11, fontWeight: 700, color: '#9b2d2d', cursor: 'pointer', fontFamily: 'var(--font-body)' }}>
+                      <Trash2 size={11} /> {t('declinedHeader.clearAll')}
+                    </button>
+                  </div>
+                  {declinedOpen && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: '0.5rem' }}>
+                      {declinedList.map((p) => (
                         <DraggableProposalCard key={p.id} proposal={p}
-                          dragLocked={dragLocked}
-                          dragLockReason={p.collabStage === 'pending' ? t('card.dragLockedPending') : undefined}
+                          dragLocked
                           expanded={expanded === p.id}
                           onToggle={() => setExpanded(expanded === p.id ? null : p.id)}
                           onStatusChange={handleStatusChange}
@@ -1425,47 +1466,26 @@ export default function HostProposals() {
                           onSign={(proposalId, party) => setSignModal({ proposalId, party })}
                           onCreatorClick={(creator) => setPopupCreator(creator)}
                         />
-                      );
-                    })}
-                  </DroppableColumn>
-                );
-              })}
-            </div>
-          )}
-
-          {/* Declined — outside the production board */}
-          {declinedList.length > 0 && (
-            <div style={{ marginTop: '1.5rem' }}>
-              <div
-                onClick={() => setDeclinedOpen((v) => !v)}
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', padding: '0.5rem 0.25rem' }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  {declinedOpen ? <ChevronUp size={14} color="var(--sage)" /> : <ChevronDown size={14} color="var(--sage)" />}
-                  <span style={{ fontSize: 12, color: 'var(--sage)', fontWeight: 600 }}>{t('declinedHeader.count', { count: declinedCount })}</span>
-                </div>
-                <button onClick={(e) => { e.stopPropagation(); setShowClearDeclined(true); }}
-                  style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 9999, border: '1px solid rgba(200,104,104,0.3)', background: 'transparent', fontSize: 11, fontWeight: 700, color: '#9b2d2d', cursor: 'pointer', fontFamily: 'var(--font-body)' }}>
-                  <Trash2 size={11} /> {t('declinedHeader.clearAll')}
-                </button>
-              </div>
-              {declinedOpen && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: '0.5rem' }}>
-                  {declinedList.map((p) => (
-                    <DraggableProposalCard key={p.id} proposal={p}
-                      dragLocked
-                      expanded={expanded === p.id}
-                      onToggle={() => setExpanded(expanded === p.id ? null : p.id)}
-                      onStatusChange={handleStatusChange}
-                      onCounter={(proposalId, fromParty) => setCounterModal({ proposalId, fromParty })}
-                      onSign={(proposalId, party) => setSignModal({ proposalId, party })}
-                      onCreatorClick={(creator) => setPopupCreator(creator)}
-                    />
-                  ))}
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
-          )}
+
+            {openProposal && (
+              <div style={{ flex: '1 1 45%', minWidth: 320, maxWidth: 480, position: 'sticky', top: '1rem' }}>
+                <ProposalDrawer
+                  proposal={openProposal}
+                  onStatusChange={handleStatusChange}
+                  onCounter={(proposalId, fromParty) => setCounterModal({ proposalId, fromParty })}
+                  onSign={(proposalId, party) => setSignModal({ proposalId, party })}
+                  onClose={() => setExpanded(null)}
+                  listingById={listingById}
+                />
+              </div>
+            )}
+          </div>
         </div>
 
         </ProposalsOverview>

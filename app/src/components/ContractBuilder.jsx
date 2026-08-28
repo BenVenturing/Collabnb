@@ -8,6 +8,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { SAMPLE_HOST } from '../lib/mockData';
 import PaymentModal from './PaymentModal';
 import ReceiptCheckoutOverlay from './ReceiptCheckoutOverlay';
+import Confetti from './Confetti';
+import { computeFee } from '../../convex/lib/fees';
 
 const CURRENCIES = ['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'JPY'];
 const FREE_STAY_VALUE = 'free_stay';
@@ -59,11 +61,27 @@ export default function ContractBuilder() {
     subtitle: [h.city, h.region].filter(Boolean).join(', ') || t('role.host'),
     isReal: true,
   }));
-  const sendHosts = liveHosts.length ? liveHosts : KNOWN_HOSTS;
+  // Demo hosts are only ever a valid send target for the founder's own testing
+  // account — sending a real creator's contract to a demo host silently goes
+  // nowhere (no matching profile for the backend to notify).
+  const baseSendHosts = liveHosts.length ? liveHosts : (profile?.is_founder ? KNOWN_HOSTS : []);
+  // The host this contract actually originated from (via Apply → Create
+  // Contract) always sorts first, so the creator doesn't have to hunt for
+  // them in a list of every host on the platform. Falls back to matching by
+  // name when no id is available (e.g. contracts started from a collab
+  // rather than directly from a listing).
+  const sendHosts = [...baseSendHosts].sort((a, b) => {
+    const aMatch = (prefill?.host_id && a.id === String(prefill.host_id)) || (!prefill?.host_id && a.name === prefill?.host);
+    const bMatch = (prefill?.host_id && b.id === String(prefill.host_id)) || (!prefill?.host_id && b.name === prefill?.host);
+    if (aMatch && !bMatch) return -1;
+    if (bMatch && !aMatch) return 1;
+    return 0;
+  });
 
   const [editingId, setEditingId] = useState(null);
   const [contractList, setContractList] = useState([]);
   const [selectedHost, setSelectedHost] = useState(null);
+  const [hostSearch, setHostSearch] = useState('');
 
   const FORM_DRAFT_KEY = 'collabnb_contract_form_draft';
 
@@ -133,6 +151,7 @@ export default function ContractBuilder() {
   // ── Send modal state ──
   const [showSendModal, setShowSendModal] = useState(false);
   const [sendSuccess, setSendSuccess] = useState(false);
+  const [sendConfetti, setSendConfetti] = useState(false);
   const [isSent, setIsSent] = useState(false);
 
   // ── Payment state ──
@@ -272,6 +291,9 @@ export default function ContractBuilder() {
     setEditingId(null);
     setSendSuccess(false);
     setIsSent(false);
+    setContractPaid(false);
+    setCardSaved(false);
+    setPaymentCancelled(false);
     try { localStorage.removeItem(FORM_DRAFT_KEY); } catch {}
   };
 
@@ -296,6 +318,11 @@ export default function ContractBuilder() {
     setEditingId(c.id);
     setSendSuccess(false);
     setIsSent(Boolean(c.sent_at));
+    // Seed from the backend record so a refresh doesn't re-prompt the host
+    // for a card they already saved, or forget a completed payment.
+    setContractPaid(Boolean(c.paid));
+    setCardSaved(Boolean(c.host_payment_method_id) || Boolean(c.paid));
+    setPaymentCancelled(false);
   };
 
   const computePaymentDisplay = () => {
@@ -471,11 +498,13 @@ export default function ContractBuilder() {
     markContractSent(id);
     setIsSent(true);
     setSendSuccess(true);
+    setSendConfetti(true);
     try { localStorage.removeItem(FORM_DRAFT_KEY); } catch {}
     setTimeout(() => {
       setShowSendModal(false);
       setSendSuccess(false);
     }, 2000);
+    setTimeout(() => setSendConfetti(false), 3800);
   };
 
   const fieldEntries = [
@@ -512,6 +541,7 @@ export default function ContractBuilder() {
 
   return (
     <div className="min-h-dvh bg-bone px-4 py-6 lg:px-8">
+      <Confetti show={sendConfetti} />
       <div className="max-w-7xl mx-auto">
         {/* Back */}
         <div className="flex items-center justify-between mb-4">
@@ -1037,7 +1067,7 @@ export default function ContractBuilder() {
       <PaymentModal
         isOpen={showPaymentModal}
         onClose={() => setShowPaymentModal(false)}
-        fee={form.isFreeStay || cashValue < 500 ? 20 : cashValue * 0.05}
+        fee={computeFee({ cashValue: form.isFreeStay ? 0 : cashValue, isFoundingHost: profile?.is_founder }).fee}
         isFreeStay={form.isFreeStay}
         cashAmount={cashValue}
         contractId={editingId || 'draft'}
@@ -1110,8 +1140,25 @@ export default function ContractBuilder() {
                         <polygon points="22 2 15 22 11 13 2 9 22 2"/>
                       </svg>
                     </button>
+                  ) : sendHosts.length === 0 ? (
+                    <p style={{ fontSize: '0.85rem', color: 'var(--sage)', textAlign: 'center', padding: '0.5rem 0' }}>
+                      {t('noHostsAvailable')}
+                    </p>
                   ) : (
-                    sendHosts.map((host) => (
+                    <>
+                      {sendHosts.length > 4 && (
+                        <input
+                          type="text"
+                          value={hostSearch}
+                          onChange={(e) => setHostSearch(e.target.value)}
+                          placeholder={t('searchHostsPlaceholder')}
+                          autoFocus={false}
+                          style={{ width: '100%', padding: '0.55rem 0.75rem', marginBottom: '0.125rem', borderRadius: '0.625rem', border: '1px solid rgba(25,37,36,0.15)', fontFamily: 'var(--font-body)', fontSize: '0.82rem', color: 'var(--ink)', outline: 'none', boxSizing: 'border-box' }}
+                        />
+                      )}
+                      {sendHosts
+                        .filter((host) => host.name?.toLowerCase().includes(hostSearch.trim().toLowerCase()))
+                        .map((host) => (
                       <button
                         key={host.id}
                         onClick={() => handleSendToHost(host)}
@@ -1135,7 +1182,8 @@ export default function ContractBuilder() {
                           <polygon points="22 2 15 22 11 13 2 9 22 2"/>
                         </svg>
                       </button>
-                    ))
+                        ))}
+                    </>
                   )}
                 </div>
                 <div style={{ marginTop: '1rem', textAlign: 'center' }}>

@@ -50,6 +50,8 @@
   "sendModalToHost": "Envoyer le contrat à l'hôte",
   "sendModalBodyCreator": "Envoyez ce contrat à {{name}}. Il apparaîtra dans sa boîte de réception.",
   "sendModalBodyHost": "Sélectionnez un hôte à qui envoyer ce contrat. Il apparaîtra dans votre boîte de réception.",
+  "searchHostsPlaceholder": "Rechercher des hôtes…",
+  "noHostsAvailable": "Aucun hôte trouvé pour le moment. Revenez une fois qu'un hôte aura publié une annonce.",
   "sendForReview": "Envoyer le contrat pour examen et signature",
   "cancel": "Annuler",
   "contract": "Contrat",

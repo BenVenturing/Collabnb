@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from "react";
 import { computeLoadTier, totalPoints, DELIVERABLE_LABELS } from "../../convex/lib/compensationPoints";
+import { computeFee } from "../../convex/lib/fees";
 
 const STORAGE_KEY = "collabnb_listing_draft_v1";
 
@@ -66,11 +67,12 @@ const EMPTY_DRAFT = {
   maxOffers: "",
 };
 
+// Delegates to the same computeFee the backend charges from (convex/lib/fees),
+// so the fee previewed here never drifts from the fee actually charged at
+// collab completion.
 function calculateFee(draft) {
-  if (draft.compensation_type === "paid" || draft.compensation_type === "hybrid") {
-    return Math.max(draft.cash_amount * 0.05, 25);
-  }
-  return 25;
+  const isPaidOrHybrid = draft.compensation_type === "paid" || draft.compensation_type === "hybrid";
+  return computeFee({ cashValue: isPaidOrHybrid ? draft.cash_amount : 0 }).fee;
 }
 
 const ListingDraftContext = createContext(null);

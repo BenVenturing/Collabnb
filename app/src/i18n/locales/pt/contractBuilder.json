@@ -50,6 +50,8 @@
   "sendModalToHost": "Enviar contrato ao anfitrião",
   "sendModalBodyCreator": "Envie este contrato para {{name}}. Ele aparecerá na caixa de entrada dele(a).",
   "sendModalBodyHost": "Selecione um anfitrião para enviar este contrato. Ele aparecerá na sua caixa de entrada.",
+  "searchHostsPlaceholder": "Buscar anfitriões…",
+  "noHostsAvailable": "Ainda não há anfitriões disponíveis. Volte quando um anfitrião publicar um anúncio.",
   "sendForReview": "Enviar contrato para revisão e assinatura",
   "cancel": "Cancelar",
   "contract": "Contrato",

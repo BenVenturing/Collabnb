@@ -544,6 +544,7 @@ Let's make something great together.`;
                     prefill: {
                       creator: creatorProfile?.full_name || nameStr,
                       host: hostDisplayName,
+                      host_id: listing.host_id,
                       property_name: listing.title,
                       location: listing.location,
                       dates: listing.dates_available,

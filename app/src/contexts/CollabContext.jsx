@@ -130,6 +130,7 @@ export function CollabProvider({ children }) {
       host_signed: c.host_signed,
       summary_note: c.summary_note,
       paid: c.paid,
+      host_payment_method_id: c.host_payment_method_id,
       sent_at: c.sent_at,
     }));
   }, [convexContractsRaw]);

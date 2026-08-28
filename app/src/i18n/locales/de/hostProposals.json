@@ -19,12 +19,30 @@
     "Influencer": "50K+ Follower — Große Reichweite, etabliertes Publikum"
   },
   "contractFields": {
-    "nights": { "label": "Nächte", "placeholder": "z. B. 3" },
-    "compensation": { "label": "Vergütung", "placeholder": "z. B. 500 $ oder 300 $ + Aufenthalt" },
-    "deliverables": { "label": "Deliverables", "placeholder": "z. B. 2 Reels + 5 Fotos" },
-    "turnaround": { "label": "Bearbeitungszeit", "placeholder": "z. B. 14 Tage" },
-    "affiliate": { "label": "Affiliate %", "placeholder": "z. B. 5 % oder —" },
-    "extra_terms": { "label": "Zusätzliche Bedingungen", "placeholder": "Optionale Extras" }
+    "nights": {
+      "label": "Nächte",
+      "placeholder": "z. B. 3"
+    },
+    "compensation": {
+      "label": "Vergütung",
+      "placeholder": "z. B. 500 $ oder 300 $ + Aufenthalt"
+    },
+    "deliverables": {
+      "label": "Deliverables",
+      "placeholder": "z. B. 2 Reels + 5 Fotos"
+    },
+    "turnaround": {
+      "label": "Bearbeitungszeit",
+      "placeholder": "z. B. 14 Tage"
+    },
+    "affiliate": {
+      "label": "Affiliate %",
+      "placeholder": "z. B. 5 % oder —"
+    },
+    "extra_terms": {
+      "label": "Zusätzliche Bedingungen",
+      "placeholder": "Optionale Extras"
+    }
   },
   "history": {
     "heading": "Verhandlungsverlauf",
@@ -80,7 +98,6 @@
   },
   "drawer": {
     "close": "Schließen",
-    "nextStep": "Weiter: {{stage}}",
     "contract": "Vertrag",
     "viewProfile": "Profil ansehen",
     "verified": "Verifiziert",
@@ -104,7 +121,6 @@
     "acceptAsIs": "So akzeptieren",
     "youSigned": "✓ Du hast unterschrieben",
     "counterPitch": "Gegenangebot",
-    "decline": "Ablehnen",
     "creatorsResponse": "Antwort des Creators",
     "demo": "· Demo",
     "creatorCounteredBack": "· Creator hat erneut ein Gegenangebot gemacht",
@@ -115,7 +131,38 @@
     "approve": "Genehmigen",
     "markCompleted": "Als abgeschlossen markieren",
     "message": "Nachricht",
-    "messageCreator": "Nachricht an Creator"
+    "messageCreator": "Nachricht an Creator",
+    "moveToStage": "Zu {{stage}} verschieben",
+    "finalStage": "Letzte Phase",
+    "currentStage": "Aktuell: {{stage}}",
+    "terminate": "Beenden",
+    "terminateNeedsBoth": "Du und der Creator müssen beide zustimmen, um eine angenommene Zusammenarbeit zu beenden",
+    "terminationAwaitingCreator": "Beendigung angefragt — wartet auf die Bestätigung des Creators.",
+    "terminationRequestedByCreator": "Der Creator möchte diese Zusammenarbeit beenden.",
+    "withdrawTermination": "Zurückziehen",
+    "confirmTermination": "Beendigung bestätigen",
+    "viewListing": "Angebot",
+    "hideListing": "Ausblenden",
+    "openListingPage": "Angebotsseite öffnen",
+    "listingUnavailable": "Für diesen Vorschlag sind keine Angebotsdetails verfügbar.",
+    "noContractYet": "Noch keine Vertragsbedingungen vereinbart.",
+    "driveFolder": "Drive-Ordner:",
+    "driveNotSubmitted": "Noch nicht eingereicht",
+    "days": "{{count}} Tage",
+    "listingFields": {
+      "compensation": "Vergütung",
+      "deliverables": "Leistungen",
+      "nights": "Nächte",
+      "turnaround": "Lieferfrist",
+      "dates": "Termine"
+    },
+    "payout": {
+      "platformTitle": "Collabnb wickelt diese Zahlung ab",
+      "platformBody": "Deine Karte wird jetzt belastet. Die Auszahlung an den Creator wird 48 Stunden zurückgehalten, falls eine Seite einen Streitfall meldet, und danach automatisch weitergeleitet.",
+      "inPersonTitle": "Du bezahlst diesen Creator direkt",
+      "inPersonBody": "Denk daran, {{name}} {{amount}} selbst zu zahlen — Collabnb hält dieses Geld nie, daher gilt das 48-Stunden-Streitfenster nicht. Deine Plattformgebühr wird separat berechnet.",
+      "agreedAmount": "den vereinbarten Betrag"
+    }
   },
   "card": {
     "viewProfile": "Profil ansehen",
@@ -125,7 +172,8 @@
     "listingStats": "{{listing}} · {{followers}} Follower · {{engagement}} % ER",
     "dragToMoveStage": "Ziehen, um die Phase zu ändern",
     "dragLocked": "Der Reihe nach zur nächsten Phase — Überspringen nicht möglich",
-    "dragLockedPending": "Erst über die Karte annehmen oder ablehnen, bevor es in die Produktion geht"
+    "dragLockedPending": "Erst über die Karte annehmen oder ablehnen, bevor es in die Produktion geht",
+    "terminationPending": "Beendigung ausstehend"
   },
   "header": {
     "heading": "Vorschläge",
@@ -148,5 +196,10 @@
     "body_other": "Alle {{count}} abgelehnten Vorschläge aus der Ansicht entfernen? Dies löscht keine Creator-Daten, sondern blendet sie nur aus deiner Pipeline aus.",
     "cancel": "Abbrechen",
     "removeAll": "Alle entfernen"
+  },
+  "completeModal": {
+    "heading": "Collab mit {{name}} als abgeschlossen markieren?",
+    "cancel": "Abbrechen",
+    "confirm": "Ja, abschließen"
   }
 }

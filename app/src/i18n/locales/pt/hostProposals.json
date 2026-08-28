@@ -19,12 +19,30 @@
     "Influencer": "50K+ seguidores — Amplo alcance, público estabelecido"
   },
   "contractFields": {
-    "nights": { "label": "Noites", "placeholder": "ex.: 3" },
-    "compensation": { "label": "Compensação", "placeholder": "ex.: US$ 500 ou US$ 300 + estadia" },
-    "deliverables": { "label": "Entregáveis", "placeholder": "ex.: 2 Reels + 5 Fotos" },
-    "turnaround": { "label": "Prazo de entrega", "placeholder": "ex.: 14 dias" },
-    "affiliate": { "label": "% de afiliado", "placeholder": "ex.: 5% ou —" },
-    "extra_terms": { "label": "Termos extras", "placeholder": "Adicionais opcionais" }
+    "nights": {
+      "label": "Noites",
+      "placeholder": "ex.: 3"
+    },
+    "compensation": {
+      "label": "Compensação",
+      "placeholder": "ex.: US$ 500 ou US$ 300 + estadia"
+    },
+    "deliverables": {
+      "label": "Entregáveis",
+      "placeholder": "ex.: 2 Reels + 5 Fotos"
+    },
+    "turnaround": {
+      "label": "Prazo de entrega",
+      "placeholder": "ex.: 14 dias"
+    },
+    "affiliate": {
+      "label": "% de afiliado",
+      "placeholder": "ex.: 5% ou —"
+    },
+    "extra_terms": {
+      "label": "Termos extras",
+      "placeholder": "Adicionais opcionais"
+    }
   },
   "history": {
     "heading": "Histórico de negociação",
@@ -80,7 +98,6 @@
   },
   "drawer": {
     "close": "Fechar",
-    "nextStep": "Próximo: {{stage}}",
     "contract": "Contrato",
     "viewProfile": "Ver perfil",
     "verified": "Verificado",
@@ -104,7 +121,6 @@
     "acceptAsIs": "Aceitar como está",
     "youSigned": "✓ Você assinou",
     "counterPitch": "Contraproposta",
-    "decline": "Recusar",
     "creatorsResponse": "Resposta do criador",
     "demo": "· demo",
     "creatorCounteredBack": "· Criador fez uma nova contraproposta",
@@ -115,7 +131,38 @@
     "approve": "Aprovar",
     "markCompleted": "Marcar como concluído",
     "message": "Mensagem",
-    "messageCreator": "Enviar mensagem ao criador"
+    "messageCreator": "Enviar mensagem ao criador",
+    "moveToStage": "Mover para {{stage}}",
+    "finalStage": "Etapa final",
+    "currentStage": "Atual: {{stage}}",
+    "terminate": "Encerrar",
+    "terminateNeedsBoth": "Você e o criador precisam concordar para encerrar uma colaboração aceita",
+    "terminationAwaitingCreator": "Encerramento solicitado — aguardando a confirmação do criador.",
+    "terminationRequestedByCreator": "O criador pediu para encerrar esta colaboração.",
+    "withdrawTermination": "Retirar",
+    "confirmTermination": "Confirmar encerramento",
+    "viewListing": "Anúncio",
+    "hideListing": "Ocultar",
+    "openListingPage": "Abrir página do anúncio",
+    "listingUnavailable": "Os detalhes do anúncio não estão disponíveis para esta proposta.",
+    "noContractYet": "Nenhum termo de contrato acordado ainda.",
+    "driveFolder": "Pasta do Drive:",
+    "driveNotSubmitted": "Ainda não enviada",
+    "days": "{{count}} dias",
+    "listingFields": {
+      "compensation": "Compensação",
+      "deliverables": "Entregáveis",
+      "nights": "Noites",
+      "turnaround": "Prazo",
+      "dates": "Datas"
+    },
+    "payout": {
+      "platformTitle": "A Collabnb está cuidando deste pagamento",
+      "platformBody": "Seu cartão é cobrado agora. O pagamento do criador fica retido por 48 horas caso alguma parte abra uma disputa e depois é encaminhado automaticamente.",
+      "inPersonTitle": "Você paga este criador diretamente",
+      "inPersonBody": "Lembre-se de pagar {{amount}} a {{name}} você mesmo — a Collabnb nunca retém esse dinheiro, então a janela de disputa de 48 horas não se aplica. Sua taxa de plataforma é cobrada separadamente.",
+      "agreedAmount": "o valor acordado"
+    }
   },
   "card": {
     "viewProfile": "Ver perfil",
@@ -123,7 +170,8 @@
     "application": "Candidatura",
     "locked": "Bloqueado",
     "listingStats": "{{listing}} · {{followers}} seguidores · {{engagement}}% ER",
-    "dragToMoveStage": "Arraste para mudar de etapa"
+    "dragToMoveStage": "Arraste para mudar de etapa",
+    "terminationPending": "Encerramento pendente"
   },
   "header": {
     "heading": "Propostas",
@@ -146,5 +194,10 @@
     "body_other": "Remover as {{count}} propostas recusadas da visualização? Isso não exclui os dados do criador, apenas os oculta do seu pipeline.",
     "cancel": "Cancelar",
     "removeAll": "Remover tudo"
+  },
+  "completeModal": {
+    "heading": "Marcar a colab com {{name}} como concluída?",
+    "cancel": "Cancelar",
+    "confirm": "Sim, concluir"
   }
 }

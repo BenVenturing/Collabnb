@@ -225,6 +225,11 @@ export default defineSchema({
     is_sample: v.optional(v.boolean()),
     host_id: v.optional(v.string()),
     pitch_id: v.optional(v.string()), // links back to the pitches row created in the same apply()
+    // Ending an accepted collab needs both sides to agree: one party requests,
+    // the other confirms. 'host' | 'creator' | undefined (no request pending).
+    termination_requested_by: v.optional(v.string()),
+    termination_requested_at: v.optional(v.number()),
+    terminated_at: v.optional(v.number()),
   })
     .index("by_creator", ["creator_id"])
     .index("by_host", ["host_id"])

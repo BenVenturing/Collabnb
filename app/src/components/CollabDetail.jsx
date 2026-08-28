@@ -939,6 +939,18 @@ export default function CollabDetail({ collab, onClose }) {
   const { profile } = useAuth();
   const [driveUrl, setDriveUrl] = useState(collab.drive_url || '');
   const [confirmTerminate, setConfirmTerminate] = useState(false);
+
+  // Ending an accepted collab takes both sides — read the pending request (if
+  // any) straight from Convex, which is where the host writes it.
+  const convexCollab = useQuery(
+    api.collaborations.getById,
+    collab.convex_id ? { id: String(collab.convex_id) } : 'skip',
+  );
+  const terminationRequestedBy = convexCollab?.termination_requested_by || null;
+  const requestTerminationCvx = useMutation(api.collaborations.requestTermination);
+  const cancelTerminationCvx  = useMutation(api.collaborations.cancelTermination);
+  const confirmTerminationCvx = useMutation(api.collaborations.confirmTermination);
+  const isAcceptedCollab = collab.current_stage && collab.current_stage !== 'pending';
   const listing = SAMPLE_LISTINGS.find((l) => l.id === collab.listing_id);
   const host = SAMPLE_HOST;
   const hostProfile = useQuery(api.profiles.getByUsername, { username: host.username });
@@ -1132,12 +1144,51 @@ export default function CollabDetail({ collab, onClose }) {
         {confirmTerminate && (
           <WithdrawConfirmModal
             titleKey="terminate.title"
-            bodyKey="terminate.body"
-            confirmKey="terminate.confirm"
+            bodyKey={isAcceptedCollab && collab.convex_id ? 'terminate.bodyAccepted' : 'terminate.body'}
+            confirmKey={isAcceptedCollab && collab.convex_id ? 'terminate.requestConfirm' : 'terminate.confirm'}
             cancelKey="terminate.cancel"
-            onConfirm={() => { removeCollab(collab); onClose(); }}
+            onConfirm={() => {
+              // An accepted collab can't be ended unilaterally — ask the host
+              // and leave it in place until they confirm.
+              if (isAcceptedCollab && collab.convex_id) {
+                requestTerminationCvx({ id: String(collab.convex_id) }).catch(() => {});
+                setConfirmTerminate(false);
+                return;
+              }
+              removeCollab(collab);
+              onClose();
+            }}
             onCancel={() => setConfirmTerminate(false)}
           />
+        )}
+
+        {/* Pending termination — either side may have asked */}
+        {terminationRequestedBy && (
+          <div style={{
+            margin: '0 1.5rem 0.75rem', padding: '0.75rem 1rem', borderRadius: '0.875rem',
+            background: 'rgba(192,57,43,0.08)', border: '1px solid rgba(192,57,43,0.25)',
+            display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap',
+          }}>
+            <Trash2 size={15} color="#c0392b" style={{ flexShrink: 0 }} />
+            <span style={{ flex: 1, minWidth: 180, fontSize: '0.8rem', fontWeight: 600, color: '#c0392b', lineHeight: 1.45 }}>
+              {terminationRequestedBy === 'host' ? t('terminate.hostRequested') : t('terminate.awaitingHost')}
+            </span>
+            {terminationRequestedBy === 'host' ? (
+              <button
+                onClick={() => { confirmTerminationCvx({ id: String(collab.convex_id) }).catch(() => {}); }}
+                style={{ padding: '0.45rem 0.9rem', borderRadius: 9999, border: 'none', background: '#c0392b', color: '#fff', fontFamily: 'var(--font-body)', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}
+              >
+                {t('terminate.agree')}
+              </button>
+            ) : (
+              <button
+                onClick={() => { cancelTerminationCvx({ id: String(collab.convex_id) }).catch(() => {}); }}
+                style={{ padding: '0.45rem 0.9rem', borderRadius: 9999, border: '1.5px solid rgba(192,57,43,0.35)', background: 'transparent', color: '#c0392b', fontFamily: 'var(--font-body)', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}
+              >
+                {t('terminate.withdraw')}
+              </button>
+            )}
+          </div>
         )}
 
         {/* ── Stage progress bar ───────────────────────────────────────── */}

@@ -19,12 +19,30 @@
     "Influencer": "50K+ followers — Broad reach, established audience"
   },
   "contractFields": {
-    "nights": { "label": "Nights", "placeholder": "e.g. 3" },
-    "compensation": { "label": "Compensation", "placeholder": "e.g. $500 or $300 + stay" },
-    "deliverables": { "label": "Deliverables", "placeholder": "e.g. 2 Reels + 5 Photos" },
-    "turnaround": { "label": "Turnaround", "placeholder": "e.g. 14 days" },
-    "affiliate": { "label": "Affiliate %", "placeholder": "e.g. 5% or —" },
-    "extra_terms": { "label": "Extra Terms", "placeholder": "Optional add-ons" }
+    "nights": {
+      "label": "Nights",
+      "placeholder": "e.g. 3"
+    },
+    "compensation": {
+      "label": "Compensation",
+      "placeholder": "e.g. $500 or $300 + stay"
+    },
+    "deliverables": {
+      "label": "Deliverables",
+      "placeholder": "e.g. 2 Reels + 5 Photos"
+    },
+    "turnaround": {
+      "label": "Turnaround",
+      "placeholder": "e.g. 14 days"
+    },
+    "affiliate": {
+      "label": "Affiliate %",
+      "placeholder": "e.g. 5% or —"
+    },
+    "extra_terms": {
+      "label": "Extra Terms",
+      "placeholder": "Optional add-ons"
+    }
   },
   "history": {
     "heading": "Negotiation history",
@@ -80,7 +98,6 @@
   },
   "drawer": {
     "close": "Close",
-    "nextStep": "Next: {{stage}}",
     "contract": "Contract",
     "viewProfile": "View profile",
     "verified": "Verified",
@@ -104,7 +121,6 @@
     "acceptAsIs": "Accept As Is",
     "youSigned": "✓ You signed",
     "counterPitch": "Counter Pitch",
-    "decline": "Decline",
     "creatorsResponse": "Creator's Response",
     "demo": "· demo",
     "creatorCounteredBack": "· Creator countered back",
@@ -115,7 +131,38 @@
     "approve": "Approve",
     "markCompleted": "Mark Completed",
     "message": "Message",
-    "messageCreator": "Message Creator"
+    "messageCreator": "Message Creator",
+    "moveToStage": "Move to {{stage}}",
+    "finalStage": "Final stage",
+    "currentStage": "Current: {{stage}}",
+    "terminate": "Terminate",
+    "terminateNeedsBoth": "Both you and the creator must agree to end an accepted collaboration",
+    "terminationAwaitingCreator": "Termination requested — waiting on the creator to confirm.",
+    "terminationRequestedByCreator": "The creator has asked to terminate this collaboration.",
+    "withdrawTermination": "Withdraw",
+    "confirmTermination": "Confirm termination",
+    "viewListing": "Listing",
+    "hideListing": "Hide",
+    "openListingPage": "Open listing page",
+    "listingUnavailable": "Listing details aren't available for this proposal.",
+    "noContractYet": "No contract terms agreed yet.",
+    "driveFolder": "Drive folder:",
+    "driveNotSubmitted": "Not submitted yet",
+    "days": "{{count}} days",
+    "listingFields": {
+      "compensation": "Compensation",
+      "deliverables": "Deliverables",
+      "nights": "Nights",
+      "turnaround": "Turnaround",
+      "dates": "Dates"
+    },
+    "payout": {
+      "platformTitle": "Collabnb is handling this payment",
+      "platformBody": "Your card is charged now. The creator's payout is held for 48 hours in case either side raises a dispute, then forwarded automatically.",
+      "inPersonTitle": "You're paying this creator directly",
+      "inPersonBody": "Remember to pay {{name}} {{amount}} yourself — Collabnb never holds this money, so the 48-hour dispute window doesn't apply. Your platform fee is charged separately.",
+      "agreedAmount": "the agreed amount"
+    }
   },
   "card": {
     "viewProfile": "View profile",
@@ -125,7 +172,8 @@
     "listingStats": "{{listing}} · {{followers}} followers · {{engagement}}% ER",
     "dragToMoveStage": "Drag to move stage",
     "dragLocked": "Move to the next stage in order — you can't skip ahead",
-    "dragLockedPending": "Approve or decline this from the card before moving it into production"
+    "dragLockedPending": "Approve or decline this from the card before moving it into production",
+    "terminationPending": "Termination pending"
   },
   "header": {
     "heading": "Proposals",
@@ -148,5 +196,10 @@
     "body_other": "Remove all {{count}} declined proposals from view? This won't delete creator data, just hides them from your pipeline.",
     "cancel": "Cancel",
     "removeAll": "Remove All"
+  },
+  "completeModal": {
+    "heading": "Mark the collab with {{name}} complete?",
+    "cancel": "Cancel",
+    "confirm": "Yes, complete"
   }
 }

@@ -11,10 +11,12 @@ import SkeletonCard from '../../components/SkeletonCard';
 import ProposalsOverview from '../../components/dashboard/ProposalsOverview';
 import { bucketByMonth, toMonthSeries, isoDate } from '../../lib/monthSeries';
 import { STAGES } from '../../lib/mockData';
-import { canAdvanceStage, STAGE_KEYS } from '../../lib/collabStages';
+import { STAGE_KEYS } from '../../lib/collabStages';
+import { SAMPLE_PROPOSALS } from '../../lib/sampleProposals';
 import {
   MessageSquare, ChevronDown, ChevronUp, ExternalLink, Sparkles,
-  GripVertical, Lock, Download, Pen, CheckCircle2, Trash2, X,
+  GripVertical, Lock, Download, Pen, CheckCircle2, Trash2, X, ArrowLeft,
+  AlertTriangle, FileText, FolderOpen, Image as ImageIcon, DollarSign,
 } from 'lucide-react';
 import {
   DndContext, DragOverlay,
@@ -85,14 +87,9 @@ const PROPOSALS = [
   },
 ];
 
-const STATUS_CFG = {
-  pending:      { bg: 'rgba(212,168,67,0.15)',  border: 'rgba(212,168,67,0.4)',  color: '#b45309' },
-  under_review: { bg: 'rgba(123,104,200,0.12)', border: 'rgba(123,104,200,0.3)', color: '#5b4db8' },
-  approved:     { bg: 'rgba(74,155,127,0.12)',  border: 'rgba(74,155,127,0.3)',  color: '#2d7d5e' },
-  completed:    { bg: 'rgba(60,87,89,0.12)',    border: 'rgba(60,87,89,0.3)',    color: '#3C5759' },
-  declined:     { bg: 'rgba(200,104,104,0.1)',  border: 'rgba(200,104,104,0.25)',color: '#9b2d2d' },
-};
-function statusLabel(key) { return i18nInstance.t(`hostProposals:statusLabels.${key}`); }
+// Status chips were removed from the board: the column a card sits in *is*
+// its status, so a chip only repeated it (and could contradict it when stage
+// and pitch status drifted apart).
 
 const TIER_COLORS = {
   'UGC Beginner':     { bg: 'rgba(209,235,219,0.6)', color: 'var(--ink)' },
@@ -124,11 +121,6 @@ function typeLabel(key) { return i18nInstance.t(`hostProposals:typeLabels.${key}
 const PITCH_BORDER_CLOSED   = '1.5px solid rgba(209,235,219,0.9)';
 const PITCH_SHADOW_CLOSED   = '0 2px 12px rgba(25,37,36,0.05), 0 0 0 1px rgba(209,235,219,0.5)';
 
-function fmtFollowers(n) {
-  if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M`;
-  if (n >= 1000)    return `${(n / 1000).toFixed(1)}K`;
-  return String(n);
-}
 
 // ─── Contract fields ──────────────────────────────────────────────────────────
 const CONTRACT_FIELDS = [
@@ -141,6 +133,22 @@ const CONTRACT_FIELDS = [
 ];
 function contractFieldLabel(key) { return i18nInstance.t(`hostProposals:contractFields.${key}.label`); }
 function contractFieldPlaceholder(key) { return i18nInstance.t(`hostProposals:contractFields.${key}.placeholder`); }
+
+// Who settles the creator's cash on completion, and for how much.
+// 'platform' — Collabnb charges the host and forwards the payout after a 48h
+// dispute hold. 'in_person' — the host pays the creator directly; Collabnb
+// only charges its own platform fee. Mirrors listings.payout_handling.
+function resolvePayout(proposal, listing) {
+  const handling = listing?.payout_handling === 'in_person' ? 'in_person' : 'platform';
+  // Prefer whatever was actually negotiated; fall back to the listing's
+  // published cash amount; show no figure rather than a wrong one.
+  const negotiated = getLatestFields(proposal).compensation;
+  let amount = null;
+  if (negotiated) amount = String(negotiated);
+  else if (typeof listing?.cash_amount === 'number' && listing.cash_amount > 0) amount = `$${listing.cash_amount.toLocaleString()}`;
+  else if (listing?.compensation) amount = String(listing.compensation);
+  return { handling, amount };
+}
 
 function getLatestFields(proposal) {
   if (proposal.contractHistory?.length > 0) {
@@ -436,7 +444,10 @@ function SignatureModal({ proposal, party, onSign, onClose }) {
 function HostMessagePanel({ threadKey, creatorName, fill = false }) {
   const { t } = useTranslation('hostProposals');
   const { profile } = useAuth();
-  const convexMessages = useQuery(api.threadMessages.getByThread, { threadKey });
+  // Preview cards carry a synthetic thread key that no Convex row matches —
+  // skip the query rather than firing a request that can only fail.
+  const isPreviewThread = String(threadKey || '').startsWith('preview_');
+  const convexMessages = useQuery(api.threadMessages.getByThread, isPreviewThread ? 'skip' : { threadKey }) ?? (isPreviewThread ? [] : undefined);
   const sendMutation = useMutation(api.threadMessages.sendMessage);
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
@@ -565,92 +576,258 @@ function MiniStageProgress({ currentStage }) {
         })}
       </div>
       <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink)', margin: 0 }}>
-        {t('drawer.nextStep', { stage: currentLabel })}
+        {t('drawer.currentStage', { stage: currentLabel })}
       </p>
     </div>
   );
 }
 
-function ProposalDrawer({ proposal, onStatusChange, onCounter, onSign, onClose, listingById }) {
+function ProposalDrawer({ proposal, onStatusChange, onCounter, onSign, onClose, onStageChange, onTerminate, onCreatorClick, onConfirmComplete, listingById }) {
   const { t } = useTranslation('hostProposals');
   const navigate = useNavigate();
   const isPitch = proposal.type === 'pitch';
   const { signatures = emptySignatures(), contractHistory = [], locked } = proposal;
-  const listing = proposal.listingId ? listingById?.[String(proposal.listingId)] : null;
+  const listing = (proposal.listingId ? listingById?.[String(proposal.listingId)] : null) || proposal.listingDetails || null;
+  const listingImage = listing?.image || proposal.listingImage || null;
+  const tierColor = TIER_COLORS[proposal.creator.tier] || TIER_COLORS['UGC Beginner'];
 
   const version = contractHistory.length;
   const hostSigned    = !!signatures.hostSignature    && signatures.hostSignedVersion    === version;
   const creatorSigned = !!signatures.creatorSignature && signatures.creatorSignedVersion === version;
 
-  // Full profile (name/avatar/tier/stats/platforms) already lives on the
-  // card face in the board column — don't repeat it here.
+  const stageIdx  = STAGE_KEYS.indexOf(proposal.collabStage);
+  const prevStage = stageIdx > 0 ? STAGE_KEYS[stageIdx - 1] : null;
+  const nextStage = stageIdx >= 0 && stageIdx < STAGE_KEYS.length - 1 ? STAGE_KEYS[stageIdx + 1] : null;
+  const stageLabelOf = (k) => STAGES.find((st) => st.key === k)?.label || k;
+  const canMoveStage = proposal.status !== 'declined' && (!!proposal.convexCollabId || proposal.isPreview);
+
+  // Once the collab has moved past Pending it's a live agreement: approving is
+  // moot, and ending it needs the creator's agreement too.
+  const isAccepted = proposal.collabStage !== 'pending' || proposal.status === 'approved' || proposal.status === 'completed';
+  const payout = resolvePayout(proposal, listing);
+  const contractFields = getLatestFields(proposal);
+  const contractRows = CONTRACT_FIELDS.filter((f) => contractFields[f.key]);
+  const [listingOpen, setListingOpen] = useState(false);
+  const [contractOpen, setContractOpen] = useState(false);
+
   return (
     <div style={{ background: '#fff', border: '1.5px solid rgba(25,37,36,0.1)', borderRadius: '1.25rem', overflow: 'hidden', boxShadow: '0 8px 32px rgba(25,37,36,0.1)' }}>
 
-      {/* Header: creator name (compact) + close */}
-      <div style={{ padding: '14px 20px', borderBottom: '1px solid rgba(25,37,36,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 14, color: 'var(--ink)' }}>{proposal.creator.name}</span>
+      {/* Header — creator identity + close */}
+      <div style={{ padding: '14px 20px', borderBottom: '1px solid rgba(25,37,36,0.07)', display: 'flex', alignItems: 'center', gap: 12 }}>
+        <CreatorAvatar src={proposal.creator.avatar} name={proposal.creator.name} size={40}
+          onClick={() => onCreatorClick?.(proposal.creator)}
+          title={t('drawer.viewProfile')}
+          style={{ border: '1.5px solid rgba(25,37,36,0.07)', flexShrink: 0, cursor: 'pointer' }} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <span
+              onClick={() => onCreatorClick?.(proposal.creator)}
+              style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 15, color: 'var(--ink)', cursor: 'pointer' }}
+              onMouseEnter={e => e.currentTarget.style.textDecoration = 'underline'}
+              onMouseLeave={e => e.currentTarget.style.textDecoration = 'none'}
+            >{proposal.creator.name}</span>
+            <span title={tierDef(proposal.creator.tier)} style={{ padding: '2px 8px', borderRadius: 9999, fontSize: 10, fontWeight: 700, background: tierColor.bg, color: tierColor.color }}>{proposal.creator.tier}</span>
+          </div>
+          <div style={{ fontSize: 12, color: 'var(--sage)', marginTop: 2 }}>{proposal.listing} · {proposal.applied}</div>
+        </div>
         {onClose && (
           <button onClick={onClose} aria-label={t('drawer.close')}
-            style={{ width: 28, height: 28, borderRadius: '50%', border: 'none', background: 'rgba(25,37,36,0.06)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--ink)', flexShrink: 0 }}>
-            <X size={13} />
+            style={{ width: 30, height: 30, borderRadius: '50%', border: 'none', background: 'rgba(25,37,36,0.06)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--ink)', flexShrink: 0 }}>
+            <X size={14} />
           </button>
         )}
       </div>
 
-      {/* Next steps */}
-      {proposal.status !== 'declined' && (
-        <div style={{ padding: '14px 20px', borderBottom: '1px solid rgba(25,37,36,0.07)' }}>
-          <MiniStageProgress currentStage={proposal.collabStage} />
+      {/* Completed — what happens to the creator's money, kept visible so the
+          host can refer back to it after the confirmation dialog is gone. */}
+      {proposal.status === 'completed' && (
+        <div style={{ padding: '12px 20px', background: 'rgba(74,155,127,0.08)', borderBottom: '1px solid rgba(74,155,127,0.22)', display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+          <DollarSign size={14} color="#2d7d5e" style={{ flexShrink: 0, marginTop: 1 }} />
+          <div style={{ minWidth: 0 }}>
+            <p style={{ fontSize: 12, fontWeight: 700, color: '#2d7d5e', margin: 0 }}>
+              {payout.handling === 'platform' ? t('drawer.payout.platformTitle') : t('drawer.payout.inPersonTitle')}
+            </p>
+            <p style={{ fontSize: 11.5, color: 'var(--slate)', margin: '3px 0 0', lineHeight: 1.5 }}>
+              {payout.handling === 'platform'
+                ? t('drawer.payout.platformBody')
+                : t('drawer.payout.inPersonBody', {
+                    name: proposal.creator.name,
+                    amount: payout.amount || t('drawer.payout.agreedAmount'),
+                  })}
+            </p>
+          </div>
         </div>
       )}
 
-      {/* Collaboration overview — listing photo/link + deliverables */}
-      <div style={{ padding: '14px 20px', borderBottom: '1px solid rgba(25,37,36,0.07)', display: 'flex', gap: 12, alignItems: 'center' }}>
-        {listing?.image && (
-          <img src={listing.image} alt={proposal.listing}
-            style={{ width: 56, height: 56, borderRadius: '0.75rem', objectFit: 'cover', flexShrink: 0, border: '1px solid rgba(25,37,36,0.08)' }} />
-        )}
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <button onClick={() => proposal.listingId && navigate(`/host/listing/${proposal.listingId}`)}
-            style={{ background: 'none', border: 'none', padding: 0, cursor: proposal.listingId ? 'pointer' : 'default', textAlign: 'left', display: 'block', width: '100%' }}>
-            <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 13, color: 'var(--ink)', textDecoration: proposal.listingId ? 'underline' : 'none', textDecorationColor: 'rgba(25,37,36,0.2)' }}>
-              {proposal.listing}
-            </span>
-          </button>
-          {listing?.deliverables && (
-            <p style={{ fontSize: 11.5, color: 'var(--sage)', margin: '2px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{listing.deliverables}</p>
+      {/* Termination pending — surfaced above everything else */}
+      {proposal.terminationRequestedBy && (
+        <div style={{ padding: '12px 20px', background: 'rgba(200,104,104,0.09)', borderBottom: '1px solid rgba(200,104,104,0.22)', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <AlertTriangle size={14} color="#9b2d2d" style={{ flexShrink: 0 }} />
+          <span style={{ flex: 1, minWidth: 160, fontSize: 12, fontWeight: 600, color: '#9b2d2d' }}>
+            {proposal.terminationRequestedBy === 'host'
+              ? t('drawer.terminationAwaitingCreator')
+              : t('drawer.terminationRequestedByCreator')}
+          </span>
+          {proposal.terminationRequestedBy === 'host' ? (
+            <button onClick={() => onTerminate?.(proposal, 'cancel')}
+              style={{ padding: '6px 14px', borderRadius: 9999, border: '1.5px solid rgba(200,104,104,0.35)', background: 'transparent', fontSize: 11.5, fontWeight: 700, color: '#9b2d2d', cursor: 'pointer', fontFamily: 'var(--font-body)' }}>
+              {t('drawer.withdrawTermination')}
+            </button>
+          ) : (
+            <button onClick={() => onTerminate?.(proposal, 'confirm')}
+              style={{ padding: '6px 14px', borderRadius: 9999, border: 'none', background: 'rgba(200,104,104,0.85)', fontSize: 11.5, fontWeight: 700, color: '#fff', cursor: 'pointer', fontFamily: 'var(--font-body)' }}>
+              {t('drawer.confirmTermination')}
+            </button>
           )}
         </div>
-        {locked && (
-          <button onClick={() => openContractPdf(proposal)}
-            style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 9999, border: '1.5px solid rgba(25,37,36,0.15)', background: 'transparent', fontFamily: 'var(--font-body)', fontSize: 11.5, fontWeight: 700, color: 'var(--ink)', cursor: 'pointer', flexShrink: 0, whiteSpace: 'nowrap' }}>
-            <Download size={11} /> {t('drawer.contract')}
+      )}
+
+      {/* Two-pane body — details on the left, live conversation on the right */}
+      <div className="hp-expanded-body" style={{ display: 'flex', alignItems: 'stretch', minHeight: 460 }}>
+        <div className="hp-expanded-main" style={{ flex: '1 1 58%', minWidth: 0, maxHeight: '70vh', overflowY: 'auto' }}>
+
+      {/* Next steps + stage controls */}
+      {proposal.status !== 'declined' && (
+        <div style={{ padding: '14px 20px', borderBottom: '1px solid rgba(25,37,36,0.07)' }}>
+          <MiniStageProgress currentStage={proposal.collabStage} />
+          {canMoveStage && (
+            <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+              <button
+                onClick={() => prevStage && onStageChange?.(proposal, prevStage)}
+                disabled={!prevStage}
+                aria-label={prevStage ? t('drawer.moveToStage', { stage: stageLabelOf(prevStage) }) : undefined}
+                title={prevStage ? t('drawer.moveToStage', { stage: stageLabelOf(prevStage) }) : undefined}
+                style={{
+                  width: 38, height: 38, borderRadius: '50%', flexShrink: 0,
+                  border: '1.5px solid rgba(25,37,36,0.15)', background: 'transparent',
+                  cursor: prevStage ? 'pointer' : 'not-allowed', opacity: prevStage ? 1 : 0.35,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--ink)',
+                }}
+              >
+                <ArrowLeft size={15} />
+              </button>
+              <button
+                onClick={() => nextStage && onStageChange?.(proposal, nextStage)}
+                disabled={!nextStage}
+                style={{
+                  flex: 1, padding: '10px 0', borderRadius: 9999, border: 'none',
+                  background: nextStage ? 'var(--ink)' : 'rgba(25,37,36,0.08)',
+                  color: nextStage ? '#fff' : 'var(--sage)',
+                  fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 700,
+                  cursor: nextStage ? 'pointer' : 'not-allowed',
+                }}
+              >
+                {nextStage ? t('drawer.moveToStage', { stage: stageLabelOf(nextStage) }) : t('drawer.finalStage')}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Listing — photo, name, and an inline expand for the full terms */}
+      <div style={{ borderBottom: '1px solid rgba(25,37,36,0.07)' }}>
+        <div style={{ padding: '14px 20px', display: 'flex', gap: 12, alignItems: 'center' }}>
+          {listingImage ? (
+            <img src={listingImage} alt={proposal.listing}
+              onError={(e) => { e.currentTarget.style.display = 'none'; }}
+              style={{ width: 60, height: 60, borderRadius: '0.75rem', objectFit: 'cover', flexShrink: 0, border: '1px solid rgba(25,37,36,0.08)' }} />
+          ) : (
+            <div style={{ width: 60, height: 60, borderRadius: '0.75rem', flexShrink: 0, background: 'rgba(25,37,36,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <ImageIcon size={18} color="var(--stone)" />
+            </div>
+          )}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 13.5, color: 'var(--ink)' }}>{proposal.listing}</div>
+            {listing?.location && (
+              <p style={{ fontSize: 11.5, color: 'var(--sage)', margin: '2px 0 0' }}>{listing.location}</p>
+            )}
+          </div>
+          <button onClick={() => setListingOpen((v) => !v)}
+            style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 12px', borderRadius: 9999, border: '1.5px solid rgba(25,37,36,0.14)', background: 'transparent', fontFamily: 'var(--font-body)', fontSize: 11.5, fontWeight: 700, color: 'var(--ink)', cursor: 'pointer', flexShrink: 0, whiteSpace: 'nowrap' }}>
+            {listingOpen ? t('drawer.hideListing') : t('drawer.viewListing')}
+            {listingOpen ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
           </button>
+        </div>
+
+        {listingOpen && (
+          <div style={{ padding: '0 20px 14px' }}>
+            <div style={{ background: 'rgba(239,236,233,0.45)', borderRadius: '0.875rem', padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 7 }}>
+              {[
+                { label: t('drawer.listingFields.compensation'), value: listing?.compensation },
+                { label: t('drawer.listingFields.deliverables'), value: listing?.deliverables },
+                { label: t('drawer.listingFields.nights'), value: listing?.nights },
+                { label: t('drawer.listingFields.turnaround'), value: listing?.turnaround_days ? t('drawer.days', { count: listing.turnaround_days }) : null },
+                { label: t('drawer.listingFields.dates'), value: listing?.collab_start && listing?.collab_end ? `${listing.collab_start} – ${listing.collab_end}` : null },
+              ].filter((r) => r.value !== null && r.value !== undefined && r.value !== '').map(({ label, value }) => (
+                <div key={label} style={{ display: 'flex', gap: 8, fontSize: 12 }}>
+                  <span style={{ color: 'var(--sage)', minWidth: 104, flexShrink: 0 }}>{label}</span>
+                  <span style={{ color: 'var(--ink)', fontWeight: 600 }}>{String(value)}</span>
+                </div>
+              ))}
+              {!listing && (
+                <p style={{ fontSize: 11.5, color: 'var(--sage)', margin: 0 }}>{t('drawer.listingUnavailable')}</p>
+              )}
+              {proposal.listingId && (
+                <button onClick={() => navigate(`/host/listing/${proposal.listingId}`)}
+                  style={{ alignSelf: 'flex-start', marginTop: 4, display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 9999, border: '1.5px solid rgba(25,37,36,0.14)', background: '#fff', fontFamily: 'var(--font-body)', fontSize: 11.5, fontWeight: 700, color: 'var(--ink)', cursor: 'pointer' }}>
+                  <ExternalLink size={11} /> {t('drawer.openListingPage')}
+                </button>
+              )}
+            </div>
+          </div>
         )}
       </div>
 
-      {/* Contract terms — visible once any negotiation/acceptance has happened */}
-      {contractHistory.length > 0 && (() => {
-        const latestFields = getLatestFields(proposal);
-        const rows = CONTRACT_FIELDS.filter((f) => latestFields[f.key]);
-        if (rows.length === 0) return null;
-        return (
-          <div style={{ padding: '16px 24px', borderBottom: '1px solid rgba(25,37,36,0.07)' }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--sage)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 8 }}>
-              {t('drawer.contractTerms')}
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {rows.map(({ key }) => (
-                <div key={key} style={{ display: 'flex', gap: 8, fontSize: 12 }}>
-                  <span style={{ color: 'var(--sage)', minWidth: 110 }}>{contractFieldLabel(key)}</span>
-                  <span style={{ color: 'var(--ink)', fontWeight: 600 }}>{latestFields[key]}</span>
-                </div>
-              ))}
-            </div>
+      {/* Contract — collapsible, always reachable */}
+      <div style={{ borderBottom: '1px solid rgba(25,37,36,0.07)' }}>
+        <button onClick={() => setContractOpen((v) => !v)}
+          style={{ width: '100%', padding: '13px 20px', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, fontFamily: 'var(--font-body)' }}>
+          <FileText size={13} color="var(--sage)" style={{ flexShrink: 0 }} />
+          <span style={{ flex: 1, textAlign: 'left', fontSize: 12.5, fontWeight: 700, color: 'var(--ink)' }}>{t('drawer.contract')}</span>
+          {locked && (
+            <span style={{ display: 'flex', alignItems: 'center', gap: 3, padding: '2px 8px', borderRadius: 9999, fontSize: 9.5, fontWeight: 700, background: 'rgba(74,155,127,0.12)', color: '#2d7d5e' }}>
+              <Lock size={8} /> {t('card.locked')}
+            </span>
+          )}
+          {contractOpen ? <ChevronUp size={13} color="var(--sage)" /> : <ChevronDown size={13} color="var(--sage)" />}
+        </button>
+
+        {contractOpen && (
+          <div style={{ padding: '0 20px 14px' }}>
+            {contractRows.length > 0 ? (
+              <div style={{ background: 'rgba(239,236,233,0.45)', borderRadius: '0.875rem', padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 7 }}>
+                {contractRows.map(({ key }) => (
+                  <div key={key} style={{ display: 'flex', gap: 8, fontSize: 12 }}>
+                    <span style={{ color: 'var(--sage)', minWidth: 104, flexShrink: 0 }}>{contractFieldLabel(key)}</span>
+                    <span style={{ color: 'var(--ink)', fontWeight: 600 }}>{String(contractFields[key])}</span>
+                  </div>
+                ))}
+                <button onClick={() => openContractPdf(proposal)}
+                  style={{ alignSelf: 'flex-start', marginTop: 4, display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 9999, border: '1.5px solid rgba(25,37,36,0.14)', background: '#fff', fontFamily: 'var(--font-body)', fontSize: 11.5, fontWeight: 700, color: 'var(--ink)', cursor: 'pointer' }}>
+                  <Download size={11} /> {t('drawer.saveContractPdf')}
+                </button>
+              </div>
+            ) : (
+              <p style={{ fontSize: 11.5, color: 'var(--sage)', margin: 0 }}>{t('drawer.noContractYet')}</p>
+            )}
           </div>
-        );
-      })()}
+        )}
+      </div>
+
+      {/* Drive folder the creator is submitting into */}
+      <div style={{ padding: '12px 20px', borderBottom: '1px solid rgba(25,37,36,0.07)', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <FolderOpen size={13} color="var(--sage)" style={{ flexShrink: 0 }} />
+        <span style={{ fontSize: 12, color: 'var(--slate)', flexShrink: 0 }}>{t('drawer.driveFolder')}</span>
+        {proposal.driveUrl ? (
+          <a href={proposal.driveUrl} target="_blank" rel="noopener noreferrer"
+            style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {proposal.driveUrl}
+          </a>
+        ) : (
+          <span style={{ fontSize: 12, color: 'var(--sage)', fontStyle: 'italic' }}>{t('drawer.driveNotSubmitted')}</span>
+        )}
+      </div>
 
       {/* Pitch: original modified terms */}
       {isPitch && proposal.pitch_details && (
@@ -760,9 +937,9 @@ function ProposalDrawer({ proposal, onStatusChange, onCounter, onSign, onClose, 
                 style={{ flex: 1, padding: '9px 0', borderRadius: 9999, border: '1.5px solid rgba(123,104,200,0.4)', background: 'rgba(123,104,200,0.08)', color: '#5b4db8', fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 700, cursor: 'pointer', minWidth: 100 }}>
                 {t('drawer.counterPitch')}
               </button>
-              <button onClick={() => onStatusChange(proposal.id, 'declined')}
+              <button onClick={() => onTerminate?.(proposal, isAccepted ? 'request' : 'immediate')}
                 style={{ padding: '9px 16px', borderRadius: 9999, border: '1.5px solid rgba(200,104,104,0.3)', background: 'transparent', color: '#9b2d2d', fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
-                {t('drawer.decline')}
+                {t('drawer.terminate')}
               </button>
             </div>
           </div>
@@ -786,82 +963,79 @@ function ProposalDrawer({ proposal, onStatusChange, onCounter, onSign, onClose, 
                 style={{ flex: 1, padding: '9px 0', borderRadius: 9999, border: '1.5px solid rgba(74,155,127,0.3)', background: 'rgba(74,155,127,0.07)', color: '#2d7d5e', fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 700, cursor: 'pointer', minWidth: 100 }}>
                 {t('drawer.counterBack')}
               </button>
-              <button onClick={() => onStatusChange(proposal.id, 'declined')}
+              <button onClick={() => onTerminate?.(proposal, isAccepted ? 'request' : 'immediate')}
                 style={{ padding: '9px 16px', borderRadius: 9999, border: '1.5px solid rgba(200,104,104,0.3)', background: 'transparent', color: '#9b2d2d', fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
-                {t('drawer.decline')}
+                {t('drawer.terminate')}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ── Standard actions (non-pitch or other statuses) ── */}
-      {!locked && !(proposal.status === 'under_review' && isPitch) && (
-        <div style={{ padding: '14px 24px', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          {proposal.status === 'pending' && (
-            <>
-              <button onClick={() => onStatusChange(proposal.id, 'under_review')}
-                style={{ flex: 1, padding: '10px 0', borderRadius: 9999, border: 'none', background: 'rgba(123,104,200,0.12)', color: '#5b4db8', fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', minWidth: 120 }}>
-                {t('drawer.moveToReview')}
-              </button>
-              <button onClick={() => onStatusChange(proposal.id, 'declined')}
-                style={{ padding: '10px 20px', borderRadius: 9999, border: '1.5px solid rgba(200,104,104,0.3)', background: 'transparent', color: '#9b2d2d', fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
-                {t('drawer.decline')}
-              </button>
-            </>
-          )}
-          {proposal.status === 'under_review' && !isPitch && (
+      {/* ── Standard actions (non-pitch or other statuses) ──
+           Approve only exists while the proposal is still undecided; once the
+           collab is live the only exits are Complete or a mutual termination. */}
+      {!locked && !(proposal.status === 'under_review' && isPitch) && proposal.status !== 'declined' && (
+        <div style={{ padding: '14px 20px', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {!isAccepted && (
             <>
               <button onClick={() => onStatusChange(proposal.id, 'approved')}
-                style={{ flex: 1, padding: '10px 0', borderRadius: 9999, border: 'none', background: 'var(--ink)', color: '#fff', fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 700, cursor: 'pointer', minWidth: 100 }}>
+                style={{ flex: 1, padding: '10px 0', borderRadius: 9999, border: 'none', background: 'var(--ink)', color: '#fff', fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 700, cursor: 'pointer', minWidth: 120 }}>
                 {t('drawer.approve')}
               </button>
-              <button onClick={() => onStatusChange(proposal.id, 'declined')}
-                style={{ padding: '10px 20px', borderRadius: 9999, border: '1.5px solid rgba(25,37,36,0.15)', background: 'transparent', color: 'var(--slate)', fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
-                {t('drawer.decline')}
-              </button>
+              {proposal.status === 'pending' && (
+                <button onClick={() => onStatusChange(proposal.id, 'under_review')}
+                  style={{ padding: '10px 18px', borderRadius: 9999, border: '1.5px solid rgba(123,104,200,0.35)', background: 'transparent', color: '#5b4db8', fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                  {t('drawer.moveToReview')}
+                </button>
+              )}
             </>
           )}
-          {proposal.status === 'approved' && (
-            <button onClick={() => onStatusChange(proposal.id, 'completed')}
-              style={{ flex: 1, padding: '10px 0', borderRadius: 9999, border: 'none', background: 'rgba(74,155,127,0.12)', color: '#2d7d5e', fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+          {isAccepted && proposal.status !== 'completed' && (
+            <button onClick={() => onConfirmComplete?.(proposal)}
+              style={{ flex: 1, padding: '10px 0', borderRadius: 9999, border: 'none', background: 'rgba(74,155,127,0.12)', color: '#2d7d5e', fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 700, cursor: 'pointer', minWidth: 120 }}>
               {t('drawer.markCompleted')}
             </button>
           )}
-          {!proposal.thread_key && (
-            <button onClick={() => navigate('/inbox')}
-              style={{ padding: '10px 18px', borderRadius: 9999, border: '1.5px solid rgba(25,37,36,0.12)', background: 'transparent', color: 'var(--ink)', fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
-              <MessageSquare size={13} /> {t('drawer.message')}
+          {!proposal.terminationRequestedBy && (
+            <button onClick={() => onTerminate?.(proposal, isAccepted ? 'request' : 'immediate')}
+              title={isAccepted ? t('drawer.terminateNeedsBoth') : undefined}
+              style={{ padding: '10px 20px', borderRadius: 9999, border: '1.5px solid rgba(200,104,104,0.3)', background: 'transparent', color: '#9b2d2d', fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+              {t('drawer.terminate')}
             </button>
           )}
         </div>
       )}
 
-      {/* Message button always visible for pitch under_review */}
-      {!locked && proposal.status === 'under_review' && isPitch && !proposal.thread_key && (
-        <div style={{ padding: '0 24px 14px' }}>
-          <button onClick={() => navigate('/inbox')}
-            style={{ padding: '9px 18px', borderRadius: 9999, border: '1.5px solid rgba(25,37,36,0.12)', background: 'transparent', color: 'var(--ink)', fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
-            <MessageSquare size={13} /> {t('drawer.messageCreator')}
-          </button>
         </div>
-      )}
 
-      {/* Real-time message thread (only for real Convex pitches with a thread_key) */}
-      {proposal.thread_key && (
-        <HostMessagePanel threadKey={proposal.thread_key} creatorName={proposal.creator.name} />
-      )}
+        {/* Right pane — live conversation with this creator */}
+        <div className="hp-expanded-side" style={{ flex: '1 1 42%', minWidth: 300, borderLeft: '1px solid rgba(25,37,36,0.07)', display: 'flex', flexDirection: 'column', maxHeight: '70vh' }}>
+          {proposal.thread_key ? (
+            <HostMessagePanel threadKey={proposal.thread_key} creatorName={proposal.creator.name} fill />
+          ) : (
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, padding: '2rem', background: 'rgba(239,236,233,0.2)' }}>
+              <MessageSquare size={20} color="var(--stone)" />
+              <p style={{ fontSize: 12.5, color: 'var(--sage)', textAlign: 'center', margin: 0, lineHeight: 1.5 }}>{t('messagePanel.empty')}</p>
+              <button onClick={() => navigate('/inbox')}
+                style={{ padding: '9px 18px', borderRadius: 9999, border: '1.5px solid rgba(25,37,36,0.12)', background: 'transparent', color: 'var(--ink)', fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <MessageSquare size={13} /> {t('drawer.messageCreator')}
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
 
 // ─── Proposal card ────────────────────────────────────────────────────────────
-function ProposalCard({ proposal, expanded, onToggle, onStatusChange, onCounter, onSign, onCreatorClick, dragHandleListeners, dragHandleAttributes, dragLocked, dragLockReason }) {
+// Compact, column-friendly card: identity on top, listing + status beneath.
+// Follower stats, message preview and full profile live in the expanded view.
+function ProposalCard({ proposal, expanded, onToggle, onCreatorClick, dragHandleListeners, dragHandleAttributes, noDrag = false }) {
   const { t: tr } = useTranslation('hostProposals');
-  const s = STATUS_CFG[proposal.status] || STATUS_CFG.pending;
   const tierColor = TIER_COLORS[proposal.creator.tier] || TIER_COLORS['UGC Beginner'];
   const isPitch = proposal.type === 'pitch';
-  const isLocked = proposal.locked;
 
   const cardBorder = expanded
     ? '1.5px solid rgba(74,155,127,0.45)'
@@ -871,49 +1045,69 @@ function ProposalCard({ proposal, expanded, onToggle, onStatusChange, onCounter,
     : isPitch ? PITCH_SHADOW_CLOSED   : '0 2px 10px rgba(25,37,36,0.05)';
 
   return (
-    <div style={{ marginBottom: 10, opacity: dragLocked ? 0.55 : 1, transition: 'opacity 150ms' }}>
-      <div onClick={onToggle} style={{ background: expanded ? 'rgba(255,255,255,0.98)' : 'rgba(255,255,255,0.82)', backdropFilter: 'blur(20px) saturate(135%)', WebkitBackdropFilter: 'blur(20px) saturate(135%)', border: cardBorder, borderRadius: '1rem', padding: '14px 18px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, boxShadow: cardShadow, transition: 'all 200ms var(--ease-out-quart)' }}>
-        <div {...(dragLocked ? {} : dragHandleListeners)} {...(dragLocked ? {} : dragHandleAttributes)} onClick={(e) => e.stopPropagation()}
-          style={{ flexShrink: 0, color: dragLocked ? 'rgba(149,157,144,0.5)' : 'var(--stone)', cursor: dragLocked ? 'not-allowed' : 'grab', padding: '4px 2px', borderRadius: '0.375rem', touchAction: 'none', userSelect: 'none', transition: 'color 150ms' }}
-          onMouseEnter={(e) => { if (!dragLocked) e.currentTarget.style.color = 'var(--slate)'; }}
-          onMouseLeave={(e) => { if (!dragLocked) e.currentTarget.style.color = 'var(--stone)'; }}
-          title={dragLocked ? (dragLockReason || tr('card.dragLocked')) : tr('card.dragToMoveStage')}>
-          {dragLocked ? <Lock size={14} /> : <GripVertical size={15} />}
-        </div>
+    <div onClick={onToggle} style={{
+      background: expanded ? 'rgba(255,255,255,0.98)' : 'rgba(255,255,255,0.86)',
+      backdropFilter: 'blur(20px) saturate(135%)', WebkitBackdropFilter: 'blur(20px) saturate(135%)',
+      border: cardBorder, borderRadius: '1rem', padding: '12px 14px', cursor: 'pointer',
+      boxShadow: cardShadow, transition: 'all 200ms var(--ease-out-quart)',
+      // Fixed height so every column reads as an even grid — each text row is
+      // clamped to a single truncated line, so nothing can push this taller.
+      height: 112, boxSizing: 'border-box', overflow: 'hidden',
+    }}>
+      {/* Row 1 — grip, avatar, name + tier */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+        {!noDrag && (
+          <div {...dragHandleListeners} {...dragHandleAttributes} onClick={(e) => e.stopPropagation()}
+            style={{ flexShrink: 0, color: 'var(--stone)', cursor: 'grab', padding: '2px 0', borderRadius: '0.375rem', touchAction: 'none', userSelect: 'none', transition: 'color 150ms' }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--slate)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--stone)'; }}
+            title={tr('card.dragToMoveStage')}>
+            <GripVertical size={14} />
+          </div>
+        )}
         <CreatorAvatar
           src={proposal.creator.avatar} name={proposal.creator.name}
-          size={44}
+          size={34}
           onClick={e => { e.stopPropagation(); onCreatorClick(proposal.creator); }}
           title={tr('card.viewProfile')}
-          style={{ border: '1.5px solid rgba(25,37,36,0.07)', cursor: 'pointer' }}
+          style={{ border: '1.5px solid rgba(25,37,36,0.07)', cursor: 'pointer', flexShrink: 0 }}
         />
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-            <span
-              onClick={e => { e.stopPropagation(); onCreatorClick(proposal.creator); }}
-              style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 14, color: 'var(--ink)', cursor: 'pointer', textDecoration: 'none' }}
-              onMouseEnter={e => e.currentTarget.style.textDecoration = 'underline'}
-              onMouseLeave={e => e.currentTarget.style.textDecoration = 'none'}
-            >{proposal.creator.name}</span>
-            <span style={{ padding: '2px 8px', borderRadius: 9999, fontSize: 10, fontWeight: 700, background: tierColor.bg, color: tierColor.color, flexShrink: 0 }}>{proposal.creator.tier}</span>
-            <span title={tierDef(proposal.creator.tier)} style={{ fontSize: 9, color: 'var(--sage)', cursor: 'help', lineHeight: 1 }}>ⓘ</span>
-            {isPitch ? (
-              <span style={{ display: 'flex', alignItems: 'center', gap: 3, padding: '2px 7px', borderRadius: 9999, fontSize: 9, fontWeight: 700, background: 'rgba(209,235,219,0.7)', border: '1px solid rgba(149,157,144,0.35)', color: '#2d7d5e', flexShrink: 0 }}>
-                <Sparkles size={8} />{tr('card.pitch')}
+          <div
+            onClick={e => { e.stopPropagation(); onCreatorClick(proposal.creator); }}
+            style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 13, color: 'var(--ink)', cursor: 'pointer', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+            title={proposal.creator.name}
+          >{proposal.creator.name}</div>
+          {/* Tier + (for pitches only) a compact sparkle chip on the same
+              line — nowrap so the row can never become two lines tall. */}
+          <div style={{ marginTop: 3, display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'nowrap', minWidth: 0 }}>
+            <span title={tierDef(proposal.creator.tier)} style={{ padding: '2px 7px', borderRadius: 9999, fontSize: 9.5, fontWeight: 700, background: tierColor.bg, color: tierColor.color, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
+              {proposal.creator.tier}
+            </span>
+            {isPitch && (
+              <span title={tr('card.pitch')} aria-label={tr('card.pitch')}
+                style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 18, height: 16, borderRadius: 9999, background: 'rgba(209,235,219,0.85)', color: '#2d7d5e' }}>
+                <Sparkles size={9} />
               </span>
-            ) : (
-              <span style={{ padding: '2px 7px', borderRadius: 9999, fontSize: 9, fontWeight: 700, background: 'rgba(25,37,36,0.06)', color: 'var(--sage)', flexShrink: 0 }}>{tr('card.application')}</span>
             )}
-            {isLocked && <span style={{ display: 'flex', alignItems: 'center', gap: 3, padding: '2px 7px', borderRadius: 9999, fontSize: 9, fontWeight: 700, background: 'rgba(74,155,127,0.12)', color: '#2d7d5e', flexShrink: 0 }}><Lock size={8} />{tr('card.locked')}</span>}
           </div>
-          <div style={{ fontSize: 12, color: 'var(--sage)', marginTop: 2 }}>{tr('card.listingStats', { listing: proposal.listing, followers: fmtFollowers(proposal.creator.followers), engagement: proposal.creator.engagement })}</div>
-          <div style={{ fontSize: 12, color: 'var(--slate)', marginTop: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{proposal.message.slice(0, 90)}…</div>
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
-          <span style={{ padding: '3px 9px', borderRadius: 9999, fontSize: 10, fontWeight: 700, background: s.bg, border: `1px solid ${s.border}`, color: s.color, whiteSpace: 'nowrap' }}>{statusLabel(proposal.status)}</span>
-          <span style={{ fontSize: 11, color: 'var(--sage)' }}>{proposal.applied}</span>
-          {expanded ? <ChevronUp size={14} color="#4A9B7F" /> : <ChevronDown size={14} color="var(--sage)" />}
-        </div>
+      </div>
+
+      {/* Row 2 — listing */}
+      <div style={{ fontSize: 11.5, color: 'var(--sage)', marginTop: 9, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={proposal.listing}>
+        {proposal.listing}
+      </div>
+
+      {/* Row 3 — age. Status isn't shown: which column the card sits in is
+          the status, so a chip would just repeat it (and could contradict it). */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6, marginTop: 8, flexWrap: 'nowrap', minWidth: 0 }}>
+        {proposal.terminationRequestedBy && (
+          <span title={tr('card.terminationPending')} style={{ marginRight: 'auto', display: 'flex', alignItems: 'center', gap: 3, padding: '3px 8px', borderRadius: 9999, fontSize: 9.5, fontWeight: 700, background: 'rgba(200,104,104,0.12)', color: '#9b2d2d', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
+            <AlertTriangle size={8} style={{ flexShrink: 0 }} /> {tr('card.terminationPending')}
+          </span>
+        )}
+        <span style={{ fontSize: 10.5, color: 'var(--sage)', flexShrink: 0 }}>{proposal.applied}</span>
       </div>
     </div>
   );
@@ -921,7 +1115,7 @@ function ProposalCard({ proposal, expanded, onToggle, onStatusChange, onCounter,
 
 // ─── Draggable wrapper ────────────────────────────────────────────────────────
 function DraggableProposalCard(props) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: props.proposal.id, disabled: props.dragLocked });
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: props.proposal.id });
   return (
     <div ref={setNodeRef} style={{ transform: transform ? `translate3d(${transform.x}px,${transform.y}px,0)` : undefined, opacity: isDragging ? 0.3 : 1, position: 'relative', zIndex: isDragging ? 50 : 'auto', transition: isDragging ? undefined : 'opacity 200ms' }}>
       <ProposalCard {...props} dragHandleListeners={listeners} dragHandleAttributes={attributes} />
@@ -929,24 +1123,25 @@ function DraggableProposalCard(props) {
   );
 }
 
-// ─── Board column ─────────────────────────────────────────────────────────────
+// ─── Board column — no chrome of its own, just a heading and its cards ────────
 function DroppableColumn({ stageKey, label, count, isFlashing, children }) {
   const { isOver, setNodeRef } = useDroppable({ id: stageKey });
   return (
     <div
       ref={setNodeRef}
       style={{
-        flex: '1 1 0', minWidth: 250, maxWidth: 320, display: 'flex', flexDirection: 'column', gap: 10,
-        background: isOver ? 'rgba(74,155,127,0.08)' : 'rgba(255,255,255,0.35)',
-        border: `1.5px solid ${isOver ? 'rgba(74,155,127,0.35)' : 'rgba(25,37,36,0.06)'}`,
-        borderRadius: '1.25rem', padding: '0.75rem',
+        flex: '1 1 0', minWidth: 236, maxWidth: 300, display: 'flex', flexDirection: 'column', gap: 10,
+        borderRadius: '1rem', padding: '0.25rem',
+        background: isOver ? 'rgba(74,155,127,0.07)' : 'transparent',
+        outline: isOver ? '1.5px dashed rgba(74,155,127,0.45)' : '1.5px dashed transparent',
+        outlineOffset: -2,
         animation: isFlashing ? 'tab-flash 600ms ease forwards' : undefined,
-        transition: 'background 150ms, border-color 150ms',
+        transition: 'background 150ms, outline-color 150ms',
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.25rem 0.35rem' }}>
-        <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '0.85rem', color: 'var(--ink)', margin: 0 }}>{label}</h3>
-        <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--sage)', background: 'rgba(25,37,36,0.06)', padding: '1px 8px', borderRadius: 9999, flexShrink: 0 }}>{count}</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '0.15rem 0.35rem' }}>
+        <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '0.9rem', color: 'var(--ink)', margin: 0 }}>{label}</h3>
+        <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--sage)' }}>{count}</span>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8, minHeight: 48 }}>
         {children}
@@ -1004,6 +1199,9 @@ export default function HostProposals() {
   const sendCounterCvx  = useMutation(api.pitches.sendCounter);
   const signContractCvx = useMutation(api.pitches.signContract);
   const advanceStageCvx = useMutation(api.collaborations.advanceStage);
+  const requestTerminationCvx = useMutation(api.collaborations.requestTermination);
+  const cancelTerminationCvx  = useMutation(api.collaborations.cancelTermination);
+  const confirmTerminationCvx = useMutation(api.collaborations.confirmTermination);
   const rawPitches = useQuery(
     api.pitches.getByHost,
     hostId ? { hostId: String(hostId) } : 'skip'
@@ -1035,7 +1233,7 @@ export default function HostProposals() {
   ) ?? 0;
 
   const [typeFilter, setTypeFilter] = useState('all');
-  const [listingFilter, setListingFilter] = useState('All Listings');
+  const [listingFilter, setListingFilter] = useState('all');
   const [expanded, setExpanded]     = useState(null);
   const [activeId, setActiveId]     = useState(null);
   const [flashStage, setFlashStage] = useState(null);
@@ -1043,6 +1241,7 @@ export default function HostProposals() {
   const [signModal, setSignModal]       = useState(null);
   const [showClearDeclined, setShowClearDeclined] = useState(false);
   const [declinedOpen, setDeclinedOpen] = useState(false);
+  const [completeModal, setCompleteModal] = useState(null);
   const [hiddenTick, setHiddenTick] = useState(0);
   const [popupCreator, setPopupCreator] = useState(null);
   const [search, setSearch] = useState('');
@@ -1072,11 +1271,17 @@ export default function HostProposals() {
     return map;
   }, [rawCollaborations]);
 
+  // Preview mode (?preview=1) appends client-side sample cards so the board
+  // layout can be reviewed before there's real data. Never written to Convex.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const previewMode = searchParams.get('preview') === '1';
+  const [previewOverrides, setPreviewOverrides] = useState({});
+
   // Use only real Convex pitches once loaded; show empty state instead of mock data
   const allProposals = useMemo(() => {
     if (rawPitches === undefined) return []; // still loading
     const saved = loadApplications();
-    return rawPitches.map((p) => {
+    const real = rawPitches.map((p) => {
       const normalized = normalizePitch(p);   // negotiation parsed from Convex
       const s = saved[String(p._id)] || {};
       // Convex is the source of truth for negotiation. Fall back to legacy
@@ -1103,16 +1308,23 @@ export default function HostProposals() {
       // to Pending rather than being lost.
       const convexCollabId = p.collaboration_id ? String(p.collaboration_id) : null;
       const collab = convexCollabId ? collabByConvexId[convexCollabId] : null;
-      return { ...base, convexCollabId, collabStage: collab?.current_stage || 'pending' };
+      return {
+        ...base,
+        convexCollabId,
+        collabStage: collab?.current_stage || 'pending',
+        driveUrl: collab?.drive_url || null,
+        terminationRequestedBy: collab?.termination_requested_by || null,
+      };
     });
+    if (!previewMode) return real;
+    return [...real, ...SAMPLE_PROPOSALS.map((s) => ({ ...s, ...(previewOverrides[s.id] || {}) }))];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rawPitches, hiddenTick, collabByConvexId]);
+  }, [rawPitches, hiddenTick, collabByConvexId, previewMode, previewOverrides]);
 
   // Deep-link from notifications, or clicking an Upcoming row on the Overview
   // tab: /host/proposals?pitch=<pitchId> expands that proposal and jumps to
   // the Activity tab (ProposalsOverview's tab state is internal, so a
   // changing "jump token" is the signal it watches for).
-  const [searchParams, setSearchParams] = useSearchParams();
   const [activityJump, setActivityJump] = useState(0);
   useEffect(() => {
     const pitchParam = searchParams.get('pitch');
@@ -1120,7 +1332,7 @@ export default function HostProposals() {
     const match = allProposals.find((p) => String(p.id) === pitchParam);
     if (match) {
       setTypeFilter('all');
-      setListingFilter('All Listings');
+      setListingFilter('all');
       setExpanded(match.id);
       setActivityJump((j) => j + 1);
       setSearchParams({}, { replace: true });
@@ -1140,7 +1352,7 @@ export default function HostProposals() {
   }, []);
 
   const listingNames = useMemo(() => (
-    ['All Listings', ...Array.from(new Set(allProposals.map((p) => p.listing)))]
+    ['all', ...Array.from(new Set(allProposals.map((p) => p.listing)))]
   ), [allProposals]);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
@@ -1149,15 +1361,67 @@ export default function HostProposals() {
   function handleStatusChange(id, newStatus) {
     // For real Convex pitches, sync status back
     const target = allProposals.find((p) => p.id === id);
+    if (target?.isPreview) {
+      setPreviewOverrides((prev) => ({
+        ...prev,
+        [id]: {
+          ...(prev[id] || {}),
+          status: newStatus,
+          ...(newStatus === 'approved' && target.collabStage === 'pending' ? { collabStage: 'accepted' } : {}),
+        },
+      }));
+      return;
+    }
     if (target?.isReal && target.convexId) {
       updateStatusCvx({ id: target.convexId, status: newStatus }).catch(() => {});
+    }
+    // Approving is also a production decision: pull the card out of Pending so
+    // the board never shows an approved proposal still sitting in Pending.
+    if (newStatus === 'approved' && target?.convexCollabId && target.collabStage === 'pending') {
+      advanceStageCvx({ id: target.convexCollabId, nextStage: 'accepted' }).catch(() => {});
     }
     setProposals((prev) => {
       const next = prev.map((p) => (p.id === id ? { ...p, status: newStatus } : p));
       saveApplications(next);
       return next;
     });
-    setExpanded(null);
+    // Expanded card stays open and re-renders against the updated record.
+  }
+
+  // ── Terminate ──
+  // Before the collab is accepted the host can end it alone (it's just a
+  // declined application). After acceptance it takes both sides: the host
+  // requests, the creator confirms.
+  function handleTerminate(proposal, action) {
+    if (proposal?.isPreview) {
+      setPreviewOverrides((prev) => {
+        const cur = { ...(prev[proposal.id] || {}) };
+        if (action === 'immediate') { cur.status = 'declined'; cur.terminationRequestedBy = null; }
+        if (action === 'request')   { cur.terminationRequestedBy = 'host'; }
+        if (action === 'cancel')    { cur.terminationRequestedBy = null; }
+        if (action === 'confirm')   { cur.status = 'declined'; cur.collabStage = 'archived'; cur.terminationRequestedBy = null; }
+        return { ...prev, [proposal.id]: cur };
+      });
+      return;
+    }
+    if (action === 'immediate') { handleStatusChange(proposal.id, 'declined'); return; }
+    if (!proposal.convexCollabId) return;
+    const args = { id: proposal.convexCollabId };
+    if (action === 'request') requestTerminationCvx(args).catch(() => {});
+    if (action === 'cancel')  cancelTerminationCvx(args).catch(() => {});
+    if (action === 'confirm') confirmTerminationCvx(args).catch(() => {});
+  }
+
+  // ── Stage move from the expanded card (Next / Back) ──
+  function handleStageChange(proposal, nextStage) {
+    if (proposal?.isPreview) {
+      setPreviewOverrides((prev) => ({ ...prev, [proposal.id]: { ...(prev[proposal.id] || {}), collabStage: nextStage } }));
+    } else {
+      if (!proposal?.convexCollabId) return;
+      advanceStageCvx({ id: proposal.convexCollabId, nextStage }).catch(() => {});
+    }
+    setFlashStage(nextStage);
+    setTimeout(() => setFlashStage(null), 600);
   }
 
   // ── Counter pitch ──
@@ -1247,15 +1511,15 @@ export default function HostProposals() {
     if (!over) return;
     const proposal = allProposals.find((p) => p.id === active.id);
     if (!proposal) return;
-    const fromKey = proposal.collabStage;
     const toKey = over.id;
-    if (fromKey === toKey) return;
-    // Sequential-only — dropping anywhere except the immediate next column is
-    // a no-op (card visually returns to its column, standard dnd-kit behavior
-    // when we don't apply a state change).
-    if (!canAdvanceStage(fromKey, toKey)) return;
-    if (!proposal.convexCollabId) return;
-    advanceStageCvx({ id: proposal.convexCollabId, nextStage: toKey }).catch(() => {});
+    if (proposal.collabStage === toKey) return;
+    // Free movement in both directions — the host owns the pipeline order.
+    if (proposal.isPreview) {
+      setPreviewOverrides((prev) => ({ ...prev, [proposal.id]: { ...(prev[proposal.id] || {}), collabStage: toKey } }));
+    } else {
+      if (!proposal.convexCollabId) return;
+      advanceStageCvx({ id: proposal.convexCollabId, nextStage: toKey }).catch(() => {});
+    }
     setFlashStage(toKey);
     setTimeout(() => setFlashStage(null), 600);
   }
@@ -1265,7 +1529,7 @@ export default function HostProposals() {
 
   // Filtering (hidden proposals excluded everywhere)
   const visible    = allProposals.filter((p) => !p.hidden);
-  const byListing  = visible.filter((p) => listingFilter === 'All Listings' || p.listing === listingFilter);
+  const byListing  = visible.filter((p) => listingFilter === 'all' || p.listing === listingFilter);
   const byType     = typeFilter === 'all' ? byListing : byListing.filter((p) => p.type === typeFilter);
   const searched   = search.trim()
     ? byType.filter((p) => {
@@ -1344,7 +1608,7 @@ export default function HostProposals() {
     const columnByPreset = { new_applications: 'pending', active_collabs: 'accepted' };
     const column = columnByPreset[presetKey];
     setTypeFilter('all');
-    setListingFilter('All Listings');
+    setListingFilter('all');
     setExpanded(null);
     if (column) {
       setFlashStage(column);
@@ -1357,20 +1621,52 @@ export default function HostProposals() {
       <div style={{ minHeight: '100dvh' }}>
         <style>{`
           @keyframes tab-flash { 0%{box-shadow:0 0 0 3px rgba(25,37,36,0.18)} 60%{box-shadow:0 0 0 5px rgba(25,37,36,0.1)} 100%{box-shadow:none} }
+          @media (max-width: 900px) {
+            .hp-expanded-body { flex-direction: column !important; }
+            .hp-expanded-main { max-height: none !important; }
+            .hp-expanded-side { border-left: none !important; min-width: 0 !important;
+              border-top: 1px solid rgba(25,37,36,0.07); max-height: 420px !important; }
+          }
         `}</style>
 
         <ProposalsOverview
           role="host" search={search} onSearchChange={setSearch} onStatClick={handleStatClick}
           statValues={statValues} chartData={chartData} todoItems={todoItems}
           onTodoClick={handleTodoClick} activityJump={activityJump}
-          filters={[{
-            key: 'listing', value: listingFilter,
-            onChange: (v) => { setListingFilter(v); setExpanded(null); },
-            options: listingNames.map((name) => ({ value: name, label: name })),
-          }]}
+          filters={[
+            {
+              key: 'listing', value: listingFilter,
+              onChange: (v) => { setListingFilter(v); setExpanded(null); },
+              options: listingNames.map((name) => ({ value: name, label: name === 'all' ? 'All Listings' : name })),
+            },
+            {
+              key: 'type', value: typeFilter,
+              onChange: (v) => { setTypeFilter(v); setExpanded(null); },
+              options: TYPE_TABS.map((tt) => ({
+                value: tt.key,
+                label: `${typeLabel(tt.key)}${typeCounts[tt.key] ? ` (${typeCounts[tt.key]})` : ''}`,
+              })),
+            },
+          ]}
         >
 
         <div style={{ maxWidth: 1400, margin: '0 auto', padding: '0.5rem 1.5rem 5rem' }}>
+
+          {previewMode && (
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap',
+              marginBottom: '1rem', padding: '0.6rem 1rem', borderRadius: '0.875rem',
+              background: 'rgba(212,168,67,0.12)', border: '1px solid rgba(212,168,67,0.35)',
+            }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: '#8a6d1f' }}>
+                Preview mode — the sample cards below are fake and exist only in this browser.
+              </span>
+              <button onClick={() => setSearchParams({}, { replace: true })}
+                style={{ padding: '4px 12px', borderRadius: 9999, border: '1px solid rgba(212,168,67,0.5)', background: 'transparent', fontSize: 11, fontWeight: 700, color: '#8a6d1f', cursor: 'pointer', fontFamily: 'var(--font-body)' }}>
+                Exit preview
+              </button>
+            </div>
+          )}
 
           {/* Header */}
           <div style={{ marginBottom: '1rem' }}>
@@ -1378,65 +1674,51 @@ export default function HostProposals() {
             <p style={{ fontSize: '0.82rem', color: 'var(--sage)', marginTop: '0.25rem' }}>{t('header.subtitle', { total: visible.length, pending: pendingCount })}</p>
           </div>
 
-          {/* Type filter */}
-          <div style={{ display: 'flex', gap: 6, marginBottom: '1.25rem', alignItems: 'center' }}>
-            {TYPE_TABS.map((tt) => {
-              const active = typeFilter === tt.key;
-              const count  = typeCounts[tt.key];
-              const isPitchTab = tt.key === 'pitch';
-              return (
-                <button key={tt.key} onClick={() => { setTypeFilter(tt.key); setExpanded(null); }}
-                  style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '0.3rem 0.75rem', borderRadius: 9999, fontSize: '0.75rem', fontWeight: 600, background: active ? (isPitchTab ? 'rgba(209,235,219,0.7)' : 'rgba(25,37,36,0.08)') : 'transparent', color: active ? (isPitchTab ? '#2d7d5e' : 'var(--ink)') : 'var(--sage)', border: `1px solid ${active ? (isPitchTab ? 'rgba(149,157,144,0.4)' : 'rgba(25,37,36,0.15)') : 'transparent'}`, cursor: 'pointer', transition: 'all 150ms', fontFamily: 'var(--font-body)' }}>
-                  {isPitchTab && <Sparkles size={10} />}
-                  {typeLabel(tt.key)}
-                  {count > 0 && <span style={{ padding: '1px 5px', borderRadius: 9999, fontSize: '0.62rem', fontWeight: 700, lineHeight: 1.5, background: active ? 'rgba(25,37,36,0.1)' : 'rgba(25,37,36,0.06)', color: active ? 'inherit' : 'var(--slate)' }}>{count}</span>}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Board + open-card panel — the board compresses to the left and a
-              detail/chat panel docks on the right while a card is open. */}
-          <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
-            <div style={{ flex: openProposal ? '1 1 55%' : '1 1 auto', minWidth: 0 }}>
-              {rawPitches === undefined ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
-                  {Array.from({ length: 4 }).map((_, i) => (
-                    <SkeletonCard key={i} variant="proposal" />
-                  ))}
-                </div>
-              ) : allProposals.length === 0 ? (
-                <div style={{ background: 'rgba(255,255,255,0.6)', backdropFilter: 'blur(20px)', border: '1.5px solid rgba(255,255,255,0.7)', borderRadius: '1.25rem', padding: '3rem', textAlign: 'center' }}>
-                  <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1rem', color: 'var(--ink)', marginBottom: '0.4rem' }}>{t('empty.noProposalsYet')}</p>
-                  <p style={{ fontSize: '0.82rem', color: 'var(--sage)', margin: 0 }}>{t('empty.onceCreatorsApply')}</p>
-                </div>
-              ) : (
-                <div style={{ display: 'flex', gap: '0.75rem', overflowX: 'auto', paddingBottom: '0.5rem' }}>
-                  {STAGE_KEYS.map((key) => {
-                    const stageDef = STAGES.find((s) => s.key === key);
-                    const cards = columnCards[key] || [];
-                    return (
-                      <DroppableColumn key={key} stageKey={key} label={stageDef?.label || key} count={cards.length} isFlashing={flashStage === key}>
-                        {cards.map((p) => {
-                          const dragLocked = p.collabStage === 'pending' || p.collabStage === 'archived';
-                          return (
-                            <DraggableProposalCard key={p.id} proposal={p}
-                              dragLocked={dragLocked}
-                              dragLockReason={p.collabStage === 'pending' ? t('card.dragLockedPending') : undefined}
-                              expanded={expanded === p.id}
-                              onToggle={() => setExpanded(expanded === p.id ? null : p.id)}
-                              onStatusChange={handleStatusChange}
-                              onCounter={(proposalId, fromParty) => setCounterModal({ proposalId, fromParty })}
-                              onSign={(proposalId, party) => setSignModal({ proposalId, party })}
-                              onCreatorClick={(creator) => setPopupCreator(creator)}
-                            />
-                          );
-                        })}
-                      </DroppableColumn>
-                    );
-                  })}
-                </div>
-              )}
+          {/* An open card takes over the board area entirely — page chrome
+              (back button, search, title) stays put above it. */}
+          {openProposal ? (
+            <ProposalDrawer
+              proposal={openProposal}
+              onStatusChange={handleStatusChange}
+              onStageChange={handleStageChange}
+              onTerminate={handleTerminate}
+              onConfirmComplete={(p) => setCompleteModal(p)}
+              onCreatorClick={(creator) => setPopupCreator(creator)}
+              onCounter={(proposalId, fromParty) => setCounterModal({ proposalId, fromParty })}
+              onSign={(proposalId, party) => setSignModal({ proposalId, party })}
+              onClose={() => setExpanded(null)}
+              listingById={listingById}
+            />
+          ) : rawPitches === undefined ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
+              {Array.from({ length: 4 }).map((_, i) => (
+                <SkeletonCard key={i} variant="proposal" />
+              ))}
+            </div>
+          ) : allProposals.length === 0 ? (
+            <div style={{ background: 'rgba(255,255,255,0.6)', backdropFilter: 'blur(20px)', border: '1.5px solid rgba(255,255,255,0.7)', borderRadius: '1.25rem', padding: '3rem', textAlign: 'center' }}>
+              <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1rem', color: 'var(--ink)', marginBottom: '0.4rem' }}>{t('empty.noProposalsYet')}</p>
+              <p style={{ fontSize: '0.82rem', color: 'var(--sage)', margin: 0 }}>{t('empty.onceCreatorsApply')}</p>
+            </div>
+          ) : (
+            <>
+              <div style={{ display: 'flex', gap: '0.75rem', overflowX: 'auto', paddingBottom: '0.5rem', alignItems: 'flex-start' }}>
+                {STAGE_KEYS.map((key) => {
+                  const stageDef = STAGES.find((s) => s.key === key);
+                  const cards = columnCards[key] || [];
+                  return (
+                    <DroppableColumn key={key} stageKey={key} label={stageDef?.label || key} count={cards.length} isFlashing={flashStage === key}>
+                      {cards.map((p) => (
+                        <DraggableProposalCard key={p.id} proposal={p}
+                          expanded={expanded === p.id}
+                          onToggle={() => setExpanded(expanded === p.id ? null : p.id)}
+                          onCreatorClick={(creator) => setPopupCreator(creator)}
+                        />
+                      ))}
+                    </DroppableColumn>
+                  );
+                })}
+              </div>
 
               {/* Declined — outside the production board */}
               {declinedList.length > 0 && (
@@ -1455,15 +1737,11 @@ export default function HostProposals() {
                     </button>
                   </div>
                   {declinedOpen && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: '0.5rem' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 8, marginTop: '0.5rem' }}>
                       {declinedList.map((p) => (
-                        <DraggableProposalCard key={p.id} proposal={p}
-                          dragLocked
+                        <ProposalCard key={p.id} proposal={p} noDrag
                           expanded={expanded === p.id}
                           onToggle={() => setExpanded(expanded === p.id ? null : p.id)}
-                          onStatusChange={handleStatusChange}
-                          onCounter={(proposalId, fromParty) => setCounterModal({ proposalId, fromParty })}
-                          onSign={(proposalId, party) => setSignModal({ proposalId, party })}
                           onCreatorClick={(creator) => setPopupCreator(creator)}
                         />
                       ))}
@@ -1471,21 +1749,8 @@ export default function HostProposals() {
                   )}
                 </div>
               )}
-            </div>
-
-            {openProposal && (
-              <div style={{ flex: '1 1 45%', minWidth: 320, maxWidth: 480, position: 'sticky', top: '1rem' }}>
-                <ProposalDrawer
-                  proposal={openProposal}
-                  onStatusChange={handleStatusChange}
-                  onCounter={(proposalId, fromParty) => setCounterModal({ proposalId, fromParty })}
-                  onSign={(proposalId, party) => setSignModal({ proposalId, party })}
-                  onClose={() => setExpanded(null)}
-                  listingById={listingById}
-                />
-              </div>
-            )}
-          </div>
+            </>
+          )}
         </div>
 
         </ProposalsOverview>
@@ -1499,9 +1764,6 @@ export default function HostProposals() {
                 <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 13, color: 'var(--ink)', lineHeight: 1.2 }}>{activeProposal.creator.name}</div>
                 <div style={{ fontSize: 11, color: 'var(--sage)', marginTop: 2 }}>{activeProposal.listing}</div>
               </div>
-              <span style={{ marginLeft: 'auto', flexShrink: 0, padding: '3px 9px', borderRadius: 9999, fontSize: 10, fontWeight: 700, background: STATUS_CFG[activeProposal.status]?.bg, color: STATUS_CFG[activeProposal.status]?.color }}>
-                {statusLabel(activeProposal.status)}
-              </span>
             </div>
           ) : null}
         </DragOverlay>
@@ -1568,6 +1830,50 @@ export default function HostProposals() {
           </div>
         </div>
       )}
+
+      {/* Mark-complete confirmation — spells out the payment consequence
+          before the host commits, since completing triggers real money. */}
+      {completeModal && (() => {
+        const listing = completeModal.listingId ? listingById[String(completeModal.listingId)] : null;
+        const resolved = resolvePayout(completeModal, listing || completeModal.listingDetails || null);
+        return (
+          <div onClick={() => setCompleteModal(null)}
+            style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(25,37,36,0.5)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+            <div onClick={(e) => e.stopPropagation()}
+              style={{ width: '100%', maxWidth: 420, background: 'rgba(255,255,255,0.97)', borderRadius: '1.5rem', padding: '2rem', boxShadow: '0 20px 60px rgba(25,37,36,0.2)' }}>
+              <h4 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.1rem', color: 'var(--ink)', margin: '0 0 0.75rem' }}>
+                {t('completeModal.heading', { name: completeModal.creator.name })}
+              </h4>
+              <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '0.875rem 1rem', borderRadius: '0.875rem', background: 'rgba(74,155,127,0.09)', border: '1px solid rgba(74,155,127,0.22)', marginBottom: '1.25rem' }}>
+                <DollarSign size={15} color="#2d7d5e" style={{ flexShrink: 0, marginTop: 1 }} />
+                <div>
+                  <p style={{ fontSize: '0.82rem', fontWeight: 700, color: '#2d7d5e', margin: 0 }}>
+                    {resolved.handling === 'platform' ? t('drawer.payout.platformTitle') : t('drawer.payout.inPersonTitle')}
+                  </p>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--slate)', margin: '4px 0 0', lineHeight: 1.55 }}>
+                    {resolved.handling === 'platform'
+                      ? t('drawer.payout.platformBody')
+                      : t('drawer.payout.inPersonBody', {
+                          name: completeModal.creator.name,
+                          amount: resolved.amount || t('drawer.payout.agreedAmount'),
+                        })}
+                  </p>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: '0.75rem' }}>
+                <button onClick={() => setCompleteModal(null)}
+                  style={{ flex: 1, padding: '0.75rem', borderRadius: 9999, border: '1.5px solid rgba(25,37,36,0.12)', background: 'transparent', fontFamily: 'var(--font-body)', fontSize: '0.875rem', fontWeight: 600, color: 'var(--slate)', cursor: 'pointer' }}>
+                  {t('completeModal.cancel')}
+                </button>
+                <button onClick={() => { handleStatusChange(completeModal.id, 'completed'); setCompleteModal(null); }}
+                  style={{ flex: 1, padding: '0.75rem', borderRadius: 9999, border: 'none', background: 'rgba(74,155,127,0.9)', fontFamily: 'var(--font-body)', fontSize: '0.875rem', fontWeight: 700, color: '#fff', cursor: 'pointer' }}>
+                  {t('completeModal.confirm')}
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </DndContext>
   );
 }

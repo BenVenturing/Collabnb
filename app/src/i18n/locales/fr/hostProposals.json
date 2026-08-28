@@ -19,12 +19,30 @@
     "Influencer": "50K+ abonnés — Large portée, audience établie"
   },
   "contractFields": {
-    "nights": { "label": "Nuits", "placeholder": "ex. 3" },
-    "compensation": { "label": "Rémunération", "placeholder": "ex. 500 $ ou 300 $ + séjour" },
-    "deliverables": { "label": "Livrables", "placeholder": "ex. 2 Reels + 5 Photos" },
-    "turnaround": { "label": "Délai", "placeholder": "ex. 14 jours" },
-    "affiliate": { "label": "% d'affiliation", "placeholder": "ex. 5 % ou —" },
-    "extra_terms": { "label": "Conditions supplémentaires", "placeholder": "Extras facultatifs" }
+    "nights": {
+      "label": "Nuits",
+      "placeholder": "ex. 3"
+    },
+    "compensation": {
+      "label": "Rémunération",
+      "placeholder": "ex. 500 $ ou 300 $ + séjour"
+    },
+    "deliverables": {
+      "label": "Livrables",
+      "placeholder": "ex. 2 Reels + 5 Photos"
+    },
+    "turnaround": {
+      "label": "Délai",
+      "placeholder": "ex. 14 jours"
+    },
+    "affiliate": {
+      "label": "% d'affiliation",
+      "placeholder": "ex. 5 % ou —"
+    },
+    "extra_terms": {
+      "label": "Conditions supplémentaires",
+      "placeholder": "Extras facultatifs"
+    }
   },
   "history": {
     "heading": "Historique de négociation",
@@ -80,7 +98,6 @@
   },
   "drawer": {
     "close": "Fermer",
-    "nextStep": "Suivant : {{stage}}",
     "contract": "Contrat",
     "viewProfile": "Voir le profil",
     "verified": "Vérifié",
@@ -104,7 +121,6 @@
     "acceptAsIs": "Accepter tel quel",
     "youSigned": "✓ Vous avez signé",
     "counterPitch": "Contre-proposition",
-    "decline": "Refuser",
     "creatorsResponse": "Réponse du créateur",
     "demo": "· démo",
     "creatorCounteredBack": "· Le créateur a fait une nouvelle contre-proposition",
@@ -115,7 +131,38 @@
     "approve": "Approuver",
     "markCompleted": "Marquer comme terminé",
     "message": "Message",
-    "messageCreator": "Envoyer un message au créateur"
+    "messageCreator": "Envoyer un message au créateur",
+    "moveToStage": "Passer à {{stage}}",
+    "finalStage": "Étape finale",
+    "currentStage": "Actuel : {{stage}}",
+    "terminate": "Résilier",
+    "terminateNeedsBoth": "Vous et le créateur devez tous deux accepter de mettre fin à une collaboration acceptée",
+    "terminationAwaitingCreator": "Résiliation demandée — en attente de confirmation du créateur.",
+    "terminationRequestedByCreator": "Le créateur a demandé à résilier cette collaboration.",
+    "withdrawTermination": "Retirer",
+    "confirmTermination": "Confirmer la résiliation",
+    "viewListing": "Annonce",
+    "hideListing": "Masquer",
+    "openListingPage": "Ouvrir la page de l'annonce",
+    "listingUnavailable": "Les détails de l'annonce ne sont pas disponibles pour cette proposition.",
+    "noContractYet": "Aucune condition contractuelle convenue pour l'instant.",
+    "driveFolder": "Dossier Drive :",
+    "driveNotSubmitted": "Pas encore soumis",
+    "days": "{{count}} jours",
+    "listingFields": {
+      "compensation": "Rémunération",
+      "deliverables": "Livrables",
+      "nights": "Nuits",
+      "turnaround": "Délai",
+      "dates": "Dates"
+    },
+    "payout": {
+      "platformTitle": "Collabnb gère ce paiement",
+      "platformBody": "Votre carte est débitée maintenant. Le paiement du créateur est retenu 48 heures au cas où l'une des parties ouvrirait un litige, puis transféré automatiquement.",
+      "inPersonTitle": "Vous payez ce créateur directement",
+      "inPersonBody": "Pensez à verser vous-même {{amount}} à {{name}} — Collabnb ne détient jamais cet argent, la fenêtre de litige de 48 heures ne s'applique donc pas. Vos frais de plateforme sont facturés séparément.",
+      "agreedAmount": "le montant convenu"
+    }
   },
   "card": {
     "viewProfile": "Voir le profil",
@@ -125,7 +172,8 @@
     "listingStats": "{{listing}} · {{followers}} abonnés · {{engagement}} % ER",
     "dragToMoveStage": "Glisser pour changer d'étape",
     "dragLocked": "Passez à l'étape suivante dans l'ordre — impossible de sauter des étapes",
-    "dragLockedPending": "Approuvez ou refusez cette candidature avant de la faire passer en production"
+    "dragLockedPending": "Approuvez ou refusez cette candidature avant de la faire passer en production",
+    "terminationPending": "Résiliation en attente"
   },
   "header": {
     "heading": "Propositions",
@@ -148,5 +196,10 @@
     "body_other": "Retirer les {{count}} propositions refusées de l'affichage ? Cela ne supprime pas les données du créateur, cela les masque simplement de votre pipeline.",
     "cancel": "Annuler",
     "removeAll": "Tout retirer"
+  },
+  "completeModal": {
+    "heading": "Marquer la collab avec {{name}} comme terminée ?",
+    "cancel": "Annuler",
+    "confirm": "Oui, terminer"
   }
 }

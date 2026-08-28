@@ -138,6 +138,12 @@
     "title": "Encerrar colaboração?",
     "body": "Isso remove permanentemente esta colaboração do seu painel. Isso não pode ser desfeito.",
     "confirm": "Sim, encerrar",
-    "cancel": "Cancelar"
+    "cancel": "Cancelar",
+    "bodyAccepted": "Esta colaboração foi aceita, então só pode terminar se o anfitrião também concordar. Ele será solicitado a confirmar.",
+    "requestConfirm": "Solicitar encerramento",
+    "hostRequested": "O anfitrião pediu para encerrar esta colaboração. Ela continua ativa até você concordar.",
+    "awaitingHost": "Encerramento solicitado — aguardando a confirmação do anfitrião.",
+    "agree": "Concordar com o encerramento",
+    "withdraw": "Retirar solicitação"
   }
 }

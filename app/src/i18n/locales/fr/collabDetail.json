@@ -138,6 +138,12 @@
     "title": "Mettre fin à la collaboration ?",
     "body": "Cela supprime définitivement cette collaboration de votre tableau de bord. Cette action est irréversible.",
     "confirm": "Oui, mettre fin",
-    "cancel": "Annuler"
+    "cancel": "Annuler",
+    "bodyAccepted": "Cette collaboration a été acceptée, elle ne peut donc prendre fin que si l'hôte est également d'accord. Il devra confirmer.",
+    "requestConfirm": "Demander la résiliation",
+    "hostRequested": "L'hôte a demandé à mettre fin à cette collaboration. Elle reste active jusqu'à votre accord.",
+    "awaitingHost": "Résiliation demandée — en attente de confirmation de l'hôte.",
+    "agree": "Accepter la résiliation",
+    "withdraw": "Retirer la demande"
   }
 }

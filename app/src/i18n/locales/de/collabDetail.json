@@ -138,6 +138,12 @@
     "title": "Kollaboration beenden?",
     "body": "Dadurch wird diese Kollaboration dauerhaft aus Ihrem Dashboard entfernt. Dies kann nicht rückgängig gemacht werden.",
     "confirm": "Ja, beenden",
-    "cancel": "Abbrechen"
+    "cancel": "Abbrechen",
+    "bodyAccepted": "Diese Zusammenarbeit wurde angenommen und kann nur beendet werden, wenn der Gastgeber ebenfalls zustimmt. Er wird um Bestätigung gebeten.",
+    "requestConfirm": "Beendigung anfragen",
+    "hostRequested": "Der Gastgeber möchte diese Zusammenarbeit beenden. Sie bleibt aktiv, bis du zustimmst.",
+    "awaitingHost": "Beendigung angefragt — wartet auf die Bestätigung des Gastgebers.",
+    "agree": "Beendigung zustimmen",
+    "withdraw": "Anfrage zurückziehen"
   }
 }

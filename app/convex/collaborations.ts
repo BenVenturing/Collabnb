@@ -236,6 +236,80 @@ export const advanceStage = mutation({
   },
 });
 
+// ─── Termination (mutual consent) ─────────────────────────────────────────────
+// Once a collab is accepted neither side can end it alone: one party requests,
+// the other confirms. Either party may withdraw their own pending request.
+async function loadCollabAsParty(ctx: any, id: string) {
+  const profile = await requireAuthedProfile(ctx);
+  const collab = await ctx.db
+    .query("collaborations")
+    .filter((q: any) => q.eq(q.field("_id"), id))
+    .first();
+  if (!collab) throw new ConvexError("Collaboration not found.");
+
+  const isCreator = String(profile._id) === String(collab.creator_id);
+  const isHost = !!collab.host_id && String(profile._id) === String(collab.host_id);
+  if (profile.is_admin !== true && !isCreator && !isHost) {
+    throw new ConvexError("You don't have permission to do that.");
+  }
+  return { profile, collab, party: isHost ? "host" : "creator" };
+}
+
+export const requestTermination = mutation({
+  args: { id: v.string() },
+  handler: async (ctx, { id }) => {
+    const { collab, party } = await loadCollabAsParty(ctx, id);
+    if (collab.termination_requested_by) return; // already pending
+    await ctx.db.patch(collab._id, {
+      termination_requested_by: party,
+      termination_requested_at: Date.now(),
+    });
+  },
+});
+
+export const cancelTermination = mutation({
+  args: { id: v.string() },
+  handler: async (ctx, { id }) => {
+    const { collab, party } = await loadCollabAsParty(ctx, id);
+    // Only the side that asked can withdraw the request.
+    if (collab.termination_requested_by !== party) {
+      throw new ConvexError("Only the party who requested termination can withdraw it.");
+    }
+    await ctx.db.patch(collab._id, {
+      termination_requested_by: undefined,
+      termination_requested_at: undefined,
+    });
+  },
+});
+
+export const confirmTermination = mutation({
+  args: { id: v.string() },
+  handler: async (ctx, { id }) => {
+    const { collab, party } = await loadCollabAsParty(ctx, id);
+    if (!collab.termination_requested_by) {
+      throw new ConvexError("No termination has been requested for this collaboration.");
+    }
+    // The confirming party must be the *other* side — you can't approve your own request.
+    if (collab.termination_requested_by === party) {
+      throw new ConvexError("The other party still needs to confirm this termination.");
+    }
+    const stages = collab.stages ? JSON.parse(collab.stages) : {};
+    const now = new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+    stages.archived = { ...(stages.archived || {}), completed: true, date: now, note: "Collaboration terminated by mutual agreement" };
+
+    await ctx.db.patch(collab._id, {
+      current_stage: "archived",
+      status: "terminated",
+      status_text: "Terminated",
+      is_active: false,
+      stages: JSON.stringify(stages),
+      terminated_at: Date.now(),
+      termination_requested_by: undefined,
+      termination_requested_at: undefined,
+    });
+  },
+});
+
 export const remove = mutation({
   args: {
     id: v.string(),

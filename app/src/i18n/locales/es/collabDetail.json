@@ -138,6 +138,12 @@
     "title": "¿Terminar la colaboración?",
     "body": "Esto elimina permanentemente esta colaboración de tu panel. Esto no se puede deshacer.",
     "confirm": "Sí, terminar",
-    "cancel": "Cancelar"
+    "cancel": "Cancelar",
+    "bodyAccepted": "Esta colaboración fue aceptada, así que solo puede terminar si el anfitrión también está de acuerdo. Se le pedirá que confirme.",
+    "requestConfirm": "Solicitar rescisión",
+    "hostRequested": "El anfitrión ha pedido terminar esta colaboración. Sigue activa hasta que aceptes.",
+    "awaitingHost": "Rescisión solicitada — esperando la confirmación del anfitrión.",
+    "agree": "Aceptar rescisión",
+    "withdraw": "Retirar solicitud"
   }
 }

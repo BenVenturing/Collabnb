@@ -138,6 +138,12 @@
     "title": "Terminate collaboration?",
     "body": "This permanently removes this collaboration from your dashboard. This can't be undone.",
     "confirm": "Yes, Terminate",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "bodyAccepted": "This collaboration has been accepted, so it can only end if the host agrees too. They'll be asked to confirm.",
+    "requestConfirm": "Request termination",
+    "hostRequested": "The host has asked to end this collaboration. It stays active until you agree.",
+    "awaitingHost": "Termination requested — waiting on the host to confirm.",
+    "agree": "Agree to terminate",
+    "withdraw": "Withdraw request"
   }
 }

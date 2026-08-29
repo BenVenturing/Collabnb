@@ -1343,7 +1343,7 @@ export default function CollabDetail({ collab, onClose }) {
             <button
               className="btn-glass"
               style={{ marginTop: '0.75rem', fontSize: '0.75rem', padding: '0.5rem 1rem' }}
-              onClick={() => navigate('/explore')}
+              onClick={() => window.open(collab.listing_id ? `/listing/${collab.listing_id}` : '/explore', '_blank', 'noopener,noreferrer')}
             >
               <GlobeSmall /> {t('viewFullListing')}
             </button>

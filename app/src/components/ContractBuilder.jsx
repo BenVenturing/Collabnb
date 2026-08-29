@@ -491,6 +491,7 @@ export default function ContractBuilder() {
     // Create a message thread
     sendContractMessage({
       hostName: host.name,
+      hostId: host.isReal ? host.id : undefined,
       contractId: id,
       contractTitle: form.property_name || form.creator || t('contract'),
     });

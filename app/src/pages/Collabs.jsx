@@ -277,11 +277,28 @@ export default function Collabs() {
         stages: typeof c.stages === 'string' ? JSON.parse(c.stages) : (c.stages || {}),
       }));
 
-    // Override status for local collabs where we have a real Convex pitch status
+    // Reconcile local collabs against their real Convex record where one exists —
+    // current_stage/stages must come from the server (the host's proposal board
+    // writes stage advances straight to Convex), otherwise a stale local cache
+    // entry can show progress (e.g. "Closed") the collab never actually reached.
+    const convexByListingId = new Map((convexCollabs || []).map((c) => [String(c.listing_id), c]));
     const merged = base.map((c) => {
+      const real = convexByListingId.get(String(c.listing_id));
       const realStatus = pitchStatusMap[String(c.listing_id)];
-      if (!realStatus || realStatus === c.status) return c;
-      return { ...c, status: realStatus, status_text: statusText[realStatus] || c.status_text };
+      let next = c;
+      if (real) {
+        next = {
+          ...next,
+          convex_id: next.convex_id || String(real._id),
+          current_stage: real.current_stage || next.current_stage,
+          stages: typeof real.stages === 'string' ? JSON.parse(real.stages) : (real.stages || next.stages),
+          is_active: real.is_active ?? next.is_active,
+        };
+      }
+      if (realStatus && realStatus !== next.status) {
+        next = { ...next, status: realStatus, status_text: statusText[realStatus] || next.status_text };
+      }
+      return next;
     });
 
     const withReal = [...realCollabs, ...merged];

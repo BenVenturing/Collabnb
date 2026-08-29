@@ -51,7 +51,28 @@ export function CollabProvider({ children }) {
   const [threads, setThreads] = useState(() => {
     try {
       const raw = localStorage.getItem('collabnb_threads');
-      if (raw) return JSON.parse(raw);
+      const loaded = raw ? JSON.parse(raw) : null;
+      if (!Array.isArray(loaded)) return SAMPLE_THREADS;
+      // One-time cleanup: sendContractMessage used to always spawn a new
+      // "Contract"-tagged thread instead of reusing the existing conversation
+      // for that listing, leaving duplicate rows. Match on host_name + listing
+      // title (not host_name alone) — the same host can have several separate
+      // listing conversations, and those must not get merged into each other.
+      const dupKey = (t) => `${t.host_name}::${t.listing_title}`;
+      const byListing = new Map();
+      loaded.forEach((t) => { if (t.tag !== 'Contract' && !byListing.has(dupKey(t))) byListing.set(dupKey(t), t); });
+      const merged = loaded.filter((t) => {
+        if (t.tag !== 'Contract') return true;
+        const target = byListing.get(dupKey(t));
+        if (!target || target.id === t.id) return true;
+        target.last_message = t.last_message || target.last_message;
+        target.timestamp = 'Just now';
+        return false;
+      });
+      if (merged.length !== loaded.length) {
+        try { localStorage.setItem('collabnb_threads', JSON.stringify(merged)); } catch {}
+      }
+      return merged;
     } catch {}
     return SAMPLE_THREADS;
   });
@@ -144,6 +165,7 @@ export function CollabProvider({ children }) {
   const advanceStageCvx = useMutation(api.collaborations.advanceStage);
   const removeCollabCvx = useMutation(api.collaborations.remove);
   const createThreadCvx = useMutation(api.threads.create);
+  const sendThreadMessageCvx = useMutation(api.threadMessages.sendMessage);
   const createPitchCvx = useMutation(api.pitches.create);
   const createCollectionCvx = useMutation(api.collections.create);
   const toggleSaveCvx = useMutation(api.collections.toggleSave);
@@ -350,28 +372,74 @@ export function CollabProvider({ children }) {
 
   const getContracts = useCallback(() => contracts, [contracts]);
 
-  const sendContractMessage = useCallback(({ hostName, contractId, contractTitle }) => {
+  // Posts the "contract sent" reminder into the existing conversation with
+  // this counterpart instead of spawning a duplicate thread — a contract is
+  // part of an ongoing collab, not a new relationship. Only falls back to
+  // creating a fresh (properly-linked) thread when no conversation with them
+  // exists yet at all.
+  const sendContractMessage = useCallback(({ hostName, hostId, contractId, contractTitle }) => {
+    const text = `📄 Contract "${contractTitle || 'Agreement'}" sent for signing — view and sign in Contracts.`;
+    // Match on host AND listing — the same host can have several separate
+    // listing conversations, and a contract reminder must land in the one
+    // for that listing, not just any thread with that person.
+    const sameHost = (t) => (hostId ? (t.participant_id === hostId || t.host_name === hostName) : t.host_name === hostName);
+    const existing = threads.find((t) => !t.archived && t.tag !== 'Collabnb' && sameHost(t) && t.listing_title === contractTitle);
+
+    if (existing) {
+      setThreads((prev) => prev.map((t) => (t.id === existing.id
+        ? { ...t, last_message: text, timestamp: 'Just now', unread: 0 }
+        : t)));
+      if (existing.thread_key && ownerId) {
+        sendThreadMessageCvx({
+          threadKey: existing.thread_key,
+          senderId: ownerId,
+          senderName: profile?.full_name || 'Collabnb user',
+          senderAvatar: profile?.avatar_url,
+          senderRole: isHost ? 'host' : 'creator',
+          text,
+          recipientId: existing.participant_id || hostId || undefined,
+        }).catch(() => {});
+      }
+      return;
+    }
+
+    const threadKey = `t_contract_${contractId}_${Date.now()}`;
     const newThread = {
-      id: `t_contract_${contractId}_${Date.now()}`,
+      id: threadKey,
+      thread_key: threadKey,
       listing_title: contractTitle || 'Contract',
       host_name: hostName,
       host_avatar: null,
       tag: 'Contract',
-      last_message: `📄 Contract "${contractTitle || 'Agreement'}" sent for signing — view and sign in Contracts.`,
+      last_message: text,
       timestamp: 'Just now',
-      unread: 1,
+      unread: 0,
       is_founder: false,
+      participant_id: hostId || undefined,
     };
     setThreads((prev) => [newThread, ...prev]);
 
-    // Sync to Convex
     createThreadCvx({
       listingTitle: contractTitle || 'Contract',
       hostName,
       tag: 'Contract',
-      lastMessage: newThread.last_message,
+      lastMessage: text,
+      participantId: hostId || undefined,
+      threadKey,
+    }).then(() => {
+      if (hostId && ownerId) {
+        return sendThreadMessageCvx({
+          threadKey,
+          senderId: ownerId,
+          senderName: profile?.full_name || 'Collabnb user',
+          senderAvatar: profile?.avatar_url,
+          senderRole: isHost ? 'host' : 'creator',
+          text,
+          recipientId: hostId,
+        });
+      }
     }).catch(() => {});
-  }, [createThreadCvx]);
+  }, [threads, ownerId, profile, isHost, createThreadCvx, sendThreadMessageCvx]);
 
   const applyToListing = useCallback(async (listing, pitchMessage, creatorProfile) => {
     const stageKeys = ['pending', 'accepted', 'updated', 'uploaded_tagged', 'closed', 'archived'];
@@ -670,6 +738,13 @@ export function CollabProvider({ children }) {
     setThreads((prev) => prev.map((t) => t.id === threadId ? { ...t, tag: newTag } : t));
   }, []);
 
+  // Per-conversation color, used to tell apart multiple listing threads with
+  // the same counterpart (each side picks their own — it's a local display
+  // preference, not something that needs to be synced to the other party).
+  const setThreadColor = useCallback((threadId, color) => {
+    setThreads((prev) => prev.map((t) => t.id === threadId ? { ...t, theme_color: color } : t));
+  }, []);
+
   // When authenticated, Convex is the source of truth; fall back to localStorage
   const effectiveContracts = convexContracts ?? contracts;
 
@@ -685,7 +760,7 @@ export function CollabProvider({ children }) {
   }, [threads, myAdminThread, incomingThreadsRaw]);
 
   return (
-    <CollabContext.Provider value={{ collabs, threads: threadsWithAdmin, contracts: effectiveContracts, ownerId, applyCount, savedIds, collections, activeCollectionId, toggleSave, isSaved, createCollection, setActiveCollection, moveToCollection, renameCollection, deleteCollection, applyToListing, hasApplied, saveContract, updateContract, markContractSent, getContracts, sendContractMessage, getCollabById, advanceStage, updateStageData, toggleCloseCollab, removeCollab, submitContentMetrics, createThread, archiveThread, deleteThread, updateThreadTag }}>
+    <CollabContext.Provider value={{ collabs, threads: threadsWithAdmin, contracts: effectiveContracts, ownerId, applyCount, savedIds, collections, activeCollectionId, toggleSave, isSaved, createCollection, setActiveCollection, moveToCollection, renameCollection, deleteCollection, applyToListing, hasApplied, saveContract, updateContract, markContractSent, getContracts, sendContractMessage, getCollabById, advanceStage, updateStageData, toggleCloseCollab, removeCollab, submitContentMetrics, createThread, archiveThread, deleteThread, updateThreadTag, setThreadColor }}>
       {children}
     </CollabContext.Provider>
   );

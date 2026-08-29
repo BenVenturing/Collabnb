@@ -24,6 +24,19 @@ const TAG_STYLES = {
 };
 
 const FILTERS = ['All', 'Applications', 'Collabs', 'Pitches'];
+
+// Narrow color palette for telling apart multiple listing conversations with
+// the same host/creator — 'grey' is the default ("general", not listing-specific).
+const THEME_COLORS = {
+  grey:     { label: 'General',  dot: '#9CA3AF', panelBg: 'rgba(148,163,184,0.10)', composerBg: 'rgba(148,163,184,0.16)' },
+  mint:     { label: 'Mint',     dot: '#5FBE93', panelBg: 'rgba(209,235,219,0.35)', composerBg: 'rgba(209,235,219,0.55)' },
+  sky:      { label: 'Sky',      dot: '#5B9BD5', panelBg: 'rgba(219,234,254,0.35)', composerBg: 'rgba(219,234,254,0.55)' },
+  amber:    { label: 'Amber',    dot: '#D4A843', panelBg: 'rgba(250,230,180,0.35)', composerBg: 'rgba(250,230,180,0.55)' },
+  rose:     { label: 'Rose',     dot: '#D98A97', panelBg: 'rgba(250,220,224,0.35)', composerBg: 'rgba(250,220,224,0.55)' },
+  lavender: { label: 'Lavender', dot: '#A78BC9', panelBg: 'rgba(230,222,245,0.35)', composerBg: 'rgba(230,222,245,0.55)' },
+};
+const THEME_COLOR_IDS = Object.keys(THEME_COLORS);
+function threadTheme(thread) { return THEME_COLORS[thread?.theme_color] || THEME_COLORS.grey; }
 // Composer grows with its content up to this height (~6 lines), then scrolls.
 const MAX_COMPOSER_HEIGHT = 160;
 function filterLabel(f) { return i18nInstance.t(`inbox:filters.${f}`); }
@@ -82,6 +95,7 @@ function ThreadRow({ thread, isActive, onClick, onDelete }) {
       className={`w-full flex items-center gap-3 px-4 py-3.5 border-b border-stone/20 text-left transition-colors relative group ${
         isActive ? 'bg-white/90' : 'hover:bg-white/50'
       }`}
+      style={thread.theme_color ? { boxShadow: `inset 3px 0 0 ${threadTheme(thread).dot}` } : undefined}
       onMouseEnter={() => setShowDelete(true)}
       onMouseLeave={() => setShowDelete(false)}
     >
@@ -219,18 +233,26 @@ function ThreadMenu({ thread, onClose, onArchive, onUpdateTag }) {
 }
 
 // ─── Conversation panel (right side) ─────────────────────────────────────────
-function ConversationPanel({ thread, onViewCollab, onArchive, onUpdateTag }) {
+function ConversationPanel({ thread, allThreads, onViewCollab, onArchive, onUpdateTag, onSetColor }) {
   const { t } = useTranslation('inbox');
   const [draft, setDraft] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
+  const [colorPickerOpen, setColorPickerOpen] = useState(false);
   const [popupPerson, setPopupPerson] = useState(null);
   const [sending, setSending] = useState(false);
   const [attachments, setAttachments] = useState([]);
   const bottomRef = useRef(null);
   const fileInputRef = useRef(null);
   const textareaRef = useRef(null);
+  const colorPickerRef = useRef(null);
   const tagStyle = TAG_STYLES[thread.tag] || TAG_STYLES.Application;
   const isCollabnb = thread.tag === 'Collabnb';
+  const theme = threadTheme(thread);
+  // Only worth color-coding when this person has more than one conversation
+  // with us (multiple listings) — otherwise there's nothing to tell apart.
+  const hasMultipleListingsWithThem = !isCollabnb && (allThreads || []).filter(
+    (t) => !t.archived && t.tag !== 'Collabnb' && t.host_name === thread.host_name
+  ).length > 1;
   const navigate = useNavigate();
   const { profile } = useAuth();
   const { openModal } = useVerification();
@@ -288,7 +310,17 @@ function ConversationPanel({ thread, onViewCollab, onArchive, onUpdateTag }) {
     setSendError('');
     setAiMode(false);
     setAiPrompt('');
+    setColorPickerOpen(false);
   }, [thread.id]);
+
+  useEffect(() => {
+    if (!colorPickerOpen) return;
+    const handler = (e) => {
+      if (colorPickerRef.current && !colorPickerRef.current.contains(e.target)) setColorPickerOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [colorPickerOpen]);
 
   // While the AI panel is open, cycle the prompt box's placeholder through a
   // few example prompts (first one nudges "just hit Generate, no prompt
@@ -428,6 +460,37 @@ function ConversationPanel({ thread, onViewCollab, onArchive, onUpdateTag }) {
         </div>
         {/* Action icons */}
         <div className="flex gap-2">
+          {hasMultipleListingsWithThem && (
+            <div className="relative">
+              <button
+                onClick={() => setColorPickerOpen((o) => !o)}
+                className="w-8 h-8 rounded-full bg-bone hover:bg-stone/60 flex items-center justify-center transition-colors"
+                title="Color this listing's conversation"
+              >
+                <span className="block w-4 h-4 rounded-full border border-black/10" style={{ background: theme.dot }} />
+              </button>
+              {colorPickerOpen && (
+                <div
+                  ref={colorPickerRef}
+                  className="absolute right-0 top-full mt-1 z-50 flex items-center gap-1.5 p-2 rounded-xl bg-white border border-stone/30 shadow-lg"
+                  style={{ boxShadow: '0 8px 30px rgba(25,37,36,0.12)' }}
+                >
+                  {THEME_COLOR_IDS.map((id) => (
+                    <button
+                      key={id}
+                      onClick={() => { onSetColor(thread.id, id); setColorPickerOpen(false); }}
+                      title={THEME_COLORS[id].label}
+                      className="w-6 h-6 rounded-full border-2 flex-shrink-0"
+                      style={{
+                        background: THEME_COLORS[id].dot,
+                        borderColor: (thread.theme_color || 'grey') === id ? 'var(--ink)' : 'transparent',
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
           <button
             onClick={() => onViewCollab(thread)}
             className="w-8 h-8 rounded-full bg-bone hover:bg-stone/60 flex items-center justify-center transition-colors"
@@ -462,7 +525,7 @@ function ConversationPanel({ thread, onViewCollab, onArchive, onUpdateTag }) {
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-6 py-5 space-y-3">
+      <div className="flex-1 overflow-y-auto px-6 py-5 space-y-3" style={{ background: theme.panelBg }}>
         {thread.is_sample && !convexMessages?.length ? (
           allMessages.map((msg) => (
             <Bubble key={msg.id} msg={msg} />
@@ -565,7 +628,7 @@ function ConversationPanel({ thread, onViewCollab, onArchive, onUpdateTag }) {
           </div>
         ) : (
           /* ── Message mode ── */
-          <div className="flex items-center gap-2 bg-bone rounded-2xl px-4 py-2.5 border border-stone/40">
+          <div className="flex items-center gap-2 rounded-2xl px-4 py-2.5 border border-stone/40" style={{ background: theme.composerBg }}>
             <textarea
               ref={textareaRef}
               rows={1}
@@ -721,7 +784,7 @@ function ShimmerRow() {
 
 export default function Inbox() {
   const { t } = useTranslation('inbox');
-  const { threads, collabs, archiveThread, deleteThread, updateThreadTag, createThread, savedIds } = useCollabs();
+  const { threads, collabs, archiveThread, deleteThread, updateThreadTag, setThreadColor, createThread, savedIds } = useCollabs();
   const { profile } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
@@ -1039,9 +1102,11 @@ export default function Inbox() {
         {selectedThread ? (
           <ConversationPanel
             thread={selectedThread}
+            allThreads={threads}
             onViewCollab={handleViewCollab}
             onArchive={archiveThread}
             onUpdateTag={updateThreadTag}
+            onSetColor={setThreadColor}
           />
         ) : (
           <EmptyState />

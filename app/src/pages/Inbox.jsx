@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useSearchParams, useLocation, useNavigate } from 'react-router-dom';
 import { useCollabs } from '../contexts/CollabContext';
-import { THREAD_MESSAGES } from '../lib/mockData';
+import { THREAD_MESSAGES, STAGES } from '../lib/mockData';
+import { THEME_COLORS, THEME_COLOR_IDS, threadTheme } from '../lib/threadColors';
 import CollabDetail from '../components/CollabDetail';
 import ProfilePopupCard from '../components/ProfilePopupCard';
 import { useAuth } from '../contexts/AuthContext';
@@ -25,18 +26,15 @@ const TAG_STYLES = {
 
 const FILTERS = ['All', 'Applications', 'Collabs', 'Pitches'];
 
-// Narrow color palette for telling apart multiple listing conversations with
-// the same host/creator — 'grey' is the default ("general", not listing-specific).
-const THEME_COLORS = {
-  grey:     { label: 'General',  dot: '#9CA3AF', panelBg: 'rgba(148,163,184,0.10)', composerBg: 'rgba(148,163,184,0.16)' },
-  mint:     { label: 'Mint',     dot: '#5FBE93', panelBg: 'rgba(209,235,219,0.35)', composerBg: 'rgba(209,235,219,0.55)' },
-  sky:      { label: 'Sky',      dot: '#5B9BD5', panelBg: 'rgba(219,234,254,0.35)', composerBg: 'rgba(219,234,254,0.55)' },
-  amber:    { label: 'Amber',    dot: '#D4A843', panelBg: 'rgba(250,230,180,0.35)', composerBg: 'rgba(250,230,180,0.55)' },
-  rose:     { label: 'Rose',     dot: '#D98A97', panelBg: 'rgba(250,220,224,0.35)', composerBg: 'rgba(250,220,224,0.55)' },
-  lavender: { label: 'Lavender', dot: '#A78BC9', panelBg: 'rgba(230,222,245,0.35)', composerBg: 'rgba(230,222,245,0.55)' },
-};
-const THEME_COLOR_IDS = Object.keys(THEME_COLORS);
-function threadTheme(thread) { return THEME_COLORS[thread?.theme_color] || THEME_COLORS.grey; }
+// Resolve a thread's collab stage ("Accepted", "Closed", …) for the legend.
+// Falls back to the thread tag when there's no linked collab to read from.
+function stageLabelFor(thread, collabs) {
+  const collab = (collabs || []).find((c) => String(c.id) === String(thread.collab_id));
+  if (collab?.current_stage) {
+    return STAGES.find((s) => s.key === collab.current_stage)?.label || collab.current_stage;
+  }
+  return tagLabel(thread.tag);
+}
 // Composer grows with its content up to this height (~6 lines), then scrolls.
 const MAX_COMPOSER_HEIGHT = 160;
 function filterLabel(f) { return i18nInstance.t(`inbox:filters.${f}`); }
@@ -233,7 +231,7 @@ function ThreadMenu({ thread, onClose, onArchive, onUpdateTag }) {
 }
 
 // ─── Conversation panel (right side) ─────────────────────────────────────────
-function ConversationPanel({ thread, allThreads, onViewCollab, onArchive, onUpdateTag, onSetColor }) {
+function ConversationPanel({ thread, allThreads, collabs, onViewCollab, onArchive, onUpdateTag, onSetColor, onSelectThread }) {
   const { t } = useTranslation('inbox');
   const [draft, setDraft] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
@@ -248,11 +246,11 @@ function ConversationPanel({ thread, allThreads, onViewCollab, onArchive, onUpda
   const tagStyle = TAG_STYLES[thread.tag] || TAG_STYLES.Application;
   const isCollabnb = thread.tag === 'Collabnb';
   const theme = threadTheme(thread);
-  // Only worth color-coding when this person has more than one conversation
-  // with us (multiple listings) — otherwise there's nothing to tell apart.
-  const hasMultipleListingsWithThem = !isCollabnb && (allThreads || []).filter(
+  // Every conversation with this same person — the legend's contents. Matches
+  // the main list's filtering so every row here is actually selectable.
+  const siblingThreads = (allThreads || []).filter(
     (t) => !t.archived && t.tag !== 'Collabnb' && t.host_name === thread.host_name
-  ).length > 1;
+  );
   const navigate = useNavigate();
   const { profile } = useAuth();
   const { openModal } = useVerification();
@@ -460,33 +458,73 @@ function ConversationPanel({ thread, allThreads, onViewCollab, onArchive, onUpda
         </div>
         {/* Action icons */}
         <div className="flex gap-2">
-          {hasMultipleListingsWithThem && (
+          {!isCollabnb && (
             <div className="relative">
               <button
                 onClick={() => setColorPickerOpen((o) => !o)}
                 className="w-8 h-8 rounded-full bg-bone hover:bg-stone/60 flex items-center justify-center transition-colors"
-                title="Color this listing's conversation"
+                title={siblingThreads.length > 1
+                  ? `${siblingThreads.length} chats with ${thread.host_name}`
+                  : "Color this conversation"}
               >
                 <span className="block w-4 h-4 rounded-full border border-black/10" style={{ background: theme.dot }} />
               </button>
               {colorPickerOpen && (
                 <div
                   ref={colorPickerRef}
-                  className="absolute right-0 top-full mt-1 z-50 flex items-center gap-1.5 p-2 rounded-xl bg-white border border-stone/30 shadow-lg"
+                  className="absolute right-0 top-full mt-1 z-50 w-64 rounded-xl bg-white border border-stone/30 shadow-lg overflow-hidden"
                   style={{ boxShadow: '0 8px 30px rgba(25,37,36,0.12)' }}
                 >
-                  {THEME_COLOR_IDS.map((id) => (
-                    <button
-                      key={id}
-                      onClick={() => { onSetColor(thread.id, id); setColorPickerOpen(false); }}
-                      title={THEME_COLORS[id].label}
-                      className="w-6 h-6 rounded-full border-2 flex-shrink-0"
-                      style={{
-                        background: THEME_COLORS[id].dot,
-                        borderColor: (thread.theme_color || 'grey') === id ? 'var(--ink)' : 'transparent',
-                      }}
-                    />
-                  ))}
+                  {/* Legend — which color is which listing, and where it stands */}
+                  <p className="px-3 pt-2.5 pb-1 text-[10px] font-bold uppercase tracking-wide text-sage">
+                    {siblingThreads.length > 1
+                      ? `Chats with ${thread.host_name}`
+                      : 'This conversation'}
+                  </p>
+                  <div className="max-h-56 overflow-y-auto pb-1">
+                    {siblingThreads.map((s) => {
+                      const isCurrent = s.id === thread.id;
+                      return (
+                        <button
+                          key={s.id}
+                          onClick={() => { if (!isCurrent) onSelectThread(s.id); setColorPickerOpen(false); }}
+                          className={`w-full flex items-center gap-2 px-3 py-1.5 text-left transition-colors ${
+                            isCurrent ? 'bg-bone/70' : 'hover:bg-bone/40'
+                          }`}
+                        >
+                          <span
+                            className="w-2.5 h-2.5 rounded-full flex-shrink-0 border border-black/10"
+                            style={{ background: threadTheme(s).dot }}
+                          />
+                          <span className={`flex-1 min-w-0 truncate text-xs ${isCurrent ? 'font-bold text-ink' : 'text-slate'}`}>
+                            {s.listing_title}
+                          </span>
+                          <span className="text-[10px] text-sage flex-shrink-0">
+                            {stageLabelFor(s, collabs)}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Color picker for the open conversation */}
+                  <div className="border-t border-stone/25 px-3 py-2">
+                    <p className="text-[10px] text-sage mb-1.5">Color this conversation</p>
+                    <div className="flex items-center gap-1.5">
+                      {THEME_COLOR_IDS.map((id) => (
+                        <button
+                          key={id}
+                          onClick={() => { onSetColor(thread.thread_key || thread.id, id); setColorPickerOpen(false); }}
+                          title={THEME_COLORS[id].label}
+                          className="w-5 h-5 rounded-full border-2 flex-shrink-0"
+                          style={{
+                            background: THEME_COLORS[id].dot,
+                            borderColor: (thread.theme_color || 'grey') === id ? 'var(--ink)' : 'transparent',
+                          }}
+                        />
+                      ))}
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
@@ -1103,10 +1141,12 @@ export default function Inbox() {
           <ConversationPanel
             thread={selectedThread}
             allThreads={threads}
+            collabs={collabs}
             onViewCollab={handleViewCollab}
             onArchive={archiveThread}
             onUpdateTag={updateThreadTag}
             onSetColor={setThreadColor}
+            onSelectThread={openThread}
           />
         ) : (
           <EmptyState />

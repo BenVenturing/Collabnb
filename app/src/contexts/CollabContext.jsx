@@ -4,6 +4,7 @@ import { api } from '../../convex/_generated/api';
 import { useAuth } from './AuthContext';
 import { SAMPLE_THREADS, MOCK_CREATOR, STAGES } from '../lib/mockData';
 import { formatDate } from '../lib/dateUtils';
+import { AUTO_COLOR_IDS, threadColorKey, counterpartKey } from '../lib/threadColors';
 
 const CollabContext = createContext(null);
 
@@ -81,6 +82,21 @@ export function CollabProvider({ children }) {
   useEffect(() => {
     try { localStorage.setItem('collabnb_threads', JSON.stringify(threads)); } catch {}
   }, [threads]);
+
+  // Per-conversation colors live in their own map keyed by thread_key rather
+  // than as a field on the thread rows: threads sourced from Convex (incoming
+  // threads, the admin persona thread) aren't in local `threads` state at all,
+  // so writing the color onto a row there would silently no-op.
+  const [threadColors, setThreadColors] = useState(() => {
+    try {
+      const raw = localStorage.getItem('collabnb_thread_colors');
+      const parsed = raw ? JSON.parse(raw) : null;
+      return parsed && typeof parsed === 'object' ? parsed : {};
+    } catch { return {}; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem('collabnb_thread_colors', JSON.stringify(threadColors)); } catch {}
+  }, [threadColors]);
   const [applyCount, setApplyCount] = useState(() =>
     parseInt(localStorage.getItem('collabnb_apply_count') || '0', 10)
   );
@@ -741,14 +757,15 @@ export function CollabProvider({ children }) {
   // Per-conversation color, used to tell apart multiple listing threads with
   // the same counterpart (each side picks their own — it's a local display
   // preference, not something that needs to be synced to the other party).
-  const setThreadColor = useCallback((threadId, color) => {
-    setThreads((prev) => prev.map((t) => t.id === threadId ? { ...t, theme_color: color } : t));
+  // Keyed by thread_key so it works for Convex-sourced threads too.
+  const setThreadColor = useCallback((threadKey, color) => {
+    setThreadColors((prev) => ({ ...prev, [threadKey]: color }));
   }, []);
 
   // When authenticated, Convex is the source of truth; fall back to localStorage
   const effectiveContracts = convexContracts ?? contracts;
 
-  const threadsWithAdmin = useMemo(() => {
+  const mergedThreads = useMemo(() => {
     let result = threads;
     if (myAdminThread && !result.some((t) => t.thread_key === myAdminThread.thread_key)) {
       result = [myAdminThread, ...result];
@@ -758,6 +775,42 @@ export function CollabProvider({ children }) {
     if (newIncoming.length) result = [...newIncoming, ...result];
     return result;
   }, [threads, myAdminThread, incomingThreadsRaw]);
+
+  // Give each listing conversation with the same counterpart its own color, so
+  // the colors mean something without any manual setup. Only groups of 2+ are
+  // colored — a lone conversation stays "general" grey. Assignments persist, so
+  // a color never shifts once seen, and an explicit pick is never overwritten.
+  useEffect(() => {
+    const groups = new Map();
+    mergedThreads.forEach((t) => {
+      const who = counterpartKey(t);
+      if (!who || t.tag === 'Collabnb' || t.archived) return;
+      if (!groups.has(who)) groups.set(who, []);
+      groups.get(who).push(t);
+    });
+    const additions = {};
+    groups.forEach((group) => {
+      if (group.length < 2) return;
+      // Sort by key so first-time assignment doesn't depend on list order.
+      const ordered = [...group].sort((a, b) =>
+        String(threadColorKey(a)).localeCompare(String(threadColorKey(b))));
+      const used = new Set(ordered.map((t) => threadColors[threadColorKey(t)]).filter(Boolean));
+      ordered.forEach((t) => {
+        const key = threadColorKey(t);
+        if (!key || threadColors[key] || additions[key]) return;
+        const next = AUTO_COLOR_IDS.find((c) => !used.has(c)) || AUTO_COLOR_IDS[0];
+        used.add(next);
+        additions[key] = next;
+      });
+    });
+    // Existing entries win, so manual picks survive and this settles after one pass.
+    if (Object.keys(additions).length) setThreadColors((prev) => ({ ...additions, ...prev }));
+  }, [mergedThreads, threadColors]);
+
+  const threadsWithAdmin = useMemo(() => mergedThreads.map((t) => {
+    const color = threadColors[threadColorKey(t)];
+    return color ? { ...t, theme_color: color } : t;
+  }), [mergedThreads, threadColors]);
 
   return (
     <CollabContext.Provider value={{ collabs, threads: threadsWithAdmin, contracts: effectiveContracts, ownerId, applyCount, savedIds, collections, activeCollectionId, toggleSave, isSaved, createCollection, setActiveCollection, moveToCollection, renameCollection, deleteCollection, applyToListing, hasApplied, saveContract, updateContract, markContractSent, getContracts, sendContractMessage, getCollabById, advanceStage, updateStageData, toggleCloseCollab, removeCollab, submitContentMetrics, createThread, archiveThread, deleteThread, updateThreadTag, setThreadColor }}>

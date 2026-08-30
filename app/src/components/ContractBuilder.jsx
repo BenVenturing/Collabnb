@@ -14,6 +14,36 @@ import { computeFee } from '../../convex/lib/fees';
 const CURRENCIES = ['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'JPY'];
 const FREE_STAY_VALUE = 'free_stay';
 
+// ─── Stay window ──────────────────────────────────────────────────────────────
+// Contracts store the agreed stay as epoch ms (check_in/check_out) so the host
+// dashboard and calendar can actually read it. The free-text `dates` field is
+// still written alongside, derived from these, for display and back-compat.
+// Dates are handled as local calendar days — parsed at noon so a timezone
+// offset can never roll them onto the previous/next day.
+function epochToInput(ms) {
+  if (typeof ms !== 'number' || !Number.isFinite(ms)) return '';
+  const d = new Date(ms);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+function inputToEpoch(value) {
+  if (!value) return undefined;
+  const [y, m, d] = value.split('-').map(Number);
+  if (!y || !m || !d) return undefined;
+  return new Date(y, m - 1, d, 12, 0, 0, 0).getTime();
+}
+function stayDisplay(checkIn, checkOut) {
+  const a = inputToEpoch(checkIn);
+  const b = inputToEpoch(checkOut);
+  if (!a && !b) return '';
+  const fmt = (ms, withYear) => new Date(ms).toLocaleDateString('en-US', {
+    month: 'short', day: 'numeric', ...(withYear ? { year: 'numeric' } : {}),
+  });
+  if (a && !b) return fmt(a, true);
+  if (!a && b) return fmt(b, true);
+  const sameYear = new Date(a).getFullYear() === new Date(b).getFullYear();
+  return `${fmt(a, !sameYear)} – ${fmt(b, true)}`;
+}
+
 const USAGE_RIGHTS = [
   { value: 'social_media', label: 'Social Media Only' },
   { value: 'commercial', label: 'Commercial Use' },
@@ -102,6 +132,8 @@ export default function ContractBuilder() {
       property_name: prefill?.property_name || '',
       location: prefill?.location || '',
       dates: prefill?.dates || '',
+      checkIn: epochToInput(prefill?.check_in),
+      checkOut: epochToInput(prefill?.check_out),
       deliverables: prefill?.deliverables || '',
       currency: 'USD',
       paymentAmount: '',
@@ -248,7 +280,9 @@ export default function ContractBuilder() {
         host_name: form.host,
         property_name: form.property_name,
         location: form.location,
-        dates: form.dates,
+        dates: stayDisplay(form.checkIn, form.checkOut) || form.dates,
+        check_in: inputToEpoch(form.checkIn),
+        check_out: inputToEpoch(form.checkOut),
         deliverables: form.deliverables,
         currency: form.isFreeStay ? FREE_STAY_VALUE : form.currency,
         payment: form.isFreeStay ? 'Free Stay' : (form.currency && form.paymentAmount ? `${form.currency} ${form.paymentAmount}` : ''),
@@ -305,6 +339,8 @@ export default function ContractBuilder() {
       property_name: c.property_name || '',
       location: c.location || '',
       dates: c.dates || '',
+      checkIn: epochToInput(c.check_in),
+      checkOut: epochToInput(c.check_out),
       deliverables: c.deliverables || '',
       currency: isFreeStay ? 'USD' : (c.currency || 'USD'),
       paymentAmount: isFreeStay ? '' : (c.payment === 'Free Stay' ? '' : c.payment || ''),
@@ -342,7 +378,9 @@ export default function ContractBuilder() {
     host_name: form.host,
     property_name: form.property_name,
     location: form.location,
-    dates: form.dates,
+    dates: stayDisplay(form.checkIn, form.checkOut) || form.dates,
+    check_in: inputToEpoch(form.checkIn),
+    check_out: inputToEpoch(form.checkOut),
     deliverables: form.deliverables,
     currency: form.isFreeStay ? FREE_STAY_VALUE : form.currency,
     payment: computePaymentDisplay(),
@@ -513,7 +551,6 @@ export default function ContractBuilder() {
     { key: 'host' },
     { key: 'property_name' },
     { key: 'location' },
-    { key: 'dates' },
     { key: 'deliverables' },
   ];
 
@@ -624,6 +661,35 @@ export default function ContractBuilder() {
                     />
                   </div>
                 ))}
+
+                {/* ── Stay window ── drives Upcoming Stays + the host calendar */}
+                <div className="mb-3">
+                  <label className="block text-xs font-semibold text-sage uppercase tracking-wider mb-1">
+                    {t('field.dates')}
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="date"
+                      aria-label={t('stay.checkIn')}
+                      value={form.checkIn}
+                      max={form.checkOut || undefined}
+                      onChange={(e) => updateField('checkIn', e.target.value)}
+                      className="flex-1 min-w-0 px-3 py-2 rounded-xl border border-stone/50 bg-white/60 text-ink text-sm
+                                 outline-none transition-colors focus:border-mint focus:bg-white focus:shadow-sm"
+                    />
+                    <span className="text-sage text-sm shrink-0">–</span>
+                    <input
+                      type="date"
+                      aria-label={t('stay.checkOut')}
+                      value={form.checkOut}
+                      min={form.checkIn || undefined}
+                      onChange={(e) => updateField('checkOut', e.target.value)}
+                      className="flex-1 min-w-0 px-3 py-2 rounded-xl border border-stone/50 bg-white/60 text-ink text-sm
+                                 outline-none transition-colors focus:border-mint focus:bg-white focus:shadow-sm"
+                    />
+                  </div>
+                  <p className="text-[11px] text-sage mt-1">{t('stay.hint')}</p>
+                </div>
 
                 {/* ── Currency / Payment ── */}
                 <div className="mb-3">

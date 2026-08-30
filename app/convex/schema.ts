@@ -277,6 +277,10 @@ export default defineSchema({
     cash_value: v.optional(v.number()),
     // Snapshotted from the listing at contract creation — see listings.payout_handling.
     payout_handling: v.optional(v.union(v.literal("platform"), v.literal("in_person"))),
+    // Structured stay window (epoch ms). `dates` above is free text kept for
+    // display/back-compat; these are what the dashboard and calendar read.
+    check_in: v.optional(v.number()),
+    check_out: v.optional(v.number()),
     usage_rights: v.optional(v.string()),
     status: v.string(),
     creator_signed: v.optional(v.boolean()),

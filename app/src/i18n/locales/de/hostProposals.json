@@ -154,7 +154,8 @@
       "deliverables": "Leistungen",
       "nights": "Nächte",
       "turnaround": "Lieferfrist",
-      "dates": "Termine"
+      "dates": "Termine",
+      "stay": "Aufenthalt"
     },
     "payout": {
       "platformTitle": "Collabnb wickelt diese Zahlung ab",

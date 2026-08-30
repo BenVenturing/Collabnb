@@ -154,7 +154,8 @@
       "deliverables": "Deliverables",
       "nights": "Nights",
       "turnaround": "Turnaround",
-      "dates": "Dates"
+      "dates": "Dates",
+      "stay": "Stay"
     },
     "payout": {
       "platformTitle": "Collabnb is handling this payment",

@@ -154,7 +154,8 @@
       "deliverables": "Livrables",
       "nights": "Nuits",
       "turnaround": "Délai",
-      "dates": "Dates"
+      "dates": "Dates",
+      "stay": "Séjour"
     },
     "payout": {
       "platformTitle": "Collabnb gère ce paiement",

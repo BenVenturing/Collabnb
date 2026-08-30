@@ -7,12 +7,16 @@ function emptySignatures() {
   return { hostSignature: null, hostSignedAt: null, hostSignedVersion: null, creatorSignature: null, creatorSignedAt: null, creatorSignedVersion: null };
 }
 
-function sample({ id, name, username, tier, avatar, followers, engagement, listing, message, type, status, collabStage, applied, platforms, listingImage, listingDetails, driveUrl }) {
+function daysFromNow(n){const d=new Date();d.setDate(d.getDate()+n);d.setHours(12,0,0,0);return d.getTime();}
+
+function sample({ id, name, username, tier, avatar, followers, engagement, listing, message, type, status, collabStage, applied, platforms, listingImage, listingDetails, driveUrl, checkInDays }) {
   return {
     id, listing, listingId: null, status, type, applied,
     listingImage: listingImage || null,
     listingDetails: listingDetails || null,
     driveUrl: driveUrl || null,
+    checkIn: typeof checkInDays === 'number' ? daysFromNow(checkInDays) : null,
+    checkOut: typeof checkInDays === 'number' ? daysFromNow(checkInDays + 3) : null,
     terminationRequestedBy: null,
     thread_key: `preview_${id}`,
     message,
@@ -38,7 +42,7 @@ export const SAMPLE_PROPOSALS = [
     message: "I've been documenting boutique mountain stays for 2 years and Glacier Prime is exactly the vibe my audience loves. My last cabin Reel got 2.3M views.",
   }),
   sample({
-    id: 'preview_2',
+    id: 'preview_2', checkInDays: 12,
     listingImage: 'https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=400&q=70',
     listingDetails: { compensation: 'Hybrid + $300 cash', deliverables: '2\u00d7 Reel, 8\u00d7 Photo', nights: 4, turnaround_days: 10, location: 'Amalfi Coast, IT', payout_handling: 'platform', cash_amount: 300 }, name: 'Lena Park', username: 'lena.explores', tier: 'Micro Influencer',
     avatar: 'https://i.pravatar.cc/80?img=32', followers: 31500, engagement: 12.1,
@@ -47,7 +51,7 @@ export const SAMPLE_PROPOSALS = [
     message: 'Coastal luxury is my niche — clean editorial style, fast turnaround. Happy to deliver ahead of schedule.',
   }),
   sample({
-    id: 'preview_3',
+    id: 'preview_3', checkInDays: 5,
     listingImage: 'https://images.unsplash.com/photo-1518780664697-55e3ad937233?w=400&q=70',
     listingDetails: { compensation: '$600', deliverables: '1\u00d7 Reel, 10\u00d7 Photo', nights: 2, turnaround_days: 14, location: 'Joshua Tree, CA', payout_handling: 'in_person', cash_amount: 600 },
     driveUrl: 'https://drive.google.com/drive/folders/preview-maya-chen', name: 'Maya Chen', username: 'mayachen.travel', tier: 'Influencer',
@@ -57,7 +61,7 @@ export const SAMPLE_PROPOSALS = [
     message: 'Sustainable design content is my thing — this solar house is exactly what my eco-conscious audience wants to see.',
   }),
   sample({
-    id: 'preview_4',
+    id: 'preview_4', checkInDays: 26,
     listingImage: 'https://images.unsplash.com/photo-1502005229762-cf1b2da7c5d6?w=400&q=70',
     listingDetails: { compensation: '$250 + 2-night stay', deliverables: '3\u00d7 Reel', nights: 2, turnaround_days: 7, location: 'Asheville, NC', payout_handling: 'platform', cash_amount: 250 },
     driveUrl: 'https://drive.google.com/drive/folders/preview-kai-yamamoto', name: 'Kai Yamamoto', username: 'kai.wilderness', tier: 'UGC Pro',

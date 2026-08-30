@@ -105,5 +105,10 @@
     "suffix": "."
   },
   "groupActive": "Actifs",
-  "groupArchived": "Archivés"
+  "groupArchived": "Archivés",
+  "stay": {
+    "checkIn": "Date d'arrivée",
+    "checkOut": "Date de départ",
+    "hint": "S'affiche sur votre tableau de bord comme séjour à venir et dans votre calendrier."
+  }
 }

@@ -154,7 +154,8 @@
       "deliverables": "Entregables",
       "nights": "Noches",
       "turnaround": "Plazo",
-      "dates": "Fechas"
+      "dates": "Fechas",
+      "stay": "Estancia"
     },
     "payout": {
       "platformTitle": "Collabnb gestiona este pago",

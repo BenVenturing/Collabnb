@@ -105,5 +105,10 @@
     "suffix": "."
   },
   "groupActive": "Aktiv",
-  "groupArchived": "Archiviert"
+  "groupArchived": "Archiviert",
+  "stay": {
+    "checkIn": "Check-in-Datum",
+    "checkOut": "Check-out-Datum",
+    "hint": "Erscheint in deinem Dashboard als bevorstehender Aufenthalt und in deinem Kalender."
+  }
 }

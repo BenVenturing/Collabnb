@@ -138,13 +138,19 @@ function contractFieldPlaceholder(key) { return i18nInstance.t(`hostProposals:co
 // 'platform' — Collabnb charges the host and forwards the payout after a 48h
 // dispute hold. 'in_person' — the host pays the creator directly; Collabnb
 // only charges its own platform fee. Mirrors listings.payout_handling.
-function resolvePayout(proposal, listing) {
-  const handling = listing?.payout_handling === 'in_person' ? 'in_person' : 'platform';
-  // Prefer whatever was actually negotiated; fall back to the listing's
-  // published cash amount; show no figure rather than a wrong one.
-  const negotiated = getLatestFields(proposal).compensation;
+// The contract is the agreement both parties signed, so its snapshot wins over
+// the listing's current setting — a host who flips their listing's payment
+// method later must not change what an existing collab was agreed under.
+// Falls back to the listing only when no contract exists yet.
+function resolvePayout(proposal, listing, contract) {
+  const source = contract?.payout_handling ? contract : listing;
+  const handling = source?.payout_handling === 'in_person' ? 'in_person' : 'platform';
+
   let amount = null;
-  if (negotiated) amount = String(negotiated);
+  const negotiated = getLatestFields(proposal).compensation;
+  if (contract?.payment && contract.payment !== 'Free Stay') amount = String(contract.payment);
+  else if (typeof contract?.cash_value === 'number' && contract.cash_value > 0) amount = `$${contract.cash_value.toLocaleString()}`;
+  else if (negotiated) amount = String(negotiated);
   else if (typeof listing?.cash_amount === 'number' && listing.cash_amount > 0) amount = `$${listing.cash_amount.toLocaleString()}`;
   else if (listing?.compensation) amount = String(listing.compensation);
   return { handling, amount };
@@ -582,12 +588,13 @@ function MiniStageProgress({ currentStage }) {
   );
 }
 
-function ProposalDrawer({ proposal, onStatusChange, onCounter, onSign, onClose, onStageChange, onTerminate, onCreatorClick, onConfirmComplete, listingById }) {
+function ProposalDrawer({ proposal, onStatusChange, onCounter, onSign, onClose, onStageChange, onTerminate, onCreatorClick, onConfirmComplete, listingById, contractById }) {
   const { t } = useTranslation('hostProposals');
   const navigate = useNavigate();
   const isPitch = proposal.type === 'pitch';
   const { signatures = emptySignatures(), contractHistory = [], locked } = proposal;
   const listing = (proposal.listingId ? listingById?.[String(proposal.listingId)] : null) || proposal.listingDetails || null;
+  const contract = proposal.contractId ? contractById?.[String(proposal.contractId)] : null;
   const listingImage = listing?.image || proposal.listingImage || null;
   const tierColor = TIER_COLORS[proposal.creator.tier] || TIER_COLORS['UGC Beginner'];
 
@@ -604,7 +611,7 @@ function ProposalDrawer({ proposal, onStatusChange, onCounter, onSign, onClose, 
   // Once the collab has moved past Pending it's a live agreement: approving is
   // moot, and ending it needs the creator's agreement too.
   const isAccepted = proposal.collabStage !== 'pending' || proposal.status === 'approved' || proposal.status === 'completed';
-  const payout = resolvePayout(proposal, listing);
+  const payout = resolvePayout(proposal, listing, contract);
   const contractFields = getLatestFields(proposal);
   const contractRows = CONTRACT_FIELDS.filter((f) => contractFields[f.key]);
   const [listingOpen, setListingOpen] = useState(false);
@@ -759,6 +766,11 @@ function ProposalDrawer({ proposal, onStatusChange, onCounter, onSign, onClose, 
                 { label: t('drawer.listingFields.nights'), value: listing?.nights },
                 { label: t('drawer.listingFields.turnaround'), value: listing?.turnaround_days ? t('drawer.days', { count: listing.turnaround_days }) : null },
                 { label: t('drawer.listingFields.dates'), value: listing?.collab_start && listing?.collab_end ? `${listing.collab_start} – ${listing.collab_end}` : null },
+                { label: t('drawer.listingFields.stay'), value: proposal.checkIn
+                    ? [proposal.checkIn, proposal.checkOut].filter(Boolean)
+                        .map((ms) => new Date(ms).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }))
+                        .join(' – ')
+                    : null },
               ].filter((r) => r.value !== null && r.value !== undefined && r.value !== '').map(({ label, value }) => (
                 <div key={label} style={{ display: 'flex', gap: 8, fontSize: 12 }}>
                   <span style={{ color: 'var(--sage)', minWidth: 104, flexShrink: 0 }}>{label}</span>
@@ -1218,6 +1230,18 @@ export default function HostProposals() {
     api.listings.getByHost,
     hostId ? { host_id: String(hostId) } : 'skip'
   );
+  // Contracts carry the terms both sides actually agreed to — payout handling
+  // and the stay window are snapshotted here, so they're the source of truth
+  // over whatever the listing currently says.
+  const rawContracts = useQuery(
+    api.contracts.getForParty,
+    hostId ? { userId: String(hostId) } : 'skip'
+  );
+  const contractById = useMemo(() => {
+    const map = {};
+    (rawContracts || []).forEach((c) => { map[String(c._id)] = c; });
+    return map;
+  }, [rawContracts]);
   const listingById = useMemo(() => {
     const map = {};
     (rawHostListings || []).forEach((l) => { map[String(l._id)] = l; });
@@ -1308,18 +1332,21 @@ export default function HostProposals() {
       // to Pending rather than being lost.
       const convexCollabId = p.collaboration_id ? String(p.collaboration_id) : null;
       const collab = convexCollabId ? collabByConvexId[convexCollabId] : null;
+      const contract = p.contract_id ? contractById[String(p.contract_id)] : null;
       return {
         ...base,
         convexCollabId,
         collabStage: collab?.current_stage || 'pending',
         driveUrl: collab?.drive_url || null,
         terminationRequestedBy: collab?.termination_requested_by || null,
+        checkIn: typeof contract?.check_in === 'number' ? contract.check_in : null,
+        checkOut: typeof contract?.check_out === 'number' ? contract.check_out : null,
       };
     });
     if (!previewMode) return real;
     return [...real, ...SAMPLE_PROPOSALS.map((s) => ({ ...s, ...(previewOverrides[s.id] || {}) }))];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rawPitches, hiddenTick, collabByConvexId, previewMode, previewOverrides]);
+  }, [rawPitches, hiddenTick, collabByConvexId, contractById, previewMode, previewOverrides]);
 
   // Deep-link from notifications, or clicking an Upcoming row on the Overview
   // tab: /host/proposals?pitch=<pitchId> expands that proposal and jumps to
@@ -1556,6 +1583,16 @@ export default function HostProposals() {
   const pendingCount = visible.filter((p) => p.status === 'pending').length;
   const declinedCount = declinedList.length;
 
+  // Stays still ahead of today, soonest first — read from the contract's
+  // agreed check-in, so a proposal with no contract simply has no stay.
+  const upcomingStays = useMemo(() => {
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+    return allProposals
+      .filter((p) => !p.hidden && p.status !== 'declined' && typeof p.checkIn === 'number' && p.checkIn >= startOfToday.getTime())
+      .sort((a, b) => a.checkIn - b.checkIn);
+  }, [allProposals]);
+
   // Real dashboard data — replaces ProposalsOverview's mock defaults wherever
   // we have a clean, honest mapping onto existing Convex records.
   const statValues = useMemo(() => {
@@ -1567,12 +1604,14 @@ export default function HostProposals() {
       new:      { value: String(stageCounts.pending ?? 0), sub: `+${newThisWeek} this week` },
       active:   { value: String(stageCounts.approved ?? 0), sub: `Across ${approvedListings.size} listing${approvedListings.size === 1 ? '' : 's'}` },
       messages: { value: String(hostUnreadMessages), sub: hostUnreadMessages > 0 ? `${hostUnreadMessages} conversation${hostUnreadMessages === 1 ? '' : 's'}` : 'All caught up' },
-      // Same underlying count as Active Collabs for now — we don't yet track a
-      // distinct agreed check-in date separate from "approved", so this is an
-      // honest proxy (stays still ahead) rather than a fabricated date.
-      stays:    { value: String(stageCounts.approved ?? 0), sub: `Across ${approvedListings.size} listing${approvedListings.size === 1 ? '' : 's'}` },
+      stays:    {
+        value: String(upcomingStays.length),
+        sub: upcomingStays.length > 0
+          ? `Next ${new Date(upcomingStays[0].checkIn).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`
+          : 'No stays booked',
+      },
     };
-  }, [rawPitches, allProposals, stageCounts, hostUnreadMessages]);
+  }, [rawPitches, allProposals, stageCounts, hostUnreadMessages, upcomingStays]);
 
   const chartData = useMemo(() => {
     const year = new Date().getFullYear();
@@ -1595,8 +1634,18 @@ export default function HostProposals() {
         items.push({ id: String(p._id), type: 'pending_action', title: `Respond to counter-pitch — ${p.creator_name || 'a creator'}`, date: isoDate(new Date(p.created_at)) });
       }
     });
+    // Agreed check-ins from signed contracts — the calendar had a stay_date
+    // type defined but nothing was ever producing one.
+    upcomingStays.forEach((p) => {
+      items.push({
+        id: String(p.id),
+        type: 'stay_date',
+        title: `${p.creator.name} checks in — ${p.listing}`,
+        date: isoDate(new Date(p.checkIn)),
+      });
+    });
     return items;
-  }, [rawPitches]);
+  }, [rawPitches, upcomingStays]);
 
   function handleTodoClick(todo) {
     if (todo.id) setSearchParams({ pitch: todo.id });
@@ -1688,6 +1737,7 @@ export default function HostProposals() {
               onSign={(proposalId, party) => setSignModal({ proposalId, party })}
               onClose={() => setExpanded(null)}
               listingById={listingById}
+              contractById={contractById}
             />
           ) : rawPitches === undefined ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
@@ -1835,7 +1885,8 @@ export default function HostProposals() {
           before the host commits, since completing triggers real money. */}
       {completeModal && (() => {
         const listing = completeModal.listingId ? listingById[String(completeModal.listingId)] : null;
-        const resolved = resolvePayout(completeModal, listing || completeModal.listingDetails || null);
+        const modalContract = completeModal.contractId ? contractById[String(completeModal.contractId)] : null;
+        const resolved = resolvePayout(completeModal, listing || completeModal.listingDetails || null, modalContract);
         return (
           <div onClick={() => setCompleteModal(null)}
             style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(25,37,36,0.5)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>

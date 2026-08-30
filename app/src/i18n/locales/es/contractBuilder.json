@@ -105,5 +105,10 @@
     "suffix": "."
   },
   "groupActive": "Activos",
-  "groupArchived": "Archivados"
+  "groupArchived": "Archivados",
+  "stay": {
+    "checkIn": "Fecha de entrada",
+    "checkOut": "Fecha de salida",
+    "hint": "Aparece en tu panel como una estancia próxima y en tu calendario."
+  }
 }

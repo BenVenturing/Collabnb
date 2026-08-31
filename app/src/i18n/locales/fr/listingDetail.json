@@ -13,6 +13,11 @@
   "yearsHosting": "Années en tant qu'hôte",
   "responseRate": "Taux de réponse :",
   "messageHost": "Envoyer un message à l'hôte",
+  "viewLiveListing": "Voir l'annonce en ligne",
+  "directContact": {
+    "label": "Contact direct",
+    "whatsapp": "WhatsApp"
+  },
   "plusStay": "{{amount}} + Séjour",
   "applied": "✓ Candidature envoyée",
   "applyNow": "Postuler maintenant",

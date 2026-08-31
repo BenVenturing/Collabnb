@@ -10,6 +10,7 @@
     "listingTitle": "Título del anuncio",
     "location": "Ubicación",
     "propertyUrl": "URL del anuncio de la propiedad",
+    "contactPhone": "Número de teléfono / WhatsApp",
     "propertyImages": "Imágenes de la propiedad",
     "collaborationBrief": "Resumen de la colaboración"
   },
@@ -18,6 +19,7 @@
     "city": "Ciudad",
     "stateCountry": "Estado / País",
     "propertyUrl": "https://tu-enlace-de-reserva.com",
+    "contactPhone": "+34 612 34 56 78",
     "collaborationBrief": "p. ej., Buscamos contenido auténtico que resalte las vistas a la montaña y el ambiente acogedor de la cabaña..."
   },
   "uploading": "Subiendo...",
@@ -27,5 +29,8 @@
   "imagesCount": "{{count}} de {{max}} agregadas",
   "limitReached": " — límite alcanzado",
   "briefHint": "Describe qué buscas de los creadores (opcional)",
+  "hints": {
+    "contactPhone": "Solo se muestra a los creadores después de postularse a este anuncio — nunca es público."
+  },
   "footerNote": "El nivel de creador, la compensación y los entregables se configuran en el siguiente paso, con orientación de precios en vivo."
 }

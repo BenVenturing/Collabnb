@@ -103,6 +103,7 @@ export default function Step5Payment() {
     host_id: profile?._id || profile?.id,
     host_name: profile?.full_name,
     property_url: draft.property_url,
+    contact_phone: draft.contact_phone,
     collaboration_brief: draft.collaboration_brief,
     compensation_type: draft.compensation_type,
     cash_amount: draft.cash_amount || undefined,

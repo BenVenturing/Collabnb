@@ -1790,24 +1790,62 @@ export default function ListingDetail({ previewListing = null, preview = false }
                       <p style={{ fontSize: '0.85rem', color: 'var(--slate)', marginBottom: '1.25rem' }}><strong>{t('hostModal.responds')}</strong> {SAMPLE_HOST.response_time}</p>
                     </>
                   )}
-                  <SampleTooltip active={blockActions} label={isSampleListing ? undefined : t('hostModal.hostCantMessage')}>
-                    <button
-                      onClick={blockActions ? undefined : handleMessageHost}
-                      disabled={blockActions}
-                      style={{
-                        padding: '0.65rem 1.5rem',
-                        background: 'var(--bone)', border: '1.5px solid rgba(25,37,36,0.15)',
-                        borderRadius: '999px', fontFamily: 'var(--font-body)',
-                        fontSize: '0.875rem', fontWeight: 600, color: 'var(--ink)',
-                        cursor: blockActions ? 'not-allowed' : 'pointer',
-                        opacity: blockActions ? 0.5 : 1,
-                      }}
-                      onMouseEnter={(e) => { if (!blockActions) e.currentTarget.style.background = 'rgba(25,37,36,0.07)'; }}
-                      onMouseLeave={(e) => { if (!blockActions) e.currentTarget.style.background = 'var(--bone)'; }}
-                    >
-                      {t('messageHost')}
-                    </button>
-                  </SampleTooltip>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                    <SampleTooltip active={blockActions} label={isSampleListing ? undefined : t('hostModal.hostCantMessage')}>
+                      <button
+                        onClick={blockActions ? undefined : handleMessageHost}
+                        disabled={blockActions}
+                        style={{
+                          padding: '0.65rem 1.5rem',
+                          background: 'var(--bone)', border: '1.5px solid rgba(25,37,36,0.15)',
+                          borderRadius: '999px', fontFamily: 'var(--font-body)',
+                          fontSize: '0.875rem', fontWeight: 600, color: 'var(--ink)',
+                          cursor: blockActions ? 'not-allowed' : 'pointer',
+                          opacity: blockActions ? 0.5 : 1,
+                        }}
+                        onMouseEnter={(e) => { if (!blockActions) e.currentTarget.style.background = 'rgba(25,37,36,0.07)'; }}
+                        onMouseLeave={(e) => { if (!blockActions) e.currentTarget.style.background = 'var(--bone)'; }}
+                      >
+                        {t('messageHost')}
+                      </button>
+                    </SampleTooltip>
+                    {listing.property_url && (
+                      <a
+                        href={listing.property_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--slate)', textDecoration: 'underline', textUnderlineOffset: 3 }}
+                      >
+                        {t('viewLiveListing')} ↗
+                      </a>
+                    )}
+                  </div>
+                  {applied && !blockActions && listing.contact_phone && (
+                    <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid rgba(25,37,36,0.08)' }}>
+                      <p style={{ fontSize: '0.75rem', color: 'var(--sage)', marginBottom: '0.5rem' }}>{t('directContact.label')}</p>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                        <a
+                          href={`tel:${listing.contact_phone.replace(/[^\d+]/g, '')}`}
+                          style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--ink)' }}
+                        >
+                          {listing.contact_phone}
+                        </a>
+                        <a
+                          href={`https://wa.me/${listing.contact_phone.replace(/[^\d]/g, '')}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{
+                            display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
+                            padding: '0.4rem 0.85rem', borderRadius: '999px',
+                            background: 'rgba(74,155,127,0.12)', color: '#2E7D5B',
+                            fontSize: '0.8rem', fontWeight: 600, textDecoration: 'none',
+                          }}
+                        >
+                          {t('directContact.whatsapp')}
+                        </a>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

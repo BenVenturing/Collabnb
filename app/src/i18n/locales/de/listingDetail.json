@@ -13,6 +13,11 @@
   "yearsHosting": "Jahre als Gastgeber",
   "responseRate": "Antwortrate:",
   "messageHost": "Nachricht an Gastgeber",
+  "viewLiveListing": "Live-Angebot ansehen",
+  "directContact": {
+    "label": "Direkter Kontakt",
+    "whatsapp": "WhatsApp"
+  },
   "plusStay": "{{amount}} + Aufenthalt",
   "applied": "✓ Beworben",
   "applyNow": "Jetzt bewerben",

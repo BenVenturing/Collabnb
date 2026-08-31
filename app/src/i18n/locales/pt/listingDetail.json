@@ -13,6 +13,11 @@
   "yearsHosting": "Anos como anfitrião",
   "responseRate": "Taxa de resposta:",
   "messageHost": "Enviar mensagem ao anfitrião",
+  "viewLiveListing": "Ver anúncio ao vivo",
+  "directContact": {
+    "label": "Contato direto",
+    "whatsapp": "WhatsApp"
+  },
   "plusStay": "{{amount}} + Estadia",
   "applied": "✓ Candidatado",
   "applyNow": "Candidatar-se agora",

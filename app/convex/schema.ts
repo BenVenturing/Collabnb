@@ -177,6 +177,7 @@ export default defineSchema({
     location_city: v.optional(v.string()),
     location_country: v.optional(v.string()),
     property_url: v.optional(v.string()),
+    contact_phone: v.optional(v.string()),
     collaboration_brief: v.optional(v.string()),
     nights: v.optional(v.number()),
     perks: v.optional(v.array(v.string())),

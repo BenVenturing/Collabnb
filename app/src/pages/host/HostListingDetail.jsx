@@ -573,6 +573,7 @@ export default function HostListingDetail() {
       lat: typeof listing.lat === 'number' ? listing.lat : undefined,
       lng: typeof listing.lng === 'number' ? listing.lng : undefined,
       property_url: listing.property_url || '',
+      contact_phone: listing.contact_phone || '',
       collaboration_brief: listing.about || listing.collaboration_brief || '',
       compensation_type: listing.compensation_type || 'paid',
       nights: listing.nights || 2,

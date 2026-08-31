@@ -10,6 +10,7 @@
     "listingTitle": "Titel des Angebots",
     "location": "Standort",
     "propertyUrl": "URL zum Unterkunftsangebot",
+    "contactPhone": "Telefon- / WhatsApp-Nummer",
     "propertyImages": "Bilder der Unterkunft",
     "collaborationBrief": "Kollaborations-Briefing"
   },
@@ -18,6 +19,7 @@
     "city": "Stadt",
     "stateCountry": "Bundesland / Land",
     "propertyUrl": "https://dein-buchungslink.com",
+    "contactPhone": "+49 151 12345678",
     "collaborationBrief": "z. B. Wir suchen authentischen Content, der den Bergblick und die gemütliche Hüttenatmosphäre zeigt..."
   },
   "uploading": "Wird hochgeladen...",
@@ -27,5 +29,8 @@
   "imagesCount": "{{count}} von {{max}} hinzugefügt",
   "limitReached": " — Limit erreicht",
   "briefHint": "Beschreibe, was du dir von Creators wünschst (optional)",
+  "hints": {
+    "contactPhone": "Wird Creators erst nach ihrer Bewerbung auf dieses Angebot angezeigt — niemals öffentlich."
+  },
   "footerNote": "Creator-Stufe, Vergütung und Deliverables werden im nächsten Schritt mit Live-Preisempfehlungen festgelegt."
 }

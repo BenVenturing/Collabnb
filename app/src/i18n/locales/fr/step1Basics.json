@@ -10,6 +10,7 @@
     "listingTitle": "Titre de l'annonce",
     "location": "Emplacement",
     "propertyUrl": "URL de l'annonce du logement",
+    "contactPhone": "Numéro de téléphone / WhatsApp",
     "propertyImages": "Photos du logement",
     "collaborationBrief": "Brief de collaboration"
   },
@@ -18,6 +19,7 @@
     "city": "Ville",
     "stateCountry": "État / Pays",
     "propertyUrl": "https://votre-lien-de-reservation.com",
+    "contactPhone": "+33 6 12 34 56 78",
     "collaborationBrief": "ex. Nous recherchons un contenu authentique qui met en valeur la vue sur la montagne et l'ambiance chaleureuse du chalet..."
   },
   "uploading": "Téléchargement...",
@@ -27,5 +29,8 @@
   "imagesCount": "{{count}} sur {{max}} ajoutées",
   "limitReached": " — limite atteinte",
   "briefHint": "Décrivez ce que vous recherchez chez les créateurs (facultatif)",
+  "hints": {
+    "contactPhone": "Visible par les créateurs uniquement après leur candidature à cette annonce — jamais public."
+  },
   "footerNote": "Le niveau de créateur, la rémunération et les livrables sont définis à l'étape suivante, avec des indications de tarification en temps réel."
 }

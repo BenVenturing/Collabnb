@@ -35,6 +35,7 @@ const EMPTY_DRAFT = {
   lat: undefined,
   lng: undefined,
   property_url: "",
+  contact_phone: "",
   collaboration_brief: "",
   compensation_type: "paid",
   payout_handling: "platform",

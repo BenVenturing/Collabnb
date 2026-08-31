@@ -13,6 +13,11 @@
   "yearsHosting": "Years hosting",
   "responseRate": "Response rate:",
   "messageHost": "Message host",
+  "viewLiveListing": "View live listing",
+  "directContact": {
+    "label": "Direct contact",
+    "whatsapp": "WhatsApp"
+  },
   "plusStay": "{{amount}} + Stay",
   "applied": "✓ Applied",
   "applyNow": "Apply Now",

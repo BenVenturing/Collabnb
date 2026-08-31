@@ -148,6 +148,13 @@ export default function Step1Basics() {
           <Input placeholder={t('placeholders.propertyUrl')} value={draft.property_url} onChange={(v) => updateDraft({ property_url: v })} />
         </div>
 
+        {/* Contact phone / WhatsApp */}
+        <div>
+          <Label>{t('labels.contactPhone')}</Label>
+          <Input placeholder={t('placeholders.contactPhone')} value={draft.contact_phone} onChange={(v) => updateDraft({ contact_phone: v })} />
+          <p style={{ fontSize: '0.75rem', color: 'var(--sage)', marginTop: '0.35rem' }}>{t('hints.contactPhone')}</p>
+        </div>
+
         {/* Images */}
         <div>
           <Label>{t('labels.propertyImages')}</Label>

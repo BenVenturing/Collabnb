@@ -89,6 +89,7 @@ function sanitizeListingFields(fields: Record<string, any>) {
   if (fields.revision_policy !== undefined) clean.revision_policy = cleanPlainText(fields.revision_policy, 500);
   if (fields.usage_rights !== undefined) clean.usage_rights = cleanPlainText(fields.usage_rights, 500);
   if (fields.property_url !== undefined) clean.property_url = cleanOptionalUrl(fields.property_url, "Property URL");
+  if (fields.contact_phone !== undefined) clean.contact_phone = cleanPlainText(fields.contact_phone, 40);
   if (fields.amenities !== undefined) {
     clean.amenities = fields.amenities.map((a: any) => ({ icon: cleanPlainText(a.icon, 10), label: cleanPlainText(a.label, 60) }));
   }
@@ -174,6 +175,7 @@ export const getAll = query({
       what_you_deliver: undefined,
       requirements: undefined,
       property_url: undefined,
+    contact_phone: undefined,
       gallery_images: [],
       image: l.image ? l.image : undefined, // blur in UI via CSS
       location: l.location?.split(",")[0] || l.location, // city only
@@ -270,6 +272,7 @@ export const getById = query({
       what_you_deliver: undefined,
       requirements: undefined,
       property_url: undefined,
+    contact_phone: undefined,
       gallery_images: [],
       location: listing.location?.split(",")[0] || listing.location,
       compensation: listing.compensation,
@@ -409,6 +412,7 @@ export const create = mutation({
     lat: v.optional(v.number()),
     lng: v.optional(v.number()),
     property_url: v.optional(v.string()),
+    contact_phone: v.optional(v.string()),
     collaboration_brief: v.optional(v.string()),
     compensation_type: v.optional(v.string()),
     payout_handling: v.optional(v.union(v.literal("platform"), v.literal("in_person"))),
@@ -483,6 +487,7 @@ export const update = mutation({
     lat: v.optional(v.number()),
     lng: v.optional(v.number()),
     property_url: v.optional(v.string()),
+    contact_phone: v.optional(v.string()),
     collaboration_brief: v.optional(v.string()),
     compensation_type: v.optional(v.string()),
     payout_handling: v.optional(v.union(v.literal("platform"), v.literal("in_person"))),

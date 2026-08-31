@@ -10,6 +10,7 @@
     "listingTitle": "Listing title",
     "location": "Location",
     "propertyUrl": "Property listing URL",
+    "contactPhone": "Phone / WhatsApp number",
     "propertyImages": "Property images",
     "collaborationBrief": "Collaboration brief"
   },
@@ -18,6 +19,7 @@
     "city": "City",
     "stateCountry": "State / Country",
     "propertyUrl": "https://your-stay-or-booking-link.com",
+    "contactPhone": "+1 555 123 4567",
     "collaborationBrief": "e.g., Looking for authentic content that highlights the mountain views and cozy cabin vibe..."
   },
   "uploading": "Uploading...",
@@ -27,5 +29,8 @@
   "imagesCount": "{{count}} of {{max}} added",
   "limitReached": " — limit reached",
   "briefHint": "Describe what you're looking for from creators (optional)",
+  "hints": {
+    "contactPhone": "Only shown to creators after they've applied to this listing — never public."
+  },
   "footerNote": "Creator tier, compensation, and deliverables are set on the next step, with live pricing guidance."
 }

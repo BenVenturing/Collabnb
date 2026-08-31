@@ -182,6 +182,7 @@ http.route({
           ? session.customer
           : (session.customer as any)?.id ?? undefined;
         let paymentMethodId: string | undefined;
+        let paymentMethodType: "card" | "us_bank_account" | undefined;
         const setupIntentField = (session as any).setup_intent;
         if (secretKey && setupIntentField) {
           try {
@@ -191,6 +192,10 @@ http.route({
             paymentMethodId = typeof si.payment_method === "string"
               ? si.payment_method
               : (si.payment_method as any)?.id;
+            if (paymentMethodId) {
+              const pm = await stripeClient.paymentMethods.retrieve(paymentMethodId);
+              paymentMethodType = pm.type === "us_bank_account" ? "us_bank_account" : "card";
+            }
           } catch {
             // Ignore — the frontend verify path also persists the saved card.
           }
@@ -201,6 +206,7 @@ http.route({
             customerId,
             paymentMethodId,
             feeAmount: Number(session.metadata.feeAmount ?? 0),
+            paymentMethodType,
           });
         }
       }
@@ -238,22 +244,44 @@ http.route({
       }
     }
 
-    // Off-session platform-fee charge succeeded — backstop for chargeContractFee.
+    // Off-session collab charge succeeded — backstop for chargeContractFee,
+    // and the ONLY path for ACH debits, which resolve here asynchronously
+    // (days after chargeContractFee saw `processing` and returned). The
+    // metadata.type value must match what chargeContractFee actually sets
+    // ('collab_payment') — this previously checked for 'platform_fee', which
+    // chargeContractFee has never set, so this backstop silently never fired.
     if (event.type === "payment_intent.succeeded") {
       const intent = event.data.object as Stripe.PaymentIntent;
-      if (intent.metadata?.type === "platform_fee" && intent.metadata?.contractId) {
+      if (intent.metadata?.type === "collab_payment" && intent.metadata?.contractId) {
         const collabId = intent.metadata.contractId; // contractId doubles as collab lookup
-        await ctx.runMutation(internal.contracts.recordPaymentInternal, {
-          id: collabId,
-          paymentAmount: (intent.amount_received ?? intent.amount ?? 0) / 100,
+        const amountPaid = (intent.amount_received ?? intent.amount ?? 0) / 100;
+        const chargeId = typeof intent.latest_charge === "string" ? intent.latest_charge : intent.latest_charge?.id;
+        await ctx.runAction(internal.stripe.recordCollabPaymentFromWebhook, {
+          contractId: collabId,
           paymentIntentId: intent.id,
+          chargeId,
+          feeAmount: Number(intent.metadata?.feeAmount ?? 0),
+          creatorPayout: Number(intent.metadata?.creatorPayout ?? 0),
+          isACH: (intent.payment_method_types ?? []).includes("us_bank_account"),
         });
         // Backstop: also mark the fee_records as paid
         await ctx.runMutation(internal.fees.markFeePaid, {
           collaborationId: collabId,
           paymentIntentId: intent.id,
-          amountPaid: (intent.amount_received ?? intent.amount ?? 0) / 100,
+          amountPaid,
         });
+      }
+    }
+
+    // ACH debit ultimately bounced (insufficient funds, unauthorized, etc.)
+    // after sitting in `processing` — chargeContractFee already returned by
+    // the time this arrives, so this is the only place that can flag it.
+    if (event.type === "payment_intent.payment_failed") {
+      const intent = event.data.object as Stripe.PaymentIntent;
+      if (intent.metadata?.type === "collab_payment" && intent.metadata?.contractId) {
+        const collabId = intent.metadata.contractId;
+        await ctx.runMutation(internal.contracts.markFeeChargeFailed, { id: collabId });
+        await ctx.runMutation(internal.fees.markFeeFailed, { collaborationId: collabId });
       }
     }
 

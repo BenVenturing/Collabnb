@@ -294,9 +294,18 @@ export default defineSchema({
     // Saved-card + deferred-fee fields: card is saved at signing, fee charged on completion.
     host_stripe_customer_id: v.optional(v.string()),
     host_payment_method_id: v.optional(v.string()),
+    // Set at card-save time (verifyFeeSetupSession) — "us_bank_account" means
+    // the off-session charge will be an ACH debit: several business days to
+    // settle instead of instant, and a longer creator-payout hold (see
+    // ACH_PAYOUT_HOLD_MS in stripe.js) before the forward is released.
+    host_payment_method_type: v.optional(v.union(v.literal("card"), v.literal("us_bank_account"))),
     fee_amount: v.optional(v.number()),
     payment_intent_id: v.optional(v.string()),
     fee_charge_failed: v.optional(v.boolean()),
+    // True while an ACH debit is Stripe-side "processing" (not yet succeeded
+    // or failed) — distinct from fee_charge_failed, which means the charge
+    // needs manual completion. Cleared once the webhook confirms settlement.
+    fee_charge_pending: v.optional(v.boolean()),
     sent_at: v.optional(v.number()),
     last_reminder_at: v.optional(v.number()),
     // Settings > Notifications > Collab reminders — fires once, ~3 days

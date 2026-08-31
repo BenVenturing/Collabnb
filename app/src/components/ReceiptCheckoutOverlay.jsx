@@ -51,7 +51,7 @@ export default function ReceiptCheckoutOverlay({ receipt, onClose }) {
 
   const contentProps = isHost
     ? {
-        kicker: "PAYMENT METHOD SAVED",
+        kicker: receipt.isACH ? "BANK ACCOUNT SAVED" : "PAYMENT METHOD SAVED",
         items: [
           knownFee
             ? { label: "Platform fee — this collaboration", detail: "charged automatically when completed", amount: feeAmountStr }
@@ -62,7 +62,9 @@ export default function ReceiptCheckoutOverlay({ receipt, onClose }) {
         total: "$0.00",
         totalLabel: "Charged today",
         thanks: "You're ready to host",
-        footNote: "This card will be charged automatically once a collab is marked complete.",
+        footNote: receipt.isACH
+          ? "This bank account will be debited automatically once a collab is marked complete — allow a few extra business days for it to clear (that's normal for ACH)."
+          : "This card will be charged automatically once a collab is marked complete.",
       }
     : {
         kicker: `CREATOR PRO · ${tierLabel.toUpperCase()}`,

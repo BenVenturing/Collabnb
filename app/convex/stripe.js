@@ -11,6 +11,12 @@ import { requireAdminAction, requireOwnerOrAdminAction } from './lib/auth';
 // Dispute-resolution hold: how long between the host's charge succeeding and
 // the creator's payout actually being forwarded (mirrors Airbnb-style holds).
 const PAYOUT_HOLD_MS = 48 * 60 * 60 * 1000;
+// ACH debits carry a longer return-risk window than cards (NSF returns
+// typically land within a few business days of settlement; unauthorized-debit
+// disputes can take longer under NACHA, though that's rare for a mandate the
+// host explicitly gave). 5 days is a pragmatic middle ground — long enough to
+// catch the common return codes without holding creator payouts indefinitely.
+const ACH_PAYOUT_HOLD_MS = 5 * 24 * 60 * 60 * 1000;
 
 function getLifetimeTier(count) {
   if (count < 50)  return { price: 100, label: 'Early Adopter' };
@@ -404,13 +410,20 @@ export const createFeeSetupSession = action({
 
     const session = await stripe.checkout.sessions.create({
       mode: 'setup',
-      payment_method_types: ['card'],
+      // Bank account (ACH) costs meaningfully less than card in processing
+      // fees — worth surfacing as an option here, since this fee can include
+      // a large pass-through cash value (see chargeContractFee). Requires
+      // ACH Direct Debit + Financial Connections enabled in the Stripe
+      // Dashboard (Settings → Payment methods) — this is a dashboard-only
+      // toggle, not something settable via the API.
+      payment_method_types: ['card', 'us_bank_account'],
+      payment_method_options: { us_bank_account: { verification_method: 'automatic' } },
       customer: customer.id,
       success_url: args.successUrl,
       cancel_url: args.cancelUrl,
       metadata: { contractId: args.contractId, feeAmount: String(fee), type: 'fee_setup' },
       custom_text: {
-        submit: { message: "You won't be charged now — the platform fee is only charged once the collaboration is completed." },
+        submit: { message: "You won't be charged now — the platform fee is only charged once the collaboration is completed. Bank account (ACH) payments take a few extra business days to clear but cost less in processing fees than a card." },
       },
     });
 
@@ -449,19 +462,26 @@ export const verifyFeeSetupSession = action({
       invoice_settings: { default_payment_method: paymentMethodId },
     });
 
+    let cardBrand, cardLast4, paymentMethodType;
+    try {
+      const pm = await stripe.paymentMethods.retrieve(paymentMethodId);
+      paymentMethodType = pm.type === 'us_bank_account' ? 'us_bank_account' : 'card';
+      if (pm.type === 'us_bank_account') {
+        cardBrand = pm.us_bank_account?.bank_name || 'Bank account';
+        cardLast4 = pm.us_bank_account?.last4;
+      } else {
+        cardBrand = pm.card?.brand;
+        cardLast4 = pm.card?.last4;
+      }
+    } catch { /* display-only — card save already succeeded above */ }
+
     await ctx.runMutation(internal.contracts.setHostPayment, {
       contractId,
       customerId,
       paymentMethodId,
       feeAmount,
+      paymentMethodType,
     });
-
-    let cardBrand, cardLast4;
-    try {
-      const pm = await stripe.paymentMethods.retrieve(paymentMethodId);
-      cardBrand = pm.card?.brand;
-      cardLast4 = pm.card?.last4;
-    } catch { /* display-only — card save already succeeded above */ }
 
     const contract = await ctx.runQuery(internal.contracts.getByIdInternal, { id: contractId });
     const host = contract?.host_id
@@ -475,10 +495,11 @@ export const verifyFeeSetupSession = action({
         cardBrand,
         cardLast4,
         feeAmount,
+        isACH: paymentMethodType === 'us_bank_account',
       });
     }
 
-    return { success: true, cardBrand, cardLast4, orderId: session.id, feeAmount };
+    return { success: true, cardBrand, cardLast4, orderId: session.id, feeAmount, paymentMethodType };
   },
 });
 
@@ -678,45 +699,34 @@ export const chargeContractFee = internalAction({
       });
 
       if (intent.status === 'succeeded') {
-        await ctx.runMutation(internal.contracts.recordPaymentInternal, {
-          id: args.contractId,
-          paymentAmount: grossCharge,
+        const chargeId = typeof intent.latest_charge === 'string' ? intent.latest_charge : intent.latest_charge?.id;
+        await finalizeCollabCharge(ctx, {
+          contractId: args.contractId,
+          contract,
+          host,
+          fee,
+          creatorPayout,
+          grossCharge,
           paymentIntentId: intent.id,
+          chargeId,
+          isACH: false,
         });
-        await ctx.runMutation(internal.contracts.setGrossCharge, {
-          id: args.contractId,
-          grossChargeAmount: grossCharge,
-          creatorPayoutAmount: creatorPayout,
-        });
-
-        if (host?.email) {
-          await ctx.runAction(internal.email.sendPayoutReceiptEmail, {
-            to: host.email,
-            name: host.full_name || contract.host_name || 'there',
-            role: 'host',
-            amount: grossCharge,
-            counterpartyName: contract.creator_name || 'your creator',
-            propertyName: contract.property_name,
-          });
-          await ctx.runMutation(internal.contracts.markHostReceiptSent, { id: args.contractId });
-        }
-
-        if (creatorPayout > 0) {
-          const chargeId = typeof intent.latest_charge === 'string' ? intent.latest_charge : intent.latest_charge?.id;
-          // Dispute-resolution hold: don't forward immediately — schedule it
-          // for PAYOUT_HOLD_HOURS from now so admin has a window to pause it.
-          const releaseAt = Date.now() + PAYOUT_HOLD_MS;
-          await ctx.runMutation(internal.contracts.schedulePayoutHold, { id: args.contractId, releaseAt });
-          await ctx.scheduler.runAfter(PAYOUT_HOLD_MS, internal.stripe.forwardCreatorPayout, {
-            contractId: args.contractId,
-            amount: creatorPayout,
-            chargeId,
-          });
-        }
         return { success: true };
       }
 
-      // requires_action / processing — flag for manual completion.
+      if (intent.status === 'processing') {
+        // ACH debit initiated but not yet settled — normal, takes several
+        // business days. Not a failure: the payment_intent.succeeded /
+        // payment_intent.payment_failed webhook (see http.ts) resolves this
+        // later, since chargeContractFee only runs once at completion time.
+        await ctx.runMutation(internal.contracts.markFeeChargePending, {
+          id: args.contractId,
+          paymentIntentId: intent.id,
+        });
+        return { pending: true, status: intent.status };
+      }
+
+      // requires_action / other non-actionable states — flag for manual completion.
       await ctx.runMutation(internal.contracts.markFeeChargeFailed, { id: args.contractId });
 	    await ctx.runMutation(internal.fees.markFeeFailed, { collaborationId: args.contractId });
       return { needsAction: true, status: intent.status };
@@ -725,6 +735,86 @@ export const chargeContractFee = internalAction({
 	    await ctx.runMutation(internal.fees.markFeeFailed, { collaborationId: args.contractId });
       return { error: String(err?.message || err) };
     }
+  },
+});
+
+// Shared by chargeContractFee's synchronous success path (cards, which
+// resolve near-instantly) and the payment_intent.succeeded webhook backstop
+// (ACH, which resolves days later — see recordCollabPaymentFromWebhook
+// below). This is the ONLY place the creator's payout-forward gets
+// scheduled, so a card's synchronous success and its webhook backstop firing
+// moments later can never double-schedule the same forward.
+async function finalizeCollabCharge(ctx, { contractId, contract, host, fee, creatorPayout, grossCharge, paymentIntentId, chargeId, isACH }) {
+  await ctx.runMutation(internal.contracts.recordPaymentInternal, {
+    id: contractId,
+    paymentAmount: grossCharge,
+    paymentIntentId,
+  });
+  await ctx.runMutation(internal.contracts.setGrossCharge, {
+    id: contractId,
+    grossChargeAmount: grossCharge,
+    creatorPayoutAmount: creatorPayout,
+  });
+
+  if (host?.email && !contract?.host_receipt_sent_at) {
+    await ctx.runAction(internal.email.sendPayoutReceiptEmail, {
+      to: host.email,
+      name: host.full_name || contract?.host_name || 'there',
+      role: 'host',
+      amount: grossCharge,
+      counterpartyName: contract?.creator_name || 'your creator',
+      propertyName: contract?.property_name,
+    });
+    await ctx.runMutation(internal.contracts.markHostReceiptSent, { id: contractId });
+  }
+
+  if (creatorPayout > 0 && contract?.creator_payout_release_at === undefined) {
+    // Dispute-resolution hold: don't forward immediately — schedule it so
+    // admin has a window to pause it. ACH gets a longer hold (see
+    // ACH_PAYOUT_HOLD_MS) since its return-risk window is longer than a card's.
+    const holdMs = isACH ? ACH_PAYOUT_HOLD_MS : PAYOUT_HOLD_MS;
+    const releaseAt = Date.now() + holdMs;
+    await ctx.runMutation(internal.contracts.schedulePayoutHold, { id: contractId, releaseAt });
+    await ctx.scheduler.runAfter(holdMs, internal.stripe.forwardCreatorPayout, {
+      contractId,
+      amount: creatorPayout,
+      chargeId,
+    });
+  }
+}
+
+// Webhook backstop entry point for chargeContractFee's off-session charge —
+// see payment_intent.succeeded in http.ts. Re-derives everything from the
+// PaymentIntent's own metadata (set at creation, above) rather than trusting
+// anything client-supplied, and re-fetches the contract/host fresh so this
+// works correctly no matter how long the ACH settlement took.
+export const recordCollabPaymentFromWebhook = internalAction({
+  args: {
+    contractId: v.string(),
+    paymentIntentId: v.string(),
+    chargeId: v.optional(v.string()),
+    feeAmount: v.number(),
+    creatorPayout: v.number(),
+    isACH: v.boolean(),
+  },
+  handler: async (ctx, args) => {
+    const contract = await ctx.runQuery(internal.contracts.getByIdInternal, { id: args.contractId });
+    if (!contract || contract.paid) return { skipped: true };
+    const host = contract.host_id
+      ? await ctx.runQuery(api.profiles.getById, { id: String(contract.host_id) })
+      : null;
+    await finalizeCollabCharge(ctx, {
+      contractId: args.contractId,
+      contract,
+      host,
+      fee: args.feeAmount,
+      creatorPayout: args.creatorPayout,
+      grossCharge: args.feeAmount + args.creatorPayout,
+      paymentIntentId: args.paymentIntentId,
+      chargeId: args.chargeId,
+      isACH: args.isACH,
+    });
+    return { success: true };
   },
 });
 

@@ -618,6 +618,7 @@ export const setHostPayment = internalMutation({
     customerId: v.string(),
     paymentMethodId: v.string(),
     feeAmount: v.number(),
+    paymentMethodType: v.optional(v.union(v.literal("card"), v.literal("us_bank_account"))),
   },
   handler: async (ctx, args) => {
     const exists = await ctx.db.get(args.contractId as any);
@@ -626,6 +627,7 @@ export const setHostPayment = internalMutation({
       host_stripe_customer_id: args.customerId,
       host_payment_method_id: args.paymentMethodId,
       fee_amount: args.feeAmount,
+      host_payment_method_type: args.paymentMethodType,
     });
   },
 });
@@ -655,6 +657,7 @@ export const recordPaymentInternal = internalMutation({
       paid: true,
       payment_amount: args.paymentAmount,
       fee_charge_failed: false,
+      fee_charge_pending: false,
     };
     if (args.paymentIntentId !== undefined) patch.payment_intent_id = args.paymentIntentId;
     if (args.stripeSessionId !== undefined) patch.stripe_session_id = args.stripeSessionId;
@@ -713,7 +716,24 @@ export const markFeeChargeFailed = internalMutation({
   handler: async (ctx, args) => {
     const exists = await ctx.db.get(args.id as any);
     if (!exists || (exists as any).paid) return;
-    await ctx.db.patch(args.id as any, { fee_charge_failed: true });
+    await ctx.db.patch(args.id as any, { fee_charge_failed: true, fee_charge_pending: false });
+  },
+});
+
+// Flags a contract whose off-session charge is an ACH debit still settling —
+// Stripe returns `processing` for several business days before succeeding or
+// failing, so this is not a failure. The payment_intent.succeeded/
+// payment_intent.payment_failed webhook (see http.ts) resolves it later.
+export const markFeeChargePending = internalMutation({
+  args: { id: v.string(), paymentIntentId: v.string() },
+  handler: async (ctx, args) => {
+    const exists = await ctx.db.get(args.id as any);
+    if (!exists || (exists as any).paid) return;
+    await ctx.db.patch(args.id as any, {
+      fee_charge_pending: true,
+      fee_charge_failed: false,
+      payment_intent_id: args.paymentIntentId,
+    });
   },
 });
 

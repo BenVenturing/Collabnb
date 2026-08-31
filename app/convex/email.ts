@@ -348,20 +348,22 @@ export const sendCardSavedEmail = internalAction({
     cardBrand: v.optional(v.string()),
     cardLast4: v.optional(v.string()),
     feeAmount: v.optional(v.number()),
+    isACH: v.optional(v.boolean()),
   },
-  handler: async (_ctx, { to, name, sessionId, cardBrand, cardLast4, feeAmount }) => {
+  handler: async (_ctx, { to, name, sessionId, cardBrand, cardLast4, feeAmount, isACH }) => {
     const apiKey = process.env.RESEND_API_KEY;
     if (!apiKey) return;
 
     const firstName = name.split(" ")[0];
     const cardLine = cardLast4 ? `${cardBrand ? cardBrand[0].toUpperCase() + cardBrand.slice(1) : "Card"} •••• ${cardLast4}` : "Card on file";
     const knownFee = typeof feeAmount === "number" && feeAmount > 0;
+    const achNote = isACH ? " Bank account charges take a few extra business days to clear once triggered — that's normal, not a problem." : "";
 
     const html = receiptEmailHtml({
       heading: `You're ready to host, ${firstName}`,
-      leadText: knownFee
+      leadText: (knownFee
         ? "We saved your card for this collaboration. It's only charged once the collab wraps up."
-        : "We saved your card on file. It's only charged once a collab wraps up.",
+        : "We saved your card on file. It's only charged once a collab wraps up.") + achNote,
       orderId: shortOrderId(sessionId),
       dateStr: todayLabel(),
       cardLine,
@@ -370,7 +372,9 @@ export const sendCardSavedEmail = internalAction({
       itemAmountStr: knownFee ? `$${feeAmount.toFixed(2)}` : "$0.00",
       totalLabel: "Charged today",
       amountStr: "$0.00",
-      footNote: "This card will be charged automatically once a collab is marked complete.",
+      footNote: isACH
+        ? "This bank account will be debited automatically once a collab is marked complete — allow a few extra business days for it to clear."
+        : "This card will be charged automatically once a collab is marked complete.",
     });
 
     try {

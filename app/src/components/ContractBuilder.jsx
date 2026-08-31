@@ -445,8 +445,8 @@ export default function ContractBuilder() {
       setShowPaymentModal(false);
       if (sessionId) {
         verifyFeeSetupSession({ sessionId })
-          .then(({ cardBrand, cardLast4, orderId, feeAmount }) => {
-            setCheckoutReceipt({ type: 'host', orderId, cardBrand, cardLast4, feeAmount });
+          .then(({ cardBrand, cardLast4, orderId, feeAmount, paymentMethodType }) => {
+            setCheckoutReceipt({ type: 'host', orderId, cardBrand, cardLast4, feeAmount, isACH: paymentMethodType === 'us_bank_account' });
           })
           .catch(() => {});
       }

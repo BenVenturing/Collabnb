@@ -137,6 +137,38 @@ export const TEMPLATE_DEFAULTS: Record<string, TemplateDef> = {
       buttonLabel: "Review application",
     },
   },
+  host_stale_applications: {
+    name: "Applications waiting (to host)",
+    trigger: "Host has applications still undecided after 48h — repeats every 3 days, stops at 14 days",
+    category: "Collabs & Messaging",
+    vars: ["firstName", "applicationsLabel", "oldestListing", "waitingDays"],
+    calloutColor: "#d97706",
+    buttonHref: `${BASE_URL}/host/proposals`,
+    copy: {
+      subject: "{{applicationsLabel}} still waiting on you",
+      heading: "Don't leave them hanging, {{firstName}}",
+      body: "You have <strong>{{applicationsLabel}}</strong> you haven't responded to yet. The oldest is for <strong>{{oldestListing}}</strong>, sent {{waitingDays}} ago.",
+      calloutLabel: "Why it matters",
+      calloutText: "Creators apply to several listings at once and move on to whoever answers first. A quick accept or decline keeps your listings worth applying to.",
+      buttonLabel: "Review applications",
+    },
+  },
+  host_awaiting_reply: {
+    name: "Messages awaiting reply (to host)",
+    trigger: "Host has creator messages unanswered for 24h+ — repeats every 3 days",
+    category: "Collabs & Messaging",
+    vars: ["firstName", "conversationsLabel", "creatorNames"],
+    calloutColor: "#4A9B7F",
+    buttonHref: `${BASE_URL}/inbox`,
+    copy: {
+      subject: "{{conversationsLabel}} waiting for your reply",
+      heading: "You have unanswered messages, {{firstName}}",
+      body: "<strong>{{conversationsLabel}}</strong> in your inbox are waiting on a reply from you.",
+      calloutLabel: "Waiting to hear back",
+      calloutText: "{{creatorNames}}",
+      buttonLabel: "Open inbox",
+    },
+  },
   application_accepted: {
     name: "Application accepted (to creator)",
     trigger: "Host accepts a creator's application",
@@ -289,6 +321,11 @@ export const SAMPLE_VARS: Record<string, string> = {
   amount: "45.00",
   feeMethod: "flat $20 fee",
   days: "3 days",
+  applicationsLabel: "3 applications",
+  oldestListing: "Lakeside Forest Treehouse",
+  waitingDays: "4 days",
+  conversationsLabel: "2 conversations",
+  creatorNames: "Rachel Norton, Maya Chen",
 };
 
 export function fill(str: string | undefined, vars: Record<string, string>) {

@@ -91,6 +91,9 @@ export default defineSchema({
       collabReminders: v.optional(v.boolean()),
       marketing: v.optional(v.boolean()),
     })),
+    // Last time this host was sent the "conversations awaiting your reply"
+    // digest (cron: checkAwaitingReply). Gates the repeat interval.
+    last_reply_nudge_at: v.optional(v.number()),
     // Settings > Language & region.
     preferred_language: v.optional(v.string()),
     preferred_currency: v.optional(v.string()),
@@ -437,6 +440,9 @@ export default defineSchema({
     counter_pending: v.optional(v.string()),  // 'host' | 'creator' | null
     contract_locked: v.optional(v.boolean()),
     collaboration_id: v.optional(v.string()), // links to the collaborations row created at apply-time
+    // Last time the host was nudged about this still-undecided application
+    // (cron: checkStaleApplications). Gates the repeat interval.
+    last_nudge_at: v.optional(v.number()),
   })
     .index("by_listing", ["listing_id"])
     .index("by_creator", ["creator_id"])

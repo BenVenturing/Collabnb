@@ -1,4 +1,4 @@
-import { mutation, query } from "./_generated/server";
+import { mutation, query, internalMutation } from "./_generated/server";
 import { v, ConvexError } from "convex/values";
 import { internal } from "./_generated/api";
 import { totalPoints, normalizeTierId, calcMidpoint, calcHardFloor, evaluateZone } from "./lib/compensationPoints";
@@ -110,10 +110,16 @@ export const create = mutation({
       .first();
     if (existing) return existing._id;
 
+    // The client passes hostId off the listing it has in hand, but a listing
+    // loaded from a cache/sample path can be missing host_id — and without it
+    // the whole notify block below silently no-ops, so the host never learns
+    // an application arrived. Resolve it server-side from the listing itself.
+    const hostId = args.hostId ?? ((listing as any)?.host_id || undefined);
+
     const id = await ctx.db.insert("pitches", {
       listing_id: args.listingId,
       listing_title: args.listingTitle,
-      host_id: args.hostId,
+      host_id: hostId,
       creator_id: args.creatorId,
       creator_name: args.creatorName,
       creator_username: args.creatorUsername,
@@ -148,16 +154,16 @@ export const create = mutation({
     }
 
     // Notify host of new application (in-app + email)
-    if (args.hostId && args.hostId !== args.creatorId) {
+    if (hostId && hostId !== args.creatorId) {
       await ctx.runMutation(internal.notifications.create, {
-        userId: args.hostId,
+        userId: hostId,
         type: "new_application",
         title: `New application from ${args.creatorName}`,
         body: args.message.length > 80 ? args.message.slice(0, 80) + "…" : args.message,
         link: `#/host/proposals?pitch=${String(id)}`,
       });
 
-      const host = await ctx.db.get(args.hostId as any);
+      const host = await ctx.db.get(hostId as any);
       if ((host as any)?.email) {
         await ctx.scheduler.runAfter(0, internal.emails.sendApplicationReceivedEmail, {
           hostEmail: (host as any).email,
@@ -473,5 +479,138 @@ export const signContract = mutation({
             }
       );
     }
+  },
+});
+
+// ─── Cron: nudge hosts about applications they haven't decided on ────────────
+//
+// The apply-time email (see create above) fires once and then nothing ever
+// follows up, so a host who misses it never hears about the application
+// again. This is the follow-up.
+//
+// One email per host per run covering all their waiting applications — a host
+// with six pending shouldn't get six emails. First nudge at 48h, repeating
+// every 3 days, giving up after 14 days so an abandoned listing doesn't email
+// someone forever.
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+const FIRST_NUDGE_AFTER = 2 * DAY_MS;
+const NUDGE_INTERVAL = 3 * DAY_MS;
+const NUDGE_GIVE_UP_AFTER = 14 * DAY_MS;
+
+function pluralize(n: number, word: string) {
+  return `${n} ${word}${n === 1 ? "" : "s"}`;
+}
+
+export const checkStaleApplications = internalMutation({
+  // dryRun reports who *would* be nudged without sending or marking anything —
+  // the only safe way to test this against production data.
+  args: { dryRun: v.optional(v.boolean()) },
+  handler: async (ctx, { dryRun }) => {
+    const now = Date.now();
+    const allPitches = await ctx.db.query("pitches").collect();
+
+    const byHost = new Map<string, any[]>();
+    for (const p of allPitches) {
+      const status = (p.status || "").toLowerCase();
+      if (status !== "pending" && status !== "under_review") continue;
+      if (!p.host_id || p.host_id === p.creator_id) continue;
+
+      const sentAt = p.created_at ?? p._creationTime;
+      const age = now - sentAt;
+      if (age < FIRST_NUDGE_AFTER || age > NUDGE_GIVE_UP_AFTER) continue;
+      if (p.last_nudge_at && now - p.last_nudge_at < NUDGE_INTERVAL) continue;
+
+      const group = byHost.get(p.host_id) ?? [];
+      group.push(p);
+      byHost.set(p.host_id, group);
+    }
+
+    let hostsNudged = 0;
+    const preview: any[] = [];
+    for (const [hostId, group] of byHost) {
+      let host: any = null;
+      try { host = await ctx.db.get(hostId as any); } catch { host = null; }
+      if (!host) continue;
+
+      const oldest = group.reduce((a, b) =>
+        (a.created_at ?? a._creationTime) <= (b.created_at ?? b._creationTime) ? a : b
+      );
+      const waitingDays = Math.max(1, Math.floor((now - (oldest.created_at ?? oldest._creationTime)) / DAY_MS));
+      const applicationsLabel = pluralize(group.length, "application");
+      const oldestListing = oldest.listing_title || "your listing";
+
+      if (dryRun === true) {
+        preview.push({
+          host: host.email ?? String(hostId),
+          applicationsLabel,
+          oldestListing,
+          waitingDays,
+          emailWouldSend: !!host.email && host.notification_prefs?.collabReminders !== false,
+        });
+        hostsNudged++;
+        continue;
+      }
+
+      // The in-app notification always fires; only the email respects the
+      // Settings > Notifications toggle.
+      await ctx.runMutation(internal.notifications.create, {
+        userId: hostId,
+        type: "application_reminder",
+        title: `${applicationsLabel} still waiting on you`,
+        body: `The oldest is for ${oldestListing}, sent ${pluralize(waitingDays, "day")} ago.`,
+        link: `#/host/proposals?pitch=${String(oldest._id)}`,
+      });
+
+      if (host.email && host.notification_prefs?.collabReminders !== false) {
+        await ctx.scheduler.runAfter(0, internal.emails.sendStaleApplicationsEmail, {
+          hostEmail: host.email,
+          hostName: host.full_name || "there",
+          applicationsLabel,
+          oldestListing,
+          waitingDays: pluralize(waitingDays, "day"),
+        });
+      }
+
+      for (const p of group) await ctx.db.patch(p._id, { last_nudge_at: now });
+      hostsNudged++;
+    }
+
+    return {
+      hostsNudged,
+      applicationsCovered: [...byHost.values()].reduce((n, g) => n + g.length, 0),
+      ...(dryRun === true ? { dryRun: true, preview } : {}),
+    };
+  },
+});
+
+// One-shot repair for applications written before create() resolved host_id
+// server-side. A pitch with no host_id never notified anyone, so these are
+// applications the host was never told about. Idempotent; pass dryRun to
+// audit without writing.
+export const backfillHostIds = internalMutation({
+  args: { dryRun: v.optional(v.boolean()) },
+  handler: async (ctx, { dryRun }) => {
+    const allPitches = await ctx.db.query("pitches").collect();
+    const missing = allPitches.filter((p) => !p.host_id);
+
+    let repaired = 0;
+    let unresolvable = 0;
+    for (const p of missing) {
+      let listing: any = null;
+      try { listing = await ctx.db.get(p.listing_id as any); } catch { listing = null; }
+      const hostId = listing?.host_id;
+      if (!hostId) { unresolvable++; continue; }
+      if (dryRun !== true) await ctx.db.patch(p._id, { host_id: hostId });
+      repaired++;
+    }
+
+    return {
+      totalPitches: allPitches.length,
+      missingHostId: missing.length,
+      repaired,
+      unresolvable,
+      dryRun: dryRun === true,
+    };
   },
 });

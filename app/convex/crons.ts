@@ -71,6 +71,26 @@ crons.daily(
   {}
 );
 
+// Daily at 10am UTC — nudge hosts sitting on undecided applications. First
+// nudge at 48h, repeats every 3 days, gives up at 14 days. One email per
+// host covering all their waiting applications.
+crons.daily(
+  "stale application reminders",
+  { hourUTC: 10, minuteUTC: 0 },
+  internal.pitches.checkStaleApplications,
+  {}
+);
+
+// Daily at 10:30am UTC — digest for hosts with creator messages they haven't
+// replied to in 24h+. Backstops sendMessage's per-message email throttle,
+// which otherwise goes silent after the first unread ping.
+crons.daily(
+  "unanswered message digest",
+  { hourUTC: 10, minuteUTC: 30 },
+  internal.threadMessages.checkAwaitingReply,
+  {}
+);
+
 // Daily at midnight UTC — expire creator trials and flip to limited access.
 crons.daily(
   "expire creator trials",

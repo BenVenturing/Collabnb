@@ -91,6 +91,49 @@ export const sendApplicationReceivedEmail = internalAction({
   },
 });
 
+// ─── Nudge: applications the host hasn't decided on ──────────────────────────
+
+export const sendStaleApplicationsEmail = internalAction({
+  args: {
+    hostEmail: v.string(),
+    hostName: v.string(),
+    applicationsLabel: v.string(),
+    oldestListing: v.string(),
+    waitingDays: v.string(),
+  },
+  handler: async (ctx, { hostEmail, hostName, applicationsLabel, oldestListing, waitingDays }) => {
+    const firstName = hostName.split(" ")[0];
+    await sendFromTemplate(
+      ctx,
+      "host_stale_applications",
+      hostEmail,
+      { firstName, applicationsLabel, oldestListing, waitingDays },
+      `${BASE_URL}/host/proposals`
+    );
+  },
+});
+
+// ─── Nudge: creator messages the host hasn't replied to ──────────────────────
+
+export const sendAwaitingReplyEmail = internalAction({
+  args: {
+    hostEmail: v.string(),
+    hostName: v.string(),
+    conversationsLabel: v.string(),
+    creatorNames: v.string(),
+  },
+  handler: async (ctx, { hostEmail, hostName, conversationsLabel, creatorNames }) => {
+    const firstName = hostName.split(" ")[0];
+    await sendFromTemplate(
+      ctx,
+      "host_awaiting_reply",
+      hostEmail,
+      { firstName, conversationsLabel, creatorNames },
+      `${BASE_URL}/inbox`
+    );
+  },
+});
+
 // ─── Application accepted (notify creator) ───────────────────────────────────
 
 export const sendApplicationAcceptedEmail = internalAction({

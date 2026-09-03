@@ -39,5 +39,6 @@
   "discoverStays": "Découvrir des séjours",
   "demoToast": "Visite guidée fermée — retrouvez-la dans <strong>Paramètres</strong> ou dans le <strong>Centre d'aide (icône ?)</strong>",
   "payoutLabel": "Paiement",
-  "contractLabel": "Contrat"
+  "contractLabel": "Contrat",
+  "contractIncompleteLabel": "Contrat pas encore finalisé"
 }

@@ -42,7 +42,9 @@
     "signUpAsHost": "S'inscrire comme hôte",
     "pendingReview": "Accès {{role}} en cours d'examen",
     "faqHelp": "FAQ et aide",
-    "logOut": "Se déconnecter"
+    "logOut": "Se déconnecter",
+    "pricingTool": "Outil de tarification",
+    "contractBuilder": "Créateur de contrat"
   },
   "roleLabels": {
     "host": "Hôte",

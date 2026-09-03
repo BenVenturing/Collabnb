@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
@@ -388,7 +388,14 @@ function SectionRow({ title, subtitle, listings, saved, onSave, onNavigate, expa
 }
 
 // ─── Search dropdown wrapper ──────────────────────────────────────────────────
-function Dropdown({ children, align = 'left', width }) {
+function Dropdown({ children, align = 'left', width, narrow = false }) {
+  // On phones the fixed pixel widths (380/460px) overflow the viewport, so the
+  // panel is centred on the search bar and clamped to the screen instead.
+  const narrowStyle = narrow ? {
+    left: '50%', right: 'auto', transform: 'translateX(-50%)',
+    width: 'calc(100vw - 1.5rem)', maxWidth: 'calc(100vw - 1.5rem)',
+    maxHeight: '70dvh', overflowY: 'auto',
+  } : null;
   return (
     <div
       className="glass-card"
@@ -404,6 +411,7 @@ function Dropdown({ children, align = 'left', width }) {
         background: 'rgb(248,246,243)',
         backdropFilter: 'blur(32px) saturate(1.5)',
         WebkitBackdropFilter: 'blur(32px) saturate(1.5)',
+        ...narrowStyle,
       }}
     >
       {children}
@@ -414,6 +422,7 @@ function Dropdown({ children, align = 'left', width }) {
 // ─── Main page ────────────────────────────────────────────────────────────────
 export default function Explore() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { t } = useTranslation('explore');
   const { profile } = useAuth();
   const { compactSearch, setCompactSearch, mapDestination, setMapAreaDisplay, setMapView } = useAppBar();
@@ -437,6 +446,16 @@ export default function Explore() {
   const { savedIds, toggleSave } = useCollabs();
   const [popupHost, setPopupHost] = useState(null);
   const [pricingToolOpen, setPricingToolOpen] = useState(false);
+
+  // ?tool=pricing — how the profile menu opens the pricing sandbox on mobile,
+  // where the floating corner buttons are hidden.
+  useEffect(() => {
+    if (new URLSearchParams(location.search).get('tool') === 'pricing') {
+      setPricingToolOpen(true);
+      navigate('/explore', { replace: true });
+    }
+  }, [location.search, navigate]);
+
   const searchRef = useRef(null);
   const mapWhereRef = useRef(null);
 
@@ -1043,7 +1062,7 @@ export default function Explore() {
           </div>
 
           {activeField === 'where' && (
-            <Dropdown width="380px">
+            <Dropdown width="380px" narrow={isNarrow}>
               {isLimited ? (
                 <LockedDropdown onSubscribe={openSubModal}>
                   <WhereSearchContent whereVal={whereVal} setWhereVal={() => {}} onClose={() => {}} listings={allListings} />
@@ -1061,7 +1080,7 @@ export default function Explore() {
 
           {/* ── What dropdown (collab type + deliverables) ─────────────────────── */}
           {activeField === 'what' && (
-            <Dropdown>
+            <Dropdown narrow={isNarrow}>
               {isLimited ? (
                 <LockedDropdown onSubscribe={openSubModal}>
                   <WhatSearchContent whatVal={whatVal} setWhatVal={() => {}} onClose={() => {}} typeQuery={whatQuery} />
@@ -1079,7 +1098,7 @@ export default function Explore() {
 
           {/* ── When dropdown (date range picker) ──────────────────────────────── */}
           {activeField === 'when' && (
-            <Dropdown align="right" width="460px">
+            <Dropdown align="right" width="460px" narrow={isNarrow}>
               {isLimited ? (
                 <LockedDropdown onSubscribe={openSubModal}>
                   <WhenSearchContent whenVal={whenVal} setWhenVal={() => {}} onClose={() => {}} />
@@ -1324,23 +1343,84 @@ export default function Explore() {
         </div>
       )}
 
-      {/* ── Map full-screen (mobile) ────────────────────────────────────────── */}
+      {/* ── Map (mobile) — map on top, nearby listings docked below ─────────── */}
+      {/* The map gets ~72% of the screen; the rest is a swipeable strip of the
+          listings currently in view, so pins are never hidden behind a button. */}
       {mapOpen && isNarrow && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 300 }}>
-          {collabMapNode}
-          <button
-            onClick={() => setMapOpen(false)}
-            className="btn-primary"
-            style={{ position: 'fixed', bottom: '1.5rem', left: '50%', transform: 'translateX(-50%)', zIndex: 310, display: 'flex', alignItems: 'center', gap: 8, borderRadius: 9999, padding: '0.7rem 1.4rem', fontWeight: 700, boxShadow: '0 6px 20px rgba(25,37,36,0.3)' }}
-          >
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
-            {t('map.showList')}
-          </button>
+        <div style={{ position: 'fixed', inset: 0, zIndex: 300, display: 'flex', flexDirection: 'column', background: 'var(--bone, #F8F6F3)' }}>
+          <div style={{ flex: '1 1 auto', position: 'relative', minHeight: 0 }}>
+            {collabMapNode}
+            <button
+              onClick={() => setMapOpen(false)}
+              style={{
+                position: 'absolute', top: 12, left: 12, zIndex: 5,
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '0.5rem 0.9rem', borderRadius: 9999,
+                border: '1px solid rgba(25,37,36,0.12)', background: '#fff',
+                color: 'var(--ink)', fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: '0.8rem',
+                cursor: 'pointer', boxShadow: '0 3px 12px rgba(25,37,36,0.25)',
+              }}
+            >
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+              {t('map.showList')}
+            </button>
+          </div>
+
+          <div style={{
+            flex: '0 0 28dvh', minHeight: 0, display: 'flex', flexDirection: 'column',
+            background: 'var(--bone, #F8F6F3)',
+            borderTop: '1px solid rgba(25,37,36,0.10)',
+            borderRadius: '1.25rem 1.25rem 0 0',
+            boxShadow: '0 -6px 24px rgba(25,37,36,0.14)',
+            marginTop: '-1.25rem', position: 'relative', zIndex: 6,
+            padding: '0.5rem 0 0.75rem',
+          }}>
+            <div style={{ width: 36, height: 4, borderRadius: 2, background: 'rgba(25,37,36,0.15)', margin: '0 auto 0.5rem' }} />
+            <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.8rem', color: 'var(--ink)', margin: '0 0 0.5rem', padding: '0 1rem' }}>
+              {t('map.collabsAvailable', { count: mapListInBounds.length })}
+            </p>
+            {mapListInBounds.length === 0 ? (
+              <p style={{ fontSize: '0.78rem', color: 'var(--sage)', padding: '0 1rem' }}>{t('map.noCollabsArea')}</p>
+            ) : (
+              <div className="no-scrollbar" style={{ flex: 1, minHeight: 0, display: 'flex', gap: '0.625rem', overflowX: 'auto', padding: '0 1rem', scrollSnapType: 'x mandatory' }}>
+                {mapListInBounds.map((l) => (
+                  <button
+                    key={l.id}
+                    onClick={() => goToListing(l.id)}
+                    style={{
+                      flex: '0 0 auto', width: 220, scrollSnapAlign: 'start',
+                      display: 'flex', alignItems: 'center', gap: '0.6rem', textAlign: 'left',
+                      background: '#fff', border: activePinId === l.id ? '1.5px solid var(--ink)' : '1px solid rgba(25,37,36,0.08)',
+                      borderRadius: '0.9rem', padding: '0.5rem', cursor: 'pointer',
+                      boxShadow: '0 2px 10px rgba(25,37,36,0.07)',
+                    }}
+                  >
+                    <img
+                      src={l.image || IMG_FALLBACK}
+                      alt=""
+                      onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = IMG_FALLBACK; }}
+                      style={{ width: 52, height: 52, borderRadius: '0.65rem', objectFit: 'cover', flexShrink: 0, filter: l._redacted ? 'blur(6px)' : 'none' }}
+                    />
+                    <span style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                      <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.8rem', color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {l.title}
+                      </span>
+                      <span style={{ fontSize: '0.7rem', color: 'var(--sage)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {l.location}
+                      </span>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--ink)' }}>{pinLabel(l)}</span>
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
 
       {/* ── Floating Map pill (mobile, list view) ───────────────────────────── */}
-      {isNarrow && !mapOpen && (
+      {/* Hidden while a search dropdown is open so it can't sit over the panel. */}
+      {isNarrow && !mapOpen && !activeField && (
         <button
           onClick={() => setMapOpen(true)}
           className="btn-primary"
@@ -1359,8 +1439,9 @@ export default function Explore() {
         />
       )}
 
-      {/* ── Floating corner stack: Contract + Pricing (hidden in map view) ─── */}
-      {!mapOpen && (
+      {/* ── Floating corner stack: Contract + Pricing ───────────────────────── */}
+      {/* Desktop only — on phones these live in the profile menu instead. */}
+      {!mapOpen && !isNarrow && (
       <div style={{
         position: 'fixed', bottom: '5.25rem', right: '0.75rem', zIndex: 200,
         display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8,

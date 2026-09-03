@@ -33,8 +33,18 @@
     "aiPanelBody": "Sag mir, was du sagen möchtest — ich entwerfe eine nette Nachricht an {{name}}.",
     "aiPanelClose": "KI-Modus verlassen",
     "aiPanelFooter": "KI-Entwurfsmodus · Eingabetaste zum Generieren",
-    "aiSuggestionChips": ["Nach ihrer Verfügbarkeit fragen…", "Mehr Details zur Kooperation teilen…", "Nach Ergebnissen und Zeitplan fragen…"],
-    "aiPlaceholderHints": ["Wenn du nicht weißt, was du schreiben sollst, klick einfach auf Generieren — wir entwerfen etwas basierend auf deiner Unterhaltung.", "z. B. nach ihrer Verfügbarkeit fragen…", "z. B. mehr Details zum Aufenthalt teilen…", "z. B. höflich nachfragen…", "z. B. die Termine bestätigen…"],
+    "aiSuggestionChips": [
+      "Nach ihrer Verfügbarkeit fragen…",
+      "Mehr Details zur Kooperation teilen…",
+      "Nach Ergebnissen und Zeitplan fragen…"
+    ],
+    "aiPlaceholderHints": [
+      "Wenn du nicht weißt, was du schreiben sollst, klick einfach auf Generieren — wir entwerfen etwas basierend auf deiner Unterhaltung.",
+      "z. B. nach ihrer Verfügbarkeit fragen…",
+      "z. B. mehr Details zum Aufenthalt teilen…",
+      "z. B. höflich nachfragen…",
+      "z. B. die Termine bestätigen…"
+    ],
     "generating": "Wird entworfen…",
     "generate": "Generieren",
     "someone": "sie",
@@ -44,7 +54,8 @@
     "contractBuilderTitle": "Vertragsersteller öffnen",
     "sendHint": "Eingabe zum Senden · Umschalt+Eingabe für neue Zeile",
     "filesAttached_one": "{{count}} Datei angehängt (wird nach 30 Min. automatisch entfernt)",
-    "filesAttached_other": "{{count}} Dateien angehängt (werden nach 30 Min. automatisch entfernt)"
+    "filesAttached_other": "{{count}} Dateien angehängt (werden nach 30 Min. automatisch entfernt)",
+    "backToMessages": "Zurück zu den Nachrichten"
   },
   "emptyState": {
     "heading": "Wähle eine Unterhaltung",

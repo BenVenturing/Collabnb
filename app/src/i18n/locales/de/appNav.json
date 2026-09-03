@@ -42,7 +42,9 @@
     "signUpAsHost": "Als Gastgeber anmelden",
     "pendingReview": "{{role}}-Zugang wird geprüft",
     "faqHelp": "FAQ & Hilfe",
-    "logOut": "Abmelden"
+    "logOut": "Abmelden",
+    "pricingTool": "Preis-Tool",
+    "contractBuilder": "Vertrags-Generator"
   },
   "roleLabels": {
     "host": "Gastgeber",

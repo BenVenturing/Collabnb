@@ -42,7 +42,9 @@
     "signUpAsHost": "Sign up as Host",
     "pendingReview": "{{role}} access pending review",
     "faqHelp": "FAQ & Help",
-    "logOut": "Log Out"
+    "logOut": "Log Out",
+    "pricingTool": "Collab pricing tool",
+    "contractBuilder": "Contract builder"
   },
   "roleLabels": {
     "host": "Host",

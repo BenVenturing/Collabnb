@@ -42,7 +42,9 @@
     "signUpAsHost": "Registrarse como anfitrión",
     "pendingReview": "Acceso de {{role}} en revisión",
     "faqHelp": "Preguntas frecuentes y ayuda",
-    "logOut": "Cerrar sesión"
+    "logOut": "Cerrar sesión",
+    "pricingTool": "Herramienta de precios",
+    "contractBuilder": "Creador de contratos"
   },
   "roleLabels": {
     "host": "Anfitrión",

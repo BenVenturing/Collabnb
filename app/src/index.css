@@ -10,6 +10,8 @@
 
 /* ── DESIGN TOKENS (match website exactly) ─────────────────────────────────── */
 :root {
+  /* Space the fixed BottomNav occupies — 0 on desktop, where it's hidden. */
+  --bottom-nav-h: 0rem;
   --ink:       #192524;
   --slate:     #3C5759;
   --sage:      #959D90;
@@ -447,6 +449,32 @@ button { font: inherit; cursor: pointer; border: none; background: none; }
   padding: 0;
 }
 .search-field .search-value { color: var(--sage); }
+
+/* The fixed BottomNav (lg:hidden, h-16 + safe area) sat on top of the last few
+   rems of every page — e.g. the Collabs "Upcoming" list. Reserve the space. */
+@media (max-width: 1023px) {
+  :root { --bottom-nav-h: calc(4rem + env(safe-area-inset-bottom, 0px) + 0.75rem); }
+  #main { padding-bottom: var(--bottom-nav-h); }
+}
+
+/* Phones: the three fields have to share ~360px, so shrink the type and padding
+   and keep every value on one line ("Any time" was wrapping). */
+@media (max-width: 640px) {
+  .search-field { padding: 0.6rem 0.7rem; }
+  .search-field label { font-size: 0.55rem; letter-spacing: 0.06em; margin-bottom: 0.1rem; }
+  .search-field input,
+  .search-field .search-value {
+    font-size: 0.75rem;
+  }
+  .search-field .search-value,
+  .search-field input {
+    display: block;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
 
 /* Compact nav search (map view) — slimmer + tighter so it doesn't tower over the map */
 .nav-search-compact .search-field { padding: 0.38rem 1.05rem; }

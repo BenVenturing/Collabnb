@@ -42,7 +42,9 @@
     "signUpAsHost": "Cadastrar-se como anfitrião",
     "pendingReview": "Acesso de {{role}} em análise",
     "faqHelp": "FAQ e ajuda",
-    "logOut": "Sair"
+    "logOut": "Sair",
+    "pricingTool": "Ferramenta de preços",
+    "contractBuilder": "Criador de contrato"
   },
   "roleLabels": {
     "host": "Anfitrião",

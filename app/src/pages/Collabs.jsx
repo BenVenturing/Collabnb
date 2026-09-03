@@ -27,7 +27,7 @@ const STATUS_STYLES = {
   demo:     { bg: 'rgba(212,168,67,0.12)', text: '#B8922A', icon: '▶' },
 };
 
-function CollabCard({ collab, onClick, onDismissDemo, onDismissSample, onOpenContract }) {
+function CollabCard({ collab, onClick, onDismissDemo, onDismissSample, onOpenContract, onStartContract }) {
   const { t } = useTranslation('collabs');
   const style = STATUS_STYLES[collab.status] || STATUS_STYLES.pending;
   const canDismiss = collab.is_demo || collab.is_sample;
@@ -174,9 +174,11 @@ function CollabCard({ collab, onClick, onDismissDemo, onDismissSample, onOpenCon
           </div>
         </div>
 
-        {/* Quick access to the linked contract, always reachable from the card */}
-        {collab.contract_id && (
-          <div style={{ marginTop: '0.75rem' }}>
+        {/* Quick access to the linked contract, always reachable from the card.
+            With no contract yet, the chip says so rather than showing nothing —
+            otherwise there's no way to tell an unsigned collab from a signed one. */}
+        <div style={{ marginTop: '0.75rem' }}>
+          {collab.contract_id ? (
             <button
               onClick={(e) => { e.stopPropagation(); onOpenContract?.(collab.contract_id); }}
               style={{
@@ -188,8 +190,20 @@ function CollabCard({ collab, onClick, onDismissDemo, onDismissSample, onOpenCon
             >
               <FileText size={12} /> {t('contractLabel')}
             </button>
-          </div>
-        )}
+          ) : (
+            <button
+              onClick={(e) => { e.stopPropagation(); onStartContract?.(collab); }}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
+                fontSize: '0.7rem', fontWeight: 600, color: 'var(--sage)', cursor: 'pointer',
+                padding: '0.35rem 0.7rem', borderRadius: '9999px', background: 'rgba(25,37,36,0.03)',
+                border: '1px dashed rgba(25,37,36,0.14)', fontFamily: 'var(--font-body)',
+              }}
+            >
+              <FileText size={12} /> {t('contractIncompleteLabel')}
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -478,6 +492,17 @@ export default function Collabs() {
                 onDismissDemo={dismissDemo}
                 onDismissSample={() => dismissSample(c.id)}
                 onOpenContract={(contractId) => navigate(`/contract?open=${contractId}`)}
+                onStartContract={(c) => navigate('/contract', {
+                  state: {
+                    prefill: {
+                      host: c.host_name,
+                      property_name: c.property_name,
+                      location: c.location,
+                      dates: c.dates,
+                      deliverables: c.deliverables,
+                    },
+                  },
+                })}
               />
             ))
           )}

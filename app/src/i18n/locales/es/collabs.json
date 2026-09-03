@@ -39,5 +39,6 @@
   "discoverStays": "Descubrir estancias",
   "demoToast": "Recorrido de demostración cerrado — encuéntralo de nuevo en <strong>Configuración</strong> o en el <strong>Centro de ayuda (ícono ?)</strong>",
   "payoutLabel": "Pago",
-  "contractLabel": "Contrato"
+  "contractLabel": "Contrato",
+  "contractIncompleteLabel": "Contrato aún sin completar"
 }

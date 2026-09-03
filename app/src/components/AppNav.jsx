@@ -239,6 +239,13 @@ export default function AppNav() {
   const [faqOpen,     setFaqOpen]     = useState(false);
   const [faqBubble,   setFaqBubble]   = useState(false);
   const [roleSwitchTarget, setRoleSwitchTarget] = useState(null); // null | 'host' | 'creator'
+  // Phones hide Explore's floating Pricing/Contract buttons — they move in here.
+  const [isNarrow, setIsNarrow] = useState(() => typeof window !== 'undefined' && window.innerWidth < 900);
+  useEffect(() => {
+    const on = () => setIsNarrow(window.innerWidth < 900);
+    window.addEventListener('resize', on);
+    return () => window.removeEventListener('resize', on);
+  }, []);
 
   // In-nav search state
   const [navSearchOpen, setNavSearchOpen] = useState(false);
@@ -991,6 +998,28 @@ export default function AppNav() {
                 <NavLink to="/settings" onClick={() => setProfileOpen(false)} className="block px-4 py-3 text-sm text-ink hover:bg-mint/30 transition-colors">
                   {t('menu.settings')}
                 </NavLink>
+                {isNarrow && !isHost && (
+                  <>
+                    <button
+                      onClick={() => { setProfileOpen(false); navigate('/explore?tool=pricing'); }}
+                      className="w-full text-left px-4 py-3 text-sm text-ink hover:bg-mint/30 transition-colors"
+                      style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                    >
+                      <span style={{ fontFamily: 'var(--font-blog-display)', fontWeight: 700, fontSize: '0.95rem', lineHeight: 1, width: 16, flexShrink: 0 }}>$</span>
+                      <span style={{ flex: 1 }}>{t('menu.pricingTool')}</span>
+                    </button>
+                    <button
+                      onClick={() => { setProfileOpen(false); navigate('/contract'); }}
+                      className="w-full text-left px-4 py-3 text-sm text-ink hover:bg-mint/30 transition-colors"
+                      style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/>
+                      </svg>
+                      <span style={{ flex: 1 }}>{t('menu.contractBuilder')}</span>
+                    </button>
+                  </>
+                )}
                 {!isAdmin && !checklistAllDone && (
                   <button onClick={() => { setProfileOpen(false); reopenChecklist(); }} className="w-full text-left px-4 py-3 text-sm text-ink hover:bg-mint/30 transition-colors" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     <span style={{ flex: 1 }}>{t('menu.setupChecklist')}</span>

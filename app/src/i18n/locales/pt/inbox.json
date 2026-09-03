@@ -33,8 +33,18 @@
     "aiPanelBody": "Diga-me o que você gostaria de dizer — vou rascunhar uma mensagem legal para {{name}}.",
     "aiPanelClose": "Sair do modo IA",
     "aiPanelFooter": "Modo de rascunho com IA · Enter para gerar",
-    "aiSuggestionChips": ["Pergunte sobre a disponibilidade…", "Compartilhe mais detalhes sobre a colaboração…", "Pergunte sobre entregas e prazos…"],
-    "aiPlaceholderHints": ["Se não souber o que dizer, é só clicar em Gerar — vamos rascunhar algo com base na sua conversa.", "ex. pergunte sobre a disponibilidade…", "ex. compartilhe mais detalhes sobre a estadia…", "ex. faça um acompanhamento educado…", "ex. confirme as datas…"],
+    "aiSuggestionChips": [
+      "Pergunte sobre a disponibilidade…",
+      "Compartilhe mais detalhes sobre a colaboração…",
+      "Pergunte sobre entregas e prazos…"
+    ],
+    "aiPlaceholderHints": [
+      "Se não souber o que dizer, é só clicar em Gerar — vamos rascunhar algo com base na sua conversa.",
+      "ex. pergunte sobre a disponibilidade…",
+      "ex. compartilhe mais detalhes sobre a estadia…",
+      "ex. faça um acompanhamento educado…",
+      "ex. confirme as datas…"
+    ],
     "generating": "Rascunhando…",
     "generate": "Gerar",
     "someone": "eles",
@@ -44,7 +54,8 @@
     "contractBuilderTitle": "Abrir criador de contratos",
     "sendHint": "Enter para enviar · Shift+Enter para nova linha",
     "filesAttached_one": "{{count}} arquivo anexado (removido automaticamente após 30 min)",
-    "filesAttached_other": "{{count}} arquivos anexados (removidos automaticamente após 30 min)"
+    "filesAttached_other": "{{count}} arquivos anexados (removidos automaticamente após 30 min)",
+    "backToMessages": "Voltar às mensagens"
   },
   "emptyState": {
     "heading": "Selecione uma conversa",

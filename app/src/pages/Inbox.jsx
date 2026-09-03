@@ -231,7 +231,7 @@ function ThreadMenu({ thread, onClose, onArchive, onUpdateTag }) {
 }
 
 // ─── Conversation panel (right side) ─────────────────────────────────────────
-function ConversationPanel({ thread, allThreads, collabs, onViewCollab, onArchive, onUpdateTag, onSetColor, onSelectThread }) {
+function ConversationPanel({ thread, allThreads, collabs, onViewCollab, onArchive, onUpdateTag, onSetColor, onSelectThread, onBack }) {
   const { t } = useTranslation('inbox');
   const [draft, setDraft] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
@@ -438,6 +438,16 @@ function ConversationPanel({ thread, allThreads, collabs, onViewCollab, onArchiv
     <div className="flex flex-col h-full">
       {/* Conversation header */}
       <div className="flex items-center gap-3 px-6 py-4 border-b border-stone/30 bg-white/25 backdrop-blur-md flex-shrink-0">
+        {onBack && (
+          <button
+            onClick={onBack}
+            aria-label={t('conversation.backToMessages')}
+            title={t('conversation.backToMessages')}
+            className="w-8 h-8 -ml-2 rounded-full hover:bg-stone/40 flex items-center justify-center transition-colors flex-shrink-0"
+          >
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+        )}
         <button
           onClick={() => setPopupPerson({ name: thread.host_name, avatar: thread.host_avatar, isFounder: thread.is_founder })}
           style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', borderRadius: '50%', flexShrink: 0 }}
@@ -828,6 +838,12 @@ export default function Inbox() {
   const location = useLocation();
   const [activeFilter, setActiveFilter] = useState('All');
   const [selectedId, setSelectedId] = useState(() => location.state?.selectedThreadId ?? null);
+  const [isNarrow, setIsNarrow] = useState(() => typeof window !== 'undefined' && window.innerWidth < 900);
+  useEffect(() => {
+    const on = () => setIsNarrow(window.innerWidth < 900);
+    window.addEventListener('resize', on);
+    return () => window.removeEventListener('resize', on);
+  }, []);
   const [searchFocused, setSearchFocused] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [viewingCollab, setViewingCollab] = useState(null);
@@ -964,20 +980,26 @@ export default function Inbox() {
 
   const selectedThread = activeThreads.find((t) => t.id === selectedId) || null;
 
-  // Auto-open the most recent conversation so the panel is never blank
+  // Auto-open the most recent conversation so the panel is never blank.
+  // Skipped on phones — there the list and the conversation are separate views,
+  // and auto-selecting would drop you straight into a chat you didn't pick.
   useEffect(() => {
-    if (selectedId) return;
+    if (selectedId || isNarrow) return;
     if (searchParams.get('thread') || searchParams.get('creatorName')) return;
     if (activeThreads.length > 0) setSelectedId(activeThreads[0].id);
-  }, [activeThreads, selectedId, searchParams]);
+  }, [activeThreads, selectedId, searchParams, isNarrow]);
+
+  // Phones can't fit both panes side by side, so one is shown at a time.
+  const showList = !isNarrow || !selectedThread;
+  const showConversation = !isNarrow || !!selectedThread;
 
   return (
-    <div className="flex overflow-hidden" style={{ height: 'calc(100dvh - 7rem)' }}>
+    <div className="flex overflow-hidden" style={{ height: 'calc(100dvh - 7rem - var(--bottom-nav-h, 0rem))' }}>
 
       {/* ── Left panel: thread list ── */}
       <div
         className="flex flex-col border-r border-stone/30 bg-white/25 backdrop-blur-md flex-shrink-0"
-        style={{ width: 340 }}
+        style={{ width: isNarrow ? '100%' : 340, display: showList ? undefined : 'none' }}
       >
         {/* Header */}
         <div className="px-5 pt-6 pb-0 border-b border-stone/20">
@@ -1136,7 +1158,7 @@ export default function Inbox() {
       </div>
 
       {/* ── Right panel: conversation ── */}
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0" style={{ display: showConversation ? undefined : 'none' }}>
         {selectedThread ? (
           <ConversationPanel
             thread={selectedThread}
@@ -1147,6 +1169,7 @@ export default function Inbox() {
             onUpdateTag={updateThreadTag}
             onSetColor={setThreadColor}
             onSelectThread={openThread}
+            onBack={isNarrow ? () => setSelectedId(null) : undefined}
           />
         ) : (
           <EmptyState />

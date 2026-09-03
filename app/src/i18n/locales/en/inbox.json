@@ -33,8 +33,18 @@
     "aiPanelBody": "Prompt me what you'd like to say — I'll draft a nice message to {{name}}.",
     "aiPanelClose": "Exit AI mode",
     "aiPanelFooter": "AI draft mode · Enter to generate",
-    "aiSuggestionChips": ["Ask about their availability…", "Share more details about the collab…", "Ask about deliverables & timeline…"],
-    "aiPlaceholderHints": ["If you don't know what to say, just hit Generate — we'll draft something based on your conversation.", "e.g. ask about their availability…", "e.g. share more details about the stay…", "e.g. follow up politely…", "e.g. confirm the dates…"],
+    "aiSuggestionChips": [
+      "Ask about their availability…",
+      "Share more details about the collab…",
+      "Ask about deliverables & timeline…"
+    ],
+    "aiPlaceholderHints": [
+      "If you don't know what to say, just hit Generate — we'll draft something based on your conversation.",
+      "e.g. ask about their availability…",
+      "e.g. share more details about the stay…",
+      "e.g. follow up politely…",
+      "e.g. confirm the dates…"
+    ],
     "generating": "Drafting…",
     "generate": "Generate",
     "someone": "them",
@@ -44,7 +54,8 @@
     "contractBuilderTitle": "Open Contract Builder",
     "sendHint": "Enter to send · Shift+Enter for new line",
     "filesAttached_one": "{{count}} file attached (auto-removed after 30 min)",
-    "filesAttached_other": "{{count}} files attached (auto-removed after 30 min)"
+    "filesAttached_other": "{{count}} files attached (auto-removed after 30 min)",
+    "backToMessages": "Back to messages"
   },
   "emptyState": {
     "heading": "Select a conversation",

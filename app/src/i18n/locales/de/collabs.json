@@ -39,5 +39,6 @@
   "discoverStays": "Aufenthalte entdecken",
   "demoToast": "Demo-Tour geschlossen — du findest sie wieder unter <strong>Einstellungen</strong> oder im <strong>Hilfe-Center (?-Symbol)</strong>",
   "payoutLabel": "Auszahlung",
-  "contractLabel": "Vertrag"
+  "contractLabel": "Vertrag",
+  "contractIncompleteLabel": "Vertrag noch nicht abgeschlossen"
 }

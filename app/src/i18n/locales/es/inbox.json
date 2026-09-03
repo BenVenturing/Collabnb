@@ -33,8 +33,18 @@
     "aiPanelBody": "Dime qué te gustaría decir — redactaré un mensaje agradable para {{name}}.",
     "aiPanelClose": "Salir del modo IA",
     "aiPanelFooter": "Modo de redacción IA · Enter para generar",
-    "aiSuggestionChips": ["Pregunta por su disponibilidad…", "Comparte más detalles sobre la colaboración…", "Pregunta por los entregables y el plazo…"],
-    "aiPlaceholderHints": ["Si no sabes qué decir, solo pulsa Generar — redactaremos algo basado en tu conversación.", "p. ej. pregunta por su disponibilidad…", "p. ej. comparte más detalles sobre la estancia…", "p. ej. haz un seguimiento amable…", "p. ej. confirma las fechas…"],
+    "aiSuggestionChips": [
+      "Pregunta por su disponibilidad…",
+      "Comparte más detalles sobre la colaboración…",
+      "Pregunta por los entregables y el plazo…"
+    ],
+    "aiPlaceholderHints": [
+      "Si no sabes qué decir, solo pulsa Generar — redactaremos algo basado en tu conversación.",
+      "p. ej. pregunta por su disponibilidad…",
+      "p. ej. comparte más detalles sobre la estancia…",
+      "p. ej. haz un seguimiento amable…",
+      "p. ej. confirma las fechas…"
+    ],
     "generating": "Redactando…",
     "generate": "Generar",
     "someone": "ellos",
@@ -44,7 +54,8 @@
     "contractBuilderTitle": "Abrir creador de contratos",
     "sendHint": "Enter para enviar · Shift+Enter para nueva línea",
     "filesAttached_one": "{{count}} archivo adjunto (se elimina automáticamente tras 30 min)",
-    "filesAttached_other": "{{count}} archivos adjuntos (se eliminan automáticamente tras 30 min)"
+    "filesAttached_other": "{{count}} archivos adjuntos (se eliminan automáticamente tras 30 min)",
+    "backToMessages": "Volver a mensajes"
   },
   "emptyState": {
     "heading": "Selecciona una conversación",

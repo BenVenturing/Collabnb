@@ -3,6 +3,17 @@ import { DESTINATIONS, COUNTRIES, COLLAB_TYPES } from '../lib/searchData';
 import { formatDate, formatDateRange } from '../lib/dateUtils';
 import { useTranslation } from 'react-i18next';
 
+// Phone-width check — the two-month calendar can't fit, so it collapses to one.
+function useNarrowViewport(bp = 640) {
+  const [narrow, setNarrow] = useState(() => typeof window !== 'undefined' && window.innerWidth < bp);
+  useEffect(() => {
+    const on = () => setNarrow(window.innerWidth < bp);
+    window.addEventListener('resize', on);
+    return () => window.removeEventListener('resize', on);
+  }, [bp]);
+  return narrow;
+}
+
 // ─── Animated placeholder hook (typewriter + thinking dots) ────────────────
 export function useAnimatedPlaceholder() {
   const { t } = useTranslation('searchDropdowns');
@@ -697,6 +708,7 @@ const FLEX_MONTHS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 
 export function WhenSearchContent({ whenVal, setWhenVal, onClose }) {
   const { t } = useTranslation('searchDropdowns');
+  const isNarrow = useNarrowViewport();
   const today = new Date();
   const [baseMonth, setBaseMonth] = useState(today.getMonth());
   const [baseYear, setBaseYear] = useState(today.getFullYear());
@@ -889,9 +901,11 @@ export function WhenSearchContent({ whenVal, setWhenVal, onClose }) {
             <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--ink)' }}>
               {t(`months.${MONTH_KEYS[baseMonth]}`)} {baseYear}
             </span>
-            <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--sage)' }}>
-              {t(`months.${MONTH_KEYS[secondMonth]}`)} {secondYear}
-            </span>
+            {!isNarrow && (
+              <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--sage)' }}>
+                {t(`months.${MONTH_KEYS[secondMonth]}`)} {secondYear}
+              </span>
+            )}
             <button
               onClick={nextMonth}
               style={{
@@ -909,7 +923,7 @@ export function WhenSearchContent({ whenVal, setWhenVal, onClose }) {
             </button>
           </div>
 
-          {/* Two-month calendar grid */}
+          {/* Calendar grid — two months on desktop, one on phones */}
           <div style={{ display: 'flex', gap: '1.5rem', marginBottom: '0.625rem' }}>
             <CalendarMonth
               year={baseYear}
@@ -919,14 +933,16 @@ export function WhenSearchContent({ whenVal, setWhenVal, onClose }) {
               onDayClick={handleDayClick}
               t={t}
             />
-            <CalendarMonth
-              year={secondYear}
-              month={secondMonth}
-              startDate={startDate}
-              endDate={endDate}
-              onDayClick={handleDayClick}
-              t={t}
-            />
+            {!isNarrow && (
+              <CalendarMonth
+                year={secondYear}
+                month={secondMonth}
+                startDate={startDate}
+                endDate={endDate}
+                onDayClick={handleDayClick}
+                t={t}
+              />
+            )}
           </div>
 
           {/* +/- day flexibility chips */}

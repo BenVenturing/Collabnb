@@ -33,8 +33,18 @@
     "aiPanelBody": "Dites-moi ce que vous aimeriez dire — je rédigerai un message sympa pour {{name}}.",
     "aiPanelClose": "Quitter le mode IA",
     "aiPanelFooter": "Mode rédaction IA · Entrée pour générer",
-    "aiSuggestionChips": ["Demandez ses disponibilités…", "Partagez plus de détails sur la collaboration…", "Demandez les livrables et le calendrier…"],
-    "aiPlaceholderHints": ["Si vous ne savez pas quoi dire, cliquez simplement sur Générer — nous rédigerons quelque chose à partir de votre conversation.", "ex. demandez ses disponibilités…", "ex. partagez plus de détails sur le séjour…", "ex. relancez poliment…", "ex. confirmez les dates…"],
+    "aiSuggestionChips": [
+      "Demandez ses disponibilités…",
+      "Partagez plus de détails sur la collaboration…",
+      "Demandez les livrables et le calendrier…"
+    ],
+    "aiPlaceholderHints": [
+      "Si vous ne savez pas quoi dire, cliquez simplement sur Générer — nous rédigerons quelque chose à partir de votre conversation.",
+      "ex. demandez ses disponibilités…",
+      "ex. partagez plus de détails sur le séjour…",
+      "ex. relancez poliment…",
+      "ex. confirmez les dates…"
+    ],
     "generating": "Rédaction…",
     "generate": "Générer",
     "someone": "eux",
@@ -44,7 +54,8 @@
     "contractBuilderTitle": "Ouvrir le générateur de contrat",
     "sendHint": "Entrée pour envoyer · Maj+Entrée pour une nouvelle ligne",
     "filesAttached_one": "{{count}} fichier joint (supprimé automatiquement après 30 min)",
-    "filesAttached_other": "{{count}} fichiers joints (supprimés automatiquement après 30 min)"
+    "filesAttached_other": "{{count}} fichiers joints (supprimés automatiquement après 30 min)",
+    "backToMessages": "Retour aux messages"
   },
   "emptyState": {
     "heading": "Sélectionnez une conversation",

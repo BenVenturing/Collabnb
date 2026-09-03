@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { AmenityIcon } from '../lib/amenityIcons';
 import ListingLocationMap from '../components/map/ListingLocationMap';
+import Confetti from '../components/Confetti';
 import { TIERS, normalizeTierId } from '../../convex/lib/compensationPoints';
 
 // listing.creator_tier is stored as an id ("ugc_pro") — resolve to the
@@ -305,7 +306,7 @@ function PhotoGallery({ images, title, onClose }) {
     <div
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
       style={{
-        position: 'fixed', inset: 0, zIndex: 180,
+        position: 'fixed', inset: 0, zIndex: 400,
         background: 'rgba(25,37,36,0.97)',
         overflowY: 'auto', padding: '5rem 1.5rem 3rem',
         animation: 'detailFadeIn 200ms ease forwards',
@@ -365,6 +366,7 @@ Let's make something great together.`;
 
   const [pitch, setPitch] = useState(defaultPitch);
   const [submitted, setSubmitted] = useState(false);
+  const [showConfetti, setShowConfetti] = useState(false);
   const [pitchBlocked, setPitchBlocked] = useState(false);
   const [previewBlocked, setPreviewBlocked] = useState(false);
   const [applyError, setApplyError] = useState('');
@@ -407,13 +409,15 @@ Let's make something great together.`;
       return;
     }
     setSubmitted(true);
+    setShowConfetti(true);
+    setTimeout(() => setShowConfetti(false), 5000);
   };
 
   return (
     <div
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
       style={{
-        position: 'fixed', inset: 0, zIndex: 200,
+        position: 'fixed', inset: 0, zIndex: 400,
         background: 'rgba(25,37,36,0.5)',
         backdropFilter: 'blur(8px)',
         display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
@@ -520,6 +524,7 @@ Let's make something great together.`;
           </div>
         ) : submitted ? (
           <div style={{ textAlign: 'center', padding: '1.5rem 0' }}>
+            <Confetti show={showConfetti} />
             <div style={{
               width: 64, height: 64, borderRadius: '50%',
               background: 'rgba(209,235,219,0.8)',
@@ -710,7 +715,7 @@ function ShareModal({ listing, onClose, onCopied }) {
     <div
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
       style={{
-        position: 'fixed', inset: 0, zIndex: 200,
+        position: 'fixed', inset: 0, zIndex: 400,
         background: 'rgba(25,37,36,0.45)', backdropFilter: 'blur(6px)',
         display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
         padding: '1rem', animation: 'detailFadeIn 200ms ease forwards',
@@ -774,7 +779,7 @@ function SaveCollectionModal({ listing, collections, onMoveToCollection, onRemov
     <div
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
       style={{
-        position: 'fixed', inset: 0, zIndex: 200,
+        position: 'fixed', inset: 0, zIndex: 400,
         background: 'rgba(25,37,36,0.45)', backdropFilter: 'blur(6px)',
         display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
         padding: '1rem', animation: 'detailFadeIn 200ms ease forwards',
@@ -945,7 +950,7 @@ function HostProfileModal({ host, listing, onClose, onMessage, isSample, hostVie
     <div
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
       style={{
-        position: 'fixed', inset: 0, zIndex: 200,
+        position: 'fixed', inset: 0, zIndex: 400,
         background: 'rgba(25,37,36,0.5)',
         backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',

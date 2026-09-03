@@ -39,5 +39,6 @@
   "discoverStays": "Discover Stays",
   "demoToast": "Demo tour closed — find it again in <strong>Settings</strong> or the <strong>Help Center (? icon)</strong>",
   "payoutLabel": "Payout",
-  "contractLabel": "Contract"
+  "contractLabel": "Contract",
+  "contractIncompleteLabel": "Contract not yet completed"
 }

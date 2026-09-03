@@ -4,6 +4,13 @@
     "needLocation": "Completa la ciudad y el estado/país."
   },
   "uploadErrorFallback": "No se pudo subir una de tus fotos.",
+  "uploadIssuesTitle": "Algunas fotos no se añadieron:",
+  "fileErrors": {
+    "heic": "Los navegadores no pueden mostrar fotos HEIC/HEIF. En el iPhone: Ajustes → Cámara → Formatos → Más compatible, o expórtala como JPEG.",
+    "wrongType": "no es JPEG, PNG, WEBP ni GIF",
+    "tooLarge": "demasiado grande ({{size}} MB — el límite es {{max}} MB)",
+    "overLimit": "Se omitieron {{skipped}} foto(s): el límite es de {{max}} imágenes por anuncio."
+  },
   "heading": "Cuéntanos lo básico",
   "subtitle": "Empieza con los detalles esenciales sobre tu oportunidad de colaboración.",
   "labels": {

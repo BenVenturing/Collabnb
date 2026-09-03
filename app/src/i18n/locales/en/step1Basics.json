@@ -4,6 +4,13 @@
     "needLocation": "Fill in the city and state/country."
   },
   "uploadErrorFallback": "One of your photos couldn't be uploaded.",
+  "uploadIssuesTitle": "Some photos weren't added:",
+  "fileErrors": {
+    "heic": "HEIC/HEIF photos can't be displayed by browsers. On iPhone: Settings → Camera → Formats → Most Compatible, or export as JPEG.",
+    "wrongType": "not a JPEG, PNG, WEBP or GIF",
+    "tooLarge": "too large ({{size}}MB — the limit is {{max}}MB)",
+    "overLimit": "{{skipped}} photo(s) skipped — the limit is {{max}} images per listing."
+  },
   "heading": "Tell us the basics",
   "subtitle": "Start with the essential details about your collaboration opportunity.",
   "labels": {

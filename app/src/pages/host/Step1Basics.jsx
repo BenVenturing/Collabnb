@@ -9,6 +9,10 @@ import LocationPicker from "../../components/host/LocationPicker";
 import { useListingDraft } from "../../contexts/ListingDraftContext";
 
 const MAX_IMAGES = 10;
+// Mirrors the server-side gate in convex/uploads.ts — keep both in sync. Checked
+// here first so a bad file is named before its bytes are uploaded.
+const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
+const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 
 // Resolves a Convex storageId (or plain http URL) to a thumbnail image.
 function Thumb({ storageId, onRemove }) {
@@ -69,6 +73,20 @@ export default function Step1Basics() {
       ? t('nextHint.needLocation')
       : "";
 
+  // Rejects a file the server would reject anyway, so the user gets a reason
+  // naming the file instead of a failed round-trip. Returns null if it's fine.
+  function localRejectReason(file) {
+    if (/heic|heif/i.test(file.type) || /\.hei[cf]$/i.test(file.name)) return t('fileErrors.heic');
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) return t('fileErrors.wrongType');
+    if (file.size > MAX_IMAGE_BYTES) {
+      return t('fileErrors.tooLarge', {
+        size: (file.size / (1024 * 1024)).toFixed(1),
+        max: Math.round(MAX_IMAGE_BYTES / (1024 * 1024)),
+      });
+    }
+    return null;
+  }
+
   async function handleImageUpload(e) {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
@@ -77,25 +95,41 @@ export default function Step1Basics() {
     if (!toUpload.length) { e.target.value = ""; return; }
     setUploading(true);
     setUploadError("");
-    try {
-      const uploaded = [];
-      for (const file of toUpload) {
+
+    const uploaded = [];
+    const failures = [];
+    if (files.length > toUpload.length) {
+      failures.push(t('fileErrors.overLimit', { skipped: files.length - toUpload.length, max: MAX_IMAGES }));
+    }
+
+    // Each file is uploaded independently: one bad photo must not discard the
+    // photos that already succeeded, which is what made a multi-select batch
+    // look like "only one at a time works".
+    for (const file of toUpload) {
+      const reason = localRejectReason(file);
+      if (reason) {
+        failures.push(`${file.name} — ${reason}`);
+        continue;
+      }
+      try {
         const uploadUrl = await generateUploadUrl();
         const res = await fetch(uploadUrl, { method: "POST", headers: { "Content-Type": file.type }, body: file });
+        if (!res.ok) throw new Error(`Storage upload failed (${res.status})`);
         const { storageId } = await res.json();
         // Validates the file Convex actually stored (type/size) and deletes
         // it server-side if it fails — rejects before it ever reaches the draft.
         await finalizeUpload({ storageId });
         uploaded.push(storageId);
+      } catch (err) {
+        console.error("Upload failed", file.name, err);
+        failures.push(`${file.name} — ${err?.data || err?.message || t('uploadErrorFallback')}`);
       }
-      updateDraft({ images: [...draft.images, ...uploaded] });
-    } catch (err) {
-      console.error("Upload failed", err);
-      setUploadError(err.message || t('uploadErrorFallback'));
-    } finally {
-      setUploading(false);
-      e.target.value = "";
     }
+
+    if (uploaded.length) updateDraft({ images: [...draft.images, ...uploaded] });
+    setUploadError(failures.length ? `${t('uploadIssuesTitle')}\n${failures.join("\n")}` : "");
+    setUploading(false);
+    e.target.value = "";
   }
 
   function removeImage(idx) {
@@ -195,7 +229,7 @@ export default function Step1Basics() {
 
           <input ref={fileRef} type="file" accept="image/*" multiple style={{ display: "none" }} onChange={handleImageUpload} />
           {uploadError && (
-            <div style={{ fontFamily: "Satoshi, sans-serif", fontSize: 12, color: "#c0392b", marginTop: 8 }}>{uploadError}</div>
+            <div style={{ fontFamily: "Satoshi, sans-serif", fontSize: 12, color: "#c0392b", marginTop: 8, whiteSpace: "pre-line" }}>{uploadError}</div>
           )}
         </div>
 

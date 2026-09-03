@@ -4,6 +4,13 @@
     "needLocation": "Trage Stadt und Bundesland/Land ein."
   },
   "uploadErrorFallback": "Eines deiner Fotos konnte nicht hochgeladen werden.",
+  "uploadIssuesTitle": "Einige Fotos wurden nicht hinzugefügt:",
+  "fileErrors": {
+    "heic": "HEIC/HEIF-Fotos können von Browsern nicht angezeigt werden. Auf dem iPhone: Einstellungen → Kamera → Formate → Maximale Kompatibilität, oder als JPEG exportieren.",
+    "wrongType": "kein JPEG, PNG, WEBP oder GIF",
+    "tooLarge": "zu groß ({{size}} MB — das Limit sind {{max}} MB)",
+    "overLimit": "{{skipped}} Foto(s) übersprungen — das Limit sind {{max}} Bilder pro Inserat."
+  },
   "heading": "Erzähl uns die Grundlagen",
   "subtitle": "Beginne mit den wichtigsten Details zu deiner Kollaborationsmöglichkeit.",
   "labels": {

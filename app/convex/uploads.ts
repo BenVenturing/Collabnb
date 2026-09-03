@@ -1,5 +1,5 @@
 import { mutation, query } from "./_generated/server";
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { requireAuthedProfile } from "./lib/auth";
 
 // Adjustable upload limits. generateUploadUrl hands the client a direct PUT
@@ -26,19 +26,41 @@ export const generateUploadUrl = mutation({
 // only when it passes. Convex-generated storage IDs are random/opaque, so no
 // separate filename-sanitization step is needed — nothing user-supplied
 // (like the original filename) is ever used as a path or stored value.
+// Errors are ConvexError, not plain Error: Convex redacts plain Error messages
+// on the client in production (generic "Server Error"), which hides the actual
+// reason a photo was rejected.
 export const finalizeUpload = mutation({
   args: { storageId: v.string() },
   handler: async (ctx, { storageId }) => {
     await requireAuthedProfile(ctx);
-    const meta = await ctx.db.system.get("_storage", storageId as any);
-    if (!meta) throw new Error("Upload not found.");
+    // A dropped connection mid-upload can hand back a truncated/garbage
+    // storageId; db.system.get throws a *plain* Error on a malformed ID, which
+    // Convex redacts to "Server Error" on the client — catch it so the host
+    // sees something they can act on.
+    let meta;
+    try {
+      meta = await ctx.db.system.get("_storage", storageId as any);
+    } catch {
+      throw new ConvexError("That photo didn't finish uploading — please try adding it again.");
+    }
+    if (!meta) throw new ConvexError("Upload not found.");
     if (!meta.contentType || !ALLOWED_IMAGE_TYPES.includes(meta.contentType)) {
       await ctx.storage.delete(storageId as any);
-      throw new Error("Only JPEG, PNG, WEBP, or GIF images are allowed.");
+      // HEIC/HEIF is the iPhone camera default and can't be displayed by most
+      // browsers, so it's rejected rather than allowed through as a broken image.
+      const isHeic = /heic|heif/i.test(meta.contentType || "");
+      throw new ConvexError(
+        isHeic
+          ? "This photo is in Apple's HEIC format, which browsers can't display. On your iPhone: Settings → Camera → Formats → Most Compatible, or export the photo as JPEG."
+          : `Only JPEG, PNG, WEBP, or GIF images are allowed (this file is ${meta.contentType || "an unknown type"}).`
+      );
     }
     if (meta.size > MAX_IMAGE_BYTES) {
       await ctx.storage.delete(storageId as any);
-      throw new Error(`Image must be under ${Math.round(MAX_IMAGE_BYTES / (1024 * 1024))}MB.`);
+      const mb = (n: number) => (n / (1024 * 1024)).toFixed(1);
+      throw new ConvexError(
+        `Image must be under ${Math.round(MAX_IMAGE_BYTES / (1024 * 1024))}MB — this one is ${mb(meta.size)}MB.`
+      );
     }
     return await ctx.storage.getUrl(storageId as any);
   },

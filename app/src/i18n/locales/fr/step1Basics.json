@@ -4,6 +4,13 @@
     "needLocation": "Renseignez la ville et l'état/pays."
   },
   "uploadErrorFallback": "Une de vos photos n'a pas pu être téléchargée.",
+  "uploadIssuesTitle": "Certaines photos n'ont pas été ajoutées :",
+  "fileErrors": {
+    "heic": "Les navigateurs ne peuvent pas afficher les photos HEIC/HEIF. Sur iPhone : Réglages → Appareil photo → Formats → Le plus compatible, ou exportez en JPEG.",
+    "wrongType": "n'est pas un JPEG, PNG, WEBP ou GIF",
+    "tooLarge": "trop volumineuse ({{size}} Mo — la limite est de {{max}} Mo)",
+    "overLimit": "{{skipped}} photo(s) ignorée(s) — la limite est de {{max}} images par annonce."
+  },
   "heading": "Parlez-nous des bases",
   "subtitle": "Commencez par les détails essentiels de votre opportunité de collaboration.",
   "labels": {

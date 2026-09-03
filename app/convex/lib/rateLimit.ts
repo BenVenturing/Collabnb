@@ -13,6 +13,8 @@
 // the common case — repeated submissions from the same address — and is the
 // strongest signal actually available to a plain mutation.
 
+import { ConvexError } from "convex/values";
+
 export const RATE_LIMITS = {
   SIGNUP: { max: 5, windowMs: 60 * 60 * 1000 },              // profiles.getOrCreate / waitlist.signUp — 5/hour per email
   AMBASSADOR_APPLY: { max: 3, windowMs: 60 * 60 * 1000 },     // ambassadors.apply — 3/hour per email
@@ -55,7 +57,7 @@ export async function enforceRateLimit(ctx: RateLimitCtx, key: string, limit: Li
   }
 
   if (existing.count >= limit.max) {
-    throw new Error("Too many requests — please try again later.");
+    throw new ConvexError("Too many requests — please try again later.");
   }
 
   await ctx.db.patch(existing._id, { count: existing.count + 1 });

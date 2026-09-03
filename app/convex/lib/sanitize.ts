@@ -2,6 +2,8 @@
 // validation is UI-only — mutations can be called directly, so every
 // free-text field must be cleaned here too.
 
+import { ConvexError } from "convex/values";
+
 // Plain-text fields (bios, titles, messages, review comments, etc.) should
 // never contain markup at all — strip every tag rather than trying to
 // allow-list a safe subset.
@@ -37,12 +39,17 @@ export function isSafeHttpUrl(url: string): boolean {
 
 // For optional URL fields: returns the trimmed URL if valid, throws if
 // present but malformed/unsafe (so hosts/creators get a clear error instead
-// of a silently stored javascript: URI).
+// of a silently stored javascript: URI). A scheme-less entry like
+// "airbnb.com/rooms/123" is the common case in a paste-a-link field, so it's
+// upgraded to https:// rather than rejected. ConvexError, not Error: Convex
+// redacts plain Error messages in production ("Server Error").
 export function cleanOptionalUrl(url: string | undefined, fieldName: string): string | undefined {
   if (url === undefined || url === "") return undefined;
-  const trimmed = url.trim();
+  let trimmed = url.trim();
+  if (trimmed === "") return undefined;
+  if (!/^[a-z][a-z0-9+.-]*:/i.test(trimmed)) trimmed = `https://${trimmed}`;
   if (!isSafeHttpUrl(trimmed)) {
-    throw new Error(`${fieldName} must be a valid http(s) URL.`);
+    throw new ConvexError(`${fieldName} must be a valid http(s) link — for example https://airbnb.com/rooms/12345`);
   }
   return trimmed.slice(0, 500);
 }

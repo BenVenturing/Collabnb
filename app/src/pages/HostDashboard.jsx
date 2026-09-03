@@ -88,7 +88,7 @@ function MiniLineChart({ data, color, delay = 0 }) {
 
 function MiniBarChart({ data, color, delay = 0 }) {
   const w = 88, h = 38;
-  const max = Math.max(...data);
+  const max = Math.max(...data, 1); // all-zero data would divide by 0 → NaN rect coords
   const bw = (w / data.length) - 2.5;
   return (
     <svg width={w} height={h} style={{ display: 'block' }}>
@@ -237,7 +237,7 @@ function ExpandedChartModal({ cardKey, onClose, stats, chartData }) {
     return d.toLocaleDateString('en-US', { month: 'short' });
   });
 
-  const max = Math.max(...cfg.data);
+  const max = Math.max(...cfg.data, 1); // all-zero data would divide by 0 → NaN rect coords
   const min = cfg.type === 'line' ? Math.min(...cfg.data) : 0;
   const range = max - min || 1;
 

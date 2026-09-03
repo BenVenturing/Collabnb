@@ -237,7 +237,11 @@ export const checkAwaitingReply = internalMutation({
       if (!last || last.sender_role !== "creator") continue;
       if (now - last.created_at < REPLY_GRACE) continue;
 
-      // Whichever party isn't the creator who sent it.
+      // Whichever party isn't the creator who sent it. Require the sender to
+      // actually be one of the two resolved parties first — on a thread whose
+      // parties have drifted from its messages, "not the sender" would
+      // otherwise resolve to an uninvolved third person and email them.
+      if (parties.a !== last.sender_id && parties.b !== last.sender_id) continue;
       const hostId = parties.a === last.sender_id ? parties.b : parties.a;
       if (!hostId || hostId === last.sender_id) continue;
 

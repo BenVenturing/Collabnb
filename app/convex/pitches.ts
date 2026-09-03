@@ -508,12 +508,15 @@ export const checkStaleApplications = internalMutation({
   args: { dryRun: v.optional(v.boolean()) },
   handler: async (ctx, { dryRun }) => {
     const now = Date.now();
-    const allPitches = await ctx.db.query("pitches").collect();
+    // Only undecided applications can be stale, so read them straight off the
+    // status index rather than scanning every pitch ever written.
+    const undecided = [
+      ...(await ctx.db.query("pitches").withIndex("by_status", (q) => q.eq("status", "pending")).collect()),
+      ...(await ctx.db.query("pitches").withIndex("by_status", (q) => q.eq("status", "under_review")).collect()),
+    ];
 
     const byHost = new Map<string, any[]>();
-    for (const p of allPitches) {
-      const status = (p.status || "").toLowerCase();
-      if (status !== "pending" && status !== "under_review") continue;
+    for (const p of undecided) {
       if (!p.host_id || p.host_id === p.creator_id) continue;
 
       const sentAt = p.created_at ?? p._creationTime;
@@ -576,10 +579,65 @@ export const checkStaleApplications = internalMutation({
       hostsNudged++;
     }
 
+    // Second pass — the host side of this gives up at 14 days, which used to
+    // mean the application just sat there forever with the creator never
+    // learning the host had gone dark. Tell them once. Deliberately does NOT
+    // decline the application: the host may still come back to it, and
+    // silently cancelling someone's application is worse than leaving it open.
+    let creatorsInformed = 0;
+    const unresponsivePreview: any[] = [];
+    for (const p of undecided) {
+      if (p.host_unresponsive_notified_at) continue;
+      const sentAt = p.created_at ?? p._creationTime;
+      if (now - sentAt <= NUDGE_GIVE_UP_AFTER) continue;
+      // Never nudged means the host was never reachable in the first place —
+      // that's a different problem, and not one to blame on the host.
+      if (!p.last_nudge_at) continue;
+
+      let creator: any = null;
+      try { creator = await ctx.db.get(p.creator_id as any); } catch { creator = null; }
+      if (!creator) continue;
+
+      const waitingDays = Math.max(1, Math.floor((now - sentAt) / DAY_MS));
+      const listingTitle = p.listing_title || "the listing";
+
+      if (dryRun === true) {
+        unresponsivePreview.push({
+          creator: creator.email ?? String(p.creator_id),
+          listingTitle,
+          waitingDays,
+          emailWouldSend: !!creator.email && creator.notification_prefs?.collabReminders !== false,
+        });
+        creatorsInformed++;
+        continue;
+      }
+
+      await ctx.runMutation(internal.notifications.create, {
+        userId: p.creator_id,
+        type: "host_unresponsive",
+        title: `No response on ${listingTitle}`,
+        body: `The host hasn't replied in ${pluralize(waitingDays, "day")}. Your application is still open.`,
+        link: `#/collabs`,
+      });
+
+      if (creator.email && creator.notification_prefs?.collabReminders !== false) {
+        await ctx.scheduler.runAfter(0, internal.emails.sendHostUnresponsiveEmail, {
+          creatorEmail: creator.email,
+          creatorName: creator.full_name || "there",
+          listingTitle,
+          waitingDays: pluralize(waitingDays, "day"),
+        });
+      }
+
+      await ctx.db.patch(p._id, { host_unresponsive_notified_at: now });
+      creatorsInformed++;
+    }
+
     return {
       hostsNudged,
       applicationsCovered: [...byHost.values()].reduce((n, g) => n + g.length, 0),
-      ...(dryRun === true ? { dryRun: true, preview } : {}),
+      creatorsInformed,
+      ...(dryRun === true ? { dryRun: true, preview, unresponsivePreview } : {}),
     };
   },
 });

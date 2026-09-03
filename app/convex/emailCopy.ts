@@ -169,6 +169,38 @@ export const TEMPLATE_DEFAULTS: Record<string, TemplateDef> = {
       buttonLabel: "Open inbox",
     },
   },
+  creator_awaiting_reply: {
+    name: "Messages awaiting reply (to creator)",
+    trigger: "Creator has host messages unanswered for 24h+ — repeats every 3 days",
+    category: "Collabs & Messaging",
+    vars: ["firstName", "conversationsLabel", "hostNames"],
+    calloutColor: "#4A9B7F",
+    buttonHref: `${BASE_URL}/inbox`,
+    copy: {
+      subject: "{{conversationsLabel}} waiting for your reply",
+      heading: "You have unanswered messages, {{firstName}}",
+      body: "<strong>{{conversationsLabel}}</strong> in your inbox are waiting on a reply from you.",
+      calloutLabel: "Waiting to hear back",
+      calloutText: "{{hostNames}}",
+      buttonLabel: "Open inbox",
+    },
+  },
+  creator_host_unresponsive: {
+    name: "Host never responded (to creator)",
+    trigger: "Application still undecided after the host nudge window closes (14 days)",
+    category: "Collabs & Messaging",
+    vars: ["firstName", "listingTitle", "waitingDays"],
+    calloutColor: "#6b7280",
+    buttonHref: `${BASE_URL}/explore`,
+    copy: {
+      subject: "Still no answer on {{listingTitle}}",
+      heading: "We chased this one for you, {{firstName}}",
+      body: "Your application for <strong>{{listingTitle}}</strong> has been waiting {{waitingDays}} and the host hasn't responded. We reminded them several times.",
+      calloutLabel: "What this means",
+      calloutText: "Your application is still open in case they come back to it — nothing has been cancelled. But it's worth putting your time into hosts who are actively reviewing.",
+      buttonLabel: "Find active listings",
+    },
+  },
   application_accepted: {
     name: "Application accepted (to creator)",
     trigger: "Host accepts a creator's application",
@@ -326,6 +358,7 @@ export const SAMPLE_VARS: Record<string, string> = {
   waitingDays: "4 days",
   conversationsLabel: "2 conversations",
   creatorNames: "Rachel Norton, Maya Chen",
+  hostNames: "Landen Scott, Priya Nair",
 };
 
 export function fill(str: string | undefined, vars: Record<string, string>) {

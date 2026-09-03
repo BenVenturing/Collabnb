@@ -262,7 +262,8 @@ export default defineSchema({
   })
     .index("by_collab", ["collab_id"])
     .index("by_owner", ["owner_id"])
-    .index("by_participant", ["participant_id"]),
+    .index("by_participant", ["participant_id"])
+    .index("by_thread_key", ["thread_key"]),
 
   contracts: defineTable({
     owner_id: v.optional(v.string()),
@@ -443,10 +444,15 @@ export default defineSchema({
     // Last time the host was nudged about this still-undecided application
     // (cron: checkStaleApplications). Gates the repeat interval.
     last_nudge_at: v.optional(v.number()),
+    // Set once the host has gone unresponsive past the nudge window and the
+    // creator has been told. Presence of this is what stops it repeating.
+    host_unresponsive_notified_at: v.optional(v.number()),
   })
     .index("by_listing", ["listing_id"])
     .index("by_creator", ["creator_id"])
-    .index("by_host", ["host_id"]),
+    .index("by_host", ["host_id"])
+    .index("by_status", ["status"])
+    .index("by_thread_key", ["thread_key"]),
 
   thread_messages: defineTable({
     thread_key: v.string(),
@@ -456,7 +462,11 @@ export default defineSchema({
     sender_role: v.string(), // 'creator' | 'host'
     text: v.string(),
     created_at: v.number(),
-  }).index("by_thread", ["thread_key"]),
+  })
+    .index("by_thread", ["thread_key"])
+    // Lets the awaiting-reply digest scan only recently-active threads
+    // instead of every thread that has ever existed.
+    .index("by_created", ["created_at"]),
 
   admin_audit_log: defineTable({
     action: v.string(),

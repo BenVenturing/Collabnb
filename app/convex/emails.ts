@@ -134,6 +134,46 @@ export const sendAwaitingReplyEmail = internalAction({
   },
 });
 
+export const sendCreatorAwaitingReplyEmail = internalAction({
+  args: {
+    creatorEmail: v.string(),
+    creatorName: v.string(),
+    conversationsLabel: v.string(),
+    hostNames: v.string(),
+  },
+  handler: async (ctx, { creatorEmail, creatorName, conversationsLabel, hostNames }) => {
+    const firstName = creatorName.split(" ")[0];
+    await sendFromTemplate(
+      ctx,
+      "creator_awaiting_reply",
+      creatorEmail,
+      { firstName, conversationsLabel, hostNames },
+      `${BASE_URL}/inbox`
+    );
+  },
+});
+
+// ─── Nudge: host never answered the creator's application ────────────────────
+
+export const sendHostUnresponsiveEmail = internalAction({
+  args: {
+    creatorEmail: v.string(),
+    creatorName: v.string(),
+    listingTitle: v.string(),
+    waitingDays: v.string(),
+  },
+  handler: async (ctx, { creatorEmail, creatorName, listingTitle, waitingDays }) => {
+    const firstName = creatorName.split(" ")[0];
+    await sendFromTemplate(
+      ctx,
+      "creator_host_unresponsive",
+      creatorEmail,
+      { firstName, listingTitle, waitingDays },
+      `${BASE_URL}/explore`
+    );
+  },
+});
+
 // ─── Application accepted (notify creator) ───────────────────────────────────
 
 export const sendApplicationAcceptedEmail = internalAction({

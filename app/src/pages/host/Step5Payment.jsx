@@ -10,6 +10,7 @@ import Confetti from "../../components/Confetti";
 import ReceiptCheckoutOverlay from "../../components/ReceiptCheckoutOverlay";
 import { useListingDraft } from "../../contexts/ListingDraftContext";
 import { useAuth } from "../../contexts/AuthContext";
+import { ACH_REQUIRED_ABOVE_CASH_VALUE } from "../../../convex/lib/fees";
 
 function PayoutSwitch({ value, onChange, disabled }) {
   const isPlatform = value !== "in_person";
@@ -61,13 +62,25 @@ export default function Step5Payment() {
   const [startingCardSetup, setStartingCardSetup] = useState(false);
   const [cardJustSaved, setCardJustSaved] = useState(false);
   const [checkoutReceipt, setCheckoutReceipt] = useState(null);
+  const [noUSBank, setNoUSBank] = useState(false);
 
   const isLive = existingListing?.status === "published";
   const payoutHandling = draft.payout_handling || "platform";
 
+  // Above the threshold, card-processing fees eat a large chunk of the
+  // platform fee — ACH costs a fraction as much. Only applies when Collabnb
+  // is actually collecting-and-forwarding the cash (not "pay in person",
+  // where the charge is only ever the small fee).
+  const bigCollectAndForward = payoutHandling !== "in_person" && (draft.cash_amount || 0) >= ACH_REQUIRED_ABOVE_CASH_VALUE;
+  const requiresACH = bigCollectAndForward && !noUSBank;
+  const hasSavedMethod = !!profile?.stripe_default_payment_method_id;
+  const hasACH = hasSavedMethod && profile?.stripe_payment_method_type === "us_bank_account";
+
   // A draft can always be saved with no card — this only ever gates Publish
   // (also enforced server-side in listings.create/update). Admins are exempt.
-  const needsCard = !!profile && profile.is_admin !== true && !profile.stripe_default_payment_method_id;
+  // A host who already has a card on file still needs to add a bank account
+  // if this specific listing crosses the ACH threshold.
+  const needsCard = !!profile && profile.is_admin !== true && (!hasSavedMethod || (requiresACH && !hasACH));
 
   // Handle the return trip from the Stripe card-setup Checkout redirect.
   useEffect(() => {
@@ -161,6 +174,8 @@ export default function Step5Payment() {
         const result = await createHostCardSetupSession({
           successUrl: `${base}?card_setup=success&session_id={CHECKOUT_SESSION_ID}`,
           cancelUrl: `${base}?card_setup=cancelled`,
+          cashAmount: draft.cash_amount || undefined,
+          noUSBank,
         });
         if (result?.url) window.location.href = result.url;
       } catch (err) {
@@ -271,6 +286,26 @@ export default function Step5Payment() {
             <p style={{ fontFamily: "Satoshi, sans-serif", fontSize: 13, color: "#7a5a10", margin: 0 }}>
               {t('needsCardNote')}
             </p>
+          </div>
+        )}
+        {bigCollectAndForward && !cardJustSaved && (
+          <div style={{ background: "rgba(45,106,79,0.08)", border: "1px solid rgba(45,106,79,0.25)", borderRadius: "0.875rem", padding: "12px 16px", marginBottom: 12 }}>
+            <p style={{ fontFamily: "Satoshi, sans-serif", fontSize: 13, color: "#2d6a4f", margin: 0 }}>
+              {t('achRequired.banner', { amount: (draft.cash_amount || 0).toFixed(0) })}
+            </p>
+            {!noUSBank ? (
+              <button
+                type="button"
+                onClick={() => setNoUSBank(true)}
+                style={{ background: "none", border: "none", padding: 0, marginTop: 6, fontFamily: "Satoshi, sans-serif", fontSize: 12.5, color: "#2d6a4f", textDecoration: "underline", cursor: "pointer" }}
+              >
+                {t('achRequired.optOut')}
+              </button>
+            ) : (
+              <p style={{ fontFamily: "Satoshi, sans-serif", fontSize: 12.5, color: "#7a5a10", margin: "6px 0 0" }}>
+                {t('achRequired.optedOutNote')}
+              </p>
+            )}
           </div>
         )}
       </WizardShell>

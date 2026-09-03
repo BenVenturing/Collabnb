@@ -2,7 +2,7 @@ import { action, internalAction } from './_generated/server';
 import { api, internal } from './_generated/api';
 import { v, ConvexError } from 'convex/values';
 import Stripe from 'stripe';
-import { computeFee } from './fees';
+import { computeFee, ACH_REQUIRED_ABOVE_CASH_VALUE } from './fees';
 import { requireAdminAction, requireOwnerOrAdminAction } from './lib/auth';
 
 // Tiered lifetime pricing — price rises as more spots are purchased.
@@ -396,6 +396,10 @@ export const createFeeSetupSession = action({
     feeAmount: v.optional(v.number()), // ignored — fee is always computed server-side
     successUrl: v.string(),
     cancelUrl: v.string(),
+    // Self-declared opt-out: host says they don't have a US bank account, so
+    // fall back to allowing card even above the threshold — see ContractBuilder's
+    // "I don't have a US bank account" link.
+    noUSBank: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const secretKey = process.env.STRIPE_SECRET_KEY;
@@ -403,27 +407,37 @@ export const createFeeSetupSession = action({
 
     const contract = await ctx.runQuery(internal.contracts.getByIdInternal, { id: args.contractId });
     if (!contract) throw new Error('Contract not found');
-    const { fee } = computeContractFee(contract);
+    const { fee, cash, isFreeStay } = computeContractFee(contract);
+
+    // Requires ACH Direct Debit + Financial Connections enabled in the
+    // Stripe Dashboard (Settings → Payment methods) — dashboard-only, not
+    // settable via the API.
+    //
+    // Above ACH_REQUIRED_ABOVE_CASH_VALUE, card-processing fees (~2.9%+$0.30
+    // on the whole collect-and-forward charge) eat a large chunk of the
+    // platform fee — ACH is capped at ~$5 regardless of amount. Required
+    // above the threshold unless the host self-declares they have no US bank
+    // account (ACH is US-only), or this is a "pay in person" / free-stay
+    // contract, where the charge is only ever the small fee, not the cash
+    // pass-through.
+    const isInPerson = contract.payout_handling === 'in_person';
+    const requiresACH = !isFreeStay && !isInPerson && cash >= ACH_REQUIRED_ABOVE_CASH_VALUE && !args.noUSBank;
 
     const stripe = new Stripe(secretKey);
     const customer = await stripe.customers.create({ metadata: { contractId: args.contractId } });
 
     const session = await stripe.checkout.sessions.create({
       mode: 'setup',
-      // Bank account (ACH) costs meaningfully less than card in processing
-      // fees — worth surfacing as an option here, since this fee can include
-      // a large pass-through cash value (see chargeContractFee). Requires
-      // ACH Direct Debit + Financial Connections enabled in the Stripe
-      // Dashboard (Settings → Payment methods) — this is a dashboard-only
-      // toggle, not something settable via the API.
-      payment_method_types: ['card', 'us_bank_account'],
-      payment_method_options: { us_bank_account: { verification_method: 'automatic' } },
+      payment_method_types: requiresACH ? ['us_bank_account'] : ['card'],
+      ...(requiresACH ? { payment_method_options: { us_bank_account: { verification_method: 'automatic' } } } : {}),
       customer: customer.id,
       success_url: args.successUrl,
       cancel_url: args.cancelUrl,
       metadata: { contractId: args.contractId, feeAmount: String(fee), type: 'fee_setup' },
       custom_text: {
-        submit: { message: "You won't be charged now — the platform fee is only charged once the collaboration is completed. Bank account (ACH) payments take a few extra business days to clear but cost less in processing fees than a card." },
+        submit: { message: requiresACH
+          ? `This is a larger collaboration ($${cash.toFixed(0)}+) — we ask for bank account (ACH) details on collaborations of $${ACH_REQUIRED_ABOVE_CASH_VALUE} or more to keep processing costs sustainable for the platform. You won't be charged now.`
+          : "You won't be charged now — the platform fee is only charged once the collaboration is completed." },
       },
     });
 
@@ -514,6 +528,14 @@ export const createHostCardSetupSession = action({
   args: {
     successUrl: v.string(),
     cancelUrl: v.string(),
+    // Cash value of the listing/collab this card is being set up for — drives
+    // the ACH-required-above-ACH_REQUIRED_ABOVE_CASH_VALUE rule below.
+    // Omitted (or under the threshold) means card is fine.
+    cashAmount: v.optional(v.number()),
+    // Self-declared opt-out: host says they don't have a US bank account, so
+    // fall back to allowing card even above the threshold, per policy — see
+    // Step5Payment.jsx's "I don't have a US bank account" link.
+    noUSBank: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const secretKey = process.env.STRIPE_SECRET_KEY;
@@ -528,15 +550,25 @@ export const createHostCardSetupSession = action({
     const customerId = profile.stripe_customer_id
       || (await stripe.customers.create({ email: profile.email, metadata: { profileId: String(profile._id) } })).id;
 
+    // Card-processing fees (~2.9%+$0.30 on the whole collect-and-forward
+    // charge) eat a large chunk of the platform fee above the threshold —
+    // ACH is capped at ~$5 regardless of amount. Required above the
+    // threshold unless the host has self-declared they have no US bank
+    // account (ACH is US-only).
+    const requiresACH = (args.cashAmount ?? 0) >= ACH_REQUIRED_ABOVE_CASH_VALUE && !args.noUSBank;
+
     const session = await stripe.checkout.sessions.create({
       mode: 'setup',
-      payment_method_types: ['card'],
+      payment_method_types: requiresACH ? ['us_bank_account'] : ['card'],
+      ...(requiresACH ? { payment_method_options: { us_bank_account: { verification_method: 'automatic' } } } : {}),
       customer: customerId,
       success_url: args.successUrl,
       cancel_url: args.cancelUrl,
       metadata: { profileId: String(profile._id), type: 'host_card_setup' },
       custom_text: {
-        submit: { message: "You won't be charged now — this card is used for Collabnb's platform fee once a collaboration is completed." },
+        submit: { message: requiresACH
+          ? `This is a larger collaboration ($${(args.cashAmount ?? 0).toFixed(0)}+) — we ask for bank account (ACH) details on collaborations of $${ACH_REQUIRED_ABOVE_CASH_VALUE} or more to keep processing costs sustainable for the platform. You won't be charged now.`
+          : "You won't be charged now — this card is used for Collabnb's platform fee once a collaboration is completed." },
       },
     });
 
@@ -579,14 +611,20 @@ export const verifyHostCardSetupSession = action({
       invoice_settings: { default_payment_method: paymentMethodId },
     });
 
-    let cardBrand, cardLast4;
+    let cardBrand, cardLast4, paymentMethodType;
     try {
       const pm = await stripe.paymentMethods.retrieve(paymentMethodId);
-      cardBrand = pm.card?.brand;
-      cardLast4 = pm.card?.last4;
+      paymentMethodType = pm.type === 'us_bank_account' ? 'us_bank_account' : 'card';
+      if (pm.type === 'us_bank_account') {
+        cardBrand = pm.us_bank_account?.bank_name || 'Bank account';
+        cardLast4 = pm.us_bank_account?.last4;
+      } else {
+        cardBrand = pm.card?.brand;
+        cardLast4 = pm.card?.last4;
+      }
     } catch { /* display-only — card save already succeeded above */ }
 
-    await ctx.runMutation(internal.profiles.setHostCard, { profileId, customerId, paymentMethodId, cardBrand, cardLast4 });
+    await ctx.runMutation(internal.profiles.setHostCard, { profileId, customerId, paymentMethodId, cardBrand, cardLast4, paymentMethodType });
 
     if (caller.email) {
       await ctx.runAction(internal.email.sendCardSavedEmail, {
@@ -595,10 +633,11 @@ export const verifyHostCardSetupSession = action({
         sessionId: session.id,
         cardBrand,
         cardLast4,
+        isACH: paymentMethodType === 'us_bank_account',
       });
     }
 
-    return { success: true, cardBrand, cardLast4, orderId: session.id };
+    return { success: true, cardBrand, cardLast4, orderId: session.id, paymentMethodType };
   },
 });
 

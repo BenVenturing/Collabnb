@@ -17,5 +17,10 @@
     "redirecting": "Redirigiendo a Stripe…",
     "payButton": "Guardar tarjeta · {{fee}} al completarse",
     "later": "Lo completaré más tarde"
+  },
+  "achRequired": {
+    "banner": "Esta es una colaboración más grande (${{amount}}+) — se requiere una cuenta bancaria (ACH) para colaboraciones de $300 o más. Esto mantiene los costos de procesamiento sostenibles para la plataforma para que podamos mantener las tarifas bajas en general.",
+    "optOut": "No tengo una cuenta bancaria en EE. UU.",
+    "optedOutNote": "No hay problema — puedes pagar con tarjeta en su lugar. Ten en cuenta que esta colaboración le costará a la plataforma significativamente más en tarifas de procesamiento."
   }
 }

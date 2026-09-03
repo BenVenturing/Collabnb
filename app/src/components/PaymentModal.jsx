@@ -2,11 +2,13 @@ import { useState } from 'react';
 import { useAction } from 'convex/react';
 import { useTranslation } from 'react-i18next';
 import { api } from '../../convex/_generated/api';
+import { ACH_REQUIRED_ABOVE_CASH_VALUE } from '../../convex/lib/fees';
 
-export default function PaymentModal({ isOpen, onClose, fee, isFreeStay, cashAmount, contractId }) {
+export default function PaymentModal({ isOpen, onClose, fee, isFreeStay, cashAmount, contractId, isInPerson }) {
   const { t } = useTranslation('paymentModal');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [noUSBank, setNoUSBank] = useState(false);
   const createFeeSetupSession = useAction(api.stripe.createFeeSetupSession);
 
   if (!isOpen) return null;
@@ -15,6 +17,10 @@ export default function PaymentModal({ isOpen, onClose, fee, isFreeStay, cashAmo
   const feeExplain = isFreeStay
     ? t('feeExplain.flatFee')
     : t('feeExplain.percentage', { amount: (cashAmount || 0).toFixed(0) });
+
+  // Mirrors the server-side rule in createFeeSetupSession — shown here so the
+  // host isn't surprised when Checkout only offers a bank account.
+  const requiresACH = !isFreeStay && !isInPerson && (cashAmount || 0) >= ACH_REQUIRED_ABOVE_CASH_VALUE && !noUSBank;
 
   const handlePay = async () => {
     if (!contractId || contractId === 'draft' || contractId === 'unknown') {
@@ -32,6 +38,7 @@ export default function PaymentModal({ isOpen, onClose, fee, isFreeStay, cashAmo
         contractId,
         successUrl,
         cancelUrl,
+        noUSBank,
       });
 
       if (result?.url) {
@@ -128,6 +135,31 @@ export default function PaymentModal({ isOpen, onClose, fee, isFreeStay, cashAmo
             {feeDisplay}
           </span>
         </div>
+
+        {/* ACH requirement notice */}
+        {!isFreeStay && !isInPerson && (cashAmount || 0) >= ACH_REQUIRED_ABOVE_CASH_VALUE && (
+          <div style={{
+            background: 'rgba(45,106,79,0.08)', border: '1px solid rgba(45,106,79,0.25)',
+            borderRadius: '0.875rem', padding: '0.75rem 1rem', marginBottom: '1rem',
+          }}>
+            <p style={{ color: '#2d6a4f', fontSize: '0.78rem', margin: 0, lineHeight: 1.4 }}>
+              {t('achRequired.banner', { amount: (cashAmount || 0).toFixed(0) })}
+            </p>
+            {!noUSBank ? (
+              <button
+                type="button"
+                onClick={() => setNoUSBank(true)}
+                style={{ background: 'none', border: 'none', padding: 0, marginTop: 6, fontFamily: 'var(--font-body)', fontSize: '0.72rem', color: '#2d6a4f', textDecoration: 'underline', cursor: 'pointer' }}
+              >
+                {t('achRequired.optOut')}
+              </button>
+            ) : (
+              <p style={{ color: '#7a5a10', fontSize: '0.72rem', margin: '6px 0 0' }}>
+                {t('achRequired.optedOutNote')}
+              </p>
+            )}
+          </div>
+        )}
 
         {/* Error */}
         {error && (

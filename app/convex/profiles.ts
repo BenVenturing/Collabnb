@@ -152,6 +152,7 @@ export const setHostCard = internalMutation({
     paymentMethodId: v.string(),
     cardBrand: v.optional(v.string()),
     cardLast4: v.optional(v.string()),
+    paymentMethodType: v.optional(v.union(v.literal("card"), v.literal("us_bank_account"))),
   },
   handler: async (ctx, args) => {
     const exists = await ctx.db.get(args.profileId as any);
@@ -161,6 +162,7 @@ export const setHostCard = internalMutation({
       stripe_default_payment_method_id: args.paymentMethodId,
       stripe_card_brand: args.cardBrand,
       stripe_card_last4: args.cardLast4,
+      stripe_payment_method_type: args.paymentMethodType,
     });
   },
 });
@@ -176,6 +178,7 @@ export const clearHostCard = internalMutation({
       stripe_default_payment_method_id: undefined,
       stripe_card_brand: undefined,
       stripe_card_last4: undefined,
+      stripe_payment_method_type: undefined,
     });
   },
 });

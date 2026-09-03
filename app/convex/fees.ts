@@ -4,8 +4,8 @@
 // import directly, so the advertised fee never drifts from the charged fee.
 // ═══════════════════════════════════════════════════════════════════════════════
 
-import { computeFee } from "./lib/fees";
-export { computeFee };
+import { computeFee, ACH_REQUIRED_ABOVE_CASH_VALUE } from "./lib/fees";
+export { computeFee, ACH_REQUIRED_ABOVE_CASH_VALUE };
 export type { FeeInput, FeeResult } from "./lib/fees";
 
 // ─── Fee records table CRUD ─────────────────────────────────────────────────────

@@ -14,6 +14,7 @@ import ListingManager from './admin/ListingManager';
 import CollabOversight from './admin/CollabOversight';
 import ContractManager from './admin/ContractManager';
 import MoneyOverview from './admin/MoneyOverview';
+import MoneyResources from './admin/MoneyResources';
 import PayoutsManager from './admin/PayoutsManager';
 import AuditLog from './admin/AuditLog';
 import BlogManager from './admin/BlogManager';
@@ -94,6 +95,7 @@ function ListingsPanel()     { return <ListingManager />;       }
 function CollabPanel()       { return <CollabOversight />;     }
 function ContractPanel()     { return <ContractManager />;      }
 function MoneyOverviewPanel() { return <MoneyOverview />;       }
+function MoneyResourcesPanel() { return <MoneyResources />;     }
 function PayoutsPanel()      { return <PayoutsManager />;       }
 function FoundersPanel()     { return <FounderTracker />;       }
 function MessagesPanel()     { return <UserMessages />;         }
@@ -123,6 +125,7 @@ const PANEL_MAP = {
   collabs:      CollabPanel,
   contracts:    ContractPanel,
   'money-overview': MoneyOverviewPanel,
+  'money-resources': MoneyResourcesPanel,
   payouts:      PayoutsPanel,
   founders:     FoundersPanel,
   ambassadors:  AmbassadorsPanel,

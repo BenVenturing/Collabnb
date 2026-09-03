@@ -1138,6 +1138,7 @@ export default function ContractBuilder() {
         isFreeStay={form.isFreeStay}
         cashAmount={cashValue}
         contractId={editingId || 'draft'}
+        isInPerson={form.payoutHandling === 'in_person'}
       />
 
       {/* ── Send to Host modal ── */}

@@ -6,6 +6,16 @@
 // and ListingDraftContext.jsx, which previously each hardcoded their own copy
 // of these thresholds and drifted out of sync with the real charge amount.
 
+// Cash value above which a host's saved payment method must be a US bank
+// account (ACH) rather than a card — card-processing fees are charged on the
+// whole collect-and-forward amount (fee + cash pass-through), so above this
+// line they eat an outsized share of the fee. Independent of the flat-vs-
+// percent fee breakpoint below (used to share a value, no longer does).
+// Enforced in stripe.js's createHostCardSetupSession (listing publish) and
+// createFeeSetupSession (contract signing) — both import this, so moving the
+// line is a one-line change instead of hunting down every hardcoded copy.
+export const ACH_REQUIRED_ABOVE_CASH_VALUE = 300;
+
 export interface FeeInput {
   /** Cash-only contract value (e.g., $300 cash from a $300 cash + $400 stay hybrid) */
   cashValue: number;

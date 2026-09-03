@@ -17,5 +17,10 @@
     "redirecting": "Weiterleitung zu Stripe…",
     "payButton": "Karte speichern · {{fee}} bei Abschluss",
     "later": "Das erledige ich später"
+  },
+  "achRequired": {
+    "banner": "Dies ist eine größere Zusammenarbeit (${{amount}}+) — für Kooperationen ab 300 $ ist ein Bankkonto (ACH) erforderlich. Das hält die Bearbeitungskosten für die Plattform tragbar, damit wir die Gebühren insgesamt niedrig halten können.",
+    "optOut": "Ich habe kein US-Bankkonto",
+    "optedOutNote": "Kein Problem — du kannst stattdessen mit Karte bezahlen. Beachte, dass diese Zusammenarbeit die Plattform deutlich mehr an Bearbeitungsgebühren kostet."
   }
 }

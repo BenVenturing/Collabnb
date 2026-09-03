@@ -32,9 +32,10 @@ export const GROUPS = [
     { id: 'contracts', label: 'Contracts'          },
   ] },
   { id: 'money', label: 'Money', icon: 'money', tabs: [
-    { id: 'money-overview', label: 'Overview'   },
-    { id: 'payouts',        label: 'Payouts'    },
-    { id: 'ambassadors',    label: 'Affiliates' },
+    { id: 'money-overview',  label: 'Overview'   },
+    { id: 'payouts',         label: 'Payouts'    },
+    { id: 'ambassadors',     label: 'Affiliates' },
+    { id: 'money-resources', label: 'Resources'  },
   ] },
   { id: 'marketing', label: 'Marketing', icon: 'marketing', tabs: [
     { id: 'discovery', label: 'Discovery' },

@@ -43,5 +43,10 @@
     "hiddenNote": "⚠ Creator sehen diese Gebühren nicht"
   },
   "cardSaved": "Karte gespeichert — alles bereit. Klicke auf Veröffentlichen, um live zu gehen.",
-  "needsCardNote": "Du benötigst eine hinterlegte Karte, bevor du veröffentlichst — sie wird erst mit Collabnbs Plattformgebühr belastet, sobald eine Kollaboration abgeschlossen ist."
+  "needsCardNote": "Du benötigst eine hinterlegte Karte, bevor du veröffentlichst — sie wird erst mit Collabnbs Plattformgebühr belastet, sobald eine Kollaboration abgeschlossen ist.",
+  "achRequired": {
+    "banner": "Dies ist eine größere Zusammenarbeit (${{amount}}+) — für Kooperationen ab 300 $ ist ein Bankkonto (ACH) erforderlich. Das hält die Bearbeitungskosten für die Plattform tragbar, damit wir die Gebühren insgesamt niedrig halten können.",
+    "optOut": "Ich habe kein US-Bankkonto",
+    "optedOutNote": "Kein Problem — du kannst stattdessen eine Karte verwenden. Beachte, dass diese Zusammenarbeit die Plattform deutlich mehr an Bearbeitungsgebühren kostet."
+  }
 }

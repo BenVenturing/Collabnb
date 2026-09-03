@@ -43,5 +43,10 @@
     "hiddenNote": "⚠ Los creadores no ven estas tarifas"
   },
   "cardSaved": "Tarjeta guardada — todo listo. Haz clic en Publicar para activarlo.",
-  "needsCardNote": "Necesitarás una tarjeta registrada antes de publicar — solo se cobra la tarifa de plataforma de Collabnb una vez que se completa una colaboración."
+  "needsCardNote": "Necesitarás una tarjeta registrada antes de publicar — solo se cobra la tarifa de plataforma de Collabnb una vez que se completa una colaboración.",
+  "achRequired": {
+    "banner": "Esta es una colaboración más grande (${{amount}}+) — se requiere una cuenta bancaria (ACH) para colaboraciones de $300 o más. Esto mantiene los costos de procesamiento sostenibles para la plataforma para que podamos mantener las tarifas bajas en general.",
+    "optOut": "No tengo una cuenta bancaria en EE. UU.",
+    "optedOutNote": "No hay problema — puedes usar una tarjeta en su lugar. Ten en cuenta que esta colaboración le costará a la plataforma significativamente más en tarifas de procesamiento."
+  }
 }

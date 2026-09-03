@@ -17,5 +17,10 @@
     "redirecting": "Redirection vers Stripe…",
     "payButton": "Enregistrer la carte · {{fee}} à la finalisation",
     "later": "Je terminerai plus tard"
+  },
+  "achRequired": {
+    "banner": "Il s’agit d’une collaboration plus importante (${{amount}}+) — un compte bancaire (ACH) est requis pour les collaborations de 300 $ ou plus. Cela permet de maintenir des coûts de traitement viables pour la plateforme afin que nous puissions garder des frais bas dans l’ensemble.",
+    "optOut": "Je n'ai pas de compte bancaire américain",
+    "optedOutNote": "Pas de problème — vous pouvez payer par carte à la place. Notez que cette collaboration coûtera nettement plus cher à la plateforme en frais de traitement."
   }
 }

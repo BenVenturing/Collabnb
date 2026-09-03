@@ -37,6 +37,10 @@ export default defineSchema({
     stripe_default_payment_method_id: v.optional(v.string()),
     stripe_card_brand: v.optional(v.string()),
     stripe_card_last4: v.optional(v.string()),
+    // "us_bank_account" means this is an ACH-debit method, not a card — see
+    // Step5Payment.jsx's ACH-required-above-$500 gate, which needs to know
+    // whether an already-saved payment method actually satisfies that.
+    stripe_payment_method_type: v.optional(v.union(v.literal("card"), v.literal("us_bank_account"))),
     referral_code: v.optional(v.string()),
     referred_by: v.optional(v.string()),
     free_months_balance: v.optional(v.number()),

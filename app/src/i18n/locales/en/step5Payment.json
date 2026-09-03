@@ -43,5 +43,10 @@
     "hiddenNote": "⚠ Creators don't see these fees"
   },
   "cardSaved": "Card saved — you're all set. Click Publish to go live.",
-  "needsCardNote": "You'll need a card on file before publishing — it's only charged for Collabnb's platform fee once a collaboration completes."
+  "needsCardNote": "You'll need a card on file before publishing — it's only charged for Collabnb's platform fee once a collaboration completes.",
+  "achRequired": {
+    "banner": "This is a larger collaboration (${{amount}}+) — bank account (ACH) is required for collaborations of $300 or more. This keeps processing costs sustainable for the platform so we can keep fees low overall.",
+    "optOut": "I don't have a US bank account",
+    "optedOutNote": "No problem — you can use a card instead. Note this collaboration will cost the platform significantly more in processing fees."
+  }
 }

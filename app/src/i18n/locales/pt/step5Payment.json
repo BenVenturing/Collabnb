@@ -43,5 +43,10 @@
     "hiddenNote": "⚠ Os criadores não veem essas taxas"
   },
   "cardSaved": "Cartão salvo — tudo pronto. Clique em Publicar para colocar no ar.",
-  "needsCardNote": "Você precisará de um cartão cadastrado antes de publicar — ele só é cobrado pela taxa de plataforma do Collabnb quando uma colaboração é concluída."
+  "needsCardNote": "Você precisará de um cartão cadastrado antes de publicar — ele só é cobrado pela taxa de plataforma do Collabnb quando uma colaboração é concluída.",
+  "achRequired": {
+    "banner": "Esta é uma colaboração maior (${{amount}}+) — é necessária uma conta bancária (ACH) para colaborações de $300 ou mais. Isso mantém os custos de processamento sustentáveis para a plataforma, para que possamos manter as taxas baixas no geral.",
+    "optOut": "Não tenho uma conta bancária nos EUA",
+    "optedOutNote": "Sem problemas — você pode usar um cartão em vez disso. Observe que esta colaboração custará significativamente mais à plataforma em taxas de processamento."
+  }
 }

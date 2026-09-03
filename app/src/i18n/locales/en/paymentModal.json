@@ -17,5 +17,10 @@
     "redirecting": "Redirecting to Stripe…",
     "payButton": "Save card · {{fee}} at completion",
     "later": "I'll complete this later"
+  },
+  "achRequired": {
+    "banner": "This is a larger collaboration (${{amount}}+) — bank account (ACH) is required for collaborations of $300 or more. This keeps processing costs sustainable for the platform so we can keep fees low overall.",
+    "optOut": "I don't have a US bank account",
+    "optedOutNote": "No problem — you can pay with a card instead. Note this collaboration will cost the platform significantly more in processing fees."
   }
 }

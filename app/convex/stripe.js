@@ -668,12 +668,13 @@ export const removeSavedCard = action({
   },
 });
 
-// 3) Charge the saved card off-session when the collab completes. Called by the
-// scheduler from collaborations.markCompleted, and backstopped by the webhook.
-// Collect & forward: the host is charged fee + cash value in one PaymentIntent
-// (Collabnb collects), then the cash value is forwarded to the creator's
-// connected payout account (Collabnb forwards). Free-stay collabs have no
-// cash to forward, so they behave exactly as before — fee only.
+// 3) Collab completes → compute what's owed and queue it for admin approval.
+// Called by the scheduler from collaborations.markCompleted. NOTHING IS
+// CHARGED HERE (Sep 2026 policy change — Ben doesn't want off-session host
+// charges firing automatically yet, card or ACH). This only computes the
+// amount, snapshots it onto the contract, and notifies the admin — the
+// actual Stripe charge happens in executeApprovedCharge, only after
+// approveContractCharge below verifies the admin passkey.
 export const chargeContractFee = internalAction({
   args: { contractId: v.string() },
   handler: async (ctx, args) => {
@@ -693,7 +694,7 @@ export const chargeContractFee = internalAction({
 
     const customerId = contract.host_stripe_customer_id;
     const paymentMethodId = contract.host_payment_method_id;
-    // No saved card → can't auto-charge; the manual "Pay Platform Fee" remains.
+    // No saved card → can't queue a charge; the manual "Pay Platform Fee" remains.
     if (!customerId || !paymentMethodId) return { skipped: 'no_saved_card' };
 
     // Prefer the fee captured at signing; otherwise recompute from the contract.
@@ -701,7 +702,7 @@ export const chargeContractFee = internalAction({
     const { cash, isFreeStay } = computeContractFee(contract);
     if (!hostFeeWaived && (!fee || fee <= 0)) fee = computeContractFee(contract).fee;
     // "Pay in person": host pays the creator directly, off-platform — Collabnb
-    // still auto-charges its own fee, but never collects or forwards the cash.
+    // still charges its own fee, but never collects or forwards the cash.
     const isInPerson = contract.payout_handling === 'in_person';
     let creatorPayout = (isFreeStay || isInPerson) ? 0 : cash;
     let grossCharge = fee + creatorPayout;
@@ -710,6 +711,8 @@ export const chargeContractFee = internalAction({
     // Live-testing safety valve — shrink this one collab's charge to $1 total,
     // keeping fee/payout proportional in whole cents so the amount forwarded
     // to the creator can never exceed what was actually collected from the host.
+    // Snapshotted into the approval request below, so the admin sees (and
+    // approves) the actual $1 test amount, not the real one.
     const testDiscount = isTestDollarAccount(host?.email);
     if (testDiscount && grossCharge > 1) {
       const originalFeeCents = Math.round(fee * 100);
@@ -720,6 +723,79 @@ export const chargeContractFee = internalAction({
       grossCharge = 1;
     }
 
+    const { alreadyRequested } = await ctx.runMutation(internal.contracts.requestChargeApproval, {
+      id: args.contractId,
+      grossAmount: grossCharge,
+      feeAmount: fee,
+      creatorPayout,
+    });
+    if (alreadyRequested) return { skipped: 'already_pending_or_decided' };
+
+    await ctx.scheduler.runAfter(0, internal.email.sendAdminNotification, {
+      type: 'payout_approval',
+      subject: `Approval needed — $${grossCharge.toFixed(2)} charge for ${contract.property_name || contract.host_name || 'a completed collab'}`,
+      body: `${host?.full_name || contract.host_name || 'A host'}'s card is ready to be charged $${grossCharge.toFixed(2)} `
+        + `(fee $${fee.toFixed(2)}${creatorPayout > 0 ? ` + $${creatorPayout.toFixed(2)} creator payout` : ''}) `
+        + `now that the collab is complete. Nothing is charged until you approve it — go to Admin → Money → Approvals.`,
+    });
+
+    return { pendingApproval: true };
+  },
+});
+
+// 4) Admin approves a queued charge (Money > Approvals) — the ONLY path that
+// actually moves money on the host's saved card/bank. Requires both being
+// signed in as admin AND the PAYOUT_APPROVAL_PASSKEY, by design: Ben wants a
+// second factor beyond "logged into the admin panel" before anything real
+// gets charged, given this is an off-session auto-charge with no in-the-
+// moment user confirmation on the host's side.
+export const approveContractCharge = action({
+  args: { contractId: v.string(), passkey: v.string() },
+  handler: async (ctx, args) => {
+    await requireAdminAction(ctx, api.profiles.getByClerkUserId);
+
+    const expected = process.env.PAYOUT_APPROVAL_PASSKEY;
+    if (!expected) throw new ConvexError('PAYOUT_APPROVAL_PASSKEY is not set in Convex environment variables — set one before any charge can be approved.');
+    if (args.passkey !== expected) throw new ConvexError('Incorrect passkey.');
+
+    const contract = await ctx.runQuery(internal.contracts.getByIdInternal, { id: args.contractId });
+    if (!contract) throw new ConvexError('Contract not found.');
+    if (contract.paid) throw new ConvexError('This contract has already been charged.');
+    if (contract.charge_approval_status !== 'pending_approval') throw new ConvexError('This charge is not awaiting approval.');
+
+    await ctx.runMutation(internal.contracts.markChargeApproved, { id: args.contractId });
+    return await ctx.runAction(internal.stripe.executeApprovedCharge, { contractId: args.contractId });
+  },
+});
+
+// The actual off-session PaymentIntent — split out of chargeContractFee so it
+// can ONLY be reached via approveContractCharge's passkey check above.
+// Charges the amounts snapshotted at request time (not recomputed), so what
+// the admin approved is exactly what gets charged even if fee rules change
+// in between.
+export const executeApprovedCharge = internalAction({
+  args: { contractId: v.string() },
+  handler: async (ctx, args) => {
+    const secretKey = process.env.STRIPE_SECRET_KEY;
+    if (!secretKey) return { skipped: 'no_stripe_key' };
+
+    const contract = await ctx.runQuery(internal.contracts.getByIdInternal, { id: args.contractId });
+    if (!contract) return { skipped: 'no_contract' };
+    if (contract.paid) return { skipped: 'already_paid' };
+
+    const host = contract.host_id
+      ? await ctx.runQuery(api.profiles.getById, { id: String(contract.host_id) })
+      : null;
+    const customerId = contract.host_stripe_customer_id;
+    const paymentMethodId = contract.host_payment_method_id;
+    if (!customerId || !paymentMethodId) return { skipped: 'no_saved_card' };
+
+    const fee = contract.charge_approval_fee_amount ?? 0;
+    const creatorPayout = contract.charge_approval_creator_payout ?? 0;
+    const grossCharge = contract.charge_approval_gross_amount ?? (fee + creatorPayout);
+    if (grossCharge <= 0) return { skipped: 'nothing_to_charge' };
+
+    const testDiscount = isTestDollarAccount(host?.email);
     const amountInCents = Math.round(grossCharge * 100);
 
     const stripe = new Stripe(secretKey);
@@ -757,7 +833,7 @@ export const chargeContractFee = internalAction({
         // ACH debit initiated but not yet settled — normal, takes several
         // business days. Not a failure: the payment_intent.succeeded /
         // payment_intent.payment_failed webhook (see http.ts) resolves this
-        // later, since chargeContractFee only runs once at completion time.
+        // later.
         await ctx.runMutation(internal.contracts.markFeeChargePending, {
           id: args.contractId,
           paymentIntentId: intent.id,

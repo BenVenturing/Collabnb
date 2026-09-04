@@ -737,6 +737,69 @@ export const markFeeChargePending = internalMutation({
   },
 });
 
+// ─── Manual charge-approval gate ───────────────────────────────────────────
+// chargeContractFee computes the amount and stops here instead of charging —
+// nothing moves until an admin approves it (with a passkey) from Money >
+// Approvals. Idempotent: a contract already pending/approved/declined is
+// left alone, so the pre-existing double-scheduling of chargeContractFee
+// (collaborations.ts + fees.ts both schedule it on completion) can't create
+// duplicate approval requests or duplicate notification emails.
+export const requestChargeApproval = internalMutation({
+  args: {
+    id: v.string(),
+    grossAmount: v.number(),
+    feeAmount: v.number(),
+    creatorPayout: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const contract = await ctx.db.get(args.id as any);
+    if (!contract || (contract as any).paid) return { alreadyRequested: false };
+    if ((contract as any).charge_approval_status) return { alreadyRequested: true };
+    await ctx.db.patch(args.id as any, {
+      charge_approval_status: "pending_approval",
+      charge_approval_requested_at: Date.now(),
+      charge_approval_gross_amount: args.grossAmount,
+      charge_approval_fee_amount: args.feeAmount,
+      charge_approval_creator_payout: args.creatorPayout,
+    });
+    return { alreadyRequested: false };
+  },
+});
+
+// Lists everything awaiting a charge decision, oldest first so nothing sits
+// forgotten at the bottom. Exposes host names + exact charge amounts, so
+// this must stay admin-gated.
+export const getPendingChargeApprovals = query({
+  args: {},
+  handler: async (ctx) => {
+    await requireAdmin(ctx);
+    const pending = await ctx.db
+      .query("contracts")
+      .withIndex("by_charge_approval_status", (q) => q.eq("charge_approval_status", "pending_approval"))
+      .collect();
+    return pending.sort((a, b) => (a.charge_approval_requested_at ?? 0) - (b.charge_approval_requested_at ?? 0));
+  },
+});
+
+export const markChargeApproved = internalMutation({
+  args: { id: v.string() },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.id as any, { charge_approval_status: "approved", charge_approved_at: Date.now() });
+  },
+});
+
+// Admin declines a pending charge — no money moves, and it drops out of the
+// queue for good (doesn't retry on its own; re-triggering is a manual admin
+// action, since a declined charge usually means something about the collab
+// needs to be sorted out first, not just "try again").
+export const declineChargeApproval = mutation({
+  args: { contractId: v.string() },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    await ctx.db.patch(args.contractId as any, { charge_approval_status: "declined", charge_declined_at: Date.now() });
+  },
+});
+
 // Records the split of a successful collect-and-forward host charge.
 export const setGrossCharge = internalMutation({
   args: {

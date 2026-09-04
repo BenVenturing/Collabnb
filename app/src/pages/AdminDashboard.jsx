@@ -15,6 +15,7 @@ import CollabOversight from './admin/CollabOversight';
 import ContractManager from './admin/ContractManager';
 import MoneyOverview from './admin/MoneyOverview';
 import MoneyResources from './admin/MoneyResources';
+import PayoutApprovals from './admin/PayoutApprovals';
 import PayoutsManager from './admin/PayoutsManager';
 import AuditLog from './admin/AuditLog';
 import BlogManager from './admin/BlogManager';
@@ -97,6 +98,7 @@ function CollabPanel()       { return <CollabOversight />;     }
 function ContractPanel()     { return <ContractManager />;      }
 function MoneyOverviewPanel() { return <MoneyOverview />;       }
 function MoneyResourcesPanel() { return <MoneyResources />;     }
+function ChargeApprovalsPanel() { return <PayoutApprovals />;   }
 function PayoutsPanel()      { return <PayoutsManager />;       }
 function FoundersPanel()     { return <FounderTracker />;       }
 function MessagesPanel()     { return <UserMessages />;         }
@@ -126,6 +128,7 @@ const PANEL_MAP = {
   collabs:      CollabPanel,
   contracts:    ContractPanel,
   'money-overview': MoneyOverviewPanel,
+  'charge-approvals': ChargeApprovalsPanel,
   'money-resources': MoneyResourcesPanel,
   payouts:      PayoutsPanel,
   founders:     FoundersPanel,
@@ -146,6 +149,11 @@ const PANEL_MAP = {
   'admin-inbox':    AdminInboxPanel,
   crashes:          CrashReportsPanel,
 };
+
+// Wired here (appended after PANEL_MAP, not inline) to avoid a merge conflict
+// with in-progress edits elsewhere in this file's panel list.
+function AutoReplyPanel() { return <AutoReply />; }
+PANEL_MAP.autoreply = AutoReplyPanel;
 
 // ─── AdminDashboard ───────────────────────────────────────────────────────────
 export default function AdminDashboard() {

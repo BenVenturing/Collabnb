@@ -33,6 +33,7 @@ export const GROUPS = [
   ] },
   { id: 'money', label: 'Money', icon: 'money', tabs: [
     { id: 'money-overview',  label: 'Overview'   },
+    { id: 'charge-approvals', label: 'Approvals' },
     { id: 'payouts',         label: 'Payouts'    },
     { id: 'ambassadors',     label: 'Affiliates' },
     { id: 'money-resources', label: 'Resources'  },

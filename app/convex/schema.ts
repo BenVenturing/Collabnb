@@ -49,7 +49,6 @@ export default defineSchema({
     referral_code: v.optional(v.string()),
     referred_by: v.optional(v.string()),
     free_months_balance: v.optional(v.number()),
-    referral_bonus_pending: v.optional(v.boolean()),
     clerk_registered: v.optional(v.boolean()),
     is_admin: v.optional(v.boolean()),
     is_lifetime: v.optional(v.boolean()),
@@ -119,6 +118,11 @@ export default defineSchema({
     // currently omits the `email` claim, so email can no longer be trusted
     // as the server-verified link between a request and its profile row.
     clerk_user_id: v.optional(v.string()),
+    // Slug of the Country Ambassador link this profile signed up through
+    // (see ambassador_countries.slug), set once at signup and kept
+    // indefinitely — every completed contract this profile is party to
+    // earns that ambassador their share_pct of the platform fee.
+    ambassador_ref: v.optional(v.string()),
   }).index("by_email", ["email"]).index("by_clerk_user_id", ["clerk_user_id"])
     .index("by_stripe_customer", ["stripe_customer_id"])
     .index("by_stripe_connect_account", ["stripe_connect_account_id"]),
@@ -357,12 +361,30 @@ export default defineSchema({
     creator_payout_held: v.optional(v.boolean()),
     host_receipt_sent_at: v.optional(v.number()),
     creator_receipt_sent_at: v.optional(v.number()),
+    // Manual approval gate (Sep 2026) — chargeContractFee no longer charges
+    // automatically on collab completion; it computes the amount, stores it
+    // here, and stops. Nothing is charged until an admin approves it (with
+    // the PAYOUT_APPROVAL_PASSKEY) from Money > Approvals — see
+    // stripe.js requestChargeApproval / approveContractCharge.
+    charge_approval_status: v.optional(v.union(
+      v.literal("pending_approval"), v.literal("approved"), v.literal("declined")
+    )),
+    charge_approval_requested_at: v.optional(v.number()),
+    // Snapshotted at request time so the queue can display the amount
+    // without recomputing it, and so a later fee-rule change can't silently
+    // change what an admin is approving.
+    charge_approval_gross_amount: v.optional(v.number()),
+    charge_approval_fee_amount: v.optional(v.number()),
+    charge_approval_creator_payout: v.optional(v.number()),
+    charge_approved_at: v.optional(v.number()),
+    charge_declined_at: v.optional(v.number()),
   })
     .index("by_owner", ["owner_id"])
     .index("by_host", ["host_id"])
     .index("by_creator", ["creator_id"])
     .index("by_payout_status", ["creator_payout_status"])
-    .index("by_payout_reference", ["creator_payout_reference"]),
+    .index("by_payout_reference", ["creator_payout_reference"])
+    .index("by_charge_approval_status", ["charge_approval_status"]),
 
   collections: defineTable({
     name: v.string(),
@@ -421,7 +443,6 @@ export default defineSchema({
     used_by_id: v.string(),
     referrer_id: v.string(),
     signup_bonus_awarded: v.boolean(),
-    collab_bonus_awarded: v.boolean(),
   })
     .index("by_code", ["code"])
     .index("by_user", ["used_by_id"]),
@@ -616,24 +637,23 @@ export default defineSchema({
     .index("by_external", ["external_id"])
     .index("by_replied", ["replied"]),
 
-  // Ambassador program (beta) — regional partners earning a share of the
-  // platform fee on collabs completed in their region.
-  ambassador_regions: defineTable({
-    slug: v.string(),
-    name: v.string(),
-    countries: v.array(v.string()),
-    status: v.string(),                       // 'open' | 'taken' | 'coming_soon'
+  // Ambassador program (beta) — one exclusive partner per country, earning a
+  // share of the platform fee on every completed contract involving a host
+  // or creator who signed up through that ambassador's unique link.
+  ambassador_countries: defineTable({
+    country: v.string(),
+    slug: v.string(),                         // unique link id, e.g. "thailand-hanna"
+    status: v.string(),                       // 'open' | 'taken'
     ambassador_name: v.optional(v.string()),
     ambassador_email: v.optional(v.string()),
     application_id: v.optional(v.string()),
-    tier1_pct: v.optional(v.number()),        // % of platform fee, default 25
-    tier2_pct: v.optional(v.number()),        // % after monthly threshold, default 50
-    tier2_threshold: v.optional(v.number()),  // completed collabs/month to unlock tier 2, default 5
-  }).index("by_slug", ["slug"]),
+    share_pct: v.number(),                    // % of platform fee, set per-link by admin
+  })
+    .index("by_slug", ["slug"])
+    .index("by_country", ["country"]),
 
   ambassador_applications: defineTable({
-    region_slug: v.string(),
-    region_name: v.string(),
+    country: v.string(),
     full_name: v.string(),
     email: v.string(),
     based_in: v.optional(v.string()),
@@ -651,12 +671,12 @@ export default defineSchema({
     reviewed_at: v.optional(v.number()),
   })
     .index("by_status", ["status"])
-    .index("by_region", ["region_slug"])
+    .index("by_country", ["country"])
     .index("by_email", ["email"]),
 
   ambassador_earnings: defineTable({
-    region_slug: v.string(),
-    region_name: v.string(),
+    ambassador_slug: v.string(),
+    country: v.string(),
     ambassador_name: v.optional(v.string()),
     ambassador_email: v.optional(v.string()),
     contract_id: v.string(),
@@ -666,12 +686,11 @@ export default defineSchema({
     amount: v.number(),
     status: v.string(),                       // 'pending' | 'paid' | 'reversed'
     clawback_until: v.number(),
-    month_key: v.string(),                    // 'YYYY-MM', used for tier counting
     created_at: v.number(),
     paid_at: v.optional(v.number()),
     payout_note: v.optional(v.string()),
   })
-    .index("by_region_month", ["region_slug", "month_key"])
+    .index("by_ambassador", ["ambassador_slug"])
     .index("by_status", ["status"])
     .index("by_contract", ["contract_id"]),
 

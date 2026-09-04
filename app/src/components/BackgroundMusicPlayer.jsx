@@ -3,18 +3,26 @@ import { useTranslation } from 'react-i18next';
 import undertowSrc from '../assets/audio/undertow.mp3';
 import risingDawnSrc from '../assets/audio/rising-dawn.mp3';
 import sunAndCloudsSrc from '../assets/audio/sun-and-clouds.mp3';
+import sunshineDaySrc from '../assets/audio/sunshine-day.mp3';
+import islandBreezeSrc from '../assets/audio/island-breeze.mp3';
+import summerCarRideSrc from '../assets/audio/summer-car-ride.mp3';
 
 const MUTE_KEY = 'collabnb_music_muted';
 const DISMISS_KEY = 'collabnb_music_dismissed';
 const TRACK_KEY = 'collabnb_music_track';
 
-// Royalty-free (CC BY 4.0) tracks — not the Instagram references, which are
+// Royalty-free tracks (free-stock-music.com — free to use with attribution;
+// several are also formally CC BY) — not the Instagram references, which are
 // licensed to Meta only and can't be rehosted here. Credit lines below satisfy
-// the CC BY attribution requirement.
+// the attribution requirement. Same ids/order as the marketing-site widget in
+// public/collabnb-analytics.js — keep both lists in sync.
 const TRACKS = [
-  { id: 'undertow', title: 'Undertow', artist: 'Scott Buckley', src: undertowSrc, creditUrl: 'https://soundcloud.com/scottbuckley' },
-  { id: 'rising-dawn', title: 'Rising Dawn', artist: 'Ethereal 88', src: risingDawnSrc, creditUrl: 'https://ethereal88.bandcamp.com' },
-  { id: 'sun-and-clouds', title: 'Sun And Clouds', artist: '| e s c p', src: sunAndCloudsSrc, creditUrl: 'https://www.escp.space' },
+  { id: 'undertow', title: 'Undertow', artist: 'Scott Buckley', mood: 'calm', src: undertowSrc, creditUrl: 'https://soundcloud.com/scottbuckley' },
+  { id: 'rising-dawn', title: 'Rising Dawn', artist: 'Ethereal 88', mood: 'calm', src: risingDawnSrc, creditUrl: 'https://ethereal88.bandcamp.com' },
+  { id: 'sun-and-clouds', title: 'Sun And Clouds', artist: '| e s c p', mood: 'calm', src: sunAndCloudsSrc, creditUrl: 'https://www.escp.space' },
+  { id: 'sunshine-day', title: 'Sunshine Day', artist: 'Mixaund', mood: 'upbeat', src: sunshineDaySrc, creditUrl: 'https://mixaund.bandcamp.com' },
+  { id: 'island-breeze', title: 'Island Breeze', artist: 'Surf House Productions', mood: 'upbeat', src: islandBreezeSrc, creditUrl: 'https://surf-house-productions.bandcamp.com' },
+  { id: 'summer-car-ride', title: 'Summer Car Ride', artist: '| e s c p', mood: 'upbeat', src: summerCarRideSrc, creditUrl: 'https://www.escp.space' },
 ];
 
 function SpeakerIcon({ muted }) {
@@ -75,8 +83,26 @@ export default function BackgroundMusicPlayer() {
   const [muted, setMuted] = useState(() => localStorage.getItem(MUTE_KEY) === '1');
   const [needsGesture, setNeedsGesture] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const wasPlayingBeforeHide = useRef(false);
 
   const track = TRACKS[trackIndex];
+
+  // Only make sound while this tab is actually the one you're looking at —
+  // pause when you switch tabs/apps, resume where it left off when you're back.
+  useEffect(() => {
+    const onVisibility = () => {
+      const audio = audioRef.current;
+      if (!audio) return;
+      if (document.hidden) {
+        wasPlayingBeforeHide.current = !audio.paused;
+        if (!audio.paused) audio.pause();
+      } else if (wasPlayingBeforeHide.current) {
+        audio.play().catch(() => {});
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => document.removeEventListener('visibilitychange', onVisibility);
+  }, []);
 
   // Best-effort autoplay on mount: try with sound, fall back to muted
   // (browsers universally allow muted autoplay), fall back again to idle.
@@ -174,7 +200,7 @@ export default function BackgroundMusicPlayer() {
   const showEq = playing && !muted;
 
   return (
-    <div ref={rootRef} style={{ position: 'fixed', bottom: '9.5rem', right: '1.25rem', zIndex: 45, fontFamily: 'var(--font-body)' }}>
+    <div ref={rootRef} style={{ position: 'fixed', bottom: '1.25rem', left: '1.25rem', zIndex: 210, fontFamily: 'var(--font-body)' }}>
       <style>{`
         @keyframes cnb-mp-eq0 { 0%,100% { height:3px } 50% { height:10px } }
         @keyframes cnb-mp-eq1 { 0%,100% { height:6px } 50% { height:2px } }
@@ -219,16 +245,16 @@ export default function BackgroundMusicPlayer() {
 
       {/* ── Expanded control pill ─────────────────────────────────────────── */}
       <div className="cnb-mp-glass" style={{
-        position: 'absolute', bottom: 'calc(100% + 0.6rem)', right: 0,
+        position: 'absolute', bottom: 'calc(100% + 0.6rem)', left: 0,
         display: 'flex', alignItems: 'center', gap: '0.6rem',
         borderRadius: '9999px',
-        padding: '0.45rem 0.55rem 0.45rem 0.9rem',
+        padding: '0.45rem 0.9rem 0.45rem 0.55rem',
         whiteSpace: 'nowrap',
         opacity: expanded ? 1 : 0,
         transform: expanded ? 'translateY(0) scale(1)' : 'translateY(6px) scale(0.96)',
         pointerEvents: expanded ? 'auto' : 'none',
         transition: 'opacity 200ms cubic-bezier(0.16,1,0.3,1), transform 200ms cubic-bezier(0.16,1,0.3,1)',
-        transformOrigin: 'bottom right',
+        transformOrigin: 'bottom left',
       }}>
         <a
           href={track.creditUrl} target="_blank" rel="noopener noreferrer"

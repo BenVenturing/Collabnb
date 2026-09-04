@@ -3,6 +3,7 @@ import VerificationPendingModal from './VerificationPendingModal';
 import SubscriptionModal from './SubscriptionModal';
 import FloatingHelpButton from './FloatingHelpButton';
 import OnboardingChecklist from './OnboardingChecklist'; // self-positions via fixed CSS
+import BackgroundMusicPlayer from './BackgroundMusicPlayer'; // self-positions via fixed CSS
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useQuery, useAction } from 'convex/react';
 import { api } from '../../convex/_generated/api';
@@ -251,6 +252,9 @@ export default function Layout({ children }) {
 
       {/* ── Floating onboarding checklist (bottom-right, above AppNav) ────────── */}
       <OnboardingChecklist />
+
+      {/* ── Floating background-music widget (bottom-right, above contract button) ── */}
+      <BackgroundMusicPlayer />
 
       {/* FloatingHelpButton removed */}
 

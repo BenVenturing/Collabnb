@@ -25,5 +25,14 @@
     "ariaLabel": "Open contract builder",
     "title": "Contract Builder",
     "label": "Contract"
+  },
+  "musicPlayer": {
+    "play": "Play background music",
+    "pause": "Pause background music",
+    "mute": "Mute",
+    "unmute": "Unmute",
+    "next": "Next track",
+    "dismiss": "Turn off background music",
+    "credit": "{{title}} — {{artist}}"
   }
 }

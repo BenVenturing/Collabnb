@@ -25,5 +25,14 @@
     "ariaLabel": "Vertragsersteller öffnen",
     "title": "Vertragsersteller",
     "label": "Vertrag"
+  },
+  "musicPlayer": {
+    "play": "Hintergrundmusik abspielen",
+    "pause": "Hintergrundmusik pausieren",
+    "mute": "Stummschalten",
+    "unmute": "Ton aktivieren",
+    "next": "Nächster Titel",
+    "dismiss": "Hintergrundmusik ausschalten",
+    "credit": "{{title}} — {{artist}}"
   }
 }

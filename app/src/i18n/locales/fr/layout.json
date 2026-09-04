@@ -25,5 +25,14 @@
     "ariaLabel": "Ouvrir le générateur de contrat",
     "title": "Générateur de contrat",
     "label": "Contrat"
+  },
+  "musicPlayer": {
+    "play": "Lire la musique de fond",
+    "pause": "Mettre en pause la musique de fond",
+    "mute": "Couper le son",
+    "unmute": "Activer le son",
+    "next": "Piste suivante",
+    "dismiss": "Désactiver la musique de fond",
+    "credit": "{{title}} — {{artist}}"
   }
 }

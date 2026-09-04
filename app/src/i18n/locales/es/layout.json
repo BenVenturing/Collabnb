@@ -25,5 +25,14 @@
     "ariaLabel": "Abrir el creador de contratos",
     "title": "Creador de contratos",
     "label": "Contrato"
+  },
+  "musicPlayer": {
+    "play": "Reproducir música de fondo",
+    "pause": "Pausar música de fondo",
+    "mute": "Silenciar",
+    "unmute": "Activar sonido",
+    "next": "Siguiente pista",
+    "dismiss": "Desactivar música de fondo",
+    "credit": "{{title}} — {{artist}}"
   }
 }

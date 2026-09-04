@@ -13,6 +13,13 @@ const RUST  = '#b45309';
 // section Ben's building out over time, starting with the ACH cost model.
 const RESOURCES = [
   {
+    id: 'payout-flow-diagram',
+    category: 'Payment workflow',
+    title: 'Payout Structure — Flow Diagram',
+    description: 'End-to-end flow chart: how a host payment method is chosen, how the charge resolves, and how the creator actually gets paid.',
+    updated: 'Sep 2026',
+  },
+  {
     id: 'ach-cost-model',
     category: 'Payment workflow',
     title: 'ACH Routing — Cost Model',
@@ -20,6 +27,104 @@ const RESOURCES = [
     updated: 'Sep 2026',
   },
 ];
+
+// ─── Flow diagram primitives ────────────────────────────────────────────────
+// `note` renders as a third, smaller line inside the SAME box — folded in
+// rather than positioned as a separate element below it, since a fixed-height
+// flowchart grid leaves no safe way to place a sibling element under a box
+// without it drifting into whatever comes next as row heights change.
+function FlowBox({ x, y, w, h, title, subtitle, note, accent }) {
+  const border = accent === 'moss' ? MOSS : accent === 'rust' ? RUST : 'rgba(25,37,36,0.18)';
+  const titleColor = accent === 'moss' ? MOSS : accent === 'rust' ? RUST : INK;
+  return (
+    <g>
+      <rect x={x} y={y} width={w} height={h} rx="10" fill="#fff" stroke={border} strokeWidth={accent ? 1.75 : 1.25} />
+      <foreignObject x={x + 12} y={y} width={w - 24} height={h}>
+        <div xmlns="http://www.w3.org/1999/xhtml" style={{
+          height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 3,
+          fontFamily: 'Satoshi, -apple-system, sans-serif',
+        }}>
+          <div style={{ fontFamily: 'Cabinet Grotesk, sans-serif', fontWeight: 700, fontSize: 13.5, color: titleColor, lineHeight: 1.25 }}>{title}</div>
+          {subtitle && <div style={{ fontSize: 11, color: SLATE, lineHeight: 1.35 }}>{subtitle}</div>}
+          {note && <div style={{ fontSize: 10, color: SAGE, fontStyle: 'italic', lineHeight: 1.4, marginTop: 2 }}>{note}</div>}
+        </div>
+      </foreignObject>
+    </g>
+  );
+}
+
+function FlowArrow({ from, to }) {
+  return <line x1={from[0]} y1={from[1]} x2={to[0]} y2={to[1]} stroke="rgba(25,37,36,0.32)" strokeWidth="1.5" markerEnd="url(#flowArrow)" />;
+}
+
+function PayoutFlowDiagram() {
+  return (
+    <div>
+      <p style={{ fontSize: '0.85rem', color: SLATE, lineHeight: 1.6, maxWidth: 640, marginBottom: '1.25rem' }}>
+        Every collab's payout follows this path — which rail is used at each branch depends on cash value and what the creator connected. See <strong>ACH Routing — Cost Model</strong> in this same tab for the dollar math behind the card/ACH and Connect/Wise choices.
+      </p>
+      <div style={{ display: 'flex', gap: '1.25rem', marginBottom: '1.1rem', fontSize: '0.72rem', color: SAGE }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 10, height: 10, borderRadius: 3, border: `1.75px solid ${MOSS}`, display: 'inline-block' }} /> Fast / low-cost outcome</span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 10, height: 10, borderRadius: 3, border: `1.75px solid ${RUST}`, display: 'inline-block' }} /> Slower / manual outcome</span>
+      </div>
+
+      <div style={{ overflowX: 'auto', background: '#fbfaf6', border: '1px solid rgba(25,37,36,0.07)', borderRadius: '0.75rem', padding: '0.5rem 0' }}>
+        <svg viewBox="0 0 820 1160" style={{ width: '100%', minWidth: 640, height: 'auto', display: 'block' }}>
+          <defs>
+            <marker id="flowArrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="rgba(25,37,36,0.4)" />
+            </marker>
+          </defs>
+
+          {/* Stage 1 → 2 */}
+          <FlowArrow from={[410, 84]} to={[215, 122]} />
+          <FlowArrow from={[410, 84]} to={[605, 122]} />
+          {/* Stage 2 → 3 */}
+          <FlowArrow from={[215, 198]} to={[410, 276]} />
+          <FlowArrow from={[605, 198]} to={[410, 276]} />
+          {/* Stage 3 → 4 */}
+          <FlowArrow from={[410, 370]} to={[215, 448]} />
+          <FlowArrow from={[410, 370]} to={[605, 448]} />
+          {/* Stage 4 → 5 */}
+          <FlowArrow from={[215, 522]} to={[410, 602]} />
+          <FlowArrow from={[605, 522]} to={[410, 602]} />
+          {/* Stage 5 → 6 */}
+          <FlowArrow from={[410, 694]} to={[410, 774]} />
+          {/* Stage 6 → 7 */}
+          <FlowArrow from={[410, 854]} to={[215, 934]} />
+          <FlowArrow from={[410, 854]} to={[605, 934]} />
+          {/* Stage 7 → 8 */}
+          <FlowArrow from={[215, 1014]} to={[410, 1074]} />
+          <FlowArrow from={[605, 1014]} to={[410, 1074]} />
+
+          <FlowBox x={240} y={20} w={340} h={64} title="Contract signed" subtitle="Host adds a payment method" />
+
+          <FlowBox x={50} y={122} w={330} h={76} title="Card" subtitle={`Cash value under $${ACH_REQUIRED_ABOVE_CASH_VALUE}, or self-declared no US bank account`} />
+          <FlowBox x={440} y={122} w={330} h={76} title="Bank account (ACH)" subtitle={`Cash value $${ACH_REQUIRED_ABOVE_CASH_VALUE}+ — required, both at listing publish and contract signing`} />
+
+          <FlowBox x={200} y={276} w={420} h={94} title="Collab marked complete" subtitle="chargeContractFee fires" note={'Founders/lifetime hosts: fee waived to $0 · "Pay in person": fee only, cash handled off-platform'} />
+
+          <FlowBox x={50} y={448} w={330} h={74} title="Charged instantly" subtitle="PaymentIntent status → succeeded" />
+          <FlowBox x={440} y={448} w={330} h={74} title="Processing 3–5 business days" subtitle="Marked pending — webhook confirms succeeded / failed later" />
+
+          <FlowBox x={180} y={602} w={460} h={92} title="Payment recorded" subtitle="Host receipt sent · creator payout-forward scheduled" note={
+            <span style={{ display: 'inline-flex', gap: 8, marginTop: 2 }}>
+              <span style={{ fontWeight: 700, color: MOSS, background: 'rgba(45,122,95,0.09)', borderRadius: 999, padding: '2px 8px', fontStyle: 'normal' }}>48h hold — card</span>
+              <span style={{ fontWeight: 700, color: RUST, background: 'rgba(180,83,9,0.09)', borderRadius: 999, padding: '2px 8px', fontStyle: 'normal' }}>5-day hold — ACH</span>
+            </span>
+          } />
+
+          <FlowBox x={220} y={774} w={380} h={80} title="Hold expires" subtitle="forwardCreatorPayout fires" note="Admin can release the hold early, or pause it if a dispute comes in" />
+
+          <FlowBox x={50} y={934} w={330} h={80} accent="moss" title="Stripe Connect" subtitle="Instant transfer — creator receives funds immediately" />
+          <FlowBox x={440} y={934} w={330} h={80} accent="rust" title="Wise" subtitle="Sits pending — admin manually sends once funds settle to Collabnb's bank" />
+
+          <FlowBox x={240} y={1074} w={340} h={64} title="Creator receipt email sent" subtitle="End of flow" />
+        </svg>
+      </div>
+    </div>
+  );
+}
 
 function Th({ children, align = 'right' }) {
   return (
@@ -182,6 +287,7 @@ function AchCostModelDoc() {
 }
 
 const DOCS = {
+  'payout-flow-diagram': PayoutFlowDiagram,
   'ach-cost-model': AchCostModelDoc,
 };
 

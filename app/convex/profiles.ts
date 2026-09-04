@@ -803,6 +803,7 @@ export const updateProfile = mutation({
       tiktok_handle: v.optional(v.string()),
       youtube_handle: v.optional(v.string()),
       portfolio: v.optional(v.string()),
+      highlight_opt_in: v.optional(v.boolean()),
       city: v.optional(v.string()),
       region: v.optional(v.string()),
       country: v.optional(v.string()),

@@ -577,6 +577,15 @@ function showWizardStep(step) {
     const overlayEl = document.querySelector('#modal-overlay');
     if (overlayEl) overlayEl.classList.remove('clerk-scroll');
     const firstName = _wizardName.split(' ')[0] || 'friend';
+    const highlightBlock = currentRole === 'creator' ? `
+      <label style="display:flex;align-items:flex-start;gap:0.625rem;cursor:pointer;padding:0.75rem;background:rgba(255,255,255,0.5);border:1px solid rgba(208,213,206,0.7);border-radius:0.875rem;">
+        <input type="checkbox" id="wl-highlight" checked style="margin-top:2px;flex-shrink:0;accent-color:var(--slate,#3C5759);width:15px;height:15px;" />
+        <span style="font-size:0.82rem;color:var(--slate,#3C5759);line-height:1.45;">Feature my hero photo on Collabnb's Instagram — free exposure to our audience. Uncheck if you'd rather stay off our feed.</span>
+      </label>` : `
+      <div style="background:rgba(208,213,206,0.28);border:1px solid rgba(149,157,144,0.35);border-radius:0.875rem;padding:0.875rem 1rem;text-align:left;">
+        <p style="font-family:var(--font-body);font-size:0.8125rem;font-weight:700;color:var(--ink);margin:0 0 0.2rem;">You'll be featured on Instagram</p>
+        <p style="font-family:var(--font-body);font-size:0.78rem;color:var(--slate);line-height:1.55;margin:0;">As a host, your hero photo is automatically featured on Collabnb's Instagram — great exposure for your property, no action needed.</p>
+      </div>`;
     const fields = currentRole === 'creator' ? `
       <div class="form-group">
         <label class="form-label" for="wl-instagram">Instagram handle <span style="color:#92400E;font-weight:700;">(required)</span></label>
@@ -607,6 +616,7 @@ function showWizardStep(step) {
           <input class="form-input" type="text" id="wl-country" placeholder="United States" />
         </div>
         ${fields}
+        ${highlightBlock}
         <button type="submit" class="btn-primary" style="width:100%;cursor:pointer;">Continue →</button>
         ${currentRole !== 'creator' ? '<button type="button" id="wl-skip-details" style="background:none;border:none;color:var(--sage);font-size:0.8rem;cursor:pointer;padding:0.25rem 0;">Skip for now</button>' : ''}
         <div id="wl-details-error" style="display:none;color:#e74c3c;font-size:0.8125rem;text-align:center;"></div>
@@ -818,6 +828,9 @@ async function handleDetailsSubmit(e) {
         ? { instagram_handle: document.getElementById('wl-instagram')?.value?.trim(), tiktok_handle: document.getElementById('wl-tiktok')?.value?.trim(), portfolio: document.getElementById('wl-portfolio')?.value?.trim(), country: countryVal }
         : { city: document.getElementById('wl-city')?.value?.trim(), country: countryVal };
       const updates = Object.fromEntries(Object.entries(raw).filter(([, v]) => v));
+      // Boolean — must bypass the truthy filter above, or unchecking (false)
+      // would silently never reach the server.
+      if (currentRole === 'creator') updates.highlight_opt_in = !!document.getElementById('wl-highlight')?.checked;
       if (Object.keys(updates).length) await updateWaitlistProfile(_wizardProfileId, updates);
     }
   } catch { /* non-critical — still advance */ }

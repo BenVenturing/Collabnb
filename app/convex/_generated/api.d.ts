@@ -13,6 +13,7 @@ import type * as adminThreads from "../adminThreads.js";
 import type * as aiAssistant from "../aiAssistant.js";
 import type * as ambassadors from "../ambassadors.js";
 import type * as analytics from "../analytics.js";
+import type * as autoreply from "../autoreply.js";
 import type * as blog from "../blog.js";
 import type * as blogResearch from "../blogResearch.js";
 import type * as collaborations from "../collaborations.js";
@@ -68,6 +69,7 @@ declare const fullApi: ApiFromModules<{
   aiAssistant: typeof aiAssistant;
   ambassadors: typeof ambassadors;
   analytics: typeof analytics;
+  autoreply: typeof autoreply;
   blog: typeof blog;
   blogResearch: typeof blogResearch;
   collaborations: typeof collaborations;

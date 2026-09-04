@@ -56,6 +56,9 @@ export const signUp = mutation({
       region: rest.region ? cleanPlainText(rest.region, 100) : rest.region,
       is_founder: false,
       beta: rest.beta || false,
+      // Default true for everyone — hosts stay true permanently (no opt-out
+      // UI), creators can uncheck the step-3 signup checkbox to flip it off.
+      highlight_opt_in: true,
     });
 
     // Notify admin

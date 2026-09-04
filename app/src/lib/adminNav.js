@@ -38,10 +38,11 @@ export const GROUPS = [
     { id: 'money-resources', label: 'Resources'  },
   ] },
   { id: 'marketing', label: 'Marketing', icon: 'marketing', tabs: [
-    { id: 'discovery', label: 'Discovery' },
-    { id: 'blog',      label: 'Blog'      },
-    { id: 'broadcast', label: 'Emails'    },
-    { id: 'social',    label: 'Social'    },
+    { id: 'discovery',  label: 'Discovery'  },
+    { id: 'blog',       label: 'Blog'       },
+    { id: 'broadcast',  label: 'Emails'     },
+    { id: 'social',     label: 'Social'     },
+    { id: 'autoreply',  label: 'Auto-Reply' },
   ] },
   { id: 'suggestions', label: 'Suggestions / Beta', icon: 'suggestions', tabs: [
     { id: 'suggestions', label: 'Suggestions'        },

@@ -434,4 +434,90 @@ http.route({
   }),
 });
 
+// Comment-keyword -> auto-DM webhook (autoreply.ts) — reuses the same
+// META_ACCESS_TOKEN / IG_BUSINESS_ACCOUNT_ID as Social/Inbox. New setup:
+//   npx convex env set META_APP_SECRET <App Settings -> Basic -> App Secret>
+//   npx convex env set META_WEBHOOK_VERIFY_TOKEN <any random string>
+// Then in the Meta App dashboard: Webhooks -> Instagram -> subscribe to
+// "comments", callback URL https://<deployment>.convex.site/meta-webhook.
+
+// Verifies X-Hub-Signature-256: HMAC-SHA256 over the raw body, hex-encoded,
+// keyed with the raw (not base64) app secret — Meta's format, distinct from
+// Svix's above (hex vs base64, plain secret vs decoded).
+async function verifyMetaSignature(secret: string, signatureHeader: string, body: string): Promise<boolean> {
+  try {
+    const key = await crypto.subtle.importKey(
+      "raw",
+      new TextEncoder().encode(secret),
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["sign"]
+    );
+    const sigBytes = new Uint8Array(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(body)));
+    const expected = Array.from(sigBytes).map((b) => b.toString(16).padStart(2, "0")).join("");
+    const [scheme, provided] = signatureHeader.split("=");
+    return scheme === "sha256" && provided === expected;
+  } catch {
+    return false;
+  }
+}
+
+http.route({
+  path: "/meta-webhook",
+  method: "GET",
+  handler: httpAction(async (_ctx, request) => {
+    const url = new URL(request.url);
+    const mode = url.searchParams.get("hub.mode");
+    const token = url.searchParams.get("hub.verify_token");
+    const challenge = url.searchParams.get("hub.challenge");
+    const expected = process.env.META_WEBHOOK_VERIFY_TOKEN;
+    if (mode === "subscribe" && expected && token === expected && challenge) {
+      return new Response(challenge, { status: 200 });
+    }
+    return new Response("Forbidden", { status: 403 });
+  }),
+});
+
+http.route({
+  path: "/meta-webhook",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    const secret = process.env.META_APP_SECRET;
+    const signature = request.headers.get("x-hub-signature-256");
+    const body = await request.text();
+
+    if (secret) {
+      if (!signature || !(await verifyMetaSignature(secret, signature, body))) {
+        return new Response("Invalid signature", { status: 401 });
+      }
+    }
+
+    let payload: any;
+    try {
+      payload = JSON.parse(body);
+    } catch {
+      return new Response("Invalid JSON", { status: 400 });
+    }
+
+    for (const entry of payload?.entry || []) {
+      for (const change of entry?.changes || []) {
+        if (change?.field !== "comments") continue;
+        const value = change.value || {};
+        if (!value.id || typeof value.text !== "string") continue;
+        // Ignore replies to our own auto-sent comments / anything from the
+        // connected account itself, to avoid ever replying to ourselves.
+        if (value.from?.id && value.from.id === process.env.IG_BUSINESS_ACCOUNT_ID) continue;
+        await ctx.runAction(internal.autoreply.processComment, {
+          commentId: String(value.id),
+          postId: value.media?.id ? String(value.media.id) : undefined,
+          commentText: value.text,
+          commenterUsername: value.from?.username ? String(value.from.username) : undefined,
+        });
+      }
+    }
+
+    return new Response("OK", { status: 200 });
+  }),
+});
+
 export default http;

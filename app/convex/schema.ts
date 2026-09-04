@@ -18,6 +18,11 @@ export default defineSchema({
     tiktok_handle: v.optional(v.string()),
     youtube_handle: v.optional(v.string()),
     portfolio: v.optional(v.string()),
+    // Consent to have the hero/profile photo featured on Collabnb's own
+    // Instagram. Hosts are always true (set at signup, no UI to change it —
+    // this is informational-only for them). Creators default true (opt-out)
+    // via a signup checkbox they can uncheck.
+    highlight_opt_in: v.optional(v.boolean()),
     is_founder: v.optional(v.boolean()),
     beta: v.optional(v.boolean()),
     city: v.optional(v.string()),
@@ -832,4 +837,29 @@ export default defineSchema({
     created_at: v.number(),
     last_used_at: v.optional(v.number()),
   }).index("by_owner", ["owner_id"]),
+
+  // Comment-keyword -> auto-DM rules ("OpenReply"-style), fired from the Meta
+  // webhook in http.ts. Reuses the same META_ACCESS_TOKEN / IG_BUSINESS_ACCOUNT_ID
+  // already wired up for Social/Inbox — no separate connected-account concept.
+  autoreply_rules: defineTable({
+    post_id: v.optional(v.string()), // Instagram media id this rule targets; undefined = every post
+    keywords: v.array(v.string()),
+    match_mode: v.union(v.literal("contains"), v.literal("word")), // whole-word vs substring
+    dm_message: v.string(),
+    public_reply: v.optional(v.string()), // also posted as a public reply under the comment, if set
+    active: v.boolean(),
+    trigger_count: v.number(),
+    created_at: v.number(),
+  }),
+
+  autoreply_log: defineTable({
+    rule_id: v.optional(v.id("autoreply_rules")), // undefined if the comment matched nothing
+    comment_id: v.string(),
+    post_id: v.optional(v.string()),
+    commenter_username: v.optional(v.string()),
+    comment_text: v.string(),
+    status: v.union(v.literal("sent"), v.literal("failed"), v.literal("no_match")),
+    error: v.optional(v.string()),
+    created_at: v.number(),
+  }).index("by_comment", ["comment_id"]),
 });

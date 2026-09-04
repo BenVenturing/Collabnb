@@ -21,6 +21,7 @@ import BlogManager from './admin/BlogManager';
 import AdminOverview from './admin/AdminOverview';
 import Discovery from './admin/Discovery';
 import SocialHub from './admin/SocialHub';
+import AutoReply from './admin/AutoReply';
 import AmbassadorManager from './admin/AmbassadorManager';
 import AlgorithmLab from './admin/AlgorithmLab';
 import CreatorAlgorithmLab from './admin/CreatorAlgorithmLab';

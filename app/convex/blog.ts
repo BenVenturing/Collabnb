@@ -379,7 +379,11 @@ export async function llmChat(messages: ChatMessage[], maxTokens = 2048): Promis
     );
   }
 
-  let lastError: Error | null = null;
+  // One line per provider (not per retry) so a full-outage error names every
+  // provider that was tried and why each one specifically failed — e.g. "NVIDIA:
+  // ...410 Gone... | DeepSeek: Insufficient Balance" — instead of only the last
+  // attempt's error, which used to hide that earlier providers failed too.
+  const failures = new Map<string, string>();
   // Two passes: NVIDIA serverless intermittently drops requests (503 worker
   // limits / connection resets), so each provider gets one retry.
   for (const provider of [...providers, ...providers]) {
@@ -415,13 +419,15 @@ export async function llmChat(messages: ChatMessage[], maxTokens = 2048): Promis
       if (!content) throw new Error(`${provider.name} returned an empty response`);
       return content;
     } catch (err: any) {
+      const reason = err?.name === "AbortError" ? "timed out (90s)" : (err?.message || String(err));
       console.log(`llmChat ${provider.name}/${provider.model} failed: ${err?.name}: ${err?.message}`);
-      lastError = err;
+      failures.set(provider.name, reason);
     } finally {
       clearTimeout(timer);
     }
   }
-  throw lastError || new Error("All LLM providers failed");
+  const summary = [...failures.entries()].map(([name, reason]) => `${name}: ${reason}`).join(" | ");
+  throw new Error(`All AI providers failed — ${summary || "no providers configured"}`);
 }
 
 // ─── Deterministic lint against the style guide ───────────────────────────────

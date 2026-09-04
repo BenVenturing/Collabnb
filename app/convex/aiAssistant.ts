@@ -13,6 +13,7 @@ import { api, internal } from "./_generated/api";
 import { requireAuthedProfile, requireAuthedProfileAction, getAuthedProfile } from "./lib/auth";
 import { encryptSecret, decryptSecret } from "./lib/crypto";
 import { enforceRateLimit, RATE_LIMITS } from "./lib/rateLimit";
+import { withSurfacedErrors } from "./lib/errors";
 import { llmChat } from "./blog";
 
 const PROVIDER = v.union(v.literal("openai"), v.literal("anthropic"), v.literal("openrouter"));
@@ -24,23 +25,6 @@ const DEFAULT_MODEL: Record<Provider, string> = {
   // Matches the OpenRouter fallback model already used in blog.ts's llmChat.
   openrouter: "meta-llama/llama-3.3-70b-instruct",
 };
-
-// Convex redacts plain (non-ConvexError) thrown errors on the client down to
-// a generic "Server Error" in production, which hid the real cause of a
-// saveApiKey failure. Re-throw anything unexpected as a ConvexError so the
-// actual message reaches the client instead of being silently swallowed.
-function withSurfacedErrors<Args extends any[], Ret>(
-  fn: (...args: Args) => Promise<Ret>
-): (...args: Args) => Promise<Ret> {
-  return async (...args: Args) => {
-    try {
-      return await fn(...args);
-    } catch (err: any) {
-      if (err instanceof ConvexError) throw err;
-      throw new ConvexError(`${err?.name || "Error"}: ${err?.message || String(err)}`);
-    }
-  };
-}
 
 // ─── Connect / disconnect a personal override key ──────────────────────────
 

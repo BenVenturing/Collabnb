@@ -3,6 +3,7 @@ import { query, mutation, action } from "./_generated/server";
 import { api } from "./_generated/api";
 import { llmChat } from "./blog";
 import { requireAdmin, requireAdminAction, canAccessAdmin, getAuthedProfile } from "./lib/auth";
+import { withSurfacedErrors } from "./lib/errors";
 
 // Admin-brand inbox: threads owned by the "Collabnb" persona (username 'collabnb').
 // Each thread is a 1:1 conversation with a single user (participant_id), keyed
@@ -208,7 +209,7 @@ export const markRead = mutation({
 // so the draft must NOT include a sign-off.
 export const draftMessage = action({
   args: { recipientId: v.string(), prompt: v.optional(v.string()) },
-  handler: async (ctx, { recipientId, prompt }): Promise<string> => {
+  handler: withSurfacedErrors(async (ctx, { recipientId, prompt }): Promise<string> => {
     await requireAdminAction(ctx, api.profiles.getByClerkUserId);
     const p: any = await ctx.runQuery(api.profiles.getById, { id: recipientId });
     const firstName = (p?.full_name || "there").split(" ")[0];
@@ -236,5 +237,5 @@ export const draftMessage = action({
       out = lines.slice(1).join("\n").trim();
     }
     return out.replace(/^["'“”]+|["'“”]+$/g, "").slice(0, 1200);
-  },
+  }),
 });

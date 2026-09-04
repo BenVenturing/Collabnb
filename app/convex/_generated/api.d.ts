@@ -32,6 +32,7 @@ import type * as http from "../http.js";
 import type * as lib_auth from "../lib/auth.js";
 import type * as lib_compensationPoints from "../lib/compensationPoints.js";
 import type * as lib_crypto from "../lib/crypto.js";
+import type * as lib_errors from "../lib/errors.js";
 import type * as lib_fees from "../lib/fees.js";
 import type * as lib_geo from "../lib/geo.js";
 import type * as lib_moderation from "../lib/moderation.js";
@@ -88,6 +89,7 @@ declare const fullApi: ApiFromModules<{
   "lib/auth": typeof lib_auth;
   "lib/compensationPoints": typeof lib_compensationPoints;
   "lib/crypto": typeof lib_crypto;
+  "lib/errors": typeof lib_errors;
   "lib/fees": typeof lib_fees;
   "lib/geo": typeof lib_geo;
   "lib/moderation": typeof lib_moderation;

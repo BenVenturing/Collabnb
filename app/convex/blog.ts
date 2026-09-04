@@ -346,15 +346,18 @@ type ChatMessage = { role: string; content: string };
 // errors, the next configured provider is tried.
 export async function llmChat(messages: ChatMessage[], maxTokens = 2048): Promise<string> {
   const providers = [
-    // meta/llama-3.3-70b-instruct requests hang server-side on NVIDIA since
-    // 2026-07-03 (accepted, never answered). Nemotron is a reasoning model, so
-    // /no_think is required or the tokens all land in reasoning_content.
+    // meta/llama-3.3-70b-instruct hung server-side on NVIDIA since 2026-07-03;
+    // its replacement, nvidia/llama-3.3-nemotron-super-49b-v1.5, then hit its
+    // NVIDIA-announced end-of-life on 2026-08-26 (HTTP 410 Gone) — checked
+    // against this account's actual enabled models on 2026-09-05, most of the
+    // /v1/models catalog 404s ("not found for account"). google/gemma-4-31b-it
+    // is a plain instruct model (not a reasoning model — no /no_think dance,
+    // no reasoning_content bleed) confirmed working live at that date.
     {
       name: "NVIDIA",
       key: process.env.NVIDIA_API_KEY,
       url: "https://integrate.api.nvidia.com/v1/chat/completions",
-      model: "nvidia/llama-3.3-nemotron-super-49b-v1.5",
-      noThink: true,
+      model: "google/gemma-4-31b-it",
     },
     {
       name: "DeepSeek",

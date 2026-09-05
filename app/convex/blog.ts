@@ -419,7 +419,7 @@ export async function llmChat(messages: ChatMessage[], maxTokens = 2048): Promis
       if (!content) throw new Error(`${provider.name} returned an empty response`);
       return content;
     } catch (err: any) {
-      const reason = err?.name === "AbortError" ? "timed out (90s)" : (err?.message || String(err));
+      const reason = err?.name === "AbortError" ? "request aborted (slow/dropped connection)" : (err?.message || String(err));
       console.log(`llmChat ${provider.name}/${provider.model} failed: ${err?.name}: ${err?.message}`);
       failures.set(provider.name, reason);
     } finally {

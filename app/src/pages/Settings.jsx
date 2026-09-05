@@ -6,6 +6,7 @@ import { api } from '../../convex/_generated/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useSubscription } from '../contexts/SubscriptionContext';
 import { getPitchCount } from '../lib/pitchCount';
+import { COUNTRIES } from '../lib/countries';
 import { reopenChecklist } from '../components/OnboardingChecklist';
 import ReceiptCheckoutOverlay from '../components/ReceiptCheckoutOverlay';
 
@@ -647,16 +648,10 @@ export default function Settings() {
                       </div>
                       <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', fontSize: '0.78rem', color: 'var(--sage)' }}>
                         <span>
-                          <Trans i18nKey="settings:billing.signupsUsed" t={t} values={{ used: referralStats.signups_rewarded || 0, max: referralStats.max_uses || 12 }}>
-                            <strong style={{ color: 'var(--ink)' }}>{{ used: referralStats.signups_rewarded || 0 }}</strong> / {{ max: referralStats.max_uses || 12 }} signups used
+                          <Trans i18nKey="settings:billing.signupsUsed" t={t} values={{ used: referralStats.signups_rewarded || 0, max: referralStats.max_uses || 6 }}>
+                            <strong style={{ color: 'var(--ink)' }}>{{ used: referralStats.signups_rewarded || 0 }}</strong> / {{ max: referralStats.max_uses || 6 }} signups used
                           </Trans>
                         </span>
-                        {(referralStats.collab_bonuses_earned || 0) > 0 && (
-                          <span>
-                            <strong style={{ color: '#4A9B7F' }}>{referralStats.collab_bonuses_earned}</strong>{' '}
-                            {t('billing.collabBonus', { count: referralStats.collab_bonuses_earned })}
-                          </span>
-                        )}
                         {(profile?.free_months_balance || 0) > 0 && (
                           <span style={{ color: '#4A9B7F', fontWeight: 600 }}>{t('billing.freeMonthsBalance', { count: profile.free_months_balance })}</span>
                         )}
@@ -665,6 +660,8 @@ export default function Settings() {
                     </div>
                   </>
                 )}
+                <SectionLabel>{t('billing.sectionAmbassador')}</SectionLabel>
+                <AmbassadorLookup />
                 {profile?.role === 'creator' && (
                   <>
                     <SectionLabel>{t('billing.sectionPitches')}</SectionLabel>
@@ -917,6 +914,49 @@ function PitchCounter({ serverPitchCount }) {
         <div style={{ height: '100%', borderRadius: '999px', width: `${Math.min((count / 10) * 100, 100)}%`, background: count >= 10 ? '#ef4444' : count >= 7 ? '#D4A843' : '#4A9B7F', transition: 'width 400ms ease' }} />
       </div>
       <p style={{ fontSize: '0.72rem', color: 'var(--sage)', margin: '0.4rem 0 0' }}>{t('billing.pitchCounter.footer')}</p>
+    </div>
+  );
+}
+
+function AmbassadorLookup() {
+  const { t } = useTranslation('settings');
+  const countries = useQuery(api.ambassadors.listCountries);
+  const [query, setQuery] = useState('');
+
+  const takenMap = new Map((countries || []).map((c) => [c.country, c.ambassador_first_name]));
+  const trimmed = query.trim();
+  const match = trimmed ? COUNTRIES.find((c) => c.toLowerCase() === trimmed.toLowerCase()) : null;
+  const status = match ? (takenMap.has(match) ? 'taken' : 'available') : null;
+
+  return (
+    <div style={{ borderRadius: '1rem', padding: '1rem 1.1rem', background: 'rgba(209,235,219,0.1)', border: '1px solid var(--hairline)' }}>
+      <p style={{ fontSize: '0.84rem', fontWeight: 600, color: 'var(--ink)', margin: '0 0 0.6rem' }}>{t('billing.ambassador.prompt')}</p>
+      <input
+        list="ambassador-country-options"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder={t('billing.ambassador.placeholder')}
+        style={{ width: '100%', boxSizing: 'border-box', fontSize: '0.82rem', padding: '0.5rem 0.7rem', borderRadius: '0.6rem', border: '1px solid rgba(25,37,36,0.15)', fontFamily: 'inherit', color: 'var(--ink)' }}
+      />
+      <datalist id="ambassador-country-options">
+        {COUNTRIES.map((c) => <option key={c} value={c} />)}
+      </datalist>
+      {status && (
+        <p style={{ fontSize: '0.78rem', margin: '0.6rem 0 0', fontWeight: 600, color: status === 'available' ? '#166534' : 'var(--slate)' }}>
+          {status === 'available'
+            ? t('billing.ambassador.available', { country: match })
+            : t('billing.ambassador.taken', { country: match, name: takenMap.get(match) || '—' })}
+        </p>
+      )}
+      <p style={{ fontSize: '0.72rem', color: 'var(--sage)', margin: '0.6rem 0 0', lineHeight: 1.5 }}>
+        <Trans
+          i18nKey="settings:billing.ambassador.footer"
+          t={t}
+          components={{
+            a: <a href="https://collabnb.com/ambassadors.html" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--slate)', fontWeight: 600, textDecoration: 'underline' }} />,
+          }}
+        />
+      </p>
     </div>
   );
 }

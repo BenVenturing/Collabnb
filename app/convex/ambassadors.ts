@@ -5,69 +5,71 @@ import { requireAdmin, canAccessAdmin } from "./lib/auth";
 import { cleanPlainText } from "./lib/sanitize";
 import { enforceRateLimit, RATE_LIMITS } from "./lib/rateLimit";
 
-// ─── Ambassador program (beta) ────────────────────────────────────────────────
-// Regional partners ("Collabnb Ambassadors") earn a share of the platform fee
-// on collabs completed inside their region. Regions are seeded from
-// DEFAULT_REGIONS and overridden by ambassador_regions rows (matched by slug).
+// ─── Country Ambassador program (beta) ────────────────────────────────────────
+// One exclusive partner per country. On approval they get a unique link
+// (?amb=<slug>) tying that country + their name together. Anyone (host or
+// creator — "hotels and such") who signs up through that link is tagged with
+// ambassador_ref = slug for the life of their account; the ambassador then
+// earns share_pct of the platform fee on every completed contract they're
+// party to. The rate is set per-link by admin, not auto-tiered.
 
-const TIER1_PCT = 25;
-const TIER2_PCT = 50;
-const TIER2_THRESHOLD = 5;           // completed collabs/month to unlock tier 2
+const DEFAULT_SHARE_PCT = 20;
 const CLAWBACK_DAYS = 30;
 
-export const DEFAULT_REGIONS = [
-  {
-    slug: "southeast-asia",
-    name: "Southeast Asia",
-    countries: ["Thailand", "Vietnam", "Indonesia", "Philippines", "Malaysia", "Singapore", "Cambodia"],
-    status: "open",
-  },
-  {
-    slug: "southern-europe",
-    name: "Southern Europe",
-    countries: ["Portugal", "Spain", "Italy", "Greece"],
-    status: "open",
-  },
-  {
-    slug: "western-europe",
-    name: "Western Europe",
-    countries: ["France", "Germany", "Netherlands", "Austria", "Switzerland", "United Kingdom"],
-    status: "open",
-  },
-];
-
-async function mergedRegions(ctx: { db: any }) {
-  const rows = await ctx.db.query("ambassador_regions").collect();
-  const bySlug = new Map<string, any>(rows.map((r: any) => [r.slug, r]));
-  const merged = DEFAULT_REGIONS.map((d) => ({ ...d, ...(bySlug.get(d.slug) || {}) }));
-  for (const r of rows) {
-    if (!DEFAULT_REGIONS.some((d) => d.slug === r.slug)) merged.push(r);
-  }
-  return merged;
+function slugify(s: string): string {
+  return s.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40);
 }
 
-// Public: regions for the marketing page map + application form.
-export const listRegions = query({
+async function uniqueSlug(ctx: { db: any }, country: string, fullName: string): Promise<string> {
+  const countrySlug = slugify(country) || "country";
+  const firstName = fullName.trim().split(/\s+/)[0] || "amb";
+  const nameSlug = slugify(firstName) || "amb";
+  let slug = `${countrySlug}-${nameSlug}`;
+  let suffix = 2;
+  while (
+    await ctx.db.query("ambassador_countries").withIndex("by_slug", (q: any) => q.eq("slug", slug)).unique()
+  ) {
+    slug = `${countrySlug}-${nameSlug}-${suffix++}`;
+  }
+  return slug;
+}
+
+// Public: currently-represented countries, for the marketing page.
+export const listCountries = query({
   args: {},
   handler: async (ctx) => {
-    const regions = await mergedRegions(ctx);
-    return regions.map((r: any) => ({
-      slug: r.slug,
-      name: r.name,
-      countries: r.countries,
-      status: r.status,
-      ambassador_first_name: r.ambassador_name ? String(r.ambassador_name).split(" ")[0] : null,
-      tier1_pct: r.tier1_pct ?? TIER1_PCT,
-      tier2_pct: r.tier2_pct ?? TIER2_PCT,
-      tier2_threshold: r.tier2_threshold ?? TIER2_THRESHOLD,
-    }));
+    const rows = await ctx.db.query("ambassador_countries").collect();
+    return rows
+      .filter((r: any) => r.status === "taken")
+      .map((r: any) => ({
+        country: r.country,
+        ambassador_first_name: r.ambassador_name ? String(r.ambassador_name).split(" ")[0] : null,
+      }));
   },
 });
 
-// Public: submit an ambassador application from the marketing page.
+// Public: look up one link by its slug, for the personalized "X invited you
+// to join in Y" banner on join.html. Only ever returns display-safe fields
+// (no email) and only for a live, active link.
+export const getLinkBySlug = query({
+  args: { slug: v.string() },
+  handler: async (ctx, args) => {
+    const link = await ctx.db
+      .query("ambassador_countries")
+      .withIndex("by_slug", (q) => q.eq("slug", args.slug))
+      .unique();
+    if (!link || link.status !== "taken") return null;
+    return {
+      country: link.country,
+      ambassador_first_name: link.ambassador_name ? String(link.ambassador_name).split(" ")[0] : null,
+    };
+  },
+});
+
+// Public: submit a Country Ambassador application from the marketing page.
 export const apply = mutation({
   args: {
-    region_slug: v.string(),
+    country: v.string(),
     full_name: v.string(),
     email: v.string(),
     based_in: v.optional(v.string()),
@@ -86,23 +88,20 @@ export const apply = mutation({
     await enforceRateLimit(ctx, `ambassador:${email}`, RATE_LIMITS.AMBASSADOR_APPLY);
     if (!args.agreed_terms) throw new Error("You must agree to the Ambassador Terms to apply.");
     if (args.full_name.trim().length < 2) throw new Error("Please enter your name.");
-    if (args.content_plan.trim().length < 20) throw new Error("Tell us a bit more about how you'd promote Collabnb in your region.");
-
-    const regions = await mergedRegions(ctx);
-    const region = regions.find((r: any) => r.slug === args.region_slug);
-    if (!region) throw new Error("Unknown region.");
+    const country = args.country.trim();
+    if (country.length < 2) throw new Error("Please select a country.");
+    if (args.content_plan.trim().length < 20) throw new Error("Tell us a bit more about how you'd promote Collabnb in this country.");
 
     const existing = await ctx.db
       .query("ambassador_applications")
       .withIndex("by_email", (q) => q.eq("email", email))
       .collect();
-    if (existing.some((a) => a.region_slug === args.region_slug && a.status === "pending")) {
-      throw new Error("You already have a pending application for this region.");
+    if (existing.some((a) => a.country === country && a.status === "pending")) {
+      throw new Error("You already have a pending application for this country.");
     }
 
     await ctx.db.insert("ambassador_applications", {
-      region_slug: args.region_slug,
-      region_name: region.name,
+      country,
       full_name: cleanPlainText(args.full_name, 150),
       email,
       based_in: cleanPlainText(args.based_in, 150) || undefined,
@@ -124,8 +123,9 @@ export const apply = mutation({
 
 // ─── Earning hook ─────────────────────────────────────────────────────────────
 // Called from contracts.recordPaymentInternal after a platform fee lands.
-// Resolves the collab's country → region → assigned ambassador, then writes a
-// tiered earning row. Silent no-op when no ambassador covers the region.
+// Attribution is by signup link, not geography: the host is checked first
+// (an Ambassador's core pitch is bringing hotels on), falling back to the
+// creator. Silent no-op when neither side signed up through a live link.
 export async function recordEarningForContract(ctx: MutationCtx, contract: any, feeAmount: number) {
   if (!feeAmount || feeAmount <= 0) return;
   const contractId = String(contract._id);
@@ -136,58 +136,37 @@ export async function recordEarningForContract(ctx: MutationCtx, contract: any, 
     .first();
   if (dupe) return;
 
-  // Country candidates: segments of the contract location, plus the linked
-  // collab's listing country when one exists.
-  const candidates = new Set<string>();
-  for (const seg of String(contract.location || "").split(",")) {
-    const s = seg.trim().toLowerCase();
-    if (s) candidates.add(s);
+  let ref: string | undefined;
+  if (contract.host_id) {
+    const host = await ctx.db.get(contract.host_id as any).catch(() => null);
+    ref = (host as any)?.ambassador_ref;
   }
-  const collab = await ctx.db
-    .query("collaborations")
-    .filter((q) => q.eq(q.field("contract_id"), contractId))
-    .first();
-  if (collab?.listing_id) {
-    const listing = await ctx.db.get(collab.listing_id as any).catch(() => null);
-    const country = (listing as any)?.location_country;
-    if (country) candidates.add(String(country).trim().toLowerCase());
+  if (!ref && contract.creator_id) {
+    const creator = await ctx.db.get(contract.creator_id as any).catch(() => null);
+    ref = (creator as any)?.ambassador_ref;
   }
-  if (candidates.size === 0) return;
+  if (!ref) return;
 
-  const regions = await mergedRegions(ctx);
-  const region = regions.find(
-    (r: any) =>
-      r.status === "taken" &&
-      r.ambassador_email &&
-      r.countries.some((c: string) => candidates.has(c.toLowerCase())),
-  );
-  if (!region) return;
+  const link = await ctx.db
+    .query("ambassador_countries")
+    .withIndex("by_slug", (q) => q.eq("slug", ref!))
+    .unique();
+  if (!link || link.status !== "taken") return;
 
-  const now = new Date();
-  const monthKey = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
-  const priorThisMonth = await ctx.db
-    .query("ambassador_earnings")
-    .withIndex("by_region_month", (q) => q.eq("region_slug", region.slug).eq("month_key", monthKey))
-    .collect();
-  const countable = priorThisMonth.filter((e) => e.status !== "reversed").length;
-
-  const threshold = region.tier2_threshold ?? TIER2_THRESHOLD;
-  const sharePct = countable + 1 > threshold ? (region.tier2_pct ?? TIER2_PCT) : (region.tier1_pct ?? TIER1_PCT);
-  const amount = Math.round(feeAmount * sharePct) / 100;
+  const amount = Math.round(feeAmount * link.share_pct) / 100;
 
   await ctx.db.insert("ambassador_earnings", {
-    region_slug: region.slug,
-    region_name: region.name,
-    ambassador_name: region.ambassador_name,
-    ambassador_email: region.ambassador_email,
+    ambassador_slug: link.slug,
+    country: link.country,
+    ambassador_name: link.ambassador_name,
+    ambassador_email: link.ambassador_email,
     contract_id: contractId,
     property_name: contract.property_name || contract.location,
     fee_amount: feeAmount,
-    share_pct: sharePct,
+    share_pct: link.share_pct,
     amount,
     status: "pending",
     clawback_until: Date.now() + CLAWBACK_DAYS * 24 * 60 * 60 * 1000,
-    month_key: monthKey,
     created_at: Date.now(),
   });
 }
@@ -214,6 +193,16 @@ export const adminReviewApplication = mutation({
     const app = await ctx.db.get(args.id);
     if (!app) throw new Error("Application not found");
 
+    if (args.decision === "approved") {
+      const existingForCountry = await ctx.db
+        .query("ambassador_countries")
+        .withIndex("by_country", (q) => q.eq("country", app.country))
+        .collect();
+      if (existingForCountry.some((r) => r.status === "taken")) {
+        throw new Error(`${app.country} already has an active ambassador — deactivate them first.`);
+      }
+    }
+
     await ctx.db.patch(args.id, {
       status: args.decision,
       admin_note: args.note,
@@ -221,87 +210,73 @@ export const adminReviewApplication = mutation({
     });
 
     if (args.decision === "approved") {
-      const existing = await ctx.db
-        .query("ambassador_regions")
-        .withIndex("by_slug", (q) => q.eq("slug", app.region_slug))
-        .first();
-      const assignment = {
+      const slug = await uniqueSlug(ctx, app.country, app.full_name);
+      await ctx.db.insert("ambassador_countries", {
+        country: app.country,
+        slug,
         status: "taken",
         ambassador_name: app.full_name,
         ambassador_email: app.email,
         application_id: String(args.id),
-      };
-      if (existing) {
-        await ctx.db.patch(existing._id, assignment);
-      } else {
-        const def = DEFAULT_REGIONS.find((d) => d.slug === app.region_slug);
-        await ctx.db.insert("ambassador_regions", {
-          slug: app.region_slug,
-          name: def?.name || app.region_name,
-          countries: def?.countries || [],
-          ...assignment,
-        });
-      }
+        share_pct: DEFAULT_SHARE_PCT,
+      });
     }
 
     await ctx.db.insert("admin_audit_log", {
       action: `ambassador_application_${args.decision}`,
       target_type: "ambassador_application",
       target_id: String(args.id),
-      details: `${app.full_name} — ${app.region_name}`,
+      details: `${app.full_name} — ${app.country}`,
       created_at: Date.now(),
     });
   },
 });
 
-export const adminListRegions = query({
+export const adminListCountries = query({
   args: {},
   handler: async (ctx) => {
     if (!(await canAccessAdmin(ctx))) return [];
-    const regions = await mergedRegions(ctx);
+    const countries = await ctx.db.query("ambassador_countries").collect();
     const earnings = await ctx.db.query("ambassador_earnings").collect();
-    return regions.map((r: any) => {
-      const rows = earnings.filter((e) => e.region_slug === r.slug);
-      const sum = (f: (e: any) => boolean) => rows.filter(f).reduce((t, e) => t + e.amount, 0);
-      const now = Date.now();
-      return {
-        ...r,
-        tier1_pct: r.tier1_pct ?? TIER1_PCT,
-        tier2_pct: r.tier2_pct ?? TIER2_PCT,
-        tier2_threshold: r.tier2_threshold ?? TIER2_THRESHOLD,
-        stats: {
-          collabs: rows.filter((e) => e.status !== "reversed").length,
-          pending: sum((e) => e.status === "pending" && e.clawback_until > now),
-          payable: sum((e) => e.status === "pending" && e.clawback_until <= now),
-          paid: sum((e) => e.status === "paid"),
-        },
-      };
-    });
+    const now = Date.now();
+    return countries
+      .sort((a: any, b: any) => a.country.localeCompare(b.country))
+      .map((c: any) => {
+        const rows = earnings.filter((e: any) => e.ambassador_slug === c.slug);
+        const sum = (f: (e: any) => boolean) => rows.filter(f).reduce((t: number, e: any) => t + e.amount, 0);
+        return {
+          ...c,
+          stats: {
+            collabs: rows.filter((e: any) => e.status !== "reversed").length,
+            pending: sum((e: any) => e.status === "pending" && e.clawback_until > now),
+            payable: sum((e: any) => e.status === "pending" && e.clawback_until <= now),
+            paid: sum((e: any) => e.status === "paid"),
+          },
+        };
+      });
   },
 });
 
-export const adminUpsertRegion = mutation({
+export const adminUpsertCountry = mutation({
   args: {
     slug: v.string(),
-    name: v.string(),
-    countries: v.array(v.string()),
+    country: v.string(),
     status: v.string(),
     ambassador_name: v.optional(v.string()),
     ambassador_email: v.optional(v.string()),
-    tier1_pct: v.optional(v.number()),
-    tier2_pct: v.optional(v.number()),
-    tier2_threshold: v.optional(v.number()),
+    share_pct: v.number(),
   },
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
+    if (args.share_pct < 0 || args.share_pct > 100) throw new Error("Share % must be between 0 and 100.");
     const existing = await ctx.db
-      .query("ambassador_regions")
+      .query("ambassador_countries")
       .withIndex("by_slug", (q) => q.eq("slug", args.slug))
-      .first();
+      .unique();
     if (existing) {
       await ctx.db.patch(existing._id, args);
     } else {
-      await ctx.db.insert("ambassador_regions", args);
+      await ctx.db.insert("ambassador_countries", args);
     }
   },
 });

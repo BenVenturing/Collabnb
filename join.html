@@ -11,6 +11,17 @@
   <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&f[]=cabinet-grotesk@400,500,700,800&display=swap"
     rel="stylesheet">
   <link rel="stylesheet" href="styles/main.css" />
+  <style>
+    .ambassador-welcome-card {
+      border-radius:20px; padding:1.1rem 1.4rem; display:flex; align-items:center; gap:.9rem; flex-wrap:wrap;
+    }
+    .ambassador-welcome-badge {
+      font-size:var(--fs-xs); font-weight:700; letter-spacing:.04em; text-transform:uppercase;
+      background:var(--mint); color:var(--slate); padding:.3rem .7rem; border-radius:999px; white-space:nowrap;
+    }
+    .ambassador-welcome-text { color:var(--ink); font-size:var(--fs-sm); margin:0; }
+    .ambassador-welcome-text strong { color:var(--ink); }
+  </style>
 </head>
 
 <body>
@@ -79,6 +90,17 @@
   </nav>
 
   <main id="main">
+
+    <!-- ── AMBASSADOR WELCOME — hidden by default; shown by scripts/ambassador-welcome.js
+         when ?amb=<slug> (or a stored one) resolves to a live Country Ambassador link ── -->
+    <section id="ambassador-welcome" class="section" style="padding-top:10rem; padding-bottom:0; display:none;" aria-live="polite">
+      <div class="container" style="max-width:640px;">
+        <div class="ambassador-welcome-card glass reveal">
+          <span class="ambassador-welcome-badge">🌍 Personal invite</span>
+          <p class="ambassador-welcome-text"><strong id="amb-welcome-name">Someone</strong> invited you to join Collabnb in <strong id="amb-welcome-country">their country</strong>.</p>
+        </div>
+      </div>
+    </section>
 
     <!-- ── JOIN HERO ── -->
     <section class="join-hero section-lg" aria-labelledby="join-h1">
@@ -469,6 +491,7 @@
 
 <script type="module" src="/scripts/main.js"></script>
 <script type="module" src="/scripts/signup-panel.js"></script>
+<script type="module" src="/scripts/ambassador-welcome.js"></script>
   <script>
     // Join page: sync page role toggles with modal role
     document.querySelectorAll('#page-role-creator, #page-role-host').forEach(btn => {

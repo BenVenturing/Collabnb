@@ -4,36 +4,72 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Ambassadors — Collabnb</title>
-<meta name="description" content="Become a Collabnb Ambassador. Run creator–hotel collabs in your region and earn a share of every platform fee your region produces. Beta program — three regions open." />
+<meta name="description" content="Become a Collabnb Country Ambassador. Bring hosts and creators onto Collabnb through your own unique link and earn a share of the platform fee on everyone who joins through it. Beta program — one exclusive spot per country." />
 <link rel="icon" href="assets/collabnb-logo.png" type="image/svg+xml" />
 <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&f[]=cabinet-grotesk@400,500,700,800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles/main.css" />
 <style>
   /* ── Ambassadors page ── */
+
+  /* Hero heading: hollow outline at rest, fills left-to-right as you scroll,
+     with a dark-green leading edge that settles to solid ink once filled.
+     Two stacked layers — .fill-base (always-visible stroke) and .fill-top
+     (solid gradient, clipped to text via background-clip) — driven by the
+     --fill custom property scripts/ambassadors.js sets on scroll. */
+  .fill-heading { position:relative; }
+  .fill-heading .fill-base,
+  .fill-heading .fill-top { display:block; }
+  .fill-heading .fill-base {
+    color:transparent;
+    -webkit-text-stroke:1.5px rgba(60,87,89,0.4);
+  }
+  .fill-heading .fill-top {
+    position:absolute; inset:0; left:0; top:0; width:100%;
+    color:transparent;
+    background-image:linear-gradient(
+      90deg,
+      var(--ink) 0%,
+      var(--ink) calc(var(--fill, 0) * 100% - 3%),
+      #166534 calc(var(--fill, 0) * 100%),
+      transparent calc(var(--fill, 0) * 100% + 0.6%),
+      transparent 100%
+    );
+    background-clip:text; -webkit-background-clip:text;
+  }
+  @media (max-width:768px), (prefers-reduced-motion:reduce) {
+    .fill-heading .fill-base { color:var(--ink); -webkit-text-stroke:0; }
+    .fill-heading .fill-top { display:none; }
+  }
+
+  /* Hero CTAs: slide in from opposite sides instead of the default reveal */
+  .reveal-left { transform:translateX(-36px); }
+  .reveal-left.in { transform:translateX(0); }
+  .reveal-right { transform:translateX(36px); }
+  .reveal-right.in { transform:translateX(0); }
+
   .amb-map-wrap {
     position:relative; border-radius:24px; padding:1.25rem;
     box-shadow:var(--shadow-md), var(--glass-inner);
   }
-  #amb-map { display:block; width:100%; height:auto; cursor:pointer; border-radius:16px; }
-  #amb-tooltip {
-    position:absolute; pointer-events:none; opacity:0; transform:translate(-50%,-115%);
-    background:var(--ink); color:var(--bone); padding:.55rem .8rem; border-radius:12px;
-    font-size:var(--fs-sm); line-height:1.35; white-space:nowrap; z-index:5;
-    transition:opacity 120ms ease; box-shadow:var(--shadow-lg);
-  }
-  #amb-tooltip .tt-status { display:block; font-size:var(--fs-xs); opacity:.75; }
-  .amb-legend { display:flex; gap:1.25rem; flex-wrap:wrap; justify-content:center; margin-top:1rem; font-size:var(--fs-sm); color:var(--slate); }
-  .amb-legend span { display:inline-flex; align-items:center; gap:.4rem; }
-  .amb-legend i { width:10px; height:10px; border-radius:50%; display:inline-block; }
+  #amb-map { display:block; width:100%; height:auto; border-radius:16px; }
 
-  .region-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:1.25rem; margin-top:2rem; }
-  .region-card { border-radius:20px; padding:1.5rem; display:flex; flex-direction:column; gap:.75rem; }
-  .region-card h3 { margin:0; font-size:1.2rem; }
-  .region-card .countries { color:var(--slate); font-size:var(--fs-sm); line-height:1.5; flex:1; }
-  .status-chip { align-self:flex-start; padding:.2rem .65rem; border-radius:999px; font-size:var(--fs-xs); font-weight:700; letter-spacing:.04em; text-transform:uppercase; }
-  .status-open        { background:var(--mint);  color:var(--slate); }
-  .status-taken       { background:var(--stone); color:var(--ink);   }
-  .status-coming_soon { background:var(--bone);  color:var(--sage); border:1px solid var(--hairline-strong); }
+  .country-directory-tools { display:flex; gap:.75rem; flex-wrap:wrap; align-items:center; justify-content:center; margin-top:2rem; }
+  #country-search { max-width:280px; }
+  .country-filter-tabs { display:flex; gap:.2rem; background:var(--bone); padding:.2rem; border-radius:.6rem; border:1px solid var(--hairline-strong); }
+  .filter-tab { padding:.4rem .85rem; border-radius:.4rem; font-size:var(--fs-sm); font-weight:600; color:var(--slate); background:transparent; border:none; cursor:pointer; font-family:var(--font-body); transition:all 120ms ease; }
+  .filter-tab.active { background:var(--ink); color:#fff; }
+  .country-directory { max-width:760px; margin:1.5rem auto 0; max-height:420px; overflow-y:auto; border-radius:20px; }
+  .country-row { display:flex; align-items:center; justify-content:space-between; gap:.75rem; padding:.7rem 1.35rem; border-bottom:1px solid var(--hairline); }
+  .country-row:last-child { border-bottom:none; }
+  .country-row .country-name { font-weight:600; color:var(--ink); font-size:var(--fs-sm); }
+  .country-row-right { display:flex; align-items:center; gap:.6rem; }
+  .status-pill { font-size:var(--fs-xs); font-weight:700; padding:.25rem .65rem; border-radius:999px; letter-spacing:.02em; white-space:nowrap; }
+  .status-pill.status-available { background:var(--mint); color:var(--slate); }
+  .status-pill.status-taken { background:var(--stone); color:var(--ink); }
+  .row-apply-btn { font-size:var(--fs-xs); font-weight:700; color:var(--slate); background:none; border:1px solid var(--hairline-strong); border-radius:.5rem; padding:.3rem .65rem; cursor:pointer; font-family:var(--font-body); white-space:nowrap; }
+  .row-apply-btn:hover { background:var(--mint); border-color:transparent; }
+  .country-directory-empty { padding:2.5rem 1rem; text-align:center; color:var(--sage); font-size:var(--fs-sm); }
+  .country-directory-count { text-align:center; color:var(--sage); font-size:var(--fs-xs); margin-top:.75rem; }
 
   .tier-strip { display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:1.25rem; margin-top:2.5rem; }
   .tier-card { border-radius:20px; padding:1.75rem 1.5rem; text-align:center; }
@@ -130,30 +166,37 @@
   <section class="section-lg" aria-labelledby="amb-h1">
     <div class="container" style="text-align:center; padding-top:5rem;">
       <span class="eyebrow-tag reveal">Ambassador Program · Beta</span>
-      <h1 id="amb-h1" class="display reveal" style="font-size:var(--fs-h2); margin-top:1.25rem; transition-delay:60ms;">Your region. Your network.<br>Your cut of every collab.</h1>
-      <p class="hero-sub reveal" style="margin:1.5rem auto 0; max-width:620px; transition-delay:120ms;">Collabnb Ambassadors champion creator–hotel collabs in their corner of the world — and earn a share of the platform fee on every collab completed in their region.</p>
-      <div class="hero-ctas justify-center reveal" style="margin-top:2rem; transition-delay:180ms;">
-        <a href="#apply" class="btn-primary">Apply for a region</a>
-        <a href="#how-it-pays" class="btn-glass">See how it pays</a>
+      <h1 id="amb-h1" class="display reveal fill-heading" style="font-size:var(--fs-h2); margin-top:1.25rem; transition-delay:60ms;">
+        <span class="fill-base">Your country. Your network.<br>Your cut of every collab.</span>
+        <span class="fill-top" aria-hidden="true">Your country. Your network.<br>Your cut of every collab.</span>
+      </h1>
+      <p class="hero-sub reveal" style="margin:1.5rem auto 0; max-width:620px; transition-delay:120ms;">Collabnb Country Ambassadors bring hosts and creators onto the platform through their own unique link — and earn a share of the platform fee on every collab from someone who joined through it.</p>
+      <div class="hero-ctas justify-center" style="margin-top:2rem;">
+        <a href="#apply" class="btn-primary reveal reveal-left" style="transition-delay:100ms;">Apply for your country</a>
+        <a href="#how-it-pays" class="btn-glass reveal reveal-right" style="transition-delay:200ms;">See how it pays</a>
       </div>
     </div>
   </section>
 
-  <!-- ── REGION MAP ── -->
+  <!-- ── WORLD MAP ── -->
   <section class="section" aria-labelledby="map-heading">
     <div class="container">
-      <p class="eyebrow-tag reveal text-center" style="display:table;margin:0 auto;">The beta map</p>
-      <h2 id="map-heading" class="display reveal text-center" style="font-size:var(--fs-h2); margin:1rem 0 2.5rem; transition-delay:60ms;">Three regions are open.</h2>
+      <p class="eyebrow-tag reveal text-center" style="display:table;margin:0 auto;">Beta</p>
+      <h2 id="map-heading" class="display reveal text-center" style="font-size:var(--fs-h2); margin:1rem 0 2.5rem; transition-delay:60ms;">One exclusive spot per country.</h2>
       <div class="amb-map-wrap glass reveal">
-        <canvas id="amb-map" width="1200" height="620" aria-label="World map highlighting open ambassador regions. Use the region cards below to apply."></canvas>
-        <div id="amb-tooltip" role="status"></div>
+        <canvas id="amb-map" width="1200" height="620" aria-label="World map"></canvas>
       </div>
-      <div class="amb-legend reveal">
-        <span><i style="background:#3C5759;"></i>Open — accepting applications</span>
-        <span><i style="background:#959D90;"></i>Represented</span>
-        <span><i style="background:#D0D5CE;"></i>Coming soon</span>
+
+      <div class="country-directory-tools reveal">
+        <input type="text" class="form-input" id="country-search" placeholder="Search countries…" autocomplete="off" />
+        <div class="country-filter-tabs" role="tablist" aria-label="Filter countries by status">
+          <button type="button" class="filter-tab active" data-filter="all">All</button>
+          <button type="button" class="filter-tab" data-filter="available">Available</button>
+          <button type="button" class="filter-tab" data-filter="taken">Represented</button>
+        </div>
       </div>
-      <div class="region-grid stagger" id="region-cards"><!-- populated by scripts/ambassadors.js --></div>
+      <div class="country-directory glass reveal" id="country-directory"><!-- populated by scripts/ambassadors.js --></div>
+      <div class="country-directory-count" id="country-directory-count"></div>
     </div>
   </section>
 
@@ -161,16 +204,12 @@
   <section class="section" id="how-it-pays" aria-labelledby="pays-heading">
     <div class="container">
       <p class="eyebrow-tag reveal">How it pays</p>
-      <h2 id="pays-heading" class="display reveal" style="font-size:var(--fs-h2); margin:1rem 0 1.5rem; transition-delay:60ms;">Earn on every completed collab in your region.</h2>
-      <p class="hero-sub reveal" style="max-width:680px; transition-delay:120ms;">When a collab completes anywhere in your region, Collabnb collects its platform fee from the host — and you automatically earn a percentage of that fee. No selling, no invoicing. If it happened in your territory, you're in on it.</p>
+      <h2 id="pays-heading" class="display reveal" style="font-size:var(--fs-h2); margin:1rem 0 1.5rem; transition-delay:60ms;">Earn on everyone who joins through your link.</h2>
+      <p class="hero-sub reveal" style="max-width:680px; transition-delay:120ms;">When you're accepted, you get a unique link tied to your country and your name. Every host or creator who signs up through it is yours, indefinitely — when a collab of theirs completes and Collabnb collects its platform fee, you automatically earn your share. No selling, no invoicing.</p>
       <div class="tier-strip stagger">
         <div class="tier-card glass reveal">
-          <div class="big">25%</div>
-          <div class="lbl">of the platform fee on every completed collab in your region</div>
-        </div>
-        <div class="tier-card glass reveal">
-          <div class="big">50%</div>
-          <div class="lbl">once your region passes 5 completed collabs in a calendar month</div>
+          <div class="lbl" style="font-size:1.1rem; font-weight:700; color:var(--ink); margin-bottom:.35rem;">Your rate</div>
+          <div class="lbl">agreed individually and set on your link when you're approved</div>
         </div>
         <div class="tier-card glass reveal">
           <div class="big">$50</div>
@@ -193,7 +232,7 @@
         <div class="audience-card glass reveal">
           <h3 style="margin-top:0;">Grow the supply</h3>
           <ul>
-            <li>Bring boutique hotels, villas, and unique stays in your region onto Collabnb</li>
+            <li>Bring boutique hotels, villas, and unique stays in your country onto Collabnb through your link</li>
             <li>Recruit local creators who fit the platform</li>
             <li>Be the trusted local face — you know the market, the language, the vibe</li>
           </ul>
@@ -201,8 +240,8 @@
         <div class="audience-card glass reveal">
           <h3 style="margin-top:0;">Push the content</h3>
           <ul>
-            <li>Promote Collabnb collabs happening in your region on your channels</li>
-            <li>Share launches, wins, and creator stories from your territory</li>
+            <li>Promote Collabnb and your link on your channels</li>
+            <li>Share launches, wins, and creator stories from your country</li>
             <li>Always with clear #ad / partnership disclosure — it's in the terms</li>
           </ul>
         </div>
@@ -214,14 +253,12 @@
   <section class="section" id="apply" aria-labelledby="apply-heading">
     <div class="container">
       <p class="eyebrow-tag reveal text-center" style="display:table;margin:0 auto;">Apply</p>
-      <h2 id="apply-heading" class="display reveal text-center" style="font-size:var(--fs-h2); margin:1rem 0 2.5rem; transition-delay:60ms;">Claim your region.</h2>
+      <h2 id="apply-heading" class="display reveal text-center" style="font-size:var(--fs-h2); margin:1rem 0 2.5rem; transition-delay:60ms;">Claim your country.</h2>
       <form class="amb-form glass reveal" id="amb-form" novalidate>
         <div class="form-group">
-          <label class="form-label" for="f-region">Region</label>
-          <select class="form-input" id="f-region" required>
-            <option value="southeast-asia">Southeast Asia</option>
-            <option value="southern-europe">Southern Europe</option>
-            <option value="western-europe">Western Europe</option>
+          <label class="form-label" for="f-country">Country</label>
+          <select class="form-input" id="f-country" required>
+            <option value="" disabled selected>Select a country…</option>
           </select>
         </div>
         <div class="form-row">
@@ -266,11 +303,11 @@
           <input class="form-input" id="f-yt" type="text" placeholder="channel URL or handle" />
         </div>
         <div class="form-group">
-          <label class="form-label" for="f-plan">How would you push Collabnb in this region?</label>
+          <label class="form-label" for="f-plan">How would you push Collabnb in this country?</label>
           <textarea class="form-input" id="f-plan" placeholder="Content formats, channels, cadence, local communities you'd tap into…" required></textarea>
         </div>
         <div class="form-group">
-          <label class="form-label" for="f-connections">What connections do you have in this region?</label>
+          <label class="form-label" for="f-connections">What connections do you have in this country?</label>
           <textarea class="form-input" id="f-connections" placeholder="Hotels, villa owners, creator communities, tourism boards, agencies…" required></textarea>
         </div>
         <div class="form-group">
@@ -295,10 +332,10 @@
       <p class="eyebrow-tag reveal">The fine print</p>
       <h2 id="terms-heading" class="display reveal" style="font-size:var(--fs-h2); margin:1rem 0 2rem; transition-delay:60ms;">Ambassador Terms.</h2>
       <div class="amb-terms glass reveal">
-        <p class="terms-meta">Collabnb Ambassador Program Terms &amp; Conditions · Beta · Last updated July 7, 2026</p>
+        <p class="terms-meta">Collabnb Ambassador Program Terms &amp; Conditions · Beta · Last updated September 4, 2026</p>
 
         <h3>1. The Program</h3>
-        <p>The Collabnb Ambassador Program (the "Program") appoints individuals ("Ambassadors") to promote Collabnb and grow its community of hosts and creators within a defined geographic region (a "Region"). The Program is currently in <strong>beta</strong>: its structure, commission rates, Regions, and these terms may change as described in Section 12.</p>
+        <p>The Collabnb Ambassador Program (the "Program") appoints individuals ("Ambassadors") to promote Collabnb and grow its community of hosts and creators in a defined country (a "Country"). Each accepted Ambassador is given a unique referral link tied to their Country and name; anyone who signs up through it is attributed to that Ambassador for as long as the Ambassador remains active. The Program is currently in <strong>beta</strong>: its structure, commission rates, and these terms may change as described in Section 12.</p>
 
         <h3>2. Eligibility</h3>
         <ul>
@@ -307,11 +344,11 @@
           <li>Acceptance into the Program is at Collabnb's sole discretion. Submitting an application does not create any obligation on Collabnb to accept it.</li>
         </ul>
 
-        <h3>3. Appointment &amp; Territory</h3>
+        <h3>3. Appointment &amp; Country</h3>
         <ul>
-          <li>During the beta, each Region has at most one active Ambassador.</li>
-          <li>Your appointment is <strong>non-exclusive</strong>: Collabnb may itself market, operate, and sign hosts or creators in your Region at any time.</li>
-          <li>Collabnb may redraw Region boundaries, split, merge, or retire Regions on 30 days' notice. Earnings already accrued are unaffected.</li>
+          <li>During the beta, each Country has at most one active Ambassador — your appointment is exclusive among Ambassadors for that Country.</li>
+          <li>It is not exclusive against Collabnb itself: Collabnb may market, operate, and sign hosts or creators in your Country directly at any time. Signups that don't come through your link don't earn you commission.</li>
+          <li>Collabnb may deactivate or reassign a Country's Ambassador appointment on 30 days' notice. Commissions already accrued from signups already attributed to your link are unaffected, even after deactivation.</li>
         </ul>
 
         <h3>4. Independent Contractor</h3>
@@ -319,9 +356,9 @@
 
         <h3>5. Commission</h3>
         <ul>
-          <li>When a collaboration is <strong>completed</strong> on Collabnb at a property located in your Region and Collabnb successfully collects its platform fee for that collaboration, you earn a commission calculated on the platform fee actually collected (not on the collaboration's total value).</li>
-          <li><strong>Tier 1:</strong> 25% of the platform fee, per completed collaboration.</li>
-          <li><strong>Tier 2:</strong> 50% of the platform fee for each completed collaboration beyond the fifth in your Region within a single calendar month. The counter resets monthly.</li>
+          <li>When a collaboration is <strong>completed</strong> on Collabnb by a host or creator who signed up through your unique Ambassador link, and Collabnb successfully collects its platform fee for that collaboration, you earn a commission calculated on the platform fee actually collected (not on the collaboration's total value).</li>
+          <li>Your commission rate is agreed individually when you're accepted and set on your link — it's stated in your acceptance email and Collabnb may adjust it prospectively with notice under Section 12.</li>
+          <li>Attribution runs with the link, not a calendar window: anyone who ever signed up through your link keeps earning you commission on their completed collaborations for as long as your Ambassador status stays active.</li>
           <li>Commissions accrue only on fees actually received by Collabnb. If a fee is refunded, reversed, disputed, or charged back, the related commission is cancelled or deducted from your balance.</li>
           <li>All amounts are calculated and paid in USD.</li>
         </ul>
@@ -336,10 +373,10 @@
 
         <h3>7. Your Responsibilities</h3>
         <ul>
-          <li>Actively promote Collabnb in your Region in a professional manner consistent with the brand.</li>
-          <li><strong>Disclosure:</strong> clearly disclose your material connection to Collabnb in all promotional content (e.g. #ad, #partner) as required by the FTC and any equivalent local advertising rules in your Region.</li>
-          <li>No spam, unsolicited bulk messaging, misleading claims, income guarantees, cookie-stuffing, bidding on Collabnb trademarks in paid search, or self-dealing (e.g. fabricating collabs to generate fees).</li>
-          <li>Comply with all laws applicable to your activities, including data-protection and consumer-protection laws in your Region.</li>
+          <li>Actively promote Collabnb and your link in your Country in a professional manner consistent with the brand.</li>
+          <li><strong>Disclosure:</strong> clearly disclose your material connection to Collabnb in all promotional content (e.g. #ad, #partner) as required by the FTC and any equivalent local advertising rules that apply to you.</li>
+          <li>No spam, unsolicited bulk messaging, misleading claims, income guarantees, cookie-stuffing, bidding on Collabnb trademarks in paid search, or self-dealing (e.g. fabricating collabs or signups to generate fees).</li>
+          <li>Comply with all laws applicable to your activities, including data-protection and consumer-protection laws in your Country.</li>
         </ul>
 
         <h3>8. Brand Use</h3>
@@ -359,7 +396,7 @@
         </ul>
 
         <h3>12. Changes to the Program</h3>
-        <p>This is a beta. Collabnb may modify commission rates, tiers, thresholds, Regions, or these terms with 30 days' notice by email. Changes apply prospectively — they never reduce commissions already accrued. Continued participation after the notice period constitutes acceptance.</p>
+        <p>This is a beta. Collabnb may modify commission rates, Countries, or these terms with 30 days' notice by email. Changes apply prospectively — they never reduce commissions already accrued. Continued participation after the notice period constitutes acceptance.</p>
 
         <h3>13. Liability</h3>
         <p>The Program is provided "as is." To the maximum extent permitted by law, Collabnb's total liability under the Program is capped at the commissions paid to you in the six months preceding the claim. Collabnb is not liable for indirect, incidental, or consequential damages, or lost profits.</p>

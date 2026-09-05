@@ -134,6 +134,9 @@ function ClerkAuthInner({ children }) {
         let result = await convex.query(api.profiles.getByEmail, { email });
         const isNewUser = !result;
         if (!result) {
+          const ambassadorRef = (() => {
+            try { return localStorage.getItem('collabnb_ambassador_ref') || undefined; } catch { return undefined; }
+          })();
           try {
             result = await getOrCreateMutation({
               email,
@@ -141,7 +144,11 @@ function ClerkAuthInner({ children }) {
               avatar_url: clerkUser.imageUrl || undefined,
               is_admin: isAdminUser,
               role: waitlistRole,
+              ambassador_ref: ambassadorRef,
             });
+            if (ambassadorRef) {
+              try { localStorage.removeItem('collabnb_ambassador_ref'); } catch { /* ignore */ }
+            }
           } catch {
             // getOrCreate not yet deployed — profile remains null
           }

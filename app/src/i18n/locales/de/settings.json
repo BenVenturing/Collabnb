@@ -120,11 +120,17 @@
     "sectionReferralCode": "Empfehlungscode",
     "copy": "Kopieren",
     "signupsUsed": "<strong>{{used}}</strong> / {{max}} Anmeldungen genutzt",
-    "collabBonus_one": "Kollaborationsbonus erhalten",
-    "collabBonus_other": "Kollaborationsboni erhalten",
     "freeMonthsBalance_one": "+{{count}} Gratismonat Guthaben",
     "freeMonthsBalance_other": "+{{count}} Gratismonate Guthaben",
-    "referralDesc": "Teile deinen Code. Du und neue Mitglieder erhaltet bei der Anmeldung 1 Gratismonat, plus 1 weiteren, sobald sie ihre erste Kollaboration abschließen.",
+    "referralDesc": "Teile deinen Code. Du erhältst 1 Gratismonat für jeden Freund, der beitritt — er erhält 45 statt der üblichen 30 Tage, um Collabnb auszuprobieren.",
+    "sectionAmbassador": "Länder-Botschafter",
+    "ambassador": {
+      "prompt": "Prüfe, ob ein Land bereits einen Collabnb-Botschafter hat.",
+      "placeholder": "Land eingeben…",
+      "available": "{{country}} ist verfügbar — noch kein Botschafter.",
+      "taken": "{{country}} wird von {{name}} vertreten.",
+      "footer": "Möchtest du Länder-Botschafter werden? <a>Mehr erfahren und bewerben</a>."
+    },
     "sectionPitches": "Pitches",
     "sectionBillingHistory": "Abrechnungsverlauf",
     "subscription": {

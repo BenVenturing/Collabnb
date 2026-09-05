@@ -2042,7 +2042,11 @@ h3 { font-weight: 700; }
 /* Mobile: no reveal animation at all — show content immediately */
 @media (max-width: 768px) {
   .reveal,
-  .reveal.in {
+  .reveal.in,
+  .reveal-left,
+  .reveal-left.in,
+  .reveal-right,
+  .reveal-right.in {
     opacity: 1 !important;
     filter: none !important;
     transform: none !important;

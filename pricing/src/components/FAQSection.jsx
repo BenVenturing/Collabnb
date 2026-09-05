@@ -32,7 +32,7 @@ const FAQS = [
   },
   {
     q: 'How do referral codes and free months work?',
-    a: 'Every member has a personal referral code. When a friend signs up with your code, you both get 1 free month immediately. After that friend completes their first collaboration, you both get a second free month — so each successful referral earns you and your friend 2 free months each. A free month is a month of full access at no charge, applied automatically before you’re billed.',
+    a: 'Every member has a personal referral code, good for 6 signups. When a friend signs up with your code, you get 1 free month immediately — a month of full access at no charge, applied automatically before you’re billed. Your friend gets 45 days to try Collabnb instead of the usual 30.',
   },
 ];
 

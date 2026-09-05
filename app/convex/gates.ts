@@ -16,6 +16,9 @@ export const CREATOR_TIERS = ["UGC Beginner", "UGC Pro", "Micro Influencer", "In
 
 export const ACCESS_STATES = ["pending", "trial", "active", "limited"] as const;
 export const TRIAL_DURATION_DAYS = 30;
+// A referred signup (profile.referred_by set) gets this longer trial instead
+// of the standard one — see referrals.applyReferralCode.
+export const REFERRED_TRIAL_DURATION_DAYS = 45;
 export const FOUNDER_CAP_PER_ROLE = 100;
 
 // ─── Helpers ────────────────────────────────────────────────────────────────────
@@ -120,6 +123,7 @@ export const approveCreator = mutation({
     }
 
     const now = Date.now();
+    const trialDays = profile.referred_by ? REFERRED_TRIAL_DURATION_DAYS : TRIAL_DURATION_DAYS;
     const patch: Record<string, any> = {
       is_verified: true,
       creator_verified: true,
@@ -130,7 +134,7 @@ export const approveCreator = mutation({
       rejection_reason: undefined,
       access_state: isFounder ? "active" : "trial",
       trial_starts_at: isFounder ? undefined : now,
-      trial_ends_at: isFounder ? undefined : now + TRIAL_DURATION_DAYS * 24 * 60 * 60 * 1000,
+      trial_ends_at: isFounder ? undefined : now + trialDays * 24 * 60 * 60 * 1000,
       admin_verification_note: args.adminNote,
     };
     // Approving a role switch is what actually flips the role
@@ -139,10 +143,6 @@ export const approveCreator = mutation({
       patch.pending_role = undefined;
       patch.role_switch_requested_at = undefined;
       patch.role_switch_email = undefined;
-    }
-
-    if (profile.referred_by && !profile.first_collab_completed) {
-      patch.referral_bonus_pending = true;
     }
 
     await ctx.db.patch(args.profileId, patch);

@@ -4,6 +4,7 @@ import { internal, api } from "./_generated/api";
 import { requireAuthedProfile, requireOwnerOrAdmin, requireAdmin, isServerAdminEmail, canAccessAdmin, canAccessOwner } from "./lib/auth";
 import { cleanPlainText, cleanOptionalUrl } from "./lib/sanitize";
 import { enforceRateLimit, RATE_LIMITS } from "./lib/rateLimit";
+import { REFERRAL_CODE_MAX_USES } from "./referrals";
 
 export const countAll = query({
   args: {},
@@ -20,6 +21,10 @@ export const getOrCreate = mutation({
     avatar_url: v.optional(v.string()),
     is_admin: v.optional(v.boolean()),
     role: v.optional(v.string()),
+    // Country Ambassador link slug captured from the signup URL (?amb=) —
+    // only ever applied to a brand-new profile, never backfilled onto one
+    // that already exists.
+    ambassador_ref: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     // The caller's identity anchor is Clerk's stable per-user `subject`
@@ -91,6 +96,17 @@ export const getOrCreate = mutation({
       if (!collision) { refCode = candidate; break; }
     }
 
+    // Validate the ambassador ref against a real, active link — a stale or
+    // tampered slug is silently ignored rather than stored.
+    let ambassadorRef: string | undefined;
+    if (args.ambassador_ref) {
+      const link = await ctx.db
+        .query("ambassador_countries")
+        .withIndex("by_slug", (q) => q.eq("slug", args.ambassador_ref!))
+        .unique();
+      if (link && link.status === "taken") ambassadorRef = link.slug;
+    }
+
     const profileId = await ctx.db.insert("profiles", {
       email,
       full_name: cleanPlainText(args.full_name, 100) || email.split('@')[0],
@@ -103,6 +119,7 @@ export const getOrCreate = mutation({
       beta: isAdmin ? true : undefined,
       avatar_url: args.avatar_url ? cleanOptionalUrl(args.avatar_url, "Avatar URL") : undefined,
       referral_code: refCode || undefined,
+      ambassador_ref: ambassadorRef,
       clerk_registered: true,
       clerk_user_id: clerkUserId,
     });
@@ -112,7 +129,7 @@ export const getOrCreate = mutation({
         owner_id: String(profileId),
         code: refCode,
         use_count: 0,
-        max_uses: 12,
+        max_uses: REFERRAL_CODE_MAX_USES,
       });
     }
 
@@ -370,10 +387,6 @@ export const approveProfile = mutation({
       is_rejected: undefined,
       rejection_reason: undefined,
     };
-    // If referred, stamp the pending collab bonus so their profile shows the indicator
-    if (profile?.referred_by && !profile.first_collab_completed) {
-      patch.referral_bonus_pending = true;
-    }
     await ctx.db.patch(args.profileId as any, patch);
     if (profile?.email) {
       await ctx.scheduler.runAfter(0, internal.emails.sendAccessGrantedEmail, {

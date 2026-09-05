@@ -69,17 +69,27 @@ export async function updateWaitlistProfile(profileId, updates) {
 }
 
 // Ambassador program (beta)
-export async function listAmbassadorRegions() {
+export async function listAmbassadorCountries() {
   try {
-    return await client.query('ambassadors:listRegions');
+    return await client.query('ambassadors:listCountries');
   } catch (err) {
-    console.warn('listAmbassadorRegions failed:', err.message);
+    console.warn('listAmbassadorCountries failed:', err.message);
     return null;
   }
 }
 
 export async function applyAmbassador(data) {
   return await client.mutation('ambassadors:apply', data);
+}
+
+// Personalized "X invited you to join in Y" banner on join.html.
+export async function getAmbassadorLink(slug) {
+  try {
+    return await client.query('ambassadors:getLinkBySlug', { slug });
+  } catch (err) {
+    console.warn('getAmbassadorLink failed:', err.message);
+    return null;
+  }
 }
 
 // Fetch a single profile by email

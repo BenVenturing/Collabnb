@@ -12,10 +12,11 @@ const STATUS_META = {
   payable:  { label: 'Payable',  bg: '#FEF3C7', color: '#92400E' },
   paid:     { label: 'Paid',     bg: '#D1FAE5', color: '#166534' },
   reversed: { label: 'Reversed', bg: '#FEE2E2', color: '#991B1B' },
-  open:        { label: 'Open',        bg: '#D1EBDB', color: SLATE },
-  taken:       { label: 'Taken',       bg: '#FEF3C7', color: '#92400E' },
-  coming_soon: { label: 'Coming soon', bg: '#F7F5F2', color: SAGE },
+  taken:    { label: 'Active',   bg: '#D1EBDB', color: SLATE },
+  inactive: { label: 'Inactive', bg: '#F7F5F2', color: SAGE },
 };
+
+const AMBASSADOR_LINK_BASE = 'https://collabnb.com/join.html?amb=';
 
 function Badge({ status }) {
   const m = STATUS_META[status] || STATUS_META.pending;
@@ -79,7 +80,7 @@ function Applications() {
               >
                 <span style={{ fontSize: '0.85rem', fontWeight: 600, color: INK }}>{a.full_name}</span>
                 <span style={{ fontSize: '0.78rem', color: SLATE, overflow: 'hidden', textOverflow: 'ellipsis' }}>{a.email}</span>
-                <span style={{ fontSize: '0.8rem', color: SLATE }}>{a.region_name}</span>
+                <span style={{ fontSize: '0.8rem', color: SLATE }}>{a.country}</span>
                 <span style={{ fontSize: '0.75rem', color: SAGE }}>{formatDate(a.created_at)}</span>
                 <Badge status={a.status} />
                 <div style={{ display: 'flex', gap: '0.3rem' }} onClick={e => e.stopPropagation()}>
@@ -113,45 +114,73 @@ function Applications() {
   );
 }
 
-// ─── Regions ──────────────────────────────────────────────────────────────────
-function Regions() {
-  const regions = useQuery(api.ambassadors.adminListRegions);
-  const upsert = useMutation(api.ambassadors.adminUpsertRegion);
+// ─── Countries ────────────────────────────────────────────────────────────────
+function Countries() {
+  const countries = useQuery(api.ambassadors.adminListCountries);
+  const upsert = useMutation(api.ambassadors.adminUpsertCountry);
+  const [pctDraft, setPctDraft] = useState({});
 
-  if (regions === undefined) return <div style={{ color: SAGE, fontSize: '0.85rem', padding: '3rem 0', textAlign: 'center' }}>Loading…</div>;
+  if (countries === undefined) return <div style={{ color: SAGE, fontSize: '0.85rem', padding: '3rem 0', textAlign: 'center' }}>Loading…</div>;
+  if (countries.length === 0) return (
+    <div style={{ color: SAGE, fontSize: '0.85rem', padding: '3rem 0', textAlign: 'center' }}>
+      No ambassadors yet — approve an application to create the first country link.
+    </div>
+  );
+
+  const save = (c, patch) => upsert({
+    slug: c.slug, country: c.country, status: c.status,
+    ambassador_name: c.ambassador_name, ambassador_email: c.ambassador_email,
+    share_pct: c.share_pct, ...patch,
+  });
 
   return (
     <div style={{ display: 'grid', gap: '1rem' }}>
-      {regions.map((r) => (
-        <div key={r.slug} style={{ background: '#fff', border: '1px solid rgba(25,37,36,0.07)', borderRadius: '0.875rem', padding: '1.1rem 1.25rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-            <span style={{ fontSize: '0.95rem', fontWeight: 700, color: INK }}>{r.name}</span>
-            <Badge status={r.status} />
-            {r.ambassador_name && <span style={{ fontSize: '0.78rem', color: SLATE }}>{r.ambassador_name} · {r.ambassador_email}</span>}
-            <select
-              value={r.status}
-              onChange={e => upsert({
-                slug: r.slug, name: r.name, countries: r.countries, status: e.target.value,
-                ambassador_name: r.ambassador_name, ambassador_email: r.ambassador_email,
-                tier1_pct: r.tier1_pct, tier2_pct: r.tier2_pct, tier2_threshold: r.tier2_threshold,
-              })}
-              style={{ marginLeft: 'auto', fontSize: '0.78rem', padding: '0.3rem 0.5rem', borderRadius: '0.4rem', border: '1px solid rgba(25,37,36,0.12)', color: SLATE, fontFamily: 'inherit', background: '#F7F5F2' }}
-            >
-              <option value="open">Open</option>
-              <option value="taken">Taken</option>
-              <option value="coming_soon">Coming soon</option>
-            </select>
+      {countries.map((c) => {
+        const link = AMBASSADOR_LINK_BASE + c.slug;
+        const draft = pctDraft[c.slug];
+        return (
+          <div key={c.slug} style={{ background: '#fff', border: '1px solid rgba(25,37,36,0.07)', borderRadius: '0.875rem', padding: '1.1rem 1.25rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '0.95rem', fontWeight: 700, color: INK }}>{c.country}</span>
+              <Badge status={c.status} />
+              {c.ambassador_name && <span style={{ fontSize: '0.78rem', color: SLATE }}>{c.ambassador_name} · {c.ambassador_email}</span>}
+              <select
+                value={c.status}
+                onChange={e => save(c, { status: e.target.value })}
+                style={{ marginLeft: 'auto', fontSize: '0.78rem', padding: '0.3rem 0.5rem', borderRadius: '0.4rem', border: '1px solid rgba(25,37,36,0.12)', color: SLATE, fontFamily: 'inherit', background: '#F7F5F2' }}
+              >
+                <option value="taken">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem' }}>
+              <code style={{ fontSize: '0.75rem', color: SAGE, background: '#F7F5F2', padding: '0.2rem 0.5rem', borderRadius: '0.4rem' }}>{link}</code>
+              <ActionBtn onClick={() => navigator.clipboard?.writeText(link)}>Copy link</ActionBtn>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', marginTop: '0.75rem', flexWrap: 'wrap', fontSize: '0.78rem', color: SLATE }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                Rate:
+                <input
+                  type="number" min={0} max={100} step={1}
+                  value={draft ?? c.share_pct}
+                  onChange={e => setPctDraft(d => ({ ...d, [c.slug]: e.target.value }))}
+                  onBlur={() => {
+                    const n = Number(draft);
+                    if (draft !== undefined && Number.isFinite(n) && n !== c.share_pct) save(c, { share_pct: n });
+                    setPctDraft(d => { const next = { ...d }; delete next[c.slug]; return next; });
+                  }}
+                  style={{ width: '3.5rem', fontSize: '0.78rem', padding: '0.2rem 0.4rem', borderRadius: '0.35rem', border: '1px solid rgba(25,37,36,0.12)', fontFamily: 'inherit' }}
+                />
+                <strong>%</strong> of platform fee
+              </span>
+              <span>Collabs: <strong>{c.stats.collabs}</strong></span>
+              <span>Pending: <strong>{money(c.stats.pending)}</strong></span>
+              <span style={{ color: '#92400E' }}>Payable: <strong>{money(c.stats.payable)}</strong></span>
+              <span style={{ color: '#166534' }}>Paid: <strong>{money(c.stats.paid)}</strong></span>
+            </div>
           </div>
-          <div style={{ fontSize: '0.75rem', color: SAGE, marginTop: '0.4rem' }}>{r.countries.join(' · ')}</div>
-          <div style={{ display: 'flex', gap: '1.5rem', marginTop: '0.75rem', flexWrap: 'wrap', fontSize: '0.78rem', color: SLATE }}>
-            <span>Tiers: <strong>{r.tier1_pct}% → {r.tier2_pct}%</strong> after {r.tier2_threshold}/mo</span>
-            <span>Collabs: <strong>{r.stats.collabs}</strong></span>
-            <span>Pending: <strong>{money(r.stats.pending)}</strong></span>
-            <span style={{ color: '#92400E' }}>Payable: <strong>{money(r.stats.payable)}</strong></span>
-            <span style={{ color: '#166534' }}>Paid: <strong>{money(r.stats.paid)}</strong></span>
-          </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
@@ -204,14 +233,14 @@ function Earnings() {
 
       {earnings.length === 0 && (
         <div style={{ color: SAGE, fontSize: '0.85rem', padding: '3rem 0', textAlign: 'center' }}>
-          No earnings yet. Rows appear automatically when a collab completes in a region with an active ambassador.
+          No earnings yet. Rows appear automatically when a collab completes for a host or creator who signed up through an ambassador's link.
         </div>
       )}
 
       {earnings.length > 0 && (
         <div style={{ background: '#fff', border: '1px solid rgba(25,37,36,0.07)', borderRadius: '0.875rem', overflow: 'hidden' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '30px 90px 1fr 1fr 70px 50px 80px 100px 90px', gap: '0.4rem', padding: '0.6rem 1rem', background: '#F7F5F2', borderBottom: '1px solid rgba(25,37,36,0.07)' }}>
-            {['', 'Date', 'Region / Ambassador', 'Collab', 'Fee', '%', 'Amount', 'Status', ''].map((h, i) => (
+            {['', 'Date', 'Country / Ambassador', 'Collab', 'Fee', '%', 'Amount', 'Status', ''].map((h, i) => (
               <span key={i} style={{ fontSize: '0.7rem', fontWeight: 600, color: SAGE, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{h}</span>
             ))}
           </div>
@@ -226,7 +255,7 @@ function Earnings() {
               />
               <span style={{ fontSize: '0.75rem', color: SAGE }}>{formatDate(e.created_at)}</span>
               <span style={{ fontSize: '0.8rem', color: INK }}>
-                {e.region_name}
+                {e.country}
                 {e.ambassador_name && <span style={{ color: SAGE, fontSize: '0.72rem' }}> · {e.ambassador_name}</span>}
               </span>
               <span style={{ fontSize: '0.78rem', color: SLATE, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.property_name || e.contract_id.slice(0, 10)}</span>
@@ -250,7 +279,7 @@ function Earnings() {
 // ─── Panel ────────────────────────────────────────────────────────────────────
 const VIEWS = [
   { id: 'applications', label: 'Applications' },
-  { id: 'regions', label: 'Regions' },
+  { id: 'countries', label: 'Countries' },
   { id: 'earnings', label: 'Earnings' },
 ];
 
@@ -265,7 +294,7 @@ export default function AmbassadorManager() {
         Ambassadors <span style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: SLATE, background: '#D1EBDB', borderRadius: 99, padding: '0.15rem 0.5rem', verticalAlign: 'middle' }}>Beta</span>
       </h1>
       <p style={{ fontSize: '0.85rem', color: SAGE, marginTop: '0.3rem', marginBottom: '1.25rem' }}>
-        Regional partners earning a share of the platform fee on collabs completed in their region. Payouts are manual for the beta — mark earnings paid once you've sent the transfer.
+        One exclusive partner per country, earning a share of the platform fee on every completed collab from a host or creator who signed up through their unique link. Payouts are manual for the beta — mark earnings paid once you've sent the transfer.
       </p>
 
       <div style={{ display: 'flex', gap: '0.25rem', marginBottom: '1.25rem', background: '#F7F5F2', padding: '0.2rem', borderRadius: '0.5rem', width: 'fit-content', border: '1px solid rgba(25,37,36,0.06)' }}>
@@ -292,7 +321,7 @@ export default function AmbassadorManager() {
       </div>
 
       {view === 'applications' && <Applications />}
-      {view === 'regions' && <Regions />}
+      {view === 'countries' && <Countries />}
       {view === 'earnings' && <Earnings />}
     </div>
   );

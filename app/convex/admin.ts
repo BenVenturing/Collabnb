@@ -471,7 +471,6 @@ export const getReferralAnalytics = query({
       totalCodes: refCodes.length,
       totalReferrals: refUses.length,
       totalFreeMonthsGiven: refUses.filter((ru) => ru.signup_bonus_awarded).length,
-      collabBonusesGiven: refUses.filter((ru) => ru.collab_bonus_awarded).length,
       uniqueReferrers: Object.keys(usageByOwner).length,
       topReferrers: Object.entries(usageByOwner)
         .sort(([, a], [, b]) => b - a)
@@ -650,9 +649,6 @@ export const bulkApproveProfiles = mutation({
       const profile = await ctx.db.get(profileId);
       if (!profile) continue;
       const patch: Record<string, any> = { is_verified: true, is_founder: args.isFounder, is_rejected: undefined, rejection_reason: undefined };
-      if (profile.referred_by && !profile.first_collab_completed) {
-        patch.referral_bonus_pending = true;
-      }
       await ctx.db.patch(profileId, patch);
       if (profile.email) {
         await ctx.scheduler.runAfter(0, internal.emails.sendAccessGrantedEmail, {

@@ -726,7 +726,12 @@ async function handleStep1Submit(e) {
   if (errorEl) errorEl.style.display = 'none';
   if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
   try {
-    const result = await waitlistSignUp({ full_name: name, email, role: currentRole });
+    let ambassadorRef;
+    try { ambassadorRef = localStorage.getItem('collabnb_ambassador_ref') || undefined; } catch { /* ignore */ }
+    const result = await waitlistSignUp({ full_name: name, email, role: currentRole, ambassador_ref: ambassadorRef });
+    if (ambassadorRef) {
+      try { localStorage.removeItem('collabnb_ambassador_ref'); } catch { /* ignore */ }
+    }
     _wizardProfileId = result?.profileId || null;
     _wizardEmail = email;
     _wizardName = name;
@@ -1325,6 +1330,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const urlParams = new URLSearchParams(window.location.search);
   if (urlParams.get('join') === 'true') {
     openModal();
+  }
+
+  // Country Ambassador link (?amb=<slug>) — captured on any marketing page
+  // since the link can be shared to any page, not just join.html. Read at
+  // signup by AuthContext.jsx and cleared once applied to a new profile.
+  const ambRef = urlParams.get('amb');
+  if (ambRef) {
+    try { localStorage.setItem('collabnb_ambassador_ref', ambRef); } catch { /* ignore */ }
   }
 
   // Google/OAuth returns to <page>#/sso-callback — the SignUp component must be

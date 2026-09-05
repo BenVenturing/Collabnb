@@ -336,7 +336,6 @@ export default function PlatformAnalytics() {
                 <Stat label="Successful Referrals" value={referralStats.totalReferrals} accent="#166534" />
                 <Stat label="Unique Referrers"     value={referralStats.uniqueReferrers} />
                 <Stat label="Free Months Given"    value={referralStats.totalFreeMonthsGiven} accent="#0369A1" />
-                <Stat label="Collab Bonuses"      value={referralStats.collabBonusesGiven} />
               </StatGrid>
               {referralStats.topReferrers.length > 0 && (
                 <div style={{ ...CARD, marginTop: '0.75rem' }}>

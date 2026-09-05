@@ -120,11 +120,17 @@
     "sectionReferralCode": "Referral code",
     "copy": "Copy",
     "signupsUsed": "<strong>{{used}}</strong> / {{max}} signups used",
-    "collabBonus_one": "collab bonus earned",
-    "collabBonus_other": "collab bonuses earned",
     "freeMonthsBalance_one": "+{{count}} free month balance",
     "freeMonthsBalance_other": "+{{count}} free months balance",
-    "referralDesc": "Share your code. Both you and new members get 1 free month on signup, +1 more when they complete their first collab.",
+    "referralDesc": "Share your code. You get 1 free month for every friend who joins — they get 45 days to try Collabnb instead of the usual 30.",
+    "sectionAmbassador": "Country Ambassadors",
+    "ambassador": {
+      "prompt": "Check whether a country already has a Collabnb Ambassador.",
+      "placeholder": "Type a country…",
+      "available": "{{country}} is available — no Ambassador yet.",
+      "taken": "{{country}} is represented by {{name}}.",
+      "footer": "Want to become a Country Ambassador? <a>Learn more and apply</a>."
+    },
     "sectionPitches": "Pitches",
     "sectionBillingHistory": "Billing history",
     "subscription": {

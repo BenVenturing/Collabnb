@@ -22,9 +22,14 @@ export const signUp = mutation({
     property_type: v.optional(v.string()),
     website_url: v.optional(v.string()),
     beta: v.optional(v.boolean()),
+    // Country Ambassador link slug captured from the signup URL (?amb=) —
+    // this is the primary pre-Clerk signup path (see waitlistSignUp in
+    // scripts/main.js), so this is where most hosts/creators actually get
+    // tagged, not profiles.getOrCreate.
+    ambassador_ref: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const { role, email, ...rest } = args;
+    const { role, email, ambassador_ref, ...rest } = args;
 
     // Check if already signed up
     const existing = await ctx.db
@@ -37,6 +42,17 @@ export const signUp = mutation({
     }
 
     await enforceRateLimit(ctx, `signup:${email.toLowerCase()}`, RATE_LIMITS.SIGNUP);
+
+    // Validate the ambassador ref against a real, active link — a stale or
+    // tampered slug is silently ignored rather than stored.
+    let ambassadorRef: string | undefined;
+    if (ambassador_ref) {
+      const link = await ctx.db
+        .query("ambassador_countries")
+        .withIndex("by_slug", (q) => q.eq("slug", ambassador_ref))
+        .unique();
+      if (link && link.status === "taken") ambassadorRef = link.slug;
+    }
 
     // Create a waitlist profile
     const rawUsername = (args.instagram_handle || args.tiktok_handle || email.split("@")[0] || "user")
@@ -56,6 +72,7 @@ export const signUp = mutation({
       region: rest.region ? cleanPlainText(rest.region, 100) : rest.region,
       is_founder: false,
       beta: rest.beta || false,
+      ambassador_ref: ambassadorRef,
       // Default true for everyone — hosts stay true permanently (no opt-out
       // UI), creators can uncheck the step-3 signup checkbox to flip it off.
       highlight_opt_in: true,

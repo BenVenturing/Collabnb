@@ -120,11 +120,17 @@
     "sectionReferralCode": "Code de parrainage",
     "copy": "Copier",
     "signupsUsed": "<strong>{{used}}</strong> / {{max}} inscriptions utilisées",
-    "collabBonus_one": "bonus de collaboration gagné",
-    "collabBonus_other": "bonus de collaboration gagnés",
     "freeMonthsBalance_one": "+{{count}} mois gratuit de solde",
     "freeMonthsBalance_other": "+{{count}} mois gratuits de solde",
-    "referralDesc": "Partagez votre code. Vous et les nouveaux membres recevez 1 mois gratuit à l'inscription, et 1 mois de plus lorsqu'ils terminent leur première collaboration.",
+    "referralDesc": "Partagez votre code. Vous recevez 1 mois gratuit pour chaque ami qui rejoint — il reçoit 45 jours pour essayer Collabnb au lieu des 30 jours habituels.",
+    "sectionAmbassador": "Ambassadeurs de pays",
+    "ambassador": {
+      "prompt": "Vérifiez si un pays a déjà un Ambassadeur Collabnb.",
+      "placeholder": "Tapez un pays…",
+      "available": "{{country}} est disponible — pas encore d'Ambassadeur.",
+      "taken": "{{country}} est représenté par {{name}}.",
+      "footer": "Vous voulez devenir Ambassadeur de pays ? <a>En savoir plus et postuler</a>."
+    },
     "sectionPitches": "Propositions",
     "sectionBillingHistory": "Historique de facturation",
     "subscription": {

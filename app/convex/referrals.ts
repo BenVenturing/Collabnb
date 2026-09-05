@@ -1,6 +1,10 @@
 import { v } from "convex/values";
-import { query, mutation, internalMutation } from "./_generated/server";
+import { query, mutation } from "./_generated/server";
 import { requireOwnerOrAdmin, canAccessOwner } from "./lib/auth";
+
+// Referred signups get a longer trial instead of a free month — see
+// gates.ts TRIAL_DURATION_DAYS / REFERRED_TRIAL_DURATION_DAYS.
+export const REFERRAL_CODE_MAX_USES = 6;
 
 function makeCode(username: string): string {
   const prefix = username.replace(/[^a-z0-9]/gi, "").toUpperCase().slice(0, 4) || "USER";
@@ -28,7 +32,6 @@ export const getMyCode = query({
       use_count: codeDoc.use_count,
       max_uses: codeDoc.max_uses,
       signups_rewarded: uses.filter((u) => u.signup_bonus_awarded).length,
-      collab_bonuses_earned: uses.filter((u) => u.collab_bonus_awarded).length,
     };
   },
 });
@@ -71,7 +74,7 @@ export const ensureCode = mutation({
       owner_id: args.profileId,
       code,
       use_count: 0,
-      max_uses: 12,
+      max_uses: REFERRAL_CODE_MAX_USES,
     });
     const profileExists = await ctx.db.get(args.profileId as any);
     if (profileExists) {
@@ -109,19 +112,20 @@ export const applyReferralCode = mutation({
       used_by_id: args.newUserId,
       referrer_id: codeDoc.owner_id,
       signup_bonus_awarded: true,
-      collab_bonus_awarded: false,
     });
 
     // Increment use_count
     await ctx.db.patch(codeDoc._id, { use_count: codeDoc.use_count + 1 });
 
-    // Mark new user as referred (guard against deleted profile)
+    // Mark new user as referred — gates.ts reads this to grant the longer
+    // (45-day) trial instead of the standard 30 days.
     const newUserCheck = await ctx.db.get(args.newUserId as any);
     if (newUserCheck) {
       await ctx.db.patch(args.newUserId as any, { referred_by: codeDoc.owner_id });
     }
 
-    // +1 free month to referrer
+    // +1 free month to the referrer only — the new user's reward is the
+    // extended trial instead of a free month, applied at approval time.
     const referrer = await ctx.db.get(codeDoc.owner_id as any);
     if (referrer) {
       await ctx.db.patch(referrer._id, {
@@ -129,44 +133,6 @@ export const applyReferralCode = mutation({
       });
     }
 
-    // +1 free month to new user
-    const newUser = await ctx.db.get(args.newUserId as any);
-    if (newUser) {
-      await ctx.db.patch(newUser._id, {
-        free_months_balance: (newUser.free_months_balance || 0) + 1,
-      });
-    }
-
     return { success: true };
-  },
-});
-
-export const awardFirstCollabBonus = internalMutation({
-  args: { creatorId: v.string() },
-  handler: async (ctx, args) => {
-    const uses = await ctx.db
-      .query("referral_uses")
-      .withIndex("by_user", (q) => q.eq("used_by_id", args.creatorId))
-      .collect();
-    const use = uses.find((u) => !u.collab_bonus_awarded);
-    if (!use) return;
-
-    // +1 free month to creator
-    const creator = await ctx.db.get(args.creatorId as any);
-    if (creator) {
-      await ctx.db.patch(creator._id, {
-        free_months_balance: (creator.free_months_balance || 0) + 1,
-      });
-    }
-
-    // +1 free month to referrer
-    const referrer = await ctx.db.get(use.referrer_id as any);
-    if (referrer) {
-      await ctx.db.patch(referrer._id, {
-        free_months_balance: (referrer.free_months_balance || 0) + 1,
-      });
-    }
-
-    await ctx.db.patch(use._id, { collab_bonus_awarded: true });
   },
 });

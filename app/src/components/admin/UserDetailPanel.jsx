@@ -415,7 +415,6 @@ function TabContent({ tab, data, guarantee }) {
             <Stat label="Referred By" value={data.referrerOwnerId ? `User ID: ${data.referrerOwnerId.slice(0, 12)}…` : '—'} />
             <Stat label="Total Referrals" value={data.totalReferrals ?? 0} />
             <Stat label="Free Months Balance" value={data.freeMonthsBalance ?? 0} />
-            <Stat label="Collab Bonus Pending" value={p.referral_bonus_pending ? 'Pending' : '—'} />
           </Section>
 
           {data.referralCodes?.length > 0 && (

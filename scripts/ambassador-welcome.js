@@ -33,6 +33,13 @@ import { getAmbassadorLink } from './convex.js';
   const hero = document.querySelector('.join-hero');
   if (hero) hero.style.paddingTop = '2.5rem';
 
+  // Ambassador attribution wins over a friend referral code (enforced
+  // server-side in referrals.applyReferralCode too) — hide the field so
+  // nobody types a code that silently won't do anything.
+  const refSection = document.getElementById('referral-code-section');
+  if (refSection) refSection.style.display = 'none';
+  try { localStorage.removeItem('collabnb_referral_code'); } catch { /* ignore */ }
+
   const card = section.querySelector('.reveal');
   if (card) requestAnimationFrame(() => requestAnimationFrame(() => card.classList.add('in')));
 })();

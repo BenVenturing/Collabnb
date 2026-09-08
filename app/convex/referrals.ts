@@ -88,6 +88,14 @@ export const applyReferralCode = mutation({
   args: { code: v.string(), newUserId: v.string() },
   handler: async (ctx, args) => {
     await requireOwnerOrAdmin(ctx, args.newUserId);
+
+    // Country Ambassador attribution wins — a link-tagged signup doesn't
+    // also stack a friend referral bonus.
+    const newUserProfile = await ctx.db.get(args.newUserId as any);
+    if ((newUserProfile as any)?.ambassador_ref) {
+      return { success: false, reason: "This account joined through a Country Ambassador link — referral codes don't apply." };
+    }
+
     const upperCode = args.code.trim().toUpperCase();
 
     const codeDoc = await ctx.db

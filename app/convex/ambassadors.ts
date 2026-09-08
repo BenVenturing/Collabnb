@@ -123,52 +123,67 @@ export const apply = mutation({
 
 // ─── Earning hook ─────────────────────────────────────────────────────────────
 // Called from contracts.recordPaymentInternal after a platform fee lands.
-// Attribution is by signup link, not geography: the host is checked first
-// (an Ambassador's core pitch is bringing hotels on), falling back to the
-// creator. Silent no-op when neither side signed up through a live link.
+// Attribution is by signup link, not geography. If host and creator signed up
+// through the SAME ambassador's link, that ambassador earns their full rate
+// once. If they came through two DIFFERENT ambassadors' links, the two rates
+// are blended into one commission and split evenly between them — neither
+// earns their full individual rate twice on one contract.
+async function resolveAmbassadorLink(ctx: MutationCtx, profileId: any) {
+  if (!profileId) return null;
+  const profile = await ctx.db.get(profileId).catch(() => null);
+  const ref = (profile as any)?.ambassador_ref;
+  if (!ref) return null;
+  const link = await ctx.db
+    .query("ambassador_countries")
+    .withIndex("by_slug", (q) => q.eq("slug", ref))
+    .unique();
+  return link && link.status === "taken" ? link : null;
+}
+
 export async function recordEarningForContract(ctx: MutationCtx, contract: any, feeAmount: number) {
   if (!feeAmount || feeAmount <= 0) return;
   const contractId = String(contract._id);
 
-  const dupe = await ctx.db
+  const existing = await ctx.db
     .query("ambassador_earnings")
     .withIndex("by_contract", (q) => q.eq("contract_id", contractId))
-    .first();
-  if (dupe) return;
+    .collect();
+  const alreadyRecorded = (slug: string) => existing.some((e) => e.ambassador_slug === slug);
 
-  let ref: string | undefined;
-  if (contract.host_id) {
-    const host = await ctx.db.get(contract.host_id as any).catch(() => null);
-    ref = (host as any)?.ambassador_ref;
+  const insertEarning = async (link: any, sharePct: number) => {
+    if (alreadyRecorded(link.slug)) return;
+    const amount = Math.round(feeAmount * sharePct) / 100;
+    await ctx.db.insert("ambassador_earnings", {
+      ambassador_slug: link.slug,
+      country: link.country,
+      ambassador_name: link.ambassador_name,
+      ambassador_email: link.ambassador_email,
+      contract_id: contractId,
+      property_name: contract.property_name || contract.location,
+      fee_amount: feeAmount,
+      share_pct: sharePct,
+      amount,
+      status: "pending",
+      clawback_until: Date.now() + CLAWBACK_DAYS * 24 * 60 * 60 * 1000,
+      created_at: Date.now(),
+    });
+  };
+
+  const hostLink = await resolveAmbassadorLink(ctx, contract.host_id);
+  const creatorLink = await resolveAmbassadorLink(ctx, contract.creator_id);
+
+  if (hostLink && creatorLink && hostLink.slug !== creatorLink.slug) {
+    // Two different ambassadors — one blended commission, split evenly.
+    const blendedPct = (hostLink.share_pct + creatorLink.share_pct) / 2;
+    const perAmbassadorPct = blendedPct / 2;
+    await insertEarning(hostLink, perAmbassadorPct);
+    await insertEarning(creatorLink, perAmbassadorPct);
+    return;
   }
-  if (!ref && contract.creator_id) {
-    const creator = await ctx.db.get(contract.creator_id as any).catch(() => null);
-    ref = (creator as any)?.ambassador_ref;
-  }
-  if (!ref) return;
 
-  const link = await ctx.db
-    .query("ambassador_countries")
-    .withIndex("by_slug", (q) => q.eq("slug", ref!))
-    .unique();
-  if (!link || link.status !== "taken") return;
-
-  const amount = Math.round(feeAmount * link.share_pct) / 100;
-
-  await ctx.db.insert("ambassador_earnings", {
-    ambassador_slug: link.slug,
-    country: link.country,
-    ambassador_name: link.ambassador_name,
-    ambassador_email: link.ambassador_email,
-    contract_id: contractId,
-    property_name: contract.property_name || contract.location,
-    fee_amount: feeAmount,
-    share_pct: link.share_pct,
-    amount,
-    status: "pending",
-    clawback_until: Date.now() + CLAWBACK_DAYS * 24 * 60 * 60 * 1000,
-    created_at: Date.now(),
-  });
+  const link = hostLink || creatorLink;
+  if (!link) return;
+  await insertEarning(link, link.share_pct);
 }
 
 // ─── Admin ────────────────────────────────────────────────────────────────────

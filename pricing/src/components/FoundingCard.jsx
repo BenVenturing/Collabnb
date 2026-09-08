@@ -53,6 +53,13 @@ export default function FoundingCard({
   const hostsFull    = hostSpotsRemaining <= 0;
   const activeTier   = getActiveTier(lifetimeCount ?? 0);
 
+  let foundingSubtitle = 'First 100 creators & 100 hosts — forever';
+  if (creatorsFull && !hostsFull) {
+    foundingSubtitle = 'Founding creator spots are full — now free for the first 100 hosts, forever';
+  } else if (hostsFull && !creatorsFull) {
+    foundingSubtitle = 'Founding host spots are full — now free for the first 100 creators, forever';
+  }
+
   // ── Lifetime pricing ladder — shown after founding cap is hit ────────
   if (isFull) {
     return (
@@ -157,7 +164,7 @@ export default function FoundingCard({
           FREE
         </div>
         <p className="text-sm text-slate mt-2">
-          First 100 creators &amp; 100 hosts — forever
+          {foundingSubtitle}
         </p>
       </div>
 

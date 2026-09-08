@@ -11,7 +11,6 @@ import TermsNote       from './TermsNote';
 
 const CREATOR_CAP  = 100;
 const HOST_CAP     = 100;
-const LAUNCH_DATE  = new Date('2026-07-15T00:00:00+07:00');
 const CONVEX_URL   = import.meta.env.VITE_CONVEX_URL;
 const APP_URL = import.meta.env.VITE_APP_URL || '/';
 // Below this, the marketplace isn't populated enough to look credible —
@@ -25,8 +24,6 @@ export default function PricingPage() {
   const [creatorCount,        setCreatorCount]        = useState(0);
   const [hostCount,           setHostCount]           = useState(0);
   const [marketplaceStats,    setMarketplaceStats]    = useState(null);
-
-  const isUnlocked = new Date() >= LAUNCH_DATE;
 
   useEffect(() => {
     if (!CONVEX_URL) return;
@@ -61,7 +58,12 @@ export default function PricingPage() {
 
   const creatorSpotsRemaining = Math.max(0, CREATOR_CAP - founderCreatorCount);
   const hostSpotsRemaining    = Math.max(0, HOST_CAP - founderHostCount);
-  const isFoundingFull = creatorSpotsRemaining <= 0 || hostSpotsRemaining <= 0;
+  const creatorSpotsFull = creatorSpotsRemaining <= 0;
+  const hostSpotsFull    = hostSpotsRemaining <= 0;
+  // Free card only disappears once neither role has spots left.
+  const isFoundingFull = creatorSpotsFull && hostSpotsFull;
+  // Paid plans unlock as soon as either role's founding spots run out.
+  const isUnlocked = creatorSpotsFull || hostSpotsFull;
   const spotsRemaining = Math.min(creatorSpotsRemaining, hostSpotsRemaining);
 
   function handleClaim() { window.location.href = '../join.html'; }

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
@@ -10,7 +10,7 @@ import { useAppBar } from '../contexts/AppBarContext';
 import { useCollabs } from '../contexts/CollabContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useSubscription } from '../contexts/SubscriptionContext';
-import { useAccessGate, PendingApprovalScreen, LimitedAccessScreen, TrialBanner } from '../components/AccessGate';
+import { useAccessGate, LimitedAccessScreen, TrialBanner } from '../components/AccessGate';
 import { WhereSearchContent, WhatSearchContent, WhenSearchContent, useAnimatedPlaceholder } from '../components/SearchDropdowns';
 import SkeletonCard from '../components/SkeletonCard';
 import SampleWatermark from '../components/SampleWatermark';
@@ -779,7 +779,7 @@ export default function Explore() {
   // ── Access gate: show pending/limited screens for creators ─────────────
   if (!access.loading) {
     if (!access.canAccess && access.role === 'creator' && !access.isAdmin) {
-      if (access.state === 'pending') return <PendingApprovalScreen />;
+      if (access.state === 'pending') return <Navigate to="/welcome" replace />;
       // 'limited' (trial expired) intentionally falls through: the server returns
       // a redacted payload, so these creators still see the map + blurred cards
       // (drives FOMO) with the upgrade banner below — instead of a hard block.

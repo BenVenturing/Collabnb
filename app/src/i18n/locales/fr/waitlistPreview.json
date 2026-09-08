@@ -12,14 +12,15 @@
   "sneakPeek": "Un aperçu de ce qui vous attend",
   "statusCard": {
     "reviewInProgress": "EXAMEN EN COURS",
-    "bodyPrefix": "Une fois approuvé, vous débloquerez un accès complet pour parcourir, postuler à des collaborations et envoyer des messages aux hôtes. Les annonces complètes seront en ligne le ",
-    "liveDate": "15 juillet"
+    "body": "Une fois approuvé, vous débloquerez un accès complet pour parcourir, postuler à des collaborations et envoyer des messages aux hôtes."
   },
   "globe": {
     "heading": "Notre communauté mondiale",
     "subtitle": "Créateurs et hôtes connectés partout dans le monde",
     "creators": "Créateurs",
     "hosts": "Hôtes",
-    "countries": "Pays"
+    "countries": "Pays",
+    "mapTooltip": "Curieux de voir ce qui est disponible ? Jetez un coup d'œil →",
+    "mapBack": "Retour"
   }
 }

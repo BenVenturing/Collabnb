@@ -12,14 +12,15 @@
   "sneakPeek": "Ein Vorgeschmack auf das, was auf dich wartet",
   "statusCard": {
     "reviewInProgress": "PRÜFUNG LÄUFT",
-    "bodyPrefix": "Sobald du genehmigt bist, erhältst du vollen Zugang, um zu stöbern, dich für Kollaborationen zu bewerben und Gastgebern zu schreiben. Alle Angebote gehen am ",
-    "liveDate": "15. Juli"
+    "body": "Sobald du genehmigt bist, erhältst du vollen Zugang, um zu stöbern, dich für Kollaborationen zu bewerben und Gastgebern zu schreiben."
   },
   "globe": {
     "heading": "Unsere globale Community",
     "subtitle": "Creator und Gastgeber vernetzen sich weltweit",
     "creators": "Creator",
     "hosts": "Gastgeber",
-    "countries": "Länder"
+    "countries": "Länder",
+    "mapTooltip": "Neugierig, was es gerade gibt? Wirf einen Blick darauf →",
+    "mapBack": "Zurück"
   }
 }

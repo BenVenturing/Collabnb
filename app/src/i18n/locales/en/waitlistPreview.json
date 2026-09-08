@@ -12,14 +12,15 @@
   "sneakPeek": "A sneak peek of what's waiting for you",
   "statusCard": {
     "reviewInProgress": "REVIEW IN PROGRESS",
-    "bodyPrefix": "Once approved, you'll unlock full access to browse, apply to collabs, and message hosts. Full listings go live ",
-    "liveDate": "July 15th"
+    "body": "Once approved, you'll unlock full access to browse, apply to collabs, and message hosts."
   },
   "globe": {
     "heading": "Our Global Community",
     "subtitle": "Creators and hosts connecting across the world",
     "creators": "Creators",
     "hosts": "Hosts",
-    "countries": "Countries"
+    "countries": "Countries",
+    "mapTooltip": "Curious what's live? Take a peek →",
+    "mapBack": "Back"
   }
 }

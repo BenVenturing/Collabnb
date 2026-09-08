@@ -1,4 +1,4 @@
-import { useEffect, useRef, useMemo } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import { useQuery } from 'convex/react';
 import { useTranslation } from 'react-i18next';
 import collabnbLogo from '../assets/collabnb-logo.png';
@@ -6,6 +6,106 @@ import { api } from '../../convex/_generated/api';
 import { useAuth } from '../contexts/AuthContext';
 import { IMG_FALLBACK } from '../lib/mockData';
 import GlobeCanvas, { countGlobeStats } from '../components/GlobeCanvas';
+import CollabMap from '../components/map/CollabMap';
+
+// Same price-label formatting Explore.jsx uses for its map pins.
+function pinLabel(l) {
+  const cash = l.cash_amount;
+  if (typeof cash === 'number' && cash > 0) {
+    return cash >= 1000 ? `$${(cash / 1000).toFixed(cash % 1000 ? 1 : 0)}k` : `$${cash}`;
+  }
+  const m = String(l.compensation || '').match(/\$([\d,]+)/);
+  if (m) return `$${m[1]}`;
+  return l.collab_type || '·';
+}
+
+// ─── Full-screen redacted listings map ───────────────────────────────────────
+// Pins show price + general location only — same treatment a trial-expired
+// creator sees on Explore, just reached from the globe instead of a locked page.
+function FullScreenListingsMap({ points, onClose }) {
+  const { t } = useTranslation('waitlistPreview');
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 300, background: '#fff' }}>
+      <CollabMap points={points} fitKey="waitlist-map" fitPoints={points} />
+      <button
+        onClick={onClose}
+        aria-label={t('globe.mapBack')}
+        style={{
+          position: 'absolute', top: 'max(1.25rem, env(safe-area-inset-top))', left: '1.25rem', zIndex: 5,
+          width: 44, height: 44, borderRadius: '50%', border: '1px solid rgba(255,255,255,0.6)',
+          background: 'rgba(255,255,255,0.7)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
+          boxShadow: '0 4px 18px rgba(25,37,36,0.25)', cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}
+      >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#192524" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round">
+          <line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" />
+        </svg>
+      </button>
+    </div>
+  );
+}
+
+// ─── Globe → hover tagline → zoom → full-screen map ──────────────────────────
+function GlobeExploreEntry({ profiles, points }) {
+  const { t } = useTranslation('waitlistPreview');
+  const [hovering, setHovering] = useState(false);
+  const [zooming, setZooming] = useState(false);
+  const [mapOpen, setMapOpen] = useState(false);
+  const downPos = useRef(null);
+  const canExplore = points.length > 0;
+
+  const handleDown = (e) => {
+    const p = e.touches?.[0] || e;
+    downPos.current = { x: p.clientX, y: p.clientY };
+  };
+  const handleUp = (e) => {
+    if (!downPos.current || !canExplore) return;
+    const p = e.changedTouches?.[0] || e;
+    const moved = Math.hypot(p.clientX - downPos.current.x, p.clientY - downPos.current.y);
+    downPos.current = null;
+    if (moved < 6) {
+      setZooming(true);
+      setTimeout(() => setMapOpen(true), 420);
+    }
+  };
+
+  return (
+    <>
+      <div
+        onMouseEnter={() => setHovering(true)}
+        onMouseLeave={() => setHovering(false)}
+        onMouseDown={handleDown}
+        onMouseUp={handleUp}
+        onTouchStart={handleDown}
+        onTouchEnd={handleUp}
+        style={{
+          position: 'relative', cursor: canExplore ? 'pointer' : 'default',
+          transform: zooming ? 'scale(2.6)' : 'scale(1)',
+          opacity: zooming ? 0 : 1,
+          transition: 'transform 420ms cubic-bezier(0.16,1,0.3,1), opacity 420ms ease',
+        }}
+      >
+        {!mapOpen && <GlobeCanvas profiles={profiles} />}
+        {hovering && canExplore && !zooming && (
+          <div style={{
+            position: 'absolute', top: '8%', left: '50%', transform: 'translateX(-50%)',
+            background: 'rgba(25,37,36,0.85)', color: '#fff',
+            padding: '0.5rem 1rem', borderRadius: 999,
+            fontSize: '0.82rem', fontWeight: 600, whiteSpace: 'nowrap',
+            backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
+            pointerEvents: 'none',
+          }}>
+            {t('globe.mapTooltip')}
+          </div>
+        )}
+      </div>
+      {mapOpen && (
+        <FullScreenListingsMap points={points} onClose={() => { setMapOpen(false); setZooming(false); }} />
+      )}
+    </>
+  );
+}
 
 // ─── Canvas confetti ──────────────────────────────────────────────────────────
 function Confetti() {
@@ -175,10 +275,14 @@ export default function WaitlistPreview() {
         : l.compensation || '',
   }));
 
-  // Reactively watch for approval — reloads the page the moment admin approves
+  // Reactively watch for approval — reloads the page the moment admin approves.
+  // Skipped on localhost: auth there is mocked to Ben's real email, which is
+  // already verified in the live DB and would reload the page in an infinite loop.
+  const isLocalDev = typeof window !== 'undefined'
+    && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
   const liveProfile = useQuery(
     api.profiles.getByEmail,
-    profile?.email ? { email: profile.email } : 'skip'
+    (profile?.email && !isLocalDev) ? { email: profile.email } : 'skip'
   );
   useEffect(() => {
     if (liveProfile?.is_verified) window.location.reload();
@@ -186,6 +290,13 @@ export default function WaitlistPreview() {
 
   const allProfiles = useQuery(api.profiles.getAll);
   const globeStats  = useMemo(() => countGlobeStats(allProfiles), [allProfiles]);
+
+  // Backend redacts this for unverified (pending) viewers automatically — title,
+  // host, and images are stripped; only coarse coords + price come through.
+  const liveListings = useQuery(api.listings.getAll, profile?._id ? { viewerId: String(profile._id) } : {});
+  const mapPoints = (liveListings || [])
+    .filter((l) => typeof l.lat === 'number' && typeof l.lng === 'number')
+    .map((l) => ({ id: l._id, lat: l.lat, lng: l.lng, label: pinLabel(l), redacted: true }));
 
   return (
     <>
@@ -313,7 +424,7 @@ export default function WaitlistPreview() {
             </span>
           </div>
           <p style={{ fontSize: '0.88rem', color: 'var(--slate)', lineHeight: 1.65, margin: 0 }}>
-            {t('statusCard.bodyPrefix')}<strong>{t('statusCard.liveDate')}</strong>.
+            {t('statusCard.body')}
           </p>
         </div>
 
@@ -325,7 +436,7 @@ export default function WaitlistPreview() {
           <p style={{ color: 'var(--sage)', fontSize: '0.9rem', marginBottom: '0.875rem' }}>
             {t('globe.subtitle')}
           </p>
-          <GlobeCanvas profiles={allProfiles} />
+          <GlobeExploreEntry profiles={allProfiles} points={mapPoints} />
           <div style={{ display: 'flex', justifyContent: 'center', gap: '0.75rem', marginTop: '1.5rem', flexWrap: 'wrap' }}>
             <span className="eyebrow-tag" style={{ gap: '0.5rem' }}>
               <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#22c55e', display: 'inline-block', flexShrink: 0 }} />

@@ -39,6 +39,7 @@ import AdminDashboard       from './pages/AdminDashboard';
 import Blog                 from './pages/Blog';
 import BlogPost             from './pages/BlogPost';
 import ReceiptPreview       from './pages/dev/ReceiptPreview';
+import WaitlistPreview      from './pages/WaitlistPreview';
 
 // One-click "send this crash to the dev team" button shown in the crash
 // screen below. Lives outside the class ErrorBoundary since hooks need a
@@ -267,6 +268,9 @@ function AppRoutes() {
 
           {/* Internal preview — no nav chrome, no auth. Not linked anywhere. */}
           <Route path="/dev/receipt-preview" element={<ReceiptPreview />} />
+
+          {/* Pending-approval waitlist screen — full-screen, no nav chrome */}
+          <Route path="/welcome" element={<WaitlistPreview />} />
 
           {/* All other routes — wrapped in Layout (nav + HAZY bg) */}
           <Route path="*" element={

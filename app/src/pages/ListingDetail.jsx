@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation, Trans } from 'react-i18next';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useParams, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { SAMPLE_LISTINGS, SAMPLE_HOST, IMG_FALLBACK } from '../lib/mockData';
@@ -8,7 +8,7 @@ import { useCollabs } from '../contexts/CollabContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useVerification } from '../contexts/VerificationContext';
 import { useSubscription } from '../contexts/SubscriptionContext';
-import { useAccessGate, PendingApprovalScreen, LimitedAccessScreen } from '../components/AccessGate';
+import { useAccessGate, LimitedAccessScreen } from '../components/AccessGate';
 import { canSubmitPitch, incrementPitchCount, syncPitchCount } from '../lib/pitchCount';
 import { formatDateRange } from '../lib/dateUtils';
 import { cache } from '../lib/cache';
@@ -1331,7 +1331,7 @@ export default function ListingDetail({ previewListing = null, preview = false }
   // Covers server-redacted real listings AND sample listings (redacted client-side).
   const isLimitedCreator = !access.loading && access.role === 'creator' && access.state === 'limited' && !access.isAdmin && !access.isFounder;
   if (!isPreview && !access.loading) {
-    if (access.state === 'pending' && convexListing?._redacted) return <PendingApprovalScreen />;
+    if (access.state === 'pending' && convexListing?._redacted) return <Navigate to="/welcome" replace />;
     const redactThis = convexListing?._redacted || (isLimitedCreator && (isSampleListing || !!sampleListing));
     if (redactThis) {
       return (

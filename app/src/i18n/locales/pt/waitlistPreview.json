@@ -12,14 +12,15 @@
   "sneakPeek": "Uma prévia do que está te esperando",
   "statusCard": {
     "reviewInProgress": "ANÁLISE EM ANDAMENTO",
-    "bodyPrefix": "Depois de aprovado, você terá acesso completo para navegar, se candidatar a colaborações e enviar mensagens aos anfitriões. Os anúncios completos ficam disponíveis em ",
-    "liveDate": "15 de julho"
+    "body": "Depois de aprovado, você terá acesso completo para navegar, se candidatar a colaborações e enviar mensagens aos anfitriões."
   },
   "globe": {
     "heading": "Nossa comunidade global",
     "subtitle": "Criadores e anfitriões se conectando ao redor do mundo",
     "creators": "Criadores",
     "hosts": "Anfitriões",
-    "countries": "Países"
+    "countries": "Países",
+    "mapTooltip": "Curioso para ver o que já está disponível? Dê uma espiada →",
+    "mapBack": "Voltar"
   }
 }

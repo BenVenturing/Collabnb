@@ -64,20 +64,43 @@ const CITY_COUNTRY = {
   'cairo': 'Egypt', 'marrakech': 'Morocco',
 };
 
+// Ben's own accounts + system/test accounts — kept fully functional (role,
+// host/creator access untouched) but excluded from public community stats,
+// same convention as admin.ts getFounderDirectory.
+const INTERNAL_EMAILS    = new Set(['benventuring@gmail.com']);
+const INTERNAL_USERNAMES = new Set(['collabnb', 'strawberryandblonde00']);
+
+export function isInternalProfile(p) {
+  const email = (p?.email || '').toLowerCase();
+  const uname = (p?.username || '').toLowerCase();
+  if (email.endsWith('@collabnb.com')) return true;
+  if (INTERNAL_EMAILS.has(email)) return true;
+  if (INTERNAL_USERNAMES.has(uname)) return true;
+  return false;
+}
+
+function lookupCountryByCity(city) {
+  const key = city?.toLowerCase().trim() || '';
+  if (!key) return null;
+  if (CITY_COUNTRY[key]) return CITY_COUNTRY[key];
+  for (const c in CITY_COUNTRY) {
+    if (key.includes(c) || c.includes(key)) return CITY_COUNTRY[c];
+  }
+  return null;
+}
+
 export function countGlobeStats(profiles) {
   if (!profiles?.length) return { creators: 0, hosts: 0, countries: 0 };
   let creators = 0, hosts = 0;
   const countrySet = new Set();
   profiles.forEach((p) => {
-    if (p.role === 'creator') creators++;
-    if (p.role === 'host') hosts++;
-    const key = p.city?.toLowerCase().trim() || '';
-    let country = CITY_COUNTRY[key];
-    if (!country) {
-      for (const c in CITY_COUNTRY) {
-        if (key.includes(c) || c.includes(key)) { country = CITY_COUNTRY[c]; break; }
-      }
-    }
+    if (isInternalProfile(p)) return;
+    const isCreator = p.role === 'creator';
+    const isHost    = p.role === 'host';
+    if (!isCreator && !isHost) return;
+    if (isCreator) creators++;
+    if (isHost) hosts++;
+    const country = p.country?.trim() || lookupCountryByCity(p.city);
     if (country) countrySet.add(country);
   });
   return { creators, hosts, countries: countrySet.size };
@@ -446,8 +469,12 @@ export default function GlobeCanvas({ profiles }) {
       pinGlows.push(glow);
     }
 
-    if (profiles && profiles.length > 0) {
-      profiles.forEach((p) => {
+    const visibleProfiles = (profiles || []).filter(
+      (p) => !isInternalProfile(p) && (p.role === 'creator' || p.role === 'host')
+    );
+
+    if (visibleProfiles.length > 0) {
+      visibleProfiles.forEach((p) => {
         const coords = getCityCoords(p.city);
         const jLat = coords.lat + (Math.random() - 0.5) * 0.8;
         const jLng = coords.lng + (Math.random() - 0.5) * 0.8;

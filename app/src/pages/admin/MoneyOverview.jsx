@@ -31,8 +31,12 @@ function Section({ title, children }) {
 export default function MoneyOverview() {
   const profiles = useQuery(api.profiles.getAll);
   const contracts = useQuery(api.contracts.getAll);
+  const ambassadorCountries = useQuery(api.ambassadors.adminListCountries);
+  const ambassadorEarnings = useQuery(api.ambassadors.adminListEarnings);
+  const pendingApprovals = useQuery(api.contracts.getPendingChargeApprovals);
 
-  const loading = profiles === undefined || contracts === undefined;
+  const loading = profiles === undefined || contracts === undefined
+    || ambassadorCountries === undefined || ambassadorEarnings === undefined || pendingApprovals === undefined;
 
   const creators = (profiles ?? []).filter((p) => p.role === 'creator');
   const activeMonthly = creators.filter((p) => p.subscription_status === 'active' && p.subscription_tier !== 'yearly').length;
@@ -52,6 +56,14 @@ export default function MoneyOverview() {
   const stripeConnected = creators.filter((p) => p.payout_method === 'stripe_connect' && p.stripe_connect_payouts_enabled).length;
   const wiseConnected = creators.filter((p) => p.payout_method === 'wise' && p.wise_recipient_id).length;
   const noPayoutMethod = creators.filter((p) => !p.payout_method).length;
+
+  const activeAmbassadors = (ambassadorCountries ?? []).filter((c) => c.status === 'taken').length;
+  const now = Date.now();
+  const ambPending = (ambassadorEarnings ?? []).filter((e) => e.status === 'pending' && e.clawback_until > now).reduce((sum, e) => sum + e.amount, 0);
+  const ambPayable = (ambassadorEarnings ?? []).filter((e) => e.status === 'pending' && e.clawback_until <= now).reduce((sum, e) => sum + e.amount, 0);
+  const ambPaid = (ambassadorEarnings ?? []).filter((e) => e.status === 'paid').reduce((sum, e) => sum + e.amount, 0);
+
+  const approvalsAwaiting = (pendingApprovals ?? []).length;
 
   return (
     <div style={{ padding: '2rem 2.5rem', maxWidth: 1100 }}>
@@ -87,6 +99,17 @@ export default function MoneyOverview() {
             <StatCard label="Stripe Connected & Verified" value={stripeConnected} color="#166534" />
             <StatCard label="Wise Connected" value={wiseConnected} color="#166534" />
             <StatCard label="Not Yet Connected" value={noPayoutMethod} color="#92400E" />
+          </Section>
+
+          <Section title="Country Ambassadors">
+            <StatCard label="Active Ambassadors" value={activeAmbassadors} sublabel="countries represented" />
+            <StatCard label="Pending" value={`$${ambPending.toFixed(0)}`} sublabel="inside the 30-day hold" />
+            <StatCard label="Payable Now" value={`$${ambPayable.toFixed(0)}`} color="#92400E" />
+            <StatCard label="Paid All-Time" value={`$${ambPaid.toFixed(0)}`} color="#166534" />
+          </Section>
+
+          <Section title="Charge Approvals">
+            <StatCard label="Awaiting Decision" value={approvalsAwaiting} color={approvalsAwaiting > 0 ? '#92400E' : INK} />
           </Section>
         </>
       )}

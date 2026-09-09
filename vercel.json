@@ -36,6 +36,7 @@
     { "source": "/contract",       "destination": "/app/index.html" },
     { "source": "/admin",          "destination": "/app/index.html" },
     { "source": "/blog",           "destination": "/app/index.html" },
-    { "source": "/blog/:path*",    "destination": "/app/index.html" }
+    { "source": "/blog/:path*",    "destination": "/app/index.html" },
+    { "source": "/welcome",        "destination": "/app/index.html" }
   ]
 }

@@ -3,7 +3,8 @@
    ============================================================ */
 
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.min.js';
-import { getAllProfiles } from './convex.js';
+import { getPublicGlobeProfiles, getPublicMapPreview } from './convex.js';
+import { openFullScreenMap } from './globe-map.js';
 
 /* ── Safety: uncaught errors ─────────────────────────────────── */
 window.addEventListener('unhandledrejection', e => console.warn('Globe rejection:', e.reason));
@@ -446,7 +447,7 @@ function initGlobe() {
   /* ── Fetch Live Data and Add Pins ── */
   async function loadPins() {
     try {
-      const data = await getAllProfiles();
+      const data = await getPublicGlobeProfiles();
 
       if (data && data.length > 0) {
         let creators = 0, hosts = 0;
@@ -518,7 +519,31 @@ function initGlobe() {
     ? { x: e.touches[0].clientX, y: e.touches[0].clientY }
     : { x: e.clientX, y: e.clientY };
 
-  canvas.addEventListener('mousedown',  e => { dragging = true;  prevMouse = getPos(e); vel = { x:0, y:0 }; canvas.style.cursor = 'grabbing'; });
+  /* ── Click-to-explore: hover tagline + zoom into a full-screen redacted map ── */
+  let mapPoints = [];
+  let zooming = false;
+  let downPos = null;
+  const tooltip = document.createElement('div');
+  tooltip.className = 'globe-tooltip';
+  tooltip.textContent = 'Curious what’s live? Take a peek →';
+  container.appendChild(tooltip);
+
+  getPublicMapPreview().then((points) => { mapPoints = points || []; });
+
+  function openMap() {
+    if (zooming || !mapPoints.length) return;
+    zooming = true;
+    tooltip.classList.remove('is-visible');
+    container.classList.add('is-zooming');
+    setTimeout(() => {
+      openFullScreenMap(mapPoints, () => {
+        container.classList.remove('is-zooming');
+        zooming = false;
+      });
+    }, 420);
+  }
+
+  canvas.addEventListener('mousedown',  e => { dragging = true;  prevMouse = getPos(e); downPos = getPos(e); vel = { x:0, y:0 }; canvas.style.cursor = 'grabbing'; });
   canvas.addEventListener('mousemove',  e => {
     if (!dragging) return;
     const p = getPos(e);
@@ -528,10 +553,20 @@ function initGlobe() {
     vel = { x: dy * 0.003, y: dx * 0.005 };
     prevMouse = p;
   });
-  canvas.addEventListener('mouseup',    () => { dragging = false; canvas.style.cursor = 'grab'; });
-  canvas.addEventListener('mouseenter', () => { hovering = true;  canvas.style.cursor = 'grab'; });
-  canvas.addEventListener('mouseleave', () => { hovering = false; dragging = false; });
-  canvas.addEventListener('touchstart', e => { dragging = true;  prevMouse = getPos(e); vel = { x:0, y:0 }; }, { passive: true });
+  canvas.addEventListener('mouseup',    e => {
+    dragging = false; canvas.style.cursor = 'grab';
+    if (downPos) {
+      const p = getPos(e);
+      if (Math.hypot(p.x - downPos.x, p.y - downPos.y) < 6) openMap();
+    }
+    downPos = null;
+  });
+  canvas.addEventListener('mouseenter', () => {
+    hovering = true; canvas.style.cursor = 'grab';
+    if (mapPoints.length && !zooming) tooltip.classList.add('is-visible');
+  });
+  canvas.addEventListener('mouseleave', () => { hovering = false; dragging = false; downPos = null; tooltip.classList.remove('is-visible'); });
+  canvas.addEventListener('touchstart', e => { dragging = true;  prevMouse = getPos(e); downPos = getPos(e); vel = { x:0, y:0 }; }, { passive: true });
   canvas.addEventListener('touchmove',  e => {
     if (!dragging) return;
     const p = getPos(e);
@@ -541,7 +576,14 @@ function initGlobe() {
     vel = { x: dy * 0.003, y: dx * 0.005 };
     prevMouse = p;
   }, { passive: true });
-  canvas.addEventListener('touchend',   () => { dragging = false; });
+  canvas.addEventListener('touchend',   e => {
+    dragging = false;
+    if (downPos) {
+      const p = getPos(e.changedTouches?.length ? { touches: e.changedTouches } : e);
+      if (Math.hypot(p.x - downPos.x, p.y - downPos.y) < 6) openMap();
+    }
+    downPos = null;
+  });
 
   /* ── Resize ── */
   const handleResize = () => {

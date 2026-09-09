@@ -334,6 +334,30 @@ export const getPublishedPreview = query({
   },
 });
 
+// Public, unauthenticated map pins for anonymous marketing visitors (How it
+// works globe). Price + coarse jittered location only — no title, image,
+// host, or exact coordinates, ever. Same redaction level as a trial-expired
+// creator's locked listing view, just reachable with zero auth.
+export const getPublicMapPreview = query({
+  args: {},
+  handler: async (ctx) => {
+    const all = await ctx.db.query("listings").collect();
+    const published = all.filter(
+      (l: any) => l.status === "published" && !l.is_sample && !l.needs_compensation_review
+    );
+    return published
+      .filter((l: any) => typeof l.lat === "number" && typeof l.lng === "number")
+      .map((l: any) => ({
+        _id: l._id,
+        ...approxCoords(l.lat, l.lng, String(l._id), true),
+        compensation: l.compensation,
+        compensation_type: l.compensation_type,
+        cash_amount: l.cash_amount,
+        collab_type: l.collab_type,
+      }));
+  },
+});
+
 export const getByLocation = query({
   args: { location: v.string() },
   handler: async (ctx, args) => {

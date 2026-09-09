@@ -49,6 +49,30 @@ export async function waitlistSignUp(data) {
   }
 }
 
+// Privacy-safe globe pins for anonymous visitors — role/city/country only,
+// never email or other profile fields. Use this instead of getAllProfiles()
+// on any page that isn't behind auth.
+export async function getPublicGlobeProfiles() {
+  try {
+    return await client.query('profiles:getPublicGlobeProfiles');
+  } catch (err) {
+    console.warn('getPublicGlobeProfiles failed:', err.message);
+    return [];
+  }
+}
+
+// Privacy-safe map pins for anonymous visitors — price + coarse jittered
+// location only, no title/image/host. Same redaction level a trial-expired
+// creator's locked listing view gets, just reachable with zero auth.
+export async function getPublicMapPreview() {
+  try {
+    return await client.query('listings:getPublicMapPreview');
+  } catch (err) {
+    console.warn('getPublicMapPreview failed:', err.message);
+    return [];
+  }
+}
+
 // Fetch all profiles (for globe pins, etc.)
 export async function getAllProfiles() {
   try {

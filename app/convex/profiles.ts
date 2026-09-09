@@ -217,6 +217,28 @@ export const getAll = query({
   },
 });
 
+// Public, unauthenticated globe pins for anonymous marketing visitors (How it
+// works globe). Only role/city/country — never email, name, or anything else —
+// and excludes Ben's own accounts + system/test accounts, same convention as
+// admin.ts getFounderDirectory.
+export const getPublicGlobeProfiles = query({
+  args: {},
+  handler: async (ctx) => {
+    const all = await ctx.db.query("profiles").collect();
+    return all
+      .filter((p) => p.role === "creator" || p.role === "host")
+      .filter((p) => {
+        const email = (p.email || "").toLowerCase();
+        const uname = (p.username || "").toLowerCase();
+        if (email.endsWith("@collabnb.com")) return false;
+        if (email === "benventuring@gmail.com") return false;
+        if (uname === "collabnb" || uname === "strawberryandblonde00") return false;
+        return true;
+      })
+      .map((p) => ({ role: p.role, city: p.city, country: p.country }));
+  },
+});
+
 // Host profiles a creator can send a contract to (lightweight shape).
 export const getHosts = query({
   args: {},

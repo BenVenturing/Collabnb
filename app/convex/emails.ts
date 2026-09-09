@@ -42,6 +42,17 @@ export const sendFinishSignupEmail = internalAction({
   },
 });
 
+// ─── Incomplete application nudge (has an account, profile/listing unfinished) ─
+
+export const sendApplicationIncompleteEmail = internalAction({
+  args: { email: v.string(), full_name: v.string(), role: v.string() },
+  handler: async (ctx, { email, full_name, role }) => {
+    const firstName = full_name.split(" ")[0];
+    const templateId = role === "host" ? "application_incomplete_host" : "application_incomplete_creator";
+    await sendFromTemplate(ctx, templateId, email, { firstName });
+  },
+});
+
 // ─── Early access granted ─────────────────────────────────────────────────────
 
 export const sendAccessGrantedEmail = internalAction({

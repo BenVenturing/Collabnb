@@ -465,6 +465,84 @@ export const remindExpiringTrials = internalMutation({
   },
 });
 
+// ─── Cron: nudge stalled applicants to finish signup / profile / listing setup ──
+//
+// Covers profiles still awaiting review (matches the admin Users "Pending"
+// filter: is_verified !== true && !is_rejected) that have gone quiet. Two
+// buckets, mirroring the admin's manual "Nudge" actions but automatic:
+//   - no login yet (clerk_registered falsy)      -> finish_signup email
+//   - has a login but profile/listing is bare    -> application_incomplete_*
+// First nudge at 3 days, repeating every 5 days, giving up at 21 days so a
+// dead lead doesn't get emailed forever.
+
+const REENGAGE_FIRST_NUDGE_AFTER = 3 * 24 * 60 * 60 * 1000;
+const REENGAGE_NUDGE_INTERVAL = 5 * 24 * 60 * 60 * 1000;
+const REENGAGE_GIVE_UP_AFTER = 21 * 24 * 60 * 60 * 1000;
+
+// A creator profile counts as "set up" once they've filled in the basics a
+// host would actually look at; a host counts as "set up" once they've
+// published at least one listing (drafts don't count — hosts can sit in
+// draft indefinitely without ever becoming discoverable).
+function isCreatorProfileBare(p: any) {
+  return !p.bio && (!p.niches || p.niches.length === 0) && !p.avatar_url;
+}
+
+export const checkIncompleteApplications = internalMutation({
+  args: { dryRun: v.optional(v.boolean()) },
+  handler: async (ctx, { dryRun }) => {
+    const now = Date.now();
+    const profiles = await ctx.db.query("profiles").collect();
+    const pending = profiles.filter((p) => p.is_verified !== true && p.is_rejected !== true);
+
+    const preview: any[] = [];
+    let nudged = 0;
+    for (const p of pending) {
+      const age = now - p._creationTime;
+      if (age < REENGAGE_FIRST_NUDGE_AFTER || age > REENGAGE_GIVE_UP_AFTER) continue;
+      if (p.last_reengagement_nudge_at && now - p.last_reengagement_nudge_at < REENGAGE_NUDGE_INTERVAL) continue;
+      if (!p.email) continue;
+
+      let kind: "finish_signup" | "incomplete" | null = null;
+      if (!p.clerk_registered) {
+        kind = "finish_signup";
+      } else if (p.role === "creator" && isCreatorProfileBare(p)) {
+        kind = "incomplete";
+      } else if (p.role === "host") {
+        const published = await ctx.db
+          .query("listings")
+          .withIndex("by_host", (q) => q.eq("host_id", String(p._id)))
+          .filter((q) => q.eq(q.field("status"), "published"))
+          .first();
+        if (!published) kind = "incomplete";
+      }
+      if (!kind) continue;
+
+      if (dryRun === true) {
+        preview.push({ email: p.email, role: p.role, kind, ageDays: Math.floor(age / (24 * 60 * 60 * 1000)) });
+        nudged++;
+        continue;
+      }
+
+      if (kind === "finish_signup") {
+        await ctx.scheduler.runAfter(0, internal.emails.sendFinishSignupEmail, {
+          email: p.email,
+          full_name: p.full_name,
+        });
+      } else {
+        await ctx.scheduler.runAfter(0, internal.emails.sendApplicationIncompleteEmail, {
+          email: p.email,
+          full_name: p.full_name,
+          role: p.role,
+        });
+      }
+      await ctx.db.patch(p._id, { last_reengagement_nudge_at: now });
+      nudged++;
+    }
+
+    return dryRun === true ? { wouldNudge: nudged, preview } : { nudged };
+  },
+});
+
 // ─── Internal test utility: backdate a profile's trial to simulate expiry ──────
 export const forceTrialExpiry = internalMutation({
   args: { profileId: v.id("profiles") },

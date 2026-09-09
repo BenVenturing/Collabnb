@@ -102,6 +102,10 @@ export default defineSchema({
     // Last time this host was sent the "conversations awaiting your reply"
     // digest (cron: checkAwaitingReply). Gates the repeat interval.
     last_reply_nudge_at: v.optional(v.number()),
+    // Last time this still-pending applicant was nudged to finish their
+    // signup/profile/listing setup (cron: checkIncompleteApplications).
+    // Gates the repeat interval.
+    last_reengagement_nudge_at: v.optional(v.number()),
     // Settings > Language & region.
     preferred_language: v.optional(v.string()),
     preferred_currency: v.optional(v.string()),

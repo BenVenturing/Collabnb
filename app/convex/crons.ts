@@ -107,4 +107,14 @@ crons.daily(
   {}
 );
 
+// Daily at 11am UTC — nudge pending applicants who've gone quiet: no login
+// yet, or a login but a bare profile/no published listing. First nudge at
+// 3 days, repeats every 5 days, gives up at 21 days.
+crons.daily(
+  "incomplete application reminders",
+  { hourUTC: 11, minuteUTC: 0 },
+  internal.gates.checkIncompleteApplications,
+  {}
+);
+
 export default crons;

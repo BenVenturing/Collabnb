@@ -730,20 +730,42 @@ export default function Settings() {
                     <SectionLabel>{t('payments.sectionHistory')}</SectionLabel>
                     <div>
                       {billingHistory.map((inv, i) => (
-                        <button
+                        <div
                           key={inv.id}
-                          onClick={() => handleViewPastReceipt(inv)}
                           style={{
                             display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%',
-                            background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left',
                             padding: '0.6rem 0', borderBottom: i < billingHistory.length - 1 ? '1px solid rgba(60,87,89,0.06)' : 'none',
                           }}
                         >
-                          <span style={{ fontSize: '0.82rem', color: 'var(--ink)', fontWeight: 600 }}>
-                            {new Date(inv.periodStart || inv.created).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-                          </span>
-                          <span style={{ fontSize: '0.82rem', color: 'var(--slate)', fontWeight: 600 }}>${inv.amount.toFixed(2)}</span>
-                        </button>
+                          <button
+                            onClick={() => handleViewPastReceipt(inv)}
+                            style={{
+                              display: 'flex', alignItems: 'center', gap: '0.6rem', flex: 1, minWidth: 0,
+                              background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', padding: 0,
+                            }}
+                          >
+                            <span style={{ fontSize: '0.82rem', color: 'var(--ink)', fontWeight: 600 }}>
+                              {new Date(inv.periodStart || inv.created).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                            </span>
+                            <span style={{ fontSize: '0.82rem', color: 'var(--slate)', fontWeight: 600 }}>${inv.amount.toFixed(2)}</span>
+                          </button>
+                          {(inv.invoicePdf || inv.hostedInvoiceUrl) && (
+                            <a
+                              href={inv.invoicePdf || inv.hostedInvoiceUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              aria-label={t('payments.downloadInvoice', { defaultValue: 'Download invoice' })}
+                              onClick={(e) => e.stopPropagation()}
+                              style={{
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                width: '1.75rem', height: '1.75rem', borderRadius: '50%',
+                                color: 'var(--slate)', flexShrink: 0,
+                              }}
+                            >
+                              <DownloadIcon />
+                            </a>
+                          )}
+                        </div>
                       ))}
                     </div>
                   </>

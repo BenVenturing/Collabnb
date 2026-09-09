@@ -477,7 +477,7 @@ export default function AppNav() {
         style={{ top: isPending ? 'calc(var(--banner-h, 0rem) + 1.8rem + 0.5rem)' : 'calc(var(--banner-h, 0rem) + 1rem)' }}
       >
         {/* Logo */}
-        <NavLink to="/explore" className="nav-logo" style={{ flexShrink: 0 }}>
+        <NavLink to={isHost ? '/host' : '/explore'} className="nav-logo" style={{ flexShrink: 0 }}>
           <img src={collabnbLogo} alt="" role="presentation" width="28" height="28" />
           <span>Collabnb</span>
         </NavLink>

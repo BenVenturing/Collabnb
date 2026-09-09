@@ -4,8 +4,10 @@
 
 import { getProfileCounts, waitlistSignUp, updateWaitlistProfile } from './convex.js';
 import { initFAQBubble } from './faq-bubble.js';
+import { initProductPreview } from './product-preview.js';
 
 initFAQBubble();
+initProductPreview();
 
 const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL;
 let signedUpName = '';

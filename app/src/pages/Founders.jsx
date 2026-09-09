@@ -5,6 +5,11 @@ import { api } from '../../convex/_generated/api';
 import { useAuth } from '../contexts/AuthContext';
 import CreatorAvatar from '../components/CreatorAvatar';
 import { ListingCard } from './Explore';
+import benVenturingPhoto from '../assets/ben-venturing.png';
+import collabnbLogo from '../assets/collabnb-logo.png';
+
+// Real Clerk-hosted avatar for the strawberryandblonde00 creator account.
+const STRAWBERRYANDBLONDE_AVATAR = 'https://img.clerk.com/eyJ0eXBlIjoicHJveHkiLCJzcmMiOiJodHRwczovL2ltYWdlcy5jbGVyay5kZXYvdXBsb2FkZWQvaW1nXzNIQU9oN2dxYkRqaTNFbzZzTWp4MnZwM3V5TyJ9';
 
 /*
  * Founders — the lifetime founding-member space.
@@ -66,29 +71,26 @@ function AvatarStar({ name, src, size = 38, founder }) {
 // ── Seed data ────────────────────────────────────────────────────────────────
 const SEED_THREADS = {
   creator: [
-    { id: 'c1', author: 'Maya R.', founder: true, time: '9:12 AM',
+    { id: 'c1', author: 'Ben Venturing', avatar: benVenturingPhoto, founder: true, time: '9:12 AM',
       text: 'Just wrapped my first villa collab in Tulum — the host let me shoot sunrise on the rooftop. Happy to share my shot list if anyone wants it.',
       reactions: [{ e: '🔥', n: 6 }, { e: '🙌', n: 3 }],
       replies: [
-        { id: 'c1r1', author: 'Devon K.', founder: true, time: '9:20 AM', text: 'Yes please! Shooting my first one next week.' },
-        { id: 'c1r2', author: 'Maya R.', founder: true, time: '9:24 AM', text: 'Dropping it in Resources → Playbooks today.' },
+        { id: 'c1r1', author: 'StrawberryandBlonde', avatar: STRAWBERRYANDBLONDE_AVATAR, founder: false, time: '9:20 AM', text: 'Yes please! Shooting my first one next week.' },
+        { id: 'c1r2', author: 'Ben Venturing', avatar: benVenturingPhoto, founder: true, time: '9:24 AM', text: 'Dropping it in Resources → Playbooks today.' },
       ] },
-    { id: 'c2', author: 'Priya S.', founder: true, time: '10:02 AM',
+    { id: 'c2', author: 'Collabnb', avatar: collabnbLogo, founder: false, time: '10:02 AM',
       text: 'Reminder: early-access listings drop 3 days before they go public. Two new beachfront stays just landed in the Early access tab.',
       reactions: [{ e: '👀', n: 11 }], replies: [] },
-    { id: 'c3', author: 'Jordan T.', founder: true, time: '11:37 AM',
+    { id: 'c3', author: 'StrawberryandBlonde', avatar: STRAWBERRYANDBLONDE_AVATAR, founder: false, time: '11:37 AM',
       text: 'What rate are people charging for a 3-reel + 5-story package these days? Trying to price a luxury property.',
       reactions: [{ e: '💭', n: 2 }],
-      replies: [{ id: 'c3r1', author: 'Maya R.', founder: true, time: '11:41 AM', text: 'Check the Pricing Your Collabs guide — points/tiers math makes this easy.' }] },
+      replies: [{ id: 'c3r1', author: 'Ben Venturing', avatar: benVenturingPhoto, founder: true, time: '11:41 AM', text: 'Check the Pricing Your Collabs guide — points/tiers math makes this easy.' }] },
   ],
   host: [
-    { id: 'h1', author: 'The Olive House', founder: true, time: '8:44 AM',
-      text: 'Hosted our first founder creator this weekend and the content was unreal. The vetting really shows — night and day vs cold DMs.',
-      reactions: [{ e: '🙌', n: 8 }, { e: '❤️', n: 4 }],
-      replies: [{ id: 'h1r1', author: 'Casa Marea', founder: true, time: '9:01 AM', text: 'Same. Which package did you run?' }] },
-    { id: 'h2', author: 'Pine & Co Cabins', founder: true, time: '10:15 AM',
-      text: 'Question for hosts — do you comp the full stay, or nightly + a flat content fee? Curious what converts best.',
-      reactions: [{ e: '💭', n: 5 }], replies: [] },
+    { id: 'h1', author: 'Collabnb', avatar: collabnbLogo, founder: false, time: '9:00 AM',
+      text: "Welcome to the founding hosts lounge — glad you're here. This is your space to ask questions, compare notes with other early hosts, and tell us what you need as we build this out.",
+      reactions: [{ e: '🙌', n: 6 }],
+      replies: [{ id: 'h1r1', author: 'Ben Venturing', avatar: benVenturingPhoto, founder: true, time: '9:14 AM', text: "Thanks for having us — excited to see how everyone's first collabs go." }] },
   ],
 };
 
@@ -148,7 +150,7 @@ function Thread({ msg, onReact, onReply }) {
   const [draft, setDraft] = useState('');
   return (
     <div className="fnd-thread" style={{ display: 'flex', gap: '0.75rem', padding: '0.95rem 0' }}>
-      <AvatarStar name={msg.author} founder={msg.founder} />
+      <AvatarStar name={msg.author} src={msg.avatar} founder={msg.founder} />
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem', flexWrap: 'wrap' }}>
           <span style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--ink)' }}>{msg.author}</span>
@@ -172,7 +174,7 @@ function Thread({ msg, onReact, onReply }) {
           <div style={{ marginTop: '0.6rem', paddingLeft: '0.85rem', borderLeft: `2px solid ${GOLD_SOFT}`, display: 'flex', flexDirection: 'column', gap: '0.7rem' }}>
             {msg.replies.map((r) => (
               <div key={r.id} style={{ display: 'flex', gap: '0.55rem' }}>
-                <AvatarStar name={r.author} founder={r.founder} size={26} />
+                <AvatarStar name={r.author} src={r.avatar} founder={r.founder} size={26} />
                 <div>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.4rem' }}>
                     <span style={{ fontWeight: 700, fontSize: '0.78rem', color: 'var(--ink)' }}>{r.author}</span>

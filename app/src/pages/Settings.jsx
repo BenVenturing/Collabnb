@@ -51,6 +51,13 @@ const CreditCardIcon = () => (
     <line x1="64" y1="152" x2="96" y2="152"/><line x1="120" y1="152" x2="136" y2="152"/>
   </svg>
 );
+const DownloadIcon = () => (
+  <svg viewBox="0 0 256 256" fill="none" stroke="currentColor" strokeWidth="14" strokeLinecap="round" strokeLinejoin="round" width="14" height="14">
+    <line x1="128" y1="40" x2="128" y2="168"/>
+    <polyline points="80 120 128 168 176 120"/>
+    <line x1="40" y1="200" x2="216" y2="200"/>
+  </svg>
+);
 const GlobeIcon = () => (
   <svg viewBox="0 0 256 256" fill="none" stroke="currentColor" strokeWidth="14" strokeLinecap="round" strokeLinejoin="round" width="18" height="18">
     <circle cx="128" cy="128" r="96"/><ellipse cx="128" cy="128" rx="40" ry="96"/>

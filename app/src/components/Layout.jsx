@@ -222,7 +222,7 @@ export default function Layout({ children }) {
           padding: '0.875rem 1.25rem',
           boxShadow: '0 8px 32px rgba(25,37,36,0.15)',
           display: 'flex', alignItems: 'center', gap: '0.75rem',
-          animation: 'fadeUp 300ms cubic-bezier(0.16,1,0.3,1) forwards',
+          animation: 'fadeUpCentered 300ms cubic-bezier(0.16,1,0.3,1) forwards',
           maxWidth: 'calc(100vw - 2rem)',
         }}>
           <div style={{

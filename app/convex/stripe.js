@@ -260,6 +260,12 @@ export const listBillingHistory = action({
         periodEnd: inv.period_end ? inv.period_end * 1000 : null,
         created: inv.created * 1000,
         description: inv.lines?.data?.[0]?.description || 'Creator Pro membership',
+        // Stripe-hosted, permanent links — no auth/expiry to manage on our
+        // side. invoicePdf downloads the file directly; hostedInvoiceUrl is
+        // Stripe's viewable invoice page (kept as a fallback since invoicePdf
+        // is briefly null immediately after some invoice events fire).
+        invoicePdf: inv.invoice_pdf || null,
+        hostedInvoiceUrl: inv.hosted_invoice_url || null,
       }));
   },
 });

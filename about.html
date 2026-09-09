@@ -5,9 +5,43 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>About — Collabnb</title>
 <meta name="description" content="Collabnb is built for collabs, not ads. A two-sided marketplace for content creators and boutique hospitality." />
-<link rel="icon" href="assets/collabnb-logo.png" type="image/svg+xml" />
+<link rel="canonical" href="https://www.collabnb.com/about.html" />
+<link rel="icon" href="/assets/favicon.png" type="image/png" />
+<link rel="apple-touch-icon" href="/assets/favicon.png" />
+<link rel="manifest" href="/site.webmanifest" />
 <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&f[]=cabinet-grotesk@400,500,700,800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles/main.css" />
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "Home",
+          "item": "https://www.collabnb.com/"
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": "About",
+          "item": "https://www.collabnb.com/about.html"
+        }
+      ]
+    },
+    {
+      "@type": "AboutPage",
+      "@id": "https://www.collabnb.com/about.html",
+      "url": "https://www.collabnb.com/about.html",
+      "name": "About — Collabnb",
+      "description": "Collabnb is built for collabs, not ads. A two-sided marketplace for content creators and boutique hospitality."
+    }
+  ]
+}
+</script>
 </head>
 <body>
 
@@ -93,6 +127,41 @@
         <p id="story-heading">The collab economy already exists — it's scattered across DMs and email threads. A boutique BnB in the Catskills wants a TikTok creator who fits their vibe. A UGC filmmaker in Bali wants a paid shoot — or a hosted stay — that's worth their work. Both sides know the deal they want: a professional campaign with clear deliverables, fair compensation, and mutual respect. What they're missing is the marketplace to find each other.</p>
         <p>Collabnb is that marketplace. Each listing sets its own compensation — a hosted stay, a cash fee, or a hybrid of both. We built it because the middle layer — discovery, agreement, trust, and follow-through — was missing. Not a travel platform. Not an influencer agency. A direct collaboration infrastructure where every deal is transparent and both sides agree on the creative and commercial terms upfront.</p>
         <p>We're starting with a waitlist because the first 200 creators and 200 hosts will shape what this platform becomes. If you're early, you're in for life.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── PRODUCT PREVIEW ── -->
+  <section class="section product-preview" aria-labelledby="preview-heading">
+    <div class="container">
+      <div class="preview-grid">
+        <div class="preview-copy reveal reveal-left">
+          <span class="eyebrow-tag">See it in action</span>
+          <h2 id="preview-heading" class="display" style="font-size:var(--fs-h2);margin-top:1.25rem;">One platform, two dashboards.</h2>
+          <p class="hero-sub" style="margin-top:1.5rem;">Hosts manage collab requests like bookings. Creators manage collabs like gigs. Same marketplace — a purpose-built view for each side.</p>
+          <button type="button" class="btn-glass preview-launch" data-preview-open>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+            Watch the walkthrough
+          </button>
+        </div>
+        <div class="preview-device reveal reveal-right" style="transition-delay:150ms;">
+          <button type="button" class="mac-mockup" data-preview-open
+            data-video-host="/videos/host-walkthrough.mp4"
+            data-video-creator="/videos/creator-walkthrough.mp4"
+            aria-label="Watch the host and creator walkthrough">
+            <span class="mac-lid">
+              <span class="mac-notch"></span>
+              <span class="mac-screen">
+                <video class="mac-screen-video" muted autoplay playsinline aria-hidden="true"></video>
+                <span class="mac-caption" data-mac-caption>Host view</span>
+                <span class="mac-expand" aria-hidden="true">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 00-2 2v3M16 3h3a2 2 0 012 2v3M21 16v3a2 2 0 01-2 2h-3M8 21H5a2 2 0 01-2-2v-3"/></svg>
+                </span>
+              </span>
+            </span>
+            <span class="mac-base"></span>
+          </button>
+        </div>
       </div>
     </div>
   </section>
@@ -239,6 +308,41 @@
     <div id="clerk-login-mount"></div>
     <div class="login-footer" style="text-align:center;margin-top:1.5rem;">
       Don't have an account? <a href="join.html">Become a Founder</a>
+    </div>
+  </div>
+</div>
+
+<!-- ── PRODUCT PREVIEW MODAL ── -->
+<div id="preview-modal-overlay" class="modal-overlay" role="dialog" aria-modal="true" aria-label="Host and creator walkthrough" aria-hidden="true">
+  <div class="modal-card preview-modal-card" style="position:relative;">
+    <button type="button" class="modal-close" id="preview-modal-close" aria-label="Close">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+    </button>
+
+    <div class="preview-choice" data-preview-choice>
+      <button type="button" class="preview-choice-option" data-preview-select="host">
+        <span class="preview-choice-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+        </span>
+        <span class="preview-choice-label">Host view</span>
+        <span class="preview-choice-sub">How hosts manage collab requests</span>
+      </button>
+      <button type="button" class="preview-choice-option" data-preview-select="creator">
+        <span class="preview-choice-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M6 20v-2a6 6 0 0112 0v2"/></svg>
+        </span>
+        <span class="preview-choice-label">Creator view</span>
+        <span class="preview-choice-sub">How creators manage their collabs</span>
+      </button>
+    </div>
+
+    <div class="preview-player" data-preview-player hidden>
+      <div class="preview-player-tabs">
+        <button type="button" class="preview-tab" data-preview-select="host">Host view</button>
+        <button type="button" class="preview-tab" data-preview-select="creator">Creator view</button>
+      </div>
+      <video class="preview-player-video" id="preview-player-video" controls playsinline></video>
+      <audio id="preview-player-audio" src="/audio/sunshine-day.mp3" loop></audio>
     </div>
   </div>
 </div>

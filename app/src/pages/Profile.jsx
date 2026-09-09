@@ -11,6 +11,10 @@ import { useTranslation, Trans } from 'react-i18next';
 // Convex storage URL prefix; used to construct public URLs from storage IDs
 const CONVEX_URL = import.meta.env.VITE_CONVEX_URL;
 const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL;
+// Clerk (and therefore real Convex auth) never runs on localhost — see
+// AuthContext.jsx's IS_LOCAL check — so uploads there must use the data-URL
+// fallback even though CONVEX_URL itself is configured (points at prod).
+const IS_LOCAL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 
 const AI_PROVIDER_LABELS = { openai: 'OpenAI', anthropic: 'Anthropic', openrouter: 'OpenRouter' };
 const AI_PROVIDER_KEY_PLACEHOLDER = { openai: 'sk-...', anthropic: 'sk-ant-...', openrouter: 'sk-or-...' };
@@ -49,7 +53,7 @@ async function uploadResizedImage(file, maxW, maxH, uploadFn, quality = 0.85, ge
   const canvas = document.createElement('canvas');
   canvas.width = w; canvas.height = h;
   canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-  if (uploadFn && CONVEX_URL) {
+  if (uploadFn && CONVEX_URL && !IS_LOCAL) {
     const uploadUrl = await uploadFn();
     const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', quality));
     const res = await fetch(uploadUrl, { method: 'POST', headers: { 'Content-Type': 'image/jpeg' }, body: blob });
@@ -2013,7 +2017,7 @@ export default function Profile() {
           fontSize: '0.875rem', fontWeight: 600, fontFamily: 'var(--font-body)',
           boxShadow: '0 8px 24px rgba(25,37,36,0.25)',
           display: 'flex', alignItems: 'center', gap: '0.5rem',
-          animation: 'fadeUp 300ms cubic-bezier(0.16,1,0.3,1) forwards',
+          animation: 'fadeUpCentered 300ms cubic-bezier(0.16,1,0.3,1) forwards',
         }}>
           <svg viewBox="0 0 14 14" fill="none" stroke="#D1EBDB" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16">
             <polyline points="2 7 5.5 10.5 12 3.5" />

@@ -225,9 +225,9 @@ export const sendContractEmail = internalAction({
     const firstName = (recipientName || "there").split(" ")[0];
 
     const body = `
-      <p style="margin:0 0 18px;font-size:22px;font-weight:700;color:#192524;">${heading.replace("{name}", firstName)}</p>
+      <p style="margin:0 0 18px;font-size:22px;font-weight:700;color:#241F19;">${heading.replace("{name}", firstName)}</p>
       ${heroChip(message)}
-      ${calloutLabel ? callout("#4A9B7F", calloutLabel, calloutText || "") : ""}
+      ${calloutLabel ? callout("#8B6F52", calloutLabel, calloutText || "") : ""}
       ${button(`${BASE_URL}/contract`, "View contract")}`;
 
     await sendViaResend(apiKey, to, subject, layout(body));

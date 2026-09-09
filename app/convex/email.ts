@@ -18,20 +18,20 @@ function receiptEmailHtml({ heading, leadText, orderId, dateStr, cardLine, itemL
 <style>
   body { margin:0; padding:0; background:#EFECE9; font-family:'Helvetica Neue',Helvetica,Arial,sans-serif; }
   .wrap { max-width:480px; margin:0 auto; padding:32px 20px; }
-  .card { background:#fff; border-radius:20px; overflow:hidden; box-shadow:0 4px 24px rgba(25,37,36,0.07); }
-  .header { background:linear-gradient(135deg,#192524,#2d4a3e); padding:30px 32px 24px; text-align:center; }
+  .card { background:#fff; border-radius:20px; overflow:hidden; box-shadow:0 4px 24px rgba(40,32,20,0.07); }
+  .header { background:linear-gradient(135deg,#241F19,#4A3B2E); padding:30px 32px 24px; text-align:center; }
   .logo-text { color:#fff; font-size:1.2rem; font-weight:800; letter-spacing:-0.02em; }
   .body { padding:28px 32px 8px; }
-  h1 { font-size:1.3rem; font-weight:800; color:#192524; margin:0 0 8px; }
-  p.lead { font-size:0.875rem; color:#4a6670; line-height:1.6; margin:0 0 20px; }
-  .receipt { border:1px dashed rgba(25,37,36,0.25); border-radius:12px; padding:18px 20px; margin:0 0 20px; font-family:'SF Mono',Menlo,monospace; }
-  .receipt .row { display:flex; justify-content:space-between; font-size:0.75rem; color:#3C5759; padding:3px 0; }
-  .receipt .row.item span:first-child { color:#192524; }
+  h1 { font-size:1.3rem; font-weight:800; color:#241F19; margin:0 0 8px; }
+  p.lead { font-size:0.875rem; color:#6B6055; line-height:1.6; margin:0 0 20px; }
+  .receipt { border:1px dashed rgba(40,32,20,0.25); border-radius:12px; padding:18px 20px; margin:0 0 20px; font-family:'SF Mono',Menlo,monospace; }
+  .receipt .row { display:flex; justify-content:space-between; font-size:0.75rem; color:#5C5347; padding:3px 0; }
+  .receipt .row.item span:first-child { color:#241F19; }
   .receipt .row.item span:last-child { font-weight:700; }
-  .receipt hr { border:none; border-top:1px dashed rgba(25,37,36,0.25); margin:10px 0; }
-  .receipt .total { display:flex; justify-content:space-between; font-size:0.9rem; font-weight:800; color:#192524; border-top:1px solid #192524; padding-top:8px; margin-top:4px; }
+  .receipt hr { border:none; border-top:1px dashed rgba(40,32,20,0.25); margin:10px 0; }
+  .receipt .total { display:flex; justify-content:space-between; font-size:0.9rem; font-weight:800; color:#241F19; border-top:1px solid #241F19; padding-top:8px; margin-top:4px; }
   .footer { padding:16px 32px 28px; text-align:center; }
-  .footer p { font-size:0.72rem; color:#8faea6; margin:0; line-height:1.6; }
+  .footer p { font-size:0.72rem; color:#9C9182; margin:0; line-height:1.6; }
 </style></head>
 <body>
 <div class="wrap"><div class="card">
@@ -44,7 +44,7 @@ function receiptEmailHtml({ heading, leadText, orderId, dateStr, cardLine, itemL
       <div class="row"><span>Date</span><span>${dateStr}</span></div>
       <div class="row"><span>Payment</span><span>${cardLine}</span></div>
       <hr />
-      <div class="row item"><span>${itemLabel}<br /><span style="font-weight:400;color:#8faea6;font-size:0.68rem;">${itemDetail}</span></span><span>${itemAmount}</span></div>
+      <div class="row item"><span>${itemLabel}<br /><span style="font-weight:400;color:#9C9182;font-size:0.68rem;">${itemDetail}</span></span><span>${itemAmount}</span></div>
       <hr />
       <div class="total"><span>${totalLabel}</span><span>${amountStr}</span></div>
     </div>
@@ -86,21 +86,21 @@ export const sendWelcomeEmail = internalAction({
   body { margin:0; padding:0; background:#EFECE9; font-family:'Helvetica Neue',Helvetica,Arial,sans-serif; }
   .wrap { max-width:560px; margin:0 auto; padding:40px 20px; }
   .card { background:#fff; border-radius:20px; overflow:hidden; box-shadow:0 4px 24px rgba(25,37,36,0.07); }
-  .header { background:linear-gradient(135deg,#192524,#2d4a3e); padding:36px 40px 28px; text-align:center; }
+  .header { background:linear-gradient(135deg,#241F19,#4A3B2E); padding:36px 40px 28px; text-align:center; }
   .header-inner { display:inline-flex; align-items:center; gap:12px; }
   .logo-text { color:#fff; font-size:1.35rem; font-weight:800; letter-spacing:-0.02em; vertical-align:middle; }
   .body { padding:36px 40px 32px; }
-  h1 { font-size:1.55rem; font-weight:800; color:#192524; margin:0 0 12px; line-height:1.2; }
-  p { font-size:0.9375rem; color:#4a6670; line-height:1.65; margin:0 0 16px; }
-  .highlight { background:#f0faf5; border-left:3px solid #4ecdc4; border-radius:0 12px 12px 0; padding:14px 18px; margin:24px 0; }
-  .highlight p { margin:0; font-size:0.875rem; color:#2d7a6a; font-weight:500; }
+  h1 { font-size:1.55rem; font-weight:800; color:#241F19; margin:0 0 12px; line-height:1.2; }
+  p { font-size:0.9375rem; color:#6B6055; line-height:1.65; margin:0 0 16px; }
+  .highlight { background:#F7F2EA; border-left:3px solid #B08968; border-radius:0 12px 12px 0; padding:14px 18px; margin:24px 0; }
+  .highlight p { margin:0; font-size:0.875rem; color:#6B4F3A; font-weight:500; }
   .steps { margin:24px 0; }
   .step { display:flex; gap:14px; margin-bottom:16px; align-items:flex-start; }
-  .step-num { width:28px; height:28px; min-width:28px; border-radius:50%; background:#192524; color:#fff; font-size:0.75rem; font-weight:800; display:flex; align-items:center; justify-content:center; margin-top:1px; }
+  .step-num { width:28px; height:28px; min-width:28px; border-radius:50%; background:#241F19; color:#fff; font-size:0.75rem; font-weight:800; display:flex; align-items:center; justify-content:center; margin-top:1px; }
   .step p { margin:0; font-size:0.875rem; }
-  .btn { display:inline-block; background:#192524; color:#fff !important; text-decoration:none; padding:13px 28px; border-radius:12px; font-size:0.9rem; font-weight:700; letter-spacing:0.01em; margin:8px 0 0; }
+  .btn { display:inline-block; background:linear-gradient(135deg,#241F19,#4A3B2E); color:#fff !important; text-decoration:none; padding:13px 28px; border-radius:12px; font-size:0.9rem; font-weight:700; letter-spacing:0.01em; margin:8px 0 0; }
   .footer { padding:20px 40px 28px; text-align:center; }
-  .footer p { font-size:0.78rem; color:#8faea6; margin:0; line-height:1.6; }
+  .footer p { font-size:0.78rem; color:#9C9182; margin:0; line-height:1.6; }
   @media (max-width:560px) {
     .body, .footer { padding-left:24px; padding-right:24px; }
     .header { padding:28px 24px; }
@@ -124,7 +124,7 @@ export const sendWelcomeEmail = internalAction({
         <p>📬 We'll email you at this address once you're approved. Usually within <strong>1–2 business days</strong>.</p>
       </div>
 
-      <p style="font-weight:700;color:#192524;margin-bottom:10px;">What happens next:</p>
+      <p style="font-weight:700;color:#241F19;margin-bottom:10px;">What happens next:</p>
       <div class="steps">
         <div class="step">
           <div class="step-num">1</div>
@@ -143,7 +143,7 @@ export const sendWelcomeEmail = internalAction({
       <a href="https://collabnb.com" class="btn">Preview the platform →</a>
     </div>
     <div class="footer">
-      <p>Questions? Reply to this email or reach us at <a href="mailto:hello@collabnb.com" style="color:#3C5759;">hello@collabnb.com</a></p>
+      <p>Questions? Reply to this email or reach us at <a href="mailto:hello@collabnb.com" style="color:#5C5347;">hello@collabnb.com</a></p>
       <p style="margin-top:6px;">© 2026 Collabnb · You're receiving this because you joined the waitlist.</p>
     </div>
   </div>
@@ -249,14 +249,14 @@ export const sendPayoutReceiptEmail = internalAction({
   body { margin:0; padding:0; background:#EFECE9; font-family:'Helvetica Neue',Helvetica,Arial,sans-serif; }
   .wrap { max-width:520px; margin:0 auto; padding:40px 20px; }
   .card { background:#fff; border-radius:20px; overflow:hidden; box-shadow:0 4px 24px rgba(25,37,36,0.07); }
-  .header { background:linear-gradient(135deg,#192524,#2d4a3e); padding:32px 40px 24px; text-align:center; }
+  .header { background:linear-gradient(135deg,#241F19,#4A3B2E); padding:32px 40px 24px; text-align:center; }
   .logo-text { color:#fff; font-size:1.35rem; font-weight:800; letter-spacing:-0.02em; }
   .body { padding:32px 40px; }
-  h1 { font-size:1.35rem; font-weight:800; color:#192524; margin:0 0 12px; line-height:1.2; }
-  p { font-size:0.9375rem; color:#4a6670; line-height:1.65; margin:0 0 16px; }
-  .amount { font-size:2rem; font-weight:800; color:#192524; margin:0 0 4px; }
+  h1 { font-size:1.35rem; font-weight:800; color:#241F19; margin:0 0 12px; line-height:1.2; }
+  p { font-size:0.9375rem; color:#6B6055; line-height:1.65; margin:0 0 16px; }
+  .amount { font-size:2rem; font-weight:800; color:#241F19; margin:0 0 4px; }
   .footer { padding:16px 40px 28px; text-align:center; }
-  .footer p { font-size:0.78rem; color:#8faea6; margin:0; line-height:1.6; }
+  .footer p { font-size:0.78rem; color:#9C9182; margin:0; line-height:1.6; }
 </style>
 </head>
 <body>
@@ -268,7 +268,7 @@ export const sendPayoutReceiptEmail = internalAction({
     <p>${bodyLine}</p>
   </div>
   <div class="footer">
-    <p>Questions? Reply to this email or reach us at <a href="mailto:hello@collabnb.com" style="color:#3C5759;">hello@collabnb.com</a></p>
+    <p>Questions? Reply to this email or reach us at <a href="mailto:hello@collabnb.com" style="color:#5C5347;">hello@collabnb.com</a></p>
   </div>
 </div></div>
 </body></html>`;

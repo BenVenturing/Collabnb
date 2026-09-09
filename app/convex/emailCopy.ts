@@ -41,7 +41,7 @@ export const TEMPLATE_DEFAULTS: Record<string, TemplateDef> = {
     trigger: "Creator signs up on the marketing site",
     category: "Account",
     vars: ["firstName"],
-    calloutColor: "#4A9B7F",
+    calloutColor: "#8B6F52",
     copy: {
       subject: "You're on the Collabnb creator waitlist 🎬",
       heading: "Hey {{firstName}} 👋",
@@ -56,7 +56,7 @@ export const TEMPLATE_DEFAULTS: Record<string, TemplateDef> = {
     trigger: "Host signs up on the marketing site",
     category: "Account",
     vars: ["firstName"],
-    calloutColor: "#4A9B7F",
+    calloutColor: "#8B6F52",
     copy: {
       subject: "You're on the Collabnb host waitlist 🏡",
       heading: "Hey {{firstName}} 👋",
@@ -71,7 +71,7 @@ export const TEMPLATE_DEFAULTS: Record<string, TemplateDef> = {
     trigger: "Admin approves a creator (any approve path)",
     category: "Account",
     vars: ["firstName"],
-    calloutColor: "#4A9B7F",
+    calloutColor: "#8B6F52",
     callout2Color: "#f59e0b",
     buttonHref: `${BASE_URL}/login.html`,
     copy: {
@@ -91,7 +91,7 @@ export const TEMPLATE_DEFAULTS: Record<string, TemplateDef> = {
     trigger: "Admin approves a host (any approve path)",
     category: "Account",
     vars: ["firstName"],
-    calloutColor: "#4A9B7F",
+    calloutColor: "#8B6F52",
     callout2Color: "#f59e0b",
     buttonHref: `${BASE_URL}/login.html`,
     copy: {
@@ -158,7 +158,7 @@ export const TEMPLATE_DEFAULTS: Record<string, TemplateDef> = {
     trigger: "Host has creator messages unanswered for 24h+ — repeats every 3 days",
     category: "Collabs & Messaging",
     vars: ["firstName", "conversationsLabel", "creatorNames"],
-    calloutColor: "#4A9B7F",
+    calloutColor: "#8B6F52",
     buttonHref: `${BASE_URL}/inbox`,
     copy: {
       subject: "{{conversationsLabel}} waiting for your reply",
@@ -174,7 +174,7 @@ export const TEMPLATE_DEFAULTS: Record<string, TemplateDef> = {
     trigger: "Creator has host messages unanswered for 24h+ — repeats every 3 days",
     category: "Collabs & Messaging",
     vars: ["firstName", "conversationsLabel", "hostNames"],
-    calloutColor: "#4A9B7F",
+    calloutColor: "#8B6F52",
     buttonHref: `${BASE_URL}/inbox`,
     copy: {
       subject: "{{conversationsLabel}} waiting for your reply",
@@ -206,7 +206,7 @@ export const TEMPLATE_DEFAULTS: Record<string, TemplateDef> = {
     trigger: "Host accepts a creator's application",
     category: "Collabs & Messaging",
     vars: ["firstName", "hostName", "listingTitle"],
-    calloutColor: "#4A9B7F",
+    calloutColor: "#8B6F52",
     buttonHref: `${BASE_URL}/inbox`,
     copy: {
       subject: "{{hostName}} accepted your application 🎉",
@@ -238,7 +238,7 @@ export const TEMPLATE_DEFAULTS: Record<string, TemplateDef> = {
     trigger: "User receives an inbox message",
     category: "Collabs & Messaging",
     vars: ["firstName", "senderName", "preview"],
-    calloutColor: "#4A9B7F",
+    calloutColor: "#8B6F52",
     buttonHref: `${BASE_URL}/inbox`,
     copy: {
       subject: "{{senderName}} sent you a message",
@@ -254,7 +254,7 @@ export const TEMPLATE_DEFAULTS: Record<string, TemplateDef> = {
     trigger: "Collaboration marked complete and platform fee settled",
     category: "Contracts & Payments",
     vars: ["name", "propertyLabel"],
-    calloutColor: "#4A9B7F",
+    calloutColor: "#8B6F52",
     copy: {
       subject: "Your Collabnb collaboration is complete",
       heading: "All wrapped up, {name} 🎉",
@@ -268,7 +268,7 @@ export const TEMPLATE_DEFAULTS: Record<string, TemplateDef> = {
     trigger: "Platform fee charged on collab completion",
     category: "Contracts & Payments",
     vars: ["name", "propertyLabel", "amount", "feeMethod"],
-    calloutColor: "#4A9B7F",
+    calloutColor: "#8B6F52",
     copy: {
       subject: "Receipt: Collabnb platform fee charged",
       heading: "Collaboration complete, {name} 💸",
@@ -325,7 +325,7 @@ export const TEMPLATE_DEFAULTS: Record<string, TemplateDef> = {
     trigger: "Admin nudges an email-only signup to complete their account",
     category: "Account",
     vars: ["firstName"],
-    calloutColor: "#4A9B7F",
+    calloutColor: "#8B6F52",
     buttonHref: `${BASE_URL}/login.html`,
     copy: {
       subject: "Finish setting up your Collabnb account",
@@ -395,34 +395,34 @@ export function layout(body: string) {
   return `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background:#F7F5F2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#F7F5F2;padding:44px 16px;">
+<body style="margin:0;padding:0;background:#F7F4EF;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#F7F4EF;padding:44px 16px;">
     <tr><td align="center">
-      <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background:#ffffff;border-radius:24px;overflow:hidden;border:1px solid #EAE7E1;box-shadow:0 8px 40px rgba(25,37,36,0.08);">
-        <!-- Mint header with plain logo -->
+      <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background:#ffffff;border-radius:24px;overflow:hidden;border:1px solid #EAE3D9;box-shadow:0 8px 40px rgba(40,32,20,0.08);">
+        <!-- Cream header with plain logo -->
         <tr>
-          <td bgcolor="#D1EBDB" style="background:linear-gradient(135deg,#D1EBDB 0%,#EAF6F0 48%,#C6E6D5 100%);padding:32px 40px 28px;text-align:center;border-bottom:1px solid rgba(255,255,255,0.6);">
+          <td bgcolor="#F3EEE6" style="background:linear-gradient(135deg,#F3EEE6 0%,#FBF8F3 48%,#EFE7DA 100%);padding:32px 40px 28px;text-align:center;border-bottom:1px solid rgba(255,255,255,0.6);">
             <img src="${LOGO_URL}" alt="Collabnb" width="52" height="52" style="display:block;width:52px;height:52px;margin:0 auto;border:0;outline:none;" />
-            <div style="font-size:21px;font-weight:800;color:#192524;letter-spacing:-0.4px;margin-top:12px;">Collabnb</div>
-            <div style="font-size:10.5px;color:#5B7A6E;margin-top:4px;letter-spacing:2.2px;text-transform:uppercase;font-weight:600;">Creator-First Hospitality</div>
+            <div style="font-size:21px;font-weight:800;color:#241F19;letter-spacing:-0.4px;margin-top:12px;">Collabnb</div>
+            <div style="font-size:10.5px;color:#8A7A63;margin-top:4px;letter-spacing:2.2px;text-transform:uppercase;font-weight:600;">Creator-First Hospitality</div>
           </td>
         </tr>
-        <!-- Mint accent line -->
-        <tr><td bgcolor="#4A9B7F" style="height:3px;background:linear-gradient(90deg,rgba(74,155,127,0) 0%,#4A9B7F 30%,#D1EBDB 50%,#4A9B7F 70%,rgba(74,155,127,0) 100%);font-size:0;line-height:0;">&nbsp;</td></tr>
+        <!-- Warm accent line -->
+        <tr><td bgcolor="#8B6F52" style="height:3px;background:linear-gradient(90deg,rgba(139,111,82,0) 0%,#8B6F52 30%,#EFE3D3 50%,#8B6F52 70%,rgba(139,111,82,0) 100%);font-size:0;line-height:0;">&nbsp;</td></tr>
         <!-- Body -->
         <tr><td style="padding:38px 40px 8px;">${body}</td></tr>
         <!-- Warm sign-off -->
         <tr>
           <td style="padding:8px 40px 34px;">
-            <p style="margin:0;font-size:15px;color:#3C5759;line-height:1.65;">With gratitude,</p>
-            <p style="margin:2px 0 0;font-size:15px;font-weight:700;color:#192524;">The Collabnb Team <span style="color:#4A9B7F;">💚</span></p>
+            <p style="margin:0;font-size:15px;color:#5C5347;line-height:1.65;">With gratitude,</p>
+            <p style="margin:2px 0 0;font-size:15px;font-weight:700;color:#241F19;">The Collabnb Team <span style="color:#8B6F52;">🤎</span></p>
           </td>
         </tr>
         <!-- Footer -->
         <tr>
-          <td bgcolor="#F4F7F4" style="padding:22px 40px;background:#F4F7F4;border-top:1px solid #E7EDE7;text-align:center;">
-            <p style="margin:0 0 4px;font-size:12px;color:#7B8C82;">Creators &amp; boutique stays, matched with care.</p>
-            <p style="margin:0;font-size:12px;color:#959D90;">© 2026 Collabnb · <a href="${BASE_URL}" style="color:#4A9B7F;text-decoration:none;font-weight:600;">collabnb.com</a></p>
+          <td bgcolor="#F7F4EE" style="padding:22px 40px;background:#F7F4EE;border-top:1px solid #EDE6DA;text-align:center;">
+            <p style="margin:0 0 4px;font-size:12px;color:#9C9182;">Creators &amp; boutique stays, matched with care.</p>
+            <p style="margin:0;font-size:12px;color:#A69C8C;">© 2026 Collabnb · <a href="${BASE_URL}" style="color:#8B6F52;text-decoration:none;font-weight:600;">collabnb.com</a></p>
           </td>
         </tr>
       </table>
@@ -435,8 +435,8 @@ export function layout(body: string) {
 // The email's focal point: the key line / summary paragraph in a liquid-glass chip.
 export function heroChip(text: string) {
   return `<table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px;"><tr>
-    <td bgcolor="#E9F5EF" style="background:linear-gradient(135deg,#DCF0E5 0%,#F3FAF6 100%);border:1px solid rgba(255,255,255,0.9);border-radius:18px;padding:22px 24px;box-shadow:0 6px 20px rgba(25,37,36,0.06);">
-      <p style="margin:0;font-size:16px;font-weight:500;color:#192524;line-height:1.6;">${text}</p>
+    <td bgcolor="#F7F2EA" style="background:linear-gradient(135deg,#F3EBDD 0%,#FBF7F0 100%);border:1px solid rgba(255,255,255,0.9);border-radius:18px;padding:22px 24px;box-shadow:0 6px 20px rgba(40,32,20,0.06);">
+      <p style="margin:0;font-size:16px;font-weight:500;color:#241F19;line-height:1.6;">${text}</p>
     </td>
   </tr></table>`;
 }
@@ -445,13 +445,13 @@ export function callout(color: string, label: string, text: string) {
   return `<table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;"><tr>
     <td style="background:${color}14;border:1px solid ${color}33;border-left:3px solid ${color};border-radius:14px;padding:16px 20px;">
       <div style="font-size:11px;color:${color};font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">${label}</div>
-      <p style="margin:0;font-size:14px;color:#3C5759;line-height:1.65;">${text}</p>
+      <p style="margin:0;font-size:14px;color:#5C5347;line-height:1.65;">${text}</p>
     </td>
   </tr></table>`;
 }
 
 export function button(href: string, label: string) {
-  return `<a href="${href}" style="display:inline-block;margin-top:4px;padding:14px 34px;background:linear-gradient(135deg,#192524,#2d4a3e);color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;border-radius:999px;letter-spacing:-0.1px;box-shadow:0 6px 18px rgba(74,155,127,0.28);">${label}</a>`;
+  return `<a href="${href}" style="display:inline-block;margin-top:4px;padding:14px 34px;background:linear-gradient(135deg,#241F19,#4A3B2E);color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;border-radius:999px;letter-spacing:-0.1px;box-shadow:0 6px 18px rgba(139,111,82,0.28);">${label}</a>`;
 }
 
 // Assemble a full email (subject + html) from merged copy + variables.
@@ -463,12 +463,12 @@ export function renderTemplate(
 ) {
   const f = (s?: string) => fill(s, vars);
   const parts: string[] = [
-    `<p style="margin:0 0 18px;font-size:22px;font-weight:700;color:#192524;">${f(t.heading)}</p>`,
+    `<p style="margin:0 0 18px;font-size:22px;font-weight:700;color:#241F19;">${f(t.heading)}</p>`,
     // The body doubles as the focal summary — shown in the liquid-glass chip.
     heroChip(f(t.body)),
   ];
   if (t.calloutText && f(t.calloutText).trim()) {
-    parts.push(callout(t.calloutColor || "#4A9B7F", f(t.calloutLabel), f(t.calloutText)));
+    parts.push(callout(t.calloutColor || "#8B6F52", f(t.calloutLabel), f(t.calloutText)));
   }
   if (t.callout2Text && f(t.callout2Text).trim()) {
     parts.push(callout(t.callout2Color || "#f59e0b", f(t.callout2Label), f(t.callout2Text)));
@@ -478,7 +478,7 @@ export function renderTemplate(
     parts.push(button(href, f(t.buttonLabel)));
   }
   if (t.footnote && f(t.footnote).trim()) {
-    parts.push(`<p style="margin:12px 0 0;font-size:13px;color:#959D90;line-height:1.65;">${f(t.footnote)}</p>`);
+    parts.push(`<p style="margin:12px 0 0;font-size:13px;color:#A69C8C;line-height:1.65;">${f(t.footnote)}</p>`);
   }
   return { subject: f(t.subject), html: layout(parts.join("\n")) };
 }

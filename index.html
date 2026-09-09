@@ -205,6 +205,31 @@
     </div>
   </section>
 
+  <!-- ── FLOATING PRODUCT PREVIEW ── -->
+  <div class="floating-preview" data-floating-preview aria-hidden="true">
+    <button type="button" class="floating-preview-close" data-floating-dismiss aria-label="Dismiss preview">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+    </button>
+    <button type="button" class="mac-mockup mac-mockup--sm" data-preview-open
+      data-video-host="/videos/host-walkthrough.mp4"
+      data-video-creator="/videos/creator-walkthrough.mp4"
+      data-audio-host="/audio/undertow.mp3"
+      data-audio-creator="/audio/rising-dawn.mp3"
+      aria-label="Watch the host and creator walkthrough">
+      <span class="mac-lid">
+        <span class="mac-notch"></span>
+        <span class="mac-screen">
+          <video class="mac-screen-video" muted autoplay playsinline aria-hidden="true"></video>
+          <span class="mac-caption" data-mac-caption>Host view</span>
+          <span class="mac-expand" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 00-2 2v3M16 3h3a2 2 0 012 2v3M21 16v3a2 2 0 01-2 2h-3M8 21H5a2 2 0 01-2-2v-3"/></svg>
+          </span>
+        </span>
+      </span>
+      <span class="mac-base"></span>
+    </button>
+  </div>
+
   <!-- ── LIVE COUNTERS ── -->
   <section class="section" aria-labelledby="counters-heading">
     <div class="container">
@@ -538,6 +563,41 @@
   <div class="modal-card login-modal-card" style="max-width:520px;">
     <!-- Clerk sign-in component mounts here -->
     <div id="clerk-login-mount"></div>
+  </div>
+</div>
+
+<!-- ── PRODUCT PREVIEW MODAL ── -->
+<div id="preview-modal-overlay" class="modal-overlay" role="dialog" aria-modal="true" aria-label="Host and creator walkthrough" aria-hidden="true">
+  <div class="modal-card preview-modal-card" style="position:relative;">
+    <button type="button" class="modal-close" id="preview-modal-close" aria-label="Close">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+    </button>
+
+    <div class="preview-choice" data-preview-choice>
+      <button type="button" class="preview-choice-option" data-preview-select="host">
+        <span class="preview-choice-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+        </span>
+        <span class="preview-choice-label">Host view</span>
+        <span class="preview-choice-sub">How hosts manage collab requests</span>
+      </button>
+      <button type="button" class="preview-choice-option" data-preview-select="creator">
+        <span class="preview-choice-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M6 20v-2a6 6 0 0112 0v2"/></svg>
+        </span>
+        <span class="preview-choice-label">Creator view</span>
+        <span class="preview-choice-sub">How creators manage their collabs</span>
+      </button>
+    </div>
+
+    <div class="preview-player" data-preview-player hidden>
+      <div class="preview-player-tabs">
+        <button type="button" class="preview-tab" data-preview-select="host">Host view</button>
+        <button type="button" class="preview-tab" data-preview-select="creator">Creator view</button>
+      </div>
+      <video class="preview-player-video" id="preview-player-video" controls playsinline></video>
+      <audio id="preview-player-audio" loop></audio>
+    </div>
   </div>
 </div>
 

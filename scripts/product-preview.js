@@ -13,6 +13,10 @@ export function initProductPreview() {
     host: mockup.dataset.videoHost,
     creator: mockup.dataset.videoCreator,
   };
+  const audioTracks = {
+    host: mockup.dataset.audioHost,
+    creator: mockup.dataset.audioCreator,
+  };
 
   const closeBtn = document.querySelector('#preview-modal-close');
   const modalCard = overlay.querySelector('.preview-modal-card');
@@ -21,7 +25,7 @@ export function initProductPreview() {
   const playerVideo = document.querySelector('#preview-player-video');
   const playerAudio = document.querySelector('#preview-player-audio');
   const tabs = overlay.querySelectorAll('.preview-tab');
-  if (playerAudio) playerAudio.volume = 0.35;
+  if (playerAudio) playerAudio.volume = 0.28;
 
   function openModal() {
     overlay.classList.add('open');
@@ -47,7 +51,8 @@ export function initProductPreview() {
     if (!src) return;
     playerVideo.src = src;
     playerVideo.play().catch(() => {});
-    if (playerAudio) {
+    if (playerAudio && audioTracks[view]) {
+      playerAudio.src = audioTracks[view];
       playerAudio.currentTime = 0;
       playerAudio.play().catch(() => {});
     }
@@ -99,5 +104,32 @@ export function initProductPreview() {
   if (loopVideo) {
     loopVideo.addEventListener('ended', playNextLoop);
     playNextLoop();
+  }
+
+  /* Floating preview bubble (home hero) — shows after the hero scrolls by,
+     dismissible for the rest of the session so closing it sticks. */
+  const floating = document.querySelector('[data-floating-preview]');
+  if (floating) {
+    const dismissBtn = floating.querySelector('[data-floating-dismiss]');
+    const dismissed = sessionStorage.getItem('collabnb_preview_dismissed') === '1';
+
+    if (!dismissed) {
+      window.addEventListener('scroll', () => {
+        if (window.scrollY > window.innerHeight * 0.6) {
+          floating.classList.add('visible');
+        } else {
+          floating.classList.remove('visible');
+        }
+      }, { passive: true });
+    }
+
+    if (dismissBtn) {
+      dismissBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        floating.classList.remove('visible');
+        floating.classList.add('dismissed');
+        sessionStorage.setItem('collabnb_preview_dismissed', '1');
+      });
+    }
   }
 }

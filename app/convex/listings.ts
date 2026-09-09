@@ -335,26 +335,43 @@ export const getPublishedPreview = query({
 });
 
 // Public, unauthenticated map pins for anonymous marketing visitors (How it
-// works globe). Price + coarse jittered location only — no title, image,
-// host, or exact coordinates, ever. Same redaction level as a trial-expired
-// creator's locked listing view, just reachable with zero auth.
+// works globe). Same redaction level as a trial-expired creator's locked
+// listing card on Explore — title and exact coordinates never leave the
+// server; image and coarse location are sent but meant to render blurred
+// client-side, exactly like Explore's _redacted ListingCard.
+//
+// Blends in sample listings (same as Explore.jsx's allListings) so the map
+// isn't empty before any real listing has published — samples are always
+// status:"draft" by design, so they're matched by is_sample, not status.
 export const getPublicMapPreview = query({
   args: {},
   handler: async (ctx) => {
     const all = await ctx.db.query("listings").collect();
-    const published = all.filter(
-      (l: any) => l.status === "published" && !l.is_sample && !l.needs_compensation_review
+    const visible = all.filter(
+      (l: any) =>
+        l.is_sample === true ||
+        (l.status === "published" && !l.needs_compensation_review)
     );
-    return published
-      .filter((l: any) => typeof l.lat === "number" && typeof l.lng === "number")
-      .map((l: any) => ({
-        _id: l._id,
-        ...approxCoords(l.lat, l.lng, String(l._id), true),
-        compensation: l.compensation,
-        compensation_type: l.compensation_type,
-        cash_amount: l.cash_amount,
-        collab_type: l.collab_type,
-      }));
+    return Promise.all(
+      visible
+        .filter((l: any) => typeof l.lat === "number" && typeof l.lng === "number")
+        .map(async (l: any) => {
+          const withImg = await withImages(ctx, l);
+          return {
+            _id: l._id,
+            ...approxCoords(l.lat, l.lng, String(l._id), true),
+            image: withImg.image,
+            // Real listings carry location_city/location_country; sample
+            // listings only have a "City, ST" location string — city only.
+            location_city: l.location_city ?? l.location?.split(",")[0],
+            location_country: l.location_country,
+            compensation: l.compensation,
+            compensation_type: l.compensation_type,
+            cash_amount: l.cash_amount,
+            collab_type: l.collab_type,
+          };
+        })
+    );
   },
 });
 

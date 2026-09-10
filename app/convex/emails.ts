@@ -42,6 +42,14 @@ export const sendFinishSignupEmail = internalAction({
   },
 });
 
+export const sendFinishSignupFollowupEmail = internalAction({
+  args: { email: v.string(), full_name: v.string() },
+  handler: async (ctx, { email, full_name }) => {
+    const firstName = full_name.split(" ")[0];
+    await sendFromTemplate(ctx, "finish_signup_followup", email, { firstName });
+  },
+});
+
 // ─── Incomplete application nudge (has an account, profile/listing unfinished) ─
 
 export const sendApplicationIncompleteEmail = internalAction({

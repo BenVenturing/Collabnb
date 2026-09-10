@@ -470,10 +470,11 @@ export const remindExpiringTrials = internalMutation({
 // Covers profiles still awaiting review (matches the admin Users "Pending"
 // filter: is_verified !== true && !is_rejected) that have gone quiet. Two
 // buckets, mirroring the admin's manual "Nudge" actions but automatic:
-//   - no login yet (clerk_registered falsy)      -> finish_signup email
-//   - has a login but profile/listing is bare    -> application_incomplete_*
-// First nudge at 3 days, repeating every 5 days, giving up at 21 days so a
-// dead lead doesn't get emailed forever.
+//   - no login yet (clerk_registered falsy) -> finish_signup, then a single
+//     finish_signup_followup ~5 days later, then we stop (2-step sequence,
+//     tracked via finish_signup_nudge_count).
+//   - has a login but profile/listing is bare -> application_incomplete_*,
+//     repeating every 5 days until they finish or 21 days pass.
 
 const REENGAGE_FIRST_NUDGE_AFTER = 3 * 24 * 60 * 60 * 1000;
 const REENGAGE_NUDGE_INTERVAL = 5 * 24 * 60 * 60 * 1000;
@@ -488,23 +489,45 @@ function isCreatorProfileBare(p: any) {
 }
 
 export const checkIncompleteApplications = internalMutation({
-  args: { dryRun: v.optional(v.boolean()) },
-  handler: async (ctx, { dryRun }) => {
+  args: {
+    dryRun: v.optional(v.boolean()),
+    // Manual/admin override: only consider these emails, and send the next
+    // step in their sequence immediately instead of waiting on the day-gate.
+    onlyEmails: v.optional(v.array(v.string())),
+  },
+  handler: async (ctx, { dryRun, onlyEmails }) => {
     const now = Date.now();
+    const forced = !!onlyEmails && onlyEmails.length > 0;
+    const targetEmails = forced ? new Set(onlyEmails!.map((e) => e.toLowerCase().trim())) : null;
     const profiles = await ctx.db.query("profiles").collect();
-    const pending = profiles.filter((p) => p.is_verified !== true && p.is_rejected !== true);
+    // "No login yet" applies whether or not they've been approved — an
+    // already-approved Founder who never finished creating their account
+    // (e.g. clerk_registered still falsy) still needs this nudge. The
+    // "profile/listing is bare" branch only makes sense pre-approval, since
+    // that's what blocks them from being reviewed in the first place.
+    const candidates = profiles.filter(
+      (p) =>
+        p.is_rejected !== true &&
+        (p.is_verified !== true || !p.clerk_registered) &&
+        (!targetEmails || (p.email && targetEmails.has(p.email.toLowerCase().trim())))
+    );
 
     const preview: any[] = [];
     let nudged = 0;
-    for (const p of pending) {
+    for (const p of candidates) {
       const age = now - p._creationTime;
-      if (age < REENGAGE_FIRST_NUDGE_AFTER || age > REENGAGE_GIVE_UP_AFTER) continue;
-      if (p.last_reengagement_nudge_at && now - p.last_reengagement_nudge_at < REENGAGE_NUDGE_INTERVAL) continue;
+      if (!forced) {
+        if (age < REENGAGE_FIRST_NUDGE_AFTER || age > REENGAGE_GIVE_UP_AFTER) continue;
+        if (p.last_reengagement_nudge_at && now - p.last_reengagement_nudge_at < REENGAGE_NUDGE_INTERVAL) continue;
+      }
       if (!p.email) continue;
 
-      let kind: "finish_signup" | "incomplete" | null = null;
+      let kind: "finish_signup" | "finish_signup_followup" | "incomplete" | null = null;
       if (!p.clerk_registered) {
-        kind = "finish_signup";
+        const step = p.finish_signup_nudge_count ?? 0;
+        if (step === 0) kind = "finish_signup";
+        else if (step === 1) kind = "finish_signup_followup";
+        // step >= 2: sequence already complete, no more sends.
       } else if (p.role === "creator" && isCreatorProfileBare(p)) {
         kind = "incomplete";
       } else if (p.role === "host") {
@@ -528,6 +551,13 @@ export const checkIncompleteApplications = internalMutation({
           email: p.email,
           full_name: p.full_name,
         });
+        await ctx.db.patch(p._id, { finish_signup_nudge_count: 1 });
+      } else if (kind === "finish_signup_followup") {
+        await ctx.scheduler.runAfter(0, internal.emails.sendFinishSignupFollowupEmail, {
+          email: p.email,
+          full_name: p.full_name,
+        });
+        await ctx.db.patch(p._id, { finish_signup_nudge_count: 2 });
       } else {
         await ctx.scheduler.runAfter(0, internal.emails.sendApplicationIncompleteEmail, {
           email: p.email,

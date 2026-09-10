@@ -337,6 +337,23 @@ export const TEMPLATE_DEFAULTS: Record<string, TemplateDef> = {
       footnote: "If you didn't start a Collabnb signup, you can safely ignore this email.",
     },
   },
+  finish_signup_followup: {
+    name: "Finish creating your account — follow-up",
+    trigger: "Still hasn't finished creating a login a few days after the first finish_signup nudge — final reminder in the sequence",
+    category: "Account",
+    vars: ["firstName"],
+    calloutColor: "#f59e0b",
+    buttonHref: `${BASE_URL}/login.html`,
+    copy: {
+      subject: "Last reminder: finish your Collabnb account",
+      heading: "One more nudge, {{firstName}}",
+      body: "We reached out a few days ago — you still haven't finished creating your Collabnb login. It only takes 30 seconds to pick up where you left off.",
+      calloutLabel: "This is our last reminder",
+      calloutText: "You're welcome to finish anytime after this, but we won't keep emailing you about it.",
+      buttonLabel: "Finish creating your account",
+      footnote: "If you didn't start a Collabnb signup, you can safely ignore this email.",
+    },
+  },
   application_incomplete_creator: {
     name: "Incomplete application (to creator)",
     trigger: "Creator applicant hasn't finished their profile/application after N days — nudge, not yet wired to a cron",

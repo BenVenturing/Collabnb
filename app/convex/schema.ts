@@ -106,6 +106,10 @@ export default defineSchema({
     // signup/profile/listing setup (cron: checkIncompleteApplications).
     // Gates the repeat interval.
     last_reengagement_nudge_at: v.optional(v.number()),
+    // How many "finish creating your account" emails this email-only
+    // applicant has received (0/undefined, 1, or 2 = sequence complete).
+    // Drives which template checkIncompleteApplications sends next.
+    finish_signup_nudge_count: v.optional(v.number()),
     // Settings > Language & region.
     preferred_language: v.optional(v.string()),
     preferred_currency: v.optional(v.string()),

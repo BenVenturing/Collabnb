@@ -6,7 +6,8 @@
   "navGroups": {
     "account": "Cuenta",
     "membership": "Membresía",
-    "preferences": "Preferencias"
+    "preferences": "Preferencias",
+    "app": "App"
   },
   "nav": {
     "personalInfo": "Información personal",
@@ -15,7 +16,8 @@
     "notifications": "Notificaciones",
     "billing": "Plan y facturación",
     "payments": "Pagos e impuestos",
-    "language": "Idioma y región"
+    "language": "Idioma y región",
+    "desktopApp": "Aplicación de escritorio"
   },
   "quickLinks": {
     "adminDashboard": "Panel de administración",
@@ -224,5 +226,16 @@
       "CAD": "Dólar canadiense (C$)",
       "AUD": "Dólar australiano (A$)"
     }
+  },
+  "desktopApp": {
+    "sectionTitle": "Aplicación de escritorio",
+    "installedTitle": "Estás usando la aplicación de escritorio",
+    "installedDesc": "Collabnb se está ejecutando como su propia aplicación, independiente de tu navegador.",
+    "description": "Instala Collabnb como aplicación de escritorio para acceder con un clic, sin pestaña de navegador ni marcador que buscar.",
+    "installButton": "Instalar Collabnb",
+    "installing": "Abriendo el aviso de instalación…",
+    "safariInstructions": "En la barra de herramientas de Safari, abre el menú Compartir y elige «Añadir al Dock».",
+    "genericInstructions": "Busca el ícono de instalación en la barra de direcciones de tu navegador, o abre el menú del navegador y elige «Instalar Collabnb».",
+    "unsupported": "La instalación de la aplicación de escritorio aún no está disponible en este navegador — prueba con Chrome, Edge o Safari."
   }
 }

@@ -9,6 +9,7 @@ import { getPitchCount } from '../lib/pitchCount';
 import { COUNTRIES } from '../lib/countries';
 import { reopenChecklist } from '../components/OnboardingChecklist';
 import ReceiptCheckoutOverlay from '../components/ReceiptCheckoutOverlay';
+import { getInstallState, subscribeInstall, promptInstall } from '../lib/pwaInstall';
 
 const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL;
 
@@ -56,6 +57,13 @@ const DownloadIcon = () => (
     <line x1="128" y1="40" x2="128" y2="168"/>
     <polyline points="80 120 128 168 176 120"/>
     <line x1="40" y1="200" x2="216" y2="200"/>
+  </svg>
+);
+const MonitorIcon = () => (
+  <svg viewBox="0 0 256 256" fill="none" stroke="currentColor" strokeWidth="14" strokeLinecap="round" strokeLinejoin="round" width="18" height="18">
+    <rect x="24" y="48" width="208" height="144" rx="12"/>
+    <line x1="88" y1="224" x2="168" y2="224"/>
+    <line x1="128" y1="192" x2="128" y2="224"/>
   </svg>
 );
 const GlobeIcon = () => (
@@ -393,6 +401,12 @@ export default function Settings() {
       label: t('navGroups.preferences'),
       items: [
         { id: 'language', label: t('nav.language'), icon: <GlobeIcon /> },
+      ],
+    },
+    {
+      label: t('navGroups.app'),
+      items: [
+        { id: 'app', label: t('nav.desktopApp'), icon: <MonitorIcon /> },
       ],
     },
   ];
@@ -808,11 +822,62 @@ export default function Settings() {
                 />
               </>
             )}
+
+            {activeTab === 'app' && (
+              <>
+                <SectionLabel>{t('desktopApp.sectionTitle')}</SectionLabel>
+                <DesktopAppPanel />
+              </>
+            )}
           </div>
         )}
       </div>
 
       <ReceiptCheckoutOverlay receipt={checkoutReceipt} onClose={() => setCheckoutReceipt(null)} />
+    </div>
+  );
+}
+
+// ─── Desktop app ─────────────────────────────────────────────────────────────
+function DesktopAppPanel() {
+  const { t } = useTranslation('settings');
+  const [installState, setInstallState] = useState(getInstallState());
+  const [installing, setInstalling] = useState(false);
+
+  useEffect(() => subscribeInstall(() => setInstallState(getInstallState())), []);
+
+  const isSafari = typeof navigator !== 'undefined' && /^((?!chrome|android|crios|edgios).)*safari/i.test(navigator.userAgent);
+
+  async function handleInstall() {
+    setInstalling(true);
+    try {
+      await promptInstall();
+    } finally {
+      setInstalling(false);
+    }
+  }
+
+  if (installState.isInstalled) {
+    return (
+      <div style={{ background: 'rgba(209,235,219,0.2)', border: '1px solid rgba(74,155,127,0.2)', borderRadius: '1rem', padding: '1.1rem 1.25rem' }}>
+        <p style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--ink)', margin: '0 0 0.35rem' }}>{t('desktopApp.installedTitle')}</p>
+        <p style={{ fontSize: '0.8rem', color: 'var(--sage)', margin: 0, lineHeight: 1.5 }}>{t('desktopApp.installedDesc')}</p>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ background: 'rgba(209,235,219,0.15)', border: '1px solid rgba(74,155,127,0.15)', borderRadius: '1rem', padding: '1.1rem 1.25rem' }}>
+      <p style={{ fontSize: '0.8rem', color: 'var(--sage)', margin: '0 0 0.9rem', lineHeight: 1.5 }}>{t('desktopApp.description')}</p>
+      {installState.canInstall ? (
+        <button className="btn-primary" style={{ fontSize: '0.82rem', padding: '0.55rem 1.25rem' }} onClick={handleInstall} disabled={installing}>
+          {installing ? t('desktopApp.installing') : t('desktopApp.installButton')}
+        </button>
+      ) : (
+        <p style={{ fontSize: '0.8rem', color: 'var(--slate)', margin: 0, lineHeight: 1.5, fontWeight: 600 }}>
+          {isSafari ? t('desktopApp.safariInstructions') : t('desktopApp.genericInstructions')}
+        </p>
+      )}
     </div>
   );
 }

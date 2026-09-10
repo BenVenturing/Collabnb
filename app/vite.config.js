@@ -19,8 +19,11 @@ export default defineConfig({
         name: 'Collabnb',
         short_name: 'Collabnb',
         description: 'Discover stays, manage collabs, and grow your portfolio.',
-        start_url: APP_BASE,
-        scope: APP_BASE,
+        // scope is the site root (not /app/) because the app immediately routes to
+        // root-level paths like /explore, /profile, /host — scoping to /app/ alone
+        // made Chrome treat those as "outside the app" and show its URL trust bar
+        start_url: '/explore',
+        scope: '/',
         display: 'standalone',
         background_color: '#EFECE9',
         theme_color: '#192524',

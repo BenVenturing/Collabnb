@@ -6,7 +6,8 @@
   "navGroups": {
     "account": "Konto",
     "membership": "Mitgliedschaft",
-    "preferences": "Einstellungen"
+    "preferences": "Einstellungen",
+    "app": "App"
   },
   "nav": {
     "personalInfo": "Persönliche Informationen",
@@ -15,7 +16,8 @@
     "notifications": "Benachrichtigungen",
     "billing": "Plan und Abrechnung",
     "payments": "Zahlungen und Steuern",
-    "language": "Sprache und Region"
+    "language": "Sprache und Region",
+    "desktopApp": "Desktop-App"
   },
   "quickLinks": {
     "adminDashboard": "Admin-Dashboard",
@@ -224,5 +226,16 @@
       "CAD": "Kanadischer Dollar (C$)",
       "AUD": "Australischer Dollar (A$)"
     }
+  },
+  "desktopApp": {
+    "sectionTitle": "Desktop-App",
+    "installedTitle": "Du nutzt die Desktop-App",
+    "installedDesc": "Collabnb läuft als eigenständige App, getrennt von deinem Browser.",
+    "description": "Installiere Collabnb als Desktop-App für Zugriff mit einem Klick — kein Browser-Tab, kein Lesezeichen zum Suchen.",
+    "installButton": "Collabnb installieren",
+    "installing": "Installationsaufforderung wird geöffnet…",
+    "safariInstructions": "Öffne in der Safari-Symbolleiste das Teilen-Menü und wähle „Zum Dock hinzufügen“.",
+    "genericInstructions": "Suche nach dem Installationssymbol in der Adressleiste deines Browsers oder öffne das Browsermenü und wähle „Collabnb installieren“.",
+    "unsupported": "Die Installation der Desktop-App ist in diesem Browser noch nicht verfügbar — probiere Chrome, Edge oder Safari."
   }
 }

@@ -6,6 +6,7 @@ import { ConvexProvider, ConvexReactClient } from 'convex/react';
 import { SpeedInsights } from '@vercel/speed-insights/react';
 import './index.css';
 import './i18n';
+import './lib/pwaInstall'; // registers the beforeinstallprompt listener before any route mounts
 import App from './App';
 
 const CLERK_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;

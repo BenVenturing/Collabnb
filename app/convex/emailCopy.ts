@@ -12,6 +12,16 @@ export const LOGO_URL = "https://outgoing-anaconda-357.convex.cloud/api/storage/
 export const TRUSTPILOT_BCC = "collabnb.com+46e7d484c3@invite.trustpilot.com";
 export const TRUSTPILOT_REVIEW_URL = "https://www.trustpilot.com/evaluate/collabnb.com";
 
+// Category hero illustrations (watercolor, warm/cream palette), hosted in
+// Convex file storage same as LOGO_URL. Keyed by TemplateDef.category so
+// renderTemplate can pick the right one automatically.
+export const HERO_URLS: Record<string, string> = {
+  Account: "https://outgoing-anaconda-357.convex.cloud/api/storage/202e3911-974f-4d05-bbe9-6dba8781b478",
+  "Collabs & Messaging": "https://outgoing-anaconda-357.convex.cloud/api/storage/df4624bf-59e4-47f0-834d-6747e1e4e81b",
+  "Contracts & Payments": "https://outgoing-anaconda-357.convex.cloud/api/storage/c53c86b7-f8f3-476c-8a93-03031b21cc36",
+  Trials: "https://outgoing-anaconda-357.convex.cloud/api/storage/3f1ef632-055f-4c81-b936-5d830be58c24",
+};
+
 export type TemplateCopy = {
   subject: string;
   heading: string;
@@ -72,7 +82,7 @@ export const TEMPLATE_DEFAULTS: Record<string, TemplateDef> = {
     category: "Account",
     vars: ["firstName"],
     calloutColor: "#8B6F52",
-    callout2Color: "#f59e0b",
+    callout2Color: "#8B6F52",
     buttonHref: `${BASE_URL}/login.html`,
     copy: {
       subject: "You've been granted access to Collabnb ✅",
@@ -92,7 +102,7 @@ export const TEMPLATE_DEFAULTS: Record<string, TemplateDef> = {
     category: "Account",
     vars: ["firstName"],
     calloutColor: "#8B6F52",
-    callout2Color: "#f59e0b",
+    callout2Color: "#8B6F52",
     buttonHref: `${BASE_URL}/login.html`,
     copy: {
       subject: "You've been granted access to Collabnb ✅",
@@ -111,7 +121,7 @@ export const TEMPLATE_DEFAULTS: Record<string, TemplateDef> = {
     trigger: "Admin rejects a profile (reason shown only if provided)",
     category: "Account",
     vars: ["firstName", "reason"],
-    calloutColor: "#f59e0b",
+    calloutColor: "#8B6F52",
     copy: {
       subject: "Your Collabnb application",
       heading: "Hey {{firstName}},",
@@ -126,7 +136,7 @@ export const TEMPLATE_DEFAULTS: Record<string, TemplateDef> = {
     trigger: "Creator applies to a listing",
     category: "Collabs & Messaging",
     vars: ["firstName", "creatorName", "listingTitle"],
-    calloutColor: "#7c3aed",
+    calloutColor: "#8B6F52",
     buttonHref: `${BASE_URL}/inbox`,
     copy: {
       subject: "New application from {{creatorName}}",
@@ -142,7 +152,7 @@ export const TEMPLATE_DEFAULTS: Record<string, TemplateDef> = {
     trigger: "Host has applications still undecided after 48h — repeats every 3 days, stops at 14 days",
     category: "Collabs & Messaging",
     vars: ["firstName", "applicationsLabel", "oldestListing", "waitingDays"],
-    calloutColor: "#d97706",
+    calloutColor: "#8B6F52",
     buttonHref: `${BASE_URL}/host/proposals`,
     copy: {
       subject: "{{applicationsLabel}} still waiting on you",
@@ -295,7 +305,7 @@ export const TEMPLATE_DEFAULTS: Record<string, TemplateDef> = {
     trigger: "Midnight UTC cron — 30-day trial expired",
     category: "Trials",
     vars: ["firstName"],
-    calloutColor: "#f59e0b",
+    calloutColor: "#8B6F52",
     buttonHref: `${BASE_URL}/#/profile`,
     copy: {
       subject: "Your Collabnb trial has ended",
@@ -342,7 +352,7 @@ export const TEMPLATE_DEFAULTS: Record<string, TemplateDef> = {
     trigger: "Still hasn't finished creating a login a few days after the first finish_signup nudge — final reminder in the sequence",
     category: "Account",
     vars: ["firstName"],
-    calloutColor: "#f59e0b",
+    calloutColor: "#8B6F52",
     buttonHref: `${BASE_URL}/login.html`,
     copy: {
       subject: "Last reminder: finish your Collabnb account",
@@ -393,7 +403,7 @@ export const TEMPLATE_DEFAULTS: Record<string, TemplateDef> = {
     trigger: "User requests a password reset — buttonHref must be overridden per-send with the tokenized reset link",
     category: "Account",
     vars: ["firstName"],
-    calloutColor: "#f59e0b",
+    calloutColor: "#8B6F52",
     buttonHref: `${BASE_URL}/login.html`,
     copy: {
       subject: "Reset your Collabnb password",
@@ -454,12 +464,13 @@ export async function mergedCopy(db: any, templateId: string) {
     calloutColor: def.calloutColor,
     callout2Color: def.callout2Color,
     buttonHref: def.buttonHref,
-  } as TemplateCopy & { calloutColor?: string; callout2Color?: string; buttonHref?: string };
+    category: def.category,
+  } as TemplateCopy & { calloutColor?: string; callout2Color?: string; buttonHref?: string; category?: string };
 }
 
 // ─── HTML rendering ───────────────────────────────────────────────────────────
 
-export function layout(body: string) {
+export function layout(body: string, heroUrl?: string) {
   return `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
@@ -477,6 +488,8 @@ export function layout(body: string) {
         </tr>
         <!-- Warm accent line -->
         <tr><td bgcolor="#8B6F52" style="height:3px;background:linear-gradient(90deg,rgba(139,111,82,0) 0%,#8B6F52 30%,#EFE3D3 50%,#8B6F52 70%,rgba(139,111,82,0) 100%);font-size:0;line-height:0;">&nbsp;</td></tr>
+        ${heroUrl ? `<!-- Category hero art -->
+        <tr><td style="line-height:0;"><img src="${heroUrl}" alt="" width="560" style="display:block;width:100%;height:auto;border:0;outline:none;" /></td></tr>` : ""}
         <!-- Body -->
         <tr><td style="padding:38px 40px 8px;">${body}</td></tr>
         <!-- Warm sign-off -->
@@ -525,7 +538,7 @@ export function button(href: string, label: string) {
 // Assemble a full email (subject + html) from merged copy + variables.
 // `buttonHref` can be overridden per-send for dynamic links (e.g. application deep links).
 export function renderTemplate(
-  t: TemplateCopy & { calloutColor?: string; callout2Color?: string; buttonHref?: string },
+  t: TemplateCopy & { calloutColor?: string; callout2Color?: string; buttonHref?: string; category?: string },
   vars: Record<string, string>,
   buttonHref?: string
 ) {
@@ -539,7 +552,7 @@ export function renderTemplate(
     parts.push(callout(t.calloutColor || "#8B6F52", f(t.calloutLabel), f(t.calloutText)));
   }
   if (t.callout2Text && f(t.callout2Text).trim()) {
-    parts.push(callout(t.callout2Color || "#f59e0b", f(t.callout2Label), f(t.callout2Text)));
+    parts.push(callout(t.callout2Color || "#8B6F52", f(t.callout2Label), f(t.callout2Text)));
   }
   const href = buttonHref || t.buttonHref;
   if (t.buttonLabel && href) {
@@ -548,7 +561,8 @@ export function renderTemplate(
   if (t.footnote && f(t.footnote).trim()) {
     parts.push(`<p style="margin:12px 0 0;font-size:13px;color:#A69C8C;line-height:1.65;">${f(t.footnote)}</p>`);
   }
-  return { subject: f(t.subject), html: layout(parts.join("\n")) };
+  const heroUrl = t.category ? HERO_URLS[t.category] : undefined;
+  return { subject: f(t.subject), html: layout(parts.join("\n"), heroUrl) };
 }
 
 export async function sendViaResend(apiKey: string, to: string, subject: string, html: string, bcc?: string) {

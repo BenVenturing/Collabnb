@@ -4,7 +4,7 @@ import { api } from '../../../convex/_generated/api';
 
 const INK   = '#192524';
 const SLATE = '#3C5759';
-const SAGE  = '#959D90';
+const SAGE  = '#646B62';
 const MINT  = '#D1EBDB';
 const BONE  = '#F7F5F2';
 const CARD  = { background: '#fff', border: '1px solid rgba(25,37,36,0.07)', borderRadius: '0.875rem', padding: '1.25rem 1.5rem' };

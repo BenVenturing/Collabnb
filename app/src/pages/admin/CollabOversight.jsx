@@ -4,7 +4,7 @@ import { api } from '../../../convex/_generated/api';
 
 const INK   = '#192524';
 const SLATE = '#3C5759';
-const SAGE  = '#959D90';
+const SAGE  = '#646B62';
 const BONE  = '#F7F5F2';
 
 const STATUS_FILTERS = ['all', 'pending', 'active', 'approved', 'completed', 'closed'];
@@ -115,7 +115,7 @@ export default function CollabOversight() {
                         <span style={{
                           marginLeft: '0.4rem', fontSize: '0.6rem', fontWeight: 700,
                           padding: '0.1rem 0.4rem', borderRadius: 99,
-                          background: 'rgba(149,157,144,0.18)', color: '#959D90',
+                          background: 'rgba(149,157,144,0.18)', color: '#646B62',
                           textTransform: 'uppercase', letterSpacing: '0.04em',
                         }}>
                           Sample

@@ -6,6 +6,26 @@ import { getProfileCounts, waitlistSignUp, updateWaitlistProfile } from './conve
 import { initFAQBubble } from './faq-bubble.js';
 import { initProductPreview } from './product-preview.js';
 
+/* Liquid-glass refraction filter (feTurbulence/feDisplacementMap), referenced by
+   styles/main.css as url(#lg-distortion). Injected here so every page that loads
+   this script gets the filter without duplicating the SVG markup per-page. */
+function injectLiquidGlassFilter() {
+  if (document.getElementById('lg-distortion')) return;
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('aria-hidden', 'true');
+  svg.style.cssText = 'position:absolute;width:0;height:0;overflow:hidden';
+  svg.innerHTML = `
+    <defs>
+      <filter id="lg-distortion" x="-20%" y="-20%" width="140%" height="140%">
+        <feTurbulence type="fractalNoise" baseFrequency="0.012 0.008" numOctaves="2" seed="8" result="noise" />
+        <feGaussianBlur in="noise" stdDeviation="2" result="softNoise" />
+        <feDisplacementMap in="SourceGraphic" in2="softNoise" scale="28" xChannelSelector="R" yChannelSelector="G" />
+      </filter>
+    </defs>`;
+  document.body.prepend(svg);
+}
+injectLiquidGlassFilter();
+
 initFAQBubble();
 initProductPreview();
 

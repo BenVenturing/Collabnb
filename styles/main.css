@@ -8,7 +8,7 @@
   /* Brand surfaces */
   --ink:       #192524;
   --slate:     #3C5759;
-  --sage:      #959D90;
+  --sage:      #646B62;
   --mint:      #D1EBDB;
   --stone:     #D0D5CE;
   --bone:      #EFECE9;
@@ -3747,4 +3747,33 @@ h3 { font-weight: 700; }
 
 @media (max-width: 480px) {
   .faq-bubble-form-row { grid-template-columns: 1fr; }
+}
+
+/* Refraction upgrade: SVG feTurbulence/feDisplacementMap (#lg-distortion, injected by
+   scripts/main.js / inline in pricing/*.html) bends the backdrop instead of just
+   averaging it. Safari can't parse url() inside backdrop-filter, so @supports keeps
+   it on the flat blur fallback above. Desktop-only — the mobile media queries above
+   already strip backdrop-filter for GPU cost, and SVG displacement is pricier still. */
+@supports (backdrop-filter: url(#lg-distortion)) {
+  @media (min-width: 769px) {
+    .glass,
+    .nav-pill.scrolled,
+    .nav-overlay-login,
+    .btn-glass,
+    .lcard,
+    .bokeh-card,
+    .preview-player-tabs,
+    .signup-panel,
+    .modal-card,
+    .proof-card,
+    .legal-modal-card,
+    .review-glass,
+    .faq-bubble-trigger,
+    .faq-bubble-card {
+      backdrop-filter: url(#lg-distortion) blur(6px) saturate(180%);
+    }
+    .glass-sm {
+      backdrop-filter: url(#lg-distortion) blur(4px) saturate(170%);
+    }
+  }
 }

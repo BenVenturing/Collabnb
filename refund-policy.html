@@ -3,138 +3,45 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Log in — Collabnb</title>
-<meta name="description" content="Log in to your Collabnb account." />
-<link rel="canonical" href="https://www.collabnb.com/login.html" />
+<title>Refund Policy — Collabnb</title>
+<meta name="description" content="How refunds, disputes, and payment holds work for Collabnb subscriptions and collaboration payments." />
+<link rel="canonical" href="https://www.collabnb.com/refund-policy.html" />
 <link rel="icon" href="/assets/favicon.png" type="image/png" />
 <link rel="apple-touch-icon" href="/assets/favicon.png" />
 <link rel="manifest" href="/site.webmanifest" />
 <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&f[]=cabinet-grotesk@400,500,700,800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/styles/main.css" />
-<style>
-  /* ─── Login page layout ─── */
-  .login-page {
-    min-height: 100vh;
-    padding-top: 7rem;
-    padding-bottom: 4rem;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-  }
-
-  .login-wrap {
-    width: 100%;
-    max-width: 420px;
-    padding: 0 1.25rem;
-  }
-
-  /* ─── Login card ─── */
-  .login-card {
-    background: #fff;
-    border-radius: 24px;
-    border: 1px solid var(--stone);
-    box-shadow: 0 4px 32px rgba(25,37,36,0.08);
-    padding: 3rem 2rem;
-    text-align: center;
-  }
-
-  .login-icon {
-    width: 64px;
-    height: 64px;
-    border-radius: 50%;
-    background: var(--mint);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 0 auto 1.25rem;
-    font-size: 1.75rem;
-  }
-
-  .login-title {
-    font-family: 'Cabinet Grotesk', sans-serif;
-    font-weight: 700;
-    font-size: 1.75rem;
-    color: var(--ink);
-    margin-bottom: 0.5rem;
-  }
-
-  .login-desc {
-    font-size: 0.9375rem;
-    color: var(--sage);
-    margin-bottom: 2rem;
-    line-height: 1.5;
-  }
-
-  .login-form {
-    text-align: left;
-  }
-
-  .login-error {
-    color: #e74c3c;
-    font-size: 0.8125rem;
-    margin-top: 0.75rem;
-    display: none;
-  }
-
-  .login-spinner {
-    width: 36px;
-    height: 36px;
-    border: 3px solid var(--stone);
-    border-top-color: var(--slate);
-    border-radius: 50%;
-    animation: login-spin 0.8s linear infinite;
-    margin: 0 auto 1rem;
-  }
-
-  @keyframes login-spin { to { transform: rotate(360deg); } }
-
-  .login-success-icon {
-    width: 64px;
-    height: 64px;
-    border-radius: 50%;
-    background: var(--mint);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 0 auto 1.25rem;
-  }
-  .login-success-icon svg {
-    width: 28px;
-    height: 28px;
-    stroke: var(--ink);
-    stroke-width: 2.5;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-    fill: none;
-  }
-
-  .login-footer {
-    margin-top: 1.5rem;
-    font-size: 0.875rem;
-    color: var(--sage);
-  }
-  .login-footer a {
-    color: var(--ink);
-    font-weight: 600;
-  }
-
-  @media (max-width: 520px) {
-    .login-card { padding: 2rem 1.5rem; }
-  }
-</style>
+<link rel="stylesheet" href="styles/main.css" />
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://www.collabnb.com/" },
+        { "@type": "ListItem", "position": 2, "name": "Refund Policy", "item": "https://www.collabnb.com/refund-policy.html" }
+      ]
+    },
+    {
+      "@type": "WebPage",
+      "@id": "https://www.collabnb.com/refund-policy.html",
+      "url": "https://www.collabnb.com/refund-policy.html",
+      "name": "Refund Policy — Collabnb"
+    }
+  ]
+}
+</script>
 </head>
 <body>
 
 <a href="#main" class="skip-link">Skip to main content</a>
 
-<!-- Fixed background layers -->
 <div aria-hidden="true" class="bg-layers bg-base"></div>
 <div aria-hidden="true" class="bg-layers bg-gradient"></div>
 <div aria-hidden="true" class="bg-layers bg-clouds"></div>
 <div aria-hidden="true" class="bg-grain"></div>
 
-<!-- Mobile nav overlay -->
-<div class="nav-overlay glass" aria-label="Mobile navigation" role="dialog" aria-modal="true">
+<div class="nav-overlay glass" role="dialog" aria-modal="true" aria-label="Mobile navigation">
   <a href="how-it-works.html">How it works</a>
   <a href="/blog">Journal</a>
   <a href="pricing/index.html">Pricing</a>
@@ -152,15 +59,14 @@
     </div>
   </div>
   <div class="nav-overlay-actions">
-    <a href="login.html" class="nav-overlay-login" aria-current="page">Login</a>
+    <button type="button" class="nav-overlay-login" data-login-trigger>Login</button>
     <a href="join.html" class="btn-primary">Become a Founder</a>
   </div>
 </div>
 
-<!-- Floating glass nav -->
 <nav class="nav-pill glass" aria-label="Main navigation">
   <a href="index.html" class="nav-logo" aria-label="Collabnb home">
-    <img src="assets/collabnb-logo.webp" alt="" role="presentation" width="32" height="32" />
+    <img src="assets/collabnb-logo.webp" alt="" role="presentation" width="28" height="28" />
     <span>Collabnb</span>
   </a>
   <ul class="nav-links" role="list">
@@ -181,152 +87,50 @@
     </li>
   </ul>
   <div class="nav-actions" style="display:flex; align-items:center; gap:0.5rem;">
-    <a href="login.html" class="btn-login" aria-current="page">Login</a>
-    <button class="nav-hamburger" aria-label="Open menu" aria-expanded="false" aria-controls="mobile-nav">
+    <button class="nav-hamburger" aria-label="Open menu" aria-expanded="false">
       <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
         <line class="line line-1" x1="3" y1="5" x2="17" y2="5"/>
         <line class="line line-2" x1="3" y1="10" x2="17" y2="10"/>
         <line class="line line-3" x1="3" y1="15" x2="17" y2="15"/>
       </svg>
     </button>
+    <button class="btn-login" data-login-trigger>Login</button>
     <a href="join.html" class="btn-primary">Become a Founder</a>
   </div>
 </nav>
 
-<main id="main" class="login-page">
-  <div class="login-wrap">
+<main id="main">
+  <section class="section" aria-labelledby="refund-h1">
+    <div class="container" style="max-width:760px;">
+      <div class="legal-content">
+        <h1 id="refund-h1">Refund Policy</h1>
+        <p><strong>Effective Date:</strong> September 11, 2026</p>
 
-    <!-- ── LOGIN FORM ── -->
-    <div id="login-card" class="login-card">
-      <div class="login-icon">🔑</div>
-      <h1 class="login-title">Welcome back</h1>
-      <p class="login-desc">Sign in to your account to view your profile and manage collabs.</p>
+        <h2>Overview</h2>
+        <p>This policy explains how refunds work for Collabnb subscription fees and for payments made in connection with a host–creator collaboration. It supplements our <a href="#" data-open-legal="terms">Terms of Service</a>, which governs fees generally.</p>
 
-      <!-- Google sign-in -->
-      <button type="button" id="login-google" style="width:100%;display:flex;align-items:center;justify-content:center;gap:0.625rem;padding:0.75rem 1rem;border-radius:12px;border:1.5px solid var(--stone);background:#fff;font-family:var(--font-body);font-size:0.9375rem;font-weight:500;color:var(--ink);cursor:pointer;transition:border-color 0.15s,box-shadow 0.15s;margin-bottom:1.25rem;" onmouseenter="this.style.borderColor='#3C5759';this.style.boxShadow='0 2px 8px rgba(25,37,36,0.08)'" onmouseleave="this.style.borderColor='var(--stone)';this.style.boxShadow='none'">
-        <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.2l6.7-6.7C35.7 2.5 30.2 0 24 0 14.8 0 7 5.4 3.2 13.3l7.8 6C12.9 13.2 18 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8C43.7 37.2 46.5 31.3 46.5 24.5z"/><path fill="#FBBC05" d="M11 28.3c-.7-2-1-4-1-6.3s.4-4.4 1-6.3l-7.8-6C1.2 13.3 0 18.5 0 24s1.2 10.7 3.2 14.3l7.8-6z"/><path fill="#34A853" d="M24 48c6.2 0 11.4-2 15.2-5.5l-7.5-5.8c-2 1.4-4.6 2.3-7.7 2.3-6 0-11.1-3.7-12.9-9l-7.8 6C7 42.6 14.8 48 24 48z"/></svg>
-        Continue with Google
-      </button>
+        <h2>Creator Subscriptions</h2>
+        <p>Creator Plus subscription fees are non-refundable except as follows:</p>
+        <p><strong>Yearly Plan Guarantee</strong> — if you're on the yearly Creator Plus plan and don't secure at least one confirmed collaboration during your subscription term, you may request a refund of that subscription fee, subject to the conditions in our <a href="#" data-open-legal="terms">Terms of Service</a> (reasonable outreach shown, request made after the term ends, only collaborations confirmed through Collabnb's contract system count, and the request is made within 14 days of the term ending to <a href="mailto:hellocollabnb@gmail.com">hellocollabnb@gmail.com</a>).</p>
+        <p>This guarantee does not apply to the monthly Creator Plus plan or to one-time lifetime access purchases — those fees are final once charged.</p>
 
-      <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.25rem;">
-        <div style="flex:1;height:1px;background:var(--stone);"></div>
-        <span style="font-size:0.8rem;color:var(--sage);">or</span>
-        <div style="flex:1;height:1px;background:var(--stone);"></div>
-      </div>
+        <h2>Host Fees & Collaboration Payments</h2>
+        <p>Where a host sends payment through Collabnb for a collaboration, funds are held before being forwarded to the creator. Payouts are subject to a 48-hour hold window during which either party may raise a dispute about whether the collaboration was fulfilled as agreed.</p>
+        <p>If a dispute is raised within that window, we review it and may pause, reverse, or release the payout depending on the outcome. Once a payout has cleared the hold window and been released, Collabnb generally cannot reverse it directly — from that point, recourse is through your card issuer or payment provider's standard dispute/chargeback process.</p>
+        <p>Listing fees, commissions, and service fees charged directly by Collabnb (as opposed to funds passed between host and creator) are non-refundable once the associated service has been provided, except where required by law.</p>
 
-      <form id="login-form" class="login-form">
-        <div class="form-group">
-          <label class="form-label" for="login-email">Email address</label>
-          <input class="form-input" type="email" id="login-email" name="email" placeholder="you@example.com" autocomplete="email" required />
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="login-password">Password</label>
-          <div style="position:relative;">
-            <input class="form-input" type="password" id="login-password" name="password" placeholder="••••••••" autocomplete="current-password" required style="padding-right:2.75rem;" />
-            <button type="button" id="login-password-toggle" aria-label="Show password" style="position:absolute;right:0.5rem;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;padding:0.375rem;display:flex;align-items:center;color:var(--slate);opacity:0.7;line-height:1;" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.7'">
-              <svg id="login-password-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="20" height="20">
-                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                <circle cx="12" cy="12" r="3"/>
-              </svg>
-            </button>
-          </div>
-        </div>
-        <div style="display:flex;justify-content:flex-end;margin-top:-0.5rem;margin-bottom:1.125rem;">
-          <button type="button" id="login-forgot" class="btn-link" style="background:none;border:none;font-family:var(--font-body);font-size:0.8125rem;color:var(--slate);cursor:pointer;padding:0;text-decoration:underline;text-underline-offset:2px;">Forgot password?</button>
-        </div>
-        <button type="submit" id="login-submit" class="btn-primary" style="width:100%;cursor:pointer;">Sign In</button>
-        <div class="login-error" id="login-error"></div>
-        <div id="login-forgot-hint" style="display:none;margin-top:0.5rem;text-align:center;">
-          <button type="button" id="login-forgot-hint-btn" style="background:none;border:none;font-family:var(--font-body);font-size:0.8125rem;color:var(--slate);cursor:pointer;padding:0;text-decoration:underline;text-underline-offset:2px;">Forgot password?</button>
-        </div>
-      </form>
+        <h2>How to Request a Refund or Raise a Dispute</h2>
+        <p>Email <a href="mailto:hellocollabnb@gmail.com">hellocollabnb@gmail.com</a> with your account email, the payment or subscription in question, and what happened. We review requests case by case and will respond with our decision.</p>
 
-      <div class="login-footer">
-        Don't have an account? <a href="join.html">Become a Founder</a>
+        <h2>Legally Required Exceptions</h2>
+        <p>Nothing in this policy limits any refund or cancellation right you have under applicable law that cannot be waived by agreement.</p>
+
+        <h2>Changes & Contact</h2>
+        <p>We may update this Refund Policy from time to time. Continued use of the platform indicates acceptance of any updates.</p>
+        <p>Contact: <a href="mailto:hellocollabnb@gmail.com">hellocollabnb@gmail.com</a></p>
       </div>
     </div>
-
-    <!-- ── LOADING / REDIRECT ── -->
-    <div id="login-success" class="login-card" hidden>
-      <div class="login-success-icon">
-        <svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>
-      </div>
-      <h1 class="login-title">Signed in</h1>
-      <p class="login-desc">Taking you to your profile…</p>
-      <div class="login-spinner"></div>
-    </div>
-
-    <!-- ── MFA: second factor ── -->
-    <div id="mfa-card" class="login-card" hidden>
-      <div class="login-icon">🔐</div>
-      <h1 class="login-title">Verify it's you</h1>
-      <p class="login-desc" id="mfa-desc">Enter the verification code to complete sign in.</p>
-      <form id="mfa-form" class="login-form">
-        <div class="form-group">
-          <label class="form-label" for="mfa-code">Verification code</label>
-          <input class="form-input" type="text" id="mfa-code" name="code" placeholder="123456" inputmode="numeric" maxlength="8" autocomplete="one-time-code" required style="letter-spacing:0.25em;font-size:1.375rem;text-align:center;font-weight:600;" />
-        </div>
-        <button type="submit" id="mfa-submit" class="btn-primary" style="width:100%;cursor:pointer;">Verify</button>
-        <div class="login-error" id="mfa-error"></div>
-      </form>
-      <div class="login-footer" style="margin-top:1.25rem;">
-        <button type="button" id="mfa-back" style="background:none;border:none;font-family:var(--font-body);font-size:0.875rem;color:var(--slate);cursor:pointer;padding:0;text-decoration:underline;text-underline-offset:2px;">← Back to sign in</button>
-      </div>
-    </div>
-
-    <!-- ── RESET STEP 1: enter email ── -->
-    <div id="reset-step1-card" class="login-card" hidden>
-      <div class="login-icon">🔒</div>
-      <h1 class="login-title">Reset password</h1>
-      <p class="login-desc">Enter your email and we'll send you a 6-digit reset code.</p>
-      <form id="reset-email-form" class="login-form">
-        <div class="form-group">
-          <label class="form-label" for="reset-email">Email address</label>
-          <input class="form-input" type="email" id="reset-email" name="email" placeholder="you@example.com" autocomplete="email" required />
-        </div>
-        <button type="submit" id="reset-email-submit" class="btn-primary" style="width:100%;cursor:pointer;margin-top:0.5rem;">Send code</button>
-        <div class="login-error" id="reset-email-error"></div>
-      </form>
-      <div class="login-footer" style="margin-top:1.25rem;">
-        <button type="button" id="reset-back-to-login" style="background:none;border:none;font-family:var(--font-body);font-size:0.875rem;color:var(--slate);cursor:pointer;padding:0;text-decoration:underline;text-underline-offset:2px;">← Back to sign in</button>
-      </div>
-    </div>
-
-    <!-- ── RESET STEP 2: enter code + new password ── -->
-    <div id="reset-step2-card" class="login-card" hidden>
-      <div class="login-icon">📬</div>
-      <h1 class="login-title">Enter your code</h1>
-      <p class="login-desc" id="reset-step2-desc">Check your email for a 6-digit code, then set your new password below.</p>
-      <form id="reset-code-form" class="login-form">
-        <div class="form-group">
-          <label class="form-label" for="reset-code">6-digit code</label>
-          <input class="form-input" type="text" id="reset-code" name="code" placeholder="123456" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" required style="letter-spacing:0.25em;font-size:1.375rem;text-align:center;font-weight:600;" />
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="reset-new-password">New password</label>
-          <div style="position:relative;">
-            <input class="form-input" type="password" id="reset-new-password" name="new-password" placeholder="At least 8 characters" autocomplete="new-password" required style="padding-right:2.75rem;" />
-            <button type="button" id="reset-password-toggle" aria-label="Show password" style="position:absolute;right:0.5rem;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;padding:0.375rem;display:flex;align-items:center;color:var(--slate);opacity:0.7;line-height:1;" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.7'">
-              <svg id="reset-password-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="20" height="20">
-                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
-              </svg>
-            </button>
-          </div>
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="reset-confirm-password">Confirm new password</label>
-          <input class="form-input" type="password" id="reset-confirm-password" name="confirm-password" placeholder="Repeat password" autocomplete="new-password" required />
-        </div>
-        <button type="submit" id="reset-code-submit" class="btn-primary" style="width:100%;cursor:pointer;">Reset Password</button>
-        <div class="login-error" id="reset-code-error"></div>
-      </form>
-      <div class="login-footer" style="margin-top:1.25rem;display:flex;justify-content:space-between;">
-        <button type="button" id="reset-step2-back" style="background:none;border:none;font-family:var(--font-body);font-size:0.875rem;color:var(--slate);cursor:pointer;padding:0;text-decoration:underline;text-underline-offset:2px;">← Change email</button>
-        <button type="button" id="reset-resend" style="background:none;border:none;font-family:var(--font-body);font-size:0.875rem;color:var(--slate);cursor:pointer;padding:0;text-decoration:underline;text-underline-offset:2px;">Resend code</button>
-      </div>
-    </div>
-
-  </div>
+  </section>
 </main>
 
 <!-- ── FOOTER ── -->
@@ -339,7 +143,7 @@
             <img src="assets/collabnb-logo.png" alt="" role="presentation" width="28" height="28" />
             <span style="font-family:var(--font-display);font-weight:700;font-size:1.1rem;letter-spacing:-0.02em;margin-left:.5rem;">Collabnb</span>
           </a>
-          <p>Manage collabs effortlessly. Built for creators and boutique stays.</p>
+          <p>A creator-first hospitality marketing platform for boutique properties and professional creators.</p>
           <div class="footer-social">
             <a href="https://www.instagram.com/collabnb/" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="5"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg>
@@ -362,7 +166,7 @@
             <li><a href="about.html">About</a></li>
             <li><a href="how-it-works.html">How it works</a></li>
             <li><a href="faq.html">FAQ</a></li>
-    <li><a href="/blog">Journal</a></li>
+            <li><a href="/blog">Journal</a></li>
             <li><a href="pricing/index.html">Pricing</a></li>
           </ul>
         </div>
@@ -386,13 +190,12 @@
       </div>
       <div class="footer-bottom">
         <span>About Collabnb — a creator-first hospitality marketing platform.</span>
-        <span>&copy; 2026 Collabnb. All rights reserved.</span>
+        <span>© 2026 Collabnb. All rights reserved.</span>
       </div>
     </div>
   </div>
 </footer>
 
-<script type="module" src="/scripts/login.js"></script>
 <script type="module" src="/scripts/main.js"></script>
 
 <!-- ── PRIVACY POLICY MODAL ── -->
@@ -408,27 +211,35 @@
       <div class="legal-content">
         <h1>Privacy Policy</h1>
         <p><strong>Effective Date:</strong> July 15, 2026</p>
+
         <h2>Introduction</h2>
         <p>Collabnb ("we," "our," or "us") connects content creators with hospitality hosts for collaboration opportunities. We are committed to protecting your personal data and being transparent about how it is collected and used.</p>
         <p>By using Collabnb, you agree to the collection and use of your information in accordance with this policy. If you do not agree, please discontinue use of the platform.</p>
+
         <h2>Information We Collect</h2>
         <p>We collect personal information such as your name, email, profile details, social media handles, and property or listing information depending on your role. We also collect content you upload, collaboration details, and messages exchanged on the platform.</p>
         <p>We automatically collect usage data including device information, IP address, and interactions with the platform to improve performance and user experience.</p>
+
         <h2>How We Use Information</h2>
         <p>Your information is used to operate and improve Collabnb, including enabling collaborations, displaying profiles and listings, processing payments, and facilitating communication between users.</p>
         <p>We may also use your data to send updates, ensure platform security, prevent fraud, and enhance the overall user experience.</p>
+
         <h2>Sharing of Information</h2>
         <p>Your information is shared with other users as necessary to enable collaborations, including displaying profiles, listings, and communication between relevant parties.</p>
         <p>We may also share data with trusted third-party service providers or when required by law. We do not sell your personal data.</p>
+
         <h2>Payments</h2>
         <p>Payments for listing fees or collaborations are processed through third-party providers. Collabnb does not store full payment details.</p>
         <p>By using the platform, you agree to applicable fees and payment structures as outlined within the app.</p>
+
         <h2>Data Retention & Rights</h2>
         <p>We retain your data only as long as necessary to provide services, comply with legal obligations, and maintain records. You may request account deletion at any time.</p>
         <p>Depending on your location, you may have rights to access, update, or delete your data. Contact us at <a href="mailto:hellocollabnb@gmail.com">hellocollabnb@gmail.com</a>.</p>
+
         <h2>Security & International Use</h2>
         <p>We implement reasonable safeguards to protect your data, but no system is completely secure. Use of the platform is at your own risk.</p>
         <p>As a global platform, your data may be transferred and processed internationally. By using Collabnb, you consent to this.</p>
+
         <h2>Platform Administration</h2>
         <p>Collabnb is operated by a platform administrator who has access to certain account and activity data in order to maintain a safe, functioning marketplace. Specifically, the administrator may:</p>
         <ul>
@@ -464,39 +275,60 @@
       <div class="legal-content">
         <h1>Terms of Service</h1>
         <p><strong>Effective Date:</strong> July 15, 2026</p>
+
         <h2>Acceptance of Terms</h2>
         <p>By accessing or using Collabnb, you agree to be bound by these Terms of Service. If you do not agree, you may not use the platform.</p>
         <p>These Terms apply to all users, including creators and hosts, and govern your use of all Collabnb services.</p>
+
         <h2>Platform Overview</h2>
         <p>Collabnb connects content creators with hospitality hosts seeking promotional content. We provide tools for discovery, communication, and collaboration management.</p>
         <p>Collabnb is not a direct party to agreements between users and does not guarantee outcomes or results.</p>
+
         <h2>User Accounts</h2>
         <p>Users must be at least 18 years old and provide accurate information. You are responsible for maintaining account security and all activity under your account.</p>
         <p>We reserve the right to suspend or terminate accounts that violate these Terms or misuse the platform.</p>
+
         <h2>User Responsibilities</h2>
         <p>Creators agree to provide accurate profiles and deliver agreed content professionally. Hosts agree to provide accurate listings and honor agreed compensation or stay terms.</p>
         <p>Both parties are responsible for clear communication, fulfilling agreements, and maintaining professional conduct.</p>
+
         <h2>Collaborations & Agreements</h2>
         <p>All collaborations are agreements between creators and hosts. Collabnb may provide tools to structure these agreements but is not responsible for enforcing them.</p>
         <p>Users are solely responsible for fulfilling deliverables, timelines, and compensation terms.</p>
+
         <h2>Payments & Fees</h2>
-        <p>Collabnb may charge listing fees, commissions, or service fees as outlined on the platform. By using the service, you agree to these fees.</p>
+        <p>Collabnb may charge listing fees, commissions, or service fees as outlined on the platform. By using the service, you agree to these fees. See our <a href="refund-policy.html">Refund Policy</a> for how fees and payments are handled.</p>
         <p>Payments are handled through third-party providers, and Collabnb is not responsible for processing errors.</p>
+
+        <h3>Creator Yearly Plan Guarantee</h3>
+        <p>Creator Plus subscribers on the yearly plan may request a refund of their subscription fee if they do not secure at least one confirmed collaboration during their subscription term, subject to all of the following:</p>
+        <p>(a) You must show reasonable outreach — sending pitch or application messages to hosts through the platform;<br />
+        (b) Refund requests may only be made after your subscription term has fully ended, not part-way through;<br />
+        (c) Only collaborations confirmed through Collabnb's contract system count. If a conversation was moved off-platform and the outcome was never brought back to be confirmed here, we cannot verify what happened and no refund will be granted;<br />
+        (d) Cancelling or downgrading your subscription before the term ends forfeits this guarantee;<br />
+        (e) You must contact us at hellocollabnb@gmail.com within 14 days of your subscription term ending — requests made after this window will not be considered.</p>
+        <p>This guarantee applies only to the yearly Creator Plus subscription. It does not apply to the monthly plan, one-time lifetime access purchases, or host fees.</p>
+
         <h2>Content & Usage Rights</h2>
         <p>Creators retain ownership of their content but grant hosts usage rights as defined in each collaboration agreement.</p>
         <p>By posting content on Collabnb, you grant us a limited license to display and promote content within the platform.</p>
+
         <h2>Prohibited Conduct</h2>
         <p>Users may not engage in fraudulent behavior, harassment, spam, or attempts to bypass platform systems or fees.</p>
         <p>Violations may result in suspension or permanent removal from the platform.</p>
+
         <h2>Disputes & Liability</h2>
         <p>Collabnb is not responsible for disputes between users but may offer limited support at its discretion.</p>
         <p>We are not liable for damages, losses, or unmet expectations resulting from platform use.</p>
+
         <h2>Termination</h2>
         <p>We may suspend or terminate access at any time if users violate these Terms or harm the platform.</p>
         <p>Users may stop using the platform and delete their account at any time.</p>
+
         <h2>Changes & Governing Law</h2>
         <p>We may update these Terms periodically. Continued use indicates acceptance of any updates.</p>
-        <p>These Terms are governed by the laws of: [Insert Jurisdiction]</p>
+        <p>These Terms are governed by the laws of the State of Wyoming, USA, without regard to conflict-of-law principles. Any disputes arising from these Terms will be resolved in the state or federal courts located in Wyoming.</p>
+
         <h2>Contact</h2>
         <p>For questions, contact: <a href="mailto:hellocollabnb@gmail.com">hellocollabnb@gmail.com</a></p>
       </div>

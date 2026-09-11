@@ -806,7 +806,7 @@ function ListingRow({ listing, onClick }) {
         {listing.image ? (
           <img src={listing.image} alt={listing.title} className="w-full h-full object-cover" loading="lazy" />
         ) : (
-          <div className="w-full h-full flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #D1EBDB, #959D90)' }}>
+          <div className="w-full h-full flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #D1EBDB, #646B62)' }}>
             <span className="font-display font-bold text-slate text-xs">{listing.title[0]}</span>
           </div>
         )}
@@ -818,7 +818,7 @@ function ListingRow({ listing, onClick }) {
           {listing.host_name ? `${listing.host_name} · ${listing.location}` : listing.location}
         </p>
       </div>
-      <svg viewBox="0 0 256 256" fill="none" stroke="#959D90" strokeWidth="12" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 flex-shrink-0">
+      <svg viewBox="0 0 256 256" fill="none" stroke="#646B62" strokeWidth="12" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 flex-shrink-0">
         <polyline points="96 48 176 128 96 208"/>
       </svg>
     </button>
@@ -1007,7 +1007,7 @@ export default function Inbox() {
           <div className="flex items-center gap-2 mb-4">
             {/* Always-open search field */}
             <div className="flex-1 flex items-center gap-2 h-9 px-3 rounded-full bg-bone focus-within:ring-2 focus-within:ring-mint transition-shadow">
-              <svg viewBox="0 0 256 256" fill="none" stroke="#959D90" strokeWidth="16" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5 flex-shrink-0">
+              <svg viewBox="0 0 256 256" fill="none" stroke="#646B62" strokeWidth="16" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5 flex-shrink-0">
                 <circle cx="112" cy="112" r="80"/><line x1="168.57" y1="168.57" x2="224" y2="224"/>
               </svg>
               <input

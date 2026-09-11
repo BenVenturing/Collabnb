@@ -183,7 +183,7 @@ export default function AdminOverview() {
                 onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.65)'; }}
               >
                 <span>{item.label}</span>
-                <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#959D90" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+                <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#646B62" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
               </button>
             ))}
           </div>

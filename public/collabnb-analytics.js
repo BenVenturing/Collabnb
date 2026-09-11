@@ -194,7 +194,7 @@
         '<div class="cnb-cookie__more">We use one cookie to remember your session and record which pages ' +
           'you visit, what you click, how long you stay, and where you leave. <strong>No ads. No selling ' +
           'your data. No third-party ad networks.</strong> Clear cookies anytime in your browser and ' +
-          'Collabnb still works. <a href="/faq.html#cookies">More in the FAQ</a>.</div>' +
+          'Collabnb still works. <a href="/cookie-policy.html">Read our Cookie Policy</a>.</div>' +
         '<div class="cnb-cookie__act">' +
           '<button class="cnb-cookie__link" type="button" data-toggle>Review</button>' +
           '<button class="cnb-cookie__btn" type="button" data-ack>Got it</button>' +

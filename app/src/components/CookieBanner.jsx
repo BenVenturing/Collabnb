@@ -62,7 +62,7 @@ export default function CookieBanner() {
         <p style={{ margin: '7px 0 0', fontSize: '0.7rem', lineHeight: 1.45, color: '#3C5759',
           borderTop: '1px solid rgba(25,37,36,0.08)', paddingTop: 7 }}>
           {t('details.pre')}<strong>{t('details.strong')}</strong>{t('details.post')}{' '}
-          <a href="/faq.html#cookies" target="_blank" rel="noreferrer"
+          <a href="/cookie-policy.html" target="_blank" rel="noreferrer"
             style={{ color: '#192524', fontWeight: 600, textDecoration: 'underline', textUnderlineOffset: 2 }}>
             {t('details.faqLink')}
           </a>.

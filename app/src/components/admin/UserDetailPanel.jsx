@@ -5,7 +5,7 @@ import { api } from '../../../convex/_generated/api';
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const INK   = '#192524';
 const SLATE = '#3C5759';
-const SAGE  = '#959D90';
+const SAGE  = '#646B62';
 const MINT  = '#D1EBDB';
 const BONE  = '#F7F5F2';
 
@@ -268,7 +268,7 @@ export default function UserDetailPanel({ profileId, onClose }) {
                       disabled={deleting}
                       style={{
                         padding: '0.45rem 0.75rem', borderRadius: '0.5rem',
-                        background: 'transparent', color: '#959D90', fontSize: '0.82rem',
+                        background: 'transparent', color: '#646B62', fontSize: '0.82rem',
                         border: '1px solid rgba(25,37,36,0.1)',
                         cursor: deleting ? 'not-allowed' : 'pointer', fontFamily: 'inherit',
                       }}

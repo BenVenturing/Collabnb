@@ -498,7 +498,7 @@ export default function OnboardingChecklist() {
               title={t('header.collapseTitle')}
               style={{
                 background: 'none', border: 'none', cursor: 'pointer',
-                color: 'var(--sage, #959D90)', width: 28, height: 28,
+                color: 'var(--sage, #646B62)', width: 28, height: 28,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 borderRadius: '8px', transition: 'background 150ms',
               }}
@@ -523,7 +523,7 @@ export default function OnboardingChecklist() {
               title={t('header.closeTitle')}
               style={{
                 background: 'none', border: 'none', cursor: 'pointer',
-                color: 'var(--sage, #959D90)', width: 28, height: 28,
+                color: 'var(--sage, #646B62)', width: 28, height: 28,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 borderRadius: '8px', transition: 'background 150ms, color 150ms',
               }}
@@ -533,7 +533,7 @@ export default function OnboardingChecklist() {
               }}
               onMouseLeave={e => {
                 e.currentTarget.style.background = 'none';
-                e.currentTarget.style.color = 'var(--sage, #959D90)';
+                e.currentTarget.style.color = 'var(--sage, #646B62)';
               }}
             >
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round">
@@ -623,7 +623,7 @@ export default function OnboardingChecklist() {
                   {step.label}
                   {step.optional && !step.done && (
                     <span style={{
-                      fontSize: '0.6rem', fontWeight: 600, color: 'var(--sage, #959D90)',
+                      fontSize: '0.6rem', fontWeight: 600, color: 'var(--sage, #646B62)',
                       marginLeft: '0.375rem', textTransform: 'uppercase', letterSpacing: '0.06em',
                     }}>
                       {t('optional')}

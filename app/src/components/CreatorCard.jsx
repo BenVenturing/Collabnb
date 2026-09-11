@@ -160,7 +160,7 @@ function CreatorModal({ creator, onClose, onMessage, saved, onSave }) {
             position: 'absolute', top: 14, left: 14, zIndex: 10,
             padding: '3px 10px', borderRadius: 9999,
             fontSize: 9, fontWeight: 700, letterSpacing: '0.06em',
-            background: 'rgba(149,157,144,0.15)', color: '#959D90',
+            background: 'rgba(149,157,144,0.15)', color: '#646B62',
           }}>{t('sample')}</span>
         )}
 
@@ -469,7 +469,7 @@ function FullCard({ creator, narrow = false, large = false, onMessage, onHide, v
         >
           {/* SAMPLE badge */}
           {creator.isSample && (
-            <span style={{ position: 'absolute', top: 10, left: 10, padding: '2px 7px', borderRadius: 9999, fontSize: 8, fontWeight: 700, letterSpacing: '0.06em', background: 'rgba(149,157,144,0.15)', color: '#959D90', lineHeight: 1.8, pointerEvents: 'none' }}>{t('sample')}</span>
+            <span style={{ position: 'absolute', top: 10, left: 10, padding: '2px 7px', borderRadius: 9999, fontSize: 8, fontWeight: 700, letterSpacing: '0.06em', background: 'rgba(149,157,144,0.15)', color: '#646B62', lineHeight: 1.8, pointerEvents: 'none' }}>{t('sample')}</span>
           )}
           {/* Trash */}
           {creator.isSample && onHide && (

@@ -23,7 +23,7 @@ const STATUS_STYLES = {
   uploaded: { bg: 'rgba(209,235,221,0.4)', text: '#3C5759', icon: '◉' },
   approved: { bg: 'rgba(74,155,127,0.15)', text: '#4A9B7F', icon: '✓' },
   closed:   { bg: 'rgba(74,155,127,0.15)', text: '#4A9B7F', icon: '✓' },
-  archived: { bg: 'rgba(208,213,206,0.3)', text: '#959D90', icon: '◻' },
+  archived: { bg: 'rgba(208,213,206,0.3)', text: '#646B62', icon: '◻' },
   demo:     { bg: 'rgba(212,168,67,0.12)', text: '#B8922A', icon: '▶' },
 };
 

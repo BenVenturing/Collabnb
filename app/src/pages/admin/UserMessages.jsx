@@ -68,7 +68,7 @@ function MessageRow({ msg, toggleRead, archiveMessage, unarchiveMessage }) {
           <div style={{ fontSize: '0.85rem', fontWeight: isUnread ? 600 : 400, color: '#192524', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {msg.name}
           </div>
-          <div style={{ fontSize: '0.75rem', color: '#959D90', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <div style={{ fontSize: '0.75rem', color: '#646B62', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {msg.email}
           </div>
         </div>
@@ -89,7 +89,7 @@ function MessageRow({ msg, toggleRead, archiveMessage, unarchiveMessage }) {
         </div>
 
         {/* Date */}
-        <div style={{ flex: '0 0 80px', fontSize: '0.75rem', color: '#959D90', textAlign: 'right', whiteSpace: 'nowrap' }}>
+        <div style={{ flex: '0 0 80px', fontSize: '0.75rem', color: '#646B62', textAlign: 'right', whiteSpace: 'nowrap' }}>
           {formatDate(msg._creationTime)}
         </div>
 
@@ -141,7 +141,7 @@ function MessageRow({ msg, toggleRead, archiveMessage, unarchiveMessage }) {
                 >
                   {sending ? 'Sending…' : 'Send Reply'}
                 </button>
-                <button onClick={() => setShowInbox(false)} style={{ ...btnBase, background: '#F7F5F2', color: '#959D90' }}>
+                <button onClick={() => setShowInbox(false)} style={{ ...btnBase, background: '#F7F5F2', color: '#646B62' }}>
                   Cancel
                 </button>
               </div>
@@ -181,7 +181,7 @@ function MessageRow({ msg, toggleRead, archiveMessage, unarchiveMessage }) {
             {!msg.is_archived ? (
               <button
                 onClick={() => { setExpanded(false); archiveMessage(msg._id); }}
-                style={{ ...btnBase, background: '#F7F5F2', border: '1px solid rgba(25,37,36,0.08)', color: '#959D90' }}
+                style={{ ...btnBase, background: '#F7F5F2', border: '1px solid rgba(25,37,36,0.08)', color: '#646B62' }}
               >
                 Archive
               </button>
@@ -255,7 +255,7 @@ export default function UserMessages() {
       <h1 style={{ fontFamily: 'Cabinet Grotesk, sans-serif', fontSize: '1.5rem', fontWeight: 700, color: '#192524', letterSpacing: '-0.025em', margin: 0 }}>
         User Messages
       </h1>
-      <p style={{ fontSize: '0.85rem', color: '#959D90', marginTop: '0.3rem', marginBottom: '1.25rem' }}>
+      <p style={{ fontSize: '0.85rem', color: '#646B62', marginTop: '0.3rem', marginBottom: '1.25rem' }}>
         Support messages submitted via the Help Center.
       </p>
 
@@ -268,12 +268,12 @@ export default function UserMessages() {
 
       {/* ── Loading ── */}
       {isLoading && (
-        <div style={{ color: '#959D90', fontSize: '0.85rem', padding: '3rem 0', textAlign: 'center' }}>Loading…</div>
+        <div style={{ color: '#646B62', fontSize: '0.85rem', padding: '3rem 0', textAlign: 'center' }}>Loading…</div>
       )}
 
       {/* ── Empty ── */}
       {!isLoading && displayList.length === 0 && (
-        <div style={{ color: '#959D90', fontSize: '0.85rem', padding: '3.5rem 0', textAlign: 'center' }}>
+        <div style={{ color: '#646B62', fontSize: '0.85rem', padding: '3.5rem 0', textAlign: 'center' }}>
           {tab === 'unread' ? 'No unread messages.' : tab === 'archived' ? 'No archived messages.' : 'No messages yet.'}
         </div>
       )}
@@ -284,7 +284,7 @@ export default function UserMessages() {
           {/* Column headers */}
           <div style={{ display: 'flex', gap: '0.75rem', padding: '0.55rem 1.25rem 0.55rem 2.625rem', background: '#F7F5F2', borderBottom: '1px solid rgba(25,37,36,0.07)' }}>
             {[['180px', 'Sender'], ['140px', 'Category'], ['1', 'Message'], ['80px', 'Date']].map(([w, label]) => (
-              <span key={label} style={{ flex: w === '1' ? 1 : `0 0 ${w}`, fontSize: '0.7rem', fontWeight: 600, color: '#959D90', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{label}</span>
+              <span key={label} style={{ flex: w === '1' ? 1 : `0 0 ${w}`, fontSize: '0.7rem', fontWeight: 600, color: '#646B62', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{label}</span>
             ))}
           </div>
 

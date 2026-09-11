@@ -1,10 +1,13 @@
 import { useState, useEffect } from 'react';
-import { useQuery, useMutation } from 'convex/react';
+import { useQuery, useMutation, useAction } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { NAV_ITEMS_BY_ID, NAV_ORDER_DEFAULT, resolveNavOrder } from '../../lib/adminNav';
 
 const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL;
 const FOUNDER_LIMIT = 100;
+
+const REPO_URL = 'https://github.com/BenVenturing/Collabnb';
+const LINK = { color: '#166534', textDecoration: 'underline' };
 
 // ─── Shared field styles ──────────────────────────────────────────────────────
 const INPUT = {
@@ -25,7 +28,7 @@ const CARD = {
 
 function SectionTitle({ children }) {
   return (
-    <div style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#959D90', marginBottom: '0.75rem', marginTop: '1.75rem' }}>
+    <div style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#646B62', marginBottom: '0.75rem', marginTop: '1.75rem' }}>
       {children}
     </div>
   );
@@ -112,7 +115,7 @@ function NavOrderEditor() {
             <div key={id} draggable onDragStart={() => setDragId(id)} onDragEnd={() => setDragId(null)}
               onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); handleDrop(id); }}
               style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.5rem 0.75rem', borderRadius: '0.6rem', background: 'rgba(25,37,36,0.03)', border: '1px solid rgba(25,37,36,0.07)', cursor: 'grab' }}>
-              <span style={{ color: '#959D90', fontSize: '0.85rem', userSelect: 'none' }}>⠿</span>
+              <span style={{ color: '#646B62', fontSize: '0.85rem', userSelect: 'none' }}>⠿</span>
               <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#192524' }}>{item.label}</span>
             </div>
           );
@@ -192,7 +195,7 @@ function FounderOverride() {
         <div style={{ background: '#F7F5F2', borderRadius: '0.625rem', padding: '0.875rem 1rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <div style={{ flex: 1 }}>
             <div style={{ fontWeight: 600, fontSize: '0.875rem', color: '#192524' }}>{found.full_name}</div>
-            <div style={{ fontSize: '0.78rem', color: '#959D90' }}>@{found.username} · {found.role} · {found.is_founder ? 'Founder' : 'Not a founder'}</div>
+            <div style={{ fontSize: '0.78rem', color: '#646B62' }}>@{found.username} · {found.role} · {found.is_founder ? 'Founder' : 'Not a founder'}</div>
           </div>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
             {!found.is_founder && (
@@ -223,6 +226,63 @@ function FounderOverride() {
 }
 
 // ─── Main export ──────────────────────────────────────────────────────────────
+// ─── Maintenance — manual trigger for the weekly cleanup audit ────────────────
+function MaintenanceSection() {
+  const runAudit = useAction(api.admin.triggerCleanupAudit);
+  const [running, setRunning] = useState(false);
+  const [result, setResult] = useState(null); // 'ok' | error string
+
+  async function handleRun() {
+    setRunning(true);
+    setResult(null);
+    try {
+      await runAudit({});
+      setResult('ok');
+    } catch (err) {
+      setResult(err?.data || err?.message || 'Failed to trigger workflow.');
+    } finally {
+      setRunning(false);
+    }
+  }
+
+  return (
+    <div style={CARD}>
+      <div style={{ fontSize: '0.82rem', color: '#3C5759', marginBottom: '1rem', lineHeight: 1.6 }}>
+        Scans <code>app/src</code> for unused files, exports, and dependencies (via knip) and files the
+        results as a GitHub issue for review — nothing is deleted automatically. Runs every Monday; use
+        this to run it on demand.
+      </div>
+      <button
+        onClick={handleRun}
+        disabled={running}
+        style={{
+          padding: '0.5rem 1.25rem', borderRadius: '0.5rem',
+          background: running ? '#D0D5CE' : '#192524', color: '#fff',
+          fontSize: '0.82rem', fontWeight: 600, border: 'none',
+          cursor: running ? 'default' : 'pointer', fontFamily: 'inherit', transition: 'all 0.2s',
+        }}
+      >
+        {running ? 'Triggering…' : 'Run cleanup audit now'}
+      </button>
+      {result === 'ok' && (
+        <div style={{ marginTop: '0.75rem', fontSize: '0.78rem', color: '#166534' }}>
+          ✓ Triggered — check the{' '}
+          <a href={`${REPO_URL}/actions/workflows/cleanup-audit.yml`} target="_blank" rel="noreferrer" style={LINK}>
+            Actions run
+          </a>{' '}
+          in a minute or two, then the report lands in{' '}
+          <a href={`${REPO_URL}/issues`} target="_blank" rel="noreferrer" style={LINK}>
+            Issues
+          </a>.
+        </div>
+      )}
+      {result && result !== 'ok' && (
+        <div style={{ marginTop: '0.75rem', fontSize: '0.78rem', color: '#991B1B' }}>{String(result)}</div>
+      )}
+    </div>
+  );
+}
+
 export default function AdminSettings() {
   const settings          = useQuery(api.admin.getSettings);
   const maintenanceLive   = useQuery(api.admin.getMaintenanceMode);
@@ -280,12 +340,12 @@ export default function AdminSettings() {
       <h1 style={{ fontFamily: 'Cabinet Grotesk, sans-serif', fontSize: '1.5rem', fontWeight: 700, color: '#192524', letterSpacing: '-0.025em', margin: 0 }}>
         Settings
       </h1>
-      <p style={{ fontSize: '0.85rem', color: '#959D90', marginTop: '0.3rem', marginBottom: '1.75rem' }}>
+      <p style={{ fontSize: '0.85rem', color: '#646B62', marginTop: '0.3rem', marginBottom: '1.75rem' }}>
         Platform-level configuration and overrides.
       </p>
 
       {settings === undefined ? (
-        <div style={{ color: '#959D90', fontSize: '0.85rem', padding: '3rem 0', textAlign: 'center' }}>Loading…</div>
+        <div style={{ color: '#646B62', fontSize: '0.85rem', padding: '3rem 0', textAlign: 'center' }}>Loading…</div>
       ) : (
         <>
           {/* ── Platform Settings ── */}
@@ -293,7 +353,7 @@ export default function AdminSettings() {
           <div style={CARD}>
             <div style={{ marginBottom: '1rem' }}>
               <label style={LABEL}>Admin Email (read-only)</label>
-              <input value={ADMIN_EMAIL || '—'} readOnly style={{ ...INPUT, background: '#F7F5F2', color: '#959D90', cursor: 'not-allowed' }} />
+              <input value={ADMIN_EMAIL || '—'} readOnly style={{ ...INPUT, background: '#F7F5F2', color: '#646B62', cursor: 'not-allowed' }} />
             </div>
             <div style={{ marginBottom: '1rem' }}>
               <label style={LABEL}>Platform Name</label>
@@ -322,14 +382,14 @@ export default function AdminSettings() {
             <div style={{ display: 'flex', gap: '2rem', marginBottom: '1.25rem' }}>
               <div>
                 <div style={{ fontFamily: 'Cabinet Grotesk, sans-serif', fontSize: '1.5rem', fontWeight: 700, color: counts.creator >= FOUNDER_LIMIT ? '#991B1B' : '#166534' }}>
-                  {counts.creator} <span style={{ fontSize: '0.9rem', color: '#959D90', fontWeight: 400 }}>/ {FOUNDER_LIMIT}</span>
+                  {counts.creator} <span style={{ fontSize: '0.9rem', color: '#646B62', fontWeight: 400 }}>/ {FOUNDER_LIMIT}</span>
                 </div>
                 <div style={{ fontSize: '0.78rem', color: '#3C5759' }}>Creator Founders</div>
               </div>
               <div style={{ width: 1, background: 'rgba(25,37,36,0.07)' }} />
               <div>
                 <div style={{ fontFamily: 'Cabinet Grotesk, sans-serif', fontSize: '1.5rem', fontWeight: 700, color: counts.host >= FOUNDER_LIMIT ? '#991B1B' : '#166534' }}>
-                  {counts.host} <span style={{ fontSize: '0.9rem', color: '#959D90', fontWeight: 400 }}>/ {FOUNDER_LIMIT}</span>
+                  {counts.host} <span style={{ fontSize: '0.9rem', color: '#646B62', fontWeight: 400 }}>/ {FOUNDER_LIMIT}</span>
                 </div>
                 <div style={{ fontSize: '0.78rem', color: '#3C5759' }}>Host Founders</div>
               </div>
@@ -353,6 +413,10 @@ export default function AdminSettings() {
           <div style={CARD}>
             <NavOrderEditor />
           </div>
+
+          {/* ── Maintenance ── */}
+          <SectionTitle>Maintenance</SectionTitle>
+          <MaintenanceSection />
         </>
       )}
     </div>

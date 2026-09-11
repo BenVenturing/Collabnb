@@ -3,7 +3,7 @@ import { useMutation, useAction } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 
 const SLATE = '#3C5759';
-const SAGE  = '#959D90';
+const SAGE  = '#646B62';
 
 export const payoutStatusColors = {
   pending:    { bg: '#FEF3C7', color: '#92400E' },

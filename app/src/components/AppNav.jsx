@@ -184,7 +184,7 @@ function NotifPanel({ notifications, userId, markRead, clearAllNotifs, onClose, 
                 <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="#3C5759" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M4 1.5h5l3 3V14a.5.5 0 01-.5.5h-7A.5.5 0 014 14z"/><path d="M9 1.5V4.5h3"/><line x1="6" y1="8" x2="10" y2="8"/><line x1="6" y1="10.5" x2="10" y2="10.5"/></svg>
               )}
               {!['pitch_approved','pitch_declined','host_reply','new_message','new_application','contract_reminder','application_reminder','awaiting_reply'].includes(n.type) && (
-                <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="#959D90" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="12" height="10" rx="1.5"/><polyline points="2 5 8 9.5 14 5"/></svg>
+                <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="#646B62" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="12" height="10" rx="1.5"/><polyline points="2 5 8 9.5 14 5"/></svg>
               )}
             </span>
             <div style={{ flex: 1, minWidth: 0 }}>
@@ -858,7 +858,7 @@ export default function AppNav() {
                             <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="#3C5759" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M4 1.5h5l3 3V14a.5.5 0 01-.5.5h-7A.5.5 0 014 14z"/><path d="M9 1.5V4.5h3"/><line x1="6" y1="8" x2="10" y2="8"/><line x1="6" y1="10.5" x2="10" y2="10.5"/></svg>
                           )}
                           {!['pitch_approved','pitch_declined','host_reply','new_message','new_application','contract_reminder','application_reminder','awaiting_reply'].includes(n.type) && (
-                            <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="#959D90" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="12" height="10" rx="1.5"/><polyline points="2 5 8 9.5 14 5"/></svg>
+                            <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="#646B62" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="12" height="10" rx="1.5"/><polyline points="2 5 8 9.5 14 5"/></svg>
                           )}
                         </span>
                         <div style={{ flex: 1, minWidth: 0 }}>

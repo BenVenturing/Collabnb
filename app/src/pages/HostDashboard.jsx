@@ -173,9 +173,9 @@ function BlurredReachChart({ data, color, delay = 0 }) {
 }
 
 const STATUS_CFG = {
-  active: { bg: 'rgba(74,155,127,0.85)',  color: '#fff' },
-  paused: { bg: 'rgba(212,168,67,0.85)',  color: '#fff' },
-  draft:  { bg: 'rgba(149,157,144,0.7)',  color: '#fff' },
+  active: { bg: '#35755E', color: '#fff' },
+  paused: { bg: '#84692A', color: '#fff' },
+  draft:  { bg: '#646B62', color: '#fff' },
 };
 
 // ─── Convex listing normalizer ────────────────────────────────────────────────

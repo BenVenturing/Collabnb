@@ -6,7 +6,7 @@ import { formatDate as fmtDate } from '../../lib/dateUtils';
 
 const INK   = '#192524';
 const SLATE = '#3C5759';
-const SAGE  = '#959D90';
+const SAGE  = '#646B62';
 const MINT  = '#D1EBDB';
 const BONE  = '#F7F5F2';
 
@@ -243,19 +243,6 @@ export default function Users({ initialTab } = {}) {
             <span style={{ fontSize: '0.72rem', color: SAGE }}>{s.label}</span>
           </div>
         ))}
-      </div>
-
-      {/* ── Founder counters ── */}
-      <div style={{ ...GLASS, display: 'flex', alignItems: 'center', gap: '1.25rem', fontSize: '0.82rem', color: SLATE, padding: '0.625rem 1rem', borderRadius: 999, width: 'fit-content', marginBottom: '1.25rem', boxShadow: '0 1px 2px rgba(25,37,36,0.04)' }}>
-        <span>
-          <strong style={{ color: counts.creator >= FOUNDER_LIMIT ? '#991B1B' : '#166534', fontFamily: 'Cabinet Grotesk, sans-serif' }}>{counts.creator}</strong>
-          <span style={{ color: '#D0D5CE' }}> / {FOUNDER_LIMIT}</span> Creator Founders
-        </span>
-        <span style={{ color: '#D0D5CE', fontSize: '1rem' }}>|</span>
-        <span>
-          <strong style={{ color: counts.host >= FOUNDER_LIMIT ? '#991B1B' : '#166534', fontFamily: 'Cabinet Grotesk, sans-serif' }}>{counts.host}</strong>
-          <span style={{ color: '#D0D5CE' }}> / {FOUNDER_LIMIT}</span> Host Founders
-        </span>
       </div>
 
       {/* ── Tabs ── */}

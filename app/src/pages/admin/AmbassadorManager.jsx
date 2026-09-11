@@ -3,7 +3,7 @@ import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { formatDate } from '../../lib/dateUtils';
 
-const INK = '#192524', SLATE = '#3C5759', SAGE = '#959D90';
+const INK = '#192524', SLATE = '#3C5759', SAGE = '#646B62';
 
 const STATUS_META = {
   pending:  { label: 'Pending',  bg: '#F7F5F2', color: SLATE },

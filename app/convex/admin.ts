@@ -605,6 +605,41 @@ export const broadcastSend = action({
   },
 });
 
+// ─── Cleanup audit (knip) ───────────────────────────────────────────────────
+// Manually fires the "Weekly cleanup audit" GitHub Action (workflow_dispatch).
+// The workflow itself opens/updates a GitHub issue with the report — nothing
+// is deleted automatically, here or there.
+export const triggerCleanupAudit = action({
+  args: {},
+  handler: async (ctx) => {
+    await requireAdminAction(ctx, api.profiles.getByClerkUserId);
+
+    const token = process.env.GITHUB_ACTIONS_TOKEN;
+    if (!token) throw new Error("GITHUB_ACTIONS_TOKEN not configured in Convex environment.");
+
+    const res = await fetch(
+      "https://api.github.com/repos/BenVenturing/Collabnb/actions/workflows/cleanup-audit.yml/dispatches",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/vnd.github+json",
+          "X-GitHub-Api-Version": "2022-11-28",
+          "User-Agent": "collabnb-admin",
+        },
+        body: JSON.stringify({ ref: "main" }),
+      }
+    );
+
+    if (!res.ok) {
+      const detail = await res.text().catch(() => "");
+      throw new Error(`GitHub returned ${res.status}: ${detail || res.statusText}`);
+    }
+
+    return { ok: true };
+  },
+});
+
 // ═══════════════════════════════════════════════════════════════════════════
 // Search All Profiles (for admin search/export)
 // ═══════════════════════════════════════════════════════════════════════════

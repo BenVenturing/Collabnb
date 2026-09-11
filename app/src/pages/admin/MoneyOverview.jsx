@@ -3,7 +3,7 @@ import { api } from '../../../convex/_generated/api';
 
 const INK   = '#192524';
 const SLATE = '#3C5759';
-const SAGE  = '#959D90';
+const SAGE  = '#646B62';
 
 function StatCard({ label, value, color = INK, sublabel }) {
   return (

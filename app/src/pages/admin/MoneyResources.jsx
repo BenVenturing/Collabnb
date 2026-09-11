@@ -3,7 +3,7 @@ import { ACH_REQUIRED_ABOVE_CASH_VALUE } from '../../../convex/lib/fees';
 
 const INK   = '#192524';
 const SLATE = '#3C5759';
-const SAGE  = '#959D90';
+const SAGE  = '#646B62';
 const MOSS  = '#2D7A5F';
 const RUST  = '#b45309';
 

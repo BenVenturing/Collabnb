@@ -82,7 +82,7 @@ export default function SuggestionsModeration() {
       <h1 style={{ fontFamily: 'Cabinet Grotesk, sans-serif', fontSize: '1.5rem', fontWeight: 700, color: '#192524', letterSpacing: '-0.025em', margin: 0 }}>
         Suggestions Moderation
       </h1>
-      <p style={{ fontSize: '0.85rem', color: '#959D90', marginTop: '0.3rem', marginBottom: '1.25rem' }}>
+      <p style={{ fontSize: '0.85rem', color: '#646B62', marginTop: '0.3rem', marginBottom: '1.25rem' }}>
         Review user-submitted feature requests. Featured and implemented suggestions appear with badges in the public Help Center.
       </p>
 
@@ -109,7 +109,7 @@ export default function SuggestionsModeration() {
           style={{
             padding: '0.5rem 1.125rem', borderRadius: '0.5rem', border: 'none',
             background: newText.trim() ? '#192524' : 'rgba(25,37,36,0.12)',
-            color: newText.trim() ? '#F7F5F2' : '#959D90',
+            color: newText.trim() ? '#F7F5F2' : '#646B62',
             fontFamily: 'inherit', fontSize: '0.875rem', fontWeight: 600,
             cursor: newText.trim() && !adding ? 'pointer' : 'default',
             transition: 'background 150ms, color 150ms', whiteSpace: 'nowrap',
@@ -148,12 +148,12 @@ export default function SuggestionsModeration() {
 
       {/* ── Loading ── */}
       {suggestions === undefined && (
-        <div style={{ color: '#959D90', fontSize: '0.85rem', padding: '3rem 0', textAlign: 'center' }}>Loading…</div>
+        <div style={{ color: '#646B62', fontSize: '0.85rem', padding: '3rem 0', textAlign: 'center' }}>Loading…</div>
       )}
 
       {/* ── Empty ── */}
       {suggestions !== undefined && filtered.length === 0 && (
-        <div style={{ color: '#959D90', fontSize: '0.85rem', padding: '3rem 0', textAlign: 'center' }}>No suggestions in this filter.</div>
+        <div style={{ color: '#646B62', fontSize: '0.85rem', padding: '3rem 0', textAlign: 'center' }}>No suggestions in this filter.</div>
       )}
 
       {/* ── Table ── */}
@@ -162,7 +162,7 @@ export default function SuggestionsModeration() {
           {/* Header */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 90px 52px 52px 68px 90px 120px 140px', gap: '0', borderBottom: '1px solid rgba(25,37,36,0.07)', padding: '0.6rem 1rem', background: '#F7F5F2' }}>
             {['Suggestion', 'Submitted by', '↑', '↓', 'Score', 'Date', 'Status', 'Actions'].map(h => (
-              <span key={h} style={{ fontSize: '0.7rem', fontWeight: 600, color: '#959D90', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{h}</span>
+              <span key={h} style={{ fontSize: '0.7rem', fontWeight: 600, color: '#646B62', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{h}</span>
             ))}
           </div>
 
@@ -188,7 +188,7 @@ export default function SuggestionsModeration() {
                 </span>
 
                 {/* Submitted by */}
-                <span style={{ fontSize: '0.75rem', color: '#959D90', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <span style={{ fontSize: '0.75rem', color: '#646B62', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {s.submitted_by ? s.submitted_by.slice(0, 8) + '…' : 'Anon'}
                 </span>
 
@@ -199,12 +199,12 @@ export default function SuggestionsModeration() {
                 <span style={{ fontSize: '0.82rem', color: '#991B1B', fontWeight: 600 }}>{s.downvotes}</span>
 
                 {/* Net score */}
-                <span style={{ fontSize: '0.82rem', fontWeight: 700, color: s.netScore > 0 ? '#166534' : s.netScore < 0 ? '#991B1B' : '#959D90' }}>
+                <span style={{ fontSize: '0.82rem', fontWeight: 700, color: s.netScore > 0 ? '#166534' : s.netScore < 0 ? '#991B1B' : '#646B62' }}>
                   {s.netScore > 0 ? `+${s.netScore}` : s.netScore}
                 </span>
 
                 {/* Date */}
-                <span style={{ fontSize: '0.75rem', color: '#959D90' }}>{formatDate(s._creationTime)}</span>
+                <span style={{ fontSize: '0.75rem', color: '#646B62' }}>{formatDate(s._creationTime)}</span>
 
                 {/* Status */}
                 <div><StatusBadge status={currentStatus} /></div>

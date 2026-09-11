@@ -15,7 +15,7 @@ import {
 /* ── Brand stage colors ──────────────────────────────────────────────────── */
 const STAGE_COLORS = {
   pending:         { dot: '#192524', bg: 'rgba(25,37,36,0.08)',  label: 'Pending' },
-  accepted:        { dot: '#959D90', bg: 'rgba(149,157,144,0.12)', label: 'Accepted' },
+  accepted:        { dot: '#646B62', bg: 'rgba(149,157,144,0.12)', label: 'Accepted' },
   updated:         { dot: '#D4A843', bg: 'rgba(212,168,67,0.12)', label: 'Adjustments' },
   uploaded_tagged: { dot: '#D1EBDD', bg: 'rgba(209,235,221,0.3)', label: 'Uploaded' },
   closed:          { dot: '#4A9B7F', bg: 'rgba(74,155,127,0.15)', label: 'Closed' },
@@ -1364,7 +1364,7 @@ export default function CollabDetail({ collab, onClose }) {
               <div style={{ textAlign: 'center' }}>
                 <div style={{
                   width: '40px', height: '40px', borderRadius: '50%', overflow: 'hidden',
-                  background: 'linear-gradient(135deg, #3C5759, #959D90)', margin: '0 auto 0.25rem',
+                  background: 'linear-gradient(135deg, #3C5759, #646B62)', margin: '0 auto 0.25rem',
                 }}>
                   {profile?.avatar_url ? (
                     <img src={profile.avatar_url} alt={t('contractSummary.creatorAlt')} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
@@ -1380,7 +1380,7 @@ export default function CollabDetail({ collab, onClose }) {
               <div style={{ textAlign: 'center' }}>
                 <div style={{
                   width: '40px', height: '40px', borderRadius: '50%', overflow: 'hidden',
-                  background: 'linear-gradient(135deg, #959D90, #D0D5CE)', margin: '0 auto 0.25rem',
+                  background: 'linear-gradient(135deg, #646B62, #D0D5CE)', margin: '0 auto 0.25rem',
                 }}>
                   {(hostProfile?.avatar_url || host.avatar_fallback) ? (
                     <img src={hostProfile?.avatar_url || host.avatar_fallback} alt={t('contractSummary.hostAlt')} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />

@@ -4,7 +4,7 @@ import { useState } from 'react';
 
 export const INK   = '#192524';
 export const SLATE = '#3C5759';
-export const SAGE  = '#959D90';
+export const SAGE  = '#646B62';
 export const MINT  = '#D1EBDB';
 
 export function AvatarBubble({ profile }) {

@@ -423,7 +423,7 @@ export default function AdminDashboard() {
             {!sidebarCollapsed && (
               <div>
                 <div style={{ fontFamily: 'Cabinet Grotesk, sans-serif', fontWeight: 800, fontSize: '1.1rem', color: '#192524', letterSpacing: '-0.02em' }}>Collabnb</div>
-                <div style={{ fontSize: '0.7rem', color: '#959D90', marginTop: '0.1rem', letterSpacing: '0.04em', textTransform: 'uppercase' }}>Admin Panel</div>
+                <div style={{ fontSize: '0.7rem', color: '#646B62', marginTop: '0.1rem', letterSpacing: '0.04em', textTransform: 'uppercase' }}>Admin Panel</div>
               </div>
             )}
             <button
@@ -479,7 +479,7 @@ export default function AdminDashboard() {
               {/* Search */}
               <div style={{ padding: '0.75rem 0.75rem 0' }}>
                 <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#959D90" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ position: 'absolute', left: '0.6rem', pointerEvents: 'none' }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#646B62" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ position: 'absolute', left: '0.6rem', pointerEvents: 'none' }}>
                     <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
                   </svg>
                   <input
@@ -492,7 +492,7 @@ export default function AdminDashboard() {
                     <button
                       onClick={() => setNavSearch('')}
                       aria-label="Clear search"
-                      style={{ position: 'absolute', right: '0.4rem', width: 20, height: 20, borderRadius: '50%', border: 'none', background: 'transparent', color: '#959D90', cursor: 'pointer', fontSize: '1rem', lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                      style={{ position: 'absolute', right: '0.4rem', width: 20, height: 20, borderRadius: '50%', border: 'none', background: 'transparent', color: '#646B62', cursor: 'pointer', fontSize: '1rem', lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                     >
                       ×
                     </button>
@@ -504,7 +504,7 @@ export default function AdminDashboard() {
               <nav style={{ padding: '0.75rem 0.75rem', flex: 1, overflowY: 'auto' }}>
                 {navResults ? (
                   navResults.length === 0 ? (
-                    <div style={{ padding: '0.6rem 0.75rem', fontSize: '0.8rem', color: '#959D90' }}>No matches.</div>
+                    <div style={{ padding: '0.6rem 0.75rem', fontSize: '0.8rem', color: '#646B62' }}>No matches.</div>
                   ) : (
                     navResults.map(it => {
                       const active = activeSection === it.id;
@@ -525,7 +525,7 @@ export default function AdminDashboard() {
                         >
                           <span style={{ display: 'flex', alignItems: 'center', opacity: 0.7 }}>{ICONS[it.id]}</span>
                           <span style={{ flex: 1 }}>{it.label}</span>
-                          {it.group && <span style={{ fontSize: '0.66rem', color: '#959D90' }}>{it.group}</span>}
+                          {it.group && <span style={{ fontSize: '0.66rem', color: '#646B62' }}>{it.group}</span>}
                         </button>
                       );
                     })
@@ -543,7 +543,7 @@ export default function AdminDashboard() {
               </div>
 
               {/* Footer */}
-              <div style={{ padding: '0.75rem 1.25rem', fontSize: '0.75rem', color: '#959D90' }}>
+              <div style={{ padding: '0.75rem 1.25rem', fontSize: '0.75rem', color: '#646B62' }}>
                 Internal use only
               </div>
             </>
@@ -562,7 +562,7 @@ export default function AdminDashboard() {
             display: 'flex', alignItems: 'center',
             padding: '0 2rem', gap: '0.75rem',
           }}>
-            <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', color: '#959D90' }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', color: '#646B62' }}>
               <span style={{ display: 'flex', alignItems: 'center' }}>{ICONS[activeSection] || ICONS.marketing}</span>
               {activeLabel}
             </span>

@@ -826,7 +826,7 @@ export default function ContractBuilder() {
                     <div className="flex flex-col items-center gap-2">
                       <div style={{
                         width: 52, height: 52, borderRadius: '50%',
-                        background: 'linear-gradient(135deg, #D1EBDB, #959D90)',
+                        background: 'linear-gradient(135deg, #D1EBDB, #646B62)',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         overflow: 'hidden', flexShrink: 0,
                         boxShadow: '0 2px 8px rgba(60,87,89,0.18)',

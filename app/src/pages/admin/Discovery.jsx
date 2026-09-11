@@ -28,7 +28,7 @@ const input = {
   fontFamily: 'Satoshi, sans-serif', fontSize: '0.8rem', color: '#192524',
   background: '#fafafa', outline: 'none', boxSizing: 'border-box',
 };
-const label = { fontSize: '0.68rem', fontWeight: 700, color: '#959D90', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: '0.3rem', fontFamily: 'Satoshi, sans-serif' };
+const label = { fontSize: '0.68rem', fontWeight: 700, color: '#646B62', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: '0.3rem', fontFamily: 'Satoshi, sans-serif' };
 
 function fmtFollowers(n) {
   if (!n) return '';
@@ -65,7 +65,7 @@ function ScoreChip({ score }) {
 function ScoreBar({ name, value }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }} title={`${name}: ${value}/100`}>
-      <span style={{ fontSize: '0.6rem', color: '#959D90', width: 44, flexShrink: 0 }}>{name}</span>
+      <span style={{ fontSize: '0.6rem', color: '#646B62', width: 44, flexShrink: 0 }}>{name}</span>
       <div style={{ flex: 1, height: 5, borderRadius: 99, background: 'rgba(25,37,36,0.07)', overflow: 'hidden' }}>
         <div style={{ width: `${Math.min(100, value ?? 0)}%`, height: '100%', borderRadius: 99, background: value >= 70 ? '#4A9B7F' : value >= 45 ? '#8FBCA8' : '#C9CFC6' }} />
       </div>
@@ -208,7 +208,7 @@ function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
             )}
             <ScoreChip score={prospect.score} />
           </div>
-          <div style={{ fontSize: '0.7rem', color: '#959D90', marginTop: '0.1rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <div style={{ fontSize: '0.7rem', color: '#646B62', marginTop: '0.1rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {[prospect.display_name, fmtFollowers(prospect.follower_count) && `${fmtFollowers(prospect.follower_count)} followers`, prospect.location].filter(Boolean).join(' · ')}
           </div>
         </div>
@@ -286,7 +286,7 @@ function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
                 {enrichBusy ? 'Analyzing…' : prospect.enriched_at ? 'Re-analyze' : 'Analyze profile'}
               </button>
               {prospect.enriched_at && (
-                <span style={{ fontSize: '0.64rem', color: '#959D90' }}>
+                <span style={{ fontSize: '0.64rem', color: '#646B62' }}>
                   {new Date(prospect.enriched_at).toLocaleDateString()}
                   {prospect.avg_video_views ? ` · ~${fmtFollowers(prospect.avg_video_views)} avg views` : ''}
                 </span>
@@ -294,7 +294,7 @@ function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
             </div>
             {prospect.enriched_at
               ? <ScoreBars p={prospect} />
-              : <p style={{ fontSize: '0.7rem', color: '#959D90', margin: 0 }}>Not analyzed yet — pulls their recent posts to score reach, views, and quality (uses Apify credits).</p>}
+              : <p style={{ fontSize: '0.7rem', color: '#646B62', margin: 0 }}>Not analyzed yet — pulls their recent posts to score reach, views, and quality (uses Apify credits).</p>}
             {(() => {
               const post = bestPost(prospect);
               if (!post) return null;
@@ -419,7 +419,7 @@ function ProspectPanel({ kind, title }) {
   return (
     <div style={{ flex: 1, minWidth: 0 }}>
       <p style={{ fontFamily: 'Cabinet Grotesk, sans-serif', fontWeight: 700, fontSize: '0.95rem', color: '#192524', margin: '0 0 0.6rem' }}>
-        {title} <span style={{ color: '#959D90', fontWeight: 500, fontSize: '0.8rem' }}>({prospects.length})</span>
+        {title} <span style={{ color: '#646B62', fontWeight: 500, fontSize: '0.8rem' }}>({prospects.length})</span>
       </p>
       <div style={{ display: 'flex', gap: '0.4rem', marginBottom: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
         <select aria-label={`Filter ${kind}s by status`} value={status} onChange={e => setStatus(e.target.value)} style={select}>
@@ -454,7 +454,7 @@ function ProspectPanel({ kind, title }) {
       )}
       {prospects.length === 0 ? (
         <div style={{ padding: '1.75rem 1rem', textAlign: 'center', borderRadius: '0.875rem', background: 'rgba(255,255,255,0.5)', border: '1px dashed rgba(25,37,36,0.12)' }}>
-          <p style={{ fontSize: '0.8rem', color: '#959D90', margin: 0 }}>No {kind}s yet. Add one manually or import from Apify above.</p>
+          <p style={{ fontSize: '0.8rem', color: '#646B62', margin: 0 }}>No {kind}s yet. Add one manually or import from Apify above.</p>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '75vh', overflowY: 'auto', paddingRight: '0.25rem' }}>
@@ -591,13 +591,13 @@ function FindCreators() {
           style={{ padding: '0.5rem 1.1rem', borderRadius: 9999, border: 'none', background: '#192524', color: '#fff', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', opacity: busy ? 0.5 : 1 }}>
           {busy ? 'Searching…' : 'Find creators'}
         </button>
-        {busy && <span style={{ fontSize: '0.7rem', color: '#959D90' }}>Scraping + scoring the top 10 — this can take a minute.</span>}
+        {busy && <span style={{ fontSize: '0.7rem', color: '#646B62' }}>Scraping + scoring the top 10 — this can take a minute.</span>}
         {err && <span style={{ fontSize: '0.72rem', color: '#9b2d2d', width: '100%' }}>{err}</span>}
       </div>
 
       {results && (
         <div style={{ marginTop: '0.9rem' }}>
-          <p style={{ fontSize: '0.72rem', color: '#959D90', margin: '0 0 0.5rem' }}>
+          <p style={{ fontSize: '0.72rem', color: '#646B62', margin: '0 0 0.5rem' }}>
             Found {results.fetched}, imported {results.imported} new. Top {results.ranked.length} by fit score — all are saved as prospects below.
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
@@ -605,7 +605,7 @@ function FindCreators() {
               const post = bestPost(p);
               return (
                 <div key={String(p._id)} style={{ display: 'flex', gap: '0.7rem', alignItems: 'center', padding: '0.55rem 0.65rem', borderRadius: '0.75rem', background: 'rgba(255,255,255,0.72)', border: '1px solid rgba(25,37,36,0.07)' }}>
-                  <span style={{ fontSize: '0.7rem', color: '#959D90', width: 16, textAlign: 'right', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>{i + 1}</span>
+                  <span style={{ fontSize: '0.7rem', color: '#646B62', width: 16, textAlign: 'right', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>{i + 1}</span>
                   {p.avatar_url
                     ? <img src={p.avatar_url} alt="" style={{ width: 30, height: 30, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
                     : <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'rgba(149,157,144,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 700, color: '#3C5759', flexShrink: 0 }}>{p.instagram_handle[0]?.toUpperCase()}</div>}
@@ -615,10 +615,10 @@ function FindCreators() {
                         style={{ fontSize: '0.8rem', fontWeight: 700, color: '#192524', textDecoration: 'none' }}>
                         @{p.instagram_handle}
                       </a>
-                      <span style={{ fontSize: '0.68rem', color: '#959D90' }}>{fmtFollowers(p.follower_count)} followers{p.avg_video_views ? ` · ~${fmtFollowers(p.avg_video_views)} avg views` : ''}</span>
+                      <span style={{ fontSize: '0.68rem', color: '#646B62' }}>{fmtFollowers(p.follower_count)} followers{p.avg_video_views ? ` · ~${fmtFollowers(p.avg_video_views)} avg views` : ''}</span>
                     </div>
                     {post?.caption && (
-                      <div style={{ fontSize: '0.66rem', color: '#959D90', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <div style={{ fontSize: '0.66rem', color: '#646B62', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         “{post.caption.slice(0, 90)}”
                       </div>
                     )}
@@ -628,7 +628,7 @@ function FindCreators() {
                 </div>
               );
             })}
-            {results.ranked.length === 0 && <p style={{ fontSize: '0.74rem', color: '#959D90', margin: 0 }}>No creators found for that search.</p>}
+            {results.ranked.length === 0 && <p style={{ fontSize: '0.74rem', color: '#646B62', margin: 0 }}>No creators found for that search.</p>}
           </div>
         </div>
       )}
@@ -714,7 +714,7 @@ function HostSearchImport() {
         style={{ padding: '0.5rem 1.1rem', borderRadius: 9999, border: 'none', background: '#192524', color: '#fff', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', opacity: busy ? 0.5 : 1 }}>
         {busy ? 'Searching…' : 'Search & import'}
       </button>
-      {msg && <span style={{ fontSize: '0.72rem', color: '#959D90' }}>{msg}</span>}
+      {msg && <span style={{ fontSize: '0.72rem', color: '#646B62' }}>{msg}</span>}
     </div>
   );
 }
@@ -816,12 +816,12 @@ function HostOutreachCampaign() {
         {err && <p style={{ fontSize: '0.74rem', color: '#9b2d2d', margin: '0 0 0.5rem' }}>{err}</p>}
 
         {filteredPool.length === 0 ? (
-          <p style={{ fontSize: '0.76rem', color: '#959D90' }}>No candidates yet — search above to import some.</p>
+          <p style={{ fontSize: '0.76rem', color: '#646B62' }}>No candidates yet — search above to import some.</p>
         ) : (
           <div style={{ maxHeight: '18rem', overflowY: 'auto', border: '1px solid rgba(25,37,36,0.08)', borderRadius: '0.75rem' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.74rem' }}>
               <thead>
-                <tr style={{ textAlign: 'left', color: '#959D90', fontSize: '0.64rem', textTransform: 'uppercase', position: 'sticky', top: 0, background: '#fdfdfb' }}>
+                <tr style={{ textAlign: 'left', color: '#646B62', fontSize: '0.64rem', textTransform: 'uppercase', position: 'sticky', top: 0, background: '#fdfdfb' }}>
                   <th style={{ padding: '0.4rem 0.5rem', width: 28 }}></th>
                   <th style={{ padding: '0.4rem 0.5rem' }}>Handle</th>
                   <th style={{ padding: '0.4rem 0.5rem' }}>Location</th>
@@ -838,7 +838,7 @@ function HostOutreachCampaign() {
                     </td>
                     <td style={{ padding: '0.35rem 0.5rem' }}>
                       <a href={`https://instagram.com/${p.instagram_handle}`} target="_blank" rel="noopener noreferrer" style={{ color: '#192524', fontWeight: 700, textDecoration: 'none' }}>@{p.instagram_handle}</a>
-                      {p.display_name && <span style={{ color: '#959D90' }}> · {p.display_name}</span>}
+                      {p.display_name && <span style={{ color: '#646B62' }}> · {p.display_name}</span>}
                     </td>
                     <td style={{ padding: '0.35rem 0.5rem', color: '#3C5759' }}>{p.location || '—'}</td>
                     <td style={{ padding: '0.35rem 0.5rem', color: '#3C5759' }}>{p.niche || '—'}</td>
@@ -975,7 +975,7 @@ function HostCrmBoard() {
             }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.6rem', padding: '0 0.1rem' }}>
               <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#192524' }}>{col.label}</span>
-              <span style={{ fontSize: '0.7rem', color: '#959D90' }}>{byColumn[col.id].length}</span>
+              <span style={{ fontSize: '0.7rem', color: '#646B62' }}>{byColumn[col.id].length}</span>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', maxHeight: '75vh', overflowY: 'auto', minHeight: '2rem' }}>
               {byColumn[col.id].map((p) => (
@@ -1027,11 +1027,11 @@ function AutoDiscoveryCard() {
         <input aria-label="Creators per day" type="number" min="1" max="20" value={cfg.perDay}
           onChange={e => setDraft({ ...cfg, perDay: Math.max(1, Math.min(20, parseInt(e.target.value, 10) || 10)) })} onBlur={() => save({})}
           style={{ ...input, width: 70 }} />
-        <span style={{ fontSize: '0.7rem', color: '#959D90' }}>
+        <span style={{ fontSize: '0.7rem', color: '#646B62' }}>
           per day{savedMsg && <span style={{ color: '#166534', fontWeight: 700 }}> · {savedMsg}</span>}
         </span>
       </div>
-      <p style={{ fontSize: '0.7rem', color: '#959D90', margin: '0.5rem 0 0' }}>
+      <p style={{ fontSize: '0.7rem', color: '#646B62', margin: '0.5rem 0 0' }}>
         Every morning at 7am UTC this searches Instagram for {cfg.niche} creators{cfg.location ? ` around ${cfg.location}` : ''}, imports new ones, and scores the top {cfg.perDay} — ready before the 8am outreach queue builds. Uses Apify credits daily while on.
       </p>
     </div>
@@ -1077,7 +1077,7 @@ export default function Discovery({ sidebarCollapsed, setSidebarCollapsed }) {
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
         <div>
           <h2 style={{ fontFamily: 'Cabinet Grotesk, sans-serif', fontWeight: 700, fontSize: '1.25rem', color: '#192524', margin: '0 0 0.2rem' }}>Discovery</h2>
-          <p style={{ fontSize: '0.78rem', color: '#959D90', margin: 0 }}>
+          <p style={{ fontSize: '0.78rem', color: '#646B62', margin: 0 }}>
             {side === 'hosts'
               ? (hostView === 'outreach'
                 ? 'Search, select ~20, and draft your daily host outreach batch. Instagram DMs stay manual.'

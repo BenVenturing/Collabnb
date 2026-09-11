@@ -58,7 +58,7 @@ function ConnectorCard({ platform, account, configured, onSync, syncing, syncMsg
             : <div style={{ width: 36, height: 36, borderRadius: '50%', background: `${cfg.color}22`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, color: cfg.color, fontFamily: 'Cabinet Grotesk, sans-serif' }}>{cfg.name[0]}</div>}
           <div>
             <p style={{ fontFamily: 'Cabinet Grotesk, sans-serif', fontWeight: 700, fontSize: '0.95rem', color: '#192524', margin: 0 }}>{cfg.name}</p>
-            <p style={{ fontSize: '0.72rem', color: '#959D90', margin: 0 }}>
+            <p style={{ fontSize: '0.72rem', color: '#646B62', margin: 0 }}>
               {connected ? `@${account.handle}` : configured ? 'Key set, not synced yet' : 'Not connected'}
             </p>
           </div>
@@ -66,7 +66,7 @@ function ConnectorCard({ platform, account, configured, onSync, syncing, syncMsg
         <span style={{
           fontSize: '0.62rem', fontWeight: 700, padding: '0.2rem 0.55rem', borderRadius: 9999,
           background: connected ? 'rgba(209,235,219,0.8)' : 'rgba(25,37,36,0.06)',
-          color: connected ? '#166534' : '#959D90',
+          color: connected ? '#166534' : '#646B62',
           letterSpacing: '0.04em', textTransform: 'uppercase',
         }}>
           {connected ? 'Connected' : 'Offline'}
@@ -75,9 +75,9 @@ function ConnectorCard({ platform, account, configured, onSync, syncing, syncMsg
 
       {connected && (
         <div style={{ display: 'flex', gap: '1.25rem', marginBottom: '0.75rem' }}>
-          <div><span style={{ fontFamily: 'Cabinet Grotesk, sans-serif', fontWeight: 700, fontSize: '1.15rem', color: '#192524' }}>{fmt(account.follower_count)}</span><span style={{ fontSize: '0.68rem', color: '#959D90', display: 'block' }}>Followers</span></div>
-          <div><span style={{ fontFamily: 'Cabinet Grotesk, sans-serif', fontWeight: 700, fontSize: '1.15rem', color: '#192524' }}>{fmt(account.media_count)}</span><span style={{ fontSize: '0.68rem', color: '#959D90', display: 'block' }}>Posts</span></div>
-          {account.last_synced_at && <div style={{ alignSelf: 'flex-end' }}><span style={{ fontSize: '0.68rem', color: '#959D90' }}>Synced {new Date(account.last_synced_at).toLocaleString()}</span></div>}
+          <div><span style={{ fontFamily: 'Cabinet Grotesk, sans-serif', fontWeight: 700, fontSize: '1.15rem', color: '#192524' }}>{fmt(account.follower_count)}</span><span style={{ fontSize: '0.68rem', color: '#646B62', display: 'block' }}>Followers</span></div>
+          <div><span style={{ fontFamily: 'Cabinet Grotesk, sans-serif', fontWeight: 700, fontSize: '1.15rem', color: '#192524' }}>{fmt(account.media_count)}</span><span style={{ fontSize: '0.68rem', color: '#646B62', display: 'block' }}>Posts</span></div>
+          {account.last_synced_at && <div style={{ alignSelf: 'flex-end' }}><span style={{ fontSize: '0.68rem', color: '#646B62' }}>Synced {new Date(account.last_synced_at).toLocaleString()}</span></div>}
         </div>
       )}
 
@@ -101,7 +101,7 @@ function ConnectorCard({ platform, account, configured, onSync, syncing, syncMsg
           <ol style={{ margin: '0 0 0.6rem', paddingLeft: '1.1rem', fontSize: '0.74rem', color: '#3C5759', lineHeight: 1.6 }}>
             {cfg.steps.map((s, i) => <li key={i}>{s}</li>)}
           </ol>
-          <p style={{ fontSize: '0.68rem', fontWeight: 700, color: '#959D90', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 0.3rem' }}>Then run</p>
+          <p style={{ fontSize: '0.68rem', fontWeight: 700, color: '#646B62', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 0.3rem' }}>Then run</p>
           {cfg.envCmds.map((c, i) => (
             <code key={i} style={{ display: 'block', fontSize: '0.7rem', background: '#192524', color: '#D1EBDB', padding: '0.4rem 0.6rem', borderRadius: 6, marginBottom: '0.3rem', fontFamily: 'monospace', overflowX: 'auto', whiteSpace: 'nowrap' }}>{c}</code>
           ))}
@@ -158,7 +158,7 @@ function Composer({ configured }) {
     <div style={{ padding: '1.25rem', borderRadius: '1.25rem', background: 'rgba(255,255,255,0.72)', border: '1px solid rgba(255,255,255,0.8)', marginBottom: '1.5rem' }}>
       <p style={{ fontFamily: 'Cabinet Grotesk, sans-serif', fontWeight: 700, fontSize: '0.95rem', color: '#192524', margin: '0 0 0.75rem' }}>New Instagram post</p>
       {!configured && (
-        <p style={{ fontSize: '0.78rem', color: '#959D90', margin: '0 0 0.75rem' }}>Connect Instagram above first (needs the instagram_content_publish permission).</p>
+        <p style={{ fontSize: '0.78rem', color: '#646B62', margin: '0 0 0.75rem' }}>Connect Instagram above first (needs the instagram_content_publish permission).</p>
       )}
       <textarea value={caption} onChange={(e) => setCaption(e.target.value)} placeholder="Write a caption..."
         rows={3} disabled={!configured}
@@ -253,11 +253,11 @@ function InboxPanel({ configured }) {
           </button>
         </div>
       </div>
-      {!configured && <p style={{ fontSize: '0.78rem', color: '#959D90', margin: '0 0 0.5rem' }}>Connect Instagram above first.</p>}
+      {!configured && <p style={{ fontSize: '0.78rem', color: '#646B62', margin: '0 0 0.5rem' }}>Connect Instagram above first.</p>}
       {syncMsg && <p style={{ fontSize: '0.74rem', color: '#3C5759', margin: '0 0 0.5rem' }}>{syncMsg}</p>}
 
       {items.length === 0 ? (
-        <p style={{ fontSize: '0.8rem', color: '#959D90', margin: 0 }}>Nothing here — hit Sync inbox to pull in DMs and comments.</p>
+        <p style={{ fontSize: '0.8rem', color: '#646B62', margin: 0 }}>Nothing here — hit Sync inbox to pull in DMs and comments.</p>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
           {items.map((item) => (
@@ -268,13 +268,13 @@ function InboxPanel({ configured }) {
                 </span>
                 <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#192524' }}>@{item.from_username || 'unknown'}</span>
                 {item.post_permalink && (
-                  <a href={item.post_permalink} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.68rem', color: '#959D90' }}>view post</a>
+                  <a href={item.post_permalink} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.68rem', color: '#646B62' }}>view post</a>
                 )}
                 {item.replied && <span style={{ fontSize: '0.68rem', color: '#166534' }}>Replied</span>}
               </div>
               <p style={{ fontSize: '0.82rem', color: '#3C5759', margin: '0 0 0.5rem', lineHeight: 1.5 }}>{item.text}</p>
               {item.replied ? (
-                <p style={{ fontSize: '0.76rem', color: '#959D90', margin: 0, fontStyle: 'italic' }}>You replied: "{item.reply_text}"</p>
+                <p style={{ fontSize: '0.76rem', color: '#646B62', margin: 0, fontStyle: 'italic' }}>You replied: "{item.reply_text}"</p>
               ) : (
                 <div style={{ display: 'flex', gap: '0.4rem' }}>
                   <input value={drafts[item._id] || ''} onChange={(e) => setDrafts((d) => ({ ...d, [item._id]: e.target.value }))}
@@ -302,7 +302,7 @@ function SearchProviderToggle() {
   return (
     <div style={{ padding: '0.9rem 1rem', borderRadius: '1rem', background: 'rgba(255,255,255,0.65)', border: '1px solid rgba(25,37,36,0.07)', marginBottom: '1.5rem' }}>
       <p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#192524', margin: '0 0 0.3rem' }}>Host outreach search provider</p>
-      <p style={{ fontSize: '0.72rem', color: '#959D90', margin: '0 0 0.6rem', lineHeight: 1.5 }}>
+      <p style={{ fontSize: '0.72rem', color: '#646B62', margin: '0 0 0.6rem', lineHeight: 1.5 }}>
         Which source Discovery → Host outreach uses to find host listings. HikerAPI runs in-app. Agent-Reach runs locally — a live agent session on your Mac with your own logged-in Chrome searches Instagram, then pushes results into the same pool (see the note in the Host outreach panel).
       </p>
       <div style={{ display: 'flex', gap: '0.4rem' }}>
@@ -360,7 +360,7 @@ export default function SocialHub() {
     <div style={{ padding: '1.75rem 2rem 2rem' }}>
       <div style={{ marginBottom: '1.25rem' }}>
         <h2 style={{ fontFamily: 'Cabinet Grotesk, sans-serif', fontWeight: 700, fontSize: '1.25rem', color: '#192524', margin: '0 0 0.2rem' }}>Social</h2>
-        <p style={{ fontSize: '0.78rem', color: '#959D90', margin: 0 }}>
+        <p style={{ fontSize: '0.78rem', color: '#646B62', margin: 0 }}>
           Collabnb's own Instagram and TikTok performance in one place. Connect each platform with the setup guide, then sync.
         </p>
       </div>
@@ -388,7 +388,7 @@ export default function SocialHub() {
           ].map(s => (
             <div key={s.label} style={{ padding: '0.9rem 1rem', borderRadius: '1rem', background: 'rgba(255,255,255,0.65)', border: '1px solid rgba(25,37,36,0.07)' }}>
               <div style={{ fontFamily: 'Cabinet Grotesk, sans-serif', fontWeight: 700, fontSize: '1.3rem', color: '#192524' }}>{s.value}</div>
-              <div style={{ fontSize: '0.7rem', color: '#959D90', marginTop: '0.2rem' }}>{s.label}</div>
+              <div style={{ fontSize: '0.7rem', color: '#646B62', marginTop: '0.2rem' }}>{s.label}</div>
             </div>
           ))}
         </div>
@@ -408,7 +408,7 @@ export default function SocialHub() {
       {visiblePosts.length === 0 ? (
         <div style={{ padding: '2.5rem 1rem', textAlign: 'center', borderRadius: '1rem', background: 'rgba(255,255,255,0.5)', border: '1px dashed rgba(25,37,36,0.12)' }}>
           <p style={{ fontSize: '0.85rem', fontWeight: 600, color: '#192524', margin: '0 0 0.3rem', fontFamily: 'Cabinet Grotesk, sans-serif' }}>No posts synced yet</p>
-          <p style={{ fontSize: '0.78rem', color: '#959D90', margin: 0 }}>Connect a platform above and hit Sync to pull in your posts and their metrics.</p>
+          <p style={{ fontSize: '0.78rem', color: '#646B62', margin: 0 }}>Connect a platform above and hit Sync to pull in your posts and their metrics.</p>
         </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '0.75rem' }}>
@@ -422,7 +422,7 @@ export default function SocialHub() {
                 <p style={{ fontSize: '0.72rem', color: '#3C5759', margin: '0 0 0.4rem', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', lineHeight: 1.4 }}>
                   {p.caption || '(no caption)'}
                 </p>
-                <div style={{ display: 'flex', gap: '0.7rem', fontSize: '0.68rem', color: '#959D90' }}>
+                <div style={{ display: 'flex', gap: '0.7rem', fontSize: '0.68rem', color: '#646B62' }}>
                   <span style={{ textTransform: 'capitalize' }}>{p.platform}</span>
                   {p.likes !== undefined && <span>{fmt(p.likes)} likes</span>}
                   {p.comments !== undefined && <span>{fmt(p.comments)} comments</span>}

@@ -14,7 +14,7 @@
   --bottom-nav-h: 0rem;
   --ink:       #192524;
   --slate:     #3C5759;
-  --sage:      #959D90;
+  --sage:      #646B62;
   --mint:      #D1EBDB;
   --stone:     #D0D5CE;
   --bone:      #EFECE9;
@@ -115,6 +115,22 @@ button { font: inherit; cursor: pointer; border: none; background: none; }
     inset 0 -1px 0 rgba(25,37,36,0.04),
     0 20px 40px -15px rgba(25,37,36,0.18);
   border-radius: 1.25rem;
+}
+
+/* Refraction upgrade: SVG feTurbulence/feDisplacementMap (#lg-distortion in index.html)
+   bends the backdrop instead of just averaging it. Safari can't parse url() inside
+   backdrop-filter, so @supports keeps it on the flat blur fallback above. */
+@supports (backdrop-filter: url(#lg-distortion)) {
+  .glass,
+  .glass-card,
+  .btn-glass,
+  .listing-card,
+  .search-bar {
+    backdrop-filter: url(#lg-distortion) blur(6px) saturate(180%);
+  }
+  .glass-sm {
+    backdrop-filter: url(#lg-distortion) blur(4px) saturate(170%);
+  }
 }
 
 /* ── NAV PILL (exact match to website) ─────────────────────────────────────── */
@@ -400,6 +416,7 @@ button { font: inherit; cursor: pointer; border: none; background: none; }
   backdrop-filter: blur(24px) saturate(140%);
   -webkit-backdrop-filter: blur(24px) saturate(140%);
   border: 1px solid rgba(255,255,255,0.6);
+
   box-shadow:
     inset 0 1px 0 rgba(255,255,255,0.6),
     inset 0 -1px 0 rgba(25,37,36,0.04),
@@ -598,7 +615,7 @@ button { font: inherit; cursor: pointer; border: none; background: none; }
   --blog-bg2:      #EFECE9;
   --blog-ink:      #192524;
   --blog-slate:    #3C5759;
-  --blog-sage:     #959D90;
+  --blog-sage:     #646B62;
   --blog-accent:   #3C5759;
   --blog-divider:  rgba(208,213,206,0.5);
 }
@@ -607,7 +624,7 @@ button { font: inherit; cursor: pointer; border: none; background: none; }
   --blog-bg2:      #192524;
   --blog-ink:      #EFECE9;
   --blog-slate:    #D0D5CE;
-  --blog-sage:     #959D90;
+  --blog-sage:     #646B62;
   --blog-accent:   #D1EBDB;
   --blog-divider:  rgba(60,87,89,0.3);
 }

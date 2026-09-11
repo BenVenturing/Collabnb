@@ -35,12 +35,12 @@ export default function ModerationQueue() {
       <h1 style={{ fontFamily: 'Cabinet Grotesk, sans-serif', fontSize: '1.5rem', fontWeight: 700, color: '#192524', letterSpacing: '-0.025em', margin: 0 }}>
         Moderation Queue
       </h1>
-      <p style={{ fontSize: '0.85rem', color: '#959D90', marginTop: '0.3rem', marginBottom: '1.25rem' }}>
+      <p style={{ fontSize: '0.85rem', color: '#646B62', marginTop: '0.3rem', marginBottom: '1.25rem' }}>
         Review user reports. {pending.length} pending report{pending.length !== 1 ? 's' : ''}.
       </p>
 
       {pending.length === 0 && (
-        <div style={{ color: '#959D90', fontSize: '0.85rem', padding: '3rem 0', textAlign: 'center' }}>
+        <div style={{ color: '#646B62', fontSize: '0.85rem', padding: '3rem 0', textAlign: 'center' }}>
           No pending reports — all clear.
         </div>
       )}
@@ -52,7 +52,7 @@ export default function ModerationQueue() {
               <span style={{ fontWeight: 600, fontSize: '0.9rem', color: '#192524' }}>
                 Report: {REASON_LABELS[r.reason] || r.reason}
               </span>
-              <div style={{ fontSize: '0.78rem', color: '#959D90', marginTop: '0.2rem', display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+              <div style={{ fontSize: '0.78rem', color: '#646B62', marginTop: '0.2rem', display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
                 <span>Reported: <strong>{r.reportedName}</strong> ({r.reportedEmail})</span>
                 <span>By: <strong>{r.reporterName}</strong></span>
                 <span>{fmtDate(r.created_at)}</span>
@@ -95,7 +95,7 @@ export default function ModerationQueue() {
             <div key={r._id} style={{ background: '#fff', border: '1px solid rgba(25,37,36,0.07)', borderRadius: '0.875rem', padding: '1rem 1.25rem', marginBottom: '0.5rem', opacity: 0.6 }}>
               <div style={{ fontSize: '0.8rem', color: '#3C5759', display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
                 <span style={{ fontWeight: 600 }}>{r.reportedName}</span>
-                <span style={{ color: '#959D90' }}>—</span>
+                <span style={{ color: '#646B62' }}>—</span>
                 <span>{REASON_LABELS[r.reason] || r.reason}</span>
                 <span style={{ fontSize: '0.7rem', background: r.status === 'actioned' ? '#FEE2E2' : '#F7F5F2', color: r.status === 'actioned' ? '#991B1B' : '#3C5759', padding: '0.1rem 0.5rem', borderRadius: '99px' }}>
                   {r.status}

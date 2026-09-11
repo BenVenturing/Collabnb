@@ -7,12 +7,12 @@ const input = {
   fontFamily: 'Satoshi, sans-serif', fontSize: '0.8rem', color: '#192524',
   background: '#fafafa', outline: 'none', boxSizing: 'border-box',
 };
-const label = { fontSize: '0.68rem', fontWeight: 700, color: '#959D90', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: '0.3rem', fontFamily: 'Satoshi, sans-serif' };
+const label = { fontSize: '0.68rem', fontWeight: 700, color: '#646B62', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: '0.3rem', fontFamily: 'Satoshi, sans-serif' };
 
 const STATUS_CFG = {
   sent:     { label: 'Sent',      bg: 'rgba(209,235,219,0.8)', color: '#166534' },
   failed:   { label: 'Failed',    bg: 'rgba(200,104,104,0.12)', color: '#9b2d2d' },
-  no_match: { label: 'No match',  bg: 'rgba(25,37,36,0.06)',   color: '#959D90' },
+  no_match: { label: 'No match',  bg: 'rgba(25,37,36,0.06)',   color: '#646B62' },
 };
 
 // ─── Connection status ──────────────────────────────────────────────────────
@@ -140,12 +140,12 @@ function RuleCard({ rule }) {
         {rule.keywords.map((k) => (
           <span key={k} style={{ fontSize: '0.68rem', padding: '0.15rem 0.5rem', borderRadius: 9999, background: 'rgba(123,104,200,0.12)', color: '#5b4aa8', fontWeight: 700 }}>{k}</span>
         ))}
-        <span style={{ fontSize: '0.66rem', color: '#959D90' }}>{rule.match_mode === 'word' ? 'whole word' : 'contains'}</span>
-        <span style={{ fontSize: '0.66rem', color: '#959D90' }}>· {rule.post_id ? `post ${rule.post_id}` : 'every post'}</span>
-        <span style={{ fontSize: '0.66rem', color: '#959D90' }}>· fired {rule.trigger_count}×</span>
+        <span style={{ fontSize: '0.66rem', color: '#646B62' }}>{rule.match_mode === 'word' ? 'whole word' : 'contains'}</span>
+        <span style={{ fontSize: '0.66rem', color: '#646B62' }}>· {rule.post_id ? `post ${rule.post_id}` : 'every post'}</span>
+        <span style={{ fontSize: '0.66rem', color: '#646B62' }}>· fired {rule.trigger_count}×</span>
       </div>
       <p style={{ fontSize: '0.76rem', color: '#3C5759', margin: '0 0 0.3rem', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{rule.dm_message}</p>
-      {rule.public_reply && <p style={{ fontSize: '0.7rem', color: '#959D90', margin: '0 0 0.5rem' }}>Public reply: "{rule.public_reply}"</p>}
+      {rule.public_reply && <p style={{ fontSize: '0.7rem', color: '#646B62', margin: '0 0 0.5rem' }}>Public reply: "{rule.public_reply}"</p>}
       <div style={{ display: 'flex', gap: '0.4rem' }}>
         <button onClick={() => updateRule({ id: rule._id, active: !rule.active })}
           style={{ padding: '0.28rem 0.7rem', borderRadius: 9999, border: '1px solid rgba(25,37,36,0.15)', background: 'transparent', color: '#3C5759', fontSize: '0.7rem', fontWeight: 600, cursor: 'pointer' }}>
@@ -185,7 +185,7 @@ function LogRow({ entry }) {
         <div style={{ fontSize: '0.76rem', color: '#192524' }}>
           {entry.commenter_username ? <strong>@{entry.commenter_username}</strong> : 'Someone'}: "{entry.comment_text.slice(0, 140)}"
         </div>
-        <div style={{ fontSize: '0.66rem', color: '#959D90', marginTop: '0.1rem' }}>{new Date(entry.created_at).toLocaleString()}</div>
+        <div style={{ fontSize: '0.66rem', color: '#646B62', marginTop: '0.1rem' }}>{new Date(entry.created_at).toLocaleString()}</div>
         {entry.error && <div style={{ fontSize: '0.68rem', color: '#9b2d2d', marginTop: '0.2rem' }}>{entry.error}</div>}
         {err && <div style={{ fontSize: '0.68rem', color: '#9b2d2d', marginTop: '0.2rem' }}>{err}</div>}
       </div>
@@ -209,7 +209,7 @@ export default function AutoReply() {
     <div style={{ padding: '1.75rem 2rem 2rem' }}>
       <div style={{ marginBottom: '1.25rem' }}>
         <h2 style={{ fontFamily: 'Cabinet Grotesk, sans-serif', fontWeight: 700, fontSize: '1.25rem', color: '#192524', margin: '0 0 0.2rem' }}>Auto-Reply</h2>
-        <p style={{ fontSize: '0.78rem', color: '#959D90', margin: 0 }}>
+        <p style={{ fontSize: '0.78rem', color: '#646B62', margin: 0 }}>
           When someone comments a keyword on your Instagram posts, automatically DM them a reply — via Meta's official private-replies API, the same one ManyChat uses. Runs on your existing Instagram connection from the Social tab.
         </p>
       </div>
@@ -234,7 +234,7 @@ export default function AutoReply() {
 
       {rules.length === 0 ? (
         <div style={{ padding: '1.75rem 1rem', textAlign: 'center', borderRadius: '0.875rem', background: 'rgba(255,255,255,0.5)', border: '1px dashed rgba(25,37,36,0.12)', marginBottom: '1.75rem' }}>
-          <p style={{ fontSize: '0.8rem', color: '#959D90', margin: 0 }}>No rules yet — add one above.</p>
+          <p style={{ fontSize: '0.8rem', color: '#646B62', margin: 0 }}>No rules yet — add one above.</p>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginBottom: '1.75rem' }}>
@@ -246,7 +246,7 @@ export default function AutoReply() {
         Activity ({log.length})
       </p>
       {log.length === 0 ? (
-        <p style={{ fontSize: '0.78rem', color: '#959D90' }}>Nothing's come in yet.</p>
+        <p style={{ fontSize: '0.78rem', color: '#646B62' }}>Nothing's come in yet.</p>
       ) : (
         <div style={{ maxHeight: '40vh', overflowY: 'auto', paddingRight: '0.25rem' }}>
           {log.map((entry) => <LogRow key={entry._id} entry={entry} />)}

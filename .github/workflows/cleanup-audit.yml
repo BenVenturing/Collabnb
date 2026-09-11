@@ -1,0 +1,79 @@
+name: Weekly cleanup audit
+
+on:
+  schedule:
+    - cron: '0 9 * * 1' # every Monday 9am UTC
+  workflow_dispatch: {}
+
+permissions:
+  issues: write
+
+jobs:
+  knip:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - run: npm ci
+
+      - name: Run knip
+        run: npx knip --no-exit-code > knip-report.txt 2>&1 || true
+
+      - name: Open or update report issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            let report = fs.readFileSync('app/knip-report.txt', 'utf8').trim();
+            const MAX = 60000;
+            if (report.length > MAX) {
+              report = report.slice(0, MAX) + '\n\n... (truncated, see full run log in Actions)';
+            }
+
+            const title = '🧹 Weekly cleanup report';
+            const body = [
+              'Automated `knip` scan of `app/src` — unused files, exports, and dependencies.',
+              '',
+              '**Nothing here is deleted automatically.** Review each item before removing it —',
+              'static analysis can misflag anything reached via dynamic import, a string-built path,',
+              'or usage outside `app/src` (e.g. Convex functions called by name).',
+              '',
+              '```',
+              report,
+              '```',
+              '',
+              `_Last updated: ${new Date().toISOString()}_`,
+            ].join('\n');
+
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              per_page: 100,
+            });
+            const existing = issues.find((i) => !i.pull_request && i.title === title);
+
+            if (existing) {
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing.number,
+                body,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                body,
+              });
+            }

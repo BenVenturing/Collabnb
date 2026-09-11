@@ -613,8 +613,8 @@ export default function Settings() {
                     <h5 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.9rem', color: 'var(--ink)', margin: '1.1rem 0 0.4rem' }}>{t('privacy.policy.rightsHeading')}</h5>
                     <p>{t('privacy.policy.rightsBody')}</p>
                     <p style={{ marginTop: '0.9rem' }}>
-                      <Trans i18nKey="settings:privacy.policy.fullPolicy" t={t} values={{ link: 'collabnb.com/privacy' }}>
-                        For the full Privacy Policy, visit <a href="https://collabnb.com/privacy" style={{ color: 'var(--slate)', fontWeight: 600, textDecoration: 'underline' }} target="_blank" rel="noopener noreferrer">{{ link: 'collabnb.com/privacy' }}</a>.
+                      <Trans i18nKey="settings:privacy.policy.fullPolicy" t={t} values={{ link: 'collabnb.com/privacy-policy.html' }}>
+                        For the full Privacy Policy, visit <a href="https://collabnb.com/privacy-policy.html" style={{ color: 'var(--slate)', fontWeight: 600, textDecoration: 'underline' }} target="_blank" rel="noopener noreferrer">{{ link: 'collabnb.com/privacy-policy.html' }}</a>.
                       </Trans>
                     </p>
                   </div>

@@ -1703,7 +1703,7 @@ export default function Profile() {
               <p>{t('privacy.shareBody')}</p>
               <h5 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.95rem', color: 'var(--ink)', margin: '1.25rem 0 0.5rem' }}>{t('privacy.rightsTitle')}</h5>
               <p>{t('privacy.rightsBody')}</p>
-              <p style={{ marginTop: '1rem' }}>{t('privacy.fullLink')} <a href="https://collabnb.com/privacy" style={{ color: 'var(--slate)', fontWeight: 600, textDecoration: 'underline' }} target="_blank" rel="noopener noreferrer">collabnb.com/privacy</a>.</p>
+              <p style={{ marginTop: '1rem' }}>{t('privacy.fullLink')} <a href="https://collabnb.com/privacy-policy.html" style={{ color: 'var(--slate)', fontWeight: 600, textDecoration: 'underline' }} target="_blank" rel="noopener noreferrer">collabnb.com/privacy-policy.html</a>.</p>
             </div>
           </div>
         </div>

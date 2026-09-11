@@ -62,7 +62,7 @@ export function PendingApprovalScreen({ role = 'creator' }) {
         <p style={{ color: '#3C5759', fontSize: '0.875rem', lineHeight: 1.6, margin: '0 0 0.25rem' }}>
           {role === 'creator' ? t('pendingApproval.thanksCreator') : t('pendingApproval.thanksHost')}
         </p>
-        <p style={{ color: '#959D90', fontSize: '0.8125rem', lineHeight: 1.55, margin: '0 0 1.5rem' }}>
+        <p style={{ color: '#646B62', fontSize: '0.8125rem', lineHeight: 1.55, margin: '0 0 1.5rem' }}>
           {t('pendingApproval.reviewing')}
         </p>
 
@@ -90,7 +90,7 @@ export function PendingApprovalScreen({ role = 'creator' }) {
         }}>
           <p style={{ fontSize: '0.78rem', color: '#3C5759', margin: 0 }}>
             <span style={{ fontWeight: 600 }}>{t('pendingApproval.receivedTitle')}</span>
-            <span style={{ color: '#959D90' }}> {t('pendingApproval.receivedDetail')}</span>
+            <span style={{ color: '#646B62' }}> {t('pendingApproval.receivedDetail')}</span>
           </p>
         </div>
 
@@ -220,7 +220,7 @@ export function TrialBanner({ daysLeft, onDismiss, dismissible = true }) {
           aria-label={t('trialBanner.dismissAriaLabel')}
           style={{
             background: 'none', border: 'none', cursor: 'pointer',
-            color: '#959D90', fontSize: '1.1rem', padding: '0.1rem 0.25rem',
+            color: '#646B62', fontSize: '1.1rem', padding: '0.1rem 0.25rem',
             lineHeight: 1, fontFamily: 'inherit',
           }}
         >

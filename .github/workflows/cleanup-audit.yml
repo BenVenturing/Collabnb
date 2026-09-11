@@ -9,11 +9,8 @@ permissions:
   issues: write
 
 jobs:
-  knip:
+  audit:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: app
     steps:
       - uses: actions/checkout@v4
 
@@ -23,32 +20,46 @@ jobs:
           cache: npm
           cache-dependency-path: app/package-lock.json
 
-      - run: npm ci
+      - name: Run marketing site asset audit
+        run: node scripts/audit-marketing-assets.mjs > marketing-report.txt 2>&1 || true
 
-      - name: Run knip
-        run: npx knip --no-exit-code > knip-report.txt 2>&1 || true
+      - name: Run knip on the app
+        working-directory: app
+        run: |
+          npm ci
+          npx knip --no-exit-code > ../knip-report.txt 2>&1 || true
 
       - name: Open or update report issue
         uses: actions/github-script@v7
         with:
           script: |
             const fs = require('fs');
-            let report = fs.readFileSync('app/knip-report.txt', 'utf8').trim();
-            const MAX = 60000;
-            if (report.length > MAX) {
-              report = report.slice(0, MAX) + '\n\n... (truncated, see full run log in Actions)';
+            const MAX = 55000;
+            function readCapped(path) {
+              let text = fs.readFileSync(path, 'utf8').trim();
+              if (text.length > MAX) text = text.slice(0, MAX) + '\n\n... (truncated, see full run log in Actions)';
+              return text;
             }
+
+            const knipReport = readCapped('knip-report.txt');
+            const marketingReport = readCapped('marketing-report.txt');
 
             const title = '🧹 Weekly cleanup report';
             const body = [
-              'Automated `knip` scan of `app/src` — unused files, exports, and dependencies.',
-              '',
               '**Nothing here is deleted automatically.** Review each item before removing it —',
               'static analysis can misflag anything reached via dynamic import, a string-built path,',
-              'or usage outside `app/src` (e.g. Convex functions called by name).',
+              'or usage outside the scanned directory (e.g. Convex functions called by name).',
               '',
+              '## App (`app/src`) — knip',
+              'Unused files, exports, and dependencies.',
               '```',
-              report,
+              knipReport,
+              '```',
+              '',
+              '## Marketing site (repo root) — orphaned assets & pages',
+              'Static multi-page HTML, not a module graph, so this is a custom scan rather than knip.',
+              '```',
+              marketingReport,
               '```',
               '',
               `_Last updated: ${new Date().toISOString()}_`,

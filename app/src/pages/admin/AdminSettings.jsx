@@ -248,9 +248,9 @@ function MaintenanceSection() {
   return (
     <div style={CARD}>
       <div style={{ fontSize: '0.82rem', color: '#3C5759', marginBottom: '1rem', lineHeight: 1.6 }}>
-        Scans <code>app/src</code> for unused files, exports, and dependencies (via knip) and files the
-        results as a GitHub issue for review — nothing is deleted automatically. Runs every Monday; use
-        this to run it on demand.
+        Scans <code>app/src</code> for unused files, exports, and dependencies (via knip), plus the
+        marketing site for orphaned assets and unbuilt pages, and files the results as a GitHub issue
+        for review — nothing is deleted automatically. Runs every Monday; use this to run it on demand.
       </div>
       <button
         onClick={handleRun}

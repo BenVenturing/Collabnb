@@ -40,10 +40,14 @@ function TemplateCard({ t, testEmail }) {
   const [saved, setSaved]     = useState(false);
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState(null); // 'ok' | error string
+  const [previewHtml, setPreviewHtml] = useState(null);
+  const [previewing, setPreviewing]   = useState(false);
+  const [previewError, setPreviewError] = useState(null);
 
-  const save     = useMutation(api.emailTemplates.save);
-  const reset    = useMutation(api.emailTemplates.reset);
-  const sendTest = useAction(api.emailTemplates.sendTest);
+  const save           = useMutation(api.emailTemplates.save);
+  const reset          = useMutation(api.emailTemplates.reset);
+  const sendTest       = useAction(api.emailTemplates.sendTest);
+  const renderPreview  = useAction(api.emailTemplates.previewHtml);
 
   const fields = Object.keys(t.defaults);
   const dirty  = fields.some(f => (values[f] ?? '') !== (t.current[f] ?? ''));
@@ -82,6 +86,22 @@ function TemplateCard({ t, testEmail }) {
     } finally {
       setTesting(false);
       setTimeout(() => setTestResult(null), 4000);
+    }
+  }
+
+  async function handlePreview() {
+    if (previewHtml) { setPreviewHtml(null); return; } // toggle closed
+    setPreviewing(true);
+    setPreviewError(null);
+    try {
+      const copy = {};
+      for (const f of fields) copy[f] = values[f];
+      const html = await renderPreview({ templateId: t.id, ...copy });
+      setPreviewHtml(html);
+    } catch (err) {
+      setPreviewError(err?.message || 'Preview failed to render.');
+    } finally {
+      setPreviewing(false);
     }
   }
 
@@ -165,10 +185,27 @@ function TemplateCard({ t, testEmail }) {
             >
               {testing ? 'Sending…' : '✈️ Send test'}
             </button>
+            <button
+              onClick={handlePreview}
+              disabled={previewing}
+              style={{ padding: '0.4rem 0.875rem', borderRadius: '0.5rem', background: '#fff', color: INK, fontSize: '0.78rem', fontWeight: 600, border: '1px solid rgba(25,37,36,0.15)', cursor: previewing ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}
+            >
+              {previewing ? 'Rendering…' : previewHtml ? 'Hide preview' : '👁 Preview'}
+            </button>
             {testResult === 'ok' && <span style={{ fontSize: '0.75rem', color: '#166534', fontWeight: 600 }}>Test sent to {testEmail}</span>}
             {testResult && testResult !== 'ok' && <span style={{ fontSize: '0.75rem', color: '#991B1B' }}>{testResult}</span>}
-            {dirty && <span style={{ fontSize: '0.72rem', color: '#D97706' }}>Unsaved changes — tests use the last saved copy.</span>}
+            {previewError && <span style={{ fontSize: '0.75rem', color: '#991B1B' }}>{previewError}</span>}
+            {dirty && <span style={{ fontSize: '0.72rem', color: '#D97706' }}>Unsaved changes — tests use the last saved copy; preview reflects what's on screen.</span>}
           </div>
+
+          {previewHtml && (
+            <iframe
+              title={`${t.id}-preview`}
+              srcDoc={previewHtml}
+              sandbox=""
+              style={{ width: '100%', height: '780px', border: '1px solid rgba(25,37,36,0.1)', borderRadius: '0.75rem', marginTop: '0.875rem', background: '#F7F4EF' }}
+            />
+          )}
         </div>
       )}
     </div>

@@ -108,3 +108,26 @@ export const sendTest = action({
     return { sent: true };
   },
 });
+
+// ─── Admin UI: render a template's HTML for an in-app preview (no send) ─────────
+// Takes the same fields as `save`/`sendTest` so it reflects unsaved edits, not
+// just what's persisted — lets admin see header/hero/colors before saving.
+export const previewHtml = action({
+  args: { templateId: v.string(), ...copyArgs },
+  handler: async (ctx, { templateId, ...copy }) => {
+    await requireAdminAction(ctx, api.profiles.getByClerkUserId);
+    const def = TEMPLATE_DEFAULTS[templateId];
+    if (!def) throw new Error(`Unknown template: ${templateId}`);
+    const merged: Record<string, any> = { ...def.copy };
+    for (const k of COPY_FIELDS) {
+      const val = (copy as any)[k];
+      if (typeof val === "string" && val.trim() !== "") merged[k] = val;
+    }
+    merged.calloutColor = def.calloutColor;
+    merged.callout2Color = def.callout2Color;
+    merged.buttonHref = def.buttonHref;
+    merged.category = def.category;
+    const { html } = renderTemplate(merged as any, SAMPLE_VARS);
+    return html.replace(/\{name\}/g, SAMPLE_VARS.name);
+  },
+});

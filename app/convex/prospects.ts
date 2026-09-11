@@ -590,6 +590,24 @@ export const getHostAngleCounts = internalQuery({
   },
 });
 
+// Runs `fn` over `items` with at most `limit` in flight at once — batch
+// drafting used to await each host's LLM call one at a time, so a slow/dead
+// provider stalled the whole confirm action for minutes on a 20-host batch.
+// Capped (rather than unlimited Promise.all) to avoid tripping the writer
+// API's own concurrent-request limits.
+async function mapWithConcurrency<T, R>(items: T[], limit: number, fn: (item: T, i: number) => Promise<R>): Promise<R[]> {
+  const results: R[] = new Array(items.length);
+  let next = 0;
+  async function worker() {
+    while (next < items.length) {
+      const i = next++;
+      results[i] = await fn(items[i], i);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+  return results;
+}
+
 function nextAngle(counts: Record<string, number>): (typeof HOST_OUTREACH_TEMPLATES)[number] {
   const sorted = [...HOST_OUTREACH_TEMPLATES].sort((a, b) => (counts[a.id] || 0) - (counts[b.id] || 0));
   const angle = sorted[0];
@@ -608,6 +626,12 @@ async function draftHostMessage(p: any, angle: (typeof HOST_OUTREACH_TEMPLATES)[
   ].filter(Boolean).join("\n");
 
   try {
+    // Short timeout: these drafts are only 350 tokens, so a live provider
+    // replies in seconds. NVIDIA has repeatedly gone into a mode where it
+    // hangs with no response at all (see llmChat's provider notes) instead
+    // of erroring — the default 90s abort meant one dead host could stall
+    // an entire confirm batch for minutes. 20s is generous for a real reply
+    // but still fails fast enough to fall through to the next provider.
     const raw = await llmChat([
       {
         role: "system",
@@ -618,7 +642,7 @@ async function draftHostMessage(p: any, angle: (typeof HOST_OUTREACH_TEMPLATES)[
         role: "user",
         content: `Template to adapt:\n"""\n${angle.template}\n"""\n\nListing facts — use ONLY what's given, never invent:\n${who || "none given — just swap in the listing name"}`,
       },
-    ], 350);
+    ], 350, 20_000);
     let dmDraft = raw.trim().replace(/^["'“”]+|["'“”]+$/g, "");
     const lines = dmDraft.split("\n");
     if (lines.length > 1 && /^(here('s| is)|sure|below is|adapted)/i.test(lines[0]) && lines[0].length < 90) {
@@ -661,16 +685,15 @@ export const generateDraftsForSelected = action({
   handler: async (ctx, { ids }): Promise<{ drafted: number }> => {
     await requireAdminAction(ctx, api.profiles.getByClerkUserId);
     const counts: Record<string, number> = await ctx.runQuery(internal.prospects.getHostAngleCounts, {});
-    let drafted = 0;
-    for (const id of ids) {
+    const results = await mapWithConcurrency(ids, 5, async (id) => {
       const p: any = await ctx.runQuery(internal.prospects.getById, { id });
-      if (!p || p.kind !== "host") continue;
+      if (!p || p.kind !== "host") return false;
       const angle = nextAngle(counts);
       const dmDraft = await draftHostMessage(p, angle);
       await ctx.runMutation(internal.prospects.saveHostDraft, { id: p._id, dmDraft, dmAngle: angle.id });
-      drafted++;
-    }
-    return { drafted };
+      return true;
+    });
+    return { drafted: results.filter(Boolean).length };
   },
 });
 
@@ -715,16 +738,15 @@ export const confirmHostBatch = action({
   args: { ids: v.array(v.id("prospects")) },
   handler: async (ctx, { ids }): Promise<{ confirmed: number }> => {
     await requireAdminAction(ctx, api.profiles.getByClerkUserId);
-    let confirmed = 0;
-    for (let i = 0; i < ids.length; i++) {
-      const p: any = await ctx.runQuery(internal.prospects.getById, { id: ids[i] });
-      if (!p || p.kind !== "host" || p.published) continue; // don't re-draft an already-sent one
+    const results = await mapWithConcurrency(ids, 5, async (id, i) => {
+      const p: any = await ctx.runQuery(internal.prospects.getById, { id });
+      if (!p || p.kind !== "host" || p.published) return false; // don't re-draft an already-sent one
       const angle = HOST_OUTREACH_TEMPLATES[i % HOST_OUTREACH_TEMPLATES.length];
       const dmDraft = await draftHostMessage(p, angle);
       await ctx.runMutation(internal.prospects.confirmDraft, { id: p._id, dmDraft, dmAngle: angle.id });
-      confirmed++;
-    }
-    return { confirmed };
+      return true;
+    });
+    return { confirmed: results.filter(Boolean).length };
   },
 });
 

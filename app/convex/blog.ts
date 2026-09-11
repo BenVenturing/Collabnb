@@ -344,7 +344,7 @@ type ChatMessage = { role: string; content: string };
 // OpenAI-compatible chat call. Providers are tried in order: NVIDIA (primary),
 // DeepSeek, OpenRouter — the first one with a configured key wins; if it
 // errors, the next configured provider is tried.
-export async function llmChat(messages: ChatMessage[], maxTokens = 2048): Promise<string> {
+export async function llmChat(messages: ChatMessage[], maxTokens = 2048, timeoutMs = 90_000): Promise<string> {
   const providers = [
     // meta/llama-3.3-70b-instruct hung server-side on NVIDIA since 2026-07-03;
     // its replacement, nvidia/llama-3.3-nemotron-super-49b-v1.5, then hit its
@@ -388,7 +388,7 @@ export async function llmChat(messages: ChatMessage[], maxTokens = 2048): Promis
   // limits / connection resets), so each provider gets one retry.
   for (const provider of [...providers, ...providers]) {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 90_000);
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
     const sent = (provider as any).noThink
       ? messages[0]?.role === "system"
         ? [{ ...messages[0], content: `/no_think\n${messages[0].content}` }, ...messages.slice(1)]

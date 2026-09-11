@@ -366,10 +366,13 @@ export async function llmChat(messages: ChatMessage[], maxTokens = 2048, timeout
       model: "deepseek-chat",
     },
     {
+      // Free tier, $0 cost — confirmed live 2026-09-11 and passes this
+      // workspace's ZDR guardrail (most non-ZDR providers/models on this
+      // OpenRouter key get hard-rejected with a 404 "guardrail" error).
       name: "OpenRouter",
       key: process.env.OPENROUTER_API_KEY,
       url: "https://openrouter.ai/api/v1/chat/completions",
-      model: "meta-llama/llama-3.3-70b-instruct",
+      model: "google/gemma-4-26b-a4b-it:free",
     },
   ].filter((p) => !!p.key);
 

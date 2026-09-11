@@ -474,21 +474,11 @@ export function layout(body: string, heroUrl?: string) {
   return `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background:#F7F4EF;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#F7F4EF;padding:44px 16px;">
+<body style="margin:0;padding:0;background:#FAF9F6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#FAF9F6;padding:44px 16px;">
     <tr><td align="center">
-      <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background:#ffffff;border-radius:24px;overflow:hidden;border:1px solid #EAE3D9;box-shadow:0 8px 40px rgba(40,32,20,0.08);">
-        <!-- Cream header with plain logo -->
-        <tr>
-          <td bgcolor="#F3EEE6" style="background:linear-gradient(135deg,#F3EEE6 0%,#FBF8F3 48%,#EFE7DA 100%);padding:32px 40px 28px;text-align:center;border-bottom:1px solid rgba(255,255,255,0.6);">
-            <img src="${LOGO_URL}" alt="Collabnb" width="52" height="52" style="display:block;width:52px;height:52px;margin:0 auto;border:0;outline:none;" />
-            <div style="font-size:21px;font-weight:800;color:#241F19;letter-spacing:-0.4px;margin-top:12px;">Collabnb</div>
-            <div style="font-size:10.5px;color:#8A7A63;margin-top:4px;letter-spacing:2.2px;text-transform:uppercase;font-weight:600;">Creator-First Hospitality</div>
-          </td>
-        </tr>
-        <!-- Warm accent line -->
-        <tr><td bgcolor="#8B6F52" style="height:3px;background:linear-gradient(90deg,rgba(139,111,82,0) 0%,#8B6F52 30%,#EFE3D3 50%,#8B6F52 70%,rgba(139,111,82,0) 100%);font-size:0;line-height:0;">&nbsp;</td></tr>
-        ${heroUrl ? `<!-- Category hero art -->
+      <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background:#ffffff;border-radius:24px;overflow:hidden;border:1px solid #ECE9E3;box-shadow:0 8px 32px rgba(30,26,20,0.05);">
+        ${heroUrl ? `<!-- Hero art, full-bleed at the very top -->
         <tr><td style="line-height:0;"><img src="${heroUrl}" alt="" width="560" style="display:block;width:100%;height:auto;border:0;outline:none;" /></td></tr>` : ""}
         <!-- Body -->
         <tr><td style="padding:38px 40px 8px;">${body}</td></tr>
@@ -499,9 +489,10 @@ export function layout(body: string, heroUrl?: string) {
             <p style="margin:2px 0 0;font-size:15px;font-weight:700;color:#241F19;">The Collabnb Team <span style="color:#8B6F52;">🤎</span></p>
           </td>
         </tr>
-        <!-- Footer -->
+        <!-- Footer, logo at the bottom -->
         <tr>
-          <td bgcolor="#F7F4EE" style="padding:22px 40px;background:#F7F4EE;border-top:1px solid #EDE6DA;text-align:center;">
+          <td bgcolor="#FAF9F6" style="padding:26px 40px;background:#FAF9F6;border-top:1px solid #F1EEE8;text-align:center;">
+            <img src="${LOGO_URL}" alt="Collabnb" width="32" height="32" style="display:block;width:32px;height:32px;margin:0 auto 10px;border:0;outline:none;" />
             <p style="margin:0 0 4px;font-size:12px;color:#9C9182;">Creators &amp; boutique stays, matched with care.</p>
             <p style="margin:0;font-size:12px;color:#A69C8C;">© 2026 Collabnb · <a href="${BASE_URL}" style="color:#8B6F52;text-decoration:none;font-weight:600;">collabnb.com</a></p>
           </td>
@@ -513,18 +504,21 @@ export function layout(body: string, heroUrl?: string) {
 </html>`;
 }
 
-// The email's focal point: the key line / summary paragraph in a liquid-glass chip.
+// The email's focal point: the key line / summary paragraph in a soft chip.
+// Flat, very slightly warm off-white — not a brown-tinted wash.
 export function heroChip(text: string) {
   return `<table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px;"><tr>
-    <td bgcolor="#F7F2EA" style="background:linear-gradient(135deg,#F3EBDD 0%,#FBF7F0 100%);border:1px solid rgba(255,255,255,0.9);border-radius:18px;padding:22px 24px;box-shadow:0 6px 20px rgba(40,32,20,0.06);">
+    <td style="background:#FAF9F6;border:1px solid #F0EDE7;border-radius:18px;padding:22px 24px;">
       <p style="margin:0;font-size:16px;font-weight:500;color:#241F19;line-height:1.6;">${text}</p>
     </td>
   </tr></table>`;
 }
 
+// Neutral off-white box — color only shows up as the label text and left
+// border, not as a background tint, so the accent color doesn't dominate.
 export function callout(color: string, label: string, text: string) {
   return `<table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;"><tr>
-    <td style="background:${color}14;border:1px solid ${color}33;border-left:3px solid ${color};border-radius:14px;padding:16px 20px;">
+    <td style="background:#FAF9F6;border:1px solid #F0EDE7;border-left:3px solid ${color};border-radius:14px;padding:16px 20px;">
       <div style="font-size:11px;color:${color};font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">${label}</div>
       <p style="margin:0;font-size:14px;color:#5C5347;line-height:1.65;">${text}</p>
     </td>

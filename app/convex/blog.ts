@@ -366,13 +366,17 @@ export async function llmChat(messages: ChatMessage[], maxTokens = 2048, timeout
       model: "deepseek-chat",
     },
     {
-      // Free tier, $0 cost — confirmed live 2026-09-11 and passes this
-      // workspace's ZDR guardrail (most non-ZDR providers/models on this
-      // OpenRouter key get hard-rejected with a 404 "guardrail" error).
+      // Paid tier of the same model (was :free) — the free tier's shared
+      // rate limit (20 req/min, 200/day platform-wide) was getting hit under
+      // real usage. At this volume (dozens of DMs/day) the paid tier costs
+      // fractions of a cent/month. Confirmed live 2026-09-12, still passes
+      // this workspace's ZDR guardrail (most non-ZDR providers/models on
+      // this OpenRouter key get hard-rejected with a 404 "guardrail" error;
+      // this one routes via Cloudflare, which clears it).
       name: "OpenRouter",
       key: process.env.OPENROUTER_API_KEY,
       url: "https://openrouter.ai/api/v1/chat/completions",
-      model: "google/gemma-4-26b-a4b-it:free",
+      model: "google/gemma-4-26b-a4b-it",
     },
   ].filter((p) => !!p.key);
 

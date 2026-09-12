@@ -1,6 +1,14 @@
 """Vercel Python function — finds a hotel's real marketing/press contact
-email by fetching its actual website (Scrapling) instead of trusting
-whatever address happens to be in an Instagram bio.
+email by fetching its actual website instead of trusting whatever address
+happens to be in an Instagram bio.
+
+Originally built on Scrapling, but its dependency tree (browser-automation
+extras pulled in even for a plain HTTP fetch) bundles to 250MB+, over
+Vercel Python's 225MB function-size cap — confirmed via a failed prod
+deploy. Swapped to stdlib urllib with browser-like headers instead: same
+behavior (fetch the page, extract the best-scoring contact email) with
+zero extra dependencies. Revisit Scrapling only if it ships a slimmer
+"requests-only" extra, or if this needs real anti-bot evasion later.
 
 Convex (Node) can't run Python directly, so this bridges the two: the
 Convex action in app/convex/prospects.ts (findMarketingEmail) POSTs a
@@ -15,9 +23,24 @@ from http.server import BaseHTTPRequestHandler
 import json
 import os
 import re
+import urllib.request
 from urllib.parse import urljoin
 
-from scrapling.fetchers import Fetcher
+BROWSER_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
+                  "(KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.9",
+}
+
+
+def fetch_html(url: str, timeout: int = 15) -> str:
+    req = urllib.request.Request(url, headers=BROWSER_HEADERS)
+    with urllib.request.urlopen(req, timeout=timeout) as res:
+        raw = res.read(2_000_000)  # cap read size, contact pages are small
+        charset = res.headers.get_content_charset() or "utf-8"
+        return raw.decode(charset, errors="ignore")
+
 
 EMAIL_RE = re.compile(r"[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+")
 CONTACT_LINK_KEYWORDS = ["contact", "press", "media", "partnership", "marketing", "about"]
@@ -58,16 +81,14 @@ def find_contact_links(base_url: str, html: str) -> list[str]:
 
 
 def best_email_for(url: str) -> tuple[str | None, list[str]]:
-    page = Fetcher.get(url, stealthy_headers=True, timeout=15)
-    html = getattr(page, "body", None) or getattr(page, "html_content", None) or str(page)
+    html = fetch_html(url)
     candidates = extract_emails(html)
     if candidates:
         return candidates[0], candidates[:5]
 
     for link in find_contact_links(url, html):
         try:
-            sub_page = Fetcher.get(link, stealthy_headers=True, timeout=15)
-            sub_html = getattr(sub_page, "body", None) or getattr(sub_page, "html_content", None) or str(sub_page)
+            sub_html = fetch_html(link)
             sub_candidates = extract_emails(sub_html)
             if sub_candidates:
                 return sub_candidates[0], sub_candidates[:5]

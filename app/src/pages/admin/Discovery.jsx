@@ -9,10 +9,20 @@ const STATUS_FLOW = ['new', 'queued', 'contacted', 'replied', 'signed'];
 const STATUS_CFG = {
   new:       { label: 'New',       bg: 'rgba(25,37,36,0.06)',    color: '#3C5759' },
   queued:    { label: 'Queued',    bg: 'rgba(212,168,67,0.15)',  color: '#b45309' },
-  contacted: { label: 'Contacted', bg: 'rgba(123,104,200,0.14)', color: '#5b4aa8' },
-  replied:   { label: 'Replied',   bg: 'rgba(74,155,127,0.15)',  color: '#2d7d5e' },
+  emailed:   { label: 'Emailed',   bg: 'rgba(212,168,67,0.15)',  color: '#b45309' }, // host-only pipeline stage, set automatically after Confirm — not part of STATUS_FLOW's generic advance button
+  contacted: { label: 'DMed',      bg: 'rgba(123,104,200,0.14)', color: '#5b4aa8' },
+  replied:   { label: 'Responded', bg: 'rgba(74,155,127,0.15)',  color: '#2d7d5e' },
   signed:    { label: 'Signed',    bg: 'rgba(209,235,219,0.8)',  color: '#166534' },
   declined:  { label: 'Declined',  bg: 'rgba(200,104,104,0.1)',  color: '#9b2d2d' },
+};
+const OUTREACH_LOG_LABELS = {
+  confirmed: 'Confirmed',
+  email_sent: 'Email sent',
+  emailed: 'Emailed',
+  contacted: 'DMed on Instagram',
+  replied: 'Responded',
+  declined: 'Declined',
+  signed: 'Signed',
 };
 const TIERS = ['nano', 'micro', 'mid', 'macro'];
 const ANGLE_LABELS = {
@@ -99,6 +109,7 @@ function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
   const resetToPool = useMutation(api.prospects.resetToPool);
   const generateDm = useAction(api.prospects.generateDmDraft);
   const enrich = useAction(api.prospects.enrichProspect);
+  const sendSequenceEmail = useAction(api.prospects.sendSequenceEmail);
   const [open, setOpen] = useState(false);
   const [dmDraft, setDmDraft] = useState(prospect.dm_draft || '');
   const [notes, setNotes] = useState(prospect.notes || '');
@@ -108,6 +119,8 @@ function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
   const [enrichBusy, setEnrichBusy] = useState(false);
   const [angle, setAngle] = useState('');
   const [resetting, setResetting] = useState(false);
+  const [sendingStep, setSendingStep] = useState(null);
+  const [seqErr, setSeqErr] = useState('');
 
   async function genDm() {
     setGenBusy(true); setGenErr('');
@@ -160,6 +173,23 @@ function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
     }
     try { await navigator.clipboard.writeText(text); } catch { /* clipboard unavailable */ }
     window.open(`https://ig.me/m/${prospect.instagram_handle}`, '_blank', 'noopener');
+    // Moves the host into the "DMed" column the moment you actually go do
+    // it — no separate click needed. Only for hosts still earlier in the
+    // pipeline, so this never rewinds a card that's already moved further.
+    if (prospect.kind === 'host' && ['new', 'queued', 'emailed'].includes(prospect.status)) {
+      updateStatus({ id: prospect._id, status: 'contacted' }).catch(() => {});
+    }
+  }
+
+  async function sendStep(step) {
+    setSendingStep(step); setSeqErr('');
+    try {
+      await sendSequenceEmail({ id: prospect._id, step });
+    } catch (e) {
+      setSeqErr(e.message?.replace(/^.*Error:\s*/, '') || `Could not send step ${step}`);
+    } finally {
+      setSendingStep(null);
+    }
   }
 
   // Declined isn't part of the forward flow — indexOf returns -1 there, which
@@ -340,6 +370,42 @@ function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
               {genErr && <span style={{ fontSize: '0.68rem', color: '#9b2d2d', alignSelf: 'center' }}>{genErr}</span>}
             </div>
           </div>
+          {prospect.kind === 'host' && (prospect.marketing_email || (prospect.email_sequence?.length > 0)) && (
+            <div>
+              <span style={label}>Email sequence{prospect.marketing_email ? ` · ${prospect.marketing_email}` : ''}</span>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                {(prospect.email_sequence || []).map((e) => (
+                  <div key={e.step} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.72rem', color: '#3C5759' }}>
+                    <span style={{ fontWeight: 700, minWidth: 46 }}>Step {e.step}</span>
+                    <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.subject}</span>
+                    {e.sent_at ? (
+                      <span style={{ color: '#166534', fontSize: '0.68rem', flexShrink: 0 }}>Sent {new Date(e.sent_at).toLocaleDateString()}</span>
+                    ) : (
+                      <button onClick={() => sendStep(e.step)} disabled={sendingStep === e.step}
+                        style={{ padding: '0.2rem 0.6rem', borderRadius: 9999, border: 'none', background: '#192524', color: '#fff', fontSize: '0.66rem', fontWeight: 700, cursor: 'pointer', opacity: sendingStep === e.step ? 0.5 : 1, flexShrink: 0 }}>
+                        {sendingStep === e.step ? 'Sending…' : 'Send'}
+                      </button>
+                    )}
+                  </div>
+                ))}
+                {seqErr && <span style={{ fontSize: '0.68rem', color: '#9b2d2d' }}>{seqErr}</span>}
+              </div>
+            </div>
+          )}
+
+          {prospect.kind === 'host' && prospect.outreach_log?.length > 0 && (
+            <div>
+              <span style={label}>Outreach history</span>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
+                {prospect.outreach_log.map((e, i) => (
+                  <div key={i} style={{ fontSize: '0.7rem', color: '#646B62' }}>
+                    {new Date(e.at).toLocaleDateString()} — {OUTREACH_LOG_LABELS[e.type] || e.type}{e.note ? ` (${e.note})` : ''}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div>
             <span style={label}>Notes</span>
             <textarea value={notes} onChange={e => setNotes(e.target.value)}
@@ -862,8 +928,9 @@ function HostOutreachCampaign() {
 // on this board.
 const CRM_COLUMNS = [
   { id: 'queued', label: 'Confirmed' },
-  { id: 'contacted', label: 'Contacted' },
-  { id: 'replied', label: 'Replied' },
+  { id: 'emailed', label: 'Emailed' },
+  { id: 'contacted', label: 'DMed' },
+  { id: 'replied', label: 'Responded' },
   { id: 'signed', label: 'Signed // Onboarding' },
   { id: 'declined', label: 'Declined' },
 ];

@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { query, mutation, action, internalAction, internalMutation, internalQuery } from "./_generated/server";
 import { internal, api } from "./_generated/api";
 import { llmChat } from "./blog";
+import { sendViaResend } from "./emailCopy";
 import { requireAdmin, requireAdminAction, canAccessAdmin } from "./lib/auth";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -109,6 +110,158 @@ Here's a look: https://www.collabnb.com/`,
 We're inviting our first 100 properties in as Founding Hosts this July — free, lifetime access, no fees, ever. Would love for you to take a look: https://www.collabnb.com/`,
   },
 ];
+
+// ─── Host outreach email sequence ──────────────────────────────────────────────
+// Three-step cold email sequence, sent to a host's marketing/contact address
+// (separate channel from the Instagram DM above — DMs stay manual, step 1 of
+// this sequence sends automatically on Confirm, steps 2-3 are drafted here
+// and wait for an explicit "Send" click, same manual-control philosophy).
+export const HOST_EMAIL_SEQUENCE: { step: number; name: string; subject: string; template: string; sendDelayDays: number }[] = [
+  {
+    step: 1,
+    name: "Intro",
+    subject: "Inviting [Hotel Name] to Collabnb as a Founding Host",
+    sendDelayDays: 0,
+    template: `Hi there,
+
+My name is Benjamin, founder of Collabnb — a platform that helps boutique hotels and stays connect with vetted content creators who are actively looking for unique places to collaborate with.
+
+I came across [Hotel Name] and it looks like exactly the kind of property creators are searching for. We'd love to invite you to join Collabnb completely free and set up a listing where creators can discover your stay and reach out directly.
+
+Through Collabnb, hosts can:
+• Discover relevant creators without spending hours searching Instagram
+• Set up collaboration listings with clear deliverables
+• Manage conversations and partnerships in one place
+
+We're currently welcoming our first 100 properties as Founding Hosts — lifetime access, no admin fees, ever.
+
+Also, is this the best address for your marketing or partnerships team, or is there someone else we should loop in?
+
+Thanks so much for your time — we'd love to have [Hotel Name] on board.
+
+Benjamin
+Founder, Collabnb
+collabnb.com`,
+  },
+  {
+    step: 2,
+    name: "Follow-up",
+    subject: "Following up — Collabnb x [Hotel Name]",
+    sendDelayDays: 4,
+    template: `Hi again,
+
+Just wanted to float this back to the top of your inbox in case it got buried.
+
+{STATS}
+
+Collabnb makes it simple to set up a free listing and start hearing from creators directly — no cost, and it takes a few minutes.
+
+Happy to answer any questions, or just take a look here: https://www.collabnb.com/
+
+Benjamin
+Founder, Collabnb`,
+  },
+  {
+    step: 3,
+    name: "Final nudge",
+    subject: "Last note from me — Collabnb",
+    sendDelayDays: 7,
+    template: `Hi — totally understand if now isn't the right time.
+
+Just wanted to leave the door open: we're still holding a spot for [Hotel Name] among our first 100 Founding Hosts (free, lifetime access), so if it's ever useful, it's here: https://www.collabnb.com/
+
+Either way, wishing you all the best.
+
+Benjamin
+Founder, Collabnb`,
+  },
+];
+
+function textToEmailHtml(text: string): string {
+  const escaped = text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+  const paragraphs = escaped
+    .split(/\n\n+/)
+    .map((p) => `<p style="margin:0 0 16px">${p.replace(/\n/g, "<br>")}</p>`)
+    .join("\n");
+  return `<div style="font-family:Helvetica,Arial,sans-serif;font-size:15px;color:#1f1f1f;line-height:1.5;max-width:520px">${paragraphs}</div>`;
+}
+
+// Adapts a fixed email-sequence template to one host's real facts, same
+// personalization rules as draftHostMessage (fill in the name, one honest
+// detail if given, never invent facts) — just email-shaped (subject + body).
+async function draftHostEmail(p: any, step: (typeof HOST_EMAIL_SEQUENCE)[number]): Promise<{ subject: string; body: string }> {
+  const name = p.display_name || `@${p.instagram_handle}`;
+  const who = [
+    `Listing name: ${name}`,
+    p.location && `Location: ${p.location}`,
+    p.niche && `Type/niche: ${p.niche}`,
+    p.bio && `Instagram bio: ${p.bio}`,
+  ].filter(Boolean).join("\n");
+
+  try {
+    const raw = await llmChat([
+      {
+        role: "system",
+        content:
+          "You adapt a fixed cold-outreach email for Benjamin, founder of Collabnb (collabnb.com). You do NOT rewrite the email freely — keep its structure, sentence order, tone, and call-to-action exactly as given. Your job: (1) replace every '[Hotel Name]' with the real listing name; (2) if the email contains the literal marker '{STATS}', leave it completely unchanged, on its own line; (3) only if a genuine matching fact is provided below, you may add ONE short sentence stating it honestly right after the opening paragraph — never invent anything not given, skip it if no real fact is available. Formatting rules: plain text only, no markdown, no asterisks, no parentheses (rephrase instead), no commentary about what you changed. Output ONLY the final email body text, nothing else — no subject line.",
+      },
+      {
+        role: "user",
+        content: `Email to adapt:\n"""\n${step.template}\n"""\n\nListing facts — use ONLY what's given, never invent:\n${who || "none given — just swap in the listing name"}`,
+      },
+    ], 400, 20_000);
+    let body = raw.trim().replace(/^["'“”]+|["'“”]+$/g, "");
+    const lines = body.split("\n");
+    if (lines.length > 1 && /^(here('s| is)|sure|below is|adapted)/i.test(lines[0]) && lines[0].length < 90) {
+      body = lines.slice(1).join("\n").trim();
+    }
+    body = body.includes("{STATS}") ? body.replace("{STATS}", HOST_STATS_BLOCK) : body;
+    body = body.replace(/\*/g, "").replace(/[()]/g, "");
+    const subject = step.subject.replace(/\[Hotel Name\]/g, name);
+    return { subject, body: body.slice(0, 2000) };
+  } catch {
+    return {
+      subject: step.subject.replace(/\[Hotel Name\]/g, name),
+      body: step.template.replace(/\[Hotel Name\]/g, name).replace("{STATS}", HOST_STATS_BLOCK),
+    };
+  }
+}
+
+// ─── Marketing-email discovery ─────────────────────────────────────────────────
+// Looks up a host's real marketing/partnerships contact instead of whatever
+// address happens to be in their Instagram bio. Calls a small Vercel Python
+// function (Scrapling) that fetches the host's real website and extracts the
+// best-scoring contact address. Falls through to the bio `email` field (or
+// nothing) if the site can't be reached or has no listed address — this must
+// never block the confirm flow.
+async function findMarketingEmail(p: any): Promise<string | undefined> {
+  if (p.marketing_email) return p.marketing_email;
+  if (!p.website) return p.email || undefined;
+
+  const secret = process.env.SCRAPE_SHARED_SECRET;
+  const endpoint = process.env.SCRAPE_ENDPOINT_URL || "https://www.collabnb.com/api/find-marketing-email";
+  if (!secret) return p.email || undefined;
+
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 15_000);
+    const res = await fetch(endpoint, {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${secret}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ url: p.website }),
+      signal: controller.signal,
+    });
+    clearTimeout(timer);
+    if (!res.ok) return p.email || undefined;
+    const data = await res.json();
+    return data.email || p.email || undefined;
+  } catch {
+    return p.email || undefined;
+  }
+}
 
 // ─── Scraping providers: HikerAPI (primary) or Apify (fallback) ───────────────
 // HikerAPI: npx convex env set HIKERAPI_KEY <access key from hikerapi.com>
@@ -465,9 +618,12 @@ export const updateStatus = mutation({
   args: { id: v.id("prospects"), status: v.string() },
   handler: async (ctx, { id, status }) => {
     await requireAdmin(ctx);
+    const p = await ctx.db.get(id);
     const patch: Record<string, any> = { status };
     if (status === "contacted") patch.contacted_at = Date.now();
     if (status === "replied") patch.replied_at = Date.now();
+    const log = (p as any)?.outreach_log || [];
+    patch.outreach_log = [...log, { at: Date.now(), type: status }];
     await ctx.db.patch(id, patch);
   },
 });
@@ -721,12 +877,124 @@ export const resetToPool = mutation({
 export const confirmDraft = internalMutation({
   args: { id: v.id("prospects"), dmDraft: v.string(), dmAngle: v.string() },
   handler: async (ctx, { id, dmDraft, dmAngle }) => {
+    const p = await ctx.db.get(id);
+    const log = (p as any)?.outreach_log || [];
     await ctx.db.patch(id, {
       dm_draft: dmDraft,
       dm_angle: dmAngle,
       status: "queued",
       queued_for: todayKey(),
       published: true,
+      outreach_log: [...log, { at: Date.now(), type: "confirmed" }],
+    });
+  },
+});
+
+// Runs after confirmDraft: finds the host's real marketing email, drafts the
+// 3-step email sequence, and sends step 1 immediately (steps 2-3 wait for an
+// explicit "Send" click from the admin — see sendSequenceEmail). Never throws
+// — a failed lookup/send just leaves the host at the 'confirmed' stage so the
+// batch confirm never fails because one host's email couldn't be found.
+export const kickoffHostEmailSequence = internalAction({
+  args: { id: v.id("prospects") },
+  handler: async (ctx, { id }) => {
+    const p: any = await ctx.runQuery(internal.prospects.getById, { id });
+    if (!p) return;
+
+    const marketingEmail = await findMarketingEmail(p);
+    if (!marketingEmail) return;
+
+    const drafted = await Promise.all(HOST_EMAIL_SEQUENCE.map((step) => draftHostEmail(p, step)));
+    const emailSequence = HOST_EMAIL_SEQUENCE.map((step, i) => ({
+      step: step.step,
+      subject: drafted[i].subject,
+      body: drafted[i].body,
+      sent_at: undefined as number | undefined,
+    }));
+
+    const apiKey = process.env.RESEND_API_KEY;
+    if (apiKey) {
+      try {
+        await sendViaResend(apiKey, marketingEmail, emailSequence[0].subject, textToEmailHtml(emailSequence[0].body));
+        emailSequence[0].sent_at = Date.now();
+      } catch {
+        // leave sent_at unset — admin can retry via sendSequenceEmail
+      }
+    }
+
+    await ctx.runMutation(internal.prospects.saveEmailSequence, {
+      id,
+      marketingEmail,
+      emailSequence,
+      step1Sent: !!emailSequence[0].sent_at,
+    });
+  },
+});
+
+export const saveEmailSequence = internalMutation({
+  args: {
+    id: v.id("prospects"),
+    marketingEmail: v.string(),
+    emailSequence: v.array(v.object({
+      step: v.number(),
+      subject: v.string(),
+      body: v.string(),
+      sent_at: v.optional(v.number()),
+    })),
+    step1Sent: v.boolean(),
+  },
+  handler: async (ctx, { id, marketingEmail, emailSequence, step1Sent }) => {
+    const p = await ctx.db.get(id);
+    const log = (p as any)?.outreach_log || [];
+    await ctx.db.patch(id, {
+      marketing_email: marketingEmail,
+      email_sequence: emailSequence,
+      ...(step1Sent ? { status: "emailed" } : {}),
+      outreach_log: step1Sent
+        ? [...log, { at: Date.now(), type: "email_sent", note: `Step 1 to ${marketingEmail}` }]
+        : log,
+    });
+  },
+});
+
+// Sends a not-yet-sent step (2 or 3) of the email sequence on explicit
+// admin click — steps 2-3 never send on their own.
+export const sendSequenceEmail = action({
+  args: { id: v.id("prospects"), step: v.number() },
+  handler: async (ctx, { id, step }) => {
+    await requireAdminAction(ctx, api.profiles.getByClerkUserId);
+    const p: any = await ctx.runQuery(internal.prospects.getById, { id });
+    if (!p) throw new Error("Prospect not found");
+    if (!p.marketing_email) throw new Error("No marketing email on file for this host");
+    const entry = (p.email_sequence || []).find((e: any) => e.step === step);
+    if (!entry) throw new Error(`No drafted email for step ${step}`);
+    if (entry.sent_at) throw new Error(`Step ${step} was already sent`);
+
+    const apiKey = process.env.RESEND_API_KEY;
+    if (!apiKey) throw new Error("RESEND_API_KEY not configured in Convex environment.");
+    await sendViaResend(apiKey, p.marketing_email, entry.subject, textToEmailHtml(entry.body));
+
+    const updatedSequence = p.email_sequence.map((e: any) => (e.step === step ? { ...e, sent_at: Date.now() } : e));
+    await ctx.runMutation(internal.prospects.markSequenceStepSent, { id, emailSequence: updatedSequence });
+  },
+});
+
+export const markSequenceStepSent = internalMutation({
+  args: {
+    id: v.id("prospects"),
+    emailSequence: v.array(v.object({
+      step: v.number(),
+      subject: v.string(),
+      body: v.string(),
+      sent_at: v.optional(v.number()),
+    })),
+  },
+  handler: async (ctx, { id, emailSequence }) => {
+    const p = await ctx.db.get(id);
+    const log = (p as any)?.outreach_log || [];
+    await ctx.db.patch(id, {
+      email_sequence: emailSequence,
+      outreach_log: [...log, { at: Date.now(), type: "email_sent" }],
     });
   },
 });
@@ -744,6 +1012,7 @@ export const confirmHostBatch = action({
       const angle = HOST_OUTREACH_TEMPLATES[i % HOST_OUTREACH_TEMPLATES.length];
       const dmDraft = await draftHostMessage(p, angle);
       await ctx.runMutation(internal.prospects.confirmDraft, { id: p._id, dmDraft, dmAngle: angle.id });
+      await ctx.runAction(internal.prospects.kickoffHostEmailSequence, { id: p._id }).catch(() => {});
       return true;
     });
     return { confirmed: results.filter(Boolean).length };

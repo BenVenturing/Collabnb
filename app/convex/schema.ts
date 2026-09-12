@@ -563,9 +563,24 @@ export default defineSchema({
     bio: v.optional(v.string()),
     website: v.optional(v.string()),
     source: v.string(),                  // 'manual' | 'apify' | 'csv' | 'referral'
-    status: v.string(),                  // 'new' | 'queued' | 'contacted' | 'replied' | 'signed' | 'declined'
+    status: v.string(),                  // 'new' | 'queued' | 'emailed' | 'contacted' | 'replied' | 'signed' | 'declined' ('emailed'/'contacted' are host-only pipeline stages — see CRM_COLUMNS)
     dm_draft: v.optional(v.string()),
     notes: v.optional(v.string()),
+    // Host outreach pipeline reuses `status` for its Kanban stage (queued ->
+    // emailed -> contacted -> replied), same field the CRM board already
+    // renders columns from — see CRM_COLUMNS in Discovery.jsx.
+    marketing_email: v.optional(v.string()), // verified contact/press/marketing address, found by scraping the real site (distinct from `email`, which may be any address pulled from the bio)
+    email_sequence: v.optional(v.array(v.object({
+      step: v.number(),          // 1, 2, 3
+      subject: v.string(),
+      body: v.string(),
+      sent_at: v.optional(v.number()),
+    }))),
+    outreach_log: v.optional(v.array(v.object({
+      at: v.number(),
+      type: v.string(),          // 'confirmed' | 'email_sent' | 'dmed' | 'responded'
+      note: v.optional(v.string()),
+    }))),
     score: v.optional(v.number()),       // 0-100 composite fit score
     score_reach: v.optional(v.number()),   // 0-100, log-scale follower reach
     score_views: v.optional(v.number()),   // 0-100, avg video views vs followers

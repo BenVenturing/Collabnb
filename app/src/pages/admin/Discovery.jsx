@@ -6,6 +6,9 @@ import { NICHE_KEYWORDS } from '../../lib/matchScore';
 const NICHES = Object.keys(NICHE_KEYWORDS);
 
 const STATUS_FLOW = ['new', 'queued', 'contacted', 'replied', 'signed'];
+// Hosts get an extra 'emailed' stop between Confirmed and DMed — creators
+// don't have an email step, so they keep the plain STATUS_FLOW above.
+const HOST_STATUS_FLOW = ['new', 'queued', 'emailed', 'contacted', 'replied', 'signed'];
 const STATUS_CFG = {
   new:       { label: 'New',       bg: 'rgba(25,37,36,0.06)',    color: '#3C5759' },
   queued:    { label: 'Queued',    bg: 'rgba(212,168,67,0.15)',  color: '#b45309' },
@@ -110,6 +113,7 @@ function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
   const generateDm = useAction(api.prospects.generateDmDraft);
   const enrich = useAction(api.prospects.enrichProspect);
   const sendSequenceEmail = useAction(api.prospects.sendSequenceEmail);
+  const sendHostEmailNow = useAction(api.prospects.sendHostEmailNow);
   const [open, setOpen] = useState(false);
   const [dmDraft, setDmDraft] = useState(prospect.dm_draft || '');
   const [notes, setNotes] = useState(prospect.notes || '');
@@ -194,9 +198,30 @@ function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
 
   // Declined isn't part of the forward flow — indexOf returns -1 there, which
   // would otherwise wrap around to STATUS_FLOW[0] ("new") and offer a
-  // nonsensical "Mark new" button.
-  const flowIdx = STATUS_FLOW.indexOf(prospect.status);
-  const nextStatus = flowIdx === -1 ? undefined : STATUS_FLOW[flowIdx + 1];
+  // nonsensical "Mark new" button. Hosts use HOST_STATUS_FLOW so the
+  // advance button stops at "Emailed" on its way to "DMed".
+  const flow = prospect.kind === 'host' ? HOST_STATUS_FLOW : STATUS_FLOW;
+  const flowIdx = flow.indexOf(prospect.status);
+  const nextStatus = flowIdx === -1 ? undefined : flow[flowIdx + 1];
+  // queued -> emailed is a real send (find address, draft, send step 1),
+  // not a bare label change, so it goes through sendHostEmailNow instead
+  // of the generic updateStatus every other step uses.
+  const advanceIsSend = nextStatus === 'emailed';
+
+  async function advance() {
+    if (advanceIsSend) {
+      setSendingStep('now'); setSeqErr('');
+      try {
+        await sendHostEmailNow({ id: prospect._id });
+      } catch (e) {
+        setSeqErr(e.message?.replace(/^.*Error:\s*/, '') || 'Could not send');
+      } finally {
+        setSendingStep(null);
+      }
+    } else {
+      updateStatus({ id: prospect._id, status: nextStatus });
+    }
+  }
 
   async function copyDm() {
     try {
@@ -251,11 +276,12 @@ function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
       {crm ? (
         <div style={{ marginTop: '0.6rem' }}>
           {nextStatus && (
-            <div style={{ display: 'flex', justifyContent: 'center' }}>
-              <button onClick={() => updateStatus({ id: prospect._id, status: nextStatus })}
-                style={{ padding: '0.32rem 0.8rem', borderRadius: 9999, border: 'none', background: '#192524', color: '#fff', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer' }}>
-                Mark {STATUS_CFG[nextStatus].label.toLowerCase()}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem' }}>
+              <button onClick={advance} disabled={sendingStep === 'now'}
+                style={{ padding: '0.32rem 0.8rem', borderRadius: 9999, border: 'none', background: '#192524', color: '#fff', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', opacity: sendingStep === 'now' ? 0.5 : 1 }}>
+                {advanceIsSend ? (sendingStep === 'now' ? 'Emailing…' : 'Email') : `Mark ${STATUS_CFG[nextStatus].label.toLowerCase()}`}
               </button>
+              {advanceIsSend && seqErr && <span style={{ fontSize: '0.66rem', color: '#9b2d2d' }}>{seqErr}</span>}
             </div>
           )}
           {prospect.status !== 'signed' && (
@@ -702,10 +728,10 @@ function FindCreators() {
   );
 }
 
-// Seed rotation for the daily host-discovery cron — starts dense in
-// Southeast Asia (where Ben actually lives/travels, so bios/niches are
-// easiest to judge) then branches out to other major boutique-stay tourist
-// hubs. Editable in the UI below; this is only the first-load default.
+// Suggested regions for the host auto-search's "+ Add profile" button —
+// starts dense in Southeast Asia (where Ben actually lives/travels, so
+// bios/niches are easiest to judge) then branches out to other major
+// boutique-stay tourist hubs. Just a prefill; fully editable in the UI.
 const DEFAULT_HOST_DISCOVERY_REGIONS = [
   'villa Lombok', 'boutique hotel Bali', 'villa Canggu', 'boutique hotel Ubud',
   'boutique hotel Jakarta', 'boutique hotel Yogyakarta', 'boutique hotel Bandung',
@@ -716,7 +742,13 @@ const DEFAULT_HOST_DISCOVERY_REGIONS = [
   'boutique hotel Santorini', 'boutique hotel Marrakech', 'boutique hotel Byron Bay', 'boutique hotel Costa Rica',
 ];
 
-// ─── Host auto-discovery config (daily cron, rotates one region/day) ──────────
+// Short random id for profile rows — not security-sensitive, just needs to
+// be unique enough to key a list and target updates.
+function rid() {
+  return Math.random().toString(36).slice(2, 10);
+}
+
+// ─── Host auto-discovery config (daily cron — every profile toggled On runs every day) ──
 function HostAutoDiscoveryCard() {
   const settings = useQuery(api.admin.getSettings);
   const setSetting = useMutation(api.admin.setSetting);
@@ -724,50 +756,94 @@ function HostAutoDiscoveryCard() {
     try { return JSON.parse(settings?.host_discovery_auto || 'null') || {}; } catch { return {}; }
   })();
   const [draft, setDraft] = useState(null); // null = mirror saved
-  const cfg = draft ?? {
-    enabled: !!saved.enabled,
-    regions: saved.regions?.length ? saved.regions : DEFAULT_HOST_DISCOVERY_REGIONS,
-    index: saved.index || 0,
-    perDay: saved.perDay || 50,
-  };
-  const [regionsText, setRegionsText] = useState(cfg.regions.join('\n'));
+  const profiles = draft ?? (saved.profiles?.length ? saved.profiles : [
+    { id: 'default', enabled: false, query: DEFAULT_HOST_DISCOVERY_REGIONS[0], perDay: 50 },
+  ]);
   const [savedMsg, setSavedMsg] = useState('');
+  const [errorMsg, setErrorMsg] = useState('');
+  const [collapsed, setCollapsed] = useState(true);
 
-  async function save(next) {
-    const merged = { ...cfg, ...next };
-    setDraft(merged);
-    await setSetting({ key: 'host_discovery_auto', value: JSON.stringify(merged) });
-    setSavedMsg('Saved');
-    setTimeout(() => setSavedMsg(''), 2000);
+  // `updater` reads the previous array via React's functional setState form,
+  // not the `profiles` closed over at render time — toggling one row right
+  // after editing another (onBlur fires async) previously clobbered
+  // whichever field saved first, since both closed over the same stale
+  // snapshot. See the equivalent fix in the creator AutoDiscoveryCard.
+  async function save(updater) {
+    let merged;
+    setDraft(prev => {
+      merged = updater(prev ?? profiles);
+      return merged;
+    });
+    try {
+      await setSetting({ key: 'host_discovery_auto', value: JSON.stringify({ profiles: merged }) });
+      setErrorMsg('');
+      setSavedMsg('Saved');
+      setTimeout(() => setSavedMsg(''), 2000);
+    } catch (e) {
+      setErrorMsg((e.data || e.message)?.replace(/^.*Error:\s*/, '') || 'Save failed');
+    }
   }
 
-  const nextRegion = cfg.regions[cfg.index % cfg.regions.length] || '—';
+  function updateProfile(id, patch) {
+    setDraft(prev => (prev ?? profiles).map((p) => (p.id === id ? { ...p, ...patch } : p)));
+  }
+
+  function nextSuggestedQuery(list) {
+    const used = new Set(list.map((p) => p.query));
+    return DEFAULT_HOST_DISCOVERY_REGIONS.find((r) => !used.has(r)) || '';
+  }
+
+  const enabledCount = profiles.filter((p) => p.enabled).length;
+  const dailyTotal = profiles.filter((p) => p.enabled).reduce((s, p) => s + (p.perDay || 0), 0);
 
   return (
     <div style={{ padding: '0.7rem 0.9rem', borderRadius: '0.75rem', background: 'rgba(255,255,255,0.6)', border: '1px solid rgba(25,37,36,0.08)', marginBottom: '0.75rem' }}>
       <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
-        <button onClick={() => save({ enabled: !cfg.enabled })}
-          role="switch" aria-checked={cfg.enabled}
-          style={{ padding: '0.4rem 0.9rem', borderRadius: 9999, border: 'none', background: cfg.enabled ? '#166534' : 'rgba(25,37,36,0.12)', color: cfg.enabled ? '#fff' : '#3C5759', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer' }}>
-          {cfg.enabled ? 'Daily auto-search: On' : 'Daily auto-search: Off'}
-        </button>
-        <label style={{ fontSize: '0.72rem', color: '#3C5759', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-          Per day
-          <input aria-label="Hosts per day" type="number" min="5" max="100" value={cfg.perDay}
-            onChange={e => save({ perDay: Math.max(5, Math.min(100, parseInt(e.target.value, 10) || 50)) })}
-            style={{ ...input, width: 64, padding: '0.3rem 0.5rem' }} />
-        </label>
+        <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#192524' }}>Daily auto-search</span>
         <span style={{ fontSize: '0.7rem', color: '#646B62' }}>
-          {cfg.enabled ? `Tomorrow's region: ${nextRegion}` : `Runs daily at 7:30am UTC once on — starts with "${nextRegion}"`}
+          {enabledCount > 0 ? `${enabledCount} profile${enabledCount === 1 ? '' : 's'} on · ~${dailyTotal}/day at 7:30am UTC` : 'All profiles off'}
         </span>
         {savedMsg && <span style={{ fontSize: '0.7rem', color: '#166534' }}>{savedMsg}</span>}
+        {errorMsg && <span style={{ fontSize: '0.7rem', color: '#9b2d2d', fontWeight: 700 }}>{errorMsg}</span>}
+        <button onClick={() => setCollapsed((c) => !c)}
+          style={{ marginLeft: 'auto', padding: '0.25rem 0.6rem', borderRadius: 9999, border: '1px solid rgba(25,37,36,0.15)', background: 'transparent', color: '#3C5759', fontSize: '0.68rem', fontWeight: 600, cursor: 'pointer' }}>
+          {collapsed ? 'Edit ▾' : 'Minimize ▴'}
+        </button>
       </div>
-      <div style={{ marginTop: '0.5rem' }}>
-        <span style={{ ...label, display: 'inline' }}>Region rotation (one per line, cycles in order)</span>
-        <textarea value={regionsText} onChange={e => setRegionsText(e.target.value)}
-          onBlur={() => save({ regions: regionsText.split('\n').map(r => r.trim()).filter(Boolean) })}
-          rows={4} style={{ ...input, width: '100%', resize: 'vertical', fontSize: '0.72rem' }} />
-      </div>
+      {!collapsed && (
+        <div style={{ marginTop: '0.6rem' }}>
+          {profiles.map((p) => (
+            <div key={p.id} style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', alignItems: 'center', marginBottom: '0.4rem' }}>
+              <button onClick={() => save((prev) => prev.map((x) => (x.id === p.id ? { ...x, enabled: !x.enabled } : x)))}
+                role="switch" aria-checked={p.enabled}
+                style={{ padding: '0.35rem 0.8rem', borderRadius: 9999, border: 'none', background: p.enabled ? '#166534' : 'rgba(25,37,36,0.12)', color: p.enabled ? '#fff' : '#3C5759', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer' }}>
+                {p.enabled ? 'On' : 'Off'}
+              </button>
+              <input aria-label="Search query" value={p.query} onChange={(e) => updateProfile(p.id, { query: e.target.value })}
+                onBlur={() => save((prev) => prev)}
+                placeholder='e.g. "boutique hotel Bali"' style={{ ...input, flex: 1, minWidth: 180 }} />
+              <label style={{ fontSize: '0.72rem', color: '#3C5759', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                Per day
+                <input aria-label="Hosts per day" type="number" min="5" max="100" value={p.perDay}
+                  onChange={(e) => updateProfile(p.id, { perDay: Math.max(5, Math.min(100, parseInt(e.target.value, 10) || 50)) })}
+                  onBlur={() => save((prev) => prev)}
+                  style={{ ...input, width: 64, padding: '0.3rem 0.5rem' }} />
+              </label>
+              <button onClick={() => save((prev) => prev.filter((x) => x.id !== p.id))} title="Remove this profile"
+                style={{ padding: '0.3rem 0.6rem', borderRadius: 9999, border: 'none', background: 'transparent', color: '#9b2d2d', fontSize: '0.8rem', cursor: 'pointer' }}>
+                ×
+              </button>
+            </div>
+          ))}
+          <button onClick={() => save((prev) => [...prev, { id: rid(), enabled: false, query: nextSuggestedQuery(prev), perDay: 50 }])}
+            style={{ padding: '0.35rem 0.8rem', borderRadius: 9999, border: '1.5px dashed rgba(25,37,36,0.25)', background: 'transparent', color: '#3C5759', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer' }}>
+            + Add profile
+          </button>
+          <p style={{ fontSize: '0.68rem', color: '#646B62', margin: '0.5rem 0 0' }}>
+            Every profile toggled On runs every day — no more rotation, so more profiles means more Apify/HikerAPI credits used.
+          </p>
+        </div>
+      )}
     </div>
   );
 }
@@ -1017,8 +1093,11 @@ function HostCrmBoard() {
   const [dragOverCol, setDragOverCol] = useState(null);
   const [bulkBusy, setBulkBusy] = useState(false);
   const [bulkMsg, setBulkMsg] = useState('');
+  const [emailBulkBusy, setEmailBulkBusy] = useState(false);
+  const [emailBulkMsg, setEmailBulkMsg] = useState('');
 
   const generateDrafts = useAction(api.prospects.generateDraftsForSelected);
+  const sendEmailNow = useAction(api.prospects.sendHostEmailNow);
   const updateStatus = useMutation(api.prospects.updateStatus);
 
   const hosts = useQuery(api.prospects.getByKind, {
@@ -1068,6 +1147,24 @@ function HostCrmBoard() {
     }
   }
 
+  // Sends the initial email to every selected Confirmed host at once —
+  // each call is independent, so one bad address doesn't block the rest.
+  async function bulkSendEmails() {
+    if (selected.size === 0) return;
+    setEmailBulkBusy(true); setEmailBulkMsg('');
+    try {
+      const ids = [...selected];
+      const results = await Promise.allSettled(ids.map((id) => sendEmailNow({ id })));
+      const sent = results.filter((r) => r.status === 'fulfilled').length;
+      setEmailBulkMsg(sent === ids.length ? `Emailed ${sent}.` : `Emailed ${sent} of ${ids.length} — check the rest for a missing address.`);
+      setSelected(new Set());
+    } catch (e) {
+      setEmailBulkMsg((e.data || e.message)?.replace(/^.*Error:\s*/, '') || 'Bulk email failed');
+    } finally {
+      setEmailBulkBusy(false);
+    }
+  }
+
   function handleDrop(colId) {
     setDragOverCol(null);
     if (dragId) updateStatus({ id: dragId, status: colId }).catch(() => {});
@@ -1093,12 +1190,18 @@ function HostCrmBoard() {
           style={{ padding: '0.35rem 0.8rem', borderRadius: 9999, border: 'none', background: '#192524', color: '#fff', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer', opacity: (bulkBusy || selected.size === 0) ? 0.5 : 1 }}>
           {bulkBusy ? 'Drafting…' : `Draft DMs for selected (${selected.size})`}
         </button>
+        <button onClick={bulkSendEmails} disabled={emailBulkBusy || selected.size === 0}
+          title="Sends the initial email to every selected Confirmed host right now"
+          style={{ padding: '0.35rem 0.8rem', borderRadius: 9999, border: 'none', background: '#166534', color: '#fff', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer', opacity: (emailBulkBusy || selected.size === 0) ? 0.5 : 1 }}>
+          {emailBulkBusy ? 'Emailing…' : `Email selected (${selected.size})`}
+        </button>
         <button onClick={() => downloadHostsCsv(filtered, `collabnb-hosts-${new Date().toISOString().slice(0, 10)}.csv`)}
           disabled={filtered.length === 0}
           style={{ padding: '0.35rem 0.9rem', borderRadius: 9999, border: '1.5px solid rgba(25,37,36,0.2)', background: 'transparent', color: '#192524', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer', opacity: filtered.length === 0 ? 0.5 : 1 }}>
           Download CSV
         </button>
         {bulkMsg && <span style={{ fontSize: '0.72rem', color: '#166534' }}>{bulkMsg}</span>}
+        {emailBulkMsg && <span style={{ fontSize: '0.72rem', color: '#166534' }}>{emailBulkMsg}</span>}
       </div>
 
       <div style={{ display: 'flex', gap: '1.25rem', overflowX: 'auto', paddingBottom: '0.5rem', alignItems: 'flex-start' }}>
@@ -1132,48 +1235,134 @@ function HostCrmBoard() {
   );
 }
 
-// ─── Auto-discovery config (daily cron) ───────────────────────────────────────
+// ─── Auto-discovery config — two tiers: free Agent-Reach (manual, search-only)
+// and paid HikerAPI/Apify (automatic daily cron + on-demand "Run now") ────────
 function AutoDiscoveryCard() {
   const settings = useQuery(api.admin.getSettings);
+  const stats = useQuery(api.prospects.getStats);
   const setSetting = useMutation(api.admin.setSetting);
+  const runNow = useAction(api.prospects.runDiscoveryProfileNow);
+  const enrichPending = useAction(api.prospects.enrichPendingCreators);
   const saved = (() => {
     try { return JSON.parse(settings?.discovery_auto || 'null') || {}; } catch { return {}; }
   })();
   const [draft, setDraft] = useState(null); // null = mirror saved
-  const cfg = draft ?? { enabled: !!saved.enabled, niche: saved.niche || 'travel', location: saved.location || '', perDay: saved.perDay || 10 };
+  const profiles = draft ?? (saved.profiles?.length ? saved.profiles : [
+    { id: 'default', enabled: false, niche: 'travel', location: '', perDay: 10 },
+  ]);
   const [savedMsg, setSavedMsg] = useState('');
+  const [errorMsg, setErrorMsg] = useState('');
+  const [runState, setRunState] = useState({}); // profile id -> { busy, msg }
+  const [enrichBusy, setEnrichBusy] = useState(false);
+  const [enrichMsg, setEnrichMsg] = useState('');
 
-  async function save(next) {
-    const merged = { ...cfg, ...next };
-    setDraft(merged);
-    await setSetting({ key: 'discovery_auto', value: JSON.stringify(merged) });
-    setSavedMsg('Saved');
-    setTimeout(() => setSavedMsg(''), 2000);
+  // `updater` reads the previous array via React's functional setState form,
+  // not the `profiles` closed over at render time — see the identical fix
+  // (and its reasoning) in HostAutoDiscoveryCard above.
+  async function save(updater) {
+    let merged;
+    setDraft(prev => {
+      merged = updater(prev ?? profiles);
+      return merged;
+    });
+    try {
+      await setSetting({ key: 'discovery_auto', value: JSON.stringify({ profiles: merged }) });
+      setErrorMsg('');
+      setSavedMsg('Saved');
+      setTimeout(() => setSavedMsg(''), 2000);
+    } catch (e) {
+      setErrorMsg((e.data || e.message)?.replace(/^.*Error:\s*/, '') || 'Save failed');
+    }
   }
+
+  function updateProfile(id, patch) {
+    setDraft(prev => (prev ?? profiles).map((p) => (p.id === id ? { ...p, ...patch } : p)));
+  }
+
+  async function runProfileNow(p) {
+    setRunState((s) => ({ ...s, [p.id]: { busy: true, msg: '' } }));
+    try {
+      const r = await runNow({ niche: p.niche, location: p.location || undefined, perDay: p.perDay });
+      setRunState((s) => ({ ...s, [p.id]: { busy: false, msg: `Imported ${r.imported} of ${r.fetched} found.` } }));
+    } catch (e) {
+      const msg = (e.data || e.message)?.replace(/^.*Error:\s*/, '') || 'Run failed';
+      setRunState((s) => ({ ...s, [p.id]: { busy: false, msg } }));
+    }
+  }
+
+  async function runEnrich() {
+    setEnrichBusy(true); setEnrichMsg('');
+    try {
+      const r = await enrichPending({});
+      setEnrichMsg(`Enriched ${r.enriched}${r.remaining ? ` — ${r.remaining} still pending (run again)` : ''}.`);
+    } catch (e) {
+      setEnrichMsg((e.data || e.message)?.replace(/^.*Error:\s*/, '') || 'Enrich failed');
+    } finally {
+      setEnrichBusy(false);
+    }
+  }
+
+  const pendingCount = stats?.pendingAgentReachCreators ?? 0;
 
   return (
     <div>
-      <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', alignItems: 'center' }}>
-        <button onClick={() => save({ enabled: !cfg.enabled })}
-          role="switch" aria-checked={cfg.enabled}
-          style={{ padding: '0.45rem 1rem', borderRadius: 9999, border: 'none', background: cfg.enabled ? '#166534' : 'rgba(25,37,36,0.12)', color: cfg.enabled ? '#fff' : '#3C5759', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer' }}>
-          {cfg.enabled ? 'On' : 'Off'}
+      {profiles.map((p) => (
+        <div key={p.id} style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', alignItems: 'center', marginBottom: '0.5rem' }}>
+          <button onClick={() => save((prev) => prev.map((x) => (x.id === p.id ? { ...x, enabled: !x.enabled } : x)))}
+            role="switch" aria-checked={p.enabled}
+            style={{ padding: '0.45rem 1rem', borderRadius: 9999, border: 'none', background: p.enabled ? '#166534' : 'rgba(25,37,36,0.12)', color: p.enabled ? '#fff' : '#3C5759', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer' }}>
+            {p.enabled ? 'On' : 'Off'}
+          </button>
+          <select aria-label="Auto-discovery niche" value={p.niche}
+            onChange={(e) => save((prev) => prev.map((x) => (x.id === p.id ? { ...x, niche: e.target.value } : x)))}
+            style={{ ...input, width: 150, textTransform: 'capitalize' }}>
+            {NICHES.map((n) => <option key={n} value={n}>{n}</option>)}
+          </select>
+          <input aria-label="Auto-discovery location" value={p.location} onChange={(e) => updateProfile(p.id, { location: e.target.value })}
+            onBlur={() => save((prev) => prev)}
+            placeholder="Target location" style={{ ...input, width: 160 }} />
+          <input aria-label="Creators per day" type="number" min="1" max="20" value={p.perDay}
+            onChange={(e) => updateProfile(p.id, { perDay: Math.max(1, Math.min(20, parseInt(e.target.value, 10) || 10)) })}
+            onBlur={() => save((prev) => prev)}
+            style={{ ...input, width: 70 }} />
+          <span style={{ fontSize: '0.7rem', color: '#646B62' }}>per day</span>
+          <button onClick={() => runProfileNow(p)} disabled={runState[p.id]?.busy}
+            title="Runs this profile immediately via HikerAPI/Apify instead of waiting for the 7am UTC cron"
+            style={{ padding: '0.4rem 0.8rem', borderRadius: 9999, border: '1.5px solid rgba(25,37,36,0.2)', background: 'transparent', color: '#192524', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer', opacity: runState[p.id]?.busy ? 0.5 : 1 }}>
+            {runState[p.id]?.busy ? 'Running…' : 'Run now'}
+          </button>
+          {profiles.length > 1 && (
+            <button onClick={() => save((prev) => prev.filter((x) => x.id !== p.id))} title="Remove this profile"
+              style={{ padding: '0.3rem 0.6rem', borderRadius: 9999, border: 'none', background: 'transparent', color: '#9b2d2d', fontSize: '0.8rem', cursor: 'pointer' }}>
+              ×
+            </button>
+          )}
+          {runState[p.id]?.msg && <span style={{ fontSize: '0.7rem', color: '#646B62', flexBasis: '100%' }}>{runState[p.id].msg}</span>}
+        </div>
+      ))}
+      <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center', flexWrap: 'wrap' }}>
+        <button onClick={() => save((prev) => [...prev, { id: rid(), enabled: false, niche: 'travel', location: '', perDay: 10 }])}
+          style={{ padding: '0.4rem 0.9rem', borderRadius: 9999, border: '1.5px dashed rgba(25,37,36,0.25)', background: 'transparent', color: '#3C5759', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer' }}>
+          + Add profile
         </button>
-        <select aria-label="Auto-discovery niche" value={cfg.niche} onChange={e => save({ niche: e.target.value })} style={{ ...input, width: 150, textTransform: 'capitalize' }}>
-          {NICHES.map(n => <option key={n} value={n}>{n}</option>)}
-        </select>
-        <input aria-label="Auto-discovery location" value={cfg.location} onChange={e => setDraft({ ...cfg, location: e.target.value })} onBlur={() => save({})}
-          placeholder="Target location" style={{ ...input, width: 160 }} />
-        <input aria-label="Creators per day" type="number" min="1" max="20" value={cfg.perDay}
-          onChange={e => setDraft({ ...cfg, perDay: Math.max(1, Math.min(20, parseInt(e.target.value, 10) || 10)) })} onBlur={() => save({})}
-          style={{ ...input, width: 70 }} />
-        <span style={{ fontSize: '0.7rem', color: '#646B62' }}>
-          per day{savedMsg && <span style={{ color: '#166534', fontWeight: 700 }}> · {savedMsg}</span>}
-        </span>
+        {savedMsg && <span style={{ fontSize: '0.7rem', color: '#166534', fontWeight: 700 }}>{savedMsg}</span>}
+        {errorMsg && <span style={{ fontSize: '0.7rem', color: '#9b2d2d', fontWeight: 700 }}>{errorMsg}</span>}
       </div>
-      <p style={{ fontSize: '0.7rem', color: '#646B62', margin: '0.5rem 0 0' }}>
-        Every morning at 7am UTC this searches Instagram for {cfg.niche} creators{cfg.location ? ` around ${cfg.location}` : ''}, imports new ones, and scores the top {cfg.perDay} — ready before the 8am outreach queue builds. Uses Apify credits daily while on.
+      <p style={{ fontSize: '0.7rem', color: '#646B62', margin: '0.5rem 0 0.75rem' }}>
+        Every profile toggled On runs every morning at 7am UTC — searches Instagram for its niche/location, imports new creators, and scores the top N per day. Ready before the 8am outreach queue builds. Uses Apify/HikerAPI credits daily per profile while on; use "Run now" to fire one immediately instead of waiting.
       </p>
+      <div style={{ padding: '0.7rem 0.9rem', borderRadius: '0.75rem', background: 'rgba(123,104,200,0.06)', border: '1px solid rgba(123,104,200,0.2)' }}>
+        <p style={{ fontSize: '0.76rem', color: '#3C5759', margin: 0, lineHeight: 1.5 }}>
+          <strong>Free tier — Agent-Reach:</strong> open a local Claude Code session on your Mac (Chrome open, logged into Instagram) and ask it to search Instagram via Agent-Reach for a niche/location — no Apify/HikerAPI credits spent. It pushes the handles it finds in with the <code>prospects:importCreatorsLocal</code> mutation (secret in Convex env as <code>LOCAL_IMPORT_SECRET</code>). Agent-Reach only finds handles — it can't reliably pull follower counts or bios — so imports land unscored until you run enrichment below.
+        </p>
+        <div style={{ marginTop: '0.5rem', display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+          <button onClick={runEnrich} disabled={enrichBusy || pendingCount === 0}
+            style={{ padding: '0.4rem 0.9rem', borderRadius: 9999, border: 'none', background: '#192524', color: '#fff', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', opacity: (enrichBusy || pendingCount === 0) ? 0.5 : 1 }}>
+            {enrichBusy ? 'Enriching…' : `Enrich pending (${pendingCount})`}
+          </button>
+          {enrichMsg && <span style={{ fontSize: '0.7rem', color: '#646B62' }}>{enrichMsg}</span>}
+        </div>
+      </div>
     </div>
   );
 }

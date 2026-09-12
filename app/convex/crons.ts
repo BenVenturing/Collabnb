@@ -11,9 +11,11 @@ crons.monthly(
   {}
 );
 
-// Daily at 7am UTC — auto-discover creators for the admin-configured
-// location/niche (runs before the 8am queue build so fresh finds can enter
-// today's queue). No-op unless the Auto-discovery toggle is on in Discovery.
+// Daily at 7am UTC — auto-discover creators for every enabled niche/location
+// profile configured in Discovery (runs before the 8am queue build so fresh
+// finds can enter today's queue). No-op if no profile is enabled. HikerAPI/
+// Apify tier only — the free Agent-Reach tier runs from a local session on
+// demand, not on this cron.
 crons.daily(
   "daily creator discovery",
   { hourUTC: 7, minuteUTC: 0 },
@@ -30,9 +32,9 @@ crons.daily(
   { perKind: 20 }
 );
 
-// Daily at 7:30am UTC — auto-search one region from the rotation for hosts
-// (see HostAutoDiscoveryCard in Discovery.jsx). No-op unless its toggle is
-// on. Runs before the 8am queue build, offset from the 7am creator run.
+// Daily at 7:30am UTC — auto-search every enabled query profile for hosts
+// (see HostAutoDiscoveryCard in Discovery.jsx). No-op if none are enabled.
+// Runs before the 8am queue build, offset from the 7am creator run.
 crons.daily(
   "daily host discovery",
   { hourUTC: 7, minuteUTC: 30 },

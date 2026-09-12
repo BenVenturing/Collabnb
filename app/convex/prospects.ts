@@ -566,6 +566,9 @@ export const getStats = query({
         creators: contactedToday.filter((r) => r.kind === "creator").length,
         hosts: contactedToday.filter((r) => r.kind === "host").length,
       },
+      pendingAgentReachCreators: rows.filter(
+        (r) => r.kind === "creator" && r.source === "agent-reach" && !r.enriched_at
+      ).length,
     };
   },
 });
@@ -896,39 +899,67 @@ export const confirmDraft = internalMutation({
 // explicit "Send" click from the admin — see sendSequenceEmail). Never throws
 // — a failed lookup/send just leaves the host at the 'confirmed' stage so the
 // batch confirm never fails because one host's email couldn't be found.
+// Shared by the auto-kickoff (fires on Confirm) and the manual "Email"
+// button (for hosts confirmed before this pipeline existed, or wherever
+// auto-send didn't find an address / hit a Resend error the first time).
+async function runHostEmailKickoff(ctx: any, id: any): Promise<{ sent: boolean; reason?: string }> {
+  const p: any = await ctx.runQuery(internal.prospects.getById, { id });
+  if (!p) return { sent: false, reason: "Prospect not found" };
+
+  const marketingEmail = await findMarketingEmail(p);
+  if (!marketingEmail) return { sent: false, reason: "No email address found — add one manually on this host, then try again" };
+
+  const drafted = await Promise.all(HOST_EMAIL_SEQUENCE.map((step) => draftHostEmail(p, step)));
+  const emailSequence = HOST_EMAIL_SEQUENCE.map((step, i) => ({
+    step: step.step,
+    subject: drafted[i].subject,
+    body: drafted[i].body,
+    sent_at: undefined as number | undefined,
+  }));
+
+  const apiKey = process.env.RESEND_API_KEY;
+  let sendError: string | undefined;
+  if (apiKey) {
+    try {
+      await sendViaResend(apiKey, marketingEmail, emailSequence[0].subject, textToEmailHtml(emailSequence[0].body));
+      emailSequence[0].sent_at = Date.now();
+    } catch (e: any) {
+      sendError = e?.message || "Resend send failed";
+    }
+  } else {
+    sendError = "RESEND_API_KEY not configured in Convex environment.";
+  }
+
+  await ctx.runMutation(internal.prospects.saveEmailSequence, {
+    id,
+    marketingEmail,
+    emailSequence,
+    step1Sent: !!emailSequence[0].sent_at,
+  });
+
+  return emailSequence[0].sent_at ? { sent: true } : { sent: false, reason: sendError };
+}
+
+// Fires automatically right after Confirm — best-effort, never throws, so
+// one host's failed lookup/send never fails the batch confirm action.
 export const kickoffHostEmailSequence = internalAction({
   args: { id: v.id("prospects") },
   handler: async (ctx, { id }) => {
-    const p: any = await ctx.runQuery(internal.prospects.getById, { id });
-    if (!p) return;
+    await runHostEmailKickoff(ctx, id);
+  },
+});
 
-    const marketingEmail = await findMarketingEmail(p);
-    if (!marketingEmail) return;
-
-    const drafted = await Promise.all(HOST_EMAIL_SEQUENCE.map((step) => draftHostEmail(p, step)));
-    const emailSequence = HOST_EMAIL_SEQUENCE.map((step, i) => ({
-      step: step.step,
-      subject: drafted[i].subject,
-      body: drafted[i].body,
-      sent_at: undefined as number | undefined,
-    }));
-
-    const apiKey = process.env.RESEND_API_KEY;
-    if (apiKey) {
-      try {
-        await sendViaResend(apiKey, marketingEmail, emailSequence[0].subject, textToEmailHtml(emailSequence[0].body));
-        emailSequence[0].sent_at = Date.now();
-      } catch {
-        // leave sent_at unset — admin can retry via sendSequenceEmail
-      }
-    }
-
-    await ctx.runMutation(internal.prospects.saveEmailSequence, {
-      id,
-      marketingEmail,
-      emailSequence,
-      step1Sent: !!emailSequence[0].sent_at,
-    });
+// Manual "Email" button on a Confirmed-column card — for hosts confirmed
+// before this pipeline existed (no email_sequence yet), or a retry when
+// auto-send failed the first time. Throws a real error so the button can
+// show why, instead of silently doing nothing.
+export const sendHostEmailNow = action({
+  args: { id: v.id("prospects") },
+  handler: async (ctx, { id }) => {
+    await requireAdminAction(ctx, api.profiles.getByClerkUserId);
+    const result = await runHostEmailKickoff(ctx, id);
+    if (!result.sent) throw new Error(result.reason || "Could not send");
+    return result;
   },
 });
 
@@ -1058,6 +1089,55 @@ export const importHostsLocal = mutation({
       await ctx.db.insert("prospects", {
         ...row,
         kind: "host",
+        instagram_handle: handle,
+        tier: tierFromFollowers(row.follower_count),
+        source: "agent-reach",
+        status: "new",
+        created_at: Date.now(),
+      });
+      inserted++;
+    }
+    return { inserted };
+  },
+});
+
+// Same landing pad as importHostsLocal, for creators — a local Agent-Reach
+// search finds handles (free, no Apify/HikerAPI credits) but can't reliably
+// pull follower counts/bio (see enrichPendingCreators below), so rows land
+// unenriched/unscored until a HikerAPI/Apify pass fills that in.
+export const importCreatorsLocal = mutation({
+  args: {
+    secret: v.string(),
+    rows: v.array(
+      v.object({
+        instagram_handle: v.string(),
+        display_name: v.optional(v.string()),
+        avatar_url: v.optional(v.string()),
+        follower_count: v.optional(v.number()),
+        location: v.optional(v.string()),
+        country: v.optional(v.string()),
+        niche: v.optional(v.string()),
+        email: v.optional(v.string()),
+        bio: v.optional(v.string()),
+        website: v.optional(v.string()),
+      })
+    ),
+  },
+  handler: async (ctx, { secret, rows }) => {
+    const expected = process.env.LOCAL_IMPORT_SECRET;
+    if (!expected || secret !== expected) throw new Error("Invalid or missing import secret.");
+    let inserted = 0;
+    for (const row of rows) {
+      const handle = row.instagram_handle.replace(/^@/, "").trim().toLowerCase();
+      if (!handle) continue;
+      const existing = await ctx.db
+        .query("prospects")
+        .withIndex("by_handle", (q) => q.eq("instagram_handle", handle))
+        .first();
+      if (existing) continue;
+      await ctx.db.insert("prospects", {
+        ...row,
+        kind: "creator",
         instagram_handle: handle,
         tier: tierFromFollowers(row.follower_count),
         source: "agent-reach",
@@ -1364,6 +1444,31 @@ export const enrichProspect = action({
   },
 });
 
+// Bulk follow-up for the Agent-Reach import path: it finds handles for free
+// but can't reliably pull follower counts/bio, so anything it lands still
+// needs one HikerAPI/Apify pass here before it's scored/rankable.
+export const enrichPendingCreators = action({
+  args: {},
+  handler: withSurfacedErrors(async (ctx): Promise<{ enriched: number; remaining: number }> => {
+    await requireAdminAction(ctx, api.profiles.getByClerkUserId);
+    const pending: any[] = await ctx.runQuery(internal.prospects.getPendingAgentReach, {});
+    const batch = pending.slice(0, 30);
+    const enriched = await enrichBatch(ctx, batch);
+    return { enriched, remaining: pending.length - batch.length };
+  }),
+});
+
+export const getPendingAgentReach = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    const rows = await ctx.db
+      .query("prospects")
+      .withIndex("by_kind_status", (q) => q.eq("kind", "creator"))
+      .collect();
+    return rows.filter((r) => r.source === "agent-reach" && !r.enriched_at);
+  },
+});
+
 // Shared flow: search Instagram for a niche (+ optional location), import new
 // creators, enrich the top N by follower count, return the ranked results.
 async function discoverAndScore(
@@ -1426,62 +1531,86 @@ export const searchCreators = action({
   },
 });
 
-// Daily cron: auto-discover creators for the admin-configured location/niche.
-// Config lives in admin_settings under 'discovery_auto' as JSON:
-//   { enabled: boolean, location: string, niche: string, perDay: number }
+// Manual override for the daily creator-discovery cron below — same
+// discoverAndScore call, but for one profile on demand (the "Run now" button
+// in AutoDiscoveryCard) instead of waiting for 7am UTC.
+export const runDiscoveryProfileNow = action({
+  args: { niche: v.string(), location: v.optional(v.string()), perDay: v.optional(v.number()) },
+  handler: withSurfacedErrors(async (ctx, args): Promise<{ imported: number; fetched: number }> => {
+    await requireAdminAction(ctx, api.profiles.getByClerkUserId);
+    const { imported, fetched } = await discoverAndScore(ctx, {
+      niche: args.niche,
+      location: args.location || undefined,
+      importLimit: 30,
+      enrichTop: Math.min(args.perDay ?? 10, 20),
+    });
+    return { imported, fetched };
+  }),
+});
+
+// Daily cron: auto-discover creators for every enabled profile in the
+// admin-configured list (all run every day — no rotation). Config lives in
+// admin_settings under 'discovery_auto' as JSON:
+//   { profiles: [{ id, enabled, niche, location, perDay }] }
+// This is the HikerAPI/Apify tier only — it costs credits. The free
+// Agent-Reach tier (search-only) runs from a local session and lands rows via
+// importCreatorsLocal above; those still pass through here manually via
+// enrichPendingCreators since Agent-Reach can't reliably pull follower/bio data.
 export const runDailyDiscovery = internalAction({
   args: {},
-  handler: async (ctx): Promise<{ ran: boolean; imported?: number }> => {
+  handler: async (ctx): Promise<{ ran: boolean; results?: { niche: string; location?: string; imported: number }[] }> => {
     const settings: Record<string, string> = await ctx.runQuery(internal.admin.getSettingsInternal, {});
     let cfg: any = null;
     try { cfg = JSON.parse(settings.discovery_auto || "null"); } catch { /* bad JSON = off */ }
-    if (!cfg?.enabled || !cfg?.niche) return { ran: false };
-    const { imported } = await discoverAndScore(ctx, {
-      niche: cfg.niche,
-      location: cfg.location || undefined,
-      importLimit: 30,
-      enrichTop: Math.min(cfg.perDay ?? 10, 20),
-    });
-    return { ran: true, imported };
+    const profiles = (cfg?.profiles || []).filter((p: any) => p?.enabled && p?.niche);
+    if (!profiles.length) return { ran: false };
+
+    const results = [];
+    for (const profile of profiles) {
+      const { imported } = await discoverAndScore(ctx, {
+        niche: profile.niche,
+        location: profile.location || undefined,
+        importLimit: 30,
+        enrichTop: Math.min(profile.perDay ?? 10, 20),
+      });
+      results.push({ niche: profile.niche, location: profile.location || undefined, imported });
+    }
+    return { ran: true, results };
   },
 });
 
-// Daily cron: auto-search one region from the admin-configured rotation for
-// hosts (see HostAutoDiscoveryCard in Discovery.jsx). Config lives in
-// admin_settings under 'host_discovery_auto' as JSON:
-//   { enabled: boolean, regions: string[], index: number, perDay: number }
-// Advances `index` by 1 each run so the next day picks the next region.
+// Daily cron: auto-search every enabled profile in the admin-configured list
+// for hosts (see HostAutoDiscoveryCard in Discovery.jsx) — all run every day,
+// same shape as creator discovery above. Config lives in admin_settings under
+// 'host_discovery_auto' as JSON:
+//   { profiles: [{ id, enabled, query, perDay }] }
 export const runDailyHostDiscovery = internalAction({
   args: {},
-  handler: async (ctx): Promise<{ ran: boolean; region?: string; imported?: number }> => {
+  handler: async (ctx): Promise<{ ran: boolean; results?: { query: string; imported: number }[] }> => {
     const settings: Record<string, string> = await ctx.runQuery(internal.admin.getSettingsInternal, {});
     let cfg: any = null;
     try { cfg = JSON.parse(settings.host_discovery_auto || "null"); } catch { /* bad JSON = off */ }
-    if (!cfg?.enabled || !cfg?.regions?.length) return { ran: false };
+    const profiles = (cfg?.profiles || []).filter((p: any) => p?.enabled && p?.query);
+    if (!profiles.length) return { ran: false };
 
-    const index = cfg.index || 0;
-    const region = cfg.regions[index % cfg.regions.length];
-    const limit = Math.min(cfg.perDay ?? 50, 100);
-
-    const accounts = await searchInstagramUsers(region, limit);
-    const rows = accounts.map((acc) => ({
-      kind: "host",
-      instagram_handle: acc.username,
-      display_name: acc.fullName,
-      avatar_url: acc.avatarUrl,
-      follower_count: acc.followers,
-      bio: acc.bio,
-      website: acc.website,
-      email: acc.email,
-      source: process.env.HIKERAPI_KEY ? "hikerapi" : "apify",
-    }));
-    const { inserted } = await ctx.runMutation(internal.prospects.bulkInsert, { rows });
-
-    await ctx.runMutation(internal.admin.setSettingInternal, {
-      key: "host_discovery_auto",
-      value: JSON.stringify({ ...cfg, index: index + 1 }),
-    });
-
-    return { ran: true, region, imported: inserted };
+    const results = [];
+    for (const profile of profiles) {
+      const limit = Math.min(profile.perDay ?? 50, 100);
+      const accounts = await searchInstagramUsers(profile.query, limit);
+      const rows = accounts.map((acc) => ({
+        kind: "host",
+        instagram_handle: acc.username,
+        display_name: acc.fullName,
+        avatar_url: acc.avatarUrl,
+        follower_count: acc.followers,
+        bio: acc.bio,
+        website: acc.website,
+        email: acc.email,
+        source: process.env.HIKERAPI_KEY ? "hikerapi" : "apify",
+      }));
+      const { inserted } = await ctx.runMutation(internal.prospects.bulkInsert, { rows });
+      results.push({ query: profile.query, imported: inserted });
+    }
+    return { ran: true, results };
   },
 });

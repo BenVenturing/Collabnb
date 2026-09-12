@@ -36,7 +36,9 @@
     { "source": "/contract",       "destination": "/app/index.html" },
     { "source": "/admin",          "destination": "/app/index.html" },
     { "source": "/blog",           "destination": "/app/index.html" },
+    { "source": "/blog/:slug",     "destination": "/api/blog-post?slug=:slug" },
     { "source": "/blog/:path*",    "destination": "/app/index.html" },
-    { "source": "/welcome",        "destination": "/app/index.html" }
+    { "source": "/welcome",        "destination": "/app/index.html" },
+    { "source": "/sitemap-blog.xml", "destination": "/api/sitemap-blog" }
   ]
 }

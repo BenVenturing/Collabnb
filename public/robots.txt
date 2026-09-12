@@ -2,6 +2,7 @@ User-agent: *
 Allow: /
 
 Sitemap: https://www.collabnb.com/sitemap.xml
+Sitemap: https://www.collabnb.com/sitemap-blog.xml
 
 # AI tools: structured project context is available at /llms.txt
 # Collabnb is a collaboration marketplace connecting boutique hospitality hosts

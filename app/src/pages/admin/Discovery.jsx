@@ -127,7 +127,7 @@ function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
     try {
       setDmDraft(await generateDm({ id: prospect._id, angleId: angle || undefined }));
     } catch (e) {
-      setGenErr(e.message?.replace(/^.*Error:\s*/, '') || 'Could not generate a draft');
+      setGenErr((e.data || e.message)?.replace(/^.*Error:\s*/, '') || 'Could not generate a draft');
     } finally {
       setGenBusy(false);
     }
@@ -138,7 +138,7 @@ function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
     try {
       await resetToPool({ id: prospect._id });
     } catch (e) {
-      setGenErr(e.message?.replace(/^.*Error:\s*/, '') || 'Reset failed');
+      setGenErr((e.data || e.message)?.replace(/^.*Error:\s*/, '') || 'Reset failed');
     } finally {
       setResetting(false);
     }
@@ -149,7 +149,7 @@ function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
     try {
       await enrich({ id: prospect._id });
     } catch (e) {
-      setGenErr(e.message?.replace(/^.*Error:\s*/, '') || 'Analysis failed');
+      setGenErr((e.data || e.message)?.replace(/^.*Error:\s*/, '') || 'Analysis failed');
     } finally {
       setEnrichBusy(false);
     }
@@ -165,7 +165,7 @@ function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
         text = await generateDm({ id: prospect._id, angleId: angle || undefined });
         setDmDraft(text);
       } catch (e) {
-        setGenErr(e.message?.replace(/^.*Error:\s*/, '') || 'Could not generate a draft');
+        setGenErr((e.data || e.message)?.replace(/^.*Error:\s*/, '') || 'Could not generate a draft');
         setGenBusy(false);
         return;
       }
@@ -186,7 +186,7 @@ function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
     try {
       await sendSequenceEmail({ id: prospect._id, step });
     } catch (e) {
-      setSeqErr(e.message?.replace(/^.*Error:\s*/, '') || `Could not send step ${step}`);
+      setSeqErr((e.data || e.message)?.replace(/^.*Error:\s*/, '') || `Could not send step ${step}`);
     } finally {
       setSendingStep(null);
     }
@@ -476,7 +476,7 @@ function ProspectPanel({ kind, title }) {
       setBulkMsg(`Drafted ${r.drafted} of ${selected.size} selected.`);
       setSelected(new Set());
     } catch (e) {
-      setBulkMsg(e.message?.replace(/^.*Error:\s*/, '') || 'Bulk draft failed');
+      setBulkMsg((e.data || e.message)?.replace(/^.*Error:\s*/, '') || 'Bulk draft failed');
     } finally {
       setBulkBusy(false);
     }
@@ -560,7 +560,7 @@ function AddProspectForm({ onDone, defaultKind = 'creator' }) {
       setHandle(''); setName(''); setFollowers(''); setLoc(''); setEmail('');
       onDone?.();
     } catch (e) {
-      setErr(e.message?.replace(/^.*Error:\s*/, '') || 'Could not add prospect');
+      setErr((e.data || e.message)?.replace(/^.*Error:\s*/, '') || 'Could not add prospect');
     } finally {
       setBusy(false);
     }
@@ -601,7 +601,7 @@ function ApifyImport() {
       const r = await importFromApify({ kind, searchQuery: queryStr.trim(), limit: 50 });
       setResult(`Imported ${r.inserted} new of ${r.fetched} found.`);
     } catch (e) {
-      setResult(e.message?.replace(/^.*Error:\s*/, '') || 'Import failed');
+      setResult((e.data || e.message)?.replace(/^.*Error:\s*/, '') || 'Import failed');
     } finally {
       setBusy(false);
     }
@@ -639,7 +639,7 @@ function FindCreators() {
     try {
       setResults(await search({ niche, location: loc.trim() || undefined }));
     } catch (e) {
-      setErr(e.message?.replace(/^.*Error:\s*/, '') || 'Search failed');
+      setErr((e.data || e.message)?.replace(/^.*Error:\s*/, '') || 'Search failed');
     } finally {
       setBusy(false);
     }
@@ -702,6 +702,76 @@ function FindCreators() {
   );
 }
 
+// Seed rotation for the daily host-discovery cron — starts dense in
+// Southeast Asia (where Ben actually lives/travels, so bios/niches are
+// easiest to judge) then branches out to other major boutique-stay tourist
+// hubs. Editable in the UI below; this is only the first-load default.
+const DEFAULT_HOST_DISCOVERY_REGIONS = [
+  'villa Lombok', 'boutique hotel Bali', 'villa Canggu', 'boutique hotel Ubud',
+  'boutique hotel Jakarta', 'boutique hotel Yogyakarta', 'boutique hotel Bandung',
+  'boutique hotel Bangkok', 'boutique hotel Chiang Mai', 'boutique hotel Phuket', 'boutique hotel Koh Samui',
+  'boutique hotel Hanoi', 'boutique hotel Hoi An', 'boutique hotel Siem Reap',
+  'boutique hotel Manila', 'boutique hotel Palawan', 'boutique hotel Singapore', 'boutique hotel Kuala Lumpur',
+  'boutique hotel Tulum', 'boutique hotel Lisbon', 'boutique hotel Tuscany',
+  'boutique hotel Santorini', 'boutique hotel Marrakech', 'boutique hotel Byron Bay', 'boutique hotel Costa Rica',
+];
+
+// ─── Host auto-discovery config (daily cron, rotates one region/day) ──────────
+function HostAutoDiscoveryCard() {
+  const settings = useQuery(api.admin.getSettings);
+  const setSetting = useMutation(api.admin.setSetting);
+  const saved = (() => {
+    try { return JSON.parse(settings?.host_discovery_auto || 'null') || {}; } catch { return {}; }
+  })();
+  const [draft, setDraft] = useState(null); // null = mirror saved
+  const cfg = draft ?? {
+    enabled: !!saved.enabled,
+    regions: saved.regions?.length ? saved.regions : DEFAULT_HOST_DISCOVERY_REGIONS,
+    index: saved.index || 0,
+    perDay: saved.perDay || 50,
+  };
+  const [regionsText, setRegionsText] = useState(cfg.regions.join('\n'));
+  const [savedMsg, setSavedMsg] = useState('');
+
+  async function save(next) {
+    const merged = { ...cfg, ...next };
+    setDraft(merged);
+    await setSetting({ key: 'host_discovery_auto', value: JSON.stringify(merged) });
+    setSavedMsg('Saved');
+    setTimeout(() => setSavedMsg(''), 2000);
+  }
+
+  const nextRegion = cfg.regions[cfg.index % cfg.regions.length] || '—';
+
+  return (
+    <div style={{ padding: '0.7rem 0.9rem', borderRadius: '0.75rem', background: 'rgba(255,255,255,0.6)', border: '1px solid rgba(25,37,36,0.08)', marginBottom: '0.75rem' }}>
+      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+        <button onClick={() => save({ enabled: !cfg.enabled })}
+          role="switch" aria-checked={cfg.enabled}
+          style={{ padding: '0.4rem 0.9rem', borderRadius: 9999, border: 'none', background: cfg.enabled ? '#166534' : 'rgba(25,37,36,0.12)', color: cfg.enabled ? '#fff' : '#3C5759', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer' }}>
+          {cfg.enabled ? 'Daily auto-search: On' : 'Daily auto-search: Off'}
+        </button>
+        <label style={{ fontSize: '0.72rem', color: '#3C5759', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+          Per day
+          <input aria-label="Hosts per day" type="number" min="5" max="100" value={cfg.perDay}
+            onChange={e => save({ perDay: Math.max(5, Math.min(100, parseInt(e.target.value, 10) || 50)) })}
+            style={{ ...input, width: 64, padding: '0.3rem 0.5rem' }} />
+        </label>
+        <span style={{ fontSize: '0.7rem', color: '#646B62' }}>
+          {cfg.enabled ? `Tomorrow's region: ${nextRegion}` : `Runs daily at 7:30am UTC once on — starts with "${nextRegion}"`}
+        </span>
+        {savedMsg && <span style={{ fontSize: '0.7rem', color: '#166534' }}>{savedMsg}</span>}
+      </div>
+      <div style={{ marginTop: '0.5rem' }}>
+        <span style={{ ...label, display: 'inline' }}>Region rotation (one per line, cycles in order)</span>
+        <textarea value={regionsText} onChange={e => setRegionsText(e.target.value)}
+          onBlur={() => save({ regions: regionsText.split('\n').map(r => r.trim()).filter(Boolean) })}
+          rows={4} style={{ ...input, width: '100%', resize: 'vertical', fontSize: '0.72rem' }} />
+      </div>
+    </div>
+  );
+}
+
 // ─── Host outreach campaign (search → select → confirm, manual send) ──────────
 
 function csvEscape(val) {
@@ -752,7 +822,7 @@ function HostSearchImport() {
       const r = await importFromApify({ kind: 'host', searchQuery: q.trim(), limit });
       setMsg(`Imported ${r.inserted} new of ${r.fetched} found.`);
     } catch (e) {
-      setMsg(e.message?.replace(/^.*Error:\s*/, '') || 'Import failed');
+      setMsg((e.data || e.message)?.replace(/^.*Error:\s*/, '') || 'Import failed');
     } finally {
       setBusy(false);
     }
@@ -769,18 +839,21 @@ function HostSearchImport() {
   }
 
   return (
-    <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', alignItems: 'center' }}>
-      <input aria-label="Search hosts" value={q} onChange={e => setQ(e.target.value)} onKeyDown={e => e.key === 'Enter' && run()}
-        placeholder='Search hosts by region, e.g. "boutique hotel lisbon" or "airbnb tulum"'
-        style={{ ...input, flex: 1, minWidth: 240 }} />
-      <input aria-label="Pool size" type="number" min="5" max="100" value={limit}
-        onChange={e => setLimit(Math.max(5, Math.min(100, parseInt(e.target.value, 10) || 40)))}
-        style={{ ...input, width: 70 }} />
-      <button onClick={run} disabled={busy}
-        style={{ padding: '0.5rem 1.1rem', borderRadius: 9999, border: 'none', background: '#192524', color: '#fff', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', opacity: busy ? 0.5 : 1 }}>
-        {busy ? 'Searching…' : 'Search & import'}
-      </button>
-      {msg && <span style={{ fontSize: '0.72rem', color: '#646B62' }}>{msg}</span>}
+    <div>
+      <HostAutoDiscoveryCard />
+      <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', alignItems: 'center' }}>
+        <input aria-label="Search hosts" value={q} onChange={e => setQ(e.target.value)} onKeyDown={e => e.key === 'Enter' && run()}
+          placeholder='Search hosts by region, e.g. "boutique hotel lisbon" or "airbnb tulum"'
+          style={{ ...input, flex: 1, minWidth: 240 }} />
+        <input aria-label="Pool size" type="number" min="5" max="100" value={limit}
+          onChange={e => setLimit(Math.max(5, Math.min(100, parseInt(e.target.value, 10) || 40)))}
+          style={{ ...input, width: 70 }} />
+        <button onClick={run} disabled={busy}
+          style={{ padding: '0.5rem 1.1rem', borderRadius: 9999, border: 'none', background: '#192524', color: '#fff', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', opacity: busy ? 0.5 : 1 }}>
+          {busy ? 'Searching…' : 'Search & import'}
+        </button>
+        {msg && <span style={{ fontSize: '0.72rem', color: '#646B62' }}>{msg}</span>}
+      </div>
     </div>
   );
 }
@@ -830,7 +903,7 @@ function HostOutreachCampaign() {
       setMsg(`Confirmed ${r.confirmed} — drafted with the NVIDIA model. Find them in Host CRM → Confirmed to copy + send.`);
       setSelected(new Set());
     } catch (e) {
-      setErr(e.message?.replace(/^.*Error:\s*/, '') || 'Confirm failed');
+      setErr((e.data || e.message)?.replace(/^.*Error:\s*/, '') || 'Confirm failed');
     } finally {
       setBusy(false);
     }
@@ -846,7 +919,7 @@ function HostOutreachCampaign() {
       setMsg(`Removed ${ids.length} from the pool.`);
       setSelected(new Set());
     } catch (e) {
-      setErr(e.message?.replace(/^.*Error:\s*/, '') || 'Delete failed');
+      setErr((e.data || e.message)?.replace(/^.*Error:\s*/, '') || 'Delete failed');
     } finally {
       setDeleting(false);
     }
@@ -989,7 +1062,7 @@ function HostCrmBoard() {
       setBulkMsg(`Drafted ${r.drafted} of ${selected.size} selected.`);
       setSelected(new Set());
     } catch (e) {
-      setBulkMsg(e.message?.replace(/^.*Error:\s*/, '') || 'Bulk draft failed');
+      setBulkMsg((e.data || e.message)?.replace(/^.*Error:\s*/, '') || 'Bulk draft failed');
     } finally {
       setBulkBusy(false);
     }

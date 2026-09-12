@@ -104,11 +104,11 @@ Here's a look: https://www.collabnb.com/`,
   {
     id: "founder_story",
     name: "Founder Story / Direct",
-    template: `Hi! I'm Benjamin — I've spent 8+ years living and traveling through Indonesia, and I built Collabnb after seeing how hard it is for amazing stays like [Hotel Name] to consistently find the right creators to work with.
+    template: `Hi! I'm Benjamin, founder of Collabnb — I built it after seeing how hard it is for amazing stays like [Hotel Name] to consistently find the right creators to work with.
 
 {STATS}
 
-We're inviting our first 100 properties in as Founding Hosts this July — free, lifetime access, no fees, ever. Would love for you to take a look: https://www.collabnb.com/`,
+We're inviting our first 100 properties in as Founding Hosts — free, lifetime access, no fees, ever. Would love for you to take a look: https://www.collabnb.com/`,
   },
 ];
 

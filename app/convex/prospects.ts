@@ -1432,7 +1432,7 @@ export const searchCreators = action({
 export const runDailyDiscovery = internalAction({
   args: {},
   handler: async (ctx): Promise<{ ran: boolean; imported?: number }> => {
-    const settings: Record<string, string> = await ctx.runQuery(api.admin.getSettings, {});
+    const settings: Record<string, string> = await ctx.runQuery(internal.admin.getSettingsInternal, {});
     let cfg: any = null;
     try { cfg = JSON.parse(settings.discovery_auto || "null"); } catch { /* bad JSON = off */ }
     if (!cfg?.enabled || !cfg?.niche) return { ran: false };
@@ -1443,5 +1443,45 @@ export const runDailyDiscovery = internalAction({
       enrichTop: Math.min(cfg.perDay ?? 10, 20),
     });
     return { ran: true, imported };
+  },
+});
+
+// Daily cron: auto-search one region from the admin-configured rotation for
+// hosts (see HostAutoDiscoveryCard in Discovery.jsx). Config lives in
+// admin_settings under 'host_discovery_auto' as JSON:
+//   { enabled: boolean, regions: string[], index: number, perDay: number }
+// Advances `index` by 1 each run so the next day picks the next region.
+export const runDailyHostDiscovery = internalAction({
+  args: {},
+  handler: async (ctx): Promise<{ ran: boolean; region?: string; imported?: number }> => {
+    const settings: Record<string, string> = await ctx.runQuery(internal.admin.getSettingsInternal, {});
+    let cfg: any = null;
+    try { cfg = JSON.parse(settings.host_discovery_auto || "null"); } catch { /* bad JSON = off */ }
+    if (!cfg?.enabled || !cfg?.regions?.length) return { ran: false };
+
+    const index = cfg.index || 0;
+    const region = cfg.regions[index % cfg.regions.length];
+    const limit = Math.min(cfg.perDay ?? 50, 100);
+
+    const accounts = await searchInstagramUsers(region, limit);
+    const rows = accounts.map((acc) => ({
+      kind: "host",
+      instagram_handle: acc.username,
+      display_name: acc.fullName,
+      avatar_url: acc.avatarUrl,
+      follower_count: acc.followers,
+      bio: acc.bio,
+      website: acc.website,
+      email: acc.email,
+      source: process.env.HIKERAPI_KEY ? "hikerapi" : "apify",
+    }));
+    const { inserted } = await ctx.runMutation(internal.prospects.bulkInsert, { rows });
+
+    await ctx.runMutation(internal.admin.setSettingInternal, {
+      key: "host_discovery_auto",
+      value: JSON.stringify({ ...cfg, index: index + 1 }),
+    });
+
+    return { ran: true, region, imported: inserted };
   },
 });

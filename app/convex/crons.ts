@@ -30,6 +30,16 @@ crons.daily(
   { perKind: 20 }
 );
 
+// Daily at 7:30am UTC — auto-search one region from the rotation for hosts
+// (see HostAutoDiscoveryCard in Discovery.jsx). No-op unless its toggle is
+// on. Runs before the 8am queue build, offset from the 7am creator run.
+crons.daily(
+  "daily host discovery",
+  { hourUTC: 7, minuteUTC: 30 },
+  internal.prospects.runDailyHostDiscovery,
+  {}
+);
+
 // Daily at 9am UTC — generate a new blog post draft for admin review.
 crons.daily(
   "generate daily blog post",

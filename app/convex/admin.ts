@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { query, mutation, action, internalMutation } from "./_generated/server";
+import { query, mutation, action, internalMutation, internalQuery } from "./_generated/server";
 import { internal, api } from "./_generated/api";
 import { requireAdmin, requireAdminAction, canAccessAdmin } from "./lib/auth";
 
@@ -109,6 +109,35 @@ export const setSetting = mutation({
   args: { key: v.string(), value: v.string() },
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
+    const existing = await ctx.db
+      .query("admin_settings")
+      .withIndex("by_key", (q) => q.eq("key", args.key))
+      .first();
+    if (existing) {
+      await ctx.db.patch(existing._id, { value: args.value });
+    } else {
+      await ctx.db.insert("admin_settings", { key: args.key, value: args.value });
+    }
+  },
+});
+
+// Auth-free variants for cron jobs — internalAction/internalMutation have no
+// authenticated user, so canAccessAdmin/requireAdmin always fail there. The
+// public getSettings/setSetting above returning {} for an unauthenticated
+// caller meant runDailyDiscovery (and now runDailyHostDiscovery) silently
+// never read their admin_settings config at all — reachable only from other
+// internal server code, never exposed to a client.
+export const getSettingsInternal = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    const rows = await ctx.db.query("admin_settings").collect();
+    return Object.fromEntries(rows.map((r) => [r.key, r.value]));
+  },
+});
+
+export const setSettingInternal = internalMutation({
+  args: { key: v.string(), value: v.string() },
+  handler: async (ctx, args) => {
     const existing = await ctx.db
       .query("admin_settings")
       .withIndex("by_key", (q) => q.eq("key", args.key))

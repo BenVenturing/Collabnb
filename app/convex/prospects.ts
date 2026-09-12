@@ -4,6 +4,7 @@ import { internal, api } from "./_generated/api";
 import { llmChat } from "./blog";
 import { sendViaResend } from "./emailCopy";
 import { requireAdmin, requireAdminAction, canAccessAdmin } from "./lib/auth";
+import { withSurfacedErrors } from "./lib/errors";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -1076,7 +1077,7 @@ export const importHostsLocal = mutation({
 // freeform pitch below since there's no fixed-template ask for them.
 export const generateDmDraft = action({
   args: { id: v.id("prospects"), angleId: v.optional(v.string()) },
-  handler: async (ctx, { id, angleId }): Promise<string> => {
+  handler: withSurfacedErrors(async (ctx, { id, angleId }): Promise<string> => {
     await requireAdminAction(ctx, api.profiles.getByClerkUserId);
     const p: any = await ctx.runQuery(internal.prospects.getById, { id });
     if (!p) throw new Error("Prospect not found");
@@ -1127,7 +1128,7 @@ export const generateDmDraft = action({
         role: "user",
         content: `Write ONE Instagram DM body (max 380 characters, 2-3 short paragraphs, no hashtags, at most one emoji, no link, no sign-off). Open per the compliment rule in the system instructions, then: ${pitch} End with a soft ask — no link or sign-off, those come after.\n\n${who}`,
       },
-    ], 250);
+    ], 250, 20_000);
 
     // Strip a leaked "Here is..." preamble line and wrapping quotes.
     let dmDraft = raw.trim();
@@ -1141,7 +1142,7 @@ export const generateDmDraft = action({
     dmDraft = `${dmDraft}\n\nhttps://www.collabnb.com/\n\nCheers,\nThe Collabnb team`.slice(0, 900);
     await ctx.runMutation(api.prospects.update, { id, dmDraft });
     return dmDraft;
-  },
+  }),
 });
 
 export const bulkInsert = internalMutation({

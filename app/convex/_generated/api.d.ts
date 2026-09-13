@@ -28,6 +28,7 @@ import type * as emails from "../emails.js";
 import type * as fees from "../fees.js";
 import type * as gates from "../gates.js";
 import type * as geocode from "../geocode.js";
+import type * as hostWelcomeEmail from "../hostWelcomeEmail.js";
 import type * as http from "../http.js";
 import type * as lib_auth from "../lib/auth.js";
 import type * as lib_compensationPoints from "../lib/compensationPoints.js";
@@ -85,6 +86,7 @@ declare const fullApi: ApiFromModules<{
   fees: typeof fees;
   gates: typeof gates;
   geocode: typeof geocode;
+  hostWelcomeEmail: typeof hostWelcomeEmail;
   http: typeof http;
   "lib/auth": typeof lib_auth;
   "lib/compensationPoints": typeof lib_compensationPoints;

@@ -3,8 +3,13 @@
 // Resend (no LLM rewrite — a fixed-layout branded email needs its markup
 // untouched, so personalization is a plain string substitution instead of
 // the LLM-adapts-a-template approach used for the DM angles / follow-up
-// emails). Images live in /assets/email/host-outreach/ and must be deployed
-// to production (real HTTP URLs) before this can render for recipients.
+// emails). Images live in /public/email/host-outreach/ (served as static
+// files at collabnb.com/email/host-outreach/*) and must be deployed to
+// production before this can render for recipients. Note: repo-root
+// /assets/ looked like the established convention (see email.ts's logo
+// reference) but that path 404s in production too — vite.config.js's
+// publicDir is "public", not "assets", so /assets/* was never actually
+// served.
 //
 // Changes from the original campaign copy:
 // - Dropped "Om Swastiastu" / "Bali has always been..." / "8+ years living
@@ -22,7 +27,7 @@
 
 export const HOST_WELCOME_EMAIL_SUBJECT = "Inviting {{HOTEL_NAME}} to Collabnb as a Founding Host";
 
-const IMG = "https://www.collabnb.com/assets/email/host-outreach";
+const IMG = "https://www.collabnb.com/email/host-outreach";
 
 export function buildHostWelcomeEmailHtml(hotelName: string): string {
   const name = (hotelName || "your property").trim();

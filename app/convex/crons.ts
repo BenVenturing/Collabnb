@@ -23,13 +23,16 @@ crons.daily(
   {}
 );
 
-// Daily at 8am UTC — auto-fill the outreach queue (20 creators + 20 hosts)
-// so it's ready before the day starts; the button in Discovery still works.
+// Daily at 8am UTC — auto-fill the ready-to-confirm queue (50 creators + 50
+// hosts, full confirm treatment — drafted DM/welcome email, live-search
+// top-up if the pool's short) so it's ready before the day starts; the
+// "Build fresh 50" button in Discovery does the same thing on demand. Actual
+// Instagram DM volume stays capped separately at the safe ~20/day rate.
 crons.daily(
   "build daily prospect queue",
   { hourUTC: 8, minuteUTC: 0 },
-  internal.prospects.buildTodayQueueInternal,
-  { perKind: 20 }
+  internal.prospects.buildFreshQueueInternal,
+  { perKind: 50 }
 );
 
 // Daily at 7:30am UTC — auto-search every enabled query profile for hosts

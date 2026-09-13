@@ -565,12 +565,20 @@ export const getStats = query({
     const contactedToday = rows.filter(
       (r) => r.contacted_at && new Date(r.contacted_at).toISOString().slice(0, 10) === today
     );
+    // Ready-to-confirm queue depth (status flipped to 'queued' as part of
+    // today's batch) — distinct from contactedToday: DMs still go out at a
+    // safe, capped daily pace, but the queue behind them can run deeper.
+    const queuedToday = rows.filter((r) => r.status === "queued" && (r.queued_for ?? today) <= today);
     return {
       creators: stats("creator"),
       hosts: stats("host"),
       contactedToday: {
         creators: contactedToday.filter((r) => r.kind === "creator").length,
         hosts: contactedToday.filter((r) => r.kind === "host").length,
+      },
+      queuedToday: {
+        creators: queuedToday.filter((r) => r.kind === "creator").length,
+        hosts: queuedToday.filter((r) => r.kind === "host").length,
       },
       pendingAgentReachCreators: rows.filter(
         (r) => r.kind === "creator" && r.source === "agent-reach" && !r.enriched_at
@@ -682,6 +690,8 @@ export const remove = mutation({
 // the daily target (default 20 creators + 20 hosts) is reached. Shared by the
 // admin-triggered mutation and the cron job below, which has no identity to
 // check an admin gate against.
+// Superseded by buildFreshQueue below (full confirm treatment + live-search
+// top-up, 50/kind) — kept only in case something still references it.
 async function runBuildTodayQueue(ctx: any, perKind = 20) {
     const today = todayKey();
     const all = await ctx.db.query("prospects").collect();
@@ -709,6 +719,115 @@ export const buildTodayQueue = mutation({
     await requireAdmin(ctx);
     return runBuildTodayQueue(ctx, perKind);
   },
+});
+
+export const countQueuedToday = internalQuery({
+  args: { kind: v.string() },
+  handler: async (ctx, { kind }) => {
+    const today = todayKey();
+    const rows = await ctx.db
+      .query("prospects")
+      .withIndex("by_kind_status", (q) => q.eq("kind", kind).eq("status", "queued"))
+      .collect();
+    return rows.filter((r) => (r.queued_for ?? today) <= today).length;
+  },
+});
+
+export const getTopNewCandidates = internalQuery({
+  args: { kind: v.string(), limit: v.number() },
+  handler: async (ctx, { kind, limit }) => {
+    const rows = await ctx.db
+      .query("prospects")
+      .withIndex("by_kind_status", (q) => q.eq("kind", kind).eq("status", "new"))
+      .collect();
+    return rows.sort((a, b) => (b.score ?? 0) - (a.score ?? 0)).slice(0, limit);
+  },
+});
+
+// Fresh daily confirm queue — the "Build fresh 50" button. Unlike the older
+// buildTodayQueue above, promoting a prospect here means the *full* confirm
+// treatment: hosts get a drafted DM + the welcome email sequence kicked off
+// (same as confirmHostBatch), creators get queued + their welcome email sent
+// (same as CreatorCrmBoard's bulkConfirm) — not just a bare status flip. If
+// the existing 'new' pool is short of the target, tops it up with one live
+// search first (using the first configured auto-search profile for that
+// kind, on or off) before re-selecting the top-scored candidates.
+//
+// Actual Instagram DM volume is intentionally NOT raised here — it stays
+// capped around the ~20/day safe rate documented elsewhere in this file.
+// This only grows how deep the ready-to-confirm bench is each day.
+async function runBuildFreshQueue(ctx: any, perKind = 50): Promise<{ promoted: { creators: number; hosts: number } }> {
+  const settings: Record<string, string> = await ctx.runQuery(internal.admin.getSettingsInternal, {});
+  const promoted = { creators: 0, hosts: 0 };
+
+  for (const kind of ["creator", "host"] as const) {
+    const alreadyQueued: number = await ctx.runQuery(internal.prospects.countQueuedToday, { kind });
+    const need = Math.max(0, perKind - alreadyQueued);
+    if (need === 0) continue;
+
+    let candidates: any[] = await ctx.runQuery(internal.prospects.getTopNewCandidates, { kind, limit: need });
+    if (candidates.length < need) {
+      let cfg: any = null;
+      try { cfg = JSON.parse(settings[kind === "host" ? "host_discovery_auto" : "discovery_auto"] || "null"); } catch { /* no config yet */ }
+      const profile = cfg?.profiles?.[0];
+      try {
+        if (kind === "host") {
+          const query = profile?.query || "boutique hotel";
+          const accounts = await searchInstagramUsers(query, 50);
+          const rows = accounts.map((acc) => ({
+            kind: "host",
+            instagram_handle: acc.username,
+            display_name: acc.fullName,
+            avatar_url: acc.avatarUrl,
+            follower_count: acc.followers,
+            bio: acc.bio,
+            website: acc.website,
+            email: acc.email,
+            source: process.env.HIKERAPI_KEY ? "hikerapi" : "apify",
+          }));
+          await ctx.runMutation(internal.prospects.bulkInsert, { rows });
+        } else {
+          await discoverAndScore(ctx, { niche: profile?.niche || "travel", location: profile?.location || undefined, target: 30, enrichTop: 20 });
+        }
+      } catch {
+        // Top-up is best-effort — fall through with whatever was already there.
+      }
+      candidates = await ctx.runQuery(internal.prospects.getTopNewCandidates, { kind, limit: need });
+    }
+    if (candidates.length === 0) continue;
+
+    if (kind === "host") {
+      const templates = await resolveHostOutreachTemplates(ctx);
+      const counts: Record<string, number> = await ctx.runQuery(internal.prospects.getHostAngleCounts, {});
+      await mapWithConcurrency(candidates, 5, async (c) => {
+        const angle = nextAngle(templates, counts);
+        const dmDraft = await draftHostMessage(c, angle);
+        await ctx.runMutation(internal.prospects.confirmDraft, { id: c._id, dmDraft, dmAngle: angle.id });
+        await runHostEmailKickoff(ctx, c._id).catch(() => {});
+        promoted.hosts++;
+      });
+    } else {
+      await mapWithConcurrency(candidates, 5, async (c) => {
+        await ctx.runMutation(api.prospects.updateStatus, { id: c._id, status: "queued" });
+        await runCreatorEmailKickoff(ctx, c._id).catch(() => {});
+        promoted.creators++;
+      });
+    }
+  }
+  return { promoted };
+}
+
+export const buildFreshQueue = action({
+  args: { perKind: v.optional(v.number()) },
+  handler: withSurfacedErrors(async (ctx, { perKind = 50 }) => {
+    await requireAdminAction(ctx, api.profiles.getByClerkUserId);
+    return runBuildFreshQueue(ctx, perKind);
+  }),
+});
+
+export const buildFreshQueueInternal = internalAction({
+  args: { perKind: v.optional(v.number()) },
+  handler: async (ctx, { perKind = 50 }) => runBuildFreshQueue(ctx, perKind),
 });
 
 // Cron-only entry point — no admin identity exists in a scheduled run.

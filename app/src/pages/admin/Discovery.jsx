@@ -139,6 +139,7 @@ function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
   const sendCreatorEmailNow = useAction(api.prospects.sendCreatorEmailNow);
   const [open, setOpen] = useState(false);
   const [dmDraft, setDmDraft] = useState(prospect.dm_draft || '');
+  const [emailField, setEmailField] = useState(prospect.email || '');
   const [notes, setNotes] = useState(prospect.notes || '');
   const [copied, setCopied] = useState(false);
   const [genBusy, setGenBusy] = useState(false);
@@ -224,9 +225,13 @@ function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
 
   // Declined isn't part of the forward flow — indexOf returns -1 there, which
   // would otherwise wrap around to flow[0] ("new") and offer a nonsensical
-  // "Mark new" button. Both kinds now stop at "Emailed" on their way to
-  // "DMed" — see CREATOR_STATUS_FLOW/HOST_STATUS_FLOW above.
-  const flow = prospect.kind === 'host' ? HOST_STATUS_FLOW : CREATOR_STATUS_FLOW;
+  // "Mark new" button. Hosts always get an Emailed stop (their address is
+  // looked up from their site at send time, so it's worth trying even with
+  // nothing on file yet). Creators skip straight to DMed when there's no
+  // email already on file — cold outreach with no address to send to just
+  // isn't a step, not a step that's expected to fail.
+  const creatorFlow = prospect.email ? CREATOR_STATUS_FLOW : CREATOR_STATUS_FLOW.filter((s) => s !== 'emailed');
+  const flow = prospect.kind === 'host' ? HOST_STATUS_FLOW : creatorFlow;
   const flowIdx = flow.indexOf(prospect.status);
   const nextStatus = flowIdx === -1 ? undefined : flow[flowIdx + 1];
   // queued -> emailed is a real send (find/use an address, draft, send),
@@ -355,6 +360,14 @@ function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
       {open && (
         <div style={{ marginTop: '0.7rem', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
           {prospect.bio && <p style={{ fontSize: '0.74rem', color: '#3C5759', margin: 0, lineHeight: 1.5 }}>{prospect.bio}</p>}
+
+          <div>
+            <span style={label}>Email{prospect.kind === 'creator' && !prospect.email ? ' — none on file, so this one goes straight to DM' : ''}</span>
+            <input type="email" value={emailField} onChange={e => setEmailField(e.target.value)}
+              onBlur={() => emailField.trim() !== (prospect.email || '') && update({ id: prospect._id, email: emailField.trim() })}
+              placeholder="Found automatically from their bio when the search tool sees one" spellCheck={false}
+              style={{ ...input, width: '100%' }} />
+          </div>
 
           {/* Profile analysis: score breakdown when enriched, Analyze button otherwise */}
           <div>
@@ -1401,10 +1414,15 @@ function CreatorCrmBoard() {
     setConfirmBusy(true); setConfirmMsg('');
     try {
       const ids = [...selected];
+      const byId = new Map(creators.map((p) => [String(p._id), p]));
+      // No email on file isn't a failure to report — it's the expected "this
+      // one's DM-only" case, so only creators with an address get a send attempt.
+      const withEmail = ids.filter((id) => byId.get(id)?.email);
       await Promise.allSettled(ids.map((id) => updateStatus({ id, status: 'queued' })));
-      const results = await Promise.allSettled(ids.map((id) => sendCreatorEmailNow({ id })));
+      const results = await Promise.allSettled(withEmail.map((id) => sendCreatorEmailNow({ id })));
       const emailed = results.filter((r) => r.status === 'fulfilled').length;
-      setConfirmMsg(`Confirmed ${ids.length}${emailed ? ` — emailed ${emailed}` : ' — no emails sent (check addresses)'}.`);
+      const dmOnly = ids.length - withEmail.length;
+      setConfirmMsg(`Confirmed ${ids.length} — emailed ${emailed}${dmOnly ? `, ${dmOnly} straight to DM (no email on file)` : ''}.`);
       setSelected(new Set());
     } catch (e) {
       setConfirmMsg((e.data || e.message)?.replace(/^.*Error:\s*/, '') || 'Confirm failed');
@@ -1898,11 +1916,12 @@ const CREATOR_TOOLS = [
 
 export default function Discovery({ sidebarCollapsed, setSidebarCollapsed }) {
   const stats = useQuery(api.prospects.getStats);
-  const buildQueue = useMutation(api.prospects.buildTodayQueue);
+  const buildFreshQueue = useAction(api.prospects.buildFreshQueue);
   const [side, setSide] = useState('hosts'); // 'hosts' | 'creators'
   const [hostView, setHostView] = useState('outreach'); // 'outreach' | 'crm'
   const [openPanel, setOpenPanel] = useState(null);
   const [queueMsg, setQueueMsg] = useState('');
+  const [queueBusy, setQueueBusy] = useState(false);
   const togglePanel = (p) => setOpenPanel(cur => (cur === p ? null : p));
 
   const contactedCreators = stats?.contactedToday?.creators ?? 0;
@@ -1913,10 +1932,27 @@ export default function Discovery({ sidebarCollapsed, setSidebarCollapsed }) {
     setOpenPanel(null);
   }
 
+  // "Build fresh 50" — full confirm treatment for both sides at once (drafted
+  // DM + welcome email for hosts, welcome email for creators), topping up
+  // with a live search first if the pool's short. Actual DM volume stays
+  // capped separately at the safe ~20/day rate; this only grows the
+  // ready-to-confirm bench.
   async function handleBuildQueue() {
-    const r = await buildQueue({ perKind: 20 });
-    setQueueMsg(r.promoted > 0 ? `Queued ${r.promoted} prospects for today.` : 'Queue is already full (or no new prospects to queue).');
-    setTimeout(() => setQueueMsg(''), 4000);
+    setQueueBusy(true); setQueueMsg('');
+    try {
+      const r = await buildFreshQueue({ perKind: 50 });
+      const { creators = 0, hosts = 0 } = r.promoted || {};
+      setQueueMsg(
+        (creators + hosts) > 0
+          ? `Confirmed ${creators} creators, ${hosts} hosts — ready in each Confirmed column.`
+          : 'Both queues are already full for today.'
+      );
+    } catch (e) {
+      setQueueMsg((e.data || e.message)?.replace(/^.*Error:\s*/, '') || 'Could not build the queue');
+    } finally {
+      setQueueBusy(false);
+      setTimeout(() => setQueueMsg(''), 6000);
+    }
   }
 
   return (
@@ -1933,6 +1969,11 @@ export default function Discovery({ sidebarCollapsed, setSidebarCollapsed }) {
           </p>
         </div>
         <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexShrink: 0 }}>
+          <button onClick={handleBuildQueue} disabled={queueBusy}
+            title="Confirms up to 50 new creators and 50 new hosts each — drafts DMs/sends welcome emails, tops up with a live search first if the pool's short. Instagram DM volume stays capped separately."
+            style={{ padding: '0.5rem 1rem', borderRadius: 9999, border: '1.5px solid rgba(22,101,52,0.3)', background: 'rgba(209,235,219,0.5)', color: '#166534', fontSize: '0.76rem', fontWeight: 700, cursor: 'pointer', opacity: queueBusy ? 0.6 : 1 }}>
+            {queueBusy ? 'Building…' : 'Build fresh 50'}
+          </button>
           {typeof setSidebarCollapsed === 'function' && (
             <button onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
               title={sidebarCollapsed ? 'Exit focus mode — show the sidebar again' : 'Focus mode — collapse the sidebar for more room'}
@@ -1952,12 +1993,6 @@ export default function Discovery({ sidebarCollapsed, setSidebarCollapsed }) {
       </div>
 
       <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1.25rem' }}>
-        {side === 'creators' && (
-          <button onClick={handleBuildQueue} title="Promotes up to 20 new creators to 'queued' status, for manual follow-up tracking below"
-            style={{ padding: '0.5rem 1.1rem', borderRadius: 9999, border: 'none', background: '#192524', color: '#fff', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}>
-            Build today's queue
-          </button>
-        )}
         {side === 'hosts' ? (
           <>
             <button onClick={() => setHostView(v => (v === 'outreach' ? 'crm' : 'outreach'))}

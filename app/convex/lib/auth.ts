@@ -109,7 +109,10 @@ export async function requireAuthedProfileAction(
   const identity = await ctx.auth.getUserIdentity();
   if (!identity?.subject) throw new ConvexError("Sign in required.");
   const caller: any = await ctx.runQuery(getByClerkUserIdRef, { clerk_user_id: identity.subject });
-  if (!caller) throw new ConvexError("Sign in required.");
+  // Distinct from the "no identity at all" case above — this means Clerk
+  // auth succeeded but no profile row is linked to it yet, which reads very
+  // differently for debugging (was previously mislabeled the same way).
+  if (!caller) throw new ConvexError("No account found for this session — try refreshing or signing in again.");
   return caller;
 }
 

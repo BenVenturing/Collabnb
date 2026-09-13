@@ -916,8 +916,7 @@ function HostSearchImport() {
 
   return (
     <div>
-      <HostAutoDiscoveryCard />
-      <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', alignItems: 'center' }}>
+      <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', alignItems: 'center', marginBottom: '0.75rem' }}>
         <input aria-label="Search hosts" value={q} onChange={e => setQ(e.target.value)} onKeyDown={e => e.key === 'Enter' && run()}
           placeholder='Search hosts by region, e.g. "boutique hotel lisbon" or "airbnb tulum"'
           style={{ ...input, flex: 1, minWidth: 240 }} />
@@ -930,6 +929,7 @@ function HostSearchImport() {
         </button>
         {msg && <span style={{ fontSize: '0.72rem', color: '#646B62' }}>{msg}</span>}
       </div>
+      <HostAutoDiscoveryCard />
     </div>
   );
 }

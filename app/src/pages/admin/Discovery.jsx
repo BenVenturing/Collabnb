@@ -613,19 +613,99 @@ function AddProspectForm({ onDone, defaultKind = 'creator' }) {
 }
 
 // ─── Apify import row ─────────────────────────────────────────────────────────
-function ApifyImport() {
-  const importFromApify = useAction(api.prospects.importFromApify);
+// Minimal dependency-free CSV parser — handles quoted fields (commas,
+// newlines, escaped "" inside quotes), mirroring csvEscape's escaping above.
+function parseCsv(text) {
+  const rows = [];
+  let row = [], field = '', inQuotes = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (inQuotes) {
+      if (c === '"') {
+        if (text[i + 1] === '"') { field += '"'; i++; }
+        else inQuotes = false;
+      } else field += c;
+    } else if (c === '"') {
+      inQuotes = true;
+    } else if (c === ',') {
+      row.push(field); field = '';
+    } else if (c === '\n' || c === '\r') {
+      if (c === '\r' && text[i + 1] === '\n') i++;
+      row.push(field); field = '';
+      if (row.length > 1 || row[0] !== '') rows.push(row);
+      row = [];
+    } else {
+      field += c;
+    }
+  }
+  if (field !== '' || row.length) { row.push(field); rows.push(row); }
+  return rows;
+}
+
+const CSV_HEADER_ALIASES = {
+  instagram_handle: ['instagram handle', 'handle', 'username', 'instagram'],
+  display_name: ['name', 'display name'],
+  location: ['location'],
+  niche: ['niche'],
+  follower_count: ['followers', 'follower count'],
+  email: ['email'],
+  bio: ['bio'],
+  website: ['website'],
+};
+
+// Header-matches loosely (case-insensitive) against known aliases so an
+// export from this same app (downloadHostsCsv) or a hand-built spreadsheet
+// both work without the admin needing to match exact column names.
+function rowsFromCsv(text) {
+  const table = parseCsv(text);
+  if (table.length < 2) return [];
+  const headerRow = table[0].map((h) => h.trim().toLowerCase());
+  const fieldForCol = headerRow.map((h) => {
+    const entry = Object.entries(CSV_HEADER_ALIASES).find(([, aliases]) => aliases.includes(h));
+    return entry?.[0];
+  });
+  const rows = [];
+  for (const line of table.slice(1)) {
+    const row = {};
+    line.forEach((val, i) => {
+      const field = fieldForCol[i];
+      if (!field || !val.trim()) return;
+      row[field] = field === 'follower_count' ? parseInt(val.replace(/[^\d]/g, ''), 10) || undefined : val.trim();
+    });
+    if (row.instagram_handle) {
+      row.instagram_handle = row.instagram_handle.replace(/^@/, '');
+      rows.push(row);
+    }
+  }
+  return rows;
+}
+
+// ─── CSV import (bring your own list — an export from here, or a curated sheet) ──
+function CsvImport() {
+  const importCsvRows = useAction(api.prospects.importCsvRows);
   const [kind, setKind] = useState('creator');
-  const [queryStr, setQueryStr] = useState('');
+  const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState('');
 
+  const parsed = text.trim() ? rowsFromCsv(text) : [];
+
+  function handleFile(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => setText(String(reader.result || ''));
+    reader.readAsText(file);
+    e.target.value = '';
+  }
+
   async function run() {
-    if (!queryStr.trim()) return;
+    if (!parsed.length) return;
     setBusy(true); setResult('');
     try {
-      const r = await importFromApify({ kind, searchQuery: queryStr.trim(), limit: 50 });
-      setResult(`Imported ${r.inserted} new of ${r.fetched} found.`);
+      const r = await importCsvRows({ kind, rows: parsed });
+      setResult(`Imported ${r.inserted} new of ${r.fetched} rows.`);
+      setText('');
     } catch (e) {
       setResult((e.data || e.message)?.replace(/^.*Error:\s*/, '') || 'Import failed');
     } finally {
@@ -634,19 +714,31 @@ function ApifyImport() {
   }
 
   return (
-    <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', alignItems: 'center' }}>
-      <select aria-label="Import as" value={kind} onChange={e => setKind(e.target.value)} style={{ ...input, width: 100 }}>
-        <option value="creator">Creators</option>
-        <option value="host">Hosts</option>
-      </select>
-      <input aria-label="Apify search term" value={queryStr} onChange={e => setQueryStr(e.target.value)} onKeyDown={e => e.key === 'Enter' && run()}
-        placeholder='Search term, e.g. "travel creator bali" or "boutique hotel lisbon"'
-        style={{ ...input, flex: 1, minWidth: 220 }} />
-      <button onClick={run} disabled={busy}
-        style={{ padding: '0.5rem 1.1rem', borderRadius: 9999, border: '1.5px solid rgba(25,37,36,0.2)', background: 'transparent', color: '#192524', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer', opacity: busy ? 0.5 : 1 }}>
-        {busy ? 'Importing' : 'Import from Apify'}
-      </button>
-      {result && <span style={{ fontSize: '0.72rem', color: result.startsWith('Imported') ? '#2d7d5e' : '#9b2d2d', width: '100%' }}>{result}</span>}
+    <div>
+      <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', alignItems: 'center', marginBottom: '0.5rem' }}>
+        <select aria-label="Import as" value={kind} onChange={e => setKind(e.target.value)} style={{ ...input, width: 100 }}>
+          <option value="creator">Creators</option>
+          <option value="host">Hosts</option>
+        </select>
+        <label style={{ padding: '0.5rem 1.1rem', borderRadius: 9999, border: '1.5px solid rgba(25,37,36,0.2)', background: 'transparent', color: '#192524', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}>
+          Choose CSV file
+          <input type="file" accept=".csv,text/csv" onChange={handleFile} style={{ display: 'none' }} />
+        </label>
+        <span style={{ fontSize: '0.7rem', color: '#646B62' }}>or paste CSV text below</span>
+      </div>
+      <textarea value={text} onChange={e => setText(e.target.value)}
+        placeholder="Instagram handle,Name,Location,Niche,Followers,Email,Bio,Website"
+        rows={5} style={{ ...input, width: '100%', resize: 'vertical', fontSize: '0.72rem', fontFamily: 'monospace' }} />
+      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginTop: '0.5rem' }}>
+        <button onClick={run} disabled={busy || !parsed.length}
+          style={{ padding: '0.5rem 1.1rem', borderRadius: 9999, border: 'none', background: '#192524', color: '#fff', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', opacity: (busy || !parsed.length) ? 0.5 : 1 }}>
+          {busy ? 'Importing…' : `Import ${parsed.length || ''} row${parsed.length === 1 ? '' : 's'}`.trim()}
+        </button>
+        {result && <span style={{ fontSize: '0.72rem', color: result.startsWith('Imported') ? '#2d7d5e' : '#9b2d2d' }}>{result}</span>}
+      </div>
+      <p style={{ fontSize: '0.68rem', color: '#646B62', margin: '0.5rem 0 0' }}>
+        First row must be a header. Recognized columns (any order, case-insensitive): Instagram handle, Name, Location, Niche, Followers, Email, Bio, Website. Only Instagram handle is required.
+      </p>
     </div>
   );
 }
@@ -929,7 +1021,6 @@ function HostSearchImport() {
         </button>
         {msg && <span style={{ fontSize: '0.72rem', color: '#646B62' }}>{msg}</span>}
       </div>
-      <HostAutoDiscoveryCard />
     </div>
   );
 }
@@ -1066,6 +1157,8 @@ function HostOutreachCampaign() {
           </div>
         )}
       </div>
+
+      <HostAutoDiscoveryCard />
     </div>
   );
 }
@@ -1282,12 +1375,20 @@ function AutoDiscoveryCard() {
   async function runProfileNow(p) {
     setRunState((s) => ({ ...s, [p.id]: { busy: true, msg: '' } }));
     try {
-      const r = await runNow({ niche: p.niche, location: p.location || undefined, perDay: p.perDay });
+      const r = await runNow({ profileId: p.id, niche: p.niche, location: p.location || undefined, perDay: p.perDay });
       setRunState((s) => ({ ...s, [p.id]: { busy: false, msg: `Imported ${r.imported} of ${r.fetched} found.` } }));
     } catch (e) {
       const msg = (e.data || e.message)?.replace(/^.*Error:\s*/, '') || 'Run failed';
       setRunState((s) => ({ ...s, [p.id]: { busy: false, msg } }));
     }
+  }
+
+  // Live progress for an in-flight "Run now" — written by the action itself
+  // (runDiscoveryProfileNow) into admin_settings mid-run, so it rides the
+  // `settings` subscription already open here instead of needing its own
+  // polling loop.
+  function progressFor(id) {
+    try { return JSON.parse(settings?.[`discovery_run:creator:${id}`] || 'null'); } catch { return null; }
   }
 
   async function runEnrich() {
@@ -1306,40 +1407,64 @@ function AutoDiscoveryCard() {
 
   return (
     <div>
-      {profiles.map((p) => (
-        <div key={p.id} style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', alignItems: 'center', marginBottom: '0.5rem' }}>
-          <button onClick={() => save((prev) => prev.map((x) => (x.id === p.id ? { ...x, enabled: !x.enabled } : x)))}
-            role="switch" aria-checked={p.enabled}
-            style={{ padding: '0.45rem 1rem', borderRadius: 9999, border: 'none', background: p.enabled ? '#166534' : 'rgba(25,37,36,0.12)', color: p.enabled ? '#fff' : '#3C5759', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer' }}>
-            {p.enabled ? 'On' : 'Off'}
-          </button>
-          <select aria-label="Auto-discovery niche" value={p.niche}
-            onChange={(e) => save((prev) => prev.map((x) => (x.id === p.id ? { ...x, niche: e.target.value } : x)))}
-            style={{ ...input, width: 150, textTransform: 'capitalize' }}>
-            {NICHES.map((n) => <option key={n} value={n}>{n}</option>)}
-          </select>
-          <input aria-label="Auto-discovery location" value={p.location} onChange={(e) => updateProfile(p.id, { location: e.target.value })}
-            onBlur={() => save((prev) => prev)}
-            placeholder="Target location" style={{ ...input, width: 160 }} />
-          <input aria-label="Creators per day" type="number" min="1" max="20" value={p.perDay}
-            onChange={(e) => updateProfile(p.id, { perDay: Math.max(1, Math.min(20, parseInt(e.target.value, 10) || 10)) })}
-            onBlur={() => save((prev) => prev)}
-            style={{ ...input, width: 70 }} />
-          <span style={{ fontSize: '0.7rem', color: '#646B62' }}>per day</span>
-          <button onClick={() => runProfileNow(p)} disabled={runState[p.id]?.busy}
-            title="Runs this profile immediately via HikerAPI/Apify instead of waiting for the 7am UTC cron"
-            style={{ padding: '0.4rem 0.8rem', borderRadius: 9999, border: '1.5px solid rgba(25,37,36,0.2)', background: 'transparent', color: '#192524', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer', opacity: runState[p.id]?.busy ? 0.5 : 1 }}>
-            {runState[p.id]?.busy ? 'Running…' : 'Run now'}
-          </button>
-          {profiles.length > 1 && (
-            <button onClick={() => save((prev) => prev.filter((x) => x.id !== p.id))} title="Remove this profile"
-              style={{ padding: '0.3rem 0.6rem', borderRadius: 9999, border: 'none', background: 'transparent', color: '#9b2d2d', fontSize: '0.8rem', cursor: 'pointer' }}>
-              ×
+      {profiles.map((p) => {
+        const progress = progressFor(p.id);
+        const running = progress?.status === 'running' || runState[p.id]?.busy;
+        if (running) {
+          const found = progress?.found ?? 0;
+          const target = progress?.target ?? p.perDay;
+          const pct = target > 0 ? Math.min(100, Math.round((found / target) * 100)) : 0;
+          const tried = Math.min((progress?.attempts ?? 0) + 1, progress?.maxAttempts || 1);
+          const maxTried = progress?.maxAttempts || 1;
+          return (
+            <div key={p.id} style={{ display: 'flex', gap: '0.6rem', alignItems: 'center', marginBottom: '0.5rem', padding: '0.4rem 0' }}>
+              <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#192524', textTransform: 'capitalize', whiteSpace: 'nowrap' }}>
+                {p.niche}{p.location ? ` · ${p.location}` : ''}
+              </span>
+              <div style={{ flex: 1, minWidth: 100, height: 8, borderRadius: 9999, background: 'rgba(25,37,36,0.1)', overflow: 'hidden' }}>
+                <div style={{ width: `${pct}%`, height: '100%', background: '#166534', transition: 'width 0.4s ease' }} />
+              </div>
+              <span style={{ fontSize: '0.68rem', color: '#646B62', whiteSpace: 'nowrap' }}>
+                {found}/{target} found · trying {tried}/{maxTried}
+              </span>
+            </div>
+          );
+        }
+        return (
+          <div key={p.id} style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', alignItems: 'center', marginBottom: '0.5rem' }}>
+            <button onClick={() => save((prev) => prev.map((x) => (x.id === p.id ? { ...x, enabled: !x.enabled } : x)))}
+              role="switch" aria-checked={p.enabled}
+              style={{ padding: '0.45rem 1rem', borderRadius: 9999, border: 'none', background: p.enabled ? '#166534' : 'rgba(25,37,36,0.12)', color: p.enabled ? '#fff' : '#3C5759', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer' }}>
+              {p.enabled ? 'On' : 'Off'}
             </button>
-          )}
-          {runState[p.id]?.msg && <span style={{ fontSize: '0.7rem', color: '#646B62', flexBasis: '100%' }}>{runState[p.id].msg}</span>}
-        </div>
-      ))}
+            <select aria-label="Auto-discovery niche" value={p.niche}
+              onChange={(e) => save((prev) => prev.map((x) => (x.id === p.id ? { ...x, niche: e.target.value } : x)))}
+              style={{ ...input, width: 150, textTransform: 'capitalize' }}>
+              {NICHES.map((n) => <option key={n} value={n}>{n}</option>)}
+            </select>
+            <input aria-label="Auto-discovery location" value={p.location} onChange={(e) => updateProfile(p.id, { location: e.target.value })}
+              onBlur={() => save((prev) => prev)}
+              placeholder="Target location" style={{ ...input, width: 160 }} />
+            <input aria-label="Creators per day" type="number" min="1" max="20" value={p.perDay}
+              onChange={(e) => updateProfile(p.id, { perDay: Math.max(1, Math.min(20, parseInt(e.target.value, 10) || 10)) })}
+              onBlur={() => save((prev) => prev)}
+              style={{ ...input, width: 70 }} />
+            <span style={{ fontSize: '0.7rem', color: '#646B62' }}>per day</span>
+            <button onClick={() => runProfileNow(p)}
+              title="Runs this profile immediately via HikerAPI/Apify instead of waiting for the 7am UTC cron"
+              style={{ padding: '0.4rem 0.8rem', borderRadius: 9999, border: '1.5px solid rgba(25,37,36,0.2)', background: 'transparent', color: '#192524', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer' }}>
+              Run now
+            </button>
+            {profiles.length > 1 && (
+              <button onClick={() => save((prev) => prev.filter((x) => x.id !== p.id))} title="Remove this profile"
+                style={{ padding: '0.3rem 0.6rem', borderRadius: 9999, border: 'none', background: 'transparent', color: '#9b2d2d', fontSize: '0.8rem', cursor: 'pointer' }}>
+                ×
+              </button>
+            )}
+            {runState[p.id]?.msg && <span style={{ fontSize: '0.7rem', color: '#646B62', flexBasis: '100%' }}>{runState[p.id].msg}</span>}
+          </div>
+        );
+      })}
       <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center', flexWrap: 'wrap' }}>
         <button onClick={() => save((prev) => [...prev, { id: rid(), enabled: false, niche: 'travel', location: '', perDay: 10 }])}
           style={{ padding: '0.4rem 0.9rem', borderRadius: 9999, border: '1.5px dashed rgba(25,37,36,0.25)', background: 'transparent', color: '#3C5759', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer' }}>
@@ -1375,7 +1500,7 @@ const CREATOR_TOOLS = [
   { id: 'find', label: 'Find creators', title: 'Search Instagram by niche/location, auto-imports and scores the top 10 creators.' },
   { id: 'auto', label: 'Auto-discovery', title: 'Runs that same creator search automatically every morning at 7am.' },
   { id: 'add', label: 'Add manually', title: 'Add one specific creator you already know the handle for.' },
-  { id: 'import', label: 'Import', title: 'Bulk-search Instagram by keyword and import all matches (creators or hosts).' },
+  { id: 'import', label: 'Import', title: 'Bulk-import creators or hosts from a CSV file (or pasted CSV text).' },
 ];
 
 export default function Discovery({ sidebarCollapsed, setSidebarCollapsed }) {
@@ -1479,7 +1604,7 @@ export default function Discovery({ sidebarCollapsed, setSidebarCollapsed }) {
         <div style={{ marginBottom: '1.25rem', padding: '1rem', borderRadius: '1rem', background: 'rgba(255,255,255,0.6)', border: '1px solid rgba(25,37,36,0.08)' }}>
           {openPanel === 'find' && <FindCreators />}
           {openPanel === 'auto' && <AutoDiscoveryCard />}
-          {openPanel === 'import' && <ApifyImport />}
+          {openPanel === 'import' && <CsvImport />}
         </div>
       )}
 

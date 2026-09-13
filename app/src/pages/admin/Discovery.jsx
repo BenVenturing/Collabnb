@@ -1078,7 +1078,6 @@ function HostOutreachCampaign() {
 
   async function doDelete() {
     if (selected.size === 0) return;
-    if (!window.confirm(`Remove ${selected.size} selected candidate${selected.size === 1 ? '' : 's'} from the pool?`)) return;
     setDeleting(true); setErr(''); setMsg('');
     try {
       const ids = [...selected];

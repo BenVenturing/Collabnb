@@ -1,18 +1,20 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useQuery, useMutation, useAction } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { NICHE_KEYWORDS } from '../../lib/matchScore';
 
 const NICHES = Object.keys(NICHE_KEYWORDS);
 
-const STATUS_FLOW = ['new', 'queued', 'contacted', 'replied', 'signed'];
-// Hosts get an extra 'emailed' stop between Confirmed and DMed — creators
-// don't have an email step, so they keep the plain STATUS_FLOW above.
+// Both kinds share the same stages now — an auto-fired welcome email
+// (host: after scraping their site for a marketing address; creator: to
+// whatever email was already on file from their Instagram bio) comes right
+// after Confirmed, before the manual Instagram DM.
 const HOST_STATUS_FLOW = ['new', 'queued', 'emailed', 'contacted', 'replied', 'signed'];
+const CREATOR_STATUS_FLOW = ['new', 'queued', 'emailed', 'contacted', 'replied', 'signed'];
 const STATUS_CFG = {
   new:       { label: 'New',       bg: 'rgba(25,37,36,0.06)',    color: '#3C5759' },
   queued:    { label: 'Queued',    bg: 'rgba(212,168,67,0.15)',  color: '#b45309' },
-  emailed:   { label: 'Emailed',   bg: 'rgba(212,168,67,0.15)',  color: '#b45309' }, // host-only pipeline stage, set automatically after Confirm — not part of STATUS_FLOW's generic advance button
+  emailed:   { label: 'Emailed',   bg: 'rgba(212,168,67,0.15)',  color: '#b45309' }, // set automatically right after Confirm, for both kinds
   contacted: { label: 'DMed',      bg: 'rgba(123,104,200,0.14)', color: '#5b4aa8' },
   replied:   { label: 'Responded', bg: 'rgba(74,155,127,0.15)',  color: '#2d7d5e' },
   signed:    { label: 'Signed',    bg: 'rgba(209,235,219,0.8)',  color: '#166534' },
@@ -114,6 +116,7 @@ function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
   const enrich = useAction(api.prospects.enrichProspect);
   const sendSequenceEmail = useAction(api.prospects.sendSequenceEmail);
   const sendHostEmailNow = useAction(api.prospects.sendHostEmailNow);
+  const sendCreatorEmailNow = useAction(api.prospects.sendCreatorEmailNow);
   const [open, setOpen] = useState(false);
   const [dmDraft, setDmDraft] = useState(prospect.dm_draft || '');
   const [notes, setNotes] = useState(prospect.notes || '');
@@ -177,10 +180,10 @@ function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
     }
     try { await navigator.clipboard.writeText(text); } catch { /* clipboard unavailable */ }
     window.open(`https://ig.me/m/${prospect.instagram_handle}`, '_blank', 'noopener');
-    // Moves the host into the "DMed" column the moment you actually go do
-    // it — no separate click needed. Only for hosts still earlier in the
-    // pipeline, so this never rewinds a card that's already moved further.
-    if (prospect.kind === 'host' && ['new', 'queued', 'emailed'].includes(prospect.status)) {
+    // Moves the card into the "DMed" column the moment you actually go do
+    // it — no separate click needed, for either kind. Only from earlier in
+    // the pipeline, so this never rewinds a card that's already moved further.
+    if (['new', 'queued', 'emailed'].includes(prospect.status)) {
       updateStatus({ id: prospect._id, status: 'contacted' }).catch(() => {});
     }
   }
@@ -188,7 +191,10 @@ function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
   async function sendStep(step) {
     setSendingStep(step); setSeqErr('');
     try {
-      await sendSequenceEmail({ id: prospect._id, step });
+      // Creators only ever have step 1 (no drip sequence, no marketing_email
+      // lookup) — sendSequenceEmail's host-only checks would reject them.
+      if (prospect.kind === 'host') await sendSequenceEmail({ id: prospect._id, step });
+      else await sendCreatorEmailNow({ id: prospect._id });
     } catch (e) {
       setSeqErr((e.data || e.message)?.replace(/^.*Error:\s*/, '') || `Could not send step ${step}`);
     } finally {
@@ -197,24 +203,25 @@ function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
   }
 
   // Declined isn't part of the forward flow — indexOf returns -1 there, which
-  // would otherwise wrap around to STATUS_FLOW[0] ("new") and offer a
-  // nonsensical "Mark new" button. Hosts use HOST_STATUS_FLOW so the
-  // advance button stops at "Emailed" on its way to "DMed".
-  const flow = prospect.kind === 'host' ? HOST_STATUS_FLOW : STATUS_FLOW;
+  // would otherwise wrap around to flow[0] ("new") and offer a nonsensical
+  // "Mark new" button. Both kinds now stop at "Emailed" on their way to
+  // "DMed" — see CREATOR_STATUS_FLOW/HOST_STATUS_FLOW above.
+  const flow = prospect.kind === 'host' ? HOST_STATUS_FLOW : CREATOR_STATUS_FLOW;
   const flowIdx = flow.indexOf(prospect.status);
   const nextStatus = flowIdx === -1 ? undefined : flow[flowIdx + 1];
-  // queued -> emailed is a real send (find address, draft, send step 1),
-  // not a bare label change, so it goes through sendHostEmailNow instead
-  // of the generic updateStatus every other step uses.
+  // queued -> emailed is a real send (find/use an address, draft, send),
+  // not a bare label change, so it goes through sendHostEmailNow/
+  // sendCreatorEmailNow instead of the generic updateStatus every other step uses.
   const advanceIsSend = nextStatus === 'emailed';
 
   async function advance() {
     if (advanceIsSend) {
       setSendingStep('now'); setSeqErr('');
       try {
-        await sendHostEmailNow({ id: prospect._id });
+        if (prospect.kind === 'host') await sendHostEmailNow({ id: prospect._id });
+        else await sendCreatorEmailNow({ id: prospect._id });
       } catch (e) {
-        setSeqErr(e.message?.replace(/^.*Error:\s*/, '') || 'Could not send');
+        setSeqErr((e.data || e.message)?.replace(/^.*Error:\s*/, '') || 'Could not send');
       } finally {
         setSendingStep(null);
       }
@@ -396,7 +403,7 @@ function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
               {genErr && <span style={{ fontSize: '0.68rem', color: '#9b2d2d', alignSelf: 'center' }}>{genErr}</span>}
             </div>
           </div>
-          {prospect.kind === 'host' && (prospect.marketing_email || (prospect.email_sequence?.length > 0)) && (
+          {(prospect.marketing_email || (prospect.email_sequence?.length > 0)) && (
             <div>
               <span style={label}>Email sequence{prospect.marketing_email ? ` · ${prospect.marketing_email}` : ''}</span>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
@@ -419,7 +426,7 @@ function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
             </div>
           )}
 
-          {prospect.kind === 'host' && prospect.outreach_log?.length > 0 && (
+          {prospect.outreach_log?.length > 0 && (
             <div>
               <span style={label}>Outreach history</span>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
@@ -442,117 +449,6 @@ function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
             style={{ alignSelf: 'flex-start', padding: '0.3rem 0.7rem', borderRadius: 9999, border: 'none', background: 'transparent', color: '#9b2d2d', fontSize: '0.7rem', cursor: 'pointer' }}>
             Remove prospect
           </button>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ─── One side (creators or hosts) ─────────────────────────────────────────────
-function ProspectPanel({ kind, title }) {
-  const [status, setStatus] = useState('');
-  const [tier, setTier] = useState('');
-  const [location, setLocation] = useState('');
-  const [selected, setSelected] = useState(() => new Set());
-  const [bulkBusy, setBulkBusy] = useState(false);
-  const [bulkMsg, setBulkMsg] = useState('');
-  const generateDrafts = useAction(api.prospects.generateDraftsForSelected);
-  const prospects = useQuery(api.prospects.getByKind, {
-    kind,
-    status: status || undefined,
-    tier: tier || undefined,
-    location: location || undefined,
-  }) || [];
-
-  // Freeze display order once loaded — analyzing a card changes its score,
-  // which would otherwise reshuffle the whole list (getByKind sorts by
-  // score) and yank the page back to the top mid-scroll. New matches still
-  // get appended; existing cards never jump position.
-  const [orderedIds, setOrderedIds] = useState([]);
-  const liveIdsKey = prospects.map((p) => String(p._id)).join(',');
-  useEffect(() => {
-    const liveIds = liveIdsKey ? liveIdsKey.split(',') : [];
-    setOrderedIds((prev) => {
-      const liveSet = new Set(liveIds);
-      const kept = prev.filter((id) => liveSet.has(id));
-      const keptSet = new Set(kept);
-      const added = liveIds.filter((id) => !keptSet.has(id));
-      return [...kept, ...added];
-    });
-  }, [liveIdsKey]);
-  const byId = new Map(prospects.map((p) => [String(p._id), p]));
-  const orderedProspects = orderedIds.map((id) => byId.get(id)).filter(Boolean);
-
-  const select = { ...input, padding: '0.45rem 0.6rem', fontSize: '0.75rem' };
-
-  function toggleOne(id) {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      const key = String(id);
-      if (next.has(key)) next.delete(key); else next.add(key);
-      return next;
-    });
-  }
-
-  async function bulkGenerate() {
-    if (selected.size === 0) return;
-    setBulkBusy(true); setBulkMsg('');
-    try {
-      const r = await generateDrafts({ ids: [...selected] });
-      setBulkMsg(`Drafted ${r.drafted} of ${selected.size} selected.`);
-      setSelected(new Set());
-    } catch (e) {
-      setBulkMsg((e.data || e.message)?.replace(/^.*Error:\s*/, '') || 'Bulk draft failed');
-    } finally {
-      setBulkBusy(false);
-    }
-  }
-
-  return (
-    <div style={{ flex: 1, minWidth: 0 }}>
-      <p style={{ fontFamily: 'Cabinet Grotesk, sans-serif', fontWeight: 700, fontSize: '0.95rem', color: '#192524', margin: '0 0 0.6rem' }}>
-        {title} <span style={{ color: '#646B62', fontWeight: 500, fontSize: '0.8rem' }}>({prospects.length})</span>
-      </p>
-      <div style={{ display: 'flex', gap: '0.4rem', marginBottom: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
-        <select aria-label={`Filter ${kind}s by status`} value={status} onChange={e => setStatus(e.target.value)} style={select}>
-          <option value="">All statuses</option>
-          {Object.keys(STATUS_CFG).map(s => <option key={s} value={s}>{STATUS_CFG[s].label}</option>)}
-        </select>
-        <select aria-label={`Filter ${kind}s by tier`} value={tier} onChange={e => setTier(e.target.value)} style={select}>
-          <option value="">All tiers</option>
-          {TIERS.map(t => <option key={t} value={t}>{t}</option>)}
-        </select>
-        <input aria-label={`Filter ${kind}s by location`} value={location} onChange={e => setLocation(e.target.value)} placeholder="Location" style={{ ...select, width: 110 }} />
-      </div>
-      {prospects.length > 0 && (
-        <div style={{ display: 'flex', gap: '0.4rem', marginBottom: '0.7rem', flexWrap: 'wrap', alignItems: 'center' }}>
-          <button onClick={() => setSelected(new Set(prospects.map(p => String(p._id))))}
-            style={{ padding: '0.25rem 0.6rem', borderRadius: 9999, border: '1px solid rgba(25,37,36,0.15)', background: 'transparent', color: '#3C5759', fontSize: '0.68rem', fontWeight: 600, cursor: 'pointer' }}>
-            Select all
-          </button>
-          <button onClick={() => setSelected(new Set())} disabled={selected.size === 0}
-            style={{ padding: '0.25rem 0.6rem', borderRadius: 9999, border: '1px solid rgba(25,37,36,0.15)', background: 'transparent', color: '#3C5759', fontSize: '0.68rem', fontWeight: 600, cursor: 'pointer', opacity: selected.size === 0 ? 0.5 : 1 }}>
-            Select none
-          </button>
-          {kind === 'host' && (
-            <button onClick={bulkGenerate} disabled={bulkBusy || selected.size === 0}
-              title="Drafts a message for each selected host, rotating through the 5 angle templates"
-              style={{ padding: '0.25rem 0.7rem', borderRadius: 9999, border: 'none', background: '#192524', color: '#fff', fontSize: '0.68rem', fontWeight: 700, cursor: 'pointer', opacity: (bulkBusy || selected.size === 0) ? 0.5 : 1 }}>
-              {bulkBusy ? 'Drafting…' : `Draft DMs for selected (${selected.size})`}
-            </button>
-          )}
-          {bulkMsg && <span style={{ fontSize: '0.68rem', color: '#166534' }}>{bulkMsg}</span>}
-        </div>
-      )}
-      {prospects.length === 0 ? (
-        <div style={{ padding: '1.75rem 1rem', textAlign: 'center', borderRadius: '0.875rem', background: 'rgba(255,255,255,0.5)', border: '1px dashed rgba(25,37,36,0.12)' }}>
-          <p style={{ fontSize: '0.8rem', color: '#646B62', margin: 0 }}>No {kind}s yet. Add one manually or import from Apify above.</p>
-        </div>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '75vh', overflowY: 'auto', paddingRight: '0.25rem' }}>
-          {orderedProspects.map(p => (
-            <ProspectCard key={p._id} prospect={p} selected={selected.has(String(p._id))} onToggleSelect={toggleOne} />
-          ))}
         </div>
       )}
     </div>
@@ -746,16 +642,21 @@ function CsvImport() {
 // ─── Find creators (niche search + ranked top 10) ─────────────────────────────
 function FindCreators() {
   const search = useAction(api.prospects.searchCreators);
-  const [niche, setNiche] = useState('travel');
+  const [tags, setTags] = useState('');
   const [loc, setLoc] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [results, setResults] = useState(null); // { imported, fetched, ranked }
 
   async function run() {
+    if (!tags.trim()) return;
     setBusy(true); setErr(''); setResults(null);
     try {
-      setResults(await search({ niche, location: loc.trim() || undefined }));
+      // No niche dropdown — discoverAndScore already falls back to using
+      // whatever string it's given verbatim as the search term when it
+      // isn't one of the recognized NICHE_SEARCH_TERMS keys, so free-text
+      // tags work here with no backend change needed.
+      setResults(await search({ niche: tags.trim(), location: loc.trim() || undefined }));
     } catch (e) {
       setErr((e.data || e.message)?.replace(/^.*Error:\s*/, '') || 'Search failed');
     } finally {
@@ -766,14 +667,13 @@ function FindCreators() {
   return (
     <div>
       <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', alignItems: 'center' }}>
-        <select aria-label="Niche" value={niche} onChange={e => setNiche(e.target.value)} style={{ ...input, width: 160, textTransform: 'capitalize' }}>
-          {NICHES.map(n => <option key={n} value={n}>{n}</option>)}
-        </select>
+        <input aria-label="Creator tags" value={tags} onChange={e => setTags(e.target.value)} onKeyDown={e => e.key === 'Enter' && run()}
+          placeholder='Creator tags, e.g. "sunset yoga retreat"' style={{ ...input, flex: 2, minWidth: 200 }} />
         <input aria-label="Location" value={loc} onChange={e => setLoc(e.target.value)} onKeyDown={e => e.key === 'Enter' && run()}
           placeholder="Location (optional), e.g. Asheville" style={{ ...input, flex: 1, minWidth: 180 }} />
-        <button onClick={run} disabled={busy}
-          style={{ padding: '0.5rem 1.1rem', borderRadius: 9999, border: 'none', background: '#192524', color: '#fff', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', opacity: busy ? 0.5 : 1 }}>
-          {busy ? 'Searching…' : 'Find creators'}
+        <button onClick={run} disabled={busy || !tags.trim()}
+          style={{ padding: '0.5rem 1.1rem', borderRadius: 9999, border: 'none', background: '#192524', color: '#fff', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', opacity: (busy || !tags.trim()) ? 0.5 : 1 }}>
+          {busy ? 'Searching…' : 'Search'}
         </button>
         {busy && <span style={{ fontSize: '0.7rem', color: '#646B62' }}>Scraping + scoring the top 10 — this can take a minute.</span>}
         {err && <span style={{ fontSize: '0.72rem', color: '#9b2d2d', width: '100%' }}>{err}</span>}
@@ -1176,9 +1076,19 @@ const CRM_COLUMNS = [
   { id: 'declined', label: 'Declined' },
 ];
 
+// Most recent outreach_log entry (or _creationTime if no log yet) — used to
+// sort every column newest-activity-first, so a card that just moved into a
+// column (or was just imported, for a column with no log entries) surfaces
+// at the top instead of getting buried under older ones.
+function lastActivityAt(p) {
+  const log = p.outreach_log;
+  return log?.length ? log[log.length - 1].at : p._creationTime;
+}
+
 function HostCrmBoard() {
   const [tier, setTier] = useState('');
   const [location, setLocation] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
   const [filterText, setFilterText] = useState('');
   const [selected, setSelected] = useState(() => new Set());
   const [dragId, setDragId] = useState(null);
@@ -1211,10 +1121,27 @@ function HostCrmBoard() {
   const byColumn = {};
   for (const col of CRM_COLUMNS) byColumn[col.id] = [];
   for (const p of filtered) (byColumn[p.status] || byColumn.queued).push(p);
+  for (const col of CRM_COLUMNS) byColumn[col.id].sort((a, b) => lastActivityAt(b) - lastActivityAt(a));
 
-  const allSelected = filtered.length > 0 && filtered.every((p) => selected.has(String(p._id)));
-  function toggleSelectAll() {
-    setSelected(allSelected ? new Set() : new Set(filtered.map((p) => String(p._id))));
+  // Per-column select-all — a global one selected across every stage at
+  // once, which was rarely what you wanted (e.g. bulk-emailing the whole
+  // board instead of just Confirmed). One small checkbox per column header
+  // instead.
+  function isColumnSelected(colId) {
+    const items = byColumn[colId];
+    return items.length > 0 && items.every((p) => selected.has(String(p._id)));
+  }
+  function toggleColumnSelectAll(colId) {
+    const items = byColumn[colId];
+    const allOn = isColumnSelected(colId);
+    setSelected((prev) => {
+      const next = new Set(prev);
+      for (const p of items) {
+        const key = String(p._id);
+        if (allOn) next.delete(key); else next.add(key);
+      }
+      return next;
+    });
   }
   function toggleOne(id) {
     setSelected((prev) => {
@@ -1265,17 +1192,12 @@ function HostCrmBoard() {
 
   return (
     <div>
-      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center', marginBottom: '0.85rem' }}>
+      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center', marginBottom: showFilters ? '0.5rem' : '0.85rem' }}>
         <input aria-label="Search hosts" value={filterText} onChange={(e) => setFilterText(e.target.value)}
           placeholder="Search by name, location, niche…" style={{ ...input, width: 220, padding: '0.4rem 0.65rem', fontSize: '0.76rem' }} />
-        <select aria-label="Filter by tier" value={tier} onChange={(e) => setTier(e.target.value)} style={{ ...input, padding: '0.4rem 0.6rem', fontSize: '0.76rem' }}>
-          <option value="">All tiers</option>
-          {TIERS.map((t) => <option key={t} value={t}>{t}</option>)}
-        </select>
-        <input aria-label="Filter by location" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Location" style={{ ...input, width: 130, padding: '0.4rem 0.6rem', fontSize: '0.76rem' }} />
-        <button onClick={toggleSelectAll}
-          style={{ padding: '0.35rem 0.8rem', borderRadius: 9999, border: '1px solid rgba(25,37,36,0.15)', background: allSelected ? '#192524' : 'transparent', color: allSelected ? '#fff' : '#3C5759', fontSize: '0.74rem', fontWeight: 600, cursor: 'pointer' }}>
-          {allSelected ? 'Deselect all' : 'Select all'}
+        <button onClick={() => setShowFilters((s) => !s)}
+          style={{ padding: '0.35rem 0.8rem', borderRadius: 9999, border: '1px solid rgba(25,37,36,0.15)', background: showFilters ? 'rgba(25,37,36,0.06)' : 'transparent', color: '#3C5759', fontSize: '0.74rem', fontWeight: 600, cursor: 'pointer' }}>
+          Filters{(tier || location) ? ' •' : ''} {showFilters ? '▴' : '▾'}
         </button>
         <button onClick={bulkGenerate} disabled={bulkBusy || selected.size === 0}
           title="Drafts a message for each selected host, rotating through the 5 angle templates"
@@ -1296,8 +1218,190 @@ function HostCrmBoard() {
         {emailBulkMsg && <span style={{ fontSize: '0.72rem', color: '#166534' }}>{emailBulkMsg}</span>}
       </div>
 
+      {showFilters && (
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center', marginBottom: '0.85rem', padding: '0.5rem 0.6rem', borderRadius: '0.6rem', background: 'rgba(25,37,36,0.04)' }}>
+          <select aria-label="Filter by tier" value={tier} onChange={(e) => setTier(e.target.value)} style={{ ...input, padding: '0.4rem 0.6rem', fontSize: '0.76rem' }}>
+            <option value="">All tiers</option>
+            {TIERS.map((t) => <option key={t} value={t}>{t}</option>)}
+          </select>
+          <input aria-label="Filter by location" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Location" style={{ ...input, width: 130, padding: '0.4rem 0.6rem', fontSize: '0.76rem' }} />
+        </div>
+      )}
+
       <div style={{ display: 'flex', gap: '1.25rem', overflowX: 'auto', paddingBottom: '0.5rem', alignItems: 'flex-start' }}>
         {CRM_COLUMNS.map((col) => (
+          <div key={col.id}
+            onDragOver={(e) => { e.preventDefault(); setDragOverCol(col.id); }}
+            onDragLeave={() => setDragOverCol((c) => (c === col.id ? null : c))}
+            onDrop={(e) => { e.preventDefault(); handleDrop(col.id); }}
+            style={{
+              flex: '0 0 280px', width: 280, borderRadius: dragOverCol === col.id ? '0.875rem' : 0,
+              background: dragOverCol === col.id ? 'rgba(123,104,200,0.06)' : 'transparent',
+              outline: dragOverCol === col.id ? '1.5px dashed rgba(123,104,200,0.4)' : 'none',
+              padding: dragOverCol === col.id ? '0.5rem' : 0,
+            }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.6rem', padding: '0 0.1rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <input type="checkbox" aria-label={`Select all in ${col.label}`} disabled={byColumn[col.id].length === 0}
+                  checked={isColumnSelected(col.id)} onChange={() => toggleColumnSelectAll(col.id)} style={{ flexShrink: 0 }} />
+                <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#192524' }}>{col.label}</span>
+              </div>
+              <span style={{ fontSize: '0.7rem', color: '#646B62' }}>{byColumn[col.id].length}</span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', maxHeight: '75vh', overflowY: 'auto', minHeight: '2rem' }}>
+              {byColumn[col.id].map((p) => (
+                <div key={String(p._id)} draggable onDragStart={() => setDragId(p._id)} onDragEnd={() => setDragId(null)}
+                  title="Drag to move to another column" style={{ cursor: 'grab' }}>
+                  <ProspectCard prospect={p} selected={selected.has(String(p._id))} onToggleSelect={toggleOne} crm />
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Creators don't have a separate search/select/confirm screen the way hosts
+// do (Find creators / Auto-discovery / Import already feed the pool directly)
+// — so unlike CRM_COLUMNS, a "New" column stays on this board and "Confirm
+// selected" is the search->pipeline gate, mirroring what confirmHostBatch
+// does for hosts (move to Confirmed, then best-effort auto-email).
+const CREATOR_CRM_COLUMNS = [
+  { id: 'new', label: 'New' },
+  { id: 'queued', label: 'Confirmed' },
+  { id: 'emailed', label: 'Emailed' },
+  { id: 'contacted', label: 'DMed' },
+  { id: 'replied', label: 'Responded' },
+  { id: 'signed', label: 'Signed // Onboarding' },
+  { id: 'declined', label: 'Declined' },
+];
+
+function CreatorCrmBoard() {
+  const [tier, setTier] = useState('');
+  const [location, setLocation] = useState('');
+  const [filterText, setFilterText] = useState('');
+  const [selected, setSelected] = useState(() => new Set());
+  const [dragId, setDragId] = useState(null);
+  const [dragOverCol, setDragOverCol] = useState(null);
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkMsg, setBulkMsg] = useState('');
+  const [confirmBusy, setConfirmBusy] = useState(false);
+  const [confirmMsg, setConfirmMsg] = useState('');
+
+  const generateDrafts = useAction(api.prospects.generateDraftsForSelected);
+  const sendCreatorEmailNow = useAction(api.prospects.sendCreatorEmailNow);
+  const updateStatus = useMutation(api.prospects.updateStatus);
+
+  const creators = useQuery(api.prospects.getByKind, {
+    kind: 'creator',
+    tier: tier || undefined,
+    location: location || undefined,
+  }) || [];
+
+  // getByKind sorts by fit score (best for hosts, where quality ranking is
+  // what matters) — creators need the newest arrivals surfaced instead, so
+  // whatever just got confirmed or imported is easy to find without hunting.
+  const filtered = creators
+    .filter((p) => {
+      if (!filterText.trim()) return true;
+      const t = filterText.toLowerCase();
+      return p.instagram_handle.toLowerCase().includes(t)
+        || (p.display_name || '').toLowerCase().includes(t)
+        || (p.location || '').toLowerCase().includes(t)
+        || (p.niche || '').toLowerCase().includes(t);
+    })
+    .sort((a, b) => (b.created_at ?? 0) - (a.created_at ?? 0));
+
+  const byColumn = {};
+  for (const col of CREATOR_CRM_COLUMNS) byColumn[col.id] = [];
+  for (const p of filtered) (byColumn[p.status] || byColumn.new).push(p);
+
+  const allSelected = filtered.length > 0 && filtered.every((p) => selected.has(String(p._id)));
+  function toggleSelectAll() {
+    setSelected(allSelected ? new Set() : new Set(filtered.map((p) => String(p._id))));
+  }
+  function toggleOne(id) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      const key = String(id);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  }
+
+  async function bulkGenerate() {
+    if (selected.size === 0) return;
+    setBulkBusy(true); setBulkMsg('');
+    try {
+      const r = await generateDrafts({ ids: [...selected] });
+      setBulkMsg(`Drafted ${r.drafted} of ${selected.size} selected.`);
+      setSelected(new Set());
+    } catch (e) {
+      setBulkMsg((e.data || e.message)?.replace(/^.*Error:\s*/, '') || 'Bulk draft failed');
+    } finally {
+      setBulkBusy(false);
+    }
+  }
+
+  // The search->pipeline gate: moves selected New/pool creators to Confirmed,
+  // then fires the welcome email for each best-effort (a missing address on
+  // one creator never blocks the rest) — same shape as confirmHostBatch's
+  // confirm-then-kickoff-email flow for hosts.
+  async function bulkConfirm() {
+    if (selected.size === 0) return;
+    setConfirmBusy(true); setConfirmMsg('');
+    try {
+      const ids = [...selected];
+      await Promise.allSettled(ids.map((id) => updateStatus({ id, status: 'queued' })));
+      const results = await Promise.allSettled(ids.map((id) => sendCreatorEmailNow({ id })));
+      const emailed = results.filter((r) => r.status === 'fulfilled').length;
+      setConfirmMsg(`Confirmed ${ids.length}${emailed ? ` — emailed ${emailed}` : ' — no emails sent (check addresses)'}.`);
+      setSelected(new Set());
+    } catch (e) {
+      setConfirmMsg((e.data || e.message)?.replace(/^.*Error:\s*/, '') || 'Confirm failed');
+    } finally {
+      setConfirmBusy(false);
+    }
+  }
+
+  function handleDrop(colId) {
+    setDragOverCol(null);
+    if (dragId) updateStatus({ id: dragId, status: colId }).catch(() => {});
+    setDragId(null);
+  }
+
+  return (
+    <div>
+      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center', marginBottom: '0.85rem' }}>
+        <input aria-label="Search creators" value={filterText} onChange={(e) => setFilterText(e.target.value)}
+          placeholder="Search by name, location, niche…" style={{ ...input, width: 220, padding: '0.4rem 0.65rem', fontSize: '0.76rem' }} />
+        <select aria-label="Filter by tier" value={tier} onChange={(e) => setTier(e.target.value)} style={{ ...input, padding: '0.4rem 0.6rem', fontSize: '0.76rem' }}>
+          <option value="">All tiers</option>
+          {TIERS.map((t) => <option key={t} value={t}>{t}</option>)}
+        </select>
+        <input aria-label="Filter by location" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Location" style={{ ...input, width: 130, padding: '0.4rem 0.6rem', fontSize: '0.76rem' }} />
+        <button onClick={toggleSelectAll}
+          style={{ padding: '0.35rem 0.8rem', borderRadius: 9999, border: '1px solid rgba(25,37,36,0.15)', background: allSelected ? '#192524' : 'transparent', color: allSelected ? '#fff' : '#3C5759', fontSize: '0.74rem', fontWeight: 600, cursor: 'pointer' }}>
+          {allSelected ? 'Deselect all' : 'Select all'}
+        </button>
+        <button onClick={bulkConfirm} disabled={confirmBusy || selected.size === 0}
+          title="Moves selected creators to Confirmed and sends the welcome email to each (best-effort)"
+          style={{ padding: '0.35rem 0.8rem', borderRadius: 9999, border: 'none', background: '#166534', color: '#fff', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer', opacity: (confirmBusy || selected.size === 0) ? 0.5 : 1 }}>
+          {confirmBusy ? 'Confirming…' : `Confirm selected (${selected.size})`}
+        </button>
+        <button onClick={bulkGenerate} disabled={bulkBusy || selected.size === 0}
+          title="Drafts an Instagram DM for each selected creator"
+          style={{ padding: '0.35rem 0.8rem', borderRadius: 9999, border: 'none', background: '#192524', color: '#fff', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer', opacity: (bulkBusy || selected.size === 0) ? 0.5 : 1 }}>
+          {bulkBusy ? 'Drafting…' : `Draft DMs for selected (${selected.size})`}
+        </button>
+        {bulkMsg && <span style={{ fontSize: '0.72rem', color: '#166534' }}>{bulkMsg}</span>}
+        {confirmMsg && <span style={{ fontSize: '0.72rem', color: '#166534' }}>{confirmMsg}</span>}
+      </div>
+
+      <div style={{ display: 'flex', gap: '1.25rem', overflowX: 'auto', paddingBottom: '0.5rem', alignItems: 'flex-start' }}>
+        {CREATOR_CRM_COLUMNS.map((col) => (
           <div key={col.id}
             onDragOver={(e) => { e.preventDefault(); setDragOverCol(col.id); }}
             onDragLeave={() => setDragOverCol((c) => (c === col.id ? null : c))}
@@ -1609,7 +1713,7 @@ export default function Discovery({ sidebarCollapsed, setSidebarCollapsed }) {
 
       {side === 'hosts'
         ? (hostView === 'outreach' ? <HostOutreachCampaign /> : <HostCrmBoard />)
-        : <ProspectPanel kind="creator" title="Creators" />}
+        : <CreatorCrmBoard />}
     </div>
   );
 }

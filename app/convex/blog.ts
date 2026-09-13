@@ -346,14 +346,29 @@ type ChatMessage = { role: string; content: string };
 // errors, the next configured provider is tried.
 export async function llmChat(messages: ChatMessage[], maxTokens = 2048, timeoutMs = 90_000): Promise<string> {
   const providers = [
-    // meta/llama-3.3-70b-instruct hung server-side on NVIDIA since 2026-07-03;
-    // its replacement, nvidia/llama-3.3-nemotron-super-49b-v1.5, then hit its
-    // NVIDIA-announced end-of-life on 2026-08-26 (HTTP 410 Gone) — checked
-    // against this account's actual enabled models on 2026-09-05, most of the
-    // /v1/models catalog 404s ("not found for account"). google/gemma-4-31b-it
-    // is a plain instruct model (not a reasoning model — no /no_think dance,
-    // no reasoning_content bleed) confirmed working live at that date.
     {
+      // Tried first — reliable and fast (confirmed live 2026-09-12, ~2-5s),
+      // unlike NVIDIA below. Paid tier of the model (was :free) — the free
+      // tier's shared rate limit (20 req/min, 200/day platform-wide) was
+      // getting hit under real usage; at this volume the paid tier costs
+      // fractions of a cent/month. Passes this workspace's ZDR guardrail
+      // (most non-ZDR providers/models on this OpenRouter key get
+      // hard-rejected with a 404 "guardrail" error; this one routes via
+      // Cloudflare, which clears it).
+      name: "OpenRouter",
+      key: process.env.OPENROUTER_API_KEY,
+      url: "https://openrouter.ai/api/v1/chat/completions",
+      model: "google/gemma-4-26b-a4b-it",
+    },
+    {
+      // Fallback only — this account's NVIDIA key reliably drops the
+      // connection under Convex's network path (traced to ~20-50s before
+      // aborting; confirmed repeatedly 2026-09-05 through 2026-09-12) even
+      // though the same model answers a direct curl in ~7s, and most of the
+      // /v1/models catalog 404s "not found for account" — looks like a
+      // restricted/free-tier limitation, not a model-choice problem.
+      // google/gemma-4-31b-it is a plain instruct model (not a reasoning
+      // model — no /no_think dance, no reasoning_content bleed).
       name: "NVIDIA",
       key: process.env.NVIDIA_API_KEY,
       url: "https://integrate.api.nvidia.com/v1/chat/completions",
@@ -364,19 +379,6 @@ export async function llmChat(messages: ChatMessage[], maxTokens = 2048, timeout
       key: process.env.DEEPSEEK_API_KEY,
       url: "https://api.deepseek.com/chat/completions",
       model: "deepseek-chat",
-    },
-    {
-      // Paid tier of the same model (was :free) — the free tier's shared
-      // rate limit (20 req/min, 200/day platform-wide) was getting hit under
-      // real usage. At this volume (dozens of DMs/day) the paid tier costs
-      // fractions of a cent/month. Confirmed live 2026-09-12, still passes
-      // this workspace's ZDR guardrail (most non-ZDR providers/models on
-      // this OpenRouter key get hard-rejected with a 404 "guardrail" error;
-      // this one routes via Cloudflare, which clears it).
-      name: "OpenRouter",
-      key: process.env.OPENROUTER_API_KEY,
-      url: "https://openrouter.ai/api/v1/chat/completions",
-      model: "google/gemma-4-26b-a4b-it",
     },
   ].filter((p) => !!p.key);
 

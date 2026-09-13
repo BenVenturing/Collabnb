@@ -3,6 +3,7 @@ import { query, mutation, action, internalAction, internalMutation, internalQuer
 import { internal, api } from "./_generated/api";
 import { llmChat } from "./blog";
 import { sendViaResend } from "./emailCopy";
+import { buildHostWelcomeEmailHtml, HOST_WELCOME_EMAIL_SUBJECT } from "./hostWelcomeEmail";
 import { requireAdmin, requireAdminAction, canAccessAdmin } from "./lib/auth";
 import { withSurfacedErrors } from "./lib/errors";
 
@@ -119,6 +120,10 @@ We're inviting our first 100 properties in as Founding Hosts — free, lifetime 
 // and wait for an explicit "Send" click, same manual-control philosophy).
 export const HOST_EMAIL_SEQUENCE: { step: number; name: string; subject: string; template: string; sendDelayDays: number }[] = [
   {
+    // Superseded by the branded HTML in hostWelcomeEmail.ts — runHostEmailKickoff
+    // skips this entry (HOST_EMAIL_SEQUENCE.slice(1)) and builds step 1 from
+    // there instead. Left here so `step` numbering/indexing for steps 2-3
+    // below doesn't shift, and as a plain-text reference for the same copy.
     step: 1,
     name: "Intro",
     subject: "Inviting [Hotel Name] to Collabnb as a Founding Host",
@@ -909,19 +914,31 @@ async function runHostEmailKickoff(ctx: any, id: any): Promise<{ sent: boolean; 
   const marketingEmail = await findMarketingEmail(p);
   if (!marketingEmail) return { sent: false, reason: "No email address found — add one manually on this host, then try again" };
 
-  const drafted = await Promise.all(HOST_EMAIL_SEQUENCE.map((step) => draftHostEmail(p, step)));
-  const emailSequence = HOST_EMAIL_SEQUENCE.map((step, i) => ({
-    step: step.step,
-    subject: drafted[i].subject,
-    body: drafted[i].body,
-    sent_at: undefined as number | undefined,
-  }));
+  // Step 1 is the branded HTML welcome email — fixed layout, so it's a
+  // plain string substitution, not an LLM rewrite (which would risk
+  // mangling the markup). Steps 2-3 stay the LLM-adapted plain-text
+  // follow-ups. emailSequence[0].body stores the final rendered HTML
+  // itself, so a retry via sendSequenceEmail can resend it verbatim.
+  const name = p.display_name || `@${p.instagram_handle}`;
+  const step1Html = buildHostWelcomeEmailHtml(name);
+  const step1Subject = HOST_WELCOME_EMAIL_SUBJECT.replace(/\{\{HOTEL_NAME\}\}/g, name);
+
+  const followUps = await Promise.all(HOST_EMAIL_SEQUENCE.slice(1).map((step) => draftHostEmail(p, step)));
+  const emailSequence = [
+    { step: 1, subject: step1Subject, body: step1Html, sent_at: undefined as number | undefined },
+    ...HOST_EMAIL_SEQUENCE.slice(1).map((step, i) => ({
+      step: step.step,
+      subject: followUps[i].subject,
+      body: followUps[i].body,
+      sent_at: undefined as number | undefined,
+    })),
+  ];
 
   const apiKey = process.env.RESEND_API_KEY;
   let sendError: string | undefined;
   if (apiKey) {
     try {
-      await sendViaResend(apiKey, marketingEmail, emailSequence[0].subject, textToEmailHtml(emailSequence[0].body));
+      await sendViaResend(apiKey, marketingEmail, emailSequence[0].subject, emailSequence[0].body);
       emailSequence[0].sent_at = Date.now();
     } catch (e: any) {
       sendError = e?.message || "Resend send failed";
@@ -1004,7 +1021,11 @@ export const sendSequenceEmail = action({
 
     const apiKey = process.env.RESEND_API_KEY;
     if (!apiKey) throw new Error("RESEND_API_KEY not configured in Convex environment.");
-    await sendViaResend(apiKey, p.marketing_email, entry.subject, textToEmailHtml(entry.body));
+    // Step 1's body is already the full rendered branded HTML (see
+    // runHostEmailKickoff) — sending it through textToEmailHtml would
+    // double-wrap and mangle it. Steps 2-3 are plain text needing the wrap.
+    const html = step === 1 ? entry.body : textToEmailHtml(entry.body);
+    await sendViaResend(apiKey, p.marketing_email, entry.subject, html);
 
     const updatedSequence = p.email_sequence.map((e: any) => (e.step === step ? { ...e, sent_at: Date.now() } : e));
     await ctx.runMutation(internal.prospects.markSequenceStepSent, { id, emailSequence: updatedSequence });

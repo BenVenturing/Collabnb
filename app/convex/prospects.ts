@@ -4,6 +4,7 @@ import { internal, api } from "./_generated/api";
 import { llmChat } from "./blog";
 import { sendViaResend } from "./emailCopy";
 import { buildHostWelcomeEmailHtml, HOST_WELCOME_EMAIL_SUBJECT } from "./hostWelcomeEmail";
+import { buildCreatorWelcomeEmailHtml, CREATOR_WELCOME_EMAIL_SUBJECT } from "./creatorWelcomeEmail";
 import { requireAdmin, requireAdminAction, canAccessAdmin } from "./lib/auth";
 import { withSurfacedErrors } from "./lib/errors";
 
@@ -67,14 +68,14 @@ I ask because we built Collabnb specifically to solve that — vetted creators w
 
 {STATS}
 
-We're inviting our first 100 properties in as Founding Hosts this July — free, lifetime access. Would love for you to take a look: https://www.collabnb.com/`,
+We're inviting our first 100 properties in as Founding Hosts — free, lifetime access. Would love for you to take a look: https://www.collabnb.com/`,
   },
   {
     id: "social_proof",
     name: "Social Proof / Momentum",
     template: `Hi!
 
-We've been searching for some incredible boutique stays to onboard onto our creator-host platform, Collabnb. [Hotel Name] seemed like an excellent option. 🌿
+We've been searching for some incredible hotels, villas, and boutique stays to onboard onto our creator-host platform, Collabnb. [Hotel Name] seemed like an excellent option. 🌿
 
 We connect properties like yours with vetted content creators for paid collaborations — no more sifting through DMs hoping someone's a good fit.
 
@@ -91,14 +92,14 @@ I'm Benjamin, founder of Collabnb — we help properties like yours connect with
 
 {STATS}
 
-We're inviting our first 100 hosts in as founding members this July, completely free. Would love for you to check it out: https://www.collabnb.com/`,
+We're inviting our first 100 hosts in as founding members, completely free. Would love for you to check it out: https://www.collabnb.com/`,
   },
   {
     id: "data_stat",
     name: "Data / Stat-Led",
     template: `Hi! Did you know 92% of travelers trust a creator's recommendation over a traditional ad? 📊
 
-That's exactly why we built Collabnb — connecting boutique stays like [Hotel Name] with vetted creators for paid collaborations, so you get authentic content without the guesswork. We're welcoming our first 100 Founding Hosts this July, free for life.
+That's exactly why we built Collabnb — connecting hotels, villas, and boutique stays like [Hotel Name] with vetted creators for paid collaborations, so you get authentic content without the guesswork. We're welcoming our first 100 Founding Hosts, free for life.
 
 Here's a look: https://www.collabnb.com/`,
   },
@@ -1006,6 +1007,69 @@ export const saveEmailSequence = internalMutation({
   },
 });
 
+// Creator analog of runHostEmailKickoff/sendHostEmailNow above — same "an
+// email goes out first" pattern and the same branded template style, but the
+// address is whatever was already on file from their Instagram bio (creators
+// don't have a business website to scrape a marketing address from, so there's
+// no findMarketingEmail step), and there's no multi-step drip — just the one
+// welcome email. Fires automatically right after a creator is confirmed into
+// the pipeline (see the "Confirm selected" button in CreatorCrmBoard),
+// best-effort so one missing address never blocks the rest of the batch; the
+// "Email" button on an Emailed-eligible card in the CRM board calls the same
+// action for a retry or for creators confirmed before this existed.
+async function runCreatorEmailKickoff(ctx: any, id: any): Promise<{ sent: boolean; reason?: string }> {
+  const p: any = await ctx.runQuery(internal.prospects.getById, { id });
+  if (!p) return { sent: false, reason: "Prospect not found" };
+  const email = p.email;
+  if (!email) return { sent: false, reason: "No email on file for this creator — add one manually (e.g. from their bio), then try again" };
+
+  const name = p.display_name || `@${p.instagram_handle}`;
+  const html = buildCreatorWelcomeEmailHtml(name);
+  const subject = CREATOR_WELCOME_EMAIL_SUBJECT.replace(/\{\{CREATOR_NAME\}\}/g, name);
+
+  const apiKey = process.env.RESEND_API_KEY;
+  let sendError: string | undefined;
+  let sentAt: number | undefined;
+  if (apiKey) {
+    try {
+      await sendViaResend(apiKey, email, subject, html);
+      sentAt = Date.now();
+    } catch (e: any) {
+      sendError = e?.message || "Resend send failed";
+    }
+  } else {
+    sendError = "RESEND_API_KEY not configured in Convex environment.";
+  }
+
+  await ctx.runMutation(internal.prospects.saveCreatorEmailSent, { id, email, subject, body: html, sentAt });
+  return sentAt ? { sent: true } : { sent: false, reason: sendError };
+}
+
+export const sendCreatorEmailNow = action({
+  args: { id: v.id("prospects") },
+  handler: async (ctx, { id }) => {
+    await requireAdminAction(ctx, api.profiles.getByClerkUserId);
+    const result = await runCreatorEmailKickoff(ctx, id);
+    if (!result.sent) throw new Error(result.reason || "Could not send");
+    return result;
+  },
+});
+
+export const saveCreatorEmailSent = internalMutation({
+  args: { id: v.id("prospects"), email: v.string(), subject: v.string(), body: v.string(), sentAt: v.optional(v.number()) },
+  handler: async (ctx, { id, email, subject, body, sentAt }) => {
+    const p = await ctx.db.get(id);
+    const log = (p as any)?.outreach_log || [];
+    await ctx.db.patch(id, {
+      email_sequence: [{ step: 1, subject, body, sent_at: sentAt }],
+      ...(sentAt ? { status: "emailed" } : {}),
+      outreach_log: sentAt
+        ? [...log, { at: Date.now(), type: "email_sent", note: `Welcome email to ${email}` }]
+        : log,
+    });
+  },
+});
+
 // Sends a not-yet-sent step (2 or 3) of the email sequence on explicit
 // admin click — steps 2-3 never send on their own.
 export const sendSequenceEmail = action({
@@ -1323,6 +1387,36 @@ export const importFromApify = action({
   },
 });
 
+// Bulk import from a CSV file the admin already has (e.g. a curated list, or
+// an export from somewhere else) — the "Import" tool's other path alongside
+// the live Instagram search above. Parsing happens client-side; this just
+// dedupes and inserts the rows it's handed.
+export const importCsvRows = action({
+  args: {
+    kind: v.string(), // 'creator' | 'host'
+    rows: v.array(
+      v.object({
+        instagram_handle: v.string(),
+        display_name: v.optional(v.string()),
+        location: v.optional(v.string()),
+        niche: v.optional(v.string()),
+        follower_count: v.optional(v.number()),
+        email: v.optional(v.string()),
+        bio: v.optional(v.string()),
+        website: v.optional(v.string()),
+      })
+    ),
+  },
+  handler: withSurfacedErrors(async (ctx, args): Promise<{ inserted: number; fetched: number }> => {
+    await requireAdminAction(ctx, api.profiles.getByClerkUserId);
+    const rows = args.rows
+      .filter((r) => r.instagram_handle?.trim())
+      .map((r) => ({ ...r, kind: args.kind, source: "csv" }));
+    const { inserted } = await ctx.runMutation(internal.prospects.bulkInsert, { rows });
+    return { inserted, fetched: rows.length };
+  }),
+});
+
 // ─── Enrichment & scoring ─────────────────────────────────────────────────────
 
 export const getByHandles = internalQuery({
@@ -1490,17 +1584,61 @@ export const getPendingAgentReach = internalQuery({
   },
 });
 
+// Writes live progress for a discovery run to admin_settings, where it's
+// picked up by the client's existing (already-subscribed) getSettings query
+// — no separate polling/streaming mechanism needed, Convex's reactivity
+// covers it for free while the triggering action is still in flight.
+async function writeRunProgress(ctx: any, key: string, data: Record<string, any>) {
+  await ctx.runMutation(internal.admin.setSettingInternal, {
+    key: `discovery_run:${key}`,
+    value: JSON.stringify({ ...data, updatedAt: Date.now() }),
+  });
+}
+
 // Shared flow: search Instagram for a niche (+ optional location), import new
 // creators, enrich the top N by follower count, return the ranked results.
+// Tries each niche keyword synonym (with, then without, location) rather than
+// just the first one — a single literal phrase like "beach creator Thailand"
+// often matches nothing on Instagram's account search even when the niche
+// has real results under a different synonym or without the location term.
+// Stops early once `target` unique accounts are found.
 async function discoverAndScore(
   ctx: any,
-  opts: { niche: string; location?: string; importLimit?: number; enrichTop?: number }
+  opts: {
+    niche: string;
+    location?: string;
+    target?: number;
+    enrichTop?: number;
+    onProgress?: (p: { found: number; attempts: number; maxAttempts: number }) => Promise<void> | void;
+  }
 ): Promise<{ imported: number; fetched: number; ranked: any[] }> {
-  const keywords = NICHE_SEARCH_TERMS[opts.niche] || [opts.niche];
-  const searchQuery = [keywords[0], "creator", opts.location].filter(Boolean).join(" ");
-  const limit = Math.min(opts.importLimit ?? 30, 100);
+  const target = Math.min(opts.target ?? 30, 100);
+  const perCallLimit = Math.min(Math.max(target * 2, 30), 100);
+  const keywordVariants = NICHE_SEARCH_TERMS[opts.niche] || [opts.niche];
+  const queries = [
+    ...keywordVariants.map((kw) => [kw, "creator", opts.location].filter(Boolean).join(" ")),
+    ...(opts.location ? keywordVariants.map((kw) => [kw, opts.location].filter(Boolean).join(" ")) : []),
+  ];
 
-  const accounts = await searchInstagramUsers(searchQuery, limit);
+  const seen = new Set<string>();
+  const accounts: IgAccount[] = [];
+  for (let i = 0; i < queries.length; i++) {
+    if (opts.onProgress) await opts.onProgress({ found: accounts.length, attempts: i, maxAttempts: queries.length });
+    if (accounts.length >= target) break;
+    let batch: IgAccount[] = [];
+    try {
+      batch = await searchInstagramUsers(queries[i], perCallLimit);
+    } catch {
+      continue; // one bad query variant shouldn't kill the whole run
+    }
+    for (const acc of batch) {
+      const key = acc.username.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      accounts.push(acc);
+    }
+  }
+  if (opts.onProgress) await opts.onProgress({ found: accounts.length, attempts: queries.length, maxAttempts: queries.length });
 
   const rows = accounts.map((acc) => ({
     kind: "creator",
@@ -1546,7 +1684,7 @@ export const searchCreators = action({
     return await discoverAndScore(ctx, {
       niche: args.niche,
       location: args.location,
-      importLimit: args.limit,
+      target: args.limit,
       enrichTop: 10,
     });
   },
@@ -1554,18 +1692,30 @@ export const searchCreators = action({
 
 // Manual override for the daily creator-discovery cron below — same
 // discoverAndScore call, but for one profile on demand (the "Run now" button
-// in AutoDiscoveryCard) instead of waiting for 7am UTC.
+// in AutoDiscoveryCard) instead of waiting for 7am UTC. Reports live progress
+// to admin_settings under `discovery_run:creator:<profileId>` so the button
+// can show a progress bar instead of a single blocking spinner.
 export const runDiscoveryProfileNow = action({
-  args: { niche: v.string(), location: v.optional(v.string()), perDay: v.optional(v.number()) },
+  args: { profileId: v.string(), niche: v.string(), location: v.optional(v.string()), perDay: v.optional(v.number()) },
   handler: withSurfacedErrors(async (ctx, args): Promise<{ imported: number; fetched: number }> => {
     await requireAdminAction(ctx, api.profiles.getByClerkUserId);
-    const { imported, fetched } = await discoverAndScore(ctx, {
-      niche: args.niche,
-      location: args.location || undefined,
-      importLimit: 30,
-      enrichTop: Math.min(args.perDay ?? 10, 20),
-    });
-    return { imported, fetched };
+    const target = Math.min(args.perDay ?? 10, 20);
+    const progressKey = `creator:${args.profileId}`;
+    await writeRunProgress(ctx, progressKey, { status: "running", target, found: 0, attempts: 0, maxAttempts: 0 });
+    try {
+      const { imported, fetched } = await discoverAndScore(ctx, {
+        niche: args.niche,
+        location: args.location || undefined,
+        target,
+        enrichTop: target,
+        onProgress: (p) => writeRunProgress(ctx, progressKey, { status: "running", target, ...p }),
+      });
+      await writeRunProgress(ctx, progressKey, { status: "done", target, found: fetched, imported });
+      return { imported, fetched };
+    } catch (e: any) {
+      await writeRunProgress(ctx, progressKey, { status: "error", target, message: e?.message || String(e) });
+      throw e;
+    }
   }),
 });
 
@@ -1591,7 +1741,7 @@ export const runDailyDiscovery = internalAction({
       const { imported } = await discoverAndScore(ctx, {
         niche: profile.niche,
         location: profile.location || undefined,
-        importLimit: 30,
+        target: Math.min(profile.perDay ?? 10, 20),
         enrichTop: Math.min(profile.perDay ?? 10, 20),
       });
       results.push({ niche: profile.niche, location: profile.location || undefined, imported });

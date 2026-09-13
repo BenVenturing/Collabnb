@@ -1,9 +1,9 @@
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { query, mutation, action, internalAction, internalMutation, internalQuery } from "./_generated/server";
 import { internal, api } from "./_generated/api";
 import { llmChat } from "./blog";
 import { sendViaResend } from "./emailCopy";
-import { buildHostWelcomeEmailHtml, HOST_WELCOME_EMAIL_SUBJECT } from "./hostWelcomeEmail";
+import { renderHostWelcomeEmailHtml, DEFAULT_HOST_WELCOME_EMAIL_TEMPLATE, HOST_WELCOME_EMAIL_SUBJECT } from "./hostWelcomeEmail";
 import { buildCreatorWelcomeEmailHtml, CREATOR_WELCOME_EMAIL_SUBJECT } from "./creatorWelcomeEmail";
 import { requireAdmin, requireAdminAction, canAccessAdmin } from "./lib/auth";
 import { withSurfacedErrors } from "./lib/errors";
@@ -774,12 +774,113 @@ async function mapWithConcurrency<T, R>(items: T[], limit: number, fn: (item: T,
   return results;
 }
 
-function nextAngle(counts: Record<string, number>): (typeof HOST_OUTREACH_TEMPLATES)[number] {
-  const sorted = [...HOST_OUTREACH_TEMPLATES].sort((a, b) => (counts[a.id] || 0) - (counts[b.id] || 0));
+function nextAngle(templates: typeof HOST_OUTREACH_TEMPLATES, counts: Record<string, number>): (typeof HOST_OUTREACH_TEMPLATES)[number] {
+  const sorted = [...templates].sort((a, b) => (counts[a.id] || 0) - (counts[b.id] || 0));
   const angle = sorted[0];
   counts[angle.id] = (counts[angle.id] || 0) + 1;
   return angle;
 }
+
+// Admin-editable overrides for the 5 DM angle templates, stored in
+// admin_settings under 'host_dm_angles' as {[angleId]: templateText} —
+// same "defaults in code, admin overrides in the DB, merged at read time"
+// pattern as TEMPLATE_DEFAULTS in emailCopy.ts. Any angle without an
+// override just uses its hardcoded default.
+async function getHostDmAngleOverrides(ctx: any): Promise<Record<string, string>> {
+  const settings: Record<string, string> = await ctx.runQuery(internal.admin.getSettingsInternal, {});
+  try { return JSON.parse(settings.host_dm_angles || "null") || {}; } catch { return {}; }
+}
+
+async function resolveHostOutreachTemplates(ctx: any): Promise<typeof HOST_OUTREACH_TEMPLATES> {
+  const overrides = await getHostDmAngleOverrides(ctx);
+  return HOST_OUTREACH_TEMPLATES.map((t) => (overrides[t.id] ? { ...t, template: overrides[t.id] } : t));
+}
+
+export const getHostDmAngles = query({
+  args: {},
+  handler: async (ctx) => {
+    if (!(await canAccessAdmin(ctx))) return [];
+    const row = await ctx.db.query("admin_settings").withIndex("by_key", (q) => q.eq("key", "host_dm_angles")).first();
+    let overrides: Record<string, string> = {};
+    try { overrides = JSON.parse(row?.value || "null") || {}; } catch { /* bad JSON = no overrides */ }
+    return HOST_OUTREACH_TEMPLATES.map((t) => ({
+      id: t.id,
+      name: t.name,
+      template: overrides[t.id] ?? t.template,
+      isCustom: !!overrides[t.id],
+    }));
+  },
+});
+
+export const setHostDmAngle = mutation({
+  args: { id: v.string(), template: v.string() },
+  handler: async (ctx, { id, template }) => {
+    await requireAdmin(ctx);
+    const row = await ctx.db.query("admin_settings").withIndex("by_key", (q) => q.eq("key", "host_dm_angles")).first();
+    let overrides: Record<string, string> = {};
+    try { overrides = JSON.parse(row?.value || "null") || {}; } catch { /* bad JSON = start fresh */ }
+    overrides[id] = template;
+    const value = JSON.stringify(overrides);
+    if (row) await ctx.db.patch(row._id, { value });
+    else await ctx.db.insert("admin_settings", { key: "host_dm_angles", value });
+  },
+});
+
+export const resetHostDmAngle = mutation({
+  args: { id: v.string() },
+  handler: async (ctx, { id }) => {
+    await requireAdmin(ctx);
+    const row = await ctx.db.query("admin_settings").withIndex("by_key", (q) => q.eq("key", "host_dm_angles")).first();
+    if (!row) return;
+    let overrides: Record<string, string> = {};
+    try { overrides = JSON.parse(row.value || "null") || {}; } catch { return; }
+    delete overrides[id];
+    await ctx.db.patch(row._id, { value: JSON.stringify(overrides) });
+  },
+});
+
+// Raw-HTML override for the branded welcome email — stored whole (not
+// broken into fields) under admin_settings 'host_welcome_email_html', since
+// Ben wanted to drop in a full replacement exported from an email builder
+// rather than edit paragraphs individually. Must still contain {{HOTEL_NAME}}
+// somewhere to personalize; renderHostWelcomeEmailHtml just no-ops the
+// substitution if it doesn't, so a missing token degrades to un-personalized
+// rather than throwing.
+async function getEffectiveHostWelcomeEmailTemplate(ctx: any): Promise<string> {
+  const row = await ctx.db.query("admin_settings").withIndex("by_key", (q: any) => q.eq("key", "host_welcome_email_html")).first();
+  return row?.value || DEFAULT_HOST_WELCOME_EMAIL_TEMPLATE;
+}
+
+export const getHostWelcomeEmailHtml = query({
+  args: {},
+  handler: async (ctx) => {
+    if (!(await canAccessAdmin(ctx))) return null;
+    const row = await ctx.db.query("admin_settings").withIndex("by_key", (q) => q.eq("key", "host_welcome_email_html")).first();
+    return { template: row?.value || DEFAULT_HOST_WELCOME_EMAIL_TEMPLATE, isCustom: !!row?.value };
+  },
+});
+
+export const setHostWelcomeEmailHtml = mutation({
+  args: { html: v.string() },
+  handler: async (ctx, { html }) => {
+    await requireAdmin(ctx);
+    if (!html.includes("{{HOTEL_NAME}}")) {
+      throw new ConvexError("The HTML needs a {{HOTEL_NAME}} placeholder somewhere so each host gets personalized — add it wherever the listing name should appear.");
+    }
+    const row = await ctx.db.query("admin_settings").withIndex("by_key", (q) => q.eq("key", "host_welcome_email_html")).first();
+    if (row) await ctx.db.patch(row._id, { value: html });
+    else await ctx.db.insert("admin_settings", { key: "host_welcome_email_html", value: html });
+  },
+});
+
+export const resetHostWelcomeEmailHtml = mutation({
+  args: {},
+  handler: async (ctx) => {
+    await requireAdmin(ctx);
+    const row = await ctx.db.query("admin_settings").withIndex("by_key", (q) => q.eq("key", "host_welcome_email_html")).first();
+    if (row) await ctx.db.delete(row._id);
+  },
+});
 
 // Adapts a fixed angle template to one host's real facts via the writer LLM —
 // shared by the single-card generator, bulk-select generator, and pool Confirm.
@@ -851,10 +952,11 @@ export const generateDraftsForSelected = action({
   handler: async (ctx, { ids }): Promise<{ drafted: number }> => {
     await requireAdminAction(ctx, api.profiles.getByClerkUserId);
     const counts: Record<string, number> = await ctx.runQuery(internal.prospects.getHostAngleCounts, {});
+    const templates = await resolveHostOutreachTemplates(ctx);
     const results = await mapWithConcurrency(ids, 5, async (id) => {
       const p: any = await ctx.runQuery(internal.prospects.getById, { id });
       if (!p || p.kind !== "host") return false;
-      const angle = nextAngle(counts);
+      const angle = nextAngle(templates, counts);
       const dmDraft = await draftHostMessage(p, angle);
       await ctx.runMutation(internal.prospects.saveHostDraft, { id: p._id, dmDraft, dmAngle: angle.id });
       return true;
@@ -921,7 +1023,8 @@ async function runHostEmailKickoff(ctx: any, id: any): Promise<{ sent: boolean; 
   // follow-ups. emailSequence[0].body stores the final rendered HTML
   // itself, so a retry via sendSequenceEmail can resend it verbatim.
   const name = p.display_name || `@${p.instagram_handle}`;
-  const step1Html = buildHostWelcomeEmailHtml(name);
+  const step1Template = await getEffectiveHostWelcomeEmailTemplate(ctx);
+  const step1Html = renderHostWelcomeEmailHtml(step1Template, name);
   const step1Subject = HOST_WELCOME_EMAIL_SUBJECT.replace(/\{\{HOTEL_NAME\}\}/g, name);
 
   const followUps = await Promise.all(HOST_EMAIL_SEQUENCE.slice(1).map((step) => draftHostEmail(p, step)));
@@ -1123,10 +1226,11 @@ export const confirmHostBatch = action({
   args: { ids: v.array(v.id("prospects")) },
   handler: async (ctx, { ids }): Promise<{ confirmed: number }> => {
     await requireAdminAction(ctx, api.profiles.getByClerkUserId);
+    const templates = await resolveHostOutreachTemplates(ctx);
     const results = await mapWithConcurrency(ids, 5, async (id, i) => {
       const p: any = await ctx.runQuery(internal.prospects.getById, { id });
       if (!p || p.kind !== "host" || p.published) return false; // don't re-draft an already-sent one
-      const angle = HOST_OUTREACH_TEMPLATES[i % HOST_OUTREACH_TEMPLATES.length];
+      const angle = templates[i % templates.length];
       const dmDraft = await draftHostMessage(p, angle);
       await ctx.runMutation(internal.prospects.confirmDraft, { id: p._id, dmDraft, dmAngle: angle.id });
       await ctx.runAction(internal.prospects.kickoffHostEmailSequence, { id: p._id }).catch(() => {});
@@ -1248,10 +1352,11 @@ export const generateDmDraft = action({
     if (!p) throw new Error("Prospect not found");
 
     if (p.kind === "host") {
-      let angle = HOST_OUTREACH_TEMPLATES.find((a) => a.id === angleId);
+      const templates = await resolveHostOutreachTemplates(ctx);
+      let angle = templates.find((a) => a.id === angleId);
       if (!angle) {
         const counts: Record<string, number> = await ctx.runQuery(internal.prospects.getHostAngleCounts, {});
-        angle = nextAngle(counts);
+        angle = nextAngle(templates, counts);
       }
       const dmDraft = await draftHostMessage(p, angle);
       await ctx.runMutation(internal.prospects.saveHostDraft, { id, dmDraft, dmAngle: angle.id });

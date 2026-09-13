@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useQuery, useMutation, useAction } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { NICHE_KEYWORDS } from '../../lib/matchScore';
@@ -13,7 +13,7 @@ const HOST_STATUS_FLOW = ['new', 'queued', 'emailed', 'contacted', 'replied', 's
 const CREATOR_STATUS_FLOW = ['new', 'queued', 'emailed', 'contacted', 'replied', 'signed'];
 const STATUS_CFG = {
   new:       { label: 'New',       bg: 'rgba(25,37,36,0.06)',    color: '#3C5759' },
-  queued:    { label: 'Queued',    bg: 'rgba(212,168,67,0.15)',  color: '#b45309' },
+  queued:    { label: 'Confirmed', bg: 'rgba(212,168,67,0.15)',  color: '#b45309' },
   emailed:   { label: 'Emailed',   bg: 'rgba(212,168,67,0.15)',  color: '#b45309' }, // set automatically right after Confirm, for both kinds
   contacted: { label: 'DMed',      bg: 'rgba(123,104,200,0.14)', color: '#5b4aa8' },
   replied:   { label: 'Responded', bg: 'rgba(74,155,127,0.15)',  color: '#2d7d5e' },
@@ -104,6 +104,26 @@ function bestPost(p) {
   return (p.recent_posts || [])
     .slice()
     .sort((a, b) => ((b.views ?? b.likes ?? 0) - (a.views ?? a.likes ?? 0)))[0];
+}
+
+// Avatar with a graceful initials fallback — Instagram's scraped avatar URLs
+// (from Apify/HikerAPI) are short-lived/session-scoped CDN links that
+// frequently go stale, so a broken <img> swaps itself out for initials
+// instead of showing the browser's broken-image icon.
+function Avatar({ url, name, size = 34 }) {
+  const [broken, setBroken] = useState(false);
+  const initials = (name || '?')[0]?.toUpperCase();
+  if (!url || broken) {
+    return (
+      <div style={{ width: size, height: size, borderRadius: '50%', background: 'rgba(149,157,144,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: Math.round(size * 0.24), fontWeight: 700, color: '#3C5759', flexShrink: 0 }}>
+        {initials}
+      </div>
+    );
+  }
+  return (
+    <img src={url} alt="" onError={() => setBroken(true)}
+      style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+  );
 }
 
 // ─── Single prospect card ─────────────────────────────────────────────────────
@@ -245,11 +265,7 @@ function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
           <input type="checkbox" aria-label={`Select @${prospect.instagram_handle}`} checked={!!selected}
             onChange={() => onToggleSelect(prospect._id)} style={{ flexShrink: 0 }} />
         )}
-        {prospect.avatar_url
-          ? <img src={prospect.avatar_url} alt="" style={{ width: 34, height: 34, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
-          : <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'rgba(149,157,144,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: 700, color: '#3C5759', flexShrink: 0 }}>
-              {(prospect.display_name || prospect.instagram_handle)[0]?.toUpperCase()}
-            </div>}
+        <Avatar url={prospect.avatar_url} name={prospect.display_name || prospect.instagram_handle} size={34} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
             <a href={`https://instagram.com/${prospect.instagram_handle}`} target="_blank" rel="noopener noreferrer"
@@ -690,9 +706,7 @@ function FindCreators() {
               return (
                 <div key={String(p._id)} style={{ display: 'flex', gap: '0.7rem', alignItems: 'center', padding: '0.55rem 0.65rem', borderRadius: '0.75rem', background: 'rgba(255,255,255,0.72)', border: '1px solid rgba(25,37,36,0.07)' }}>
                   <span style={{ fontSize: '0.7rem', color: '#646B62', width: 16, textAlign: 'right', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>{i + 1}</span>
-                  {p.avatar_url
-                    ? <img src={p.avatar_url} alt="" style={{ width: 30, height: 30, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
-                    : <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'rgba(149,157,144,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 700, color: '#3C5759', flexShrink: 0 }}>{p.instagram_handle[0]?.toUpperCase()}</div>}
+                  <Avatar url={p.avatar_url} name={p.display_name || p.instagram_handle} size={30} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
                       <a href={`https://instagram.com/${p.instagram_handle}`} target="_blank" rel="noopener noreferrer"
@@ -1282,6 +1296,8 @@ function CreatorCrmBoard() {
   const [tier, setTier] = useState('');
   const [location, setLocation] = useState('');
   const [filterText, setFilterText] = useState('');
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [suggestOpen, setSuggestOpen] = useState(false);
   const [selected, setSelected] = useState(() => new Set());
   const [dragId, setDragId] = useState(null);
   const [dragOverCol, setDragOverCol] = useState(null);
@@ -1300,23 +1316,23 @@ function CreatorCrmBoard() {
     location: location || undefined,
   }) || [];
 
-  // getByKind sorts by fit score (best for hosts, where quality ranking is
-  // what matters) — creators need the newest arrivals surfaced instead, so
-  // whatever just got confirmed or imported is easy to find without hunting.
-  const filtered = creators
-    .filter((p) => {
-      if (!filterText.trim()) return true;
-      const t = filterText.toLowerCase();
-      return p.instagram_handle.toLowerCase().includes(t)
-        || (p.display_name || '').toLowerCase().includes(t)
-        || (p.location || '').toLowerCase().includes(t)
-        || (p.niche || '').toLowerCase().includes(t);
-    })
-    .sort((a, b) => (b.created_at ?? 0) - (a.created_at ?? 0));
+  // getByKind sorts by fit score (best for hosts' pool, where quality
+  // ranking matters) — creators need the newest arrivals surfaced instead,
+  // so whatever just got confirmed/emailed/DMed or freshly imported is easy
+  // to find without hunting. Same lastActivityAt used by HostCrmBoard.
+  const filtered = creators.filter((p) => {
+    if (!filterText.trim()) return true;
+    const t = filterText.toLowerCase();
+    return p.instagram_handle.toLowerCase().includes(t)
+      || (p.display_name || '').toLowerCase().includes(t)
+      || (p.location || '').toLowerCase().includes(t)
+      || (p.niche || '').toLowerCase().includes(t);
+  });
 
   const byColumn = {};
   for (const col of CREATOR_CRM_COLUMNS) byColumn[col.id] = [];
   for (const p of filtered) (byColumn[p.status] || byColumn.new).push(p);
+  for (const col of CREATOR_CRM_COLUMNS) byColumn[col.id].sort((a, b) => lastActivityAt(b) - lastActivityAt(a));
 
   const allSelected = filtered.length > 0 && filtered.every((p) => selected.has(String(p._id)));
   function toggleSelectAll() {
@@ -1330,6 +1346,37 @@ function CreatorCrmBoard() {
       return next;
     });
   }
+
+  // Select every card in one column without touching selections elsewhere —
+  // the toolbar's "Select all" spans every column, which isn't what you want
+  // when you're only working through, say, the New column right now.
+  function toggleColumn(colId) {
+    const ids = byColumn[colId].map((p) => String(p._id));
+    const allIn = ids.length > 0 && ids.every((id) => selected.has(id));
+    setSelected((prev) => {
+      const next = new Set(prev);
+      ids.forEach((id) => (allIn ? next.delete(id) : next.add(id)));
+      return next;
+    });
+  }
+
+  const activeFilterCount = (tier ? 1 : 0) + (location ? 1 : 0);
+
+  // Lightweight autocomplete off the pool already loaded client-side — not a
+  // separate search index, just distinct values matching what's typed so far.
+  const suggestions = (() => {
+    if (!filterText.trim()) return [];
+    const t = filterText.toLowerCase();
+    const vals = new Set();
+    for (const p of creators) {
+      if (p.display_name?.toLowerCase().includes(t)) vals.add(p.display_name);
+      if (p.instagram_handle.toLowerCase().includes(t)) vals.add(`@${p.instagram_handle}`);
+      if (p.location?.toLowerCase().includes(t)) vals.add(p.location);
+      if (p.niche?.toLowerCase().includes(t)) vals.add(p.niche);
+      if (vals.size >= 8) break;
+    }
+    return [...vals].slice(0, 8);
+  })();
 
   async function bulkGenerate() {
     if (selected.size === 0) return;
@@ -1375,13 +1422,47 @@ function CreatorCrmBoard() {
   return (
     <div>
       <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center', marginBottom: '0.85rem' }}>
-        <input aria-label="Search creators" value={filterText} onChange={(e) => setFilterText(e.target.value)}
-          placeholder="Search by name, location, niche…" style={{ ...input, width: 220, padding: '0.4rem 0.65rem', fontSize: '0.76rem' }} />
-        <select aria-label="Filter by tier" value={tier} onChange={(e) => setTier(e.target.value)} style={{ ...input, padding: '0.4rem 0.6rem', fontSize: '0.76rem' }}>
-          <option value="">All tiers</option>
-          {TIERS.map((t) => <option key={t} value={t}>{t}</option>)}
-        </select>
-        <input aria-label="Filter by location" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Location" style={{ ...input, width: 130, padding: '0.4rem 0.6rem', fontSize: '0.76rem' }} />
+        <div style={{ position: 'relative', flex: '1 1 220px', minWidth: 200 }}>
+          <input aria-label="Search creators" value={filterText}
+            onChange={(e) => { setFilterText(e.target.value); setSuggestOpen(true); }}
+            onFocus={() => setSuggestOpen(true)}
+            onBlur={() => setTimeout(() => setSuggestOpen(false), 150)}
+            placeholder="Search by name, handle, location, niche…"
+            style={{ ...input, width: '100%', padding: '0.4rem 2.2rem 0.4rem 0.65rem', fontSize: '0.76rem' }} />
+          <button onClick={() => setFilterOpen((o) => !o)} aria-label="Tier and location filters" title="Filter by tier or location"
+            style={{ position: 'absolute', right: 4, top: '50%', transform: 'translateY(-50%)', width: 24, height: 24, borderRadius: '50%', border: 'none', background: activeFilterCount ? 'rgba(123,104,200,0.15)' : 'transparent', color: activeFilterCount ? '#5b4aa8' : '#646B62', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16l-6.5 8.5v6L10.5 20v-7.5L4 4z"/></svg>
+            {activeFilterCount > 0 && <span style={{ position: 'absolute', top: 1, right: 1, width: 7, height: 7, borderRadius: '50%', background: '#5b4aa8' }} />}
+          </button>
+
+          {suggestOpen && suggestions.length > 0 && (
+            <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, marginTop: 4, background: '#fff', border: '1px solid rgba(25,37,36,0.12)', borderRadius: '0.6rem', boxShadow: '0 4px 16px rgba(0,0,0,0.1)', maxHeight: 190, overflowY: 'auto', zIndex: 20 }}>
+              {suggestions.map((s) => (
+                <div key={s} onMouseDown={() => { setFilterText(s.replace(/^@/, '')); setSuggestOpen(false); }}
+                  style={{ padding: '0.4rem 0.65rem', fontSize: '0.74rem', color: '#3C5759', cursor: 'pointer' }}>
+                  {s}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {filterOpen && (
+            <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: 4, background: '#fff', border: '1px solid rgba(25,37,36,0.12)', borderRadius: '0.6rem', boxShadow: '0 4px 16px rgba(0,0,0,0.1)', padding: '0.6rem', zIndex: 21, display: 'flex', flexDirection: 'column', gap: '0.4rem', minWidth: 170 }}>
+              <select aria-label="Filter by tier" value={tier} onChange={(e) => setTier(e.target.value)} style={{ ...input, fontSize: '0.76rem', padding: '0.35rem 0.5rem' }}>
+                <option value="">All tiers</option>
+                {TIERS.map((t) => <option key={t} value={t}>{t}</option>)}
+              </select>
+              <input aria-label="Filter by location" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Location"
+                style={{ ...input, fontSize: '0.76rem', padding: '0.35rem 0.5rem' }} />
+              {activeFilterCount > 0 && (
+                <button onClick={() => { setTier(''); setLocation(''); }}
+                  style={{ padding: 0, border: 'none', background: 'none', color: '#9b2d2d', fontSize: '0.7rem', fontWeight: 600, cursor: 'pointer', textAlign: 'left' }}>
+                  Clear filters
+                </button>
+              )}
+            </div>
+          )}
+        </div>
         <button onClick={toggleSelectAll}
           style={{ padding: '0.35rem 0.8rem', borderRadius: 9999, border: '1px solid rgba(25,37,36,0.15)', background: allSelected ? '#192524' : 'transparent', color: allSelected ? '#fff' : '#3C5759', fontSize: '0.74rem', fontWeight: 600, cursor: 'pointer' }}>
           {allSelected ? 'Deselect all' : 'Select all'}
@@ -1413,7 +1494,14 @@ function CreatorCrmBoard() {
               padding: dragOverCol === col.id ? '0.5rem' : 0,
             }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.6rem', padding: '0 0.1rem' }}>
-              <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#192524' }}>{col.label}</span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                {byColumn[col.id].length > 0 && (
+                  <input type="checkbox" aria-label={`Select all in ${col.label}`}
+                    checked={byColumn[col.id].every((p) => selected.has(String(p._id)))}
+                    onChange={() => toggleColumn(col.id)} />
+                )}
+                <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#192524' }}>{col.label}</span>
+              </span>
               <span style={{ fontSize: '0.7rem', color: '#646B62' }}>{byColumn[col.id].length}</span>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', maxHeight: '75vh', overflowY: 'auto', minHeight: '2rem' }}>
@@ -1599,6 +1687,208 @@ function AutoDiscoveryCard() {
 // Toggle-panel buttons, scoped per side so only relevant tools show — hosts
 // have their own dedicated search inside Host outreach, so the older
 // generic creator tools (Find/Auto/Import/Build queue) only apply to creators.
+// ─── DM angle editor — edit the 5 host outreach templates in place ────────────
+function DmAngleEditor() {
+  const angles = useQuery(api.prospects.getHostDmAngles) || [];
+  const setAngle = useMutation(api.prospects.setHostDmAngle);
+  const resetAngle = useMutation(api.prospects.resetHostDmAngle);
+  const [drafts, setDrafts] = useState({});
+  const [savingId, setSavingId] = useState(null);
+  const [msg, setMsg] = useState('');
+
+  async function save(angle) {
+    const text = drafts[angle.id] ?? angle.template;
+    setSavingId(angle.id);
+    try {
+      await setAngle({ id: angle.id, template: text });
+      setMsg(`Saved "${angle.name}".`);
+      setTimeout(() => setMsg(''), 2000);
+    } catch (e) {
+      setMsg((e.data || e.message)?.replace(/^.*Error:\s*/, '') || 'Save failed');
+    } finally {
+      setSavingId(null);
+    }
+  }
+
+  async function reset(angle) {
+    setSavingId(angle.id);
+    try {
+      await resetAngle({ id: angle.id });
+      setDrafts((d) => { const next = { ...d }; delete next[angle.id]; return next; });
+      setMsg(`Reset "${angle.name}" to default.`);
+      setTimeout(() => setMsg(''), 2000);
+    } finally {
+      setSavingId(null);
+    }
+  }
+
+  return (
+    <div>
+      <p style={{ fontSize: '0.76rem', color: '#3C5759', margin: '0 0 0.75rem', lineHeight: 1.5 }}>
+        These 5 templates rotate evenly across confirmed hosts. <code>[Hotel Name]</code> and <code>{'{STATS}'}</code> are placeholders the writer LLM fills in per host — keep them intact.
+      </p>
+      {msg && <p style={{ fontSize: '0.74rem', color: '#166534', margin: '0 0 0.75rem' }}>{msg}</p>}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        {angles.map((angle) => (
+          <div key={angle.id}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.3rem' }}>
+              <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#192524' }}>{angle.name}</span>
+              {angle.isCustom && <span style={{ fontSize: '0.64rem', padding: '0.1rem 0.4rem', borderRadius: 9999, background: 'rgba(123,104,200,0.12)', color: '#5b4aa8', fontWeight: 600 }}>Customized</span>}
+            </div>
+            <textarea value={drafts[angle.id] ?? angle.template}
+              onChange={(e) => setDrafts((d) => ({ ...d, [angle.id]: e.target.value }))}
+              rows={5} style={{ ...input, width: '100%', resize: 'vertical', fontSize: '0.76rem' }} />
+            <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.35rem' }}>
+              <button onClick={() => save(angle)} disabled={savingId === angle.id}
+                style={{ padding: '0.3rem 0.8rem', borderRadius: 9999, border: 'none', background: '#192524', color: '#fff', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer', opacity: savingId === angle.id ? 0.5 : 1 }}>
+                {savingId === angle.id ? 'Saving…' : 'Save'}
+              </button>
+              {angle.isCustom && (
+                <button onClick={() => reset(angle)} disabled={savingId === angle.id}
+                  style={{ padding: '0.3rem 0.8rem', borderRadius: 9999, border: '1px solid rgba(25,37,36,0.15)', background: 'transparent', color: '#3C5759', fontSize: '0.7rem', fontWeight: 600, cursor: 'pointer' }}>
+                  Reset to default
+                </button>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── Welcome email editor — raw HTML + photo upload, no field-by-field form ───
+// Ben wanted to drop in a full replacement exported from an email builder,
+// not edit paragraphs individually — so this is a textarea for the whole
+// HTML plus an image uploader that hands back URLs to paste into it.
+function WelcomeEmailEditor() {
+  const current = useQuery(api.prospects.getHostWelcomeEmailHtml);
+  const setHtml = useMutation(api.prospects.setHostWelcomeEmailHtml);
+  const resetHtml = useMutation(api.prospects.resetHostWelcomeEmailHtml);
+  const generateUploadUrl = useMutation(api.uploads.generateUploadUrl);
+  const finalizeUpload = useMutation(api.uploads.finalizeUpload);
+
+  const [draft, setDraft] = useState(null); // null = mirror `current` until touched
+  const [msg, setMsg] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadedUrls, setUploadedUrls] = useState([]);
+  const fileInputRef = useRef(null);
+  const photoInputRef = useRef(null);
+
+  const html = draft ?? current?.template ?? '';
+  const previewHtml = html.replace(/\{\{HOTEL_NAME\}\}/g, 'Sample Hotel Name');
+
+  function loadHtmlFile(file) {
+    const reader = new FileReader();
+    reader.onload = () => setDraft(String(reader.result || ''));
+    reader.readAsText(file);
+  }
+
+  async function save() {
+    setSaving(true); setMsg('');
+    try {
+      await setHtml({ html });
+      setMsg('Saved — this is now what sends.');
+      setTimeout(() => setMsg(''), 3000);
+    } catch (e) {
+      setMsg((e.data || e.message)?.replace(/^.*Error:\s*/, '') || 'Save failed');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function reset() {
+    setSaving(true); setMsg('');
+    try {
+      await resetHtml({});
+      setDraft(null);
+      setMsg('Reset to the built-in default.');
+      setTimeout(() => setMsg(''), 3000);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function uploadPhoto(file) {
+    setUploading(true); setMsg('');
+    try {
+      const uploadUrl = await generateUploadUrl();
+      const res = await fetch(uploadUrl, { method: 'POST', headers: { 'Content-Type': file.type }, body: file });
+      const { storageId } = await res.json();
+      const url = await finalizeUpload({ storageId });
+      setUploadedUrls((u) => [{ name: file.name, url }, ...u]);
+    } catch (e) {
+      setMsg((e.data || e.message)?.replace(/^.*Error:\s*/, '') || 'Photo upload failed');
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  return (
+    <div>
+      <p style={{ fontSize: '0.76rem', color: '#3C5759', margin: '0 0 0.75rem', lineHeight: 1.5 }}>
+        This is the exact HTML that sends as the welcome email (step 1) the moment a host is confirmed. Upload a full replacement exported from an email builder, or edit the HTML directly — it must keep a <code>{'{{HOTEL_NAME}}'}</code> token somewhere so each send gets personalized. Upload photos below to get hosted URLs first, then reference them in the HTML.
+      </p>
+      {current?.isCustom && (
+        <p style={{ fontSize: '0.7rem', color: '#5b4aa8', margin: '0 0 0.75rem' }}>Currently using a customized version, not the built-in default.</p>
+      )}
+      {msg && <p style={{ fontSize: '0.74rem', color: '#166534', margin: '0 0 0.75rem' }}>{msg}</p>}
+
+      <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'flex-start' }}>
+        <div style={{ flex: '1 1 320px', minWidth: 280 }}>
+          <div style={{ display: 'flex', gap: '0.4rem', marginBottom: '0.4rem', flexWrap: 'wrap' }}>
+            <button onClick={() => fileInputRef.current?.click()}
+              style={{ padding: '0.3rem 0.8rem', borderRadius: 9999, border: '1px solid rgba(25,37,36,0.15)', background: 'transparent', color: '#3C5759', fontSize: '0.7rem', fontWeight: 600, cursor: 'pointer' }}>
+              Upload HTML file
+            </button>
+            <input ref={fileInputRef} type="file" accept=".html,text/html" style={{ display: 'none' }}
+              onChange={(e) => { const f = e.target.files?.[0]; if (f) loadHtmlFile(f); e.target.value = ''; }} />
+            <button onClick={() => photoInputRef.current?.click()} disabled={uploading}
+              style={{ padding: '0.3rem 0.8rem', borderRadius: 9999, border: '1px solid rgba(25,37,36,0.15)', background: 'transparent', color: '#3C5759', fontSize: '0.7rem', fontWeight: 600, cursor: 'pointer', opacity: uploading ? 0.5 : 1 }}>
+              {uploading ? 'Uploading…' : 'Upload photo'}
+            </button>
+            <input ref={photoInputRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" style={{ display: 'none' }}
+              onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadPhoto(f); e.target.value = ''; }} />
+          </div>
+          <textarea value={html} onChange={(e) => setDraft(e.target.value)}
+            rows={16} style={{ ...input, width: '100%', resize: 'vertical', fontSize: '0.68rem', fontFamily: 'monospace' }} />
+          <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.5rem' }}>
+            <button onClick={save} disabled={saving || !html}
+              style={{ padding: '0.35rem 0.9rem', borderRadius: 9999, border: 'none', background: '#192524', color: '#fff', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', opacity: (saving || !html) ? 0.5 : 1 }}>
+              {saving ? 'Saving…' : 'Save'}
+            </button>
+            {current?.isCustom && (
+              <button onClick={reset} disabled={saving}
+                style={{ padding: '0.35rem 0.9rem', borderRadius: 9999, border: '1px solid rgba(25,37,36,0.15)', background: 'transparent', color: '#3C5759', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer' }}>
+                Reset to default
+              </button>
+            )}
+          </div>
+          {uploadedUrls.length > 0 && (
+            <div style={{ marginTop: '0.75rem' }}>
+              <span style={{ ...label, display: 'inline' }}>Uploaded photo URLs (click to copy)</span>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                {uploadedUrls.map((u, i) => (
+                  <button key={i} onClick={() => navigator.clipboard?.writeText(u.url)}
+                    title="Copy URL" style={{ textAlign: 'left', padding: '0.3rem 0.5rem', borderRadius: 6, border: '1px solid rgba(25,37,36,0.1)', background: 'rgba(255,255,255,0.6)', fontSize: '0.66rem', color: '#3C5759', cursor: 'pointer', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {u.name}: {u.url}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+        <div style={{ flex: '1 1 380px', minWidth: 320 }}>
+          <span style={{ ...label, display: 'inline' }}>Preview (sample name filled in)</span>
+          <iframe title="Welcome email preview" srcDoc={previewHtml}
+            style={{ width: '100%', height: '70vh', border: '1px solid rgba(25,37,36,0.1)', borderRadius: '0.5rem', background: '#fff' }} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const CREATOR_TOOLS = [
   { id: 'find', label: 'Find creators', title: 'Search Instagram by niche/location, auto-imports and scores the top 10 creators.' },
   { id: 'auto', label: 'Auto-discovery', title: 'Runs that same creator search automatically every morning at 7am.' },
@@ -1681,6 +1971,14 @@ export default function Discovery({ sidebarCollapsed, setSidebarCollapsed }) {
                 Add manually
               </button>
             )}
+            <button onClick={() => togglePanel('dm_angles')} title="Edit the text of the 5 DM angle templates"
+              style={{ padding: '0.5rem 1.1rem', borderRadius: 9999, border: '1.5px solid rgba(25,37,36,0.2)', background: openPanel === 'dm_angles' ? 'rgba(25,37,36,0.06)' : 'transparent', color: '#192524', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}>
+              DM angles
+            </button>
+            <button onClick={() => togglePanel('welcome_email')} title="Preview the branded welcome email, or upload a replacement HTML/photos"
+              style={{ padding: '0.5rem 1.1rem', borderRadius: 9999, border: '1.5px solid rgba(25,37,36,0.2)', background: openPanel === 'welcome_email' ? 'rgba(25,37,36,0.06)' : 'transparent', color: '#192524', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}>
+              Welcome email
+            </button>
           </>
         ) : (
           CREATOR_TOOLS.map(({ id, label: l, title: t }) => (
@@ -1701,6 +1999,16 @@ export default function Discovery({ sidebarCollapsed, setSidebarCollapsed }) {
       {openPanel === 'add' && (
         <div style={{ marginBottom: '1.25rem', padding: '1rem', borderRadius: '1rem', background: 'rgba(255,255,255,0.6)', border: '1px solid rgba(25,37,36,0.08)' }}>
           <AddProspectForm onDone={() => setOpenPanel(null)} defaultKind={side === 'hosts' ? 'host' : 'creator'} />
+        </div>
+      )}
+      {openPanel === 'dm_angles' && (
+        <div style={{ marginBottom: '1.25rem', padding: '1rem', borderRadius: '1rem', background: 'rgba(255,255,255,0.6)', border: '1px solid rgba(25,37,36,0.08)' }}>
+          <DmAngleEditor />
+        </div>
+      )}
+      {openPanel === 'welcome_email' && (
+        <div style={{ marginBottom: '1.25rem', padding: '1rem', borderRadius: '1rem', background: 'rgba(255,255,255,0.6)', border: '1px solid rgba(25,37,36,0.08)' }}>
+          <WelcomeEmailEditor />
         </div>
       )}
       {side === 'creators' && openPanel && openPanel !== 'add' && (

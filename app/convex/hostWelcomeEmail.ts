@@ -29,13 +29,25 @@ export const HOST_WELCOME_EMAIL_SUBJECT = "Inviting {{HOTEL_NAME}} to Collabnb a
 
 const IMG = "https://www.collabnb.com/email/host-outreach";
 
-export function buildHostWelcomeEmailHtml(hotelName: string): string {
+// Pure substitution — used both for the hardcoded default and for whatever
+// raw HTML the admin has uploaded as an override (see getHostWelcomeEmailHtml
+// / setHostWelcomeEmailHtml in prospects.ts). Ben wanted a raw-HTML-and-photo
+// upload here, not a structured field editor — a fixed-layout branded email
+// isn't a good fit for per-paragraph fields, and he already has full designs
+// exported from an email builder to drop in directly.
+export function renderHostWelcomeEmailHtml(template: string, hotelName: string): string {
   const name = (hotelName || "your property").trim();
-  const html = HOST_WELCOME_EMAIL_TEMPLATE.replace(/\{\{HOTEL_NAME\}\}/g, name);
-  return html;
+  return template.replace(/\{\{HOTEL_NAME\}\}/g, name);
 }
 
-const HOST_WELCOME_EMAIL_TEMPLATE = `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office"><head><meta name="viewport" content="width=device-width, initial-scale=1.0"><link rel="preload" as="image" href="${IMG}/hero-boutique-stays.jpg"><link rel="preload" as="image" href="${IMG}/sunset-boat.png"><link rel="preload" as="image" href="${IMG}/app-preview.png"><link rel="preload" as="image" href="${IMG}/instagram-icon.png"><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><meta name="format-detection" content="telephone=no, date=no, address=no, email=no"><meta name="x-apple-disable-message-reformatting"><style>body{margin:0;padding:0}table{mso-table-lspace:0;mso-table-rspace:0}p,span,h1,h2,h3,h4,h5,h6{margin:0;padding:0}p{line-height:inherit}a[x-apple-data-detectors]{color:inherit!important;text-decoration:inherit!important}#MessageViewBody a{color:inherit;text-decoration:none}img+div{display:none}@media (max-width:599px){.ecw{width:100%!important;min-width:0!important}}</style><!--[if mso]><div>
+// Convenience wrapper for callers with no DB access (none currently) — the
+// real send path in prospects.ts always fetches the effective (possibly
+// admin-overridden) template first, then calls renderHostWelcomeEmailHtml.
+export function buildHostWelcomeEmailHtml(hotelName: string): string {
+  return renderHostWelcomeEmailHtml(DEFAULT_HOST_WELCOME_EMAIL_TEMPLATE, hotelName);
+}
+
+export const DEFAULT_HOST_WELCOME_EMAIL_TEMPLATE = `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office"><head><meta name="viewport" content="width=device-width, initial-scale=1.0"><link rel="preload" as="image" href="${IMG}/hero-boutique-stays.jpg"><link rel="preload" as="image" href="${IMG}/sunset-boat.png"><link rel="preload" as="image" href="${IMG}/app-preview.png"><link rel="preload" as="image" href="${IMG}/instagram-icon.png"><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><meta name="format-detection" content="telephone=no, date=no, address=no, email=no"><meta name="x-apple-disable-message-reformatting"><style>body{margin:0;padding:0}table{mso-table-lspace:0;mso-table-rspace:0}p,span,h1,h2,h3,h4,h5,h6{margin:0;padding:0}p{line-height:inherit}a[x-apple-data-detectors]{color:inherit!important;text-decoration:inherit!important}#MessageViewBody a{color:inherit;text-decoration:none}img+div{display:none}@media (max-width:599px){.ecw{width:100%!important;min-width:0!important}}</style><!--[if mso]><div>
                 <noscript>
                   <xml>
                     <w:WordDocument xmlns:w="urn:schemas-microsoft-com:office:word">

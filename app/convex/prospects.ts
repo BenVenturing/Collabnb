@@ -4,7 +4,7 @@ import { internal, api } from "./_generated/api";
 import { llmChat } from "./blog";
 import { sendViaResend } from "./emailCopy";
 import { renderHostWelcomeEmailHtml, DEFAULT_HOST_WELCOME_EMAIL_TEMPLATE, HOST_WELCOME_EMAIL_SUBJECT } from "./hostWelcomeEmail";
-import { buildCreatorWelcomeEmailHtml, CREATOR_WELCOME_EMAIL_SUBJECT } from "./creatorWelcomeEmail";
+import { renderCreatorWelcomeEmailHtml, DEFAULT_CREATOR_WELCOME_EMAIL_TEMPLATE, CREATOR_WELCOME_EMAIL_SUBJECT } from "./creatorWelcomeEmail";
 import { requireAdmin, requireAdminAction, canAccessAdmin } from "./lib/auth";
 import { withSurfacedErrors } from "./lib/errors";
 
@@ -50,13 +50,17 @@ export const NICHE_SEARCH_TERMS: Record<string, string[]> = {
 // [Hotel Name] token + one true personalization detail per prospect — it does
 // not freely rewrite these, so the approved copy/tone stays intact.
 // Deterministic — never LLM-generated — so the stats can never drift or get
-// hallucinated per message. General consumer/industry behavior stats only —
+// hallucinated per message. Same sourced third-party stats already used on
+// the marketing site's "Why creator collabs work" section (how-it-works.html)
+// — kept in sync with that page rather than a separate unsourced set, and
 // deliberately not framed as Collabnb's own results, since the platform has
 // no host track record yet (still onboarding its first 100 Founding Hosts).
+// No parentheses around the source attribution — draftHostMessage strips
+// parens from the whole message as a formatting safety net.
 const HOST_STATS_BLOCK = `Why creators matter for stays like yours:
-• 92% of travelers trust a creator's recommendation over a traditional ad
-• 61% of travelers have booked accommodation after seeing it on Instagram
-• 75% of travelers say social media inspired their destination choice`;
+• $5.78 average return for every $1 spent on influencer marketing — Influencer Marketing Hub, 2026
+• 73% of travelers say influencer recommendations have shaped a trip or booking decision — Expedia Group, 2025
+• 61% of travelers now find trip inspiration on social media — Expedia Group, 2025`;
 
 export const HOST_OUTREACH_TEMPLATES: { id: string; name: string; template: string }[] = [
   {
@@ -184,6 +188,69 @@ Founder, Collabnb`,
   },
 ];
 
+// Creator analog of HOST_EMAIL_SEQUENCE — same shape/cadence (step 1
+// superseded by the branded HTML, steps 2-3 are the real LLM-adapted
+// follow-ups), [Creator Name] token instead of [Hotel Name]. No {STATS}
+// block: the host stats are about why creators matter to a host, which
+// doesn't make sense pitched back at a creator, and there's no equivalent
+// creator-side stat on file to cite instead of fabricating one.
+export const CREATOR_EMAIL_SEQUENCE: { step: number; name: string; subject: string; template: string; sendDelayDays: number }[] = [
+  {
+    step: 1,
+    name: "Intro",
+    subject: "Inviting [Creator Name] to Collabnb as a Founding Creator",
+    sendDelayDays: 0,
+    template: `Hi there,
+
+My name is Benjamin, founder of Collabnb — a platform that helps content creators connect with vetted boutique hotels and stays that are actively looking to pay creators for content.
+
+I came across [Creator Name] and it looks like exactly the kind of creator boutique stays are searching for. We'd love to invite you to join Collabnb completely free and start browsing paid collaborations.
+
+Through Collabnb, creators can:
+• Discover boutique stays without spending hours searching Instagram
+• Browse paid collaboration listings with clear deliverables
+• Manage conversations, partnerships, and campaigns in one place
+
+We're currently welcoming our first 100 creators as Founding Creators — lifetime access, no admin fees, ever.
+
+Thanks so much for your time — we'd love to have [Creator Name] on board.
+
+Benjamin
+Founder, Collabnb
+collabnb.com`,
+  },
+  {
+    step: 2,
+    name: "Follow-up",
+    subject: "Following up — Collabnb x [Creator Name]",
+    sendDelayDays: 4,
+    template: `Hi again,
+
+Just wanted to float this back to the top of your inbox in case it got buried.
+
+Collabnb makes it simple to browse paid collaborations with boutique stays and start hearing back directly — free to join, takes a few minutes.
+
+Happy to answer any questions, or just take a look here: https://www.collabnb.com/
+
+Benjamin
+Founder, Collabnb`,
+  },
+  {
+    step: 3,
+    name: "Final nudge",
+    subject: "Last note from me — Collabnb",
+    sendDelayDays: 7,
+    template: `Hi — totally understand if now isn't the right time.
+
+Just wanted to leave the door open: we're still holding a spot for [Creator Name] among our first 100 Founding Creators (free, lifetime access), so if it's ever useful, it's here: https://www.collabnb.com/
+
+Either way, wishing you all the best.
+
+Benjamin
+Founder, Collabnb`,
+  },
+];
+
 function textToEmailHtml(text: string): string {
   const escaped = text
     .replace(/&/g, "&amp;")
@@ -233,6 +300,45 @@ async function draftHostEmail(p: any, step: (typeof HOST_EMAIL_SEQUENCE)[number]
     return {
       subject: step.subject.replace(/\[Hotel Name\]/g, name),
       body: step.template.replace(/\[Hotel Name\]/g, name).replace("{STATS}", HOST_STATS_BLOCK),
+    };
+  }
+}
+
+// Creator analog of draftHostEmail — same adapt-don't-rewrite rules, creator
+// facts instead of listing facts, [Creator Name] token.
+async function draftCreatorEmail(p: any, step: { subject: string; template: string }): Promise<{ subject: string; body: string }> {
+  const name = p.display_name || `@${p.instagram_handle}`;
+  const who = [
+    `Creator name: ${name}`,
+    p.location && `Location: ${p.location}`,
+    p.niche && `Niche: ${p.niche}`,
+    p.bio && `Instagram bio: ${p.bio}`,
+  ].filter(Boolean).join("\n");
+
+  try {
+    const raw = await llmChat([
+      {
+        role: "system",
+        content:
+          "You adapt a fixed cold-outreach email for Benjamin, founder of Collabnb (collabnb.com), sent to a content creator. You do NOT rewrite the email freely — keep its structure, sentence order, tone, and call-to-action exactly as given. Your job: (1) replace every '[Creator Name]' with the real creator's name; (2) only if a genuine matching fact is provided below, you may add ONE short sentence stating it honestly right after the opening paragraph — never invent anything not given, skip it if no real fact is available. Formatting rules: plain text only, no markdown, no asterisks, no parentheses (rephrase instead), no commentary about what you changed. Output ONLY the final email body text, nothing else — no subject line.",
+      },
+      {
+        role: "user",
+        content: `Email to adapt:\n"""\n${step.template}\n"""\n\nCreator facts — use ONLY what's given, never invent:\n${who || "none given — just swap in the creator's name"}`,
+      },
+    ], 400, 20_000);
+    let body = raw.trim().replace(/^["'“”]+|["'“”]+$/g, "");
+    const lines = body.split("\n");
+    if (lines.length > 1 && /^(here('s| is)|sure|below is|adapted)/i.test(lines[0]) && lines[0].length < 90) {
+      body = lines.slice(1).join("\n").trim();
+    }
+    body = body.replace(/\*/g, "").replace(/[()]/g, "");
+    const subject = step.subject.replace(/\[Creator Name\]/g, name);
+    return { subject, body: body.slice(0, 2000) };
+  } catch {
+    return {
+      subject: step.subject.replace(/\[Creator Name\]/g, name),
+      body: step.template.replace(/\[Creator Name\]/g, name),
     };
   }
 }
@@ -745,17 +851,19 @@ export const getTopNewCandidates = internalQuery({
 });
 
 // Fresh daily confirm queue — the "Build fresh 50" button. Unlike the older
-// buildTodayQueue above, promoting a prospect here means the *full* confirm
-// treatment: hosts get a drafted DM + the welcome email sequence kicked off
-// (same as confirmHostBatch), creators get queued + their welcome email sent
-// (same as CreatorCrmBoard's bulkConfirm) — not just a bare status flip. If
-// the existing 'new' pool is short of the target, tops it up with one live
-// search first (using the first configured auto-search profile for that
-// kind, on or off) before re-selecting the top-scored candidates.
+// buildTodayQueue above, promoting a prospect here means the *fuller* confirm
+// treatment: hosts get a drafted DM (same as confirmHostBatch), creators get
+// queued — not just a bare status flip. If the existing 'new' pool is short
+// of the target, tops it up with one live search first (using the first
+// configured auto-search profile for that kind, on or off) before
+// re-selecting the top-scored candidates.
 //
-// Actual Instagram DM volume is intentionally NOT raised here — it stays
-// capped around the ~20/day safe rate documented elsewhere in this file.
-// This only grows how deep the ready-to-confirm bench is each day.
+// Deliberately does NOT send the welcome email — nothing goes to a real
+// inbox without an explicit "Email"/"Email selected" click from the admin,
+// so a 50-per-side daily batch (or the daily cron) never fires real sends on
+// its own. Actual Instagram DM volume is likewise intentionally NOT raised
+// here — it stays capped around the ~20/day safe rate documented elsewhere
+// in this file. This only grows how deep the ready-to-confirm bench is.
 async function runBuildFreshQueue(ctx: any, perKind = 50): Promise<{ promoted: { creators: number; hosts: number } }> {
   const settings: Record<string, string> = await ctx.runQuery(internal.admin.getSettingsInternal, {});
   const promoted = { creators: 0, hosts: 0 };
@@ -803,13 +911,11 @@ async function runBuildFreshQueue(ctx: any, perKind = 50): Promise<{ promoted: {
         const angle = nextAngle(templates, counts);
         const dmDraft = await draftHostMessage(c, angle);
         await ctx.runMutation(internal.prospects.confirmDraft, { id: c._id, dmDraft, dmAngle: angle.id });
-        await runHostEmailKickoff(ctx, c._id).catch(() => {});
         promoted.hosts++;
       });
     } else {
       await mapWithConcurrency(candidates, 5, async (c) => {
         await ctx.runMutation(api.prospects.updateStatus, { id: c._id, status: "queued" });
-        await runCreatorEmailKickoff(ctx, c._id).catch(() => {});
         promoted.creators++;
       });
     }
@@ -1001,6 +1107,130 @@ export const resetHostWelcomeEmailHtml = mutation({
   },
 });
 
+// Creator analog of the three above — same raw-HTML-override pattern, own
+// admin_settings key so the two templates are independent.
+async function getEffectiveCreatorWelcomeEmailTemplate(ctx: any): Promise<string> {
+  const row = await ctx.db.query("admin_settings").withIndex("by_key", (q: any) => q.eq("key", "creator_welcome_email_html")).first();
+  return row?.value || DEFAULT_CREATOR_WELCOME_EMAIL_TEMPLATE;
+}
+
+export const getCreatorWelcomeEmailHtml = query({
+  args: {},
+  handler: async (ctx) => {
+    if (!(await canAccessAdmin(ctx))) return null;
+    const row = await ctx.db.query("admin_settings").withIndex("by_key", (q) => q.eq("key", "creator_welcome_email_html")).first();
+    return { template: row?.value || DEFAULT_CREATOR_WELCOME_EMAIL_TEMPLATE, isCustom: !!row?.value };
+  },
+});
+
+export const setCreatorWelcomeEmailHtml = mutation({
+  args: { html: v.string() },
+  handler: async (ctx, { html }) => {
+    await requireAdmin(ctx);
+    if (!html.includes("{{CREATOR_NAME}}")) {
+      throw new ConvexError("The HTML needs a {{CREATOR_NAME}} placeholder somewhere so each creator gets personalized — add it wherever their name should appear.");
+    }
+    const row = await ctx.db.query("admin_settings").withIndex("by_key", (q) => q.eq("key", "creator_welcome_email_html")).first();
+    if (row) await ctx.db.patch(row._id, { value: html });
+    else await ctx.db.insert("admin_settings", { key: "creator_welcome_email_html", value: html });
+  },
+});
+
+export const resetCreatorWelcomeEmailHtml = mutation({
+  args: {},
+  handler: async (ctx) => {
+    await requireAdmin(ctx);
+    const row = await ctx.db.query("admin_settings").withIndex("by_key", (q) => q.eq("key", "creator_welcome_email_html")).first();
+    if (row) await ctx.db.delete(row._id);
+  },
+});
+
+// One-off real send of whatever HTML is currently in the editor (saved or
+// not) to an address of the admin's choosing — lets Ben check rendering in
+// an actual inbox before committing a draft with Save.
+export const sendTestWelcomeEmail = action({
+  args: {
+    kind: v.union(v.literal("host"), v.literal("creator")),
+    toEmail: v.string(),
+    html: v.string(),
+    sampleName: v.optional(v.string()),
+  },
+  handler: withSurfacedErrors(async (ctx, { kind, toEmail, html, sampleName }) => {
+    await requireAdminAction(ctx, api.profiles.getByClerkUserId);
+    const apiKey = process.env.RESEND_API_KEY;
+    if (!apiKey) throw new Error("RESEND_API_KEY not configured in Convex environment.");
+    const name = sampleName?.trim() || (kind === "host" ? "Sample Hotel Name" : "Sample Creator");
+    const rendered = kind === "host" ? renderHostWelcomeEmailHtml(html, name) : renderCreatorWelcomeEmailHtml(html, name);
+    const subjectTemplate = kind === "host" ? HOST_WELCOME_EMAIL_SUBJECT : CREATOR_WELCOME_EMAIL_SUBJECT;
+    const token = kind === "host" ? /\{\{HOTEL_NAME\}\}/g : /\{\{CREATOR_NAME\}\}/g;
+    const subject = `[TEST] ${subjectTemplate.replace(token, name)}`;
+    await sendViaResend(apiKey, toEmail, subject, rendered);
+    return { sent: true };
+  }),
+});
+
+// Follow-up (steps 2-3) template overrides — plain text, not HTML, since
+// these are LLM-adapted at send time rather than sent verbatim; editing here
+// changes the source template the LLM is told to adapt, same as editing
+// HOST_EMAIL_SEQUENCE/CREATOR_EMAIL_SEQUENCE in code would. One JSON blob
+// per kind, keyed by step number, so either step can be reset independently.
+async function getEffectiveEmailSequence(ctx: any, kind: "host" | "creator") {
+  const base = kind === "host" ? HOST_EMAIL_SEQUENCE : CREATOR_EMAIL_SEQUENCE;
+  const key = kind === "host" ? "host_followup_templates" : "creator_followup_templates";
+  const row = await ctx.db.query("admin_settings").withIndex("by_key", (q: any) => q.eq("key", key)).first();
+  let overrides: Record<string, string> = {};
+  try { overrides = JSON.parse(row?.value || "{}"); } catch { /* bad JSON = no overrides */ }
+  return base.map((s) => (overrides[s.step] ? { ...s, template: overrides[s.step] } : s));
+}
+
+export const getFollowupTemplates = query({
+  args: { kind: v.union(v.literal("host"), v.literal("creator")) },
+  handler: async (ctx, { kind }) => {
+    if (!(await canAccessAdmin(ctx))) return [];
+    const seq = await getEffectiveEmailSequence(ctx, kind);
+    const base = kind === "host" ? HOST_EMAIL_SEQUENCE : CREATOR_EMAIL_SEQUENCE;
+    return seq.slice(1).map((s, i) => ({
+      step: s.step,
+      name: s.name,
+      subject: s.subject,
+      template: s.template,
+      isCustom: s.template !== base[i + 1].template,
+    }));
+  },
+});
+
+export const setFollowupTemplate = mutation({
+  args: { kind: v.union(v.literal("host"), v.literal("creator")), step: v.number(), template: v.string() },
+  handler: async (ctx, { kind, step, template }) => {
+    await requireAdmin(ctx);
+    const nameToken = kind === "host" ? "[Hotel Name]" : "[Creator Name]";
+    if (!template.includes(nameToken)) {
+      throw new ConvexError(`This needs a ${nameToken} placeholder somewhere so each send gets personalized.`);
+    }
+    const key = kind === "host" ? "host_followup_templates" : "creator_followup_templates";
+    const row = await ctx.db.query("admin_settings").withIndex("by_key", (q) => q.eq("key", key)).first();
+    let overrides: Record<string, string> = {};
+    try { overrides = JSON.parse(row?.value || "{}"); } catch { /* bad JSON = starting fresh */ }
+    overrides[step] = template;
+    if (row) await ctx.db.patch(row._id, { value: JSON.stringify(overrides) });
+    else await ctx.db.insert("admin_settings", { key, value: JSON.stringify(overrides) });
+  },
+});
+
+export const resetFollowupTemplate = mutation({
+  args: { kind: v.union(v.literal("host"), v.literal("creator")), step: v.number() },
+  handler: async (ctx, { kind, step }) => {
+    await requireAdmin(ctx);
+    const key = kind === "host" ? "host_followup_templates" : "creator_followup_templates";
+    const row = await ctx.db.query("admin_settings").withIndex("by_key", (q) => q.eq("key", key)).first();
+    if (!row) return;
+    let overrides: Record<string, string> = {};
+    try { overrides = JSON.parse(row.value || "{}"); } catch { return; }
+    delete overrides[step];
+    await ctx.db.patch(row._id, { value: JSON.stringify(overrides) });
+  },
+});
+
 // Adapts a fixed angle template to one host's real facts via the writer LLM —
 // shared by the single-card generator, bulk-select generator, and pool Confirm.
 async function draftHostMessage(p: any, angle: (typeof HOST_OUTREACH_TEMPLATES)[number]): Promise<string> {
@@ -1180,15 +1410,6 @@ async function runHostEmailKickoff(ctx: any, id: any): Promise<{ sent: boolean; 
   return emailSequence[0].sent_at ? { sent: true } : { sent: false, reason: sendError };
 }
 
-// Fires automatically right after Confirm — best-effort, never throws, so
-// one host's failed lookup/send never fails the batch confirm action.
-export const kickoffHostEmailSequence = internalAction({
-  args: { id: v.id("prospects") },
-  handler: async (ctx, { id }) => {
-    await runHostEmailKickoff(ctx, id);
-  },
-});
-
 // Manual "Email" button on a Confirmed-column card — for hosts confirmed
 // before this pipeline existed (no email_sequence yet), or a retry when
 // auto-send failed the first time. Throws a real error so the button can
@@ -1245,17 +1466,33 @@ async function runCreatorEmailKickoff(ctx: any, id: any): Promise<{ sent: boolea
   const email = p.email;
   if (!email) return { sent: false, reason: "No email on file for this creator — add one manually (e.g. from their bio), then try again" };
 
+  // Step 1 is the branded HTML welcome email (possibly admin-overridden) —
+  // same plain-substitution treatment as hosts. Steps 2-3 are LLM-adapted
+  // plain-text follow-ups, drafted now but left unsent for an explicit
+  // "Send" click later, same as the host sequence.
   const name = p.display_name || `@${p.instagram_handle}`;
-  const html = buildCreatorWelcomeEmailHtml(name);
-  const subject = CREATOR_WELCOME_EMAIL_SUBJECT.replace(/\{\{CREATOR_NAME\}\}/g, name);
+  const step1Template = await getEffectiveCreatorWelcomeEmailTemplate(ctx);
+  const step1Html = renderCreatorWelcomeEmailHtml(step1Template, name);
+  const step1Subject = CREATOR_WELCOME_EMAIL_SUBJECT.replace(/\{\{CREATOR_NAME\}\}/g, name);
+
+  const sequence = await getEffectiveEmailSequence(ctx, "creator");
+  const followUps = await Promise.all(sequence.slice(1).map((step) => draftCreatorEmail(p, step)));
+  const emailSequence = [
+    { step: 1, subject: step1Subject, body: step1Html, sent_at: undefined as number | undefined },
+    ...sequence.slice(1).map((step, i) => ({
+      step: step.step,
+      subject: followUps[i].subject,
+      body: followUps[i].body,
+      sent_at: undefined as number | undefined,
+    })),
+  ];
 
   const apiKey = process.env.RESEND_API_KEY;
   let sendError: string | undefined;
-  let sentAt: number | undefined;
   if (apiKey) {
     try {
-      await sendViaResend(apiKey, email, subject, html);
-      sentAt = Date.now();
+      await sendViaResend(apiKey, email, emailSequence[0].subject, emailSequence[0].body);
+      emailSequence[0].sent_at = Date.now();
     } catch (e: any) {
       sendError = e?.message || "Resend send failed";
     }
@@ -1263,8 +1500,10 @@ async function runCreatorEmailKickoff(ctx: any, id: any): Promise<{ sent: boolea
     sendError = "RESEND_API_KEY not configured in Convex environment.";
   }
 
-  await ctx.runMutation(internal.prospects.saveCreatorEmailSent, { id, email, subject, body: html, sentAt });
-  return sentAt ? { sent: true } : { sent: false, reason: sendError };
+  await ctx.runMutation(internal.prospects.saveCreatorEmailSequence, {
+    id, email, emailSequence, step1Sent: !!emailSequence[0].sent_at,
+  });
+  return emailSequence[0].sent_at ? { sent: true } : { sent: false, reason: sendError };
 }
 
 export const sendCreatorEmailNow = action({
@@ -1277,15 +1516,60 @@ export const sendCreatorEmailNow = action({
   },
 });
 
-export const saveCreatorEmailSent = internalMutation({
-  args: { id: v.id("prospects"), email: v.string(), subject: v.string(), body: v.string(), sentAt: v.optional(v.number()) },
-  handler: async (ctx, { id, email, subject, body, sentAt }) => {
+// Scheduler-driven single sends — best-effort (never throws) since nothing
+// is watching a scheduled run to report a failure to.
+export const sendHostEmailScheduled = internalAction({
+  args: { id: v.id("prospects") },
+  handler: async (ctx, { id }) => { await runHostEmailKickoff(ctx, id).catch(() => {}); },
+});
+export const sendCreatorEmailScheduled = internalAction({
+  args: { id: v.id("prospects") },
+  handler: async (ctx, { id }) => { await runCreatorEmailKickoff(ctx, id).catch(() => {}); },
+});
+
+// Drip-sends a batch instead of firing every "Email selected" at once — a
+// burst of 20-30 sends in the same second reads as a blast to receiving
+// mail providers even when each one is a real, individually-relevant email.
+// Spreads them 1/minute (configurable) via the Convex scheduler and returns
+// immediately; the sends themselves happen over the following minutes/hours,
+// each independent so one bad address never blocks the rest of the batch.
+export const scheduleBulkEmail = action({
+  args: {
+    ids: v.array(v.id("prospects")),
+    kind: v.union(v.literal("host"), v.literal("creator")),
+    intervalSeconds: v.optional(v.number()),
+  },
+  handler: withSurfacedErrors(async (ctx, { ids, kind, intervalSeconds }) => {
+    await requireAdminAction(ctx, api.profiles.getByClerkUserId);
+    const interval = Math.max(intervalSeconds ?? 60, 15) * 1000;
+    const fn = kind === "host" ? internal.prospects.sendHostEmailScheduled : internal.prospects.sendCreatorEmailScheduled;
+    for (let i = 0; i < ids.length; i++) {
+      await ctx.scheduler.runAfter(i * interval, fn, { id: ids[i] });
+    }
+    const spanMinutes = ids.length > 1 ? Math.ceil(((ids.length - 1) * interval) / 60000) : 0;
+    return { scheduled: ids.length, spanMinutes };
+  }),
+});
+
+export const saveCreatorEmailSequence = internalMutation({
+  args: {
+    id: v.id("prospects"),
+    email: v.string(),
+    emailSequence: v.array(v.object({
+      step: v.number(),
+      subject: v.string(),
+      body: v.string(),
+      sent_at: v.optional(v.number()),
+    })),
+    step1Sent: v.boolean(),
+  },
+  handler: async (ctx, { id, email, emailSequence, step1Sent }) => {
     const p = await ctx.db.get(id);
     const log = (p as any)?.outreach_log || [];
     await ctx.db.patch(id, {
-      email_sequence: [{ step: 1, subject, body, sent_at: sentAt }],
-      ...(sentAt ? { status: "emailed" } : {}),
-      outreach_log: sentAt
+      email_sequence: emailSequence,
+      ...(step1Sent ? { status: "emailed" } : {}),
+      outreach_log: step1Sent
         ? [...log, { at: Date.now(), type: "email_sent", note: `Welcome email to ${email}` }]
         : log,
     });
@@ -1300,7 +1584,10 @@ export const sendSequenceEmail = action({
     await requireAdminAction(ctx, api.profiles.getByClerkUserId);
     const p: any = await ctx.runQuery(internal.prospects.getById, { id });
     if (!p) throw new Error("Prospect not found");
-    if (!p.marketing_email) throw new Error("No marketing email on file for this host");
+    // Hosts send to the marketing address scraped from their site; creators
+    // don't have one of those, so their own `email` field is the target.
+    const toEmail = p.kind === "host" ? p.marketing_email : p.email;
+    if (!toEmail) throw new Error(p.kind === "host" ? "No marketing email on file for this host" : "No email on file for this creator");
     const entry = (p.email_sequence || []).find((e: any) => e.step === step);
     if (!entry) throw new Error(`No drafted email for step ${step}`);
     if (entry.sent_at) throw new Error(`Step ${step} was already sent`);
@@ -1308,10 +1595,11 @@ export const sendSequenceEmail = action({
     const apiKey = process.env.RESEND_API_KEY;
     if (!apiKey) throw new Error("RESEND_API_KEY not configured in Convex environment.");
     // Step 1's body is already the full rendered branded HTML (see
-    // runHostEmailKickoff) — sending it through textToEmailHtml would
-    // double-wrap and mangle it. Steps 2-3 are plain text needing the wrap.
+    // runHostEmailKickoff/runCreatorEmailKickoff) — sending it through
+    // textToEmailHtml would double-wrap and mangle it. Steps 2-3 are plain
+    // text needing the wrap.
     const html = step === 1 ? entry.body : textToEmailHtml(entry.body);
-    await sendViaResend(apiKey, p.marketing_email, entry.subject, html);
+    await sendViaResend(apiKey, toEmail, entry.subject, html);
 
     const updatedSequence = p.email_sequence.map((e: any) => (e.step === step ? { ...e, sent_at: Date.now() } : e));
     await ctx.runMutation(internal.prospects.markSequenceStepSent, { id, emailSequence: updatedSequence });
@@ -1351,8 +1639,11 @@ export const confirmHostBatch = action({
       if (!p || p.kind !== "host" || p.published) return false; // don't re-draft an already-sent one
       const angle = templates[i % templates.length];
       const dmDraft = await draftHostMessage(p, angle);
+      // Confirming drafts the DM but does NOT send the welcome email —
+      // that's a separate, deliberate click ("Email" / "Email selected" in
+      // the CRM board) per Ben's call: nothing goes to a real inbox without
+      // an explicit send action.
       await ctx.runMutation(internal.prospects.confirmDraft, { id: p._id, dmDraft, dmAngle: angle.id });
-      await ctx.runAction(internal.prospects.kickoffHostEmailSequence, { id: p._id }).catch(() => {});
       return true;
     });
     return { confirmed: results.filter(Boolean).length };

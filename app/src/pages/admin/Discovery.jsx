@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useAction } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { NICHE_KEYWORDS } from '../../lib/matchScore';
@@ -142,6 +142,16 @@ function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
   const [emailField, setEmailField] = useState(prospect.email || '');
   const [notes, setNotes] = useState(prospect.notes || '');
   const [copied, setCopied] = useState(false);
+  // These mirror prospect fields into local state so an onBlur can tell
+  // "did the user actually change this" apart from "just re-rendered" — but
+  // useState's initializer only runs on mount, so a draft written from
+  // elsewhere (bulk "Draft DMs for selected", auto-discovery re-enriching)
+  // while this card was already sitting open in a list never showed up
+  // without this: the live query updates `prospect`, but the already-
+  // mounted card kept whatever it had at mount time.
+  useEffect(() => { setDmDraft(prospect.dm_draft || ''); }, [prospect.dm_draft]);
+  useEffect(() => { setEmailField(prospect.email || ''); }, [prospect.email]);
+  useEffect(() => { setNotes(prospect.notes || ''); }, [prospect.notes]);
   const [genBusy, setGenBusy] = useState(false);
   const [genErr, setGenErr] = useState('');
   const [enrichBusy, setEnrichBusy] = useState(false);
@@ -474,7 +484,7 @@ function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
               onBlur={() => notes !== (prospect.notes || '') && update({ id: prospect._id, notes })}
               rows={2} style={{ ...input, width: '100%', resize: 'vertical' }} />
           </div>
-          <button onClick={() => { if (window.confirm(`Remove @${prospect.instagram_handle} from the list?`)) remove({ id: prospect._id }); }}
+          <button onClick={() => remove({ id: prospect._id })}
             style={{ alignSelf: 'flex-start', padding: '0.3rem 0.7rem', borderRadius: 9999, border: 'none', background: 'transparent', color: '#9b2d2d', fontSize: '0.7rem', cursor: 'pointer' }}>
             Remove prospect
           </button>
@@ -2079,7 +2089,7 @@ export default function Discovery({ sidebarCollapsed, setSidebarCollapsed }) {
   const stats = useQuery(api.prospects.getStats);
   const buildFreshQueue = useAction(api.prospects.buildFreshQueue);
   const [side, setSide] = useState('hosts'); // 'hosts' | 'creators'
-  const [hostView, setHostView] = useState('outreach'); // 'outreach' | 'crm'
+  const [hostView, setHostView] = useState('crm'); // 'outreach' | 'crm'
   const [openPanel, setOpenPanel] = useState(null);
   const [queueMsg, setQueueMsg] = useState('');
   const [queueBusy, setQueueBusy] = useState(false);
@@ -2091,6 +2101,7 @@ export default function Discovery({ sidebarCollapsed, setSidebarCollapsed }) {
   function switchSide(next) {
     setSide(next);
     setOpenPanel(null);
+    if (next === 'hosts') setHostView('crm');
   }
 
   // "Build fresh 50" — confirms both sides at once (drafted DM for hosts,

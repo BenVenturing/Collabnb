@@ -46,9 +46,10 @@ export const NICHE_SEARCH_TERMS: Record<string, string[]> = {
 };
 
 // ─── Host outreach copy templates ──────────────────────────────────────────────
-// Five fixed angles for the daily host-outreach batch. The LLM adapts the
-// [Hotel Name] token + one true personalization detail per prospect — it does
-// not freely rewrite these, so the approved copy/tone stays intact.
+// Five fixed angles for the daily host-outreach batch. The LLM only swaps in
+// the [Hotel Name] token — it does not freely rewrite these or add any
+// location/niche/bio detail back to the host (reads as robotic mail-merge
+// since it's their own property info), so the approved copy/tone stays intact.
 // Deterministic — never LLM-generated — so the stats can never drift or get
 // hallucinated per message. Same sourced third-party stats already used on
 // the marketing site's "Why creator collabs work" section (how-it-works.html)
@@ -77,9 +78,9 @@ We're inviting our first 100 properties in as Founding Hosts — free, lifetime 
   {
     id: "social_proof",
     name: "Social Proof / Momentum",
-    template: `Hi!
+    template: `Hi! I'm Benjamin, founder of Collabnb.
 
-We've been searching for some incredible hotels, villas, and boutique stays to onboard onto our creator-host platform, Collabnb. [Hotel Name] seemed like an excellent option. 🌿
+We've been searching for some incredible hotels, villas, and boutique stays to onboard onto the platform, and [Hotel Name] seemed like an excellent fit. 🌿
 
 We connect properties like yours with vetted content creators for paid collaborations — no more sifting through DMs hoping someone's a good fit.
 
@@ -1252,7 +1253,7 @@ async function draftHostMessage(p: any, angle: (typeof HOST_OUTREACH_TEMPLATES)[
       {
         role: "system",
         content:
-          "You adapt a fixed outreach template for Benjamin, founder of Collabnb (collabnb.com). You do NOT rewrite the message freely — you keep its structure, sentence order, tone, emoji, and call-to-action exactly as given. Your job: (1) replace every '[Hotel Name]' with the real listing name; (2) if the template contains the literal marker '{STATS}', leave it completely unchanged, on its own line — never translate, remove, or alter it; (3) only if a genuine matching fact is provided below (location, niche, bio), add ONE short new paragraph (1 sentence, separated by a blank line, placed right after the opening paragraph) stating that fact honestly — never invent anything not given, and skip this paragraph entirely if no real fact is available. Formatting rules, no exceptions: never use markdown or asterisks (no *bold* or bullet '*'), never use parentheses anywhere — rephrase instead, never include notes, brackets, or commentary about what you changed. Output ONLY the final message text a host would receive, nothing else.",
+          "You adapt a fixed outreach template for Benjamin, founder of Collabnb (collabnb.com). You do NOT rewrite the message freely — you keep its structure, sentence order, tone, emoji, and call-to-action exactly as given. Your job: (1) replace every '[Hotel Name]' with the real listing name; (2) if the template contains the literal marker '{STATS}', leave it completely unchanged, on its own line — never translate, remove, or alter it. Do NOT add any new sentence or paragraph stating the host's own location, niche, or bio back to them — they already know these facts about their own property, and reciting them back reads as automated/robotic. Formatting rules, no exceptions: never use markdown or asterisks (no *bold* or bullet '*'), never use parentheses anywhere — rephrase instead, never include notes, brackets, or commentary about what you changed. Output ONLY the final message text a host would receive, nothing else.",
       },
       {
         role: "user",
@@ -1304,10 +1305,15 @@ export const generateDraftsForSelected = action({
     const templates = await resolveHostOutreachTemplates(ctx);
     const results = await mapWithConcurrency(ids, 5, async (id) => {
       const p: any = await ctx.runQuery(internal.prospects.getById, { id });
-      if (!p || p.kind !== "host") return false;
-      const angle = nextAngle(templates, counts);
-      const dmDraft = await draftHostMessage(p, angle);
-      await ctx.runMutation(internal.prospects.saveHostDraft, { id: p._id, dmDraft, dmAngle: angle.id });
+      if (!p) return false;
+      if (p.kind === "host") {
+        const angle = nextAngle(templates, counts);
+        const dmDraft = await draftHostMessage(p, angle);
+        await ctx.runMutation(internal.prospects.saveHostDraft, { id: p._id, dmDraft, dmAngle: angle.id });
+      } else {
+        const dmDraft = await draftCreatorMessage(p);
+        await ctx.runMutation(api.prospects.update, { id: p._id, dmDraft });
+      }
       return true;
     });
     return { drafted: results.filter(Boolean).length };
@@ -1754,6 +1760,59 @@ export const importCreatorsLocal = mutation({
 // Hosts always use the 5 fixed angle templates (angleId picks one explicitly,
 // otherwise the least-used angle is auto-selected); creators keep the older
 // freeform pitch below since there's no fixed-template ask for them.
+// Creator analog of draftHostMessage — shared by the single-card generator
+// and the bulk "Draft DMs for selected" action, which previously only had a
+// host branch (generateDraftsForSelected silently no-op'd on every creator).
+async function draftCreatorMessage(p: any): Promise<string> {
+  // Real scraped data (from "Analyze profile") makes a specific compliment
+  // honest — Ben has genuinely verified facts about this creator at that
+  // point, unlike an un-analyzed profile where a specific claim would be
+  // a guess dressed up as personal review.
+  const bestPost = (p.recent_posts || [])
+    .slice()
+    .sort((a: any, b: any) => ((b.views ?? b.likes ?? 0) - (a.views ?? a.likes ?? 0)))[0];
+  const isAnalyzed = !!p.enriched_at && !!bestPost;
+
+  const who = [
+    `Instagram handle: @${p.instagram_handle}`,
+    p.display_name && `Name: ${p.display_name}`,
+    p.follower_count && `Followers: ${p.follower_count}`,
+    p.niche && `Niche: ${p.niche}`,
+    p.location && `Location: ${p.location}`,
+    p.bio && `Bio: ${p.bio}`,
+    isAnalyzed && `Their recent ${bestPost.type} post${bestPost.views ? ` — ${bestPost.views.toLocaleString()} views` : ""}: "${bestPost.caption.slice(0, 200)}"`,
+  ].filter(Boolean).join("\n");
+
+  const pitch = "Invite them to join Collabnb as a travel creator — they pitch boutique stays and trade content for nights, with contracts and payments handled on the platform.";
+
+  const complimentRule = isAnalyzed
+    ? "Ben has genuinely reviewed this profile's recent post data below — open with a specific, honest reference to it (react like a real follower would), not a generic line."
+    : "Ben has NOT personally reviewed this specific profile, so keep the opener honest and general — say something like \"you've done some incredible travel recently\" or \"your recent content is really spot on\", never claim to have watched a specific video or read a specific caption. It's fine to say something like \"our team came across your account\" rather than implying personal review.";
+
+  const raw = await llmChat([
+    {
+      role: "system",
+      content:
+        `You write short Instagram DM bodies for Ben, founder of Collabnb (collabnb.com) — a creator-first hospitality marketing platform connecting boutique properties with vetted creators for professional campaigns. Sound like a real person typing on their phone: warm, zero marketing-speak. Never use 'elevate', 'unlock', 'leverage', 'seamless', 'game-changer', or exclamation marks back to back. ${complimentRule} Formatting rules, no exceptions: never use markdown or asterisks, never use parentheses anywhere — rephrase instead, never include notes or commentary about what you changed. Output ONLY the DM body text — no link, no sign-off (those are added automatically after), no introduction line, no quotes, no commentary.`,
+    },
+    {
+      role: "user",
+      content: `Write ONE Instagram DM body (max 380 characters, 2-3 short paragraphs, no hashtags, at most one emoji, no link, no sign-off). Open per the compliment rule in the system instructions, then: ${pitch} End with a soft ask — no link or sign-off, those come after.\n\n${who}`,
+    },
+  ], 250, 20_000);
+
+  // Strip a leaked "Here is..." preamble line and wrapping quotes.
+  let dmDraft = raw.trim();
+  const lines = dmDraft.split("\n");
+  if (lines.length > 1 && /^(here('s| is)|sure|below is)/i.test(lines[0]) && lines[0].length < 90) {
+    dmDraft = lines.slice(1).join("\n").trim();
+  }
+  dmDraft = dmDraft.replace(/^["'“”]+|["'“”]+$/g, "").replace(/\*/g, "").replace(/[()]/g, "");
+  // Link + sign-off are appended in code, not left to the LLM, so they're
+  // always correct and consistent — never a hallucinated URL or wording.
+  return `${dmDraft}\n\nhttps://www.collabnb.com/\n\nCheers,\nThe Collabnb team`.slice(0, 900);
+}
+
 export const generateDmDraft = action({
   args: { id: v.id("prospects"), angleId: v.optional(v.string()) },
   handler: withSurfacedErrors(async (ctx, { id, angleId }): Promise<string> => {
@@ -1773,53 +1832,7 @@ export const generateDmDraft = action({
       return dmDraft;
     }
 
-    // Real scraped data (from "Analyze profile") makes a specific compliment
-    // honest — Ben has genuinely verified facts about this creator at that
-    // point, unlike an un-analyzed profile where a specific claim would be
-    // a guess dressed up as personal review.
-    const bestPost = (p.recent_posts || [])
-      .slice()
-      .sort((a: any, b: any) => ((b.views ?? b.likes ?? 0) - (a.views ?? a.likes ?? 0)))[0];
-    const isAnalyzed = !!p.enriched_at && !!bestPost;
-
-    const who = [
-      `Instagram handle: @${p.instagram_handle}`,
-      p.display_name && `Name: ${p.display_name}`,
-      p.follower_count && `Followers: ${p.follower_count}`,
-      p.niche && `Niche: ${p.niche}`,
-      p.location && `Location: ${p.location}`,
-      p.bio && `Bio: ${p.bio}`,
-      isAnalyzed && `Their recent ${bestPost.type} post${bestPost.views ? ` — ${bestPost.views.toLocaleString()} views` : ""}: "${bestPost.caption.slice(0, 200)}"`,
-    ].filter(Boolean).join("\n");
-
-    const pitch = "Invite them to join Collabnb as a travel creator — they pitch boutique stays and trade content for nights, with contracts and payments handled on the platform.";
-
-    const complimentRule = isAnalyzed
-      ? "Ben has genuinely reviewed this profile's recent post data below — open with a specific, honest reference to it (react like a real follower would), not a generic line."
-      : "Ben has NOT personally reviewed this specific profile, so keep the opener honest and general — say something like \"you've done some incredible travel recently\" or \"your recent content is really spot on\", never claim to have watched a specific video or read a specific caption. It's fine to say something like \"our team came across your account\" rather than implying personal review.";
-
-    const raw = await llmChat([
-      {
-        role: "system",
-        content:
-          `You write short Instagram DM bodies for Ben, founder of Collabnb (collabnb.com) — a creator-first hospitality marketing platform connecting boutique properties with vetted creators for professional campaigns. Sound like a real person typing on their phone: warm, zero marketing-speak. Never use 'elevate', 'unlock', 'leverage', 'seamless', 'game-changer', or exclamation marks back to back. ${complimentRule} Formatting rules, no exceptions: never use markdown or asterisks, never use parentheses anywhere — rephrase instead, never include notes or commentary about what you changed. Output ONLY the DM body text — no link, no sign-off (those are added automatically after), no introduction line, no quotes, no commentary.`,
-      },
-      {
-        role: "user",
-        content: `Write ONE Instagram DM body (max 380 characters, 2-3 short paragraphs, no hashtags, at most one emoji, no link, no sign-off). Open per the compliment rule in the system instructions, then: ${pitch} End with a soft ask — no link or sign-off, those come after.\n\n${who}`,
-      },
-    ], 250, 20_000);
-
-    // Strip a leaked "Here is..." preamble line and wrapping quotes.
-    let dmDraft = raw.trim();
-    const lines = dmDraft.split("\n");
-    if (lines.length > 1 && /^(here('s| is)|sure|below is)/i.test(lines[0]) && lines[0].length < 90) {
-      dmDraft = lines.slice(1).join("\n").trim();
-    }
-    dmDraft = dmDraft.replace(/^["'“”]+|["'“”]+$/g, "").replace(/\*/g, "").replace(/[()]/g, "");
-    // Link + sign-off are appended in code, not left to the LLM, so they're
-    // always correct and consistent — never a hallucinated URL or wording.
-    dmDraft = `${dmDraft}\n\nhttps://www.collabnb.com/\n\nCheers,\nThe Collabnb team`.slice(0, 900);
+    const dmDraft = await draftCreatorMessage(p);
     await ctx.runMutation(api.prospects.update, { id, dmDraft });
     return dmDraft;
   }),

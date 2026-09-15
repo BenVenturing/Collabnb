@@ -293,24 +293,36 @@ function InboxPanel({ configured }) {
   );
 }
 
-// Which source Discovery → Host outreach uses to search/import host listings.
-function SearchProviderToggle() {
+// Which source Discovery uses to search/import host or creator listings.
+// Agent-Reach (free, local) is the default tier for both — it's the closest
+// thing to "try this first" that's actually possible here: Agent-Reach only
+// runs inside a live local agent session with the admin's own logged-in
+// Chrome, so unlike the LLM provider chain (pure server-to-server calls),
+// Convex has no way to invoke it directly and silently fall back on failure.
+// This setting is the real tiering mechanism instead — background/automatic
+// flows (the daily cron, "Build fresh 50"'s auto top-up) skip HikerAPI/Apify
+// entirely while this is 'agent_reach', and only ever spend credits once an
+// admin explicitly switches a kind over to the paid tier. Manual buttons
+// (per-profile "Run now", the CSV/manual-add forms) still work regardless —
+// this only gates the silent/automatic paid calls.
+function SearchProviderToggle({ kind, label }) {
   const settings = useQuery(api.admin.getSettings);
   const setSetting = useMutation(api.admin.setSetting);
-  const provider = settings?.host_search_provider || 'hikerapi';
+  const settingKey = `${kind}_search_provider`;
+  const provider = settings?.[settingKey] || 'agent_reach';
 
   return (
-    <div style={{ padding: '0.9rem 1rem', borderRadius: '1rem', background: 'rgba(255,255,255,0.65)', border: '1px solid rgba(25,37,36,0.07)', marginBottom: '1.5rem' }}>
-      <p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#192524', margin: '0 0 0.3rem' }}>Host outreach search provider</p>
+    <div style={{ padding: '0.9rem 1rem', borderRadius: '1rem', background: 'rgba(255,255,255,0.65)', border: '1px solid rgba(25,37,36,0.07)', marginBottom: '1rem' }}>
+      <p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#192524', margin: '0 0 0.3rem' }}>{label} search provider</p>
       <p style={{ fontSize: '0.72rem', color: '#646B62', margin: '0 0 0.6rem', lineHeight: 1.5 }}>
-        Which source Discovery → Host outreach uses to find host listings. HikerAPI runs in-app. Agent-Reach runs locally — a live agent session on your Mac with your own logged-in Chrome searches Instagram, then pushes results into the same pool (see the note in the Host outreach panel).
+        Agent-Reach (default) keeps every automatic search free — a live local agent session on your Mac with your own logged-in Chrome searches Instagram, then pushes results into the same pool. Switch to HikerAPI to let the daily cron and "Build fresh 50" auto top-up spend credits automatically instead.
       </p>
       <div style={{ display: 'flex', gap: '0.4rem' }}>
         {[
-          { id: 'hikerapi', label: 'HikerAPI (in-app)' },
-          { id: 'agent_reach', label: 'Agent-Reach (local)' },
+          { id: 'agent_reach', label: 'Agent-Reach (local, free)' },
+          { id: 'hikerapi', label: 'HikerAPI (in-app, paid)' },
         ].map((opt) => (
-          <button key={opt.id} onClick={() => setSetting({ key: 'host_search_provider', value: opt.id })}
+          <button key={opt.id} onClick={() => setSetting({ key: settingKey, value: opt.id })}
             style={{ padding: '0.4rem 0.9rem', borderRadius: 9999, border: provider === opt.id ? 'none' : '1px solid rgba(25,37,36,0.15)', background: provider === opt.id ? '#192524' : 'transparent', color: provider === opt.id ? '#fff' : '#3C5759', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer' }}>
             {opt.label}
           </button>
@@ -365,7 +377,8 @@ export default function SocialHub() {
         </p>
       </div>
 
-      <SearchProviderToggle />
+      <SearchProviderToggle kind="host" label="Host outreach" />
+      <SearchProviderToggle kind="creator" label="Creator discovery" />
 
       <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
         <ConnectorCard platform="instagram" account={igAccount} configured={integrations?.instagram}

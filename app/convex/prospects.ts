@@ -384,6 +384,20 @@ async function findMarketingEmail(p: any): Promise<string | undefined> {
 const NO_KEY_MSG =
   "No Instagram API key set. Set HIKERAPI_KEY (preferred — hikerapi.com) or APIFY_API_TOKEN (apify.com): npx convex env set HIKERAPI_KEY ...";
 
+// Which Instagram source a background/automatic flow is allowed to spend
+// credits on — 'agent_reach' (the default) means "don't call HikerAPI/Apify
+// on your own", since Agent-Reach itself has no server-callable API: it only
+// runs inside a live local agent session with the admin's own logged-in
+// Chrome (see HostSearchImport's note in Discovery.jsx), so Convex can never
+// invoke it directly the way it can silently retry across LLM providers.
+// The real tiering this enables is: free local Agent-Reach searches stay the
+// default path, and the paid tier only ever spends money when an admin
+// explicitly flips this setting (or clicks a manual "Search & import"/"Run
+// now" button, which always uses the paid tier regardless of this setting).
+function searchProviderFor(settings: Record<string, string>, kind: "host" | "creator"): string {
+  return settings[`${kind}_search_provider`] || "agent_reach";
+}
+
 async function hikerGet(path: string, params: Record<string, any>): Promise<any> {
   const key = process.env.HIKERAPI_KEY!;
   const qs = new URLSearchParams(
@@ -855,9 +869,12 @@ export const getTopNewCandidates = internalQuery({
 // buildTodayQueue above, promoting a prospect here means the *fuller* confirm
 // treatment: hosts get a drafted DM (same as confirmHostBatch), creators get
 // queued — not just a bare status flip. If the existing 'new' pool is short
-// of the target, tops it up with one live search first (using the first
-// configured auto-search profile for that kind, on or off) before
-// re-selecting the top-scored candidates.
+// of the target AND that kind's search_provider is set to hikerapi/apify
+// (not the 'agent_reach' default), tops it up with one live search first
+// (using the first configured auto-search profile for that kind, on or off)
+// before re-selecting the top-scored candidates. Under the agent_reach
+// default it just works with whatever's already in the pool — topping up is
+// then a manual "run Agent-Reach locally, then import" step instead.
 //
 // Deliberately does NOT send the welcome email — nothing goes to a real
 // inbox without an explicit "Email"/"Email selected" click from the admin,
@@ -875,7 +892,7 @@ async function runBuildFreshQueue(ctx: any, perKind = 50): Promise<{ promoted: {
     if (need === 0) continue;
 
     let candidates: any[] = await ctx.runQuery(internal.prospects.getTopNewCandidates, { kind, limit: need });
-    if (candidates.length < need) {
+    if (candidates.length < need && searchProviderFor(settings, kind) !== "agent_reach") {
       let cfg: any = null;
       try { cfg = JSON.parse(settings[kind === "host" ? "host_discovery_auto" : "discovery_auto"] || "null"); } catch { /* no config yet */ }
       const profile = cfg?.profiles?.[0];
@@ -2257,14 +2274,17 @@ export const runDiscoveryProfileNow = action({
 // admin-configured list (all run every day — no rotation). Config lives in
 // admin_settings under 'discovery_auto' as JSON:
 //   { profiles: [{ id, enabled, niche, location, perDay }] }
-// This is the HikerAPI/Apify tier only — it costs credits. The free
-// Agent-Reach tier (search-only) runs from a local session and lands rows via
-// importCreatorsLocal above; those still pass through here manually via
-// enrichPendingCreators since Agent-Reach can't reliably pull follower/bio data.
+// This is the HikerAPI/Apify tier only — it costs credits, so it no-ops
+// (ran: false) whenever creator_search_provider is 'agent_reach' (the
+// default). The free Agent-Reach tier (search-only) runs from a local
+// session and lands rows via importCreatorsLocal above; those still pass
+// through here manually via enrichPendingCreators since Agent-Reach can't
+// reliably pull follower/bio data.
 export const runDailyDiscovery = internalAction({
   args: {},
   handler: async (ctx): Promise<{ ran: boolean; results?: { niche: string; location?: string; imported: number }[] }> => {
     const settings: Record<string, string> = await ctx.runQuery(internal.admin.getSettingsInternal, {});
+    if (searchProviderFor(settings, "creator") === "agent_reach") return { ran: false };
     let cfg: any = null;
     try { cfg = JSON.parse(settings.discovery_auto || "null"); } catch { /* bad JSON = off */ }
     const profiles = (cfg?.profiles || []).filter((p: any) => p?.enabled && p?.niche);
@@ -2293,6 +2313,7 @@ export const runDailyHostDiscovery = internalAction({
   args: {},
   handler: async (ctx): Promise<{ ran: boolean; results?: { query: string; imported: number }[] }> => {
     const settings: Record<string, string> = await ctx.runQuery(internal.admin.getSettingsInternal, {});
+    if (searchProviderFor(settings, "host") === "agent_reach") return { ran: false };
     let cfg: any = null;
     try { cfg = JSON.parse(settings.host_discovery_auto || "null"); } catch { /* bad JSON = off */ }
     const profiles = (cfg?.profiles || []).filter((p: any) => p?.enabled && p?.query);

@@ -159,6 +159,14 @@ function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
   const [resetting, setResetting] = useState(false);
   const [sendingStep, setSendingStep] = useState(null);
   const [seqErr, setSeqErr] = useState('');
+  const [focusEmailPending, setFocusEmailPending] = useState(false);
+  const emailInputRef = useRef(null);
+  useEffect(() => {
+    if (open && focusEmailPending) {
+      emailInputRef.current?.focus();
+      setFocusEmailPending(false);
+    }
+  }, [open, focusEmailPending]);
 
   async function genDm() {
     setGenBusy(true); setGenErr('');
@@ -244,24 +252,35 @@ function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
   const flow = prospect.kind === 'host' ? HOST_STATUS_FLOW : creatorFlow;
   const flowIdx = flow.indexOf(prospect.status);
   const nextStatus = flowIdx === -1 ? undefined : flow[flowIdx + 1];
-  // queued -> emailed is a real send (find/use an address, draft, send),
-  // not a bare label change, so it goes through sendHostEmailNow/
-  // sendCreatorEmailNow instead of the generic updateStatus every other step uses.
-  const advanceIsSend = nextStatus === 'emailed';
+  // Email and DM are now their own persistent buttons (see the crm render
+  // branch below), not a single dynamic "advance" button — so the generic
+  // advance only ever needs to cover what's left: Responded/Signed.
+  const genericTarget = nextStatus && nextStatus !== 'emailed' && nextStatus !== 'contacted' ? nextStatus : null;
+  const emailSent = !!prospect.email_sequence?.[0]?.sent_at;
+  const dmed = !!prospect.contacted_at;
 
-  async function advance() {
-    if (advanceIsSend) {
-      setSendingStep('now'); setSeqErr('');
-      try {
-        if (prospect.kind === 'host') await sendHostEmailNow({ id: prospect._id });
-        else await sendCreatorEmailNow({ id: prospect._id });
-      } catch (e) {
-        setSeqErr((e.data || e.message)?.replace(/^.*Error:\s*/, '') || 'Could not send');
-      } finally {
-        setSendingStep(null);
-      }
-    } else {
-      updateStatus({ id: prospect._id, status: nextStatus });
+  // Email button click behavior depends on state: no address on file yet ->
+  // expand the card and focus the field to add one (this button doesn't
+  // fire a send with nothing to send to); already sent -> just expand for
+  // review/resend via the proper per-step control; otherwise -> send now.
+  async function handleEmailClick() {
+    if (!prospect.email) {
+      setOpen(true);
+      setFocusEmailPending(true);
+      return;
+    }
+    if (emailSent) {
+      setOpen((o) => !o);
+      return;
+    }
+    setSendingStep('now'); setSeqErr('');
+    try {
+      if (prospect.kind === 'host') await sendHostEmailNow({ id: prospect._id });
+      else await sendCreatorEmailNow({ id: prospect._id });
+    } catch (e) {
+      setSeqErr((e.data || e.message)?.replace(/^.*Error:\s*/, '') || 'Could not send');
+    } finally {
+      setSendingStep(null);
     }
   }
 
@@ -289,12 +308,16 @@ function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
             </a>
             {!crm && <StatusBadge status={prospect.status} />}
             {prospect.tier && <span style={{ fontSize: '0.62rem', padding: '0.15rem 0.45rem', borderRadius: 9999, background: 'rgba(209,235,219,0.6)', color: '#166534', fontWeight: 600, textTransform: 'capitalize' }}>{prospect.tier}</span>}
-            {prospect.dm_angle && (
+            {/* Angle + Published badges only clutter the CRM board's collapsed
+                card — the angle is copy-writing detail, and Published is
+                implied by being confirmed into the pipeline at all. Both
+                still visible in the non-crm pool view. */}
+            {!crm && prospect.dm_angle && (
               <span title="Outreach copy angle" style={{ fontSize: '0.62rem', padding: '0.15rem 0.45rem', borderRadius: 9999, background: 'rgba(123,104,200,0.12)', color: '#5b4aa8', fontWeight: 600 }}>
                 {ANGLE_LABELS[prospect.dm_angle] || prospect.dm_angle}
               </span>
             )}
-            {prospect.published && (
+            {!crm && prospect.published && (
               <span title="Reviewed and published — ready to send" style={{ fontSize: '0.62rem', padding: '0.15rem 0.45rem', borderRadius: 9999, background: 'rgba(209,235,219,0.8)', color: '#166534', fontWeight: 700 }}>
                 ✓ Published
               </span>
@@ -312,30 +335,31 @@ function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
 
       {/* Quick status advance */}
       {crm ? (
-        <div style={{ marginTop: '0.6rem' }}>
-          {nextStatus && (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem' }}>
-              <button onClick={advance} disabled={sendingStep === 'now'}
-                style={{ padding: '0.32rem 0.8rem', borderRadius: 9999, border: 'none', background: '#192524', color: '#fff', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', opacity: sendingStep === 'now' ? 0.5 : 1 }}>
-                {advanceIsSend ? (sendingStep === 'now' ? 'Emailing…' : 'Email') : `Mark ${STATUS_CFG[nextStatus].label.toLowerCase()}`}
-              </button>
-              {advanceIsSend && seqErr && <span style={{ fontSize: '0.66rem', color: '#9b2d2d' }}>{seqErr}</span>}
-            </div>
-          )}
-          {prospect.status !== 'signed' && (
-            <div style={{ display: 'flex', justifyContent: 'center', gap: '0.4rem', marginTop: '0.4rem' }}>
-              {prospect.status !== 'declined' && (
-                <button onClick={() => updateStatus({ id: prospect._id, status: 'declined' })}
-                  style={{ padding: '0.32rem 0.7rem', borderRadius: 9999, border: '1px solid rgba(200,104,104,0.3)', background: 'transparent', color: '#9b2d2d', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer' }}>
-                  Declined
-                </button>
-              )}
-              <button onClick={doReset} disabled={resetting}
-                title="Back to a fresh pool candidate — keeps the draft, clears status/queue"
-                style={{ padding: '0.32rem 0.7rem', borderRadius: 9999, border: '1px solid rgba(25,37,36,0.15)', background: 'transparent', color: '#3C5759', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer', opacity: resetting ? 0.5 : 1 }}>
-                {resetting ? 'Resetting…' : 'Reset'}
-              </button>
-            </div>
+        <div style={{ marginTop: '0.6rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.3rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+            <button onClick={handleEmailClick} disabled={sendingStep === 'now'}
+              title={!prospect.email ? 'No email on file — click to add one' : emailSent ? 'Already emailed — click to expand and review or resend' : 'Send the cold outreach email'}
+              style={{
+                padding: '0.32rem 0.8rem', borderRadius: 9999, fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer',
+                border: prospect.email ? 'none' : '1.5px solid rgba(25,37,36,0.2)',
+                background: emailSent ? '#166534' : prospect.email ? '#192524' : 'transparent',
+                color: emailSent || prospect.email ? '#fff' : '#3C5759',
+                opacity: sendingStep === 'now' ? 0.5 : 1,
+              }}>
+              {sendingStep === 'now' ? 'Emailing…' : 'Email'}
+            </button>
+            <button onClick={dmOnInstagram} disabled={genBusy}
+              title={dmed ? 'Already DMed — click to reopen the thread and copy the message again' : (dmDraft ? 'Copies the draft, then opens their Instagram DM thread' : 'Generates a draft (using Analyze profile data if available), copies it, then opens their Instagram DM thread')}
+              style={{ padding: '0.32rem 0.8rem', borderRadius: 9999, border: 'none', background: dmed ? '#166534' : '#192524', color: '#fff', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', opacity: genBusy ? 0.5 : 1 }}>
+              {genBusy && !dmDraft ? 'Writing…' : 'DM on Instagram ↗'}
+            </button>
+          </div>
+          {seqErr && <span style={{ fontSize: '0.66rem', color: '#9b2d2d' }}>{seqErr}</span>}
+          {genericTarget && (
+            <button onClick={() => updateStatus({ id: prospect._id, status: genericTarget })}
+              style={{ padding: '0.32rem 0.8rem', borderRadius: 9999, border: 'none', background: '#192524', color: '#fff', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer' }}>
+              Mark {STATUS_CFG[genericTarget].label.toLowerCase()}
+            </button>
           )}
         </div>
       ) : (
@@ -373,7 +397,7 @@ function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
 
           <div>
             <span style={label}>Email{prospect.kind === 'creator' && !prospect.email ? ' — none on file, so this one goes straight to DM' : ''}</span>
-            <input type="email" value={emailField} onChange={e => setEmailField(e.target.value)}
+            <input ref={emailInputRef} type="email" value={emailField} onChange={e => setEmailField(e.target.value)}
               onBlur={() => emailField.trim() !== (prospect.email || '') && update({ id: prospect._id, email: emailField.trim() })}
               placeholder="Found automatically from their bio when the search tool sees one" spellCheck={false}
               style={{ ...input, width: '100%' }} />
@@ -484,10 +508,25 @@ function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
               onBlur={() => notes !== (prospect.notes || '') && update({ id: prospect._id, notes })}
               rows={2} style={{ ...input, width: '100%', resize: 'vertical' }} />
           </div>
-          <button onClick={() => remove({ id: prospect._id })}
-            style={{ alignSelf: 'flex-start', padding: '0.3rem 0.7rem', borderRadius: 9999, border: 'none', background: 'transparent', color: '#9b2d2d', fontSize: '0.7rem', cursor: 'pointer' }}>
-            Remove prospect
-          </button>
+          <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+            {crm && prospect.status !== 'declined' && prospect.status !== 'signed' && (
+              <button onClick={() => updateStatus({ id: prospect._id, status: 'declined' })}
+                style={{ padding: '0.3rem 0.7rem', borderRadius: 9999, border: '1px solid rgba(200,104,104,0.3)', background: 'transparent', color: '#9b2d2d', fontSize: '0.7rem', fontWeight: 600, cursor: 'pointer' }}>
+                Declined
+              </button>
+            )}
+            {crm && prospect.status !== 'signed' && (
+              <button onClick={doReset} disabled={resetting}
+                title="Back to a fresh pool candidate — keeps the draft, clears status/queue"
+                style={{ padding: '0.3rem 0.7rem', borderRadius: 9999, border: '1px solid rgba(25,37,36,0.15)', background: 'transparent', color: '#3C5759', fontSize: '0.7rem', fontWeight: 600, cursor: 'pointer', opacity: resetting ? 0.5 : 1 }}>
+                {resetting ? 'Resetting…' : 'Reset'}
+              </button>
+            )}
+            <button onClick={() => remove({ id: prospect._id })}
+              style={{ padding: '0.3rem 0.7rem', borderRadius: 9999, border: 'none', background: 'transparent', color: '#9b2d2d', fontSize: '0.7rem', cursor: 'pointer' }}>
+              Remove prospect
+            </button>
+          </div>
         </div>
       )}
     </div>
@@ -679,7 +718,13 @@ function CsvImport() {
 }
 
 // ─── Find creators (niche search + ranked top 10) ─────────────────────────────
+// Swaps to instructions when Agent-Reach is the selected provider (Social
+// tab), same as HostSearchImport above — searchCreators always spends
+// HikerAPI/Apify credits, so it stays hidden behind an explicit provider
+// switch rather than running by default.
 function FindCreators() {
+  const settings = useQuery(api.admin.getSettings);
+  const provider = settings?.creator_search_provider || 'agent_reach';
   const search = useAction(api.prospects.searchCreators);
   const [tags, setTags] = useState('');
   const [loc, setLoc] = useState('');
@@ -701,6 +746,16 @@ function FindCreators() {
     } finally {
       setBusy(false);
     }
+  }
+
+  if (provider === 'agent_reach') {
+    return (
+      <div style={{ padding: '0.7rem 0.9rem', borderRadius: '0.75rem', background: 'rgba(123,104,200,0.06)', border: '1px solid rgba(123,104,200,0.2)' }}>
+        <p style={{ fontSize: '0.76rem', color: '#3C5759', margin: 0, lineHeight: 1.5 }}>
+          Search provider is set to <strong>Agent-Reach</strong> (Social tab). Its Instagram search needs a live local agent session with your own logged-in Chrome — it can't run from this hosted admin page. On your Mac, open a local Claude Code session and ask it to search Instagram via Agent-Reach for a niche/location, then have it push the results in with the <code>prospects:importCreatorsLocal</code> mutation (secret in Convex env as <code>LOCAL_IMPORT_SECRET</code>). New creators appear in the pool below automatically once pushed — run "Enrich pending" below afterward to fill in follower counts/bio.
+        </p>
+      </div>
+    );
   }
 
   return (
@@ -869,7 +924,7 @@ function HostAutoDiscoveryCard() {
             + Add profile
           </button>
           <p style={{ fontSize: '0.68rem', color: '#646B62', margin: '0.5rem 0 0' }}>
-            Every profile toggled On runs every day — no more rotation, so more profiles means more Apify/HikerAPI credits used.
+            Every profile toggled On runs every day — no more rotation, so more profiles means more Apify/HikerAPI credits used. Only actually runs while the host search provider (Social tab) is set to HikerAPI — under the Agent-Reach default this cron no-ops and stays free.
           </p>
         </div>
       )}
@@ -913,7 +968,7 @@ function downloadHostsCsv(rows, filename) {
 // selected provider (Social tab), since that runs locally, not server-side.
 function HostSearchImport() {
   const settings = useQuery(api.admin.getSettings);
-  const provider = settings?.host_search_provider || 'hikerapi';
+  const provider = settings?.host_search_provider || 'agent_reach';
   const importFromApify = useAction(api.prospects.importFromApify);
   const [q, setQ] = useState('');
   const [limit, setLimit] = useState(40);
@@ -1729,7 +1784,7 @@ function AutoDiscoveryCard() {
         {errorMsg && <span style={{ fontSize: '0.7rem', color: '#9b2d2d', fontWeight: 700 }}>{errorMsg}</span>}
       </div>
       <p style={{ fontSize: '0.7rem', color: '#646B62', margin: '0.5rem 0 0.75rem' }}>
-        Every profile toggled On runs every morning at 7am UTC — searches Instagram for its niche/location, imports new creators, and scores the top N per day. Ready before the 8am outreach queue builds. Uses Apify/HikerAPI credits daily per profile while on; use "Run now" to fire one immediately instead of waiting.
+        Every profile toggled On runs every morning at 7am UTC — searches Instagram for its niche/location, imports new creators, and scores the top N per day. Ready before the 8am outreach queue builds. Uses Apify/HikerAPI credits daily per profile while on, and only actually runs while the creator search provider (Social tab) is set to HikerAPI — under the Agent-Reach default this cron no-ops and stays free. "Run now" always uses HikerAPI/Apify regardless of that setting.
       </p>
       <div style={{ padding: '0.7rem 0.9rem', borderRadius: '0.75rem', background: 'rgba(123,104,200,0.06)', border: '1px solid rgba(123,104,200,0.2)' }}>
         <p style={{ fontSize: '0.76rem', color: '#3C5759', margin: 0, lineHeight: 1.5 }}>

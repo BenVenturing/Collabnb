@@ -859,6 +859,18 @@ export const markWhatsapped = mutation({
   },
 });
 
+// Click-the-avatar star toggle — a plain "this one looks promising" flag,
+// same for hosts and creators, independent of status/pipeline stage.
+export const toggleStarred = mutation({
+  args: { id: v.id("prospects") },
+  handler: async (ctx, { id }) => {
+    await requireAdmin(ctx);
+    const p = await ctx.db.get(id);
+    if (!p) throw new Error("Prospect not found");
+    await ctx.db.patch(id, { starred: !(p as any).starred });
+  },
+});
+
 export const remove = mutation({
   args: { id: v.id("prospects") },
   handler: async (ctx, { id }) => {

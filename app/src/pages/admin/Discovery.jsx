@@ -116,19 +116,44 @@ function bestPost(p) {
 // (from Apify/HikerAPI) are short-lived/session-scoped CDN links that
 // frequently go stale, so a broken <img> swaps itself out for initials
 // instead of showing the browser's broken-image icon.
-function Avatar({ url, name, size = 34 }) {
+// starred/onToggleStar are optional — plain decorative use (e.g. the compact
+// FindCreators results list) just omits them and gets the old click-nothing
+// avatar. Where they're passed, clicking swaps the avatar for a gold star —
+// a quick "this one looks especially profitable" flag, same for hosts and
+// creators, independent of status/pipeline stage.
+function Avatar({ url, name, size = 34, starred, onToggleStar }) {
   const [broken, setBroken] = useState(false);
   const initials = (name || '?')[0]?.toUpperCase();
-  if (!url || broken) {
+  const clickable = typeof onToggleStar === 'function';
+
+  if (starred) {
     return (
+      <button onClick={onToggleStar} title="Starred — click to unstar" aria-label="Unstar"
+        style={{ width: size, height: size, borderRadius: '50%', background: '#f5b400', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, cursor: 'pointer', padding: 0 }}>
+        <svg width={Math.round(size * 0.56)} height={Math.round(size * 0.56)} viewBox="0 0 24 24" fill="#fff" aria-hidden="true">
+          <path d="M12 2l2.9 6.6 7.1.6-5.4 4.7 1.6 7-6.2-3.8L5.8 21l1.6-7-5.4-4.7 7.1-.6z" />
+        </svg>
+      </button>
+    );
+  }
+
+  const content = (!url || broken)
+    ? (
       <div style={{ width: size, height: size, borderRadius: '50%', background: 'rgba(149,157,144,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: Math.round(size * 0.24), fontWeight: 700, color: '#3C5759', flexShrink: 0 }}>
         {initials}
       </div>
+    ) : (
+      <img src={url} alt="" onError={() => setBroken(true)}
+        style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
     );
-  }
+
+  if (!clickable) return content;
+
   return (
-    <img src={url} alt="" onError={() => setBroken(true)}
-      style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+    <button onClick={onToggleStar} title="Click to star this prospect" aria-label="Star"
+      style={{ border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', borderRadius: '50%', flexShrink: 0, lineHeight: 0 }}>
+      {content}
+    </button>
   );
 }
 
@@ -144,6 +169,7 @@ function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
   const sendHostEmailNow = useAction(api.prospects.sendHostEmailNow);
   const sendCreatorEmailNow = useAction(api.prospects.sendCreatorEmailNow);
   const markWhatsapped = useMutation(api.prospects.markWhatsapped);
+  const toggleStarred = useMutation(api.prospects.toggleStarred);
   const [open, setOpen] = useState(false);
   const [dmDraft, setDmDraft] = useState(prospect.dm_draft || '');
   const [emailField, setEmailField] = useState(prospect.email || '');
@@ -331,7 +357,8 @@ function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
           <input type="checkbox" aria-label={`Select @${prospect.instagram_handle}`} checked={!!selected}
             onChange={() => onToggleSelect(prospect._id)} style={checkbox} />
         )}
-        <Avatar url={prospect.avatar_url} name={prospect.display_name || prospect.instagram_handle} size={34} />
+        <Avatar url={prospect.avatar_url} name={prospect.display_name || prospect.instagram_handle} size={34}
+          starred={prospect.starred} onToggleStar={() => toggleStarred({ id: prospect._id })} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
             <a href={`https://instagram.com/${prospect.instagram_handle}`} target="_blank" rel="noopener noreferrer"
@@ -1367,7 +1394,7 @@ function HostCrmBoard() {
   const byColumn = {};
   for (const col of CRM_COLUMNS) byColumn[col.id] = [];
   for (const p of filtered) (byColumn[p.status] || byColumn.queued).push(p);
-  for (const col of CRM_COLUMNS) byColumn[col.id].sort((a, b) => lastActivityAt(b) - lastActivityAt(a));
+  for (const col of CRM_COLUMNS) byColumn[col.id].sort((a, b) => (b.starred ? 1 : 0) - (a.starred ? 1 : 0) || lastActivityAt(b) - lastActivityAt(a));
 
   // Per-column select-all — a global one selected across every stage at
   // once, which was rarely what you wanted (e.g. bulk-emailing the whole
@@ -1570,7 +1597,7 @@ function CreatorCrmBoard() {
   const byColumn = {};
   for (const col of CREATOR_CRM_COLUMNS) byColumn[col.id] = [];
   for (const p of filtered) (byColumn[p.status] || byColumn.new).push(p);
-  for (const col of CREATOR_CRM_COLUMNS) byColumn[col.id].sort((a, b) => lastActivityAt(b) - lastActivityAt(a));
+  for (const col of CREATOR_CRM_COLUMNS) byColumn[col.id].sort((a, b) => (b.starred ? 1 : 0) - (a.starred ? 1 : 0) || lastActivityAt(b) - lastActivityAt(a));
 
   const allSelected = filtered.length > 0 && filtered.every((p) => selected.has(String(p._id)));
   function toggleSelectAll() {

@@ -603,6 +603,7 @@ export default defineSchema({
     replied_at: v.optional(v.number()),
     whatsapp: v.optional(v.string()),    // phone number, digits + country code (e.g. "15551234567") for the wa.me deep link
     whatsapped_at: v.optional(v.number()), // independent of `status` — a parallel channel, not a pipeline stage
+    starred: v.optional(v.boolean()), // admin flag for "looks especially profitable" — click the avatar to toggle
     created_at: v.number(),
   })
     .index("by_kind_status", ["kind", "status"])

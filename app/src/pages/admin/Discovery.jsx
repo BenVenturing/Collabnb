@@ -675,6 +675,7 @@ const CSV_HEADER_ALIASES = {
   email: ['email'],
   bio: ['bio'],
   website: ['website'],
+  whatsapp: ['whatsapp', 'phone', 'phone number'],
 };
 
 // Header-matches loosely (case-insensitive) against known aliases so an
@@ -751,7 +752,7 @@ function CsvImport() {
         <span style={{ fontSize: '0.7rem', color: '#646B62' }}>or paste CSV text below</span>
       </div>
       <textarea value={text} onChange={e => setText(e.target.value)}
-        placeholder="Instagram handle,Name,Location,Niche,Followers,Email,Bio,Website"
+        placeholder="Instagram handle,Name,Location,Niche,Followers,Email,Bio,Website,Whatsapp"
         rows={5} style={{ ...input, width: '100%', resize: 'vertical', fontSize: '0.72rem', fontFamily: 'monospace' }} />
       <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginTop: '0.5rem' }}>
         <button onClick={run} disabled={busy || !parsed.length}
@@ -761,7 +762,7 @@ function CsvImport() {
         {result && <span style={{ fontSize: '0.72rem', color: result.startsWith('Imported') ? '#2d7d5e' : '#9b2d2d' }}>{result}</span>}
       </div>
       <p style={{ fontSize: '0.68rem', color: '#646B62', margin: '0.5rem 0 0' }}>
-        First row must be a header. Recognized columns (any order, case-insensitive): Instagram handle, Name, Location, Niche, Followers, Email, Bio, Website. Only Instagram handle is required.
+        First row must be a header. Recognized columns (any order, case-insensitive): Instagram handle, Name, Location, Niche, Followers, Email, Bio, Website, Whatsapp. Only Instagram handle is required.
       </p>
     </div>
   );

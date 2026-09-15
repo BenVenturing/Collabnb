@@ -25,7 +25,8 @@ const OUTREACH_LOG_LABELS = {
   confirmed: 'Confirmed',
   email_sent: 'Email sent',
   emailed: 'Emailed',
-  contacted: 'DMed on Instagram',
+  contacted: 'DMed',
+  whatsapped: 'WhatsApped',
   replied: 'Responded',
   declined: 'Declined',
   signed: 'Signed',
@@ -142,9 +143,11 @@ function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
   const sendSequenceEmail = useAction(api.prospects.sendSequenceEmail);
   const sendHostEmailNow = useAction(api.prospects.sendHostEmailNow);
   const sendCreatorEmailNow = useAction(api.prospects.sendCreatorEmailNow);
+  const markWhatsapped = useMutation(api.prospects.markWhatsapped);
   const [open, setOpen] = useState(false);
   const [dmDraft, setDmDraft] = useState(prospect.dm_draft || '');
   const [emailField, setEmailField] = useState(prospect.email || '');
+  const [whatsappField, setWhatsappField] = useState(prospect.whatsapp || '');
   const [notes, setNotes] = useState(prospect.notes || '');
   const [copied, setCopied] = useState(false);
   // These mirror prospect fields into local state so an onBlur can tell
@@ -156,6 +159,7 @@ function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
   // mounted card kept whatever it had at mount time.
   useEffect(() => { setDmDraft(prospect.dm_draft || ''); }, [prospect.dm_draft]);
   useEffect(() => { setEmailField(prospect.email || ''); }, [prospect.email]);
+  useEffect(() => { setWhatsappField(prospect.whatsapp || ''); }, [prospect.whatsapp]);
   useEffect(() => { setNotes(prospect.notes || ''); }, [prospect.notes]);
   const [genBusy, setGenBusy] = useState(false);
   const [genErr, setGenErr] = useState('');
@@ -172,6 +176,14 @@ function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
       setFocusEmailPending(false);
     }
   }, [open, focusEmailPending]);
+  const [focusWhatsappPending, setFocusWhatsappPending] = useState(false);
+  const whatsappInputRef = useRef(null);
+  useEffect(() => {
+    if (open && focusWhatsappPending) {
+      whatsappInputRef.current?.focus();
+      setFocusWhatsappPending(false);
+    }
+  }, [open, focusWhatsappPending]);
 
   async function genDm() {
     setGenBusy(true); setGenErr('');
@@ -263,6 +275,7 @@ function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
   const genericTarget = nextStatus && nextStatus !== 'emailed' && nextStatus !== 'contacted' ? nextStatus : null;
   const emailSent = !!prospect.email_sequence?.[0]?.sent_at;
   const dmed = !!prospect.contacted_at;
+  const whatsapped = !!prospect.whatsapped_at;
 
   // Email button click behavior depends on state: no address on file yet ->
   // expand the card and focus the field to add one (this button doesn't
@@ -287,6 +300,20 @@ function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
     } finally {
       setSendingStep(null);
     }
+  }
+
+  // Same shape as the Email button: no number on file -> expand + focus the
+  // field; number on file -> open wa.me with it pre-filled and mark done.
+  // wa.me needs digits only (country code + number, no +/spaces/dashes).
+  function handleWhatsappClick() {
+    if (!prospect.whatsapp) {
+      setOpen(true);
+      setFocusWhatsappPending(true);
+      return;
+    }
+    const digits = prospect.whatsapp.replace(/\D/g, '');
+    window.open(`https://wa.me/${digits}`, '_blank', 'noopener');
+    if (!whatsapped) markWhatsapped({ id: prospect._id }).catch(() => {});
   }
 
   async function copyDm() {
@@ -356,7 +383,17 @@ function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
             <button onClick={dmOnInstagram} disabled={genBusy}
               title={dmed ? 'Already DMed — click to reopen the thread and copy the message again' : (dmDraft ? 'Copies the draft, then opens their Instagram DM thread' : 'Generates a draft (using Analyze profile data if available), copies it, then opens their Instagram DM thread')}
               style={{ padding: '0.32rem 0.8rem', borderRadius: 9999, border: 'none', background: dmed ? '#166534' : '#192524', color: '#fff', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', opacity: genBusy ? 0.5 : 1 }}>
-              {genBusy && !dmDraft ? 'Writing…' : 'DM on Instagram ↗'}
+              {genBusy && !dmDraft ? 'Writing…' : 'DM ↗'}
+            </button>
+            <button onClick={handleWhatsappClick}
+              title={!prospect.whatsapp ? 'No WhatsApp number on file — click to add one' : whatsapped ? 'Already messaged on WhatsApp — click to reopen the chat' : 'Opens WhatsApp with their number pre-filled'}
+              style={{
+                padding: '0.32rem 0.8rem', borderRadius: 9999, fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer',
+                border: prospect.whatsapp ? 'none' : '1.5px solid rgba(25,37,36,0.2)',
+                background: whatsapped ? '#166534' : prospect.whatsapp ? '#192524' : 'transparent',
+                color: whatsapped || prospect.whatsapp ? '#fff' : '#3C5759',
+              }}>
+              WA{prospect.whatsapp ? ' ↗' : ''}
             </button>
           </div>
           {seqErr && <span style={{ fontSize: '0.66rem', color: '#9b2d2d' }}>{seqErr}</span>}
@@ -405,6 +442,14 @@ function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
             <input ref={emailInputRef} type="email" value={emailField} onChange={e => setEmailField(e.target.value)}
               onBlur={() => emailField.trim() !== (prospect.email || '') && update({ id: prospect._id, email: emailField.trim() })}
               placeholder="Found automatically from their bio when the search tool sees one" spellCheck={false}
+              style={{ ...input, width: '100%' }} />
+          </div>
+
+          <div>
+            <span style={label}>WhatsApp</span>
+            <input ref={whatsappInputRef} type="tel" value={whatsappField} onChange={e => setWhatsappField(e.target.value)}
+              onBlur={() => whatsappField.trim() !== (prospect.whatsapp || '') && update({ id: prospect._id, whatsapp: whatsappField.trim() })}
+              placeholder="Country code + number, e.g. 15551234567" spellCheck={false}
               style={{ ...input, width: '100%' }} />
           </div>
 
@@ -466,7 +511,7 @@ function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
               <button onClick={dmOnInstagram} disabled={genBusy}
                 title={dmDraft ? 'Copies the draft, then opens their Instagram DM thread' : 'Generates a draft (using Analyze profile data if available), copies it, then opens their Instagram DM thread'}
                 style={{ padding: '0.3rem 0.8rem', borderRadius: 9999, border: '1px solid rgba(123,104,200,0.35)', background: 'rgba(123,104,200,0.08)', color: '#5b4aa8', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer', opacity: genBusy ? 0.5 : 1 }}>
-                {genBusy && !dmDraft ? 'Writing…' : 'DM on Instagram ↗'}
+                {genBusy && !dmDraft ? 'Writing…' : 'DM ↗'}
               </button>
               {genErr && <span style={{ fontSize: '0.68rem', color: '#9b2d2d', alignSelf: 'center' }}>{genErr}</span>}
             </div>

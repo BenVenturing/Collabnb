@@ -803,6 +803,7 @@ export const update = mutation({
     notes: v.optional(v.string()),
     dmDraft: v.optional(v.string()),
     score: v.optional(v.number()),
+    whatsapp: v.optional(v.string()),
   },
   handler: async (ctx, { id, ...fields }) => {
     await requireAdmin(ctx);
@@ -819,7 +820,24 @@ export const update = mutation({
     if (fields.notes !== undefined) patch.notes = fields.notes;
     if (fields.dmDraft !== undefined) patch.dm_draft = fields.dmDraft;
     if (fields.score !== undefined) patch.score = fields.score;
+    if (fields.whatsapp !== undefined) patch.whatsapp = fields.whatsapp;
     await ctx.db.patch(id, patch);
+  },
+});
+
+// WhatsApp is tracked independently of `status` (unlike Email/DM, which are
+// pipeline stages) — it's a parallel "did I also reach out here" flag, since
+// Ben asked for it to work "as well as" Email/DM, not as a replacement stage.
+export const markWhatsapped = mutation({
+  args: { id: v.id("prospects") },
+  handler: async (ctx, { id }) => {
+    await requireAdmin(ctx);
+    const p = await ctx.db.get(id);
+    const log = (p as any)?.outreach_log || [];
+    await ctx.db.patch(id, {
+      whatsapped_at: Date.now(),
+      outreach_log: [...log, { at: Date.now(), type: "whatsapped" }],
+    });
   },
 });
 
@@ -828,25 +846,6 @@ export const remove = mutation({
   handler: async (ctx, { id }) => {
     await requireAdmin(ctx);
     await ctx.db.delete(id);
-  },
-});
-
-// One-off cleanup: clears the pre-Agent-Reach junk sitting unreviewed in the
-// New column (random location/community pages from the old unfiltered
-// HikerAPI search) without touching anything Ben already confirmed further
-// into the pipeline, or the new Agent-Reach batch. Run via `npx convex run
-// prospects:cleanupPreAgentReachNewCreators --prod`, then delete this
-// function — it's a one-time fix, not a feature.
-export const cleanupPreAgentReachNewCreators = internalMutation({
-  args: {},
-  handler: async (ctx) => {
-    const rows = await ctx.db
-      .query("prospects")
-      .withIndex("by_kind_status", (q) => q.eq("kind", "creator").eq("status", "new"))
-      .collect();
-    const toDelete = rows.filter((r) => r.source !== "agent-reach");
-    for (const r of toDelete) await ctx.db.delete(r._id);
-    return { deleted: toDelete.length, kept: rows.length - toDelete.length };
   },
 });
 
@@ -1132,9 +1131,11 @@ export const resetHostDmAngle = mutation({
 // somewhere to personalize; renderHostWelcomeEmailHtml just no-ops the
 // substitution if it doesn't, so a missing token degrades to un-personalized
 // rather than throwing.
+// ctx.runQuery, not ctx.db — this is called from action contexts
+// (runHostEmailKickoff), which have no direct db access.
 async function getEffectiveHostWelcomeEmailTemplate(ctx: any): Promise<string> {
-  const row = await ctx.db.query("admin_settings").withIndex("by_key", (q: any) => q.eq("key", "host_welcome_email_html")).first();
-  return row?.value || DEFAULT_HOST_WELCOME_EMAIL_TEMPLATE;
+  const settings: Record<string, string> = await ctx.runQuery(internal.admin.getSettingsInternal, {});
+  return settings.host_welcome_email_html || DEFAULT_HOST_WELCOME_EMAIL_TEMPLATE;
 }
 
 export const getHostWelcomeEmailHtml = query({
@@ -1170,9 +1171,11 @@ export const resetHostWelcomeEmailHtml = mutation({
 
 // Creator analog of the three above — same raw-HTML-override pattern, own
 // admin_settings key so the two templates are independent.
+// Same ctx.runQuery note as getEffectiveHostWelcomeEmailTemplate above —
+// called from the runCreatorEmailKickoff action context.
 async function getEffectiveCreatorWelcomeEmailTemplate(ctx: any): Promise<string> {
-  const row = await ctx.db.query("admin_settings").withIndex("by_key", (q: any) => q.eq("key", "creator_welcome_email_html")).first();
-  return row?.value || DEFAULT_CREATOR_WELCOME_EMAIL_TEMPLATE;
+  const settings: Record<string, string> = await ctx.runQuery(internal.admin.getSettingsInternal, {});
+  return settings.creator_welcome_email_html || DEFAULT_CREATOR_WELCOME_EMAIL_TEMPLATE;
 }
 
 export const getCreatorWelcomeEmailHtml = query({
@@ -1235,13 +1238,27 @@ export const sendTestWelcomeEmail = action({
 // changes the source template the LLM is told to adapt, same as editing
 // HOST_EMAIL_SEQUENCE/CREATOR_EMAIL_SEQUENCE in code would. One JSON blob
 // per kind, keyed by step number, so either step can be reset independently.
-async function getEffectiveEmailSequence(ctx: any, kind: "host" | "creator") {
+function resolveEmailSequence(rawValue: string | undefined, kind: "host" | "creator") {
   const base = kind === "host" ? HOST_EMAIL_SEQUENCE : CREATOR_EMAIL_SEQUENCE;
+  let overrides: Record<string, string> = {};
+  try { overrides = JSON.parse(rawValue || "{}"); } catch { /* bad JSON = no overrides */ }
+  return base.map((s) => (overrides[s.step] ? { ...s, template: overrides[s.step] } : s));
+}
+
+// Query/mutation-context version (has ctx.db) — used by getFollowupTemplates.
+async function getEffectiveEmailSequence(ctx: any, kind: "host" | "creator") {
   const key = kind === "host" ? "host_followup_templates" : "creator_followup_templates";
   const row = await ctx.db.query("admin_settings").withIndex("by_key", (q: any) => q.eq("key", key)).first();
-  let overrides: Record<string, string> = {};
-  try { overrides = JSON.parse(row?.value || "{}"); } catch { /* bad JSON = no overrides */ }
-  return base.map((s) => (overrides[s.step] ? { ...s, template: overrides[s.step] } : s));
+  return resolveEmailSequence(row?.value, kind);
+}
+
+// Action-context version (ctx.runQuery, no ctx.db) — used by
+// runCreatorEmailKickoff, same bug class as getEffectiveHostWelcomeEmailTemplate
+// above (an action ctx has no .db).
+async function getEffectiveEmailSequenceForAction(ctx: any, kind: "host" | "creator") {
+  const key = kind === "host" ? "host_followup_templates" : "creator_followup_templates";
+  const settings: Record<string, string> = await ctx.runQuery(internal.admin.getSettingsInternal, {});
+  return resolveEmailSequence(settings[key], kind);
 }
 
 export const getFollowupTemplates = query({
@@ -1546,7 +1563,7 @@ async function runCreatorEmailKickoff(ctx: any, id: any): Promise<{ sent: boolea
   const step1Html = renderCreatorWelcomeEmailHtml(step1Template, name);
   const step1Subject = CREATOR_WELCOME_EMAIL_SUBJECT.replace(/\{\{CREATOR_NAME\}\}/g, name);
 
-  const sequence = await getEffectiveEmailSequence(ctx, "creator");
+  const sequence = await getEffectiveEmailSequenceForAction(ctx, "creator");
   const followUps = await Promise.all(sequence.slice(1).map((step) => draftCreatorEmail(p, step)));
   const emailSequence = [
     { step: 1, subject: step1Subject, body: step1Html, sent_at: undefined as number | undefined },

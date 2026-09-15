@@ -1133,11 +1133,8 @@ function HostCountryRotationCard() {
 
   return (
     <div>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.75rem' }}>
-        <p style={{ fontSize: '0.78rem', color: '#646B62', margin: 0, maxWidth: 560 }}>
-          Rotates through one country a day so outreach stays spread out instead of piling into wherever's easiest to search. Run today's Agent-Reach session against <strong>{today?.name}</strong> and aim for ~{perDay} — counts below are hosts already in the pool matching each country's name.
-        </p>
-        <div style={{ padding: '0.5rem 0.9rem', borderRadius: 9999, background: 'rgba(22,101,52,0.1)', border: '1px solid rgba(22,101,52,0.25)', fontSize: '0.78rem', fontWeight: 700, color: '#166534', flexShrink: 0 }}>
+      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.75rem' }}>
+        <div style={{ padding: '0.5rem 0.9rem', borderRadius: 9999, background: 'rgba(22,101,52,0.1)', border: '1px solid rgba(22,101,52,0.25)', fontSize: '0.78rem', fontWeight: 700, color: '#166534' }}>
           Today: {today?.name || '—'} · {counts?.[today?.name] ?? 0}/{perDay}
         </div>
       </div>
@@ -1543,6 +1540,8 @@ function CreatorCrmBoard() {
   const [confirmMsg, setConfirmMsg] = useState('');
   const [emailBulkBusy, setEmailBulkBusy] = useState(false);
   const [emailBulkMsg, setEmailBulkMsg] = useState('');
+  const [deleteBusy, setDeleteBusy] = useState(false);
+  const [deleteMsg, setDeleteMsg] = useState('');
 
   const generateDrafts = useAction(api.prospects.generateDraftsForSelected);
   const scheduleBulkEmail = useAction(api.prospects.scheduleBulkEmail);

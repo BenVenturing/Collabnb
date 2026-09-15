@@ -166,7 +166,11 @@ def main():
                 row["email"] = data["email"]
             results.append(row)
             print(f"-> {data['website'] or '-'} | {data['phone'] or '-'} | {data['email'] or '-'}")
-        except urllib.error.URLError as e:
+        except Exception as e:
+            # Broad on purpose: a dropped connection (e.g. Docker Desktop
+            # itself quitting mid-run, confirmed to happen once already)
+            # raises http.client exceptions that aren't urllib.error.URLError
+            # subclasses. One bad item should never kill the whole batch.
             print(f"error: {e}")
         # Write after every item, not just at the end — an interrupted run
         # (Ctrl-C, or asked to stop early) still leaves a usable file instead

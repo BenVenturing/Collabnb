@@ -1317,8 +1317,8 @@ function HostOutreachCampaign() {
 // on this board.
 const CRM_COLUMNS = [
   { id: 'queued', label: 'Confirmed' },
-  { id: 'emailed', label: 'Emailed' },
   { id: 'contacted', label: 'DMed' },
+  { id: 'emailed', label: 'Emailed' },
   { id: 'replied', label: 'Responded' },
   { id: 'signed', label: 'Signed // Onboarding' },
   { id: 'declined', label: 'Declined' },

@@ -8,6 +8,14 @@ import { renderCreatorWelcomeEmailHtml, DEFAULT_CREATOR_WELCOME_EMAIL_TEMPLATE, 
 import { requireAdmin, requireAdminAction, canAccessAdmin } from "./lib/auth";
 import { withSurfacedErrors } from "./lib/errors";
 
+// Every real host/creator outreach send also BCCs this address — Resend's
+// own API send has no relationship to Gmail's Sent folder (different
+// systems entirely, even though the From address is real), so without this
+// there's no way to see what actually went out short of the Resend
+// dashboard. Doesn't apply to sendTestWelcomeEmail, which already sends to
+// an address the admin picks.
+const OUTREACH_BCC = "hellocollabnb@gmail.com";
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function tierFromFollowers(count?: number): string | undefined {
@@ -344,20 +352,27 @@ async function draftCreatorEmail(p: any, step: { subject: string; template: stri
   }
 }
 
-// ─── Marketing-email discovery ─────────────────────────────────────────────────
-// Looks up a host's real marketing/partnerships contact instead of whatever
-// address happens to be in their Instagram bio. Calls a small Vercel Python
-// function (Scrapling) that fetches the host's real website and extracts the
-// best-scoring contact address. Falls through to the bio `email` field (or
-// nothing) if the site can't be reached or has no listed address — this must
-// never block the confirm flow.
-async function findMarketingEmail(p: any): Promise<string | undefined> {
-  if (p.marketing_email) return p.marketing_email;
-  if (!p.website) return p.email || undefined;
+// ─── Marketing-contact discovery ───────────────────────────────────────────────
+// Looks up a host/creator's real marketing/partnerships contact instead of
+// whatever's in their Instagram bio — email AND phone/WhatsApp. Calls a small
+// Vercel Python function that fetches the site and extracts the best-scoring
+// contact info. Falls through to whatever's already on file (or nothing) if
+// the site can't be reached or has no listed contact — this must never block
+// the confirm flow. Never overwrites an already-known marketing_email/whatsapp
+// (e.g. typed in by hand), only fills in what's missing.
+async function findMarketingContact(p: any): Promise<{ email?: string; phone?: string }> {
+  // marketing_email/whatsapp are already-resolved real addresses (scraped
+  // previously, or typed in by hand) — always win outright. p.email (the bio
+  // address) is only a last-resort fallback, ranked BELOW a fresh scrape.
+  const knownEmail: string | undefined = p.marketing_email || undefined;
+  const knownPhone: string | undefined = p.whatsapp || undefined;
+  const bioFallback = { email: knownEmail || p.email || undefined, phone: knownPhone };
+  if (knownEmail && knownPhone) return bioFallback;
+  if (!p.website) return bioFallback;
 
   const secret = process.env.SCRAPE_SHARED_SECRET;
   const endpoint = process.env.SCRAPE_ENDPOINT_URL || "https://www.collabnb.com/api/find-marketing-email";
-  if (!secret) return p.email || undefined;
+  if (!secret) return bioFallback;
 
   try {
     const controller = new AbortController();
@@ -369,11 +384,14 @@ async function findMarketingEmail(p: any): Promise<string | undefined> {
       signal: controller.signal,
     });
     clearTimeout(timer);
-    if (!res.ok) return p.email || undefined;
+    if (!res.ok) return bioFallback;
     const data = await res.json();
-    return data.email || p.email || undefined;
+    return {
+      email: knownEmail || data.email || p.email || undefined,
+      phone: knownPhone || data.phone || undefined,
+    };
   } catch {
-    return p.email || undefined;
+    return bioFallback;
   }
 }
 
@@ -1446,7 +1464,8 @@ async function runHostEmailKickoff(ctx: any, id: any): Promise<{ sent: boolean; 
   const p: any = await ctx.runQuery(internal.prospects.getById, { id });
   if (!p) return { sent: false, reason: "Prospect not found" };
 
-  const marketingEmail = await findMarketingEmail(p);
+  const contact = await findMarketingContact(p);
+  const marketingEmail = contact.email;
   if (!marketingEmail) return { sent: false, reason: "No email address found — add one manually on this host, then try again" };
 
   // Step 1 is the branded HTML welcome email — fixed layout, so it's a
@@ -1474,7 +1493,7 @@ async function runHostEmailKickoff(ctx: any, id: any): Promise<{ sent: boolean; 
   let sendError: string | undefined;
   if (apiKey) {
     try {
-      await sendViaResend(apiKey, marketingEmail, emailSequence[0].subject, emailSequence[0].body);
+      await sendViaResend(apiKey, marketingEmail, emailSequence[0].subject, emailSequence[0].body, OUTREACH_BCC);
       emailSequence[0].sent_at = Date.now();
     } catch (e: any) {
       sendError = e?.message || "Resend send failed";
@@ -1486,6 +1505,7 @@ async function runHostEmailKickoff(ctx: any, id: any): Promise<{ sent: boolean; 
   await ctx.runMutation(internal.prospects.saveEmailSequence, {
     id,
     marketingEmail,
+    whatsapp: contact.phone,
     emailSequence,
     step1Sent: !!emailSequence[0].sent_at,
   });
@@ -1511,6 +1531,7 @@ export const saveEmailSequence = internalMutation({
   args: {
     id: v.id("prospects"),
     marketingEmail: v.string(),
+    whatsapp: v.optional(v.string()),
     emailSequence: v.array(v.object({
       step: v.number(),
       subject: v.string(),
@@ -1519,11 +1540,12 @@ export const saveEmailSequence = internalMutation({
     })),
     step1Sent: v.boolean(),
   },
-  handler: async (ctx, { id, marketingEmail, emailSequence, step1Sent }) => {
+  handler: async (ctx, { id, marketingEmail, whatsapp, emailSequence, step1Sent }) => {
     const p = await ctx.db.get(id);
     const log = (p as any)?.outreach_log || [];
     await ctx.db.patch(id, {
       marketing_email: marketingEmail,
+      ...(whatsapp && !(p as any)?.whatsapp ? { whatsapp } : {}),
       email_sequence: emailSequence,
       ...(step1Sent ? { status: "emailed" } : {}),
       outreach_log: step1Sent
@@ -1535,7 +1557,7 @@ export const saveEmailSequence = internalMutation({
 
 // Creator analog of runHostEmailKickoff/sendHostEmailNow above — same "an
 // email goes out first" pattern, the same branded template style, and (as of
-// this version) the same findMarketingEmail lookup: many creators list a
+// this version) the same findMarketingContact lookup: many creators list a
 // personal site/portfolio/Linktree as their bio link, so it's worth trying
 // before falling back to whatever address is directly in the bio. There's
 // still no multi-step drip — just the one welcome email. Fires automatically
@@ -1551,7 +1573,8 @@ async function runCreatorEmailKickoff(ctx: any, id: any): Promise<{ sent: boolea
   // the creator's own site (bio link, portfolio, etc.) over whatever's in
   // their Instagram bio — falls back to the bio email if there's no
   // scrapeable website or the scrape comes up empty.
-  const email = await findMarketingEmail(p);
+  const contact = await findMarketingContact(p);
+  const email = contact.email;
   if (!email) return { sent: false, reason: "No email found — no address on file and no scrapeable website on record. Add one manually, then try again" };
 
   // Step 1 is the branded HTML welcome email (possibly admin-overridden) —
@@ -1579,7 +1602,7 @@ async function runCreatorEmailKickoff(ctx: any, id: any): Promise<{ sent: boolea
   let sendError: string | undefined;
   if (apiKey) {
     try {
-      await sendViaResend(apiKey, email, emailSequence[0].subject, emailSequence[0].body);
+      await sendViaResend(apiKey, email, emailSequence[0].subject, emailSequence[0].body, OUTREACH_BCC);
       emailSequence[0].sent_at = Date.now();
     } catch (e: any) {
       sendError = e?.message || "Resend send failed";
@@ -1589,7 +1612,7 @@ async function runCreatorEmailKickoff(ctx: any, id: any): Promise<{ sent: boolea
   }
 
   await ctx.runMutation(internal.prospects.saveCreatorEmailSequence, {
-    id, email, emailSequence, step1Sent: !!emailSequence[0].sent_at,
+    id, email, whatsapp: contact.phone, emailSequence, step1Sent: !!emailSequence[0].sent_at,
   });
   return emailSequence[0].sent_at ? { sent: true } : { sent: false, reason: sendError };
 }
@@ -1643,6 +1666,7 @@ export const saveCreatorEmailSequence = internalMutation({
   args: {
     id: v.id("prospects"),
     email: v.string(),
+    whatsapp: v.optional(v.string()),
     emailSequence: v.array(v.object({
       step: v.number(),
       subject: v.string(),
@@ -1651,11 +1675,12 @@ export const saveCreatorEmailSequence = internalMutation({
     })),
     step1Sent: v.boolean(),
   },
-  handler: async (ctx, { id, email, emailSequence, step1Sent }) => {
+  handler: async (ctx, { id, email, whatsapp, emailSequence, step1Sent }) => {
     const p = await ctx.db.get(id);
     const log = (p as any)?.outreach_log || [];
     await ctx.db.patch(id, {
       marketing_email: email,
+      ...(whatsapp && !(p as any)?.whatsapp ? { whatsapp } : {}),
       email_sequence: emailSequence,
       ...(step1Sent ? { status: "emailed" } : {}),
       outreach_log: step1Sent
@@ -1674,7 +1699,7 @@ export const sendSequenceEmail = action({
     const p: any = await ctx.runQuery(internal.prospects.getById, { id });
     if (!p) throw new Error("Prospect not found");
     // Both kinds prefer the marketing address scraped from their site
-    // (findMarketingEmail), falling back to whatever's directly in the bio.
+    // (findMarketingContact), falling back to whatever's directly in the bio.
     const toEmail = p.marketing_email || p.email;
     if (!toEmail) throw new Error(`No email on file for this ${p.kind}`);
     const entry = (p.email_sequence || []).find((e: any) => e.step === step);
@@ -1688,7 +1713,7 @@ export const sendSequenceEmail = action({
     // textToEmailHtml would double-wrap and mangle it. Steps 2-3 are plain
     // text needing the wrap.
     const html = step === 1 ? entry.body : textToEmailHtml(entry.body);
-    await sendViaResend(apiKey, toEmail, entry.subject, html);
+    await sendViaResend(apiKey, toEmail, entry.subject, html, OUTREACH_BCC);
 
     const updatedSequence = p.email_sequence.map((e: any) => (e.step === step ? { ...e, sent_at: Date.now() } : e));
     await ctx.runMutation(internal.prospects.markSequenceStepSent, { id, emailSequence: updatedSequence });
@@ -1759,6 +1784,7 @@ export const importHostsLocal = mutation({
         email: v.optional(v.string()),
         bio: v.optional(v.string()),
         website: v.optional(v.string()),
+        whatsapp: v.optional(v.string()),
       })
     ),
   },
@@ -1808,6 +1834,7 @@ export const importCreatorsLocal = mutation({
         email: v.optional(v.string()),
         bio: v.optional(v.string()),
         website: v.optional(v.string()),
+        whatsapp: v.optional(v.string()),
       })
     ),
   },
@@ -1835,6 +1862,50 @@ export const importCreatorsLocal = mutation({
       inserted++;
     }
     return { inserted };
+  },
+});
+
+// Fills in website/email/whatsapp on prospects that already exist (matched
+// by handle, either kind) — the backfill counterpart to importHostsLocal/
+// importCreatorsLocal above. For rows found via Agent-Reach's Instagram
+// SEARCH (handle only, no bio/website — the profile lookup that would
+// normally supply that is the rate-limited step) and then resolved through
+// a separate local lookup (e.g. the Google Maps scraper kit, or a plain web
+// search) that never touches Instagram at all. Never overwrites a field
+// that's already set, so a manually-typed value always wins.
+export const enrichProspectLocal = mutation({
+  args: {
+    secret: v.string(),
+    rows: v.array(
+      v.object({
+        instagram_handle: v.string(),
+        website: v.optional(v.string()),
+        email: v.optional(v.string()),
+        whatsapp: v.optional(v.string()),
+      })
+    ),
+  },
+  handler: async (ctx, { secret, rows }) => {
+    const expected = process.env.LOCAL_IMPORT_SECRET;
+    if (!expected || secret !== expected) throw new Error("Invalid or missing import secret.");
+    let updated = 0;
+    for (const row of rows) {
+      const handle = row.instagram_handle.replace(/^@/, "").trim().toLowerCase();
+      if (!handle) continue;
+      const existing = await ctx.db
+        .query("prospects")
+        .withIndex("by_handle", (q) => q.eq("instagram_handle", handle))
+        .first();
+      if (!existing) continue;
+      const patch: Record<string, any> = {};
+      if (row.website && !existing.website) patch.website = row.website;
+      if (row.email && !existing.email) patch.email = row.email;
+      if (row.whatsapp && !(existing as any).whatsapp) patch.whatsapp = row.whatsapp;
+      if (Object.keys(patch).length === 0) continue;
+      await ctx.db.patch(existing._id, patch);
+      updated++;
+    }
+    return { updated };
   },
 });
 
@@ -1937,6 +2008,7 @@ export const bulkInsert = internalMutation({
         email: v.optional(v.string()),
         bio: v.optional(v.string()),
         website: v.optional(v.string()),
+        whatsapp: v.optional(v.string()),
         source: v.string(),
       })
     ),
@@ -2015,6 +2087,7 @@ export const importCsvRows = action({
         email: v.optional(v.string()),
         bio: v.optional(v.string()),
         website: v.optional(v.string()),
+        whatsapp: v.optional(v.string()),
       })
     ),
   },

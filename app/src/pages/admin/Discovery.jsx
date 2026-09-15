@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useAction } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { NICHE_KEYWORDS } from '../../lib/matchScore';
+import SearchRegionsMap, { geocodeCountry } from '../../components/map/SearchRegionsMap';
 
 const NICHES = Object.keys(NICHE_KEYWORDS);
 
@@ -44,6 +45,10 @@ const input = {
   background: '#fafafa', outline: 'none', boxSizing: 'border-box',
 };
 const label = { fontSize: '0.68rem', fontWeight: 700, color: '#646B62', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: '0.3rem', fontFamily: 'Satoshi, sans-serif' };
+// Explicit size/accent so a native checkbox renders predictably next to
+// custom pill buttons instead of an unstyled, browser-default box (which
+// showed up oversized/clipped-looking, especially once checked+focused).
+const checkbox = { width: 15, height: 15, accentColor: '#192524', flexShrink: 0, cursor: 'pointer', margin: 0 };
 
 function fmtFollowers(n) {
   if (!n) return '';
@@ -297,7 +302,7 @@ function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
         {onToggleSelect && (
           <input type="checkbox" aria-label={`Select @${prospect.instagram_handle}`} checked={!!selected}
-            onChange={() => onToggleSelect(prospect._id)} style={{ flexShrink: 0 }} />
+            onChange={() => onToggleSelect(prospect._id)} style={checkbox} />
         )}
         <Avatar url={prospect.avatar_url} name={prospect.display_name || prospect.instagram_handle} size={34} />
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -1018,6 +1023,116 @@ function HostSearchImport() {
 }
 
 
+// Seed list for the search-regions rotation — countries with real
+// boutique-hospitality Instagram presence, not yet exhaustively covered.
+// Fully editable below; this is just the starting point.
+const DEFAULT_ROTATION_COUNTRIES = [
+  { name: 'Mexico', lat: 23.6345, lng: -102.5528 },
+  { name: 'Costa Rica', lat: 9.7489, lng: -83.7534 },
+  { name: 'Colombia', lat: 4.5709, lng: -74.2973 },
+  { name: 'Portugal', lat: 39.3999, lng: -8.2245 },
+  { name: 'Greece', lat: 39.0742, lng: 21.8243 },
+  { name: 'Morocco', lat: 31.7917, lng: -7.0926 },
+  { name: 'Thailand', lat: 15.8700, lng: 100.9925 },
+  { name: 'Indonesia', lat: -0.7893, lng: 113.9213 },
+  { name: 'Vietnam', lat: 14.0583, lng: 108.2772 },
+  { name: 'Croatia', lat: 45.1000, lng: 15.2000 },
+  { name: 'Italy', lat: 41.8719, lng: 12.5674 },
+  { name: 'Spain', lat: 40.4637, lng: -3.7492 },
+];
+
+// One target country per day, ~50 hosts each — a planning/coverage view for
+// the manual Agent-Reach workflow (search_provider defaults to agent_reach,
+// which can't be triggered from this hosted page — see HostSearchImport's
+// note above), not an automatic search trigger. Today's target rotates
+// deterministically off the calendar date, so it needs no stored "current
+// index" that could drift out of sync between admins/sessions.
+function HostCountryRotationCard() {
+  const settings = useQuery(api.admin.getSettings);
+  const setSetting = useMutation(api.admin.setSetting);
+  const [newCountry, setNewCountry] = useState('');
+  const [adding, setAdding] = useState(false);
+  const [addErr, setAddErr] = useState('');
+
+  const cfg = (() => {
+    try { return JSON.parse(settings?.host_country_rotation || 'null') || {}; } catch { return {}; }
+  })();
+  const countries = cfg.countries?.length ? cfg.countries : DEFAULT_ROTATION_COUNTRIES;
+  const perDay = cfg.perDay || 50;
+  const todayIndex = Math.floor(Date.now() / 86400000) % countries.length;
+  const today = countries[todayIndex];
+  const counts = useQuery(api.prospects.getHostCountryCounts, { countries: countries.map((c) => c.name) });
+
+  function save(next) {
+    setSetting({ key: 'host_country_rotation', value: JSON.stringify({ perDay, countries, ...next }) });
+  }
+
+  async function addCountry() {
+    if (!newCountry.trim()) return;
+    setAdding(true); setAddErr('');
+    try {
+      const hit = await geocodeCountry(newCountry.trim());
+      if (!hit) { setAddErr('Could not find that country'); return; }
+      if (countries.some((c) => c.name.toLowerCase() === hit.name.toLowerCase())) { setAddErr('Already in the list'); return; }
+      save({ countries: [...countries, hit] });
+      setNewCountry('');
+    } finally {
+      setAdding(false);
+    }
+  }
+
+  function removeCountry(name) {
+    save({ countries: countries.filter((c) => c.name !== name) });
+  }
+
+  return (
+    <div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.75rem' }}>
+        <p style={{ fontSize: '0.78rem', color: '#646B62', margin: 0, maxWidth: 560 }}>
+          Rotates through one country a day so outreach stays spread out instead of piling into wherever's easiest to search. Run today's Agent-Reach session against <strong>{today?.name}</strong> and aim for ~{perDay} — counts below are hosts already in the pool matching each country's name.
+        </p>
+        <div style={{ padding: '0.5rem 0.9rem', borderRadius: 9999, background: 'rgba(22,101,52,0.1)', border: '1px solid rgba(22,101,52,0.25)', fontSize: '0.78rem', fontWeight: 700, color: '#166534', flexShrink: 0 }}>
+          Today: {today?.name || '—'} · {counts?.[today?.name] ?? 0}/{perDay}
+        </div>
+      </div>
+
+      <SearchRegionsMap countries={countries} todayIndex={todayIndex} counts={counts} />
+
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', margin: '0.75rem 0' }}>
+        {countries.map((c, i) => (
+          <span key={c.name} style={{
+            display: 'inline-flex', alignItems: 'center', gap: '0.35rem', padding: '0.3rem 0.7rem', borderRadius: 9999,
+            background: i === todayIndex ? '#166534' : 'rgba(25,37,36,0.06)',
+            color: i === todayIndex ? '#fff' : '#3C5759', fontSize: '0.72rem', fontWeight: 600,
+          }}>
+            {c.name} · {counts?.[c.name] ?? 0}
+            <button onClick={() => removeCountry(c.name)} title="Remove from rotation"
+              style={{ border: 'none', background: 'transparent', color: 'inherit', opacity: 0.6, cursor: 'pointer', padding: 0, fontSize: '0.85rem', lineHeight: 1 }}>
+              ×
+            </button>
+          </span>
+        ))}
+      </div>
+
+      <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', flexWrap: 'wrap' }}>
+        <input value={newCountry} onChange={(e) => setNewCountry(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addCountry()}
+          placeholder="Add a country, e.g. Vietnam" style={{ ...input, width: 220 }} />
+        <button onClick={addCountry} disabled={adding || !newCountry.trim()}
+          style={{ padding: '0.4rem 0.9rem', borderRadius: 9999, border: '1.5px solid rgba(25,37,36,0.2)', background: 'transparent', color: '#192524', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer', opacity: (adding || !newCountry.trim()) ? 0.5 : 1 }}>
+          {adding ? 'Adding…' : 'Add'}
+        </button>
+        <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.74rem', color: '#3C5759' }}>
+          Per day
+          <input type="number" min="10" max="200" value={perDay}
+            onChange={(e) => save({ perDay: Math.max(10, Math.min(200, parseInt(e.target.value, 10) || 50)) })}
+            style={{ ...input, width: 70 }} />
+        </label>
+        {addErr && <span style={{ fontSize: '0.72rem', color: '#9b2d2d' }}>{addErr}</span>}
+      </div>
+    </div>
+  );
+}
+
 function HostOutreachCampaign() {
   const pool = useQuery(api.prospects.getHostPool) || [];
   const confirmBatch = useAction(api.prospects.confirmHostBatch);
@@ -1131,7 +1246,7 @@ function HostOutreachCampaign() {
                 {filteredPool.map((p) => (
                   <tr key={String(p._id)} style={{ borderTop: '1px solid rgba(25,37,36,0.06)' }}>
                     <td style={{ padding: '0.35rem 0.5rem' }}>
-                      <input type="checkbox" aria-label={`Select @${p.instagram_handle}`} checked={selected.has(String(p._id))} onChange={() => toggle(p._id)} />
+                      <input type="checkbox" aria-label={`Select @${p.instagram_handle}`} checked={selected.has(String(p._id))} onChange={() => toggle(p._id)} style={checkbox} />
                     </td>
                     <td style={{ padding: '0.35rem 0.5rem' }}>
                       <a href={`https://instagram.com/${p.instagram_handle}`} target="_blank" rel="noopener noreferrer" style={{ color: '#192524', fontWeight: 700, textDecoration: 'none' }}>@{p.instagram_handle}</a>
@@ -1295,12 +1410,12 @@ function HostCrmBoard() {
         <button onClick={bulkGenerate} disabled={bulkBusy || selected.size === 0}
           title="Drafts a message for each selected host, rotating through the 5 angle templates"
           style={{ padding: '0.35rem 0.8rem', borderRadius: 9999, border: 'none', background: '#192524', color: '#fff', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer', opacity: (bulkBusy || selected.size === 0) ? 0.5 : 1 }}>
-          {bulkBusy ? 'Drafting…' : `Draft DMs for selected (${selected.size})`}
+          {bulkBusy ? 'Drafting…' : `Draft DM (${selected.size})`}
         </button>
         <button onClick={bulkSendEmails} disabled={emailBulkBusy || selected.size === 0}
           title="Drip-sends the cold outreach email to every selected host, 1/minute, over the next several minutes"
           style={{ padding: '0.35rem 0.8rem', borderRadius: 9999, border: 'none', background: '#166534', color: '#fff', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer', opacity: (emailBulkBusy || selected.size === 0) ? 0.5 : 1 }}>
-          {emailBulkBusy ? 'Emailing…' : `Email selected (${selected.size})`}
+          {emailBulkBusy ? 'Emailing…' : `Email (${selected.size})`}
         </button>
         <button onClick={() => downloadHostsCsv(filtered, `collabnb-hosts-${new Date().toISOString().slice(0, 10)}.csv`)}
           disabled={filtered.length === 0}
@@ -1336,7 +1451,7 @@ function HostCrmBoard() {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.6rem', padding: '0 0.1rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                 <input type="checkbox" aria-label={`Select all in ${col.label}`} disabled={byColumn[col.id].length === 0}
-                  checked={isColumnSelected(col.id)} onChange={() => toggleColumnSelectAll(col.id)} style={{ flexShrink: 0 }} />
+                  checked={isColumnSelected(col.id)} onChange={() => toggleColumnSelectAll(col.id)} style={checkbox} />
                 <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#192524' }}>{col.label}</span>
               </div>
               <span style={{ fontSize: '0.7rem', color: '#646B62' }}>{byColumn[col.id].length}</span>
@@ -1390,6 +1505,7 @@ function CreatorCrmBoard() {
   const generateDrafts = useAction(api.prospects.generateDraftsForSelected);
   const scheduleBulkEmail = useAction(api.prospects.scheduleBulkEmail);
   const updateStatus = useMutation(api.prospects.updateStatus);
+  const removeProspect = useMutation(api.prospects.remove);
 
   const creators = useQuery(api.prospects.getByKind, {
     kind: 'creator',
@@ -1526,6 +1642,21 @@ function CreatorCrmBoard() {
     }
   }
 
+  async function bulkDelete() {
+    if (selected.size === 0) return;
+    setDeleteBusy(true); setDeleteMsg('');
+    try {
+      const ids = [...selected];
+      await Promise.allSettled(ids.map((id) => removeProspect({ id })));
+      setDeleteMsg(`Deleted ${ids.length}.`);
+      setSelected(new Set());
+    } catch (e) {
+      setDeleteMsg((e.data || e.message)?.replace(/^.*Error:\s*/, '') || 'Delete failed');
+    } finally {
+      setDeleteBusy(false);
+    }
+  }
+
   function handleDrop(colId) {
     setDragOverCol(null);
     if (dragId) updateStatus({ id: dragId, status: colId }).catch(() => {});
@@ -1583,21 +1714,27 @@ function CreatorCrmBoard() {
         <button onClick={bulkConfirm} disabled={confirmBusy || selected.size === 0}
           title="Moves selected creators to Confirmed — does not email or DM anyone"
           style={{ padding: '0.35rem 0.8rem', borderRadius: 9999, border: 'none', background: '#166534', color: '#fff', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer', opacity: (confirmBusy || selected.size === 0) ? 0.5 : 1 }}>
-          {confirmBusy ? 'Confirming…' : `Confirm selected (${selected.size})`}
+          {confirmBusy ? 'Confirming…' : `Confirm (${selected.size})`}
         </button>
         <button onClick={bulkEmail} disabled={emailBulkBusy || selected.size === 0}
           title="Drip-sends the cold outreach email, 1/minute, to every selected creator with an email on file (skips the rest)"
           style={{ padding: '0.35rem 0.8rem', borderRadius: 9999, border: 'none', background: '#5b4aa8', color: '#fff', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer', opacity: (emailBulkBusy || selected.size === 0) ? 0.5 : 1 }}>
-          {emailBulkBusy ? 'Emailing…' : `Email selected (${selected.size})`}
+          {emailBulkBusy ? 'Emailing…' : `Email (${selected.size})`}
         </button>
         <button onClick={bulkGenerate} disabled={bulkBusy || selected.size === 0}
           title="Drafts an Instagram DM for each selected creator"
           style={{ padding: '0.35rem 0.8rem', borderRadius: 9999, border: 'none', background: '#192524', color: '#fff', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer', opacity: (bulkBusy || selected.size === 0) ? 0.5 : 1 }}>
-          {bulkBusy ? 'Drafting…' : `Draft DMs for selected (${selected.size})`}
+          {bulkBusy ? 'Drafting…' : `Draft DM (${selected.size})`}
+        </button>
+        <button onClick={bulkDelete} disabled={deleteBusy || selected.size === 0}
+          title="Permanently removes every selected creator from the list — no confirmation, no undo"
+          style={{ padding: '0.35rem 0.8rem', borderRadius: 9999, border: '1px solid rgba(200,104,104,0.3)', background: 'transparent', color: '#9b2d2d', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer', opacity: (deleteBusy || selected.size === 0) ? 0.5 : 1 }}>
+          {deleteBusy ? 'Deleting…' : `Delete (${selected.size})`}
         </button>
         {bulkMsg && <span style={{ fontSize: '0.72rem', color: '#166534' }}>{bulkMsg}</span>}
         {confirmMsg && <span style={{ fontSize: '0.72rem', color: '#166534' }}>{confirmMsg}</span>}
         {emailBulkMsg && <span style={{ fontSize: '0.72rem', color: '#166534' }}>{emailBulkMsg}</span>}
+        {deleteMsg && <span style={{ fontSize: '0.72rem', color: '#166534' }}>{deleteMsg}</span>}
       </div>
 
       <div style={{ display: 'flex', gap: '1.25rem', overflowX: 'auto', paddingBottom: '0.5rem', alignItems: 'flex-start' }}>
@@ -1617,7 +1754,7 @@ function CreatorCrmBoard() {
                 {byColumn[col.id].length > 0 && (
                   <input type="checkbox" aria-label={`Select all in ${col.label}`}
                     checked={byColumn[col.id].every((p) => selected.has(String(p._id)))}
-                    onChange={() => toggleColumn(col.id)} />
+                    onChange={() => toggleColumn(col.id)} style={checkbox} />
                 )}
                 <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#192524' }}>{col.label}</span>
               </span>
@@ -2245,6 +2382,10 @@ export default function Discovery({ sidebarCollapsed, setSidebarCollapsed }) {
               style={{ padding: '0.5rem 1.1rem', borderRadius: 9999, border: '1.5px solid rgba(25,37,36,0.2)', background: openPanel === 'followups' ? 'rgba(25,37,36,0.06)' : 'transparent', color: '#192524', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}>
               Follow-up emails
             </button>
+            <button onClick={() => togglePanel('search_regions')} title="Map of the country rotation for the daily Agent-Reach search — one country a day, ~50 hosts each"
+              style={{ padding: '0.5rem 1.1rem', borderRadius: 9999, border: '1.5px solid rgba(25,37,36,0.2)', background: openPanel === 'search_regions' ? 'rgba(25,37,36,0.06)' : 'transparent', color: '#192524', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}>
+              Search regions
+            </button>
           </>
         ) : (
           CREATOR_TOOLS.map(({ id, label: l, title: t }) => (
@@ -2280,6 +2421,11 @@ export default function Discovery({ sidebarCollapsed, setSidebarCollapsed }) {
       {openPanel === 'followups' && (
         <div style={{ marginBottom: '1.25rem', padding: '1rem', borderRadius: '1rem', background: 'rgba(255,255,255,0.6)', border: '1px solid rgba(25,37,36,0.08)' }}>
           <FollowupTemplatesEditor kind={side === 'hosts' ? 'host' : 'creator'} />
+        </div>
+      )}
+      {openPanel === 'search_regions' && (
+        <div style={{ marginBottom: '1.25rem', padding: '1rem', borderRadius: '1rem', background: 'rgba(255,255,255,0.6)', border: '1px solid rgba(25,37,36,0.08)' }}>
+          <HostCountryRotationCard />
         </div>
       )}
       {side === 'creators' && openPanel && openPanel !== 'add' && (

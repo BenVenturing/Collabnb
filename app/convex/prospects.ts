@@ -708,6 +708,30 @@ export const getStats = query({
   },
 });
 
+// Host coverage per country for the "search regions" map (HostCountryRotationCard
+// in Discovery.jsx) — a lightweight substring match against location/country on
+// existing host rows rather than a strict field match, since most rows so far
+// only have a free-text `location` (e.g. "Tulum" or "Thailand"), not `country`.
+export const getHostCountryCounts = query({
+  args: { countries: v.array(v.string()) },
+  handler: async (ctx, { countries }) => {
+    if (!(await canAccessAdmin(ctx))) return {};
+    const rows = await ctx.db
+      .query("prospects")
+      .withIndex("by_kind_status", (q) => q.eq("kind", "host"))
+      .collect();
+    const counts: Record<string, number> = {};
+    for (const country of countries) {
+      const needle = country.toLowerCase();
+      counts[country] = rows.filter((r) => {
+        const haystack = `${r.location || ""} ${(r as any).country || ""}`.toLowerCase();
+        return haystack.includes(needle);
+      }).length;
+    }
+    return counts;
+  },
+});
+
 // ─── Mutations ────────────────────────────────────────────────────────────────
 
 export const add = mutation({
@@ -804,6 +828,25 @@ export const remove = mutation({
   handler: async (ctx, { id }) => {
     await requireAdmin(ctx);
     await ctx.db.delete(id);
+  },
+});
+
+// One-off cleanup: clears the pre-Agent-Reach junk sitting unreviewed in the
+// New column (random location/community pages from the old unfiltered
+// HikerAPI search) without touching anything Ben already confirmed further
+// into the pipeline, or the new Agent-Reach batch. Run via `npx convex run
+// prospects:cleanupPreAgentReachNewCreators --prod`, then delete this
+// function — it's a one-time fix, not a feature.
+export const cleanupPreAgentReachNewCreators = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const rows = await ctx.db
+      .query("prospects")
+      .withIndex("by_kind_status", (q) => q.eq("kind", "creator").eq("status", "new"))
+      .collect();
+    const toDelete = rows.filter((r) => r.source !== "agent-reach");
+    for (const r of toDelete) await ctx.db.delete(r._id);
+    return { deleted: toDelete.length, kept: rows.length - toDelete.length };
   },
 });
 

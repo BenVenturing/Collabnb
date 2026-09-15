@@ -755,9 +755,9 @@ function FindCreators() {
 
   if (provider === 'agent_reach') {
     return (
-      <div style={{ padding: '0.7rem 0.9rem', borderRadius: '0.75rem', background: 'rgba(123,104,200,0.06)', border: '1px solid rgba(123,104,200,0.2)' }}>
-        <p style={{ fontSize: '0.76rem', color: '#3C5759', margin: 0, lineHeight: 1.5 }}>
-          Search provider is set to <strong>Agent-Reach</strong> (Social tab). Its Instagram search needs a live local agent session with your own logged-in Chrome — it can't run from this hosted admin page. On your Mac, open a local Claude Code session and ask it to search Instagram via Agent-Reach for a niche/location, then have it push the results in with the <code>prospects:importCreatorsLocal</code> mutation (secret in Convex env as <code>LOCAL_IMPORT_SECRET</code>). New creators appear in the pool below automatically once pushed — run "Enrich pending" below afterward to fill in follower counts/bio.
+      <div style={{ padding: '0.6rem 0.9rem', borderRadius: '0.75rem', background: 'rgba(123,104,200,0.06)', border: '1px solid rgba(123,104,200,0.2)' }}>
+        <p style={{ fontSize: '0.76rem', color: '#3C5759', margin: 0 }}>
+          Agent-Reach mode — search locally, push results via <code>prospects:importCreatorsLocal</code>.
         </p>
       </div>
     );
@@ -995,9 +995,9 @@ function HostSearchImport() {
 
   if (provider === 'agent_reach') {
     return (
-      <div style={{ padding: '0.7rem 0.9rem', borderRadius: '0.75rem', background: 'rgba(123,104,200,0.06)', border: '1px solid rgba(123,104,200,0.2)' }}>
-        <p style={{ fontSize: '0.76rem', color: '#3C5759', margin: 0, lineHeight: 1.5 }}>
-          Search provider is set to <strong>Agent-Reach</strong> (Social tab). Its Instagram search needs a live local agent session with your own logged-in Chrome — it can't run from this hosted admin page. On your Mac, open a local Claude Code session and ask it to search Instagram via Agent-Reach for a region, then have it push the results in with the <code>prospects:importHostsLocal</code> mutation (secret in Convex env as <code>LOCAL_IMPORT_SECRET</code>). New listings appear in the pool below automatically once pushed.
+      <div style={{ padding: '0.6rem 0.9rem', borderRadius: '0.75rem', background: 'rgba(123,104,200,0.06)', border: '1px solid rgba(123,104,200,0.2)' }}>
+        <p style={{ fontSize: '0.76rem', color: '#3C5759', margin: 0 }}>
+          Agent-Reach mode — search locally, push results via <code>prospects:importHostsLocal</code>.
         </p>
       </div>
     );
@@ -1200,10 +1200,6 @@ function HostOutreachCampaign() {
 
   return (
     <div>
-      <p style={{ fontSize: '0.78rem', color: '#3C5759', margin: '0 0 0.7rem', lineHeight: 1.5 }}>
-        Search & import a pool of candidates (default 40/day), tick ~20 in the table below — top-scored are pre-selected, swap in others as backups — then Confirm to draft + lock those in. Nothing sends automatically: copy each draft and send it yourself via Instagram.
-      </p>
-
       <HostSearchImport />
 
       <div style={{ marginTop: '1rem' }}>
@@ -2278,7 +2274,6 @@ const CREATOR_TOOLS = [
 ];
 
 export default function Discovery({ sidebarCollapsed, setSidebarCollapsed }) {
-  const stats = useQuery(api.prospects.getStats);
   const buildFreshQueue = useAction(api.prospects.buildFreshQueue);
   const [side, setSide] = useState('hosts'); // 'hosts' | 'creators'
   const [hostView, setHostView] = useState('crm'); // 'outreach' | 'crm'
@@ -2286,9 +2281,6 @@ export default function Discovery({ sidebarCollapsed, setSidebarCollapsed }) {
   const [queueMsg, setQueueMsg] = useState('');
   const [queueBusy, setQueueBusy] = useState(false);
   const togglePanel = (p) => setOpenPanel(cur => (cur === p ? null : p));
-
-  const contactedCreators = stats?.contactedToday?.creators ?? 0;
-  const contactedHosts = stats?.contactedToday?.hosts ?? 0;
 
   function switchSide(next) {
     setSide(next);
@@ -2323,14 +2315,7 @@ export default function Discovery({ sidebarCollapsed, setSidebarCollapsed }) {
     <div style={{ padding: '1.75rem 2rem 2rem' }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
         <div>
-          <h2 style={{ fontFamily: 'Cabinet Grotesk, sans-serif', fontWeight: 700, fontSize: '1.25rem', color: '#192524', margin: '0 0 0.2rem' }}>Discovery</h2>
-          <p style={{ fontSize: '0.78rem', color: '#646B62', margin: 0 }}>
-            {side === 'hosts'
-              ? (hostView === 'outreach'
-                ? 'Search, select ~20, and draft your daily host outreach batch. Instagram DMs stay manual.'
-                : 'Every host across its lifecycle — drag a card to a new column, or use Mark ... to advance it.')
-              : `Today's outreach: ${contactedCreators}/20 creators contacted. Instagram DMs stay manual (20/day is the safe limit); this board preps and tracks everything else.`}
-          </p>
+          <h2 style={{ fontFamily: 'Cabinet Grotesk, sans-serif', fontWeight: 700, fontSize: '1.25rem', color: '#192524', margin: 0 }}>Discovery</h2>
         </div>
         <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexShrink: 0 }}>
           <button onClick={handleBuildQueue} disabled={queueBusy}

@@ -175,7 +175,6 @@ function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
   const [emailField, setEmailField] = useState(prospect.email || '');
   const [whatsappField, setWhatsappField] = useState(prospect.whatsapp || '');
   const [notes, setNotes] = useState(prospect.notes || '');
-  const [copied, setCopied] = useState(false);
   // These mirror prospect fields into local state so an onBlur can tell
   // "did the user actually change this" apart from "just re-rendered" — but
   // useState's initializer only runs on mount, so a draft written from
@@ -295,10 +294,6 @@ function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
   const flow = prospect.kind === 'host' ? HOST_STATUS_FLOW : creatorFlow;
   const flowIdx = flow.indexOf(prospect.status);
   const nextStatus = flowIdx === -1 ? undefined : flow[flowIdx + 1];
-  // Email and DM are now their own persistent buttons (see the crm render
-  // branch below), not a single dynamic "advance" button — so the generic
-  // advance only ever needs to cover what's left: Responded/Signed.
-  const genericTarget = nextStatus && nextStatus !== 'emailed' && nextStatus !== 'contacted' ? nextStatus : null;
   const emailSent = !!prospect.email_sequence?.[0]?.sent_at;
   const dmed = !!prospect.contacted_at;
   const whatsapped = !!prospect.whatsapped_at;
@@ -340,14 +335,6 @@ function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
     const digits = prospect.whatsapp.replace(/\D/g, '');
     window.open(`https://wa.me/${digits}`, '_blank', 'noopener');
     if (!whatsapped) markWhatsapped({ id: prospect._id }).catch(() => {});
-  }
-
-  async function copyDm() {
-    try {
-      await navigator.clipboard.writeText(dmDraft);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    } catch { /* clipboard unavailable */ }
   }
 
   return (
@@ -424,12 +411,6 @@ function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
             </button>
           </div>
           {seqErr && <span style={{ fontSize: '0.66rem', color: '#9b2d2d' }}>{seqErr}</span>}
-          {genericTarget && (
-            <button onClick={() => updateStatus({ id: prospect._id, status: genericTarget })}
-              style={{ padding: '0.32rem 0.8rem', borderRadius: 9999, border: 'none', background: '#192524', color: '#fff', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer' }}>
-              Mark {STATUS_CFG[genericTarget].label.toLowerCase()}
-            </button>
-          )}
         </div>
       ) : (
         <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.6rem', flexWrap: 'wrap' }}>
@@ -518,27 +499,18 @@ function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
               onBlur={() => dmDraft !== (prospect.dm_draft || '') && update({ id: prospect._id, dmDraft })}
               rows={3} placeholder="Write the outreach message here, then copy it into Instagram."
               style={{ ...input, width: '100%', resize: 'vertical' }} />
-            <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.35rem', flexWrap: 'wrap', alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: '0.3rem', marginTop: '0.35rem', flexWrap: 'wrap', alignItems: 'center' }}>
               {prospect.kind === 'host' && (
                 <select aria-label="Copy angle" value={angle} onChange={(e) => setAngle(e.target.value)}
                   title="Pick a specific angle, or leave on Auto-rotate to balance across all 5"
-                  style={{ ...input, padding: '0.3rem 0.5rem', fontSize: '0.68rem', width: 132 }}>
-                  <option value="">Auto-rotate angle</option>
+                  style={{ ...input, padding: '0.2rem 0.4rem', fontSize: '0.64rem', width: 112, borderRadius: '0.5rem' }}>
+                  <option value="">Auto-rotate</option>
                   {Object.entries(ANGLE_LABELS).map(([id, name]) => <option key={id} value={id}>{name}</option>)}
                 </select>
               )}
               <button onClick={genDm} disabled={genBusy}
-                style={{ padding: '0.3rem 0.8rem', borderRadius: 9999, border: 'none', background: '#192524', color: '#fff', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer', opacity: genBusy ? 0.5 : 1 }}>
-                {genBusy ? 'Writing…' : dmDraft ? 'Rewrite DM' : 'Generate DM'}
-              </button>
-              <button onClick={copyDm} disabled={!dmDraft}
-                style={{ padding: '0.3rem 0.8rem', borderRadius: 9999, border: '1px solid rgba(25,37,36,0.15)', background: copied ? 'rgba(209,235,219,0.6)' : 'transparent', color: copied ? '#166534' : '#3C5759', fontSize: '0.7rem', fontWeight: 600, cursor: 'pointer' }}>
-                {copied ? 'Copied' : 'Copy DM'}
-              </button>
-              <button onClick={dmOnInstagram} disabled={genBusy}
-                title={dmDraft ? 'Copies the draft, then opens their Instagram DM thread' : 'Generates a draft (using Analyze profile data if available), copies it, then opens their Instagram DM thread'}
-                style={{ padding: '0.3rem 0.8rem', borderRadius: 9999, border: '1px solid rgba(123,104,200,0.35)', background: 'rgba(123,104,200,0.08)', color: '#5b4aa8', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer', opacity: genBusy ? 0.5 : 1 }}>
-                {genBusy && !dmDraft ? 'Writing…' : 'DM ↗'}
+                style={{ padding: '0.22rem 0.65rem', borderRadius: 9999, border: 'none', background: '#192524', color: '#fff', fontSize: '0.66rem', fontWeight: 700, cursor: 'pointer', opacity: genBusy ? 0.5 : 1 }}>
+                {genBusy ? 'Writing…' : dmDraft ? 'Rewrite' : 'Generate'}
               </button>
               {genErr && <span style={{ fontSize: '0.68rem', color: '#9b2d2d', alignSelf: 'center' }}>{genErr}</span>}
             </div>

@@ -61,17 +61,20 @@ export default function SearchRegionsMap({ countries, todayIndex, counts }) {
         if (typeof c.lat !== 'number' || typeof c.lng !== 'number') return;
         const isToday = i === todayIndex;
         const count = counts?.[c.name] || 0;
-        const size = isToday ? 22 : Math.min(20, 10 + count * 0.7);
+        const size = Math.max(22, Math.min(34, 22 + String(count).length * 4));
         const el = document.createElement('div');
         Object.assign(el.style, {
           width: `${size}px`,
           height: `${size}px`,
           borderRadius: '9999px',
-          background: isToday ? '#166534' : 'rgba(25,37,36,0.55)',
+          background: isToday ? '#166534' : 'rgba(25,37,36,0.65)',
           border: isToday ? '2px solid #fff' : '1.5px solid rgba(255,255,255,0.85)',
           boxShadow: isToday ? '0 0 0 5px rgba(22,101,52,0.22)' : '0 1px 3px rgba(0,0,0,0.25)',
           cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          color: '#fff', fontSize: '11px', fontWeight: 700, fontFamily: 'system-ui',
         });
+        el.textContent = String(count);
         const popup = new mapboxgl.Popup({ offset: 14, closeButton: false }).setHTML(
           `<div style="font:600 12px system-ui;color:#192524">${c.name}${isToday ? " — today’s target" : ''}</div><div style="font:400 11px system-ui;color:#646B62">${count} sourced so far</div>`
         );
@@ -93,5 +96,5 @@ export default function SearchRegionsMap({ countries, todayIndex, counts }) {
     );
   }
 
-  return <div ref={containerRef} style={{ width: '100%', height: 260, borderRadius: '0.9rem', overflow: 'hidden' }} />;
+  return <div ref={containerRef} style={{ width: '100%', maxWidth: 480, aspectRatio: '1 / 1', margin: '0 auto', borderRadius: '0.9rem', overflow: 'hidden' }} />;
 }

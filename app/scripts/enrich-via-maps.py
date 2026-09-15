@@ -147,25 +147,28 @@ def main():
     for i, t in enumerate(targets):
         query = f"{t['display_name']} {t.get('location', '')}".strip()
         print(f"[{i+1}/{len(targets)}] {query} ...", end=" ", flush=True)
+        # try/finally (not a bare `continue` inside the try) so the write and
+        # the rate-limit pause below always run — a "no result" continue used
+        # to skip straight to the next loop iteration and bypass both.
         try:
             job_id = create_job(query)
             ok = poll_job(job_id)
             if not ok:
                 print("no result (timed out or job failed)")
-                continue
-            data = download_result(job_id)
-            if not data or not any(data.values()):
-                print("no result (empty)")
-                continue
-            row = {"instagram_handle": t["instagram_handle"]}
-            if data["website"]:
-                row["website"] = data["website"]
-            if data["phone"]:
-                row["whatsapp"] = "".join(c for c in data["phone"] if c.isdigit())
-            if data["email"]:
-                row["email"] = data["email"]
-            results.append(row)
-            print(f"-> {data['website'] or '-'} | {data['phone'] or '-'} | {data['email'] or '-'}")
+            else:
+                data = download_result(job_id)
+                if not data or not any(data.values()):
+                    print("no result (empty)")
+                else:
+                    row = {"instagram_handle": t["instagram_handle"]}
+                    if data["website"]:
+                        row["website"] = data["website"]
+                    if data["phone"]:
+                        row["whatsapp"] = "".join(c for c in data["phone"] if c.isdigit())
+                    if data["email"]:
+                        row["email"] = data["email"]
+                    results.append(row)
+                    print(f"-> {data['website'] or '-'} | {data['phone'] or '-'} | {data['email'] or '-'}")
         except Exception as e:
             # Broad on purpose: a dropped connection (e.g. Docker Desktop
             # itself quitting mid-run, confirmed to happen once already)

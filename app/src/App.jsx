@@ -1,4 +1,4 @@
-import { Component, useRef, useState, useEffect, useCallback } from 'react';
+import { Component, useRef, useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { useMutation } from 'convex/react';
 import { useTranslation } from 'react-i18next';
@@ -16,30 +16,33 @@ import { ListingDraftProvider } from './contexts/ListingDraftContext';
 import { VerificationProvider } from './contexts/VerificationContext';
 import { SubscriptionProvider } from './contexts/SubscriptionContext';
 import Layout        from './components/Layout';
-import ContractBuilder from './components/ContractBuilder';
-import Explore       from './pages/Explore';
-import Collabs       from './pages/Collabs';
-import Saved         from './pages/Saved';
-import Inbox         from './pages/Inbox';
-import Founders      from './pages/Founders';
-import Profile       from './pages/Profile';
-import Settings      from './pages/Settings';
-import ListingDetail from './pages/ListingDetail';
-import HostDashboard        from './pages/HostDashboard';
-import HostListingDetail    from './pages/host/HostListingDetail';
-import HostProposals        from './pages/host/HostProposals';
-import HostCreators         from './pages/host/HostCreators';
-import CreateListingIntro   from './pages/host/CreateListingIntro';
-import Step1Basics          from './pages/host/Step1Basics';
-import Step2Offer           from './pages/host/Step2Offer';
-import Step3Deliverables    from './pages/host/Step3Deliverables';
-import Step4Review          from './pages/host/Step4Review';
-import Step5Payment         from './pages/host/Step5Payment';
-import AdminDashboard       from './pages/AdminDashboard';
-import Blog                 from './pages/Blog';
-import BlogPost             from './pages/BlogPost';
-import ReceiptPreview       from './pages/dev/ReceiptPreview';
-import WaitlistPreview      from './pages/WaitlistPreview';
+// Route pages are lazy-loaded so any single route (e.g. a blog post landed
+// on from search) only downloads its own code, not every other route's —
+// previously everything shipped as one ~5.5MB bundle regardless of entry point.
+const ContractBuilder = lazy(() => import('./components/ContractBuilder'));
+const Explore       = lazy(() => import('./pages/Explore'));
+const Collabs       = lazy(() => import('./pages/Collabs'));
+const Saved         = lazy(() => import('./pages/Saved'));
+const Inbox         = lazy(() => import('./pages/Inbox'));
+const Founders      = lazy(() => import('./pages/Founders'));
+const Profile       = lazy(() => import('./pages/Profile'));
+const Settings      = lazy(() => import('./pages/Settings'));
+const ListingDetail = lazy(() => import('./pages/ListingDetail'));
+const HostDashboard        = lazy(() => import('./pages/HostDashboard'));
+const HostListingDetail    = lazy(() => import('./pages/host/HostListingDetail'));
+const HostProposals        = lazy(() => import('./pages/host/HostProposals'));
+const HostCreators         = lazy(() => import('./pages/host/HostCreators'));
+const CreateListingIntro   = lazy(() => import('./pages/host/CreateListingIntro'));
+const Step1Basics          = lazy(() => import('./pages/host/Step1Basics'));
+const Step2Offer           = lazy(() => import('./pages/host/Step2Offer'));
+const Step3Deliverables    = lazy(() => import('./pages/host/Step3Deliverables'));
+const Step4Review          = lazy(() => import('./pages/host/Step4Review'));
+const Step5Payment         = lazy(() => import('./pages/host/Step5Payment'));
+const AdminDashboard       = lazy(() => import('./pages/AdminDashboard'));
+const Blog                 = lazy(() => import('./pages/Blog'));
+const BlogPost             = lazy(() => import('./pages/BlogPost'));
+const ReceiptPreview       = lazy(() => import('./pages/dev/ReceiptPreview'));
+const WaitlistPreview      = lazy(() => import('./pages/WaitlistPreview'));
 
 // One-click "send this crash to the dev team" button shown in the crash
 // screen below. Lives outside the class ErrorBoundary since hooks need a
@@ -250,6 +253,7 @@ function AppRoutes() {
       <VerificationProvider>
       <SubscriptionProvider>
       <ListingDraftProvider>
+        <Suspense fallback={<LoadingScreen />}>
         <Routes>
             {/* Host wizard — full-screen, no nav chrome */}
           <Route path="/host/listings/create"              element={hostOnly(<CreateListingIntro />)} />
@@ -297,6 +301,7 @@ function AppRoutes() {
             </Layout>
           } />
         </Routes>
+        </Suspense>
       </ListingDraftProvider>
       </SubscriptionProvider>
       </VerificationProvider>

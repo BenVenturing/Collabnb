@@ -837,6 +837,7 @@ h3 { font-weight: 700; }
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.4), 0 8px 24px rgba(25,37,36,0.06);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
+  will-change: transform;
 }
 .bokeh-card .bokeh-title {
   font-family: var(--font-display);
@@ -2001,8 +2002,11 @@ h3 { font-weight: 700; }
 }
 
 /* Login modal card — no chrome of its own; the mounted Clerk widget is the
-   only visible "window", centered directly on the shaded backdrop. */
-.login-modal-card {
+   only visible "window", centered directly on the shaded backdrop. Selector
+   doubled as `.login-modal-card.login-modal-card` to outrank the later
+   `.modal-card` liquid-glass rule (same specificity, later in the cascade) —
+   that SVG feDisplacementMap warps this card's edge into a ghosted offset box. */
+.login-modal-card.login-modal-card {
   padding: 0;
   max-height: calc(92dvh - 2rem);
   overflow-y: auto;

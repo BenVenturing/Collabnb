@@ -7,7 +7,7 @@ import { requireAdmin, requireAdminAction, canAccessAdmin } from "./lib/auth";
 export const getAnalytics = query({
   args: {},
   handler: async (ctx) => {
-    if (!(await canAccessAdmin(ctx))) return {};
+    if (!(await canAccessAdmin(ctx))) return undefined;
     const [profiles, listings, collabs, pitchCounts] = await Promise.all([
       ctx.db.query("profiles").collect(),
       ctx.db.query("listings").collect(),
@@ -273,7 +273,7 @@ export const getEmailList = query({
 export const getPitchAnalytics = query({
   args: {},
   handler: async (ctx) => {
-    if (!(await canAccessAdmin(ctx))) return {};
+    if (!(await canAccessAdmin(ctx))) return undefined;
     const [pitchCounts, profiles] = await Promise.all([
       ctx.db.query("pitch_counts").collect(),
       ctx.db.query("profiles").collect(),
@@ -340,7 +340,7 @@ export const getPitchAnalytics = query({
 export const getGeographicDistribution = query({
   args: {},
   handler: async (ctx) => {
-    if (!(await canAccessAdmin(ctx))) return {};
+    if (!(await canAccessAdmin(ctx))) return undefined;
     const profiles = await ctx.db.query("profiles").collect();
 
     const countries: Record<string, number> = {};
@@ -438,7 +438,7 @@ export const toggleFeatured = mutation({
 export const getFunnelAnalytics = query({
   args: {},
   handler: async (ctx) => {
-    if (!(await canAccessAdmin(ctx))) return {};
+    if (!(await canAccessAdmin(ctx))) return undefined;
     const [profiles, collabs] = await Promise.all([
       ctx.db.query("profiles").collect(),
       ctx.db.query("collaborations").collect(),
@@ -482,7 +482,7 @@ export const getFunnelAnalytics = query({
 export const getReferralAnalytics = query({
   args: {},
   handler: async (ctx) => {
-    if (!(await canAccessAdmin(ctx))) return {};
+    if (!(await canAccessAdmin(ctx))) return undefined;
     const [profiles, refCodes, refUses] = await Promise.all([
       ctx.db.query("profiles").collect(),
       ctx.db.query("referral_codes").collect(),

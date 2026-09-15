@@ -6,6 +6,7 @@ import {
   PRESET_PACKAGES, LOAD_TIER_LABELS,
   totalPoints, calcMidpoint, calcRange, calcStayOffset, calcHardFloor, calcWarnThreshold,
   evaluateZone, computeLoadTier, isDeliverableAllowedForTier, findPackagesForBudget,
+  normalizeTierId,
 } from "../../convex/lib/compensationPoints";
 
 // Range bar: a single smooth gradient from very light green to deep green.
@@ -292,7 +293,7 @@ function PresetCard({ preset, points, midpoint, active, onClick }) {
 export default function PricingTool({ mode = "sandbox", initialValue, onChange }) {
   const { t } = useTranslation('pricingTool');
   const [entryMode, setEntryMode] = useState("deliverables");
-  const [tierId, setTierId] = useState(initialValue?.tierId || "ugc_pro");
+  const [tierId, setTierId] = useState(normalizeTierId(initialValue?.tierId) || "ugc_pro");
   const [compensationType, setCompensationType] = useState(initialValue?.compensationType || "paid");
   const [complexity, setComplexity] = useState(initialValue?.complexity || "standard");
   const [stayValue, setStayValue] = useState(initialValue?.stayValue || 0);

@@ -20,6 +20,7 @@ import type * as collaborations from "../collaborations.js";
 import type * as collections from "../collections.js";
 import type * as contracts from "../contracts.js";
 import type * as crashReports from "../crashReports.js";
+import type * as creatorWelcomeEmail from "../creatorWelcomeEmail.js";
 import type * as crons from "../crons.js";
 import type * as email from "../email.js";
 import type * as emailCopy from "../emailCopy.js";
@@ -78,6 +79,7 @@ declare const fullApi: ApiFromModules<{
   collections: typeof collections;
   contracts: typeof contracts;
   crashReports: typeof crashReports;
+  creatorWelcomeEmail: typeof creatorWelcomeEmail;
   crons: typeof crons;
   email: typeof email;
   emailCopy: typeof emailCopy;

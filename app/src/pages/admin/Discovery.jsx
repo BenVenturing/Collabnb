@@ -1126,7 +1126,7 @@ function HostCrmBoard() {
   const [emailBulkMsg, setEmailBulkMsg] = useState('');
 
   const generateDrafts = useAction(api.prospects.generateDraftsForSelected);
-  const sendEmailNow = useAction(api.prospects.sendHostEmailNow);
+  const scheduleBulkEmail = useAction(api.prospects.scheduleBulkEmail);
   const updateStatus = useMutation(api.prospects.updateStatus);
 
   const hosts = useQuery(api.prospects.getByKind, {
@@ -1193,16 +1193,17 @@ function HostCrmBoard() {
     }
   }
 
-  // Sends the initial email to every selected Confirmed host at once —
-  // each call is independent, so one bad address doesn't block the rest.
+  // Drip-sends 1/minute instead of firing every selected host's email at
+  // once — a burst of sends reads as a blast to receiving mail providers.
+  // Returns immediately; the actual sends happen over the following minutes
+  // via the Convex scheduler.
   async function bulkSendEmails() {
     if (selected.size === 0) return;
     setEmailBulkBusy(true); setEmailBulkMsg('');
     try {
       const ids = [...selected];
-      const results = await Promise.allSettled(ids.map((id) => sendEmailNow({ id })));
-      const sent = results.filter((r) => r.status === 'fulfilled').length;
-      setEmailBulkMsg(sent === ids.length ? `Emailed ${sent}.` : `Emailed ${sent} of ${ids.length} — check the rest for a missing address.`);
+      const r = await scheduleBulkEmail({ ids, kind: 'host', intervalSeconds: 60 });
+      setEmailBulkMsg(r.spanMinutes > 0 ? `Scheduled ${r.scheduled} — sending 1/minute over the next ${r.spanMinutes} min.` : `Sending ${r.scheduled} now.`);
       setSelected(new Set());
     } catch (e) {
       setEmailBulkMsg((e.data || e.message)?.replace(/^.*Error:\s*/, '') || 'Bulk email failed');
@@ -1232,7 +1233,7 @@ function HostCrmBoard() {
           {bulkBusy ? 'Drafting…' : `Draft DMs for selected (${selected.size})`}
         </button>
         <button onClick={bulkSendEmails} disabled={emailBulkBusy || selected.size === 0}
-          title="Sends the initial email to every selected Confirmed host right now"
+          title="Drip-sends the cold outreach email to every selected host, 1/minute, over the next several minutes"
           style={{ padding: '0.35rem 0.8rem', borderRadius: 9999, border: 'none', background: '#166534', color: '#fff', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer', opacity: (emailBulkBusy || selected.size === 0) ? 0.5 : 1 }}>
           {emailBulkBusy ? 'Emailing…' : `Email selected (${selected.size})`}
         </button>
@@ -1318,9 +1319,11 @@ function CreatorCrmBoard() {
   const [bulkMsg, setBulkMsg] = useState('');
   const [confirmBusy, setConfirmBusy] = useState(false);
   const [confirmMsg, setConfirmMsg] = useState('');
+  const [emailBulkBusy, setEmailBulkBusy] = useState(false);
+  const [emailBulkMsg, setEmailBulkMsg] = useState('');
 
   const generateDrafts = useAction(api.prospects.generateDraftsForSelected);
-  const sendCreatorEmailNow = useAction(api.prospects.sendCreatorEmailNow);
+  const scheduleBulkEmail = useAction(api.prospects.scheduleBulkEmail);
   const updateStatus = useMutation(api.prospects.updateStatus);
 
   const creators = useQuery(api.prospects.getByKind, {
@@ -1409,25 +1412,52 @@ function CreatorCrmBoard() {
   // then fires the welcome email for each best-effort (a missing address on
   // one creator never blocks the rest) — same shape as confirmHostBatch's
   // confirm-then-kickoff-email flow for hosts.
+  // Confirm only moves them into the pipeline — it does NOT email. Sending
+  // is always a separate, deliberate click ("Email selected" below, or
+  // "Email" on one card) so nothing reaches a real inbox without that.
   async function bulkConfirm() {
     if (selected.size === 0) return;
     setConfirmBusy(true); setConfirmMsg('');
     try {
       const ids = [...selected];
-      const byId = new Map(creators.map((p) => [String(p._id), p]));
-      // No email on file isn't a failure to report — it's the expected "this
-      // one's DM-only" case, so only creators with an address get a send attempt.
-      const withEmail = ids.filter((id) => byId.get(id)?.email);
       await Promise.allSettled(ids.map((id) => updateStatus({ id, status: 'queued' })));
-      const results = await Promise.allSettled(withEmail.map((id) => sendCreatorEmailNow({ id })));
-      const emailed = results.filter((r) => r.status === 'fulfilled').length;
-      const dmOnly = ids.length - withEmail.length;
-      setConfirmMsg(`Confirmed ${ids.length} — emailed ${emailed}${dmOnly ? `, ${dmOnly} straight to DM (no email on file)` : ''}.`);
+      setConfirmMsg(`Confirmed ${ids.length}.`);
       setSelected(new Set());
     } catch (e) {
       setConfirmMsg((e.data || e.message)?.replace(/^.*Error:\s*/, '') || 'Confirm failed');
     } finally {
       setConfirmBusy(false);
+    }
+  }
+
+  // Explicit, separate send — only fires for whichever selected creators
+  // actually have an email on file; the rest are DM-only and just get
+  // skipped (not reported as a failure).
+  // Drip-sends 1/minute instead of firing every selected creator's email at
+  // once — same reasoning as HostCrmBoard's bulkSendEmails. Only creators
+  // with an address get scheduled; the rest are DM-only and just skipped.
+  async function bulkEmail() {
+    if (selected.size === 0) return;
+    setEmailBulkBusy(true); setEmailBulkMsg('');
+    try {
+      const ids = [...selected];
+      const byId = new Map(creators.map((p) => [String(p._id), p]));
+      const withEmail = ids.filter((id) => byId.get(id)?.email);
+      const skipped = ids.length - withEmail.length;
+      if (withEmail.length === 0) {
+        setEmailBulkMsg(`Nothing to send — all ${ids.length} skipped (no email on file).`);
+      } else {
+        const r = await scheduleBulkEmail({ ids: withEmail, kind: 'creator', intervalSeconds: 60 });
+        setEmailBulkMsg(
+          (r.spanMinutes > 0 ? `Scheduled ${r.scheduled} — sending 1/minute over the next ${r.spanMinutes} min` : `Sending ${r.scheduled} now`)
+          + (skipped ? `, ${skipped} skipped (no email on file).` : '.')
+        );
+      }
+      setSelected(new Set());
+    } catch (e) {
+      setEmailBulkMsg((e.data || e.message)?.replace(/^.*Error:\s*/, '') || 'Bulk email failed');
+    } finally {
+      setEmailBulkBusy(false);
     }
   }
 
@@ -1486,9 +1516,14 @@ function CreatorCrmBoard() {
           {allSelected ? 'Deselect all' : 'Select all'}
         </button>
         <button onClick={bulkConfirm} disabled={confirmBusy || selected.size === 0}
-          title="Moves selected creators to Confirmed and sends the welcome email to each (best-effort)"
+          title="Moves selected creators to Confirmed — does not email or DM anyone"
           style={{ padding: '0.35rem 0.8rem', borderRadius: 9999, border: 'none', background: '#166534', color: '#fff', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer', opacity: (confirmBusy || selected.size === 0) ? 0.5 : 1 }}>
           {confirmBusy ? 'Confirming…' : `Confirm selected (${selected.size})`}
+        </button>
+        <button onClick={bulkEmail} disabled={emailBulkBusy || selected.size === 0}
+          title="Drip-sends the cold outreach email, 1/minute, to every selected creator with an email on file (skips the rest)"
+          style={{ padding: '0.35rem 0.8rem', borderRadius: 9999, border: 'none', background: '#5b4aa8', color: '#fff', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer', opacity: (emailBulkBusy || selected.size === 0) ? 0.5 : 1 }}>
+          {emailBulkBusy ? 'Emailing…' : `Email selected (${selected.size})`}
         </button>
         <button onClick={bulkGenerate} disabled={bulkBusy || selected.size === 0}
           title="Drafts an Instagram DM for each selected creator"
@@ -1497,6 +1532,7 @@ function CreatorCrmBoard() {
         </button>
         {bulkMsg && <span style={{ fontSize: '0.72rem', color: '#166534' }}>{bulkMsg}</span>}
         {confirmMsg && <span style={{ fontSize: '0.72rem', color: '#166534' }}>{confirmMsg}</span>}
+        {emailBulkMsg && <span style={{ fontSize: '0.72rem', color: '#166534' }}>{emailBulkMsg}</span>}
       </div>
 
       <div style={{ display: 'flex', gap: '1.25rem', overflowX: 'auto', paddingBottom: '0.5rem', alignItems: 'flex-start' }}>
@@ -1779,23 +1815,32 @@ function DmAngleEditor() {
 // Ben wanted to drop in a full replacement exported from an email builder,
 // not edit paragraphs individually — so this is a textarea for the whole
 // HTML plus an image uploader that hands back URLs to paste into it.
-function WelcomeEmailEditor() {
-  const current = useQuery(api.prospects.getHostWelcomeEmailHtml);
-  const setHtml = useMutation(api.prospects.setHostWelcomeEmailHtml);
-  const resetHtml = useMutation(api.prospects.resetHostWelcomeEmailHtml);
+// Shared by both sides — same build-out, same button, only the underlying
+// Convex functions/token/copy differ per kind (see the isHost branches below).
+function WelcomeEmailEditor({ kind }) {
+  const isHost = kind === 'host';
+  const token = isHost ? '{{HOTEL_NAME}}' : '{{CREATOR_NAME}}';
+  const sampleName = isHost ? 'Sample Hotel Name' : 'Sample Creator';
+  const current = useQuery(isHost ? api.prospects.getHostWelcomeEmailHtml : api.prospects.getCreatorWelcomeEmailHtml);
+  const setHtml = useMutation(isHost ? api.prospects.setHostWelcomeEmailHtml : api.prospects.setCreatorWelcomeEmailHtml);
+  const resetHtml = useMutation(isHost ? api.prospects.resetHostWelcomeEmailHtml : api.prospects.resetCreatorWelcomeEmailHtml);
   const generateUploadUrl = useMutation(api.uploads.generateUploadUrl);
   const finalizeUpload = useMutation(api.uploads.finalizeUpload);
+  const sendTest = useAction(api.prospects.sendTestWelcomeEmail);
 
   const [draft, setDraft] = useState(null); // null = mirror `current` until touched
   const [msg, setMsg] = useState('');
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadedUrls, setUploadedUrls] = useState([]);
+  const [testEmail, setTestEmail] = useState('benventuring@gmail.com');
+  const [testBusy, setTestBusy] = useState(false);
+  const [testMsg, setTestMsg] = useState('');
   const fileInputRef = useRef(null);
   const photoInputRef = useRef(null);
 
   const html = draft ?? current?.template ?? '';
-  const previewHtml = html.replace(/\{\{HOTEL_NAME\}\}/g, 'Sample Hotel Name');
+  const previewHtml = html.split(token).join(sampleName);
 
   function loadHtmlFile(file) {
     const reader = new FileReader();
@@ -1843,10 +1888,24 @@ function WelcomeEmailEditor() {
     }
   }
 
+  async function sendTestNow() {
+    if (!testEmail.trim() || !html) return;
+    setTestBusy(true); setTestMsg('');
+    try {
+      await sendTest({ kind, toEmail: testEmail.trim(), html, sampleName });
+      setTestMsg(`Sent to ${testEmail.trim()} — whatever's in the box above, saved or not.`);
+      setTimeout(() => setTestMsg(''), 5000);
+    } catch (e) {
+      setTestMsg((e.data || e.message)?.replace(/^.*Error:\s*/, '') || 'Test send failed');
+    } finally {
+      setTestBusy(false);
+    }
+  }
+
   return (
     <div>
       <p style={{ fontSize: '0.76rem', color: '#3C5759', margin: '0 0 0.75rem', lineHeight: 1.5 }}>
-        This is the exact HTML that sends as the welcome email (step 1) the moment a host is confirmed. Upload a full replacement exported from an email builder, or edit the HTML directly — it must keep a <code>{'{{HOTEL_NAME}}'}</code> token somewhere so each send gets personalized. Upload photos below to get hosted URLs first, then reference them in the HTML.
+        This is the exact HTML that sends as the cold outreach email (step 1) the moment a {isHost ? 'host' : 'creator'} is confirmed. Upload a full replacement exported from an email builder, or edit the HTML directly — it must keep a <code>{token}</code> token somewhere so each send gets personalized. Upload photos below to get hosted URLs first, then reference them in the HTML.
       </p>
       {current?.isCustom && (
         <p style={{ fontSize: '0.7rem', color: '#5b4aa8', margin: '0 0 0.75rem' }}>Currently using a customized version, not the built-in default.</p>
@@ -1896,6 +1955,22 @@ function WelcomeEmailEditor() {
               </div>
             </div>
           )}
+          <div style={{ marginTop: '0.9rem', padding: '0.7rem 0.8rem', borderRadius: '0.6rem', background: 'rgba(123,104,200,0.06)', border: '1px solid rgba(123,104,200,0.2)' }}>
+            <span style={{ ...label, display: 'inline' }}>Send a test copy</span>
+            <p style={{ fontSize: '0.7rem', color: '#3C5759', margin: '0 0 0.5rem', lineHeight: 1.5 }}>
+              Sends the exact HTML above (saved or not) to a real inbox right now, so you can check rendering before committing it.
+            </p>
+            <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', alignItems: 'center' }}>
+              <input type="email" value={testEmail} onChange={(e) => setTestEmail(e.target.value)}
+                aria-label="Test send address" placeholder="you@example.com"
+                style={{ ...input, flex: '1 1 200px', fontSize: '0.74rem' }} />
+              <button onClick={sendTestNow} disabled={testBusy || !testEmail.trim() || !html}
+                style={{ padding: '0.35rem 0.9rem', borderRadius: 9999, border: 'none', background: '#5b4aa8', color: '#fff', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', opacity: (testBusy || !testEmail.trim() || !html) ? 0.5 : 1 }}>
+                {testBusy ? 'Sending…' : 'Send test'}
+              </button>
+            </div>
+            {testMsg && <p style={{ fontSize: '0.7rem', color: testMsg.includes('failed') ? '#9b2d2d' : '#166534', margin: '0.4rem 0 0' }}>{testMsg}</p>}
+          </div>
         </div>
         <div style={{ flex: '1 1 380px', minWidth: 320 }}>
           <span style={{ ...label, display: 'inline' }}>Preview (sample name filled in)</span>
@@ -1907,11 +1982,97 @@ function WelcomeEmailEditor() {
   );
 }
 
+// Steps 2-3 — plain-text, LLM-adapted at send time, so this edits the source
+// template (same [Hotel Name]/[Creator Name] bracket token used in code) not
+// a literal substitution. Same build-out on both sides: view, edit, save,
+// reset, and a test send of the adapted copy against a sample profile.
+function FollowupTemplatesEditor({ kind }) {
+  const isHost = kind === 'host';
+  const nameToken = isHost ? '[Hotel Name]' : '[Creator Name]';
+  const templates = useQuery(api.prospects.getFollowupTemplates, { kind });
+  const setTemplate = useMutation(api.prospects.setFollowupTemplate);
+  const resetTemplate = useMutation(api.prospects.resetFollowupTemplate);
+
+  if (!templates) return <p style={{ fontSize: '0.76rem', color: '#646B62' }}>Loading…</p>;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
+      <p style={{ fontSize: '0.76rem', color: '#3C5759', margin: 0, lineHeight: 1.5 }}>
+        The two follow-ups sent after the cold outreach email, if a {isHost ? 'host' : 'creator'} hasn't replied. An LLM adapts this source text per recipient (swaps in their real name, keeps structure/tone) rather than sending it verbatim — edit the template itself here, keeping a <code>{nameToken}</code> token somewhere.
+      </p>
+      {templates.map((t) => (
+        <FollowupTemplateRow key={t.step} kind={kind} nameToken={nameToken} template={t}
+          onSave={(value) => setTemplate({ kind, step: t.step, template: value })}
+          onReset={() => resetTemplate({ kind, step: t.step })} />
+      ))}
+    </div>
+  );
+}
+
+function FollowupTemplateRow({ kind, nameToken, template, onSave, onReset }) {
+  const [draft, setDraft] = useState(null);
+  const [msg, setMsg] = useState('');
+  const [saving, setSaving] = useState(false);
+  const value = draft ?? template.template;
+
+  async function save() {
+    setSaving(true); setMsg('');
+    try {
+      await onSave(value);
+      setMsg('Saved.');
+      setTimeout(() => setMsg(''), 3000);
+    } catch (e) {
+      setMsg((e.data || e.message)?.replace(/^.*Error:\s*/, '') || 'Save failed');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function reset() {
+    setSaving(true); setMsg('');
+    try {
+      await onReset();
+      setDraft(null);
+      setMsg('Reset to the built-in default.');
+      setTimeout(() => setMsg(''), 3000);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
+        <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#192524' }}>Step {template.step} — {template.name}</span>
+        <span style={{ fontSize: '0.7rem', color: '#646B62' }}>Subject: {template.subject.replace(nameToken, 'their name')}</span>
+        {template.isCustom && <span style={{ fontSize: '0.66rem', color: '#5b4aa8', fontWeight: 600 }}>Customized</span>}
+      </div>
+      <textarea value={value} onChange={(e) => setDraft(e.target.value)}
+        rows={7} style={{ ...input, width: '100%', resize: 'vertical', fontSize: '0.74rem' }} />
+      <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.4rem', alignItems: 'center' }}>
+        <button onClick={save} disabled={saving || !value.trim()}
+          style={{ padding: '0.3rem 0.8rem', borderRadius: 9999, border: 'none', background: '#192524', color: '#fff', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer', opacity: (saving || !value.trim()) ? 0.5 : 1 }}>
+          {saving ? 'Saving…' : 'Save'}
+        </button>
+        {template.isCustom && (
+          <button onClick={reset} disabled={saving}
+            style={{ padding: '0.3rem 0.8rem', borderRadius: 9999, border: '1px solid rgba(25,37,36,0.15)', background: 'transparent', color: '#3C5759', fontSize: '0.7rem', fontWeight: 600, cursor: 'pointer' }}>
+            Reset to default
+          </button>
+        )}
+        {msg && <span style={{ fontSize: '0.7rem', color: '#166534' }}>{msg}</span>}
+      </div>
+    </div>
+  );
+}
+
 const CREATOR_TOOLS = [
   { id: 'find', label: 'Find creators', title: 'Search Instagram by niche/location, auto-imports and scores the top 10 creators.' },
   { id: 'auto', label: 'Auto-discovery', title: 'Runs that same creator search automatically every morning at 7am.' },
   { id: 'add', label: 'Add manually', title: 'Add one specific creator you already know the handle for.' },
   { id: 'import', label: 'Import', title: 'Bulk-import creators or hosts from a CSV file (or pasted CSV text).' },
+  { id: 'welcome_email', label: 'Cold outreach email', title: 'Preview the branded cold outreach email, or upload a replacement HTML/photos.' },
+  { id: 'followups', label: 'Follow-up emails', title: 'View or edit the two follow-up email templates.' },
 ];
 
 export default function Discovery({ sidebarCollapsed, setSidebarCollapsed }) {
@@ -1932,11 +2093,11 @@ export default function Discovery({ sidebarCollapsed, setSidebarCollapsed }) {
     setOpenPanel(null);
   }
 
-  // "Build fresh 50" — full confirm treatment for both sides at once (drafted
-  // DM + welcome email for hosts, welcome email for creators), topping up
-  // with a live search first if the pool's short. Actual DM volume stays
-  // capped separately at the safe ~20/day rate; this only grows the
-  // ready-to-confirm bench.
+  // "Build fresh 50" — confirms both sides at once (drafted DM for hosts,
+  // queued status for creators), topping up with a live search first if the
+  // pool's short. Does NOT email anyone — that's always a separate,
+  // deliberate click. Actual DM volume stays capped separately at the safe
+  // ~20/day rate; this only grows the ready-to-confirm bench.
   async function handleBuildQueue() {
     setQueueBusy(true); setQueueMsg('');
     try {
@@ -1970,7 +2131,7 @@ export default function Discovery({ sidebarCollapsed, setSidebarCollapsed }) {
         </div>
         <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexShrink: 0 }}>
           <button onClick={handleBuildQueue} disabled={queueBusy}
-            title="Confirms up to 50 new creators and 50 new hosts each — drafts DMs/sends welcome emails, tops up with a live search first if the pool's short. Instagram DM volume stays capped separately."
+            title="Confirms up to 50 new creators and 50 new hosts each — drafts DMs, tops up with a live search first if the pool's short. Emailing is a separate step you trigger yourself; Instagram DM volume stays capped separately."
             style={{ padding: '0.5rem 1rem', borderRadius: 9999, border: '1.5px solid rgba(22,101,52,0.3)', background: 'rgba(209,235,219,0.5)', color: '#166534', fontSize: '0.76rem', fontWeight: 700, cursor: 'pointer', opacity: queueBusy ? 0.6 : 1 }}>
             {queueBusy ? 'Building…' : 'Build fresh 50'}
           </button>
@@ -2010,9 +2171,13 @@ export default function Discovery({ sidebarCollapsed, setSidebarCollapsed }) {
               style={{ padding: '0.5rem 1.1rem', borderRadius: 9999, border: '1.5px solid rgba(25,37,36,0.2)', background: openPanel === 'dm_angles' ? 'rgba(25,37,36,0.06)' : 'transparent', color: '#192524', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}>
               DM angles
             </button>
-            <button onClick={() => togglePanel('welcome_email')} title="Preview the branded welcome email, or upload a replacement HTML/photos"
+            <button onClick={() => togglePanel('welcome_email')} title="Preview the branded cold outreach email, or upload a replacement HTML/photos"
               style={{ padding: '0.5rem 1.1rem', borderRadius: 9999, border: '1.5px solid rgba(25,37,36,0.2)', background: openPanel === 'welcome_email' ? 'rgba(25,37,36,0.06)' : 'transparent', color: '#192524', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}>
-              Welcome email
+              Cold outreach email
+            </button>
+            <button onClick={() => togglePanel('followups')} title="View or edit the two follow-up email templates"
+              style={{ padding: '0.5rem 1.1rem', borderRadius: 9999, border: '1.5px solid rgba(25,37,36,0.2)', background: openPanel === 'followups' ? 'rgba(25,37,36,0.06)' : 'transparent', color: '#192524', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}>
+              Follow-up emails
             </button>
           </>
         ) : (
@@ -2043,7 +2208,12 @@ export default function Discovery({ sidebarCollapsed, setSidebarCollapsed }) {
       )}
       {openPanel === 'welcome_email' && (
         <div style={{ marginBottom: '1.25rem', padding: '1rem', borderRadius: '1rem', background: 'rgba(255,255,255,0.6)', border: '1px solid rgba(25,37,36,0.08)' }}>
-          <WelcomeEmailEditor />
+          <WelcomeEmailEditor kind={side === 'hosts' ? 'host' : 'creator'} />
+        </div>
+      )}
+      {openPanel === 'followups' && (
+        <div style={{ marginBottom: '1.25rem', padding: '1rem', borderRadius: '1rem', background: 'rgba(255,255,255,0.6)', border: '1px solid rgba(25,37,36,0.08)' }}>
+          <FollowupTemplatesEditor kind={side === 'hosts' ? 'host' : 'creator'} />
         </div>
       )}
       {side === 'creators' && openPanel && openPanel !== 'add' && (

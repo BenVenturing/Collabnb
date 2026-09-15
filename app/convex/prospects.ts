@@ -1457,11 +1457,12 @@ export const saveEmailSequence = internalMutation({
 });
 
 // Creator analog of runHostEmailKickoff/sendHostEmailNow above — same "an
-// email goes out first" pattern and the same branded template style, but the
-// address is whatever was already on file from their Instagram bio (creators
-// don't have a business website to scrape a marketing address from, so there's
-// no findMarketingEmail step), and there's no multi-step drip — just the one
-// welcome email. Fires automatically right after a creator is confirmed into
+// email goes out first" pattern, the same branded template style, and (as of
+// this version) the same findMarketingEmail lookup: many creators list a
+// personal site/portfolio/Linktree as their bio link, so it's worth trying
+// before falling back to whatever address is directly in the bio. There's
+// still no multi-step drip — just the one welcome email. Fires automatically
+// right after a creator is confirmed into
 // the pipeline (see the "Confirm selected" button in CreatorCrmBoard),
 // best-effort so one missing address never blocks the rest of the batch; the
 // "Email" button on an Emailed-eligible card in the CRM board calls the same
@@ -1469,8 +1470,12 @@ export const saveEmailSequence = internalMutation({
 async function runCreatorEmailKickoff(ctx: any, id: any): Promise<{ sent: boolean; reason?: string }> {
   const p: any = await ctx.runQuery(internal.prospects.getById, { id });
   if (!p) return { sent: false, reason: "Prospect not found" };
-  const email = p.email;
-  if (!email) return { sent: false, reason: "No email on file for this creator — add one manually (e.g. from their bio), then try again" };
+  // Same lookup as hosts: prefer a real contact/press address scraped from
+  // the creator's own site (bio link, portfolio, etc.) over whatever's in
+  // their Instagram bio — falls back to the bio email if there's no
+  // scrapeable website or the scrape comes up empty.
+  const email = await findMarketingEmail(p);
+  if (!email) return { sent: false, reason: "No email found — no address on file and no scrapeable website on record. Add one manually, then try again" };
 
   // Step 1 is the branded HTML welcome email (possibly admin-overridden) —
   // same plain-substitution treatment as hosts. Steps 2-3 are LLM-adapted
@@ -1573,6 +1578,7 @@ export const saveCreatorEmailSequence = internalMutation({
     const p = await ctx.db.get(id);
     const log = (p as any)?.outreach_log || [];
     await ctx.db.patch(id, {
+      marketing_email: email,
       email_sequence: emailSequence,
       ...(step1Sent ? { status: "emailed" } : {}),
       outreach_log: step1Sent
@@ -1590,10 +1596,10 @@ export const sendSequenceEmail = action({
     await requireAdminAction(ctx, api.profiles.getByClerkUserId);
     const p: any = await ctx.runQuery(internal.prospects.getById, { id });
     if (!p) throw new Error("Prospect not found");
-    // Hosts send to the marketing address scraped from their site; creators
-    // don't have one of those, so their own `email` field is the target.
-    const toEmail = p.kind === "host" ? p.marketing_email : p.email;
-    if (!toEmail) throw new Error(p.kind === "host" ? "No marketing email on file for this host" : "No email on file for this creator");
+    // Both kinds prefer the marketing address scraped from their site
+    // (findMarketingEmail), falling back to whatever's directly in the bio.
+    const toEmail = p.marketing_email || p.email;
+    if (!toEmail) throw new Error(`No email on file for this ${p.kind}`);
     const entry = (p.email_sequence || []).find((e: any) => e.step === step);
     if (!entry) throw new Error(`No drafted email for step ${step}`);
     if (entry.sent_at) throw new Error(`Step ${step} was already sent`);

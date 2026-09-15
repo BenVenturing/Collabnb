@@ -88,11 +88,17 @@ def poll_job(job_id: str, timeout_s: int = 90) -> bool:
 BOGUS_EMAIL_DOMAINS = ("wixpress.com", "sentry.io", "sentry-next", "domain.com", "example.com", "yoursite.com")
 BOGUS_EMAIL_LOCALS = ("user", "test", "email", "name", "yourname")
 
-# A "website" that's actually a social link isn't useful to us — our own
-# contact scraper (findMarketingContact) needs a real business domain to
-# fetch, and there's no point routing back through Instagram/Facebook when
-# the whole point of this pipeline is to avoid that.
-BOGUS_WEBSITE_DOMAINS = ("instagram.com", "facebook.com", "wa.me", "linktr.ee", "linktree.com")
+# A "website" that's actually a social link, or an OTA/booking-aggregator
+# listing page (bluepillow, freecancellations, etc. — third-party booking
+# sites that list a business without being its own domain), isn't useful to
+# us — our own contact scraper (findMarketingContact) needs the business's
+# own domain to fetch, and there's no point routing back through
+# Instagram/Facebook when the whole point of this pipeline is to avoid that.
+BOGUS_WEBSITE_DOMAINS = (
+    "instagram.com", "facebook.com", "wa.me", "linktr.ee", "linktree.com",
+    "bluepillow.com", "freecancellations.com", "booking.com", "expedia.com",
+    "tripadvisor.com", "hoteldetails.eu", "hotels.com", "agoda.com",
+)
 
 
 def is_real_email(addr: str) -> bool:

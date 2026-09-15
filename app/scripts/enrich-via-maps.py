@@ -168,11 +168,14 @@ def main():
             print(f"-> {data['website'] or '-'} | {data['phone'] or '-'} | {data['email'] or '-'}")
         except urllib.error.URLError as e:
             print(f"error: {e}")
+        # Write after every item, not just at the end — an interrupted run
+        # (Ctrl-C, or asked to stop early) still leaves a usable file instead
+        # of losing everything back to the last item.
+        with open(out_path, "w") as f:
+            json.dump(results, f, indent=2)
         # Real pause between jobs — see module docstring on rate-limit risk.
         time.sleep(5)
 
-    with open(out_path, "w") as f:
-        json.dump(results, f, indent=2)
     print(f"Wrote {len(results)} enrichments to {out_path}")
     print(f"Push them with: node scripts/enrich-prospects-local.mjs {out_path}")
 

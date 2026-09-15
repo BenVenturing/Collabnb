@@ -80,6 +80,36 @@ def poll_job(job_id: str, timeout_s: int = 90) -> bool:
     return False
 
 
+# Wix embeds a diagnostic address like <hash>@sentry-next.wixpress.com in
+# some sites' page source for its own error tracking — the scraper's email
+# regex picks it up as if it were a real contact address. "user@domain.com"
+# and friends are template placeholder text builders leave in unfinished
+# pages. Squarespace/other builders may have similar tells; extend as needed.
+BOGUS_EMAIL_DOMAINS = ("wixpress.com", "sentry.io", "sentry-next", "domain.com", "example.com", "yoursite.com")
+BOGUS_EMAIL_LOCALS = ("user", "test", "email", "name", "yourname")
+
+# A "website" that's actually a social link isn't useful to us — our own
+# contact scraper (findMarketingContact) needs a real business domain to
+# fetch, and there's no point routing back through Instagram/Facebook when
+# the whole point of this pipeline is to avoid that.
+BOGUS_WEBSITE_DOMAINS = ("instagram.com", "facebook.com", "wa.me", "linktr.ee", "linktree.com")
+
+
+def is_real_email(addr: str) -> bool:
+    if not addr or "@" not in addr:
+        return False
+    local, _, domain = addr.lower().partition("@")
+    if any(d in domain for d in BOGUS_EMAIL_DOMAINS):
+        return False
+    if local in BOGUS_EMAIL_LOCALS:
+        return False
+    return True
+
+
+def is_real_website(url: str) -> bool:
+    return bool(url) and not any(d in url.lower() for d in BOGUS_WEBSITE_DOMAINS)
+
+
 def download_result(job_id: str) -> dict | None:
     url = f"{SCRAPER_BASE}/api/v1/jobs/{job_id}/download"
     r = urllib.request.Request(url, headers={"User-Agent": UA})
@@ -94,10 +124,15 @@ def download_result(job_id: str) -> dict | None:
     row = next(reader, None)
     if not row:
         return None
+    candidates = [e.strip() for e in (row.get("emails") or "").split(",") if e.strip()]
+    email = next((e for e in candidates if is_real_email(e)), None)
+    website = row.get("website") or None
+    if not is_real_website(website):
+        website = None
     return {
-        "website": row.get("website") or None,
+        "website": website,
         "phone": row.get("phone") or None,
-        "email": (row.get("emails") or "").split(",")[0].strip() or None,
+        "email": email,
     }
 
 

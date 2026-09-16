@@ -25,16 +25,21 @@ const actionBtn = {
 export default function CollabOversight() {
   const stats   = useQuery(api.admin.getAnalytics);
   const collabs = useQuery(api.admin.getAllCollabs);
-  const terminateCollab = useMutation(api.admin.deleteCollab);
+  const terminateCollab = useMutation(api.admin.terminateCollab);
   const [statusFilter, setStatusFilter] = useState('all');
   const [busyId, setBusyId] = useState(null);
   const [confirming, setConfirming] = useState(null);
+  const [notice, setNotice] = useState('');
 
   const confirmTerminate = async () => {
-    const id = String(confirming._id);
+    const collab = confirming;
+    const id = String(collab._id);
     setConfirming(null);
     setBusyId(id);
-    try { await terminateCollab({ id }); }
+    try {
+      const { contractsFrozen, emailed } = await terminateCollab({ id });
+      setNotice(`Terminated "${collab.property_name || 'collaboration'}" · ${contractsFrozen} contract${contractsFrozen === 1 ? '' : 's'} frozen · ${emailed} email${emailed === 1 ? '' : 's'} sent`);
+    }
     catch (err) { window.alert(err?.data || err?.message || 'Something went wrong.'); }
     finally { setBusyId(null); }
   };
@@ -46,9 +51,9 @@ export default function CollabOversight() {
     return <div style={{ padding: '2rem 2.5rem', color: SAGE, fontSize: '0.85rem' }}>Sign in with the admin account to manage collaborations.</div>;
   }
 
-  const filtered = collabs.filter((c) =>
-    statusFilter === 'all' || c.status === statusFilter || c.current_stage === statusFilter
-  );
+  const matchesFilter = (c, f) =>
+    f === 'all' ? c.status !== 'terminated' : c.status === f || c.current_stage === f;
+  const filtered = collabs.filter((c) => matchesFilter(c, statusFilter));
 
   return (
     <div style={{ padding: '2rem 2.5rem', maxWidth: 1080 }}>
@@ -89,10 +94,17 @@ export default function CollabOversight() {
               cursor: 'pointer', fontFamily: 'inherit', textTransform: 'capitalize',
             }}
           >
-            {s === 'all' ? `All (${collabs.length})` : `${s} (${collabs.filter(c => c.status === s || c.current_stage === s).length})`}
+            {`${s} (${collabs.filter((c) => matchesFilter(c, s)).length})`}
           </button>
         ))}
       </div>
+
+      {notice && (
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', background: '#fff', border: '1px solid rgba(25,37,36,0.07)', borderLeft: '3px solid #991B1B', borderRadius: '0.6rem', padding: '0.65rem 0.9rem', marginBottom: '1rem', fontSize: '0.8rem', color: INK }}>
+          <span>{notice}</span>
+          <button onClick={() => setNotice('')} aria-label="Dismiss" style={{ background: 'none', border: 'none', cursor: 'pointer', color: SAGE, fontSize: '1rem', lineHeight: 1 }}>×</button>
+        </div>
+      )}
 
       {/* ── Empty state ── */}
       {filtered.length === 0 && (
@@ -176,13 +188,15 @@ export default function CollabOversight() {
                       {c._creationTime ? new Date(c._creationTime).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
                     </td>
                     <td style={{ padding: '0.75rem', textAlign: 'right' }}>
-                      <button
-                        onClick={() => setConfirming(c)}
-                        disabled={busy}
-                        style={{ ...actionBtn, color: '#B91C1C', border: '1px solid rgba(185,28,28,0.3)', opacity: busy ? 0.5 : 1 }}
-                      >
-                        Terminate
-                      </button>
+                      {sKey !== 'terminated' && (
+                        <button
+                          onClick={() => setConfirming(c)}
+                          disabled={busy}
+                          style={{ ...actionBtn, color: '#B91C1C', border: '1px solid rgba(185,28,28,0.3)', opacity: busy ? 0.5 : 1 }}
+                        >
+                          Terminate
+                        </button>
+                      )}
                     </td>
                   </tr>
                 );
@@ -229,7 +243,15 @@ function ConfirmTerminate({ collab, onCancel, onConfirm }) {
           {collab.creator_name ? ` · ${collab.creator_name}` : ''}
         </p>
         <p style={{ fontSize: '0.8rem', color: SAGE, lineHeight: 1.5, margin: '0.75rem 0 1rem' }}>
-          Admin override: this permanently removes the collaboration along with its application, message thread and reviews. This can't be undone.
+          Admin override — this immediately:
+        </p>
+        <ul style={{ fontSize: '0.8rem', color: SAGE, lineHeight: 1.6, margin: '-0.5rem 0 1rem', paddingLeft: '1.1rem' }}>
+          <li>ends the collaboration without either party's agreement</li>
+          <li>freezes every payment tied to it — no charges, checkouts or payouts go through</li>
+          <li>emails the creator and host that Collabnb terminated it</li>
+        </ul>
+        <p style={{ fontSize: '0.75rem', color: SAGE, margin: '0 0 1rem' }}>
+          The record, messages and contract are kept under the Terminated filter.
         </p>
         <label style={{ display: 'block', fontSize: '0.75rem', color: SLATE, marginBottom: '0.35rem' }}>
           Type <strong style={{ color: DANGER, letterSpacing: '0.04em' }}>{CONFIRM_WORD}</strong> to confirm

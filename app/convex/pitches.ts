@@ -11,6 +11,16 @@ function currentMonthKey(): string {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 }
 
+// Terminated collaborations (by Collabnb or mutual agreement) are frozen —
+// no status changes, counter-offers or signatures on their pitch.
+async function assertCollabNotTerminated(ctx: any, pitch: { collaboration_id?: string }) {
+  const collabId = pitch.collaboration_id ? ctx.db.normalizeId("collaborations", pitch.collaboration_id) : null;
+  const collab = collabId ? await ctx.db.get(collabId) : null;
+  if (collab?.status === "terminated") {
+    throw new ConvexError("This collaboration has been terminated and can no longer be changed.");
+  }
+}
+
 export const checkAndIncrement = mutation({
   args: { userId: v.string() },
   handler: async (ctx, { userId }) => {
@@ -255,6 +265,7 @@ export const updateStatus = mutation({
     const pitch = await ctx.db.get(id);
     if (!pitch) return;
     await requireOwnerOrAdmin(ctx, pitch.host_id);
+    await assertCollabNotTerminated(ctx, pitch);
 
     const updates: Record<string, unknown> = { status };
     if (hostNote !== undefined) updates.host_note = cleanPlainText(hostNote, 1000);
@@ -338,6 +349,7 @@ export const sendCounter = mutation({
     const pitch = await ctx.db.get(id);
     if (!pitch) return;
     await requireOwnerOrAdmin(ctx, fromParty === "host" ? pitch.host_id : pitch.creator_id);
+    await assertCollabNotTerminated(ctx, pitch);
 
     // Three-zone floor — a negotiation can never settle below the hard floor
     // for whatever deliverable set it proposes. Server-side is the source of
@@ -415,6 +427,7 @@ export const signContract = mutation({
     const pitch = await ctx.db.get(id);
     if (!pitch) return;
     await requireOwnerOrAdmin(ctx, party === "host" ? pitch.host_id : pitch.creator_id);
+    await assertCollabNotTerminated(ctx, pitch);
 
     const history = parseJSON<any[]>(pitch.contract_history, []);
     const version = history.length;

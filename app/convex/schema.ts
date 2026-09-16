@@ -400,6 +400,10 @@ export default defineSchema({
     charge_approval_creator_payout: v.optional(v.number()),
     charge_approved_at: v.optional(v.number()),
     charge_declined_at: v.optional(v.number()),
+    // Admin master off switch (set when Collabnb terminates the collaboration):
+    // every charge, checkout and payout path in stripe.js refuses to run.
+    payments_blocked: v.optional(v.boolean()),
+    payments_blocked_at: v.optional(v.number()),
   })
     .index("by_owner", ["owner_id"])
     .index("by_host", ["host_id"])

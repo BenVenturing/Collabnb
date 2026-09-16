@@ -72,6 +72,8 @@ async function getOneDollarCoupon(stripe, priceId) {
 
 // One-time Checkout for host platform fee.
 // Requires: npx convex env set STRIPE_SECRET_KEY sk_test_...
+const PAYMENTS_BLOCKED_MSG = 'Payments are frozen on this contract — its collaboration was terminated by Collabnb.';
+
 export const createCheckoutSession = action({
   args: {
     contractId: v.string(),
@@ -87,6 +89,7 @@ export const createCheckoutSession = action({
     const contract = await ctx.runQuery(internal.contracts.getByIdInternal, { id: args.contractId });
     if (!contract) throw new Error('Contract not found');
     if (contract.paid) throw new Error('This contract fee has already been paid');
+    if (contract.payments_blocked) throw new ConvexError(PAYMENTS_BLOCKED_MSG);
 
     const stripe = new Stripe(secretKey);
     const { isFreeStay, cash, fee } = computeContractFee(contract);
@@ -690,6 +693,7 @@ export const chargeContractFee = internalAction({
     const contract = await ctx.runQuery(internal.contracts.getByIdInternal, { id: args.contractId });
     if (!contract) return { skipped: 'no_contract' };
     if (contract.paid) return { skipped: 'already_paid' };
+    if (contract.payments_blocked) return { skipped: 'payments_blocked' };
 
     // Founding / lifetime hosts pay no platform fee — but they still owe the
     // creator their agreed cash payout, since that's not Collabnb's money.
@@ -767,6 +771,7 @@ export const approveContractCharge = action({
     const contract = await ctx.runQuery(internal.contracts.getByIdInternal, { id: args.contractId });
     if (!contract) throw new ConvexError('Contract not found.');
     if (contract.paid) throw new ConvexError('This contract has already been charged.');
+    if (contract.payments_blocked) throw new ConvexError(PAYMENTS_BLOCKED_MSG);
     if (contract.charge_approval_status !== 'pending_approval') throw new ConvexError('This charge is not awaiting approval.');
 
     await ctx.runMutation(internal.contracts.markChargeApproved, { id: args.contractId });
@@ -788,6 +793,7 @@ export const executeApprovedCharge = internalAction({
     const contract = await ctx.runQuery(internal.contracts.getByIdInternal, { id: args.contractId });
     if (!contract) return { skipped: 'no_contract' };
     if (contract.paid) return { skipped: 'already_paid' };
+    if (contract.payments_blocked) return { skipped: 'payments_blocked' };
 
     const host = contract.host_id
       ? await ctx.runQuery(api.profiles.getById, { id: String(contract.host_id) })
@@ -889,7 +895,7 @@ async function finalizeCollabCharge(ctx, { contractId, contract, host, fee, crea
     await ctx.runMutation(internal.contracts.markHostReceiptSent, { id: contractId });
   }
 
-  if (creatorPayout > 0 && contract?.creator_payout_release_at === undefined) {
+  if (creatorPayout > 0 && !contract?.payments_blocked && contract?.creator_payout_release_at === undefined) {
     // Dispute-resolution hold: don't forward immediately — schedule it so
     // admin has a window to pause it. ACH gets a longer hold (see
     // ACH_PAYOUT_HOLD_MS) since its return-risk window is longer than a card's.
@@ -947,7 +953,7 @@ export const forwardCreatorPayout = internalAction({
   args: { contractId: v.string(), amount: v.number(), chargeId: v.optional(v.string()) },
   handler: async (ctx, args) => {
     const contract = await ctx.runQuery(internal.contracts.getByIdInternal, { id: args.contractId });
-    if (contract?.creator_payout_held) return { held: true };
+    if (contract?.creator_payout_held || contract?.payments_blocked) return { held: true };
     const creatorId = contract?.creator_id;
     if (!creatorId) {
       await ctx.runMutation(internal.contracts.setPayoutStatus, { id: args.contractId, status: 'pending' });
@@ -1014,6 +1020,7 @@ export const releasePayoutNow = action({
     const contract = await ctx.runQuery(internal.contracts.getByIdInternal, { id: args.contractId });
     if (!contract) throw new Error('Contract not found');
     if (contract.creator_payout_status === 'paid') throw new Error('This contract has already been paid out');
+    if (contract.payments_blocked) throw new ConvexError(PAYMENTS_BLOCKED_MSG);
     if (!contract.creator_payout_amount) throw new Error('No payout amount recorded on this contract');
 
     await ctx.runMutation(internal.contracts.setPayoutHold, { contractId: args.contractId, held: false });
@@ -1198,6 +1205,7 @@ export const sendWisePayout = action({
     const contract = await ctx.runQuery(internal.contracts.getByIdInternal, { id: args.contractId });
     if (!contract) throw new Error('Contract not found');
     if (contract.creator_payout_status === 'paid') throw new Error('This contract has already been paid out');
+    if (contract.payments_blocked) throw new ConvexError(PAYMENTS_BLOCKED_MSG);
     if (!contract.creator_id) throw new Error('Contract has no linked creator');
 
     const creator = await ctx.runQuery(api.profiles.getById, { id: String(contract.creator_id) });

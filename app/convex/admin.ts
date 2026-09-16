@@ -1,6 +1,5 @@
 import { v, ConvexError } from "convex/values";
 import { query, mutation, action, internalMutation, internalQuery, type MutationCtx } from "./_generated/server";
-import type { Doc } from "./_generated/dataModel";
 import { internal, api } from "./_generated/api";
 import { requireAdmin, requireAdminAction, canAccessAdmin } from "./lib/auth";
 
@@ -761,65 +760,87 @@ async function getCollabOrThrow(ctx: MutationCtx, id: string) {
   return collab;
 }
 
+async function getProfileById(ctx: MutationCtx, id?: string) {
+  const docId = id ? ctx.db.normalizeId("profiles", id) : null;
+  return docId ? await ctx.db.get(docId) : null;
+}
+
+// Admin master off switch: ends the collaboration without either party's
+// agreement, freezes every payment tied to it, and emails both sides. The
+// record, thread and contract are kept as evidence.
 export const terminateCollab = mutation({
   args: { id: v.string() },
   handler: async (ctx, { id }) => {
     await requireAdmin(ctx);
     const collab = await getCollabOrThrow(ctx, id);
+    if (collab.status === "terminated") throw new ConvexError("This collaboration is already terminated.");
+    const collabId = String(collab._id);
+    const now = Date.now();
+
     const stages = collab.stages ? JSON.parse(collab.stages) : {};
-    const now = new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-    stages.archived = { ...(stages.archived || {}), completed: true, date: now, note: "Collaboration terminated by Collabnb" };
+    const today = new Date(now).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+    stages.archived = { ...(stages.archived || {}), completed: true, date: today, note: "Collaboration terminated by Collabnb" };
     await ctx.db.patch(collab._id, {
       current_stage: "archived",
       status: "terminated",
-      status_text: "Terminated",
+      status_text: "Terminated by Collabnb",
       is_active: false,
       stages: JSON.stringify(stages),
-      terminated_at: Date.now(),
+      terminated_at: now,
       termination_requested_by: undefined,
       termination_requested_at: undefined,
     });
-  },
-});
 
-// Removes the collaboration plus the pitch, message thread and reviews created
-// alongside it. Paid fee records are kept as the money trail; contracts are
-// left for the Contracts tab to handle.
-async function deleteCollabCascade(ctx: MutationCtx, collab: Doc<"collaborations">) {
-  const id = String(collab._id);
+    const pitches = (await ctx.db
+      .query("pitches")
+      .withIndex("by_listing", (q) => q.eq("listing_id", collab.listing_id))
+      .collect()
+    ).filter((p) => p.collaboration_id === collabId || (!!collab.pitch_id && String(p._id) === collab.pitch_id));
 
-  const pitches = (await ctx.db
-    .query("pitches")
-    .withIndex("by_listing", (q) => q.eq("listing_id", collab.listing_id))
-    .collect()
-  ).filter((p) => p.collaboration_id === id || (!!collab.pitch_id && String(p._id) === collab.pitch_id));
+    const contractIds = new Set<string>();
+    if (collab.contract_id) contractIds.add(collab.contract_id);
+    for (const p of pitches) if (p.contract_id) contractIds.add(p.contract_id);
+    const backLinked = await ctx.db
+      .query("contracts")
+      .filter((q) => q.eq(q.field("linked_collaboration_id"), collabId))
+      .collect();
+    for (const c of backLinked) contractIds.add(String(c._id));
 
-  const threadKeys = new Set(pitches.map((p) => p.thread_key).filter((k): k is string => !!k));
-  const threads = await ctx.db.query("threads").withIndex("by_collab", (q) => q.eq("collab_id", id)).collect();
-  for (const t of threads) if (t.thread_key) threadKeys.add(t.thread_key);
+    let contractsFrozen = 0;
+    for (const cid of contractIds) {
+      const docId = ctx.db.normalizeId("contracts", cid);
+      const contract = docId ? await ctx.db.get(docId) : null;
+      if (!contract) continue;
+      await ctx.db.patch(contract._id, {
+        payments_blocked: true,
+        payments_blocked_at: now,
+        creator_payout_held: true,
+        ...(contract.charge_approval_status === "pending_approval"
+          ? { charge_approval_status: "declined" as const, charge_declined_at: now }
+          : {}),
+      });
+      contractsFrozen++;
+    }
 
-  for (const key of threadKeys) {
-    const msgs = await ctx.db.query("thread_messages").withIndex("by_thread", (q) => q.eq("thread_key", key)).collect();
-    for (const m of msgs) await ctx.db.delete(m._id);
-    const keyed = await ctx.db.query("threads").withIndex("by_thread_key", (q) => q.eq("thread_key", key)).collect();
-    for (const t of keyed) await ctx.db.delete(t._id);
-  }
-  for (const t of threads) if (!t.thread_key) await ctx.db.delete(t._id);
-  for (const p of pitches) await ctx.db.delete(p._id);
+    const pitch = pitches[0];
+    const creator = await getProfileById(ctx, collab.creator_id || pitch?.creator_id);
+    const host = await getProfileById(ctx, collab.host_id || pitch?.host_id);
+    const listingTitle = collab.property_name || pitch?.listing_title || "your collaboration";
+    const creatorName = creator?.full_name || collab.creator_name || pitch?.creator_name || "your creator";
+    const hostName = host?.full_name || collab.host_name || "your host";
 
-  const reviews = await ctx.db.query("reviews").withIndex("by_collab", (q) => q.eq("collab_id", id)).collect();
-  for (const r of reviews) await ctx.db.delete(r._id);
+    const emailed: string[] = [];
+    for (const [party, name, counterpartyName] of [
+      [creator, creatorName, hostName],
+      [host, hostName, creatorName],
+    ] as const) {
+      if (!party?.email || emailed.includes(party.email)) continue;
+      await ctx.scheduler.runAfter(0, internal.emails.sendCollabTerminatedEmail, {
+        to: party.email, name, counterpartyName, listingTitle,
+      });
+      emailed.push(party.email);
+    }
 
-  const fees = await ctx.db.query("fee_records").withIndex("by_collaboration", (q) => q.eq("collaboration_id", id)).collect();
-  for (const f of fees) if (!f.paid_at) await ctx.db.delete(f._id);
-
-  await ctx.db.delete(collab._id);
-}
-
-export const deleteCollab = mutation({
-  args: { id: v.string() },
-  handler: async (ctx, { id }) => {
-    await requireAdmin(ctx);
-    await deleteCollabCascade(ctx, await getCollabOrThrow(ctx, id));
+    return { contractsFrozen, emailed: emailed.length };
   },
 });

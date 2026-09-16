@@ -239,6 +239,21 @@ export const sendApplicationDeclinedEmail = internalAction({
   },
 });
 
+// ─── Collaboration terminated by admin (notify creator + host) ───────────────
+
+export const sendCollabTerminatedEmail = internalAction({
+  args: {
+    to: v.string(),
+    name: v.string(),
+    counterpartyName: v.string(),
+    listingTitle: v.string(),
+  },
+  handler: async (ctx, { to, name, counterpartyName, listingTitle }) => {
+    const firstName = name.split(" ")[0];
+    await sendFromTemplate(ctx, "collab_terminated", to, { firstName, counterpartyName, listingTitle });
+  },
+});
+
 // ─── Contract lifecycle (sent / signed / fully signed / paid) ────────────────
 // Copy is provided by the caller (contracts.ts / pitches.ts); the completion +
 // fee receipt callers pull their copy from the editable template registry.

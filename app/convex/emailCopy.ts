@@ -275,6 +275,21 @@ export const TEMPLATE_DEFAULTS: Record<string, TemplateDef> = {
       buttonLabel: "Browse listings",
     },
   },
+  collab_terminated: {
+    name: "Collaboration terminated by Collabnb (to creator & host)",
+    trigger: "Admin terminates a collaboration from Collaboration Oversight",
+    category: "Collabs & Messaging",
+    vars: ["firstName", "counterpartyName", "listingTitle"],
+    calloutColor: "#A5462F",
+    copy: {
+      subject: "Your collaboration for {{listingTitle}} has been terminated",
+      heading: "Hi {{firstName}},",
+      body: "Your collaboration with <strong>{{counterpartyName}}</strong> for <strong>{{listingTitle}}</strong> has been terminated by the Collabnb team as part of our admin oversight.",
+      calloutLabel: "What this means",
+      calloutText: "The collaboration is now closed, and all payments connected to it have been frozen. No further charges or payouts will be processed for it.",
+      footnote: "Have questions, or think this was a mistake? Just reply to this email and our team will get back to you.",
+    },
+  },
   new_message: {
     name: "New message notification",
     trigger: "User receives an inbox message",
@@ -469,6 +484,7 @@ export const SAMPLE_VARS: Record<string, string> = {
   conversationsLabel: "2 conversations",
   creatorNames: "Rachel Norton, Maya Chen",
   hostNames: "Landen Scott, Priya Nair",
+  counterpartyName: "Landen Scott",
 };
 
 export function fill(str: string | undefined, vars: Record<string, string>) {

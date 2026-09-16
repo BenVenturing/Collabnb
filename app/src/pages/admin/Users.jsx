@@ -220,9 +220,9 @@ export default function Users({ initialTab } = {}) {
 
   const stats = [
     { label: 'Pending',  value: pending.length,                                              color: INK },
-    { label: 'Creators', value: creatorsAll.filter(p => p.is_verified === true).length,       color: '#0369A1' },
-    { label: 'Hosts',    value: hostsAll.filter(p => p.is_verified === true).length,          color: '#92400E' },
-    { label: 'Rejected', value: rejectedAll.length,                                           color: '#991B1B' },
+    { label: 'Creators', value: creatorsAll.filter(p => p.is_verified === true).length,       color: INK },
+    { label: 'Hosts',    value: hostsAll.filter(p => p.is_verified === true).length,          color: INK },
+    { label: 'Rejected', value: rejectedAll.length,                                           color: INK },
   ];
 
   return (

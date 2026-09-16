@@ -14,6 +14,16 @@ const CONVEX_URL = import.meta.env.VITE_CONVEX_URL;
 
 const convex = CONVEX_URL ? new ConvexReactClient(CONVEX_URL) : null;
 
+// A deploy can replace dist/assets/ while a tab is still open on the old
+// build, so a lazy route's chunk hash 404s on the next navigation. Reload
+// once to pick up the new build; the sessionStorage guard stops a genuine
+// repeated failure (e.g. offline) from loop-reloading.
+window.addEventListener('vite:preloadError', () => {
+  if (sessionStorage.getItem('collabnb_chunk_reload')) return;
+  sessionStorage.setItem('collabnb_chunk_reload', '1');
+  window.location.reload();
+});
+
 function Root() {
   // Global background layers — render on every route, every account
   const bg = (
@@ -76,3 +86,4 @@ function Root() {
 }
 
 ReactDOM.createRoot(document.getElementById('root')).render(<Root />);
+sessionStorage.removeItem('collabnb_chunk_reload');

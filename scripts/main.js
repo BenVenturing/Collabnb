@@ -1166,26 +1166,44 @@ function initListingStack() {
 
   const LISTINGS = [
     {
-      photo: 'https://images.unsplash.com/photo-1587061949409-02df41d5e562?w=800&auto=format&fit=crop',
+      photo: '/listings/tahoe.jpg',
       name: 'Glacier Prime Cabin',
       chips: ['Lake Tahoe, CA', 'Micro', '4 deliverables', '3-night stay'],
       message: "Hey! I'd love to host you at Glacier Prime Cabin for a 3-night stay — looking for 4 Reels + 1 TikTok.",
     },
     {
-      photo: 'https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=800&auto=format&fit=crop',
+      photo: '/listings/aspen.jpg',
       name: 'Mountain View Lodge',
       chips: ['Aspen, CO', 'Influencer', '3 deliverables', '2-night stay'],
       message: "Mountain View Lodge has an opening next month — interested in a 2-night content collab?",
     },
     {
-      photo: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&auto=format&fit=crop',
+      photo: '/listings/lisbon.jpg',
       name: 'Sable House',
       chips: ['Lisbon, Portugal', 'UGC Pro', '6 deliverables', '4-night stay'],
       message: "Sable House is looking for creators who love architecture and culture. Is that you?",
     },
+    {
+      photo: '/listings/tulum.jpg',
+      name: 'Selva Casa',
+      chips: ['Tulum, Mexico', 'Macro', '5 deliverables', '4-night stay'],
+      message: "Selva Casa has a jungle suite open in March — want to shoot it before the season picks up?",
+    },
+    {
+      photo: '/listings/antwerp.jpg',
+      name: 'The Timber Loft',
+      chips: ['Antwerp, Belgium', 'Creator', '3 deliverables', '2-night stay'],
+      message: "Our loft is all old beams and morning light — ideal for slow, lived-in content. Free that week?",
+    },
   ];
 
+  // Keep in sync with lcard-deal / .lcard transition in main.css
+  const DEAL_MS = 880;
+  const ADVANCE_MS = 620;
+  const DWELL_MS = 1900;
+
   let typingTimer = null;
+  let cycleTimer = null;
 
   const cards = LISTINGS.map((listing, i) => {
     const el = document.createElement('div');
@@ -1220,17 +1238,15 @@ function initListingStack() {
 
   function getFront() { return cards.find(c => c.classList.contains('pos-0')); }
 
-  function startTyping(index) {
+  function startTyping(card, index, onDone) {
     clearTimeout(typingTimer);
-    const front = getFront();
-    if (!front) return;
-    const el = front.querySelector('.lcard-typing');
+    const el = card.querySelector('.lcard-typing');
     if (!el) return;
     const msg = LISTINGS[index].message;
     // Mobile: show full message instantly so card content is never empty
     if (isMobileStack) {
       el.textContent = msg;
-      const cursor = front.querySelector('.lcard-cursor');
+      const cursor = card.querySelector('.lcard-cursor');
       if (cursor) cursor.style.display = 'none';
       return;
     }
@@ -1240,44 +1256,68 @@ function initListingStack() {
       if (i < msg.length) {
         el.textContent += msg[i++];
         typingTimer = setTimeout(tick, 26 + Math.random() * 18);
+      } else if (onDone) {
+        onDone();
       }
     }
-    setTimeout(tick, 350);
+    typingTimer = setTimeout(tick, 350);
+  }
+
+  function scheduleNext() {
+    clearTimeout(cycleTimer);
+    cycleTimer = setTimeout(rotate, DWELL_MS);
   }
 
   function rotate() {
     const front = getFront();
     if (!front) return;
 
-    front.classList.add('is-flipping');
-
-    // Mobile fade takes 400ms; desktop flip takes 380ms
-    setTimeout(() => {
-      front.style.transition = 'none';
-      front.classList.remove('is-flipping', 'pos-0');
-      front.classList.add('pos-2');
+    // Park the dealt card at the back once it has finished travelling. The
+    // keyframe's end state matches .pos-N exactly, so handing it over is
+    // invisible. The timeout is a fallback for when the animation is
+    // suppressed (reduced motion, low-power) and animationend never fires.
+    let settled = false;
+    const settle = () => {
+      if (settled) return;
+      settled = true;
+      front.classList.remove('is-dealing');
+      front.classList.add(`pos-${cards.length - 1}`);
       const typing = front.querySelector('.lcard-typing');
       if (typing) typing.textContent = '';
-      front.getBoundingClientRect();
-      front.style.transition = '';
+    };
+    front.addEventListener('animationend', settle, { once: true });
+    setTimeout(settle, DEAL_MS + 120);
 
-      cards.forEach(card => {
-        if (card === front) return;
-        if (card.classList.contains('pos-1')) {
-          card.classList.replace('pos-1', 'pos-0');
-        } else if (card.classList.contains('pos-2')) {
-          card.classList.replace('pos-2', 'pos-1');
+    // Deal the front card out and step everything else forward on the same
+    // beat, so the whole deck moves together rather than on separate clocks.
+    front.classList.remove('pos-0');
+    front.classList.add('is-dealing');
+
+    cards.forEach(card => {
+      if (card === front) return;
+      for (let p = 1; p < cards.length; p++) {
+        if (card.classList.contains(`pos-${p}`)) {
+          card.classList.replace(`pos-${p}`, `pos-${p - 1}`);
+          break;
         }
-      });
+      }
+    });
 
+    // Type on the new front card once it has finished sliding forward.
+    setTimeout(() => {
       const newFront = getFront();
-      if (newFront) startTyping(parseInt(newFront.dataset.index));
-    }, isMobileStack ? 400 : 380);
+      if (!newFront) return;
+      startTyping(newFront, parseInt(newFront.dataset.index, 10), scheduleNext);
+    }, ADVANCE_MS);
   }
 
-  startTyping(0);
-  // On mobile: keep the card static — no rotation interval
-  if (!isMobileStack) setInterval(rotate, 4200);
+  // Reduced motion: show the first card and leave it be — the deck relies on
+  // the deal animation to hand cards to the back, which is suppressed there.
+  const prefersReducedMotion =
+    window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const isStatic = isMobileStack || prefersReducedMotion;
+
+  startTyping(cards[0], 0, isStatic ? null : scheduleNext);
 }
 
 /* --- Mockup Carousel (About Page) --- */

@@ -692,8 +692,10 @@ h3 { font-weight: 700; }
   border-radius: 1.75rem;
   overflow: hidden;
   will-change: transform, opacity;
-  transition: transform 0.55s var(--ease-out-expo), box-shadow 0.55s var(--ease-out-expo);
-  transform-origin: center top;
+  transition: transform 0.62s var(--ease-out-expo),
+              opacity 0.62s var(--ease-out-expo),
+              box-shadow 0.62s var(--ease-out-expo);
+  transform-origin: center center;
   /* glass styling matching .hero-card */
   background: rgba(255,255,255,0.6);
   backdrop-filter: blur(20px);
@@ -701,20 +703,34 @@ h3 { font-weight: 700; }
   border: 1px solid rgba(255,255,255,0.55);
 }
 
+/* Three visible depth tiers. Anything deeper parks out of sight behind them
+   and fades in as it advances, so the deck can cycle more than three cards
+   without the stack looking cluttered. */
 .lcard.pos-0 {
-  z-index: 3;
-  transform: translateY(0) scale(1);
+  z-index: 5;
+  transform: translate3d(0, 0, 0) scale(1);
+  opacity: 1;
   box-shadow: 0 24px 56px -8px rgba(25,37,36,0.16), 0 8px 20px -4px rgba(25,37,36,0.08);
 }
 .lcard.pos-1 {
-  z-index: 2;
-  transform: translateY(11px) scale(0.955);
+  z-index: 4;
+  transform: translate3d(0, 11px, 0) scale(0.955);
+  opacity: 1;
   box-shadow: 0 8px 24px rgba(25,37,36,0.07);
 }
 .lcard.pos-2 {
-  z-index: 1;
-  transform: translateY(21px) scale(0.912);
+  z-index: 3;
+  transform: translate3d(0, 21px, 0) scale(0.912);
+  opacity: 1;
   box-shadow: 0 4px 10px rgba(25,37,36,0.05);
+}
+.lcard.pos-3,
+.lcard.pos-4 {
+  z-index: 2;
+  transform: translate3d(0, 28px, 0) scale(0.88);
+  opacity: 0;
+  box-shadow: none;
+  pointer-events: none;
 }
 
 /* Photo strip at top of each card */
@@ -754,15 +770,35 @@ h3 { font-weight: 700; }
   50%       { opacity: 0; }
 }
 
-/* Flip-out: card lifts and rotates up over the top */
-@keyframes lcard-flipout {
-  0%   { transform: translateY(0)    scale(1)    rotateX(0deg);   opacity: 1; }
-  40%  { transform: translateY(-12px) scale(1.01) rotateX(55deg);  opacity: 0.9; }
-  100% { transform: translateY(-5px)  scale(0.97) rotateX(105deg); opacity: 0; }
+/* Deal-to-back: the front card slides aside, tilts, then tucks in behind the
+   deck while the others step forward. It is fully transparent from 78% on, so
+   it never ghosts over the cards moving up underneath it, and its end state
+   matches .pos-3/.pos-4 exactly so JS can hand it over without a snap. */
+@keyframes lcard-deal {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1) rotate(0deg);
+    opacity: 1;
+  }
+  32% {
+    transform: translate3d(30%, 12px, 0) scale(0.98) rotate(5deg);
+    opacity: 1;
+  }
+  62% {
+    transform: translate3d(37%, 30px, 0) scale(0.93) rotate(6.5deg);
+    opacity: 0.32;
+  }
+  78% {
+    transform: translate3d(20%, 30px, 0) scale(0.90) rotate(3deg);
+    opacity: 0;
+  }
+  100% {
+    transform: translate3d(0, 28px, 0) scale(0.88) rotate(0deg);
+    opacity: 0;
+  }
 }
-.lcard.is-flipping {
-  animation: lcard-flipout 0.52s cubic-bezier(0.4, 0, 0.6, 1) forwards;
-  z-index: 4 !important;
+.lcard.is-dealing {
+  animation: lcard-deal 0.88s var(--ease-out-quart) forwards;
+  z-index: 6;
   pointer-events: none;
 }
 
@@ -806,14 +842,16 @@ h3 { font-weight: 700; }
 
   /* Hide stacked cards — one card at a time */
   .lcard.pos-1,
-  .lcard.pos-2 {
+  .lcard.pos-2,
+  .lcard.pos-3,
+  .lcard.pos-4 {
     opacity: 0 !important;
     pointer-events: none;
   }
   .lcard.pos-0 { opacity: 1 !important; }
 
   /* Outgoing: just fade out, no keyframe animation */
-  .lcard.is-flipping {
+  .lcard.is-dealing {
     animation: none !important;
     opacity: 0 !important;
   }
@@ -2418,7 +2456,7 @@ h3 { font-weight: 700; }
   .faq-answer {
     transition: none !important;
   }
-  .lcard.is-flipping {
+  .lcard.is-dealing {
     animation: none !important;
     opacity: 0 !important;
   }
@@ -3525,7 +3563,9 @@ h3 { font-weight: 700; }
   /* 4. Listing stack — hide back cards entirely, no rotation */
   .lcard.pos-1,
   .lcard.pos-2,
-  .lcard.is-flipping { display: none !important; }
+  .lcard.pos-3,
+  .lcard.pos-4,
+  .lcard.is-dealing { display: none !important; }
 
   /* 5. Exception: typewriter cursor still blinks */
   .cw-cursor { animation: blink 0.6s step-end infinite !important; }

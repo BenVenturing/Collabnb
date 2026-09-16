@@ -25,18 +25,16 @@ const actionBtn = {
 export default function CollabOversight() {
   const stats   = useQuery(api.admin.getAnalytics);
   const collabs = useQuery(api.admin.getAllCollabs);
-  const terminateCollab = useMutation(api.admin.terminateCollab);
-  const deleteCollab    = useMutation(api.admin.deleteCollab);
+  const terminateCollab = useMutation(api.admin.deleteCollab);
   const [statusFilter, setStatusFilter] = useState('all');
   const [busyId, setBusyId] = useState(null);
-  const [pending, setPending] = useState(null); // { collab, kind: 'terminate' | 'delete' }
+  const [confirming, setConfirming] = useState(null);
 
-  const confirmPending = async () => {
-    const { collab, kind } = pending;
-    const id = String(collab._id);
-    setPending(null);
+  const confirmTerminate = async () => {
+    const id = String(confirming._id);
+    setConfirming(null);
     setBusyId(id);
-    try { await (kind === 'delete' ? deleteCollab : terminateCollab)({ id }); }
+    try { await terminateCollab({ id }); }
     catch (err) { window.alert(err?.data || err?.message || 'Something went wrong.'); }
     finally { setBusyId(null); }
   };
@@ -178,24 +176,13 @@ export default function CollabOversight() {
                       {c._creationTime ? new Date(c._creationTime).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
                     </td>
                     <td style={{ padding: '0.75rem', textAlign: 'right' }}>
-                      <div style={{ display: 'flex', gap: '0.35rem', justifyContent: 'flex-end', opacity: busy ? 0.5 : 1 }}>
-                        {sKey !== 'terminated' && (
-                          <button
-                            onClick={() => setPending({ collab: c, kind: 'terminate' })}
-                            disabled={busy}
-                            style={{ ...actionBtn, color: SLATE, border: '1px solid rgba(25,37,36,0.15)' }}
-                          >
-                            Terminate
-                          </button>
-                        )}
-                        <button
-                          onClick={() => setPending({ collab: c, kind: 'delete' })}
-                          disabled={busy}
-                          style={{ ...actionBtn, color: '#B91C1C', border: '1px solid rgba(185,28,28,0.3)' }}
-                        >
-                          Delete
-                        </button>
-                      </div>
+                      <button
+                        onClick={() => setConfirming(c)}
+                        disabled={busy}
+                        style={{ ...actionBtn, color: '#B91C1C', border: '1px solid rgba(185,28,28,0.3)', opacity: busy ? 0.5 : 1 }}
+                      >
+                        Terminate
+                      </button>
                     </td>
                   </tr>
                 );
@@ -205,37 +192,23 @@ export default function CollabOversight() {
         </div>
       )}
 
-      {pending && (
-        <ConfirmOverride
-          collab={pending.collab}
-          kind={pending.kind}
-          onCancel={() => setPending(null)}
-          onConfirm={confirmPending}
+      {confirming && (
+        <ConfirmTerminate
+          collab={confirming}
+          onCancel={() => setConfirming(null)}
+          onConfirm={confirmTerminate}
         />
       )}
     </div>
   );
 }
 
-const OVERRIDE_COPY = {
-  terminate: {
-    word: 'TERMINATE',
-    title: 'Terminate collaboration',
-    body: 'Admin override: this ends the collaboration immediately without the other party agreeing. It stays on record as Terminated.',
-    color: '#B45309',
-  },
-  delete: {
-    word: 'DELETE',
-    title: 'Delete collaboration',
-    body: "This permanently removes the collaboration along with its application, message thread and reviews. This can't be undone.",
-    color: '#B91C1C',
-  },
-};
+const CONFIRM_WORD = 'TERMINATE';
+const DANGER = '#B91C1C';
 
-function ConfirmOverride({ collab, kind, onCancel, onConfirm }) {
+function ConfirmTerminate({ collab, onCancel, onConfirm }) {
   const [typed, setTyped] = useState('');
-  const { word, title, body, color } = OVERRIDE_COPY[kind];
-  const matches = typed.trim().toUpperCase() === word;
+  const matches = typed.trim().toUpperCase() === CONFIRM_WORD;
 
   return (
     <div
@@ -250,20 +223,22 @@ function ConfirmOverride({ collab, kind, onCancel, onConfirm }) {
         onSubmit={(e) => { e.preventDefault(); if (matches) onConfirm(); }}
         style={{ background: '#fff', borderRadius: '0.875rem', padding: '1.5rem', width: '100%', maxWidth: 420, boxShadow: '0 20px 50px rgba(25,37,36,0.2)' }}
       >
-        <h2 style={{ fontFamily: 'Cabinet Grotesk, sans-serif', fontSize: '1.15rem', fontWeight: 700, color: INK, margin: 0 }}>{title}</h2>
+        <h2 style={{ fontFamily: 'Cabinet Grotesk, sans-serif', fontSize: '1.15rem', fontWeight: 700, color: INK, margin: 0 }}>Terminate collaboration</h2>
         <p style={{ fontSize: '0.85rem', fontWeight: 600, color: SLATE, margin: '0.5rem 0 0' }}>
           {collab.property_name || 'Untitled property'}
           {collab.creator_name ? ` · ${collab.creator_name}` : ''}
         </p>
-        <p style={{ fontSize: '0.8rem', color: SAGE, lineHeight: 1.5, margin: '0.75rem 0 1rem' }}>{body}</p>
+        <p style={{ fontSize: '0.8rem', color: SAGE, lineHeight: 1.5, margin: '0.75rem 0 1rem' }}>
+          Admin override: this permanently removes the collaboration along with its application, message thread and reviews. This can't be undone.
+        </p>
         <label style={{ display: 'block', fontSize: '0.75rem', color: SLATE, marginBottom: '0.35rem' }}>
-          Type <strong style={{ color, letterSpacing: '0.04em' }}>{word}</strong> to confirm
+          Type <strong style={{ color: DANGER, letterSpacing: '0.04em' }}>{CONFIRM_WORD}</strong> to confirm
         </label>
         <input
           autoFocus
           value={typed}
           onChange={(e) => setTyped(e.target.value)}
-          placeholder={word}
+          placeholder={CONFIRM_WORD}
           style={{ width: '100%', boxSizing: 'border-box', padding: '0.55rem 0.7rem', borderRadius: '0.45rem', border: '1px solid rgba(25,37,36,0.18)', fontSize: '0.85rem', fontFamily: 'inherit' }}
         />
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '1.25rem' }}>
@@ -273,9 +248,9 @@ function ConfirmOverride({ collab, kind, onCancel, onConfirm }) {
           <button
             type="submit"
             disabled={!matches}
-            style={{ ...actionBtn, padding: '0.45rem 0.9rem', fontSize: '0.8rem', color: '#fff', border: 'none', background: color, opacity: matches ? 1 : 0.4, cursor: matches ? 'pointer' : 'not-allowed' }}
+            style={{ ...actionBtn, padding: '0.45rem 0.9rem', fontSize: '0.8rem', color: '#fff', border: 'none', background: DANGER, opacity: matches ? 1 : 0.4, cursor: matches ? 'pointer' : 'not-allowed' }}
           >
-            {title.split(' ')[0]}
+            Terminate
           </button>
         </div>
       </form>

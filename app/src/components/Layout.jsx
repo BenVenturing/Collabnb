@@ -103,6 +103,37 @@ function PastDueBanner({ topOffset }) {
   );
 }
 
+// Shown after a role-switch approval (signup correction or self-serve switch)
+// until the new role's delta fields are filled in via finish-role.html — the
+// same link that was emailed. Hardcoded copy for now, not yet run through
+// i18next like the rest of this file's banners.
+function RoleSwitchLockedBanner({ topOffset }) {
+  const { profile } = useAuth();
+  if (profile?.pending_role_completion !== true || !profile?.role_switch_token) return null;
+  const isHost = profile.role === 'host';
+  const href = `/finish-role.html?token=${encodeURIComponent(profile.role_switch_token)}`;
+  return (
+    <div style={{
+      position: 'fixed', top: topOffset, left: 0, right: 0, zIndex: 9999,
+      background: 'linear-gradient(90deg, #FFFBEB 0%, #FEF3C7 50%, #FFFBEB 100%)',
+      borderBottom: '1px solid rgba(217,119,6,0.35)',
+      padding: '0.4rem 1rem',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem',
+      flexWrap: 'wrap', fontSize: '0.78rem', fontWeight: 500, color: '#92400E', textAlign: 'center',
+    }}>
+      <span>
+        <strong>Finish your {isHost ? 'host' : 'creator'} profile</strong> to unlock {isHost ? 'publishing listings' : 'applying to listings'}.
+      </span>
+      <a
+        href={href}
+        style={{ background: '#92400E', color: '#FFFBEB', border: 'none', borderRadius: '999px', padding: '0.25rem 0.85rem', fontSize: '0.75rem', fontWeight: 700, textDecoration: 'none', whiteSpace: 'nowrap' }}
+      >
+        Finish now
+      </a>
+    </div>
+  );
+}
+
 export default function Layout({ children }) {
   const { t } = useTranslation('layout');
   const navigate = useNavigate();
@@ -188,6 +219,9 @@ export default function Layout({ children }) {
       {/* ── Past-due payment banner (fixed top) ───────────────────────────── */}
       <PastDueBanner topOffset={isPending ? '1.8rem' : 0} />
 
+      {/* ── Role-switch-locked banner (fixed top) ───────────────────────────── */}
+      <RoleSwitchLockedBanner topOffset={isPending ? '1.8rem' : 0} />
+
       {/* ── Floating nav pill ───────────────────────────────────────────────── */}
       <AppNav />
 
@@ -198,7 +232,7 @@ export default function Layout({ children }) {
         style={{
           paddingTop: location.pathname === '/profile'
             ? '0'
-            : `calc(7rem${bannerVisible ? ` + ${BANNER_H}` : ''}${isPending ? ' + 1.8rem' : ''})`,
+            : `calc(7rem${bannerVisible ? ` + ${BANNER_H}` : ''}${isPending ? ' + 1.8rem' : ''}${profile?.pending_role_completion === true ? ' + 1.8rem' : ''})`,
         }}
       >
         {children}

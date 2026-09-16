@@ -28,6 +28,10 @@ export default defineSchema({
     city: v.optional(v.string()),
     region: v.optional(v.string()),
     country: v.optional(v.string()),
+    // Host-only. Collected on the finish-role-switch form (see
+    // gates.finishRoleSwitchProfile); the join wizard's host step also has a
+    // business-name field but doesn't currently persist it.
+    business_name: v.optional(v.string()),
     is_verified: v.optional(v.boolean()),
     is_rejected: v.optional(v.boolean()),
     rejection_reason: v.optional(v.string()),
@@ -76,6 +80,16 @@ export default defineSchema({
     pending_role: v.optional(v.string()),
     role_switch_requested_at: v.optional(v.number()),
     role_switch_email: v.optional(v.string()),
+    // Set true the moment a role-switch approval flips `role` (whether from
+    // an admin signup-time correction or a self-serve switch request). The
+    // new role's delta fields (see gates.finishRoleSwitchProfile) haven't
+    // been collected yet, so the core action for that role stays gated —
+    // AccessGate-style — until this clears.
+    pending_role_completion: v.optional(v.boolean()),
+    // Single-use link sent by the role-switch-approval email; expires 14
+    // days after being issued. Cleared once finishRoleSwitchProfile succeeds.
+    role_switch_token: v.optional(v.string()),
+    role_switch_token_expires_at: v.optional(v.number()),
     // Settings > Personal info > Verification > Submit Request. Purely a
     // "please take another look" flag for admin's queue — current verified
     // status is untouched while it's pending.

@@ -18,6 +18,7 @@ export default defineConfig({
         join: resolve(__dirname, 'join.html'),
         ambassadors: resolve(__dirname, 'ambassadors.html'),
         login: resolve(__dirname, 'login.html'),
+        'finish-role': resolve(__dirname, 'finish-role.html'),
         'sso-callback': resolve(__dirname, 'sso-callback.html'),
         'privacy-policy': resolve(__dirname, 'privacy-policy.html'),
         terms: resolve(__dirname, 'terms.html'),

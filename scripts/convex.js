@@ -92,6 +92,15 @@ export async function updateWaitlistProfile(profileId, updates) {
   }
 }
 
+// Finish-role-switch link (finish-role.html) — token is the auth, not a Clerk session.
+export async function getRoleSwitchProfile(token) {
+  return await client.query('gates:getByRoleSwitchToken', { token });
+}
+
+export async function submitRoleSwitchProfile(token, fields) {
+  return await client.mutation('gates:finishRoleSwitchProfile', { token, ...fields });
+}
+
 // Ambassador program (beta)
 export async function listAmbassadorCountries() {
   try {

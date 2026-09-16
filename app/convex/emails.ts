@@ -72,6 +72,22 @@ export const sendAccessGrantedEmail = internalAction({
   },
 });
 
+// ─── Role-switch approved — finish the new role's profile ────────────────────
+// Sent instead of sendAccessGrantedEmail when the approval flipped the
+// person's role (signup-time admin correction, or a self-serve switch
+// request): they're verified, but still need the new role's delta fields
+// before the core action (publish / apply) unlocks.
+
+export const sendRoleSwitchInviteEmail = internalAction({
+  args: { email: v.string(), full_name: v.string(), role: v.string(), token: v.string() },
+  handler: async (ctx, { email, full_name, role, token }) => {
+    const firstName = full_name.split(" ")[0];
+    const templateId = role === "host" ? "role_switch_invite_host" : "role_switch_invite_creator";
+    const href = `${BASE_URL}/finish-role.html?token=${encodeURIComponent(token)}`;
+    await sendFromTemplate(ctx, templateId, email, { firstName }, href);
+  },
+});
+
 // ─── Account rejected ─────────────────────────────────────────────────────────
 
 export const sendRejectionEmail = internalAction({

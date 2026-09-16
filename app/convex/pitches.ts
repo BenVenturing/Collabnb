@@ -95,6 +95,9 @@ export const create = mutation({
       if ((creator as any).is_verified !== true) {
         throw new ConvexError("Your account must be verified before you can apply to listings.");
       }
+      if ((creator as any).pending_role_completion === true) {
+        throw new ConvexError("Finish your creator profile to unlock applying — check your email for the link, or find it under Settings.");
+      }
       const isFounder = (creator as any).is_founder === true;
       const state = (creator as any).access_state ?? "active";
       if (!(isFounder || state === "trial" || state === "active")) {

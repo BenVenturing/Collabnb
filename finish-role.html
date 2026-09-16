@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Finish your profile — Collabnb</title>
+<meta name="description" content="Finish setting up your Collabnb profile." />
+<meta name="robots" content="noindex" />
+<link rel="icon" href="/assets/favicon.png" type="image/png" />
+<link rel="apple-touch-icon" href="/assets/favicon.png" />
+<link rel="manifest" href="/site.webmanifest" />
+<link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&f[]=cabinet-grotesk@400,500,700,800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles/main.css" />
+<style>
+  .login-page {
+    min-height: 100vh;
+    padding-top: 7rem;
+    padding-bottom: 4rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .login-wrap { width: 100%; max-width: 460px; padding: 0 1.25rem; }
+  .login-card {
+    background: #fff;
+    border-radius: 24px;
+    border: 1px solid var(--stone);
+    box-shadow: 0 4px 32px rgba(25,37,36,0.08);
+    padding: 3rem 2rem;
+    text-align: center;
+  }
+  .login-icon {
+    width: 64px; height: 64px; border-radius: 50%;
+    background: var(--mint);
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 1.25rem; font-size: 1.75rem;
+  }
+  .login-title {
+    font-family: 'Cabinet Grotesk', sans-serif; font-weight: 700;
+    font-size: 1.6rem; color: var(--ink); margin-bottom: 0.5rem;
+  }
+  .login-desc { font-size: 0.9375rem; color: var(--sage); margin-bottom: 2rem; line-height: 1.5; }
+  .login-form { text-align: left; }
+  .login-error {
+    color: #e74c3c; font-size: 0.8125rem; margin-top: 0.75rem; display: none;
+  }
+  @media (max-width: 520px) { .login-card { padding: 2rem 1.5rem; } }
+</style>
+</head>
+<body>
+
+<div aria-hidden="true" class="bg-layers bg-base"></div>
+<div aria-hidden="true" class="bg-layers bg-gradient"></div>
+<div aria-hidden="true" class="bg-layers bg-clouds"></div>
+<div aria-hidden="true" class="bg-grain"></div>
+
+<main class="login-page">
+  <div class="login-wrap">
+
+    <!-- ── LOADING ── -->
+    <div id="fr-loading" class="login-card">
+      <div class="login-spinner" style="width:36px;height:36px;border:3px solid var(--stone);border-top-color:var(--slate);border-radius:50%;animation:fr-spin 0.8s linear infinite;margin:0 auto 1rem;"></div>
+      <p class="login-desc" style="margin:0;">Loading your invite…</p>
+    </div>
+    <style>@keyframes fr-spin { to { transform: rotate(360deg); } }</style>
+
+    <!-- ── INVALID / EXPIRED ── -->
+    <div id="fr-invalid" class="login-card" hidden>
+      <div class="login-icon">⚠️</div>
+      <h1 class="login-title" id="fr-invalid-title">Link not valid</h1>
+      <p class="login-desc" id="fr-invalid-body">This link has already been used or has expired. Reply to the email you were sent and we'll send you a new one.</p>
+    </div>
+
+    <!-- ── FORM ── -->
+    <div id="fr-form-card" class="login-card" hidden>
+      <div class="login-icon">🔑</div>
+      <h1 class="login-title">Finish your profile</h1>
+      <p class="login-desc" id="fr-subtitle">A couple of details are needed to unlock your account.</p>
+
+      <form id="fr-form" class="login-form">
+        <div class="form-group">
+          <label class="form-label" for="fr-country">Home country <span style="color:var(--sage);font-weight:400;">(optional)</span></label>
+          <input class="form-input" type="text" id="fr-country" placeholder="United States" />
+        </div>
+
+        <!-- Creator fields -->
+        <div id="fr-creator-fields" hidden>
+          <div class="form-group">
+            <label class="form-label" for="fr-instagram">Instagram handle <span style="color:#92400E;font-weight:700;">(required)</span></label>
+            <input class="form-input" type="text" id="fr-instagram" placeholder="@yourhandle" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="fr-tiktok">TikTok handle <span style="color:var(--sage);font-weight:400;">(optional)</span></label>
+            <input class="form-input" type="text" id="fr-tiktok" placeholder="@yourhandle" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="fr-portfolio-creator">Website / Portfolio <span style="color:var(--sage);font-weight:400;">(optional)</span></label>
+            <input class="form-input" type="text" id="fr-portfolio-creator" placeholder="https://yourportfolio.com" />
+          </div>
+        </div>
+
+        <!-- Host fields -->
+        <div id="fr-host-fields" hidden>
+          <div class="form-group">
+            <label class="form-label" for="fr-business">Property or business name</label>
+            <input class="form-input" type="text" id="fr-business" placeholder="Moss &amp; Pine Cabin" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="fr-city">City</label>
+            <input class="form-input" type="text" id="fr-city" placeholder="Asheville" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="fr-portfolio-host">Website <span style="color:var(--sage);font-weight:400;">(optional)</span></label>
+            <input class="form-input" type="text" id="fr-portfolio-host" placeholder="https://yourproperty.com" />
+          </div>
+        </div>
+
+        <p style="font-size:0.78rem;color:var(--sage);margin:0 0 1rem;">Payment details aren't needed yet — those come later, when you're ready to publish your first listing.</p>
+
+        <button type="submit" id="fr-submit" class="btn-primary" style="width:100%;cursor:pointer;">Finish my profile →</button>
+        <div class="login-error" id="fr-error"></div>
+      </form>
+    </div>
+
+    <!-- ── SUCCESS ── -->
+    <div id="fr-success" class="login-card" hidden>
+      <div class="login-success-icon" style="width:64px;height:64px;border-radius:50%;background:var(--mint);display:flex;align-items:center;justify-content:center;margin:0 auto 1.25rem;">
+        <svg viewBox="0 0 24 24" width="28" height="28" stroke="var(--ink)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="M20 6L9 17l-5-5"/></svg>
+      </div>
+      <h1 class="login-title">You're all set</h1>
+      <p class="login-desc" id="fr-success-body">Your profile is complete. Log in to get started.</p>
+      <a href="/profile" class="btn-primary" style="display:inline-block;width:100%;text-decoration:none;padding:0.875rem;box-sizing:border-box;">Continue to your account →</a>
+    </div>
+
+  </div>
+</main>
+
+<script type="module" src="/scripts/finish-role.js"></script>
+</body>
+</html>

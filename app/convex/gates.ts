@@ -1,7 +1,8 @@
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { query, mutation, internalMutation, internalAction } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { requireAdmin, requireOwnerOrAdmin, canAccessAdmin, canAccessOwner } from "./lib/auth";
+import { cleanPlainText, cleanOptionalUrl } from "./lib/sanitize";
 
 // ─── Shared Constants ───────────────────────────────────────────────────────────
 export const FOLLOWER_THRESHOLDS = {
@@ -20,6 +21,8 @@ export const TRIAL_DURATION_DAYS = 30;
 // of the standard one — see referrals.applyReferralCode.
 export const REFERRED_TRIAL_DURATION_DAYS = 45;
 export const FOUNDER_CAP_PER_ROLE = 100;
+// How long a role-switch "finish your profile" link stays valid for.
+export const ROLE_SWITCH_LINK_TTL_DAYS = 14;
 
 // ─── Helpers ────────────────────────────────────────────────────────────────────
 function determineCreatorTier(followers: number, track: string): string {
@@ -137,12 +140,20 @@ export const approveCreator = mutation({
       trial_ends_at: isFounder ? undefined : now + trialDays * 24 * 60 * 60 * 1000,
       admin_verification_note: args.adminNote,
     };
-    // Approving a role switch is what actually flips the role
+    // Approving a role switch is what actually flips the role — the new role's
+    // delta fields (Instagram, etc.) haven't been collected, so it also opens
+    // a finish-profile link and locks the core action (see pitches.create)
+    // until that link is used.
+    let roleSwitchToken: string | undefined;
     if (isRoleSwitch) {
+      roleSwitchToken = crypto.randomUUID();
       patch.role = "creator";
       patch.pending_role = undefined;
       patch.role_switch_requested_at = undefined;
       patch.role_switch_email = undefined;
+      patch.pending_role_completion = true;
+      patch.role_switch_token = roleSwitchToken;
+      patch.role_switch_token_expires_at = now + ROLE_SWITCH_LINK_TTL_DAYS * 24 * 60 * 60 * 1000;
     }
 
     await ctx.db.patch(args.profileId, patch);
@@ -158,11 +169,20 @@ export const approveCreator = mutation({
 
     // Email notification
     if (profile.email) {
-      await ctx.scheduler.runAfter(0, internal.emails.sendAccessGrantedEmail, {
-        email: profile.email,
-        full_name: profile.full_name,
-        role: "creator",
-      });
+      if (roleSwitchToken) {
+        await ctx.scheduler.runAfter(0, internal.emails.sendRoleSwitchInviteEmail, {
+          email: profile.email,
+          full_name: profile.full_name,
+          role: "creator",
+          token: roleSwitchToken,
+        });
+      } else {
+        await ctx.scheduler.runAfter(0, internal.emails.sendAccessGrantedEmail, {
+          email: profile.email,
+          full_name: profile.full_name,
+          role: "creator",
+        });
+      }
     }
   },
 });
@@ -196,12 +216,20 @@ export const approveHost = mutation({
       is_rejected: undefined,
       rejection_reason: undefined,
     };
-    // Approving a role switch is what actually flips the role
+    // Approving a role switch is what actually flips the role — the new role's
+    // delta fields (business name, etc.) haven't been collected, so it also
+    // opens a finish-profile link and locks publishing (see listings.update)
+    // until that link is used.
+    let roleSwitchToken: string | undefined;
     if (isRoleSwitch) {
+      roleSwitchToken = crypto.randomUUID();
       patch.role = "host";
       patch.pending_role = undefined;
       patch.role_switch_requested_at = undefined;
       patch.role_switch_email = undefined;
+      patch.pending_role_completion = true;
+      patch.role_switch_token = roleSwitchToken;
+      patch.role_switch_token_expires_at = now + ROLE_SWITCH_LINK_TTL_DAYS * 24 * 60 * 60 * 1000;
     }
     await ctx.db.patch(args.profileId, patch);
 
@@ -214,11 +242,20 @@ export const approveHost = mutation({
     });
 
     if (profile.email) {
-      await ctx.scheduler.runAfter(0, internal.emails.sendAccessGrantedEmail, {
-        email: profile.email,
-        full_name: profile.full_name,
-        role: "host",
-      });
+      if (roleSwitchToken) {
+        await ctx.scheduler.runAfter(0, internal.emails.sendRoleSwitchInviteEmail, {
+          email: profile.email,
+          full_name: profile.full_name,
+          role: "host",
+          token: roleSwitchToken,
+        });
+      } else {
+        await ctx.scheduler.runAfter(0, internal.emails.sendAccessGrantedEmail, {
+          email: profile.email,
+          full_name: profile.full_name,
+          role: "host",
+        });
+      }
     }
   },
 });
@@ -585,6 +622,76 @@ export const checkIncompleteApplications = internalMutation({
     }
 
     return dryRun === true ? { wouldNudge: nudged, preview } : { nudged };
+  },
+});
+
+// ─── Role-switch finish-profile link ────────────────────────────────────────────
+// Public (token-based, not admin/owner auth) — the token itself is the proof
+// of identity, same pattern as a password-reset link. Looked up by scanning
+// rather than an index since this is a low-volume, infrequent lookup.
+
+export const getByRoleSwitchToken = query({
+  args: { token: v.string() },
+  handler: async (ctx, { token }) => {
+    const profiles = await ctx.db.query("profiles").collect();
+    const profile = profiles.find((p) => p.role_switch_token === token);
+    if (!profile) return { status: "not_found" as const };
+    if (!profile.role_switch_token_expires_at || profile.role_switch_token_expires_at < Date.now()) {
+      return { status: "expired" as const };
+    }
+    if (profile.pending_role_completion !== true) return { status: "already_done" as const };
+    return {
+      status: "ok" as const,
+      role: profile.role,
+      full_name: profile.full_name,
+      email: profile.email,
+      country: profile.country,
+      city: profile.city,
+      avatar_url: profile.avatar_url,
+    };
+  },
+});
+
+export const finishRoleSwitchProfile = mutation({
+  args: {
+    token: v.string(),
+    // Creator fields
+    instagram_handle: v.optional(v.string()),
+    tiktok_handle: v.optional(v.string()),
+    portfolio: v.optional(v.string()),
+    // Host fields (website reuses `portfolio` too)
+    business_name: v.optional(v.string()),
+    city: v.optional(v.string()),
+    country: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const profiles = await ctx.db.query("profiles").collect();
+    const profile = profiles.find((p) => p.role_switch_token === args.token);
+    if (!profile) throw new ConvexError("This link isn't valid — it may have already been used.");
+    if (!profile.role_switch_token_expires_at || profile.role_switch_token_expires_at < Date.now()) {
+      throw new ConvexError("This link has expired. Reply to the email you were sent for a new one.");
+    }
+    if (profile.role === "creator") {
+      if (!args.instagram_handle) throw new ConvexError("Instagram handle is required.");
+    }
+
+    const patch: Record<string, any> = {
+      pending_role_completion: undefined,
+      role_switch_token: undefined,
+      role_switch_token_expires_at: undefined,
+    };
+    if (args.country !== undefined) patch.country = cleanPlainText(args.country, 100);
+    if (profile.role === "creator") {
+      if (args.instagram_handle !== undefined) patch.instagram_handle = cleanPlainText(args.instagram_handle, 60);
+      if (args.tiktok_handle !== undefined) patch.tiktok_handle = cleanPlainText(args.tiktok_handle, 60);
+      if (args.portfolio !== undefined) patch.portfolio = cleanOptionalUrl(args.portfolio, "Portfolio URL");
+    } else {
+      if (args.business_name !== undefined) patch.business_name = cleanPlainText(args.business_name, 100);
+      if (args.city !== undefined) patch.city = cleanPlainText(args.city, 100);
+      if (args.portfolio !== undefined) patch.portfolio = cleanOptionalUrl(args.portfolio, "Website");
+    }
+    await ctx.db.patch(profile._id, patch);
+    return { ok: true, role: profile.role };
   },
 });
 

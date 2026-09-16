@@ -560,13 +560,18 @@ function ReviewActions({ profile }) {
   // An existing role-switch request is always already-verified (pending_role
   // sits on top of a verified account), so this alone excludes that case.
   const showRoleCorrection = !profile.is_verified;
-  const [approveAsRole, setApproveAsRole] = useState(profile.role);
+  // A pre-existing self-serve switch request already has pending_role set to
+  // the role they're switching to — default to that; the correction toggle
+  // below defaults to their current role and lets the admin override it.
+  const [approveAsRole, setApproveAsRole] = useState(profile.pending_role || profile.role);
   const isCreator  = approveAsRole === 'creator';
+  const isRoleSwitch = approveAsRole !== profile.role;
   const checklist  = CHECKLIST_ITEMS[isCreator ? 'creator' : 'host'];
 
   const [checkedItems, setCheckedItems] = useState(() => new Set());
   const [creatorTrack, setCreatorTrack] = useState('ugc');
   const [creatorTier, setCreatorTier]   = useState('UGC Beginner');
+  const [confirmingSwitch, setConfirmingSwitch] = useState(false);
   const [rejecting, setRejecting]       = useState(false);
   const [reason, setReason]             = useState('');
   const [busy, setBusy]                 = useState(false);
@@ -604,12 +609,19 @@ function ReviewActions({ profile }) {
     });
   }
 
+  function onApproveClick() {
+    if (isRoleSwitch && !confirmingSwitch) {
+      setConfirmingSwitch(true);
+      return;
+    }
+    handleApprove();
+  }
+
   async function handleApprove() {
     setBusy(true);
     setError('');
-    const roleCorrected = showRoleCorrection && approveAsRole !== profile.role;
     try {
-      if (roleCorrected) {
+      if (isRoleSwitch && showRoleCorrection) {
         await correctSignupRole({ profileId: profile._id, role: approveAsRole });
       }
       if (isCreator) {
@@ -617,11 +629,12 @@ function ReviewActions({ profile }) {
       } else {
         await approveHost({ profileId: profile._id });
       }
-      try { await addAudit({ action: 'approved', targetType: 'profile', targetId: String(profile._id), details: `${profile.full_name}${isCreator ? ` (${creatorTrack}, ${creatorTier})` : ''}${isRejected ? ' — previously rejected' : ''}${roleCorrected ? ` — signed up as ${profile.role}, approved as ${approveAsRole}` : ''}` }); } catch {}
+      try { await addAudit({ action: 'approved', targetType: 'profile', targetId: String(profile._id), details: `${profile.full_name}${isCreator ? ` (${creatorTrack}, ${creatorTier})` : ''}${isRejected ? ' — previously rejected' : ''}${isRoleSwitch ? ` — signed up as ${profile.role}, approved as ${approveAsRole}` : ''}` }); } catch {}
     } catch (err) {
       setError(err?.message || 'Failed to approve.');
     } finally {
       setBusy(false);
+      setConfirmingSwitch(false);
     }
   }
 
@@ -680,8 +693,8 @@ function ReviewActions({ profile }) {
             Approve as {profile.role !== approveAsRole && <span style={{ color: '#166534' }}>(signed up as {profile.role})</span>}
           </label>
           <div style={{ display: 'flex', gap: '0.375rem' }}>
-            <button onClick={() => setApproveAsRole('creator')} style={pillStyle(isCreator)}>Creator</button>
-            <button onClick={() => setApproveAsRole('host')} style={pillStyle(!isCreator)}>Host</button>
+            <button onClick={() => { setApproveAsRole('creator'); setConfirmingSwitch(false); }} style={pillStyle(isCreator)}>Creator</button>
+            <button onClick={() => { setApproveAsRole('host'); setConfirmingSwitch(false); }} style={pillStyle(!isCreator)}>Host</button>
           </div>
         </div>
       )}
@@ -730,23 +743,39 @@ function ReviewActions({ profile }) {
 
       {/* Approve / Reject */}
       {!rejecting ? (
-        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-          <button
-            onClick={handleApprove}
-            disabled={busy || !allChecked}
-            style={{ padding: '0.45rem 1.125rem', borderRadius: '0.5rem', background: '#166534', color: '#fff', fontSize: '0.8rem', fontWeight: 600, border: 'none', cursor: busy || !allChecked ? 'not-allowed' : 'pointer', opacity: busy || !allChecked ? 0.55 : 1, fontFamily: 'inherit', transition: 'opacity 150ms' }}
-          >
-            {busy ? 'Approving…' : isRejected ? '✓ Grant Access' : '✓ Confirm Approval'}
-          </button>
-          {!isRejected && (
-            <button
-              onClick={() => setRejecting(true)}
-              disabled={busy}
-              style={{ padding: '0.45rem 1rem', borderRadius: '0.5rem', background: 'transparent', color: '#991B1B', fontSize: '0.8rem', fontWeight: 500, border: '1px solid rgba(153,27,27,0.2)', cursor: busy ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}
-            >
-              ✕ Reject
-            </button>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          {confirmingSwitch && (
+            <div style={{ padding: '0.6rem 0.75rem', background: '#FEF9E7', border: '1px solid rgba(180,131,9,0.25)', borderRadius: '0.5rem', fontSize: '0.78rem', color: '#7A5B00' }}>
+              They signed up as <strong>{profile.role}</strong> — approve as <strong>{approveAsRole}</strong> instead?
+            </div>
           )}
+          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+            <button
+              onClick={onApproveClick}
+              disabled={busy || !allChecked}
+              style={{ padding: '0.45rem 1.125rem', borderRadius: '0.5rem', background: '#166534', color: '#fff', fontSize: '0.8rem', fontWeight: 600, border: 'none', cursor: busy || !allChecked ? 'not-allowed' : 'pointer', opacity: busy || !allChecked ? 0.55 : 1, fontFamily: 'inherit', transition: 'opacity 150ms' }}
+            >
+              {busy ? 'Approving…' : confirmingSwitch ? `Yes, approve as ${approveAsRole}` : isRejected ? '✓ Grant Access' : '✓ Confirm Approval'}
+            </button>
+            {confirmingSwitch && (
+              <button
+                onClick={() => setConfirmingSwitch(false)}
+                disabled={busy}
+                style={{ padding: '0.45rem 1rem', borderRadius: '0.5rem', background: 'transparent', color: SAGE, fontSize: '0.8rem', border: '1px solid rgba(25,37,36,0.1)', cursor: busy ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}
+              >
+                Cancel
+              </button>
+            )}
+            {!isRejected && !confirmingSwitch && (
+              <button
+                onClick={() => setRejecting(true)}
+                disabled={busy}
+                style={{ padding: '0.45rem 1rem', borderRadius: '0.5rem', background: 'transparent', color: '#991B1B', fontSize: '0.8rem', fontWeight: 500, border: '1px solid rgba(153,27,27,0.2)', cursor: busy ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}
+              >
+                ✕ Reject
+              </button>
+            )}
+          </div>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>

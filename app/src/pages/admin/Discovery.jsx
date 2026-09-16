@@ -799,13 +799,7 @@ function FindCreators() {
   }
 
   if (provider === 'agent_reach') {
-    return (
-      <div style={{ padding: '0.6rem 0.9rem', borderRadius: '0.75rem', background: 'rgba(123,104,200,0.06)', border: '1px solid rgba(123,104,200,0.2)' }}>
-        <p style={{ fontSize: '0.76rem', color: '#3C5759', margin: 0 }}>
-          Agent-Reach mode — search locally, push results via <code>prospects:importCreatorsLocal</code>.
-        </p>
-      </div>
-    );
+    return null;
   }
 
   return (
@@ -1039,13 +1033,7 @@ function HostSearchImport() {
   }
 
   if (provider === 'agent_reach') {
-    return (
-      <div style={{ padding: '0.6rem 0.9rem', borderRadius: '0.75rem', background: 'rgba(123,104,200,0.06)', border: '1px solid rgba(123,104,200,0.2)' }}>
-        <p style={{ fontSize: '0.76rem', color: '#3C5759', margin: 0 }}>
-          Agent-Reach mode — search locally, push results via <code>prospects:importHostsLocal</code>.
-        </p>
-      </div>
-    );
+    return null;
   }
 
   return (

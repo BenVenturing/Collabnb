@@ -37,7 +37,7 @@ export default function CollabOversight() {
     setConfirming(null);
     setBusyId(id);
     try {
-      const { contractsFrozen, emailed } = await terminateCollab({ id });
+      const { contractsFrozen = 0, emailed = 0 } = (await terminateCollab({ id })) ?? {};
       setNotice(`Terminated "${collab.property_name || 'collaboration'}" · ${contractsFrozen} contract${contractsFrozen === 1 ? '' : 's'} frozen · ${emailed} email${emailed === 1 ? '' : 's'} sent`);
     }
     catch (err) { window.alert(err?.data || err?.message || 'Something went wrong.'); }

@@ -223,6 +223,21 @@ export const approveHost = mutation({
   },
 });
 
+// ─── Admin: Correct a signup-time role mismatch ─────────────────────────────────
+// For a pending (not yet verified) signup where the applicant picked the wrong
+// role — e.g. filled out the creator form but meant to sign up as a host. Sets
+// pending_role so the existing approveCreator/approveHost role-switch branch
+// does the actual flip, reusing that tested path instead of duplicating it.
+export const setSignupRoleCorrection = mutation({
+  args: { profileId: v.id("profiles"), role: v.union(v.literal("creator"), v.literal("host")) },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    const profile = await ctx.db.get(args.profileId);
+    if (!profile || profile.is_verified === true) return;
+    await ctx.db.patch(args.profileId, { pending_role: profile.role === args.role ? undefined : args.role });
+  },
+});
+
 // ─── Admin: Reject profile ──────────────────────────────────────────────────────
 export const rejectProfile = mutation({
   args: {

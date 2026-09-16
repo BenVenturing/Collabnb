@@ -554,8 +554,14 @@ const CHECKLIST_ITEMS = {
 };
 
 function ReviewActions({ profile }) {
-  const isCreator  = profile.role === 'creator';
   const isRejected = profile.is_rejected === true;
+  // Lets an admin approve a not-yet-verified signup under the OTHER role than
+  // what they picked at signup (e.g. filled out the creator form by mistake).
+  // An existing role-switch request is always already-verified (pending_role
+  // sits on top of a verified account), so this alone excludes that case.
+  const showRoleCorrection = !profile.is_verified;
+  const [approveAsRole, setApproveAsRole] = useState(profile.role);
+  const isCreator  = approveAsRole === 'creator';
   const checklist  = CHECKLIST_ITEMS[isCreator ? 'creator' : 'host'];
 
   const [checkedItems, setCheckedItems] = useState(() => new Set());
@@ -573,6 +579,7 @@ function ReviewActions({ profile }) {
   const approveCreator = useMutation(api.gates.approveCreator);
   const approveHost    = useMutation(api.gates.approveHost);
   const rejectProfile  = useMutation(api.gates.rejectProfile);
+  const correctSignupRole = useMutation(api.gates.setSignupRoleCorrection);
   const saveNote       = useMutation(api.gates.setAdminNote);
   const addAudit       = useMutation(api.admin.addAuditEntry);
 
@@ -600,13 +607,17 @@ function ReviewActions({ profile }) {
   async function handleApprove() {
     setBusy(true);
     setError('');
+    const roleCorrected = showRoleCorrection && approveAsRole !== profile.role;
     try {
+      if (roleCorrected) {
+        await correctSignupRole({ profileId: profile._id, role: approveAsRole });
+      }
       if (isCreator) {
         await approveCreator({ profileId: profile._id, track: creatorTrack, tier: creatorTier });
       } else {
         await approveHost({ profileId: profile._id });
       }
-      try { await addAudit({ action: 'approved', targetType: 'profile', targetId: String(profile._id), details: `${profile.full_name}${isCreator ? ` (${creatorTrack}, ${creatorTier})` : ''}${isRejected ? ' — previously rejected' : ''}` }); } catch {}
+      try { await addAudit({ action: 'approved', targetType: 'profile', targetId: String(profile._id), details: `${profile.full_name}${isCreator ? ` (${creatorTrack}, ${creatorTier})` : ''}${isRejected ? ' — previously rejected' : ''}${roleCorrected ? ` — signed up as ${profile.role}, approved as ${approveAsRole}` : ''}` }); } catch {}
     } catch (err) {
       setError(err?.message || 'Failed to approve.');
     } finally {
@@ -660,6 +671,18 @@ function ReviewActions({ profile }) {
       {isRejected && (
         <div style={{ marginBottom: '0.75rem', padding: '0.45rem 0.7rem', background: '#FEF2F2', borderRadius: '0.5rem', fontSize: '0.75rem', color: '#991B1B', borderLeft: '3px solid #FECACA' }}>
           Previously rejected{profile.rejection_reason ? <> — <strong>{profile.rejection_reason}</strong></> : ''}. Granting access clears the rejection.
+        </div>
+      )}
+
+      {showRoleCorrection && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem', marginBottom: '0.75rem' }}>
+          <label style={{ fontSize: '0.72rem', color: SLATE, fontWeight: 600 }}>
+            Approve as {profile.role !== approveAsRole && <span style={{ color: '#166534' }}>(signed up as {profile.role})</span>}
+          </label>
+          <div style={{ display: 'flex', gap: '0.375rem' }}>
+            <button onClick={() => setApproveAsRole('creator')} style={pillStyle(isCreator)}>Creator</button>
+            <button onClick={() => setApproveAsRole('host')} style={pillStyle(!isCreator)}>Host</button>
+          </div>
         </div>
       )}
 

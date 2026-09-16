@@ -1,5 +1,5 @@
 import { v, ConvexError } from "convex/values";
-import { query, mutation, internalMutation } from "./_generated/server";
+import { query, mutation } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { requireOwnerOrAdmin, requireAuthedProfile, canAccessOwner, getAuthedProfile } from "./lib/auth";
 
@@ -76,7 +76,17 @@ export const create = mutation({
     pitchId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    if (args.creatorId) await requireOwnerOrAdmin(ctx, args.creatorId);
+    const caller = args.creatorId
+      ? await requireOwnerOrAdmin(ctx, args.creatorId)
+      : await requireAuthedProfile(ctx);
+    const creatorId = args.creatorId ?? String(caller._id);
+    const creatorDocId = ctx.db.normalizeId("profiles", creatorId);
+    const creator = creatorId === String(caller._id)
+      ? caller
+      : creatorDocId ? await ctx.db.get(creatorDocId) : null;
+    const hostDocId = args.hostId ? ctx.db.normalizeId("profiles", args.hostId) : null;
+    const host = hostDocId ? await ctx.db.get(hostDocId) : null;
+
     const now = new Date().toLocaleDateString("en-US", {
       month: "short",
       day: "numeric",
@@ -96,7 +106,7 @@ export const create = mutation({
       listing_id: args.listingId,
       property_name: args.propertyName,
       location: args.location,
-      host_name: args.hostName,
+      host_name: host?.full_name || args.hostName,
       image: args.image,
       status: "pending",
       status_text: "Application Sent",
@@ -105,7 +115,8 @@ export const create = mutation({
       is_active: true,
       current_stage: "pending",
       stages: JSON.stringify(stages),
-      creator_id: args.creatorId,
+      creator_id: creatorId,
+      creator_name: creator?.full_name,
       listing_description: args.listingDescription,
       host_id: args.hostId,
       pitch_id: args.pitchId,
@@ -310,83 +321,5 @@ export const remove = mutation({
     }
 
     await ctx.db.delete(collab._id);
-  },
-});
-
-// One-time seed: create one sample collaboration per sample listing so the admin
-// Collaboration Oversight is populated with clearly-labelled demo data. Idempotent —
-// wipes existing is_sample collaborations first. Attributed to fake sample creator
-// ids so they never surface in any real creator's Collabs page.
-const SAMPLE_COLLAB_PLAN: Record<
-  string,
-  { status: string; stage: string; creator: string; dates: string; active: boolean }
-> = {
-  "Glacier Prime Cabin":         { status: "pending",   stage: "pending",         creator: "Maya Chen",   dates: "Feb 15–18, 2026", active: true },
-  "Tranquil Waterfront Retreat": { status: "active",    stage: "accepted",        creator: "Sam Rivera",  dates: "Jan 28–31, 2026", active: true },
-  "Mountain Lodge Escape":       { status: "active",    stage: "uploaded_tagged", creator: "Priya Nair",  dates: "Jan 10–13, 2026", active: true },
-  "Vineyard Wine Estate":        { status: "approved",  stage: "approved",        creator: "Lena Park",   dates: "Mar 5–9, 2026",   active: true },
-  "Lakeside Forest Treehouse":   { status: "completed", stage: "completed",       creator: "Marcus Webb", dates: "Apr 2–5, 2026",   active: false },
-  "Desert Dome Glamping":        { status: "closed",    stage: "archived",        creator: "Nina Okafor", dates: "Dec 1–3, 2025",   active: false },
-};
-
-// One-time cleanup: remove leftover non-sample collaborations (old test rows that
-// reference now-deleted listings). Leaves the seeded is_sample collaborations intact.
-export const deleteNonSampleCollaborations = internalMutation({
-  args: {},
-  handler: async (ctx) => {
-    const all = await ctx.db.query("collaborations").collect();
-    let deleted = 0;
-    for (const c of all) {
-      if (!(c as any).is_sample) {
-        await ctx.db.delete(c._id);
-        deleted++;
-      }
-    }
-    return { deleted };
-  },
-});
-
-export const seedSampleCollaborations = internalMutation({
-  args: {},
-  handler: async (ctx) => {
-    // Idempotency — clear existing sample collaborations
-    const existing = await ctx.db.query("collaborations").collect();
-    for (const c of existing) {
-      if ((c as any).is_sample) await ctx.db.delete(c._id);
-    }
-
-    const profiles = await ctx.db.query("profiles").collect();
-    const ben = profiles.find(
-      (p: any) => (p.email || "").toLowerCase() === "benventuring@gmail.com"
-    );
-    const benName = ben?.full_name || "Ben Venturing";
-
-    const listings = await ctx.db.query("listings").collect();
-    const samples = listings.filter((l: any) => l.is_sample === true);
-
-    let created = 0;
-    for (const l of samples) {
-      const plan = SAMPLE_COLLAB_PLAN[l.title];
-      if (!plan) continue;
-      await ctx.db.insert("collaborations", {
-        listing_id: String(l._id),
-        property_name: l.title,
-        location: l.location,
-        host_name: benName,
-        image: l.image,
-        status: plan.status,
-        status_text: plan.status,
-        dates: plan.dates,
-        deliverables: l.deliverables,
-        is_active: plan.active,
-        current_stage: plan.stage,
-        creator_id: `sample-creator-${created + 1}`,
-        creator_name: plan.creator,
-        is_sample: true,
-      });
-      created++;
-    }
-
-    return { created };
   },
 });

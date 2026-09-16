@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQuery } from 'convex/react';
+import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 
 const INK   = '#192524';
@@ -7,22 +7,45 @@ const SLATE = '#3C5759';
 const SAGE  = '#646B62';
 const BONE  = '#F7F5F2';
 
-const STATUS_FILTERS = ['all', 'pending', 'active', 'approved', 'completed', 'closed'];
+const STATUS_FILTERS = ['all', 'pending', 'active', 'approved', 'completed', 'closed', 'terminated'];
 const statusColors = {
   pending:   { bg: '#FEF3C7', color: '#92400E' },
   active:    { bg: '#DBEAFE', color: '#0369A1' },
   approved:  { bg: '#DCFCE7', color: '#166534' },
   completed: { bg: '#D1EBDB', color: '#166534' },
   closed:    { bg: '#F3E8FF', color: '#7E22CE' },
+  terminated: { bg: '#FEE2E2', color: '#991B1B' },
+};
+
+const actionBtn = {
+  padding: '0.25rem 0.55rem', borderRadius: '0.35rem', fontSize: '0.7rem', fontWeight: 600,
+  background: '#fff', cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap',
 };
 
 export default function CollabOversight() {
   const stats   = useQuery(api.admin.getAnalytics);
   const collabs = useQuery(api.admin.getAllCollabs);
+  const terminateCollab = useMutation(api.admin.terminateCollab);
+  const deleteCollab    = useMutation(api.admin.deleteCollab);
   const [statusFilter, setStatusFilter] = useState('all');
+  const [busyId, setBusyId] = useState(null);
+  const [pending, setPending] = useState(null); // { collab, kind: 'terminate' | 'delete' }
+
+  const confirmPending = async () => {
+    const { collab, kind } = pending;
+    const id = String(collab._id);
+    setPending(null);
+    setBusyId(id);
+    try { await (kind === 'delete' ? deleteCollab : terminateCollab)({ id }); }
+    catch (err) { window.alert(err?.data || err?.message || 'Something went wrong.'); }
+    finally { setBusyId(null); }
+  };
 
   if (stats === undefined || collabs === undefined) {
     return <div style={{ padding: '2rem 2.5rem', color: SAGE, fontSize: '0.85rem' }}>Loading…</div>;
+  }
+  if (stats === null) {
+    return <div style={{ padding: '2rem 2.5rem', color: SAGE, fontSize: '0.85rem' }}>Sign in with the admin account to manage collaborations.</div>;
   }
 
   const filtered = collabs.filter((c) =>
@@ -30,7 +53,7 @@ export default function CollabOversight() {
   );
 
   return (
-    <div style={{ padding: '2rem 2.5rem', maxWidth: 960 }}>
+    <div style={{ padding: '2rem 2.5rem', maxWidth: 1080 }}>
       <h1 style={{ fontFamily: 'Cabinet Grotesk, sans-serif', fontSize: '1.5rem', fontWeight: 700, color: INK, letterSpacing: '-0.025em', margin: 0 }}>
         Collaboration Oversight
       </h1>
@@ -42,9 +65,9 @@ export default function CollabOversight() {
       <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
         {[
           { label: 'Total',           value: stats.totalCollabs,      color: INK },
-          { label: 'Approved',        value: stats.approvedCollabs,   color: '#166534' },
-          { label: 'Completed',       value: stats.completedCollabs,  color: '#166534' },
-          { label: 'Active Listings', value: stats.publishedListings, color: '#0369A1' },
+          { label: 'Approved',        value: stats.approvedCollabs,   color: INK },
+          { label: 'Completed',       value: stats.completedCollabs,  color: INK },
+          { label: 'Active Listings', value: stats.publishedListings, color: INK },
         ].map((s) => (
           <div key={s.label} style={{ background: '#fff', border: '1px solid rgba(25,37,36,0.07)', borderRadius: '0.75rem', padding: '0.875rem 1.25rem', display: 'flex', flexDirection: 'column', gap: '0.15rem', minWidth: 100 }}>
             <span style={{ fontFamily: 'Cabinet Grotesk, sans-serif', fontSize: '1.5rem', fontWeight: 700, color: s.color, lineHeight: 1 }}>{s.value}</span>
@@ -87,12 +110,12 @@ export default function CollabOversight() {
 
       {/* ── Table ── */}
       {filtered.length > 0 && (
-        <div style={{ background: '#fff', border: '1px solid rgba(25,37,36,0.07)', borderRadius: '0.875rem', overflow: 'hidden' }}>
+        <div style={{ background: '#fff', border: '1px solid rgba(25,37,36,0.07)', borderRadius: '0.875rem', overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid rgba(25,37,36,0.07)' }}>
-                {['Property', 'Host', 'Creator', 'Status', 'Stage', 'Dates', 'Active', 'Created'].map((h) => (
-                  <th key={h} style={{ padding: '0.75rem', textAlign: 'left', fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: SAGE, whiteSpace: 'nowrap' }}>
+                {['Property', 'Host', 'Creator', 'Status', 'Stage', 'Dates', 'Active', 'Created', ''].map((h) => (
+                  <th key={h || 'actions'} style={{ padding: '0.75rem', textAlign: 'left', fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: SAGE, whiteSpace: 'nowrap' }}>
                     {h}
                   </th>
                 ))}
@@ -102,6 +125,7 @@ export default function CollabOversight() {
               {filtered.map((c, i) => {
                 const sKey = (c.status || 'pending').toLowerCase();
                 const sColors = statusColors[sKey] ?? { bg: '#F7F5F2', color: '#3C5759' };
+                const busy = busyId === String(c._id);
                 return (
                   <tr
                     key={String(c._id)}
@@ -111,16 +135,6 @@ export default function CollabOversight() {
                   >
                     <td style={{ padding: '0.75rem', fontWeight: 600, color: INK, maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {c.property_name || '—'}
-                      {c.is_sample && (
-                        <span style={{
-                          marginLeft: '0.4rem', fontSize: '0.6rem', fontWeight: 700,
-                          padding: '0.1rem 0.4rem', borderRadius: 99,
-                          background: 'rgba(149,157,144,0.18)', color: '#646B62',
-                          textTransform: 'uppercase', letterSpacing: '0.04em',
-                        }}>
-                          Sample
-                        </span>
-                      )}
                     </td>
                     <td style={{ padding: '0.75rem', color: SLATE }}>{c.host_name || '—'}</td>
                     <td style={{ padding: '0.75rem' }}>
@@ -163,6 +177,26 @@ export default function CollabOversight() {
                     <td style={{ padding: '0.75rem', color: SAGE, fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
                       {c._creationTime ? new Date(c._creationTime).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
                     </td>
+                    <td style={{ padding: '0.75rem', textAlign: 'right' }}>
+                      <div style={{ display: 'flex', gap: '0.35rem', justifyContent: 'flex-end', opacity: busy ? 0.5 : 1 }}>
+                        {sKey !== 'terminated' && (
+                          <button
+                            onClick={() => setPending({ collab: c, kind: 'terminate' })}
+                            disabled={busy}
+                            style={{ ...actionBtn, color: SLATE, border: '1px solid rgba(25,37,36,0.15)' }}
+                          >
+                            Terminate
+                          </button>
+                        )}
+                        <button
+                          onClick={() => setPending({ collab: c, kind: 'delete' })}
+                          disabled={busy}
+                          style={{ ...actionBtn, color: '#B91C1C', border: '1px solid rgba(185,28,28,0.3)' }}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 );
               })}
@@ -170,6 +204,81 @@ export default function CollabOversight() {
           </table>
         </div>
       )}
+
+      {pending && (
+        <ConfirmOverride
+          collab={pending.collab}
+          kind={pending.kind}
+          onCancel={() => setPending(null)}
+          onConfirm={confirmPending}
+        />
+      )}
+    </div>
+  );
+}
+
+const OVERRIDE_COPY = {
+  terminate: {
+    word: 'TERMINATE',
+    title: 'Terminate collaboration',
+    body: 'Admin override: this ends the collaboration immediately without the other party agreeing. It stays on record as Terminated.',
+    color: '#B45309',
+  },
+  delete: {
+    word: 'DELETE',
+    title: 'Delete collaboration',
+    body: "This permanently removes the collaboration along with its application, message thread and reviews. This can't be undone.",
+    color: '#B91C1C',
+  },
+};
+
+function ConfirmOverride({ collab, kind, onCancel, onConfirm }) {
+  const [typed, setTyped] = useState('');
+  const { word, title, body, color } = OVERRIDE_COPY[kind];
+  const matches = typed.trim().toUpperCase() === word;
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      onClick={onCancel}
+      onKeyDown={(e) => { if (e.key === 'Escape') onCancel(); }}
+      style={{ position: 'fixed', inset: 0, background: 'rgba(25,37,36,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', zIndex: 1000 }}
+    >
+      <form
+        onClick={(e) => e.stopPropagation()}
+        onSubmit={(e) => { e.preventDefault(); if (matches) onConfirm(); }}
+        style={{ background: '#fff', borderRadius: '0.875rem', padding: '1.5rem', width: '100%', maxWidth: 420, boxShadow: '0 20px 50px rgba(25,37,36,0.2)' }}
+      >
+        <h2 style={{ fontFamily: 'Cabinet Grotesk, sans-serif', fontSize: '1.15rem', fontWeight: 700, color: INK, margin: 0 }}>{title}</h2>
+        <p style={{ fontSize: '0.85rem', fontWeight: 600, color: SLATE, margin: '0.5rem 0 0' }}>
+          {collab.property_name || 'Untitled property'}
+          {collab.creator_name ? ` · ${collab.creator_name}` : ''}
+        </p>
+        <p style={{ fontSize: '0.8rem', color: SAGE, lineHeight: 1.5, margin: '0.75rem 0 1rem' }}>{body}</p>
+        <label style={{ display: 'block', fontSize: '0.75rem', color: SLATE, marginBottom: '0.35rem' }}>
+          Type <strong style={{ color, letterSpacing: '0.04em' }}>{word}</strong> to confirm
+        </label>
+        <input
+          autoFocus
+          value={typed}
+          onChange={(e) => setTyped(e.target.value)}
+          placeholder={word}
+          style={{ width: '100%', boxSizing: 'border-box', padding: '0.55rem 0.7rem', borderRadius: '0.45rem', border: '1px solid rgba(25,37,36,0.18)', fontSize: '0.85rem', fontFamily: 'inherit' }}
+        />
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '1.25rem' }}>
+          <button type="button" onClick={onCancel} style={{ ...actionBtn, padding: '0.45rem 0.9rem', fontSize: '0.8rem', color: SLATE, border: '1px solid rgba(25,37,36,0.15)' }}>
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={!matches}
+            style={{ ...actionBtn, padding: '0.45rem 0.9rem', fontSize: '0.8rem', color: '#fff', border: 'none', background: color, opacity: matches ? 1 : 0.4, cursor: matches ? 'pointer' : 'not-allowed' }}
+          >
+            {title.split(' ')[0]}
+          </button>
+        </div>
+      </form>
     </div>
   );
 }

@@ -530,7 +530,7 @@ export function CollabProvider({ children }) {
         listingId: listing.id,
         propertyName: listing.title,
         location: listing.location,
-        hostName: MOCK_CREATOR.full_name,
+        hostName: listing.host_name,
         image: listing.image,
         deliverables: listing.deliverables,
         listingDescription: listing.about,

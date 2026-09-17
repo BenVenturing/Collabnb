@@ -964,7 +964,9 @@ async function runBuildFreshQueue(ctx: any, perKind = 50): Promise<{ promoted: {
     if (need === 0) continue;
 
     let candidates: any[] = await ctx.runQuery(internal.prospects.getTopNewCandidates, { kind, limit: need });
-    if (candidates.length < need && searchProviderFor(settings, kind) !== "agent_reach") {
+    // Always tops up via HikerAPI/Apify here, regardless of the Agent-Reach
+    // provider toggle elsewhere — this button has no local-session path.
+    if (candidates.length < need) {
       let cfg: any = null;
       try { cfg = JSON.parse(settings[kind === "host" ? "host_discovery_auto" : "discovery_auto"] || "null"); } catch { /* no config yet */ }
       const profile = cfg?.profiles?.[0];

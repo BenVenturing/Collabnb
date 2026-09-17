@@ -520,4 +520,20 @@ http.route({
   }),
 });
 
+// Tracked link for the auto-DM follow-up sequence (autoreply.ts) — a rule's
+// {{link}} placeholder renders to <site>/go/<ref_token>. Logs the click (the
+// Tier 3 gate) then redirects to the rule's signup page tagged with
+// ?igref=<token>, which AuthContext.jsx picks up at signup so profiles.
+// getOrCreate can attribute the new account back to this DM (Tier 4).
+http.route({
+  pathPrefix: "/go/",
+  method: "GET",
+  handler: httpAction(async (ctx, request) => {
+    const url = new URL(request.url);
+    const token = url.pathname.slice("/go/".length);
+    const destination = await ctx.runMutation(internal.autoreply.markLinkClicked, { refToken: token });
+    return new Response(null, { status: 302, headers: { Location: destination } });
+  }),
+});
+
 export default http;

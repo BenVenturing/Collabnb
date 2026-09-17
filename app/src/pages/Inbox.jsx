@@ -22,6 +22,7 @@ const TAG_STYLES = {
   Contract:    'bg-amber-100 text-amber-700',
   Archived:    'bg-stone/40 text-sage',
   Collabnb:    'bg-ink text-bone',
+  Notifications: 'bg-slate text-bone',
 };
 
 const FILTERS = ['All', 'Applications', 'Collabs', 'Pitches'];
@@ -84,9 +85,10 @@ function ThreadRow({ thread, isActive, onClick, onDelete }) {
   const { t } = useTranslation('inbox');
   const [showDelete, setShowDelete] = useState(false);
   const tagStyle = TAG_STYLES[thread.tag] || TAG_STYLES.Application;
-  // The Collabnb admin persona thread: title, tag, and sender name are all
-  // "Collabnb" — show it once (the bold title) instead of three times.
-  const isCollabnb = thread.tag === 'Collabnb';
+  // The Collabnb/Notifications admin persona threads: title, tag, and sender
+  // name are all the same string — show it once (the bold title) instead of
+  // three times.
+  const isCollabnb = thread.tag === 'Collabnb' || thread.tag === 'Notifications';
 
   return (
     <div
@@ -244,12 +246,15 @@ function ConversationPanel({ thread, allThreads, collabs, onViewCollab, onArchiv
   const textareaRef = useRef(null);
   const colorPickerRef = useRef(null);
   const tagStyle = TAG_STYLES[thread.tag] || TAG_STYLES.Application;
-  const isCollabnb = thread.tag === 'Collabnb';
+  const isCollabnb = thread.tag === 'Collabnb' || thread.tag === 'Notifications';
+  // One-way broadcast thread — recipients can see it but the composer below
+  // is hidden entirely (see the "Compose bar" render further down).
+  const isNotifications = thread.tag === 'Notifications';
   const theme = threadTheme(thread);
   // Every conversation with this same person — the legend's contents. Matches
   // the main list's filtering so every row here is actually selectable.
   const siblingThreads = (allThreads || []).filter(
-    (t) => !t.archived && t.tag !== 'Collabnb' && t.host_name === thread.host_name
+    (t) => !t.archived && t.tag !== 'Collabnb' && t.tag !== 'Notifications' && t.host_name === thread.host_name
   );
   const navigate = useNavigate();
   const { profile } = useAuth();
@@ -595,7 +600,9 @@ function ConversationPanel({ thread, allThreads, collabs, onViewCollab, onArchiv
         {sendError && (
           <p className="text-xs text-red-600 mb-1.5 px-1">{sendError}</p>
         )}
-        {aiMode ? (
+        {isNotifications ? (
+          <p className="text-xs text-sage text-center py-2">{t('conversation.notificationsReadOnly')}</p>
+        ) : aiMode ? (
           /* ── AI draft mode ── */
           <div
             className="rounded-2xl p-3 border"

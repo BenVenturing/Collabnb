@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query, internalMutation } from "./_generated/server";
+import { internal } from "./_generated/api";
 import { requireOwnerOrAdmin, canAccessOwner } from "./lib/auth";
 
 export const getForUser = query({
@@ -99,6 +100,14 @@ export const create = internalMutation({
       link: args.link,
       read: false,
       created_at: Date.now(),
+    });
+    // Mirrors this notification onto the user's linked Google Wallet pass, if
+    // any — a no-op for anyone who hasn't linked one (see googleWallet.ts).
+    await ctx.scheduler.runAfter(0, internal.googleWallet.pushForUser, {
+      userId: args.userId,
+      type: args.type,
+      title: args.title,
+      body: args.body,
     });
   },
 });

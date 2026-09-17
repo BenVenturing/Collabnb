@@ -364,7 +364,7 @@ function Conversation({ thread, persona }) {
               value={draft}
               onChange={e => setDraft(e.target.value)}
               onKeyDown={onKey}
-              placeholder="Message as Collabnb…"
+              placeholder={`Message as ${persona?.full_name || 'Collabnb'}…`}
               style={{ flex: 1, display: 'block', boxSizing: 'border-box', background: 'transparent', border: 'none', outline: 'none', resize: 'none', fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--ink)', lineHeight: 1.5, minHeight: '1.4rem', maxHeight: 140, overflowY: 'auto' }}
             />
             {/* AI mode toggle — same colour profile as send, sat next to it */}
@@ -400,13 +400,27 @@ function Conversation({ thread, persona }) {
   );
 }
 
+// Which brand identity you're sending as. "collabnb" is the two-way support
+// persona; "notifications" is one-way only — recipients see it in their own
+// Inbox but can't reply (see Inbox.jsx's isNotifications gate).
+const PERSONAS = [
+  { username: 'collabnb', label: 'Collabnb' },
+  { username: 'notifications', label: 'Notifications' },
+];
+
 export default function AdminInbox() {
-  const persona = useQuery(api.profiles.getAdminPersona);
-  const ensurePersona = useMutation(api.profiles.ensureAdminPersona);
+  const [activePersona, setActivePersona] = useState('collabnb');
+
+  const collabnbPersona = useQuery(api.profiles.getAdminPersona);
+  const notificationsPersona = useQuery(api.profiles.getNotificationsPersona);
+  const persona = activePersona === 'notifications' ? notificationsPersona : collabnbPersona;
+
+  const ensureAdminPersonaMut = useMutation(api.profiles.ensureAdminPersona);
+  const ensureNotificationsPersonaMut = useMutation(api.profiles.ensureNotificationsPersona);
   const setPersonaPhoto = useMutation(api.profiles.updateProfile);
   const generateUploadUrl = useMutation(api.uploads.generateUploadUrl);
   const finalizeUpload = useMutation(api.uploads.finalizeUpload);
-  const threads = useQuery(api.adminThreads.list) ?? [];
+  const threads = useQuery(api.adminThreads.list, { personaUsername: activePersona }) ?? [];
   const messagable = useQuery(api.profiles.listMessagable) ?? [];
   const startThread = useMutation(api.adminThreads.startWithUser);
   const markThreadRead = useMutation(api.adminThreads.markRead);
@@ -416,8 +430,12 @@ export default function AdminInbox() {
   const [query, setQuery] = useState('');
   const [photoUploading, setPhotoUploading] = useState(false);
 
-  // Ensure the persona exists on first mount (idempotent server-side).
-  useEffect(() => { if (persona === null) ensurePersona({}).catch(() => {}); }, [persona, ensurePersona]);
+  // Ensure each persona exists on first mount (idempotent server-side).
+  useEffect(() => { if (collabnbPersona === null) ensureAdminPersonaMut({}).catch(() => {}); }, [collabnbPersona, ensureAdminPersonaMut]);
+  useEffect(() => { if (notificationsPersona === null) ensureNotificationsPersonaMut({}).catch(() => {}); }, [notificationsPersona, ensureNotificationsPersonaMut]);
+
+  // Switching persona means switching which conversation list/thread is showing.
+  useEffect(() => { setSelectedKey(null); setPickerOpen(false); }, [activePersona]);
 
   // Opening a thread clears its unread badge (both here and in the user's own Inbox).
   useEffect(() => {
@@ -481,6 +499,29 @@ export default function AdminInbox() {
                 <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               </button>
             </div>
+
+            {/* Persona switcher — which identity you're sending as */}
+            <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
+              {PERSONAS.map((p) => (
+                <button
+                  key={p.username}
+                  onClick={() => setActivePersona(p.username)}
+                  style={{
+                    flex: 1, fontSize: 11.5, fontWeight: 700, padding: '6px 8px', borderRadius: 999,
+                    border: '1px solid rgba(25,37,36,0.1)', cursor: 'pointer', fontFamily: 'var(--font-body)',
+                    background: activePersona === p.username ? 'var(--ink)' : 'rgba(255,255,255,0.6)',
+                    color: activePersona === p.username ? 'var(--bone)' : 'var(--slate)',
+                  }}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+            {activePersona === 'notifications' && (
+              <p style={{ fontSize: 10.5, color: 'var(--sage)', margin: '0 0 10px', lineHeight: 1.5 }}>
+                One-way — recipients see these in their Inbox but can't reply.
+              </p>
+            )}
             {pickerOpen ? (
               <input
                 autoFocus

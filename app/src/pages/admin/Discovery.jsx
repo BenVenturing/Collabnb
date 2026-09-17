@@ -2307,10 +2307,13 @@ const CREATOR_TOOLS = [
 
 export default function Discovery({ sidebarCollapsed, setSidebarCollapsed }) {
   const buildFreshQueue = useAction(api.prospects.buildFreshQueue);
+  const settings = useQuery(api.admin.getSettings);
+  const setSetting = useMutation(api.admin.setSetting);
   const [side, setSide] = useState('hosts'); // 'hosts' | 'creators'
   const [hostView, setHostView] = useState('crm'); // 'outreach' | 'crm'
   const [openPanel, setOpenPanel] = useState(null);
   const [queueMsg, setQueueMsg] = useState('');
+  const [agentReachRegion, setAgentReachRegion] = useState('');
   const [queueBusy, setQueueBusy] = useState(false);
   const togglePanel = (p) => setOpenPanel(cur => (cur === p ? null : p));
 
@@ -2343,6 +2346,44 @@ export default function Discovery({ sidebarCollapsed, setSidebarCollapsed }) {
     }
   }
 
+  // Agent-Reach needs your own logged-in Chrome session, which this hosted
+  // page can't reach — so this preps a ready-to-paste search prompt for the
+  // next rotation region (cycling independently of the date-based "Today"
+  // display in Daily auto-search) and copies it to your clipboard.
+  function handleAgentReachPrompt() {
+    const cfg = (() => {
+      try { return JSON.parse(settings?.host_country_rotation || 'null') || {}; } catch { return {}; }
+    })();
+    const countries = cfg.countries?.length ? cfg.countries : DEFAULT_ROTATION_COUNTRIES;
+    const cursor = Number(settings?.host_agent_reach_cursor || 0);
+    const region = countries[cursor % countries.length];
+    setSetting({ key: 'host_agent_reach_cursor', value: String(cursor + 1) });
+
+    const prompt = `Use agent-reach's Instagram backend to search for ~50 boutique hotel / boutique
+Airbnb Instagram accounts in ${region.name} (vary the query if needed to reach 50 —
+e.g. "boutique hotel ${region.name}", "boutique airbnb ${region.name}"). For each
+account, collect: instagram_handle, display_name, follower_count, bio, location.
+
+Then write them to rows.json as a JSON array shaped exactly like this (only
+instagram_handle is required):
+
+[
+  { "instagram_handle": "somehotel", "display_name": "Some Hotel", "follower_count": 4200, "bio": "...", "location": "${region.name}" }
+]
+
+Then run, from the app/ directory of the Collabnb Website repo:
+
+CONVEX_URL=https://outgoing-anaconda-357.convex.cloud \\
+LOCAL_IMPORT_SECRET=b8020371f0fcfee4e9eb0f87740f0f6741ab9ead63f528aa \\
+node scripts/import-hosts-local.mjs rows.json
+
+Report back how many rows it inserted.`;
+
+    navigator.clipboard?.writeText(prompt).catch(() => {});
+    setAgentReachRegion(region.name);
+    setTimeout(() => setAgentReachRegion(''), 8000);
+  }
+
   return (
     <div style={{ padding: '1.75rem 2rem 2rem' }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
@@ -2354,6 +2395,11 @@ export default function Discovery({ sidebarCollapsed, setSidebarCollapsed }) {
             title="Confirms up to 50 new creators and 50 new hosts each — drafts DMs, tops up with a live search first if the pool's short. Emailing is a separate step you trigger yourself; Instagram DM volume stays capped separately."
             style={{ padding: '0.5rem 1rem', borderRadius: 9999, border: '1.5px solid rgba(22,101,52,0.3)', background: 'rgba(209,235,219,0.5)', color: '#166534', fontSize: '0.76rem', fontWeight: 700, cursor: 'pointer', opacity: queueBusy ? 0.6 : 1 }}>
             {queueBusy ? 'Building…' : 'Build fresh 50'}
+          </button>
+          <button onClick={handleAgentReachPrompt}
+            title="Copies a ready-to-paste Agent-Reach search prompt for the next rotation region — paste it into your local session with Chrome/Instagram access, it can't run from this page directly"
+            style={{ padding: '0.5rem 1rem', borderRadius: 9999, border: '1.5px solid rgba(91,74,168,0.3)', background: 'rgba(123,104,200,0.08)', color: '#5b4aa8', fontSize: '0.76rem', fontWeight: 700, cursor: 'pointer' }}>
+            {agentReachRegion ? `Copied — ${agentReachRegion} ↗` : 'Search via Agent-Reach'}
           </button>
           {typeof setSidebarCollapsed === 'function' && (
             <button onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
@@ -2376,11 +2422,15 @@ export default function Discovery({ sidebarCollapsed, setSidebarCollapsed }) {
       <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1.25rem' }}>
         {side === 'hosts' ? (
           <>
-            <button onClick={() => setHostView(v => (v === 'outreach' ? 'crm' : 'outreach'))}
-              title={hostView === 'outreach' ? 'Switch to the full host CRM board' : 'Switch back to the search/select/confirm workflow'}
-              style={{ padding: '0.5rem 1.1rem', borderRadius: 9999, border: 'none', background: '#192524', color: '#fff', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}>
-              {hostView === 'outreach' ? 'Host CRM' : 'Host outreach'}
-            </button>
+            <div style={{ display: 'flex', borderRadius: 9999, border: '1.5px solid rgba(25,37,36,0.15)', overflow: 'hidden' }}>
+              {[{ id: 'outreach', label: 'Outreach' }, { id: 'crm', label: 'CRM board' }].map(({ id, label: l }) => (
+                <button key={id} onClick={() => setHostView(id)}
+                  title={id === 'outreach' ? 'Search/select/confirm workflow for new leads' : 'Full lifecycle board — Confirmed, DMed, Emailed, Responded'}
+                  style={{ padding: '0.5rem 1.1rem', border: 'none', background: hostView === id ? '#192524' : 'transparent', color: hostView === id ? '#fff' : '#3C5759', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}>
+                  {l}
+                </button>
+              ))}
+            </div>
             {hostView === 'outreach' && (
               <button onClick={() => togglePanel('add')} title="Add one specific host you already know the handle for, without running a search"
                 style={{ padding: '0.5rem 1.1rem', borderRadius: 9999, border: '1.5px solid rgba(25,37,36,0.2)', background: openPanel === 'add' ? 'rgba(25,37,36,0.06)' : 'transparent', color: '#192524', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}>

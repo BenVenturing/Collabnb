@@ -50,6 +50,7 @@
     "someone": "them",
     "sendError": "Message failed to send — try again.",
     "messagePlaceholder": "Write a message…",
+    "notificationsReadOnly": "This is a one-way notification — replies aren't monitored here.",
     "attachTitle": "Attach a file (max 100KB)",
     "contractBuilderTitle": "Open Contract Builder",
     "sendHint": "Enter to send · Shift+Enter for new line",

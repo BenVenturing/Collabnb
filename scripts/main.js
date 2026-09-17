@@ -1402,6 +1402,21 @@ document.addEventListener('DOMContentLoaded', () => {
     try { localStorage.setItem('collabnb_ambassador_ref', ambRef); } catch { /* ignore */ }
   }
 
+  // Instagram auto-DM tracked link (?igref=<token>) — captured sitewide same
+  // as ?amb= above, since the /go/ redirect can land on any marketing page.
+  // Read at signup by AuthContext.jsx and cleared once applied to a new profile.
+  const igRef = urlParams.get('igref');
+  if (igRef) {
+    try { localStorage.setItem('collabnb_igdm_ref', igRef); } catch { /* ignore */ }
+  }
+
+  // Pre-select the role toggle when arriving via a role-specific tracked link
+  // (e.g. the Instagram "HOST" vs "COLLAB" keyword flows) — ?role=host/creator.
+  const roleParam = urlParams.get('role');
+  if (roleParam === 'host' || roleParam === 'creator') {
+    switchRole(roleParam);
+  }
+
   // Google/OAuth returns to <page>#/sso-callback — the SignUp component must be
   // mounted at that route to finish the handshake (and collect missing fields
   // like username), otherwise the flow hangs on a spinner forever.

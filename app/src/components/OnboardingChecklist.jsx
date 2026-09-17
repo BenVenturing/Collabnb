@@ -56,6 +56,13 @@ function creatorSteps(profile, isFirstVisit, hasShared, hasExplored) {
       action: { label: t('creatorSteps.explore.action'), path: '/explore' },
     },
     {
+      id: 'walletNotifications',
+      label: t('creatorSteps.walletNotifications.label'),
+      done: !!profile?.google_wallet_object_id,
+      optional: true,
+      action: { label: t('creatorSteps.walletNotifications.action'), path: '/settings?tab=notifications' },
+    },
+    {
       id: 'share',
       label: t('creatorSteps.share.label'),
       done: hasShared,
@@ -85,6 +92,13 @@ function hostSteps(profile, isFirstVisit, hasShared, hasListing, hasBrowsedCreat
       label: t('hostSteps.creators.label'),
       done: hasBrowsedCreators,
       action: { label: t('hostSteps.creators.action'), path: '/host/creators' },
+    },
+    {
+      id: 'walletNotifications',
+      label: t('hostSteps.walletNotifications.label'),
+      done: !!profile?.google_wallet_object_id,
+      optional: true,
+      action: { label: t('hostSteps.walletNotifications.action'), path: '/settings?tab=notifications' },
     },
     {
       id: 'share',

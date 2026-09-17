@@ -105,6 +105,17 @@
     }
   },
   "notifications": {
+    "sectionPush": "Push notifications",
+    "googleWallet": "Google Wallet",
+    "googleWalletValue": "Get a Collabnb pass on your phone's lock screen for new activity — no app to install.",
+    "googleWalletLinkedValue": "Connected — you'll get lock-screen alerts based on the preferences below.",
+    "googleWalletConnect": "Add to Google Wallet",
+    "googleWalletRelink": "Reconnect",
+    "googleWalletScanPrompt": "Scan with your phone's camera, or open the link directly if you're already on your phone",
+    "googleWalletOpenDirectly": "Open directly →",
+    "googleWalletConsentText": "By adding this pass, you agree to receive account-related notifications from Collabnb (new messages, application activity, reminders) on your device via Google Wallet. A referral link unique to your account is included on the pass. This is optional — disconnect anytime from this page or by removing the pass from Google Wallet. See our Privacy Policy and Terms of Service for details.",
+    "googleWalletConsentAgree": "Agree & continue",
+    "googleWalletConsentCancel": "Not now",
     "sectionPreferences": "Preferences",
     "messages": "Messages",
     "messagesDesc": "New messages and replies in your inbox",

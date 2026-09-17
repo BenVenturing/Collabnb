@@ -5,29 +5,40 @@ import { llmChat } from "./blog";
 import { requireAdmin, requireAdminAction, canAccessAdmin, getAuthedProfile } from "./lib/auth";
 import { withSurfacedErrors } from "./lib/errors";
 
-// Admin-brand inbox: threads owned by the "Collabnb" persona (username 'collabnb').
-// Each thread is a 1:1 conversation with a single user (participant_id), keyed
-// "admin_<participantId>" in thread_messages. Self-contained — does not touch
-// the user-facing CollabContext/threads layer.
+// Admin-brand inbox: threads owned by an admin persona — "collabnb" (two-way
+// support chat) or "notifications" (one-way pushes; Inbox.jsx hides the
+// composer for its tag). Each thread is a 1:1 conversation with a single user
+// (participant_id), keyed by persona in thread_messages so the two personas'
+// conversations with the same person never collide. Self-contained — does not
+// touch the user-facing CollabContext/threads layer beyond the merge in
+// CollabContext.jsx.
 
-async function getPersonaId(ctx: any): Promise<string | null> {
+const VALID_PERSONAS = ["collabnb", "notifications"] as const;
+type PersonaUsername = (typeof VALID_PERSONAS)[number];
+
+function keyPrefixFor(personaUsername: string): string {
+  return personaUsername === "notifications" ? "notif" : "admin";
+}
+
+async function getPersonaId(ctx: any, personaUsername: string = "collabnb"): Promise<string | null> {
   const all = await ctx.db.query("profiles").collect();
-  const p = all.find((row: any) => row.username === "collabnb");
+  const p = all.find((row: any) => row.username === personaUsername);
   return p ? String(p._id) : null;
 }
 
-function threadKeyFor(participantId: string) {
-  return `admin_${participantId}`;
+function threadKeyFor(participantId: string, personaUsername: string = "collabnb") {
+  return `${keyPrefixFor(personaUsername)}_${participantId}`;
 }
 
 // List all admin threads, newest-last-message first, with participant profile +
 // last message preview + unread count (messages from the participant that the
 // admin hasn't opened).
 export const list = query({
-  args: {},
-  handler: async (ctx) => {
+  args: { personaUsername: v.optional(v.string()) },
+  handler: async (ctx, { personaUsername }) => {
     if (!(await canAccessAdmin(ctx))) return [];
-    const personaId = await getPersonaId(ctx);
+    const persona = personaUsername ?? "collabnb";
+    const personaId = await getPersonaId(ctx, persona);
     if (!personaId) return [];
     const rows = await ctx.db
       .query("threads")
@@ -43,7 +54,7 @@ export const list = query({
 
     const enriched = await Promise.all(
       rows.map(async (r: any) => {
-        const key = r.thread_key || threadKeyFor(r.participant_id);
+        const key = r.thread_key || threadKeyFor(r.participant_id, persona);
         const msgs = await ctx.db
           .query("thread_messages")
           .withIndex("by_thread", (q) => q.eq("thread_key", key))
@@ -84,11 +95,12 @@ export const list = query({
 // one exists — merged into their regular Inbox so admin messages actually
 // reach the recipient instead of only showing up in the admin's own inbox view.
 export const getMineAsUser = query({
-  args: {},
-  handler: async (ctx) => {
+  args: { personaUsername: v.optional(v.string()) },
+  handler: async (ctx, { personaUsername }) => {
     const profile = await getAuthedProfile(ctx);
     if (!profile) return null;
-    const personaId = await getPersonaId(ctx);
+    const persona_ = personaUsername ?? "collabnb";
+    const personaId = await getPersonaId(ctx, persona_);
     if (!personaId) return null;
     const myId = String(profile._id);
 
@@ -99,7 +111,7 @@ export const getMineAsUser = query({
       .first();
     if (!thread) return null;
 
-    const key = thread.thread_key || threadKeyFor(myId);
+    const key = thread.thread_key || threadKeyFor(myId, persona_);
     const persona: any = await ctx.db.get(personaId as any);
     const msgs = await ctx.db
       .query("thread_messages")
@@ -108,14 +120,15 @@ export const getMineAsUser = query({
       .take(1);
     const last = msgs[0];
     const participantReadAt = thread.participant_read_at ?? 0;
+    const tag = persona_ === "notifications" ? "Notifications" : "Collabnb";
 
     return {
       id: key,
       thread_key: key,
-      listing_title: "Collabnb",
-      host_name: persona?.full_name ?? "Collabnb",
+      listing_title: persona?.full_name ?? tag,
+      host_name: persona?.full_name ?? tag,
       host_avatar: persona?.avatar_url ?? null,
-      tag: "Collabnb",
+      tag,
       last_message: last?.text ?? thread.last_message ?? "",
       timestamp: last?.created_at
         ? new Date(last.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })
@@ -128,10 +141,11 @@ export const getMineAsUser = query({
 
 // Total unread across all admin threads — for the top-bar badge.
 export const unreadCount = query({
-  args: {},
-  handler: async (ctx) => {
+  args: { personaUsername: v.optional(v.string()) },
+  handler: async (ctx, { personaUsername }) => {
     if (!(await canAccessAdmin(ctx))) return 0;
-    const personaId = await getPersonaId(ctx);
+    const persona = personaUsername ?? "collabnb";
+    const personaId = await getPersonaId(ctx, persona);
     if (!personaId) return 0;
     const rows = await ctx.db
       .query("threads")
@@ -139,7 +153,7 @@ export const unreadCount = query({
       .collect();
     let total = 0;
     for (const r of rows) {
-      const key = r.thread_key || threadKeyFor(r.participant_id);
+      const key = r.thread_key || threadKeyFor(r.participant_id, persona);
       const ownerReadAt = r.owner_read_at ?? 0;
       const incoming = await ctx.db
         .query("thread_messages")
@@ -157,12 +171,12 @@ export const startWithUser = mutation({
   args: { participantId: v.string(), asPersonaId: v.string() },
   handler: async (ctx, { participantId, asPersonaId }) => {
     await requireAdmin(ctx);
-    // Only the verified persona may own admin threads.
+    // Only a recognized persona may own admin threads.
     const persona = await ctx.db.get(asPersonaId as any);
-    if (!persona || persona.username !== "collabnb") {
+    if (!persona || !VALID_PERSONAS.includes(persona.username as PersonaUsername)) {
       throw new Error("Not authorized to start admin threads.");
     }
-    const key = threadKeyFor(participantId);
+    const key = threadKeyFor(participantId, persona.username);
     const existing = await ctx.db
       .query("threads")
       .withIndex("by_owner", (q) => q.eq("owner_id", asPersonaId))

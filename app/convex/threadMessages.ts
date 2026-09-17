@@ -80,6 +80,15 @@ export const sendMessage = mutation({
   handler: async (ctx, args) => {
     await requireOwnerOrAdmin(ctx, args.senderId);
     await enforceRateLimit(ctx, `message:${args.senderId}`, RATE_LIMITS.THREAD_MESSAGE);
+    // notif_* threads are one-way broadcasts — Inbox.jsx hides the composer,
+    // but enforce it here too so hiding the UI isn't the only barrier.
+    if (args.threadKey.startsWith("notif_")) {
+      let senderCheck: any = null;
+      try { senderCheck = await ctx.db.get(args.senderId as any); } catch { senderCheck = null; }
+      if (senderCheck?.username !== "notifications") {
+        throw new ConvexError("This is a one-way notification thread — replies aren't accepted.");
+      }
+    }
     // Unverified accounts (pending review) can't message anyone — enforced
     // server-side so hiding the UI isn't the only barrier
     let sender: any = null;
@@ -225,8 +234,9 @@ export const checkAwaitingReply = internalMutation({
     const owed = new Map<string, { names: Set<string>; role: string }>();
 
     for (const [key, last] of latestByThread) {
-      // admin_* are support conversations, preview_* is the sample board.
-      if (key.startsWith("admin_") || key.startsWith("preview_")) continue;
+      // admin_* are support conversations, notif_* are one-way pushes (no
+      // reply expected), preview_* is the sample board.
+      if (key.startsWith("admin_") || key.startsWith("notif_") || key.startsWith("preview_")) continue;
       if (now - last.created_at < REPLY_GRACE) continue;
 
       const senderRole = last.sender_role === "host" ? "host" : "creator";

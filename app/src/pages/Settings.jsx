@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useQuery, useAction, useMutation } from 'convex/react';
+import QRCode from 'qrcode';
 import { useTranslation, Trans } from 'react-i18next';
 import { api } from '../../convex/_generated/api';
 import { useAuth } from '../contexts/AuthContext';
@@ -205,7 +206,14 @@ export default function Settings() {
   const listBillingHistory = useAction(api.stripe.listBillingHistory);
   const blockUserMutation = useMutation(api.profiles.blockUser);
   const unblockUserMutation = useMutation(api.profiles.unblockUser);
+  const generateWalletSaveLink = useAction(api.googleWallet.generateSaveLink);
+  const acceptWalletTerms = useMutation(api.profiles.acceptWalletTerms);
   const [portalLoading, setPortalLoading] = useState(false);
+  const [walletBusy, setWalletBusy] = useState(false);
+  const [walletError, setWalletError] = useState('');
+  const [walletSaveUrl, setWalletSaveUrl] = useState(null);
+  const [walletConsentOpen, setWalletConsentOpen] = useState(false);
+  const walletQrRef = useRef(null);
   const [policyExpanded, setPolicyExpanded] = useState(false);
   const [cardBusy, setCardBusy] = useState(false);
   const [cardError, setCardError] = useState('');
@@ -300,6 +308,40 @@ export default function Settings() {
       setCardBusy(false);
     }
   }
+
+  function handleAddToGoogleWalletClick() {
+    if (!profile?.wallet_terms_accepted_at) {
+      setWalletConsentOpen(true);
+      return;
+    }
+    handleAddToGoogleWallet();
+  }
+
+  async function handleAcceptWalletTermsAndContinue() {
+    setWalletConsentOpen(false);
+    try { await acceptWalletTerms({ profileId: userId }); } catch { /* best-effort; retry next click if it failed */ }
+    handleAddToGoogleWallet();
+  }
+
+  async function handleAddToGoogleWallet() {
+    setWalletBusy(true);
+    setWalletError('');
+    try {
+      const { saveUrl } = await generateWalletSaveLink({ profileId: userId });
+      setWalletSaveUrl(saveUrl);
+    } catch (err) {
+      setWalletError(err?.message || "Couldn't connect Google Wallet — please try again.");
+    } finally {
+      setWalletBusy(false);
+    }
+  }
+
+  // Rendered entirely client-side (no network call) — generated fresh each
+  // time so it never needs a third-party QR service.
+  useEffect(() => {
+    if (!walletSaveUrl || !walletQrRef.current) return;
+    QRCode.toCanvas(walletQrRef.current, walletSaveUrl, { width: 190, margin: 1 }).catch(() => {});
+  }, [walletSaveUrl]);
 
   async function handleRemoveCard() {
     setCardBusy(true);
@@ -630,6 +672,82 @@ export default function Settings() {
 
             {activeTab === 'notifications' && (
               <>
+                <SectionLabel>{t('notifications.sectionPush')}</SectionLabel>
+                <div style={{ padding: '1.1rem 0', borderBottom: '1px solid var(--hairline)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
+                    <div style={{ minWidth: 0 }}>
+                      <p style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--ink)', margin: '0 0 0.2rem' }}>{t('notifications.googleWallet')}</p>
+                      <p style={{ fontSize: '0.8rem', color: 'var(--sage)', margin: 0, lineHeight: 1.5 }}>
+                        {profile?.google_wallet_object_id ? t('notifications.googleWalletLinkedValue') : t('notifications.googleWalletValue')}
+                      </p>
+                    </div>
+                    <button
+                      onClick={walletBusy ? undefined : handleAddToGoogleWalletClick}
+                      disabled={walletBusy}
+                      aria-label={t('notifications.googleWalletConnect')}
+                      style={{ background: 'none', border: 'none', padding: 0, cursor: walletBusy ? 'default' : 'pointer', flexShrink: 0, opacity: walletBusy ? 0.6 : 1, lineHeight: 0 }}
+                    >
+                      {/* Google's official badge asset — brand guidelines prohibit
+                          recoloring/resizing it, so it's rendered as-is. */}
+                      <img
+                        src="https://developers.google.com/static/wallet/images/branding/add-to-wallet-button-primary.png"
+                        alt={t('notifications.googleWalletConnect')}
+                        style={{ height: 48, display: 'block' }}
+                      />
+                    </button>
+                  </div>
+                  {walletError && <p style={{ fontSize: '0.78rem', color: '#dc2626', margin: '0.6rem 0 0' }}>{walletError}</p>}
+                  {walletConsentOpen && (
+                    <div style={{ marginTop: '1rem', padding: '1.1rem', background: 'rgba(25,37,36,0.03)', border: '1px solid rgba(60,87,89,0.12)', borderRadius: '0.9rem' }}>
+                      <p style={{ fontSize: '0.8rem', color: 'var(--ink)', margin: '0 0 0.75rem', lineHeight: 1.6 }}>
+                        {t('notifications.googleWalletConsentText')}
+                      </p>
+                      <div style={{ display: 'flex', gap: '0.6rem' }}>
+                        <button
+                          onClick={handleAcceptWalletTermsAndContinue}
+                          style={{ fontSize: '0.82rem', fontWeight: 700, color: '#fff', background: 'var(--ink)', border: 'none', borderRadius: 999, padding: '0.5rem 1.1rem', cursor: 'pointer', fontFamily: 'var(--font-body)' }}
+                        >
+                          {t('notifications.googleWalletConsentAgree')}
+                        </button>
+                        <button
+                          onClick={() => setWalletConsentOpen(false)}
+                          style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--slate)', background: 'none', border: '1.5px solid rgba(25,37,36,0.15)', borderRadius: 999, padding: '0.5rem 1.1rem', cursor: 'pointer', fontFamily: 'var(--font-body)' }}
+                        >
+                          {t('notifications.googleWalletConsentCancel')}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                  {walletSaveUrl && (
+                    <div style={{ marginTop: '1rem', padding: '1.1rem', background: 'rgba(25,37,36,0.03)', border: '1px solid rgba(60,87,89,0.12)', borderRadius: '0.9rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}>
+                      <p style={{ fontSize: '0.8rem', color: 'var(--slate)', margin: 0, fontWeight: 600, textAlign: 'center' }}>{t('notifications.googleWalletScanPrompt')}</p>
+                      <canvas ref={walletQrRef} style={{ borderRadius: '0.5rem' }} />
+                      <a
+                        href={walletSaveUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        style={{ fontSize: '0.82rem', fontWeight: 700, color: '#fff', background: 'var(--ink)', borderRadius: 999, padding: '0.55rem 1.25rem', textDecoration: 'none' }}
+                      >
+                        {t('notifications.googleWalletOpenDirectly')}
+                      </a>
+                      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', width: '100%' }}>
+                        <input
+                          readOnly
+                          value={walletSaveUrl}
+                          onFocus={(e) => e.target.select()}
+                          style={{ flex: 1, minWidth: 0, fontSize: '0.7rem', color: 'var(--slate)', border: '1px solid rgba(60,87,89,0.18)', borderRadius: '0.5rem', padding: '0.4rem 0.6rem', fontFamily: 'monospace', background: 'rgba(255,255,255,0.7)' }}
+                        />
+                        <button
+                          onClick={() => navigator.clipboard?.writeText(walletSaveUrl)}
+                          style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--slate)', background: 'none', border: '1.5px solid rgba(25,37,36,0.15)', borderRadius: '0.5rem', padding: '0.4rem 0.7rem', cursor: 'pointer', fontFamily: 'var(--font-body)', flexShrink: 0 }}
+                        >
+                          {t('billing.copy')}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 <SectionLabel>{t('notifications.sectionPreferences')}</SectionLabel>
                 {[
                   { key: 'messages', label: t('notifications.messages'), desc: t('notifications.messagesDesc') },

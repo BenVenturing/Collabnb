@@ -51,18 +51,24 @@ function RuleForm({ existing, onDone }) {
   const [matchMode, setMatchMode] = useState(existing?.match_mode || 'contains');
   const [dmMessage, setDmMessage] = useState(existing?.dm_message || '');
   const [publicReply, setPublicReply] = useState(existing?.public_reply || '');
+  const [signupUrl, setSignupUrl] = useState(existing?.signup_url || '');
+  const [tier2Message, setTier2Message] = useState(existing?.tier2_message || '');
+  const [tier3Message, setTier3Message] = useState(existing?.tier3_message || '');
+  const [tier4Message, setTier4Message] = useState(existing?.tier4_message || '');
+  const [showFollowUps, setShowFollowUps] = useState(!!(existing?.tier2_message || existing?.tier3_message || existing?.tier4_message));
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
 
   async function submit() {
     setBusy(true); setErr('');
     const keywordList = keywords.split(',').map((k) => k.trim()).filter(Boolean);
+    const followUps = { signupUrl: signupUrl || undefined, tier2Message: tier2Message || undefined, tier3Message: tier3Message || undefined, tier4Message: tier4Message || undefined };
     try {
       if (existing) {
-        await updateRule({ id: existing._id, postId: postId || undefined, keywords: keywordList, matchMode, dmMessage, publicReply: publicReply || undefined });
+        await updateRule({ id: existing._id, postId: postId || undefined, keywords: keywordList, matchMode, dmMessage, publicReply: publicReply || undefined, ...followUps });
       } else {
-        await addRule({ postId: postId || undefined, keywords: keywordList, matchMode, dmMessage, publicReply: publicReply || undefined });
-        setPostId(''); setKeywords(''); setDmMessage(''); setPublicReply('');
+        await addRule({ postId: postId || undefined, keywords: keywordList, matchMode, dmMessage, publicReply: publicReply || undefined, ...followUps });
+        setPostId(''); setKeywords(''); setDmMessage(''); setPublicReply(''); setSignupUrl(''); setTier2Message(''); setTier3Message(''); setTier4Message('');
       }
       onDone?.();
     } catch (e) {
@@ -96,14 +102,51 @@ function RuleForm({ existing, onDone }) {
       <div>
         <span style={label}>Private DM to send</span>
         <textarea value={dmMessage} onChange={(e) => setDmMessage(e.target.value)} rows={3}
-          placeholder="Hey! Here's the link you asked about: https://www.collabnb.com/"
+          placeholder="Hey! Here's the link you asked about: {{link}}"
           style={{ ...input, width: '100%', resize: 'vertical' }} />
+        <span style={{ fontSize: '0.66rem', color: '#646B62', marginTop: '0.25rem', display: 'block' }}>
+          Use <code>{'{{link}}'}</code> for a tracked link — works in any tier's message below. Clicks and signups on it drive the sequence.
+        </span>
       </div>
       <div>
         <span style={label}>Public reply under the comment (optional)</span>
         <input value={publicReply} onChange={(e) => setPublicReply(e.target.value)} placeholder="Sent you a DM! 📩"
           style={{ ...input, width: '100%' }} />
       </div>
+
+      <button onClick={() => setShowFollowUps((s) => !s)} type="button"
+        style={{ alignSelf: 'flex-start', padding: 0, border: 'none', background: 'none', color: '#5b4aa8', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer' }}>
+        {showFollowUps ? '− Hide' : '+ Add'} follow-up sequence (tiers 2-4)
+      </button>
+
+      {showFollowUps && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', padding: '0.75rem', borderRadius: '0.75rem', background: 'rgba(123,104,200,0.05)', border: '1px solid rgba(123,104,200,0.15)' }}>
+          <div>
+            <span style={label}>Signup page the tracked link redirects to (blank = default join page)</span>
+            <input value={signupUrl} onChange={(e) => setSignupUrl(e.target.value)} placeholder="https://www.collabnb.com/join.html"
+              style={{ ...input, width: '100%' }} />
+          </div>
+          <div>
+            <span style={label}>Tier 2 — no click, ~24h later</span>
+            <textarea value={tier2Message} onChange={(e) => setTier2Message(e.target.value)} rows={2}
+              placeholder="Hey! Just checking you saw this 👋 — here's the link again in case it got buried: {{link}}"
+              style={{ ...input, width: '100%', resize: 'vertical' }} />
+          </div>
+          <div>
+            <span style={label}>Tier 3 — clicked but didn't sign up, ~48-72h later</span>
+            <textarea value={tier3Message} onChange={(e) => setTier3Message(e.target.value)} rows={2}
+              placeholder="Founding member spots are going fast — still time to grab yours: {{link}}"
+              style={{ ...input, width: '100%', resize: 'vertical' }} />
+          </div>
+          <div>
+            <span style={label}>Tier 4 — welcome + follow-ask, sent right after signup</span>
+            <textarea value={tier4Message} onChange={(e) => setTier4Message(e.target.value)} rows={2}
+              placeholder="You're in! 🎉 One more thing — follow @collabnb so you don't miss it when new stays open up in your area."
+              style={{ ...input, width: '100%', resize: 'vertical' }} />
+          </div>
+        </div>
+      )}
+
       <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
         <button onClick={submit} disabled={busy || !keywords.trim() || !dmMessage.trim()}
           style={{ padding: '0.5rem 1.1rem', borderRadius: 9999, border: 'none', background: '#192524', color: '#fff', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', opacity: (busy || !keywords.trim() || !dmMessage.trim()) ? 0.5 : 1 }}>
@@ -146,6 +189,11 @@ function RuleCard({ rule }) {
       </div>
       <p style={{ fontSize: '0.76rem', color: '#3C5759', margin: '0 0 0.3rem', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{rule.dm_message}</p>
       {rule.public_reply && <p style={{ fontSize: '0.7rem', color: '#646B62', margin: '0 0 0.5rem' }}>Public reply: "{rule.public_reply}"</p>}
+      {(rule.tier2_message || rule.tier3_message || rule.tier4_message) && (
+        <p style={{ fontSize: '0.66rem', color: '#5b4aa8', margin: '0 0 0.5rem' }}>
+          Follow-ups: {[rule.tier2_message && 'tier 2', rule.tier3_message && 'tier 3', rule.tier4_message && 'tier 4'].filter(Boolean).join(', ')}
+        </p>
+      )}
       <div style={{ display: 'flex', gap: '0.4rem' }}>
         <button onClick={() => updateRule({ id: rule._id, active: !rule.active })}
           style={{ padding: '0.28rem 0.7rem', borderRadius: 9999, border: '1px solid rgba(25,37,36,0.15)', background: 'transparent', color: '#3C5759', fontSize: '0.7rem', fontWeight: 600, cursor: 'pointer' }}>
@@ -186,6 +234,14 @@ function LogRow({ entry }) {
           {entry.commenter_username ? <strong>@{entry.commenter_username}</strong> : 'Someone'}: "{entry.comment_text.slice(0, 140)}"
         </div>
         <div style={{ fontSize: '0.66rem', color: '#646B62', marginTop: '0.1rem' }}>{new Date(entry.created_at).toLocaleString()}</div>
+        {entry.ref_token && (
+          <div style={{ fontSize: '0.66rem', color: '#5b4aa8', marginTop: '0.2rem' }}>
+            {entry.signed_up_at ? '✓ Signed up' : entry.link_clicked_at ? 'Clicked link, no signup yet' : 'Link not clicked yet'}
+            {entry.tier2_sent_at && ' · tier 2 sent'}
+            {entry.tier3_sent_at && ' · tier 3 sent'}
+            {entry.tier4_sent_at && ' · tier 4 sent'}
+          </div>
+        )}
         {entry.error && <div style={{ fontSize: '0.68rem', color: '#9b2d2d', marginTop: '0.2rem' }}>{entry.error}</div>}
         {err && <div style={{ fontSize: '0.68rem', color: '#9b2d2d', marginTop: '0.2rem' }}>{err}</div>}
       </div>
@@ -210,7 +266,7 @@ export default function AutoReply() {
       <div style={{ marginBottom: '1.25rem' }}>
         <h2 style={{ fontFamily: 'Cabinet Grotesk, sans-serif', fontWeight: 700, fontSize: '1.25rem', color: '#192524', margin: '0 0 0.2rem' }}>Auto-Reply</h2>
         <p style={{ fontSize: '0.78rem', color: '#646B62', margin: 0 }}>
-          When someone comments a keyword on your Instagram posts, automatically DM them a reply — via Meta's official private-replies API, the same one ManyChat uses. Runs on your existing Instagram connection from the Social tab.
+          When someone comments a keyword on your Instagram posts, automatically DM them a reply — via Meta's official private-replies API, the same one ManyChat uses. Runs on your existing Instagram connection from the Social tab. Optionally add a follow-up sequence: a nudge if they don't click the link, another if they click but don't sign up, and a welcome + follow-ask once they do.
         </p>
       </div>
 

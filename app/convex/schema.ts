@@ -113,6 +113,16 @@ export default defineSchema({
       collabReminders: v.optional(v.boolean()),
       marketing: v.optional(v.boolean()),
     })),
+    // Settings > Notifications > Push notifications — Google Wallet pass
+    // linkage. Set once googleWallet.generateSaveLink creates the pass object;
+    // its presence is what gates whether notifications.create's wallet push
+    // (see googleWallet.pushForUser) has anywhere to push to.
+    google_wallet_object_id: v.optional(v.string()),
+    google_wallet_linked_at: v.optional(v.number()),
+    // Set by profiles.acceptWalletTerms the first time this person agrees to
+    // the short wallet-pass consent shown in Settings, before their first
+    // "Add to Google Wallet" — required once, never re-shown after.
+    wallet_terms_accepted_at: v.optional(v.number()),
     // Last time this host was sent the "conversations awaiting your reply"
     // digest (cron: checkAwaitingReply). Gates the repeat interval.
     last_reply_nudge_at: v.optional(v.number()),
@@ -913,6 +923,14 @@ export default defineSchema({
     active: v.boolean(),
     trigger_count: v.number(),
     created_at: v.number(),
+    // Follow-up DM sequence (see autoreply.ts checkFollowUps / sendTier4).
+    // signup_url is the page the tracked {{link}} in dm_message redirects to
+    // (defaults to the join page) — the redirect also tags the visit with
+    // ?igref=<token> so a completed signup can be attributed back here.
+    signup_url: v.optional(v.string()),
+    tier2_message: v.optional(v.string()), // no click, ~24h later
+    tier3_message: v.optional(v.string()), // clicked but no signup, ~48-72h later
+    tier4_message: v.optional(v.string()), // sent right after signup completes (welcome + follow-ask)
   }),
 
   autoreply_log: defineTable({
@@ -924,5 +942,16 @@ export default defineSchema({
     status: v.union(v.literal("sent"), v.literal("failed"), v.literal("no_match")),
     error: v.optional(v.string()),
     created_at: v.number(),
-  }).index("by_comment", ["comment_id"]),
+    // Follow-up tracking — only set when the rule's dm_message used {{link}}.
+    ref_token: v.optional(v.string()),
+    recipient_igsid: v.optional(v.string()), // IG-scoped user id, captured from the private-reply response, needed to DM again for tiers 2-4
+    link_clicked_at: v.optional(v.number()),
+    signed_up_at: v.optional(v.number()),
+    signed_up_profile_id: v.optional(v.string()),
+    tier2_sent_at: v.optional(v.number()),
+    tier3_sent_at: v.optional(v.number()),
+    tier4_sent_at: v.optional(v.number()),
+  })
+    .index("by_comment", ["comment_id"])
+    .index("by_ref_token", ["ref_token"]),
 });

@@ -132,4 +132,15 @@ crons.daily(
   {}
 );
 
+// Hourly — sends the Instagram auto-DM follow-up tiers: a no-click nudge
+// (~24h after the first DM) and a clicked-but-no-signup nudge (~48-72h after
+// the click). Tier 4 (welcome + follow-ask) fires on signup itself instead —
+// see profiles.getOrCreate.
+crons.hourly(
+  "instagram autoreply follow-ups",
+  { minuteUTC: 15 },
+  internal.autoreply.checkFollowUps,
+  {}
+);
+
 export default crons;

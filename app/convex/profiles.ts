@@ -25,6 +25,10 @@ export const getOrCreate = mutation({
     // only ever applied to a brand-new profile, never backfilled onto one
     // that already exists.
     ambassador_ref: v.optional(v.string()),
+    // Instagram auto-DM ref token captured from the signup URL (?igref=) —
+    // ties this brand-new profile back to the DM that sent them here, so
+    // autoreply.ts can fire the Tier 4 welcome + follow-ask message.
+    igdm_ref: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     // The caller's identity anchor is Clerk's stable per-user `subject`
@@ -131,6 +135,17 @@ export const getOrCreate = mutation({
         use_count: 0,
         max_uses: REFERRAL_CODE_MAX_USES,
       });
+    }
+
+    if (args.igdm_ref) {
+      const dmLog = await ctx.db
+        .query("autoreply_log")
+        .withIndex("by_ref_token", (q) => q.eq("ref_token", args.igdm_ref!))
+        .unique();
+      if (dmLog && !dmLog.signed_up_at) {
+        await ctx.db.patch(dmLog._id, { signed_up_at: Date.now(), signed_up_profile_id: String(profileId) });
+        await ctx.scheduler.runAfter(0, internal.autoreply.sendTier4, { logId: dmLog._id });
+      }
     }
 
     return await ctx.db.get(profileId);
@@ -1099,6 +1114,16 @@ export const setProfileVisibility = mutation({
   },
 });
 
+// Settings > Notifications — recorded the first time someone agrees to the
+// short wallet-pass consent shown before their first "Add to Google Wallet".
+export const acceptWalletTerms = mutation({
+  args: { profileId: v.string() },
+  handler: async (ctx, { profileId }) => {
+    await requireOwnerOrAdmin(ctx, profileId);
+    await ctx.db.patch(profileId as any, { wallet_terms_accepted_at: Date.now() });
+  },
+});
+
 function deriveCreatorTier(followers: number): string {
   if (followers >= 50000) return "Influencer";
   if (followers >= 10000) return "Micro Influencer";
@@ -1211,6 +1236,53 @@ export const ensureAdminPersona = mutation({
       region: "NC",
     });
     return String(id);
+  },
+});
+
+// ─── "Notifications" one-way broadcast persona ────────────────────────────────
+// Separate from the "Collabnb" support persona above — this one is for
+// one-way pushes only (Admin > Inbox lets Ben pick either persona to send
+// as). Recipients see it in their Inbox but can't reply to it — see
+// Inbox.jsx's isNotifications gate, which hides the composer for this tag.
+export const ensureNotificationsPersona = mutation({
+  args: {},
+  handler: async (ctx) => {
+    await requireAdmin(ctx);
+    const all = await ctx.db.query("profiles").collect();
+    const existing = all.find((p) => p.username === "notifications");
+    if (existing) return String(existing._id);
+    const id = await ctx.db.insert("profiles", {
+      full_name: "Notifications",
+      username: "notifications",
+      email: "notifications@collabnb.com",
+      role: "admin",
+      tier: "Admin",
+      bio: "One-way alerts from Collabnb — new activity, reminders, and updates. Replies here aren't monitored.",
+      is_admin: true,
+      is_verified: true,
+      is_founder: true,
+      beta: true,
+      profile_visible: false,
+      city: "Asheville",
+      region: "NC",
+    });
+    return String(id);
+  },
+});
+
+export const getNotificationsPersona = query({
+  args: {},
+  handler: async (ctx) => {
+    const all = await ctx.db.query("profiles").collect();
+    const p = all.find((row) => row.username === "notifications");
+    if (!p) return null;
+    return {
+      _id: String(p._id),
+      full_name: p.full_name,
+      username: p.username,
+      avatar_url: p.avatar_url ?? null,
+      role: p.role,
+    };
   },
 });
 

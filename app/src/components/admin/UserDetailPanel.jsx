@@ -232,8 +232,9 @@ export default function UserDetailPanel({ profileId, onClose }) {
                   Danger Zone
                 </div>
                 <p style={{ fontSize: '0.78rem', color: '#7F1D1D', margin: '0 0 0.75rem', lineHeight: 1.5 }}>
-                  Permanently delete this user and all associated data (collabs, pitches, messages, referral codes).
-                  This cannot be undone. Their Clerk login is also removed automatically (when CLERK_SECRET_KEY is set), freeing the email for reuse.
+                  Permanently delete this user and all associated data — collabs, pitches, direct-message threads,
+                  uploaded images, notifications, referral codes, and audit log entries. This cannot be undone.
+                  Their Clerk login is also removed automatically (when CLERK_SECRET_KEY is set), freeing the email for reuse.
                 </p>
                 {!showDeleteConfirm ? (
                   <button

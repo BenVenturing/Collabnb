@@ -946,9 +946,33 @@ export const deleteProfile = mutation({
     const pitchCounts = await ctx.db.query("pitch_counts").withIndex("by_user", (q) => q.eq("user_id", pId)).collect();
     await Promise.all(pitchCounts.map((c) => ctx.db.delete(c._id)));
 
-    // Delete collaborations
-    const collabs = await ctx.db.query("collaborations").filter((q) => q.eq(q.field("creator_id"), pId)).collect();
+    // Delete pitches (either side) — capture thread keys before deleting
+    const pitchesAsCreator = await ctx.db.query("pitches").withIndex("by_creator", (q) => q.eq("creator_id", pId)).collect();
+    const pitchesAsHost = await ctx.db.query("pitches").withIndex("by_host", (q) => q.eq("host_id", pId)).collect();
+    const pitches = [...pitchesAsCreator, ...pitchesAsHost];
+    const pitchThreadKeys = pitches.map((p) => p.thread_key).filter(Boolean) as string[];
+    await Promise.all(pitches.map((p) => ctx.db.delete(p._id)));
+
+    // Delete collaborations (either side — host_id was previously missed)
+    const collabsAsCreator = await ctx.db.query("collaborations").withIndex("by_creator", (q) => q.eq("creator_id", pId)).collect();
+    const collabsAsHost = await ctx.db.query("collaborations").withIndex("by_host", (q) => q.eq("host_id", pId)).collect();
+    const collabs = [...collabsAsCreator, ...collabsAsHost];
     await Promise.all(collabs.map((c) => ctx.db.delete(c._id)));
+
+    // Delete direct-message threads (owner, participant, or linked to one of
+    // the collaborations above) and every message inside them
+    const threadsAsOwner = await ctx.db.query("threads").withIndex("by_owner", (q) => q.eq("owner_id", pId)).collect();
+    const threadsAsParticipant = await ctx.db.query("threads").withIndex("by_participant", (q) => q.eq("participant_id", pId)).collect();
+    const threadsByCollab = (await Promise.all(
+      collabs.map((c) => ctx.db.query("threads").withIndex("by_collab", (q) => q.eq("collab_id", String(c._id))).collect())
+    )).flat();
+    const threads = [...new Map([...threadsAsOwner, ...threadsAsParticipant, ...threadsByCollab].map((t) => [t._id, t])).values()];
+    const threadKeys = [...new Set([...threads.map((t) => t.thread_key), ...pitchThreadKeys].filter(Boolean))] as string[];
+    const threadMessages = (await Promise.all(
+      threadKeys.map((key) => ctx.db.query("thread_messages").withIndex("by_thread", (q) => q.eq("thread_key", key)).collect())
+    )).flat();
+    await Promise.all(threadMessages.map((m) => ctx.db.delete(m._id)));
+    await Promise.all(threads.map((t) => ctx.db.delete(t._id)));
 
     // Delete collections
     const collections = await ctx.db.query("collections").filter((q) => q.eq(q.field("creator_id"), pId)).collect();
@@ -956,7 +980,6 @@ export const deleteProfile = mutation({
 
     // Delete referral codes owned by this user
     const refCodes = await ctx.db.query("referral_codes").filter((q) => q.eq(q.field("owner_id"), pId)).collect();
-    const codeIds = refCodes.map((rc) => rc.code);
     await Promise.all(refCodes.map((rc) => ctx.db.delete(rc._id)));
 
     // Delete referral uses where this user was the referrer or the used_by
@@ -973,11 +996,19 @@ export const deleteProfile = mutation({
     const suggestions = await ctx.db.query("suggestions").filter((q) => q.eq(q.field("submitted_by"), pId)).collect();
     await Promise.all(suggestions.map((s) => ctx.db.patch(s._id, { submitted_by: undefined })));
 
-    // Delete listings owned by this user (if host)
+    // Delete listings owned by this user (if host), including their stored images.
+    // gallery_images/image can be raw Convex storage ids or plain "http" URLs
+    // (external/legacy) — only the former have a blob worth reclaiming.
     const listings = await ctx.db.query("listings").withIndex("by_host", (q) => q.eq("host_id", pId)).collect();
-    await Promise.all(listings.map((l) => ctx.db.delete(l._id)));
+    await Promise.all(listings.map(async (l) => {
+      const imageIds = [...(l.gallery_images ?? []), ...(l.image ? [l.image] : [])].filter((id) => !id.startsWith("http"));
+      await Promise.all(imageIds.map((id) => ctx.storage.delete(id as any).catch(() => {})));
+      await ctx.db.delete(l._id);
+    }));
 
-    // Anonymize messages from this user
+    // Anonymize contact-form submissions from this user (the "messages" table is
+    // the public contact form, keyed by email — separate from the in-app
+    // threads/thread_messages already deleted above).
     if (email) {
       const messages = await ctx.db.query("messages").collect();
       const userMessages = messages.filter((m) => m.email === email);
@@ -987,6 +1018,14 @@ export const deleteProfile = mutation({
         )
       );
     }
+
+    // Delete notifications addressed to this user
+    const notifs = await ctx.db.query("notifications").withIndex("by_user", (q) => q.eq("user_id", pId)).collect();
+    await Promise.all(notifs.map((n) => ctx.db.delete(n._id)));
+
+    // Delete admin audit log entries about this user (no index on target_id)
+    const auditEntries = await ctx.db.query("admin_audit_log").filter((q) => q.eq(q.field("target_id"), pId)).collect();
+    await Promise.all(auditEntries.map((e) => ctx.db.delete(e._id)));
 
     // Finally delete the profile itself
     await ctx.db.delete(args.profileId);

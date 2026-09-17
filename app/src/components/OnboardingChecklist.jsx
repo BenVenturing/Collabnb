@@ -14,6 +14,7 @@ function userKeys(userId) {
   if (!userId) return null;
   return {
     dismissed:       `${KEY_PREFIX}_dismissed_${userId}`,
+    reopened:        `${KEY_PREFIX}_reopened_${userId}`,
     collapsed:       `${KEY_PREFIX}_collapsed_${userId}`,
     seen:            `${KEY_PREFIX}_seen_${userId}`,
     shared:          `${KEY_PREFIX}_shared_${userId}`,
@@ -267,6 +268,8 @@ export default function OnboardingChecklist() {
   // All checklist state starts fresh (blank slate for every new user context).
   // A useEffect below syncs from per-user localStorage once userId is known.
   const [dismissed,          setDismissed]          = useState(false);
+  // Reopened on purpose (Settings > Setup checklist) — stays open until the X.
+  const [reopened,           setReopened]           = useState(false);
   const [collapsed,          setCollapsed]          = useState(false);
   const [visible,            setVisible]            = useState(false);
   const [entered,            setEntered]            = useState(false);
@@ -309,7 +312,9 @@ export default function OnboardingChecklist() {
     } catch {
       setManualChecked({});
     }
-    setVisible(false);
+    const wasReopened = localStorage.getItem(k.reopened) === '1';
+    setReopened(wasReopened);
+    setVisible(wasReopened);
     setEntered(false);
   }, [userId]);
 
@@ -334,7 +339,9 @@ export default function OnboardingChecklist() {
       const k = userKeys(userId);
       localStorage.removeItem(k.dismissed);
       localStorage.removeItem(k.collapsed);
+      localStorage.setItem(k.reopened, '1');
       setDismissed(false);
+      setReopened(true);
       setCollapsed(false);
       setVisible(true);
       setEntered(true);
@@ -388,9 +395,11 @@ export default function OnboardingChecklist() {
     return () => clearTimeout(t);
   }, [shouldShow, userId]);
 
-  // Auto-dismiss when all required items are done
+  // Auto-dismiss when all required items are done — except when reopened on
+  // purpose, where an already-complete checklist would otherwise vanish 1.5s
+  // after opening (optional steps like wallet alerts don't count toward done).
   useEffect(() => {
-    if (!allDone || dismissed || !userId) return;
+    if (!allDone || dismissed || !userId || reopened) return;
     const k = userKeys(userId);
     const t = setTimeout(() => {
       setEntered(false);
@@ -401,7 +410,7 @@ export default function OnboardingChecklist() {
       }, 300);
     }, 1500);
     return () => clearTimeout(t);
-  }, [allDone, dismissed, userId]);
+  }, [allDone, dismissed, userId, reopened]);
 
   if (!visible || !shouldShow) return null;
 
@@ -412,6 +421,8 @@ export default function OnboardingChecklist() {
       setEntered(false);
       setTimeout(() => {
         localStorage.setItem(k.dismissed, '1');
+        localStorage.removeItem(k.reopened);
+        setReopened(false);
         setDismissed(true);
       }, 280);
     } else {
@@ -531,6 +542,8 @@ export default function OnboardingChecklist() {
                 setEntered(false);
                 setTimeout(() => {
                   localStorage.setItem(k.dismissed, '1');
+                  localStorage.removeItem(k.reopened);
+                  setReopened(false);
                   setDismissed(true);
                 }, 280);
               }}

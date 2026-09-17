@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useQuery, useAction, useMutation } from 'convex/react';
 import QRCode from 'qrcode';
+import addToGoogleWalletBadge from '../assets/add-to-google-wallet.png';
 import { useTranslation, Trans } from 'react-i18next';
 import { api } from '../../convex/_generated/api';
 import { useAuth } from '../contexts/AuthContext';
@@ -713,10 +714,11 @@ export default function Settings() {
                       aria-label={t('notifications.googleWalletConnect')}
                       style={{ background: 'none', border: 'none', padding: 0, cursor: walletBusy ? 'default' : 'pointer', flexShrink: 0, opacity: walletBusy ? 0.6 : 1, lineHeight: 0 }}
                     >
-                      {/* Google's official badge asset — brand guidelines prohibit
-                          recoloring/resizing it, so it's rendered as-is. */}
+                      {/* Google's official badge, self-hosted: the site CSP blocks
+                          developers.google.com images, and brand guidelines
+                          prohibit recoloring or reshaping it. */}
                       <img
-                        src="https://developers.google.com/static/wallet/images/branding/add-to-wallet-button-primary.png"
+                        src={addToGoogleWalletBadge}
                         alt={t('notifications.googleWalletConnect')}
                         style={{ height: 48, display: 'block' }}
                       />

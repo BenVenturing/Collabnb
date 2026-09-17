@@ -1115,6 +1115,37 @@ export const setProfileVisibility = mutation({
   },
 });
 
+// Repairs a profile whose clerk_user_id points at a Clerk account that no
+// longer exists — e.g. the login was deleted and re-created with the same
+// email, which otherwise locks that person out of every authenticated write
+// (getAuthedProfile matches on clerk_user_id, and the JWT carries no email
+// claim to fall back on). Deliberately internal-only and never client
+// callable: relinking an identity from a client-supplied email would let
+// anyone claim any account. Run it from the CLI only after confirming with
+// Clerk's API that the new id really owns `expectedEmail`.
+export const relinkClerkUser = internalMutation({
+  args: { profileId: v.string(), clerkUserId: v.string(), expectedEmail: v.string() },
+  handler: async (ctx, args) => {
+    const profile: any = await ctx.db.get(args.profileId as any);
+    if (!profile) throw new Error("Profile not found.");
+    if ((profile.email || "").toLowerCase() !== args.expectedEmail.toLowerCase()) {
+      throw new Error(`Email mismatch — profile is ${profile.email}, expected ${args.expectedEmail}.`);
+    }
+    const alreadyLinked = await ctx.db
+      .query("profiles")
+      .withIndex("by_clerk_user_id", (q) => q.eq("clerk_user_id", args.clerkUserId))
+      .unique();
+    if (alreadyLinked && String(alreadyLinked._id) !== String(profile._id)) {
+      throw new Error(`That Clerk user is already linked to profile ${alreadyLinked._id}.`);
+    }
+    await ctx.db.patch(args.profileId as any, {
+      clerk_user_id: args.clerkUserId,
+      clerk_registered: true,
+    });
+    return { relinked: true, previous: profile.clerk_user_id ?? null, now: args.clerkUserId };
+  },
+});
+
 // Settings > Notifications — recorded the first time someone agrees to the
 // short wallet-pass consent shown before their first "Add to Google Wallet".
 export const acceptWalletTerms = mutation({

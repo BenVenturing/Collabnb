@@ -132,18 +132,18 @@ async function ensureClass(creds: WalletCreds, token: string): Promise<string> {
   return id;
 }
 
-async function ensureObject(creds: WalletCreds, token: string, profile: any): Promise<string> {
+async function ensureObject(creds: WalletCreds, token: string, profile: any, referralCode?: string): Promise<string> {
   const id = objectIdFor(creds, String(profile._id));
   const roleLabel = profile.role === "host" ? "Host" : "Creator";
   const memberSince = new Date(profile._creationTime).toLocaleDateString("en-US", { month: "short", year: "numeric" });
-  // Personalized to this person's own referral link (Settings > Referrals —
-  // extra free time for whoever they refer) so a scan/tap attributes back to
-  // them. Deliberately NOT the paid Ambassador program, which is invite-only
-  // and unrelated to this pass. Falls back to the plain homepage if this
-  // profile has no referral_code (e.g. pre-referral-system accounts).
-  const referralUrl = profile.referral_code
-    ? `https://collabnb.com/join?ref=${profile.referral_code}`
-    : "https://collabnb.com";
+  // Personalized to this person's own referral link (extra free time for
+  // whoever they refer) so a stranger scanning it lands straight in signup
+  // with the code applied — scripts/main.js stores ?ref= and ?join=true opens
+  // the signup wizard. Deliberately NOT the paid Ambassador program. Must be
+  // join.html: the extensionless /join path 404s on the live site.
+  const referralUrl = referralCode
+    ? `https://collabnb.com/join.html?ref=${encodeURIComponent(referralCode)}&join=true`
+    : "https://collabnb.com/join.html?join=true";
 
   const body: Record<string, unknown> = {
     id,
@@ -161,10 +161,10 @@ async function ensureObject(creds: WalletCreds, token: string, profile: any): Pr
     barcode: {
       type: "QR_CODE",
       value: referralUrl,
-      alternateText: profile.referral_code ? `Referral: ${profile.referral_code}` : "Open Collabnb",
+      alternateText: referralCode ? `Join Collabnb · ${referralCode}` : "Join Collabnb",
     },
     linksModuleData: {
-      uris: [{ uri: referralUrl, description: "Open Collabnb", id: "open_collabnb" }],
+      uris: [{ uri: referralUrl, description: "Join Collabnb with my referral", id: "open_collabnb" }],
     },
   };
   if (creds.heroImageUrl) {
@@ -199,7 +199,12 @@ async function addMessage(token: string, objectId: string, title: string, body?:
     method: "POST",
     headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      message: { header: title, body: body || "", id: `msg_${Date.now()}`, messageType: "TEXT" },
+      // TEXT_AND_NOTIFY (not TEXT) is what actually triggers a lock-screen
+      // push — TEXT alone only updates the pass silently. Google also caps
+      // this at 3 notifying messages per object per 24h and throttles harder
+      // if it looks spammy, so pushForUser's callers shouldn't fire more
+      // often than real events warrant.
+      message: { header: title, body: body || "", id: `msg_${Date.now()}`, messageType: "TEXT_AND_NOTIFY" },
     }),
   });
   if (!res.ok) throw new Error(`Wallet push failed: ${await res.text()}`);
@@ -208,10 +213,15 @@ async function addMessage(token: string, objectId: string, title: string, body?:
 // Shared by the public action below and the CLI/admin-testing action further
 // down — builds (creating the pass object on first call) the one-time
 // "Save to Google Wallet" link for a given profile.
-async function buildSaveLink(creds: WalletCreds, token: string, profile: any): Promise<{ saveUrl: string; objectId: string }> {
+async function buildSaveLink(
+  creds: WalletCreds,
+  token: string,
+  profile: any,
+  referralCode?: string
+): Promise<{ saveUrl: string; objectId: string }> {
   // Always (re)ensures the object so it stays current — e.g. a referral code
   // that didn't exist when the pass was first created gets picked up here too.
-  const objectId = await ensureObject(creds, token, profile);
+  const objectId = await ensureObject(creds, token, profile, referralCode);
 
   const now = Math.floor(Date.now() / 1000);
   const saveJwt = await signJwtRS256(
@@ -227,6 +237,22 @@ async function buildSaveLink(creds: WalletCreds, token: string, profile: any): P
   return { saveUrl: `https://pay.google.com/gp/v/save/${saveJwt}`, objectId };
 }
 
+// Accounts created before the referral system (or via the Clerk webhook path)
+// have no code yet — generate one on first wallet add so the pass QR always
+// carries a referral link. A failure here just falls back to a plain join link.
+async function referralCodeFor(ctx: any, profileId: string, profile: any): Promise<string | undefined> {
+  try {
+    const code: string = await ctx.runMutation(internal.referrals.ensureCodeInternal, {
+      profileId,
+      username: profile.username || profile.full_name || "user",
+    });
+    return code;
+  } catch (err) {
+    console.error("Referral code for wallet pass failed", profileId, err);
+    return undefined;
+  }
+}
+
 // ─── Public: Settings > Notifications > "Add to Google Wallet" ─────────────
 export const generateSaveLink = action({
   args: { profileId: v.string() },
@@ -238,8 +264,9 @@ export const generateSaveLink = action({
     const profile: any = await ctx.runQuery(api.profiles.getById, { id: profileId });
     if (!profile) throw new ConvexError("Profile not found.");
 
+    const referralCode = await referralCodeFor(ctx, profileId, profile);
     const token = await getAccessToken(creds);
-    const { saveUrl, objectId } = await buildSaveLink(creds, token, profile);
+    const { saveUrl, objectId } = await buildSaveLink(creds, token, profile, referralCode);
     if (!profile.google_wallet_object_id) {
       await ctx.runMutation(internal.googleWallet.setWalletObjectId, { profileId, objectId });
     }
@@ -261,8 +288,9 @@ export const generateSaveLinkForTesting = internalAction({
     const profile: any = await ctx.runQuery(api.profiles.getById, { id: profileId });
     if (!profile) throw new Error("Profile not found.");
 
+    const referralCode = await referralCodeFor(ctx, profileId, profile);
     const token = await getAccessToken(creds);
-    const { saveUrl, objectId } = await buildSaveLink(creds, token, profile);
+    const { saveUrl, objectId } = await buildSaveLink(creds, token, profile, referralCode);
     if (!profile.google_wallet_object_id) {
       await ctx.runMutation(internal.googleWallet.setWalletObjectId, { profileId, objectId });
     }
@@ -297,6 +325,22 @@ const PREF_KEY_BY_TYPE: Record<string, "messages" | "contractUpdates" | "collabR
   host_unresponsive: "collabReminders",
 };
 
+// Google hard-caps a Generic pass at 3 notifying (TEXT_AND_NOTIFY) messages
+// per rolling 24h and throttles harder beyond that — not a Collabnb limit, a
+// platform one, so there's no way to push "almost everything" through this
+// channel. Only the highest-value activity is allowed to spend one of those
+// 3 slots; everything else (reminders/nudges) still shows up in-app and by
+// email as usual, just never as a wallet push.
+const WALLET_NOTIFY_ELIGIBLE = new Set([
+  "new_application",   // a host got pitched — time-sensitive, worth a lock-screen alert
+  "pitch_approved",    // a creator's application was accepted
+  "pitch_declined",    // a creator's application was declined
+  "new_message",       // direct message (also what admin "Notifications" broadcasts use)
+  "host_reply",        // direct message, host side
+]);
+const WALLET_NOTIFY_MAX = 3;
+const WALLET_NOTIFY_WINDOW_MS = 24 * 60 * 60 * 1000;
+
 export const pushForUser = internalAction({
   args: { userId: v.string(), type: v.string(), title: v.string(), body: v.optional(v.string()) },
   handler: async (ctx, args) => {
@@ -305,9 +349,16 @@ export const pushForUser = internalAction({
 
     const profile: any = await ctx.runQuery(api.profiles.getById, { id: args.userId });
     if (!profile?.google_wallet_object_id) return;
+    // Settings > Notifications > "Phone push" master switch — undefined = on.
+    if (profile.google_wallet_push_enabled === false) return;
 
     const prefKey = PREF_KEY_BY_TYPE[args.type] ?? "contractUpdates";
     if (profile.notification_prefs?.[prefKey] === false) return;
+
+    if (!WALLET_NOTIFY_ELIGIBLE.has(args.type)) return;
+
+    const allowed: boolean = await ctx.runMutation(internal.googleWallet.consumeNotifySlot, { userId: args.userId });
+    if (!allowed) return; // today's 3 slots for this pass are already spent
 
     try {
       const token = await getAccessToken(creds);
@@ -317,5 +368,33 @@ export const pushForUser = internalAction({
       // a wallet push failing must never surface as an error to the caller.
       console.error("Google Wallet push failed for", args.userId, err);
     }
+  },
+});
+
+// Sliding-window counter reusing the same `rateLimits` table lib/rateLimit.ts
+// uses elsewhere — kept as its own non-throwing mutation (rather than that
+// file's enforceRateLimit) because pushForUser wants a quiet skip, not a
+// thrown error, when the daily budget is spent.
+export const consumeNotifySlot = internalMutation({
+  args: { userId: v.string() },
+  handler: async (ctx, { userId }) => {
+    const key = `wallet_notify:${userId}`;
+    const now = Date.now();
+    const existing = await ctx.db
+      .query("rateLimits")
+      .withIndex("by_key", (q) => q.eq("key", key))
+      .unique();
+
+    if (!existing) {
+      await ctx.db.insert("rateLimits", { key, count: 1, windowStart: now });
+      return true;
+    }
+    if (now - existing.windowStart > WALLET_NOTIFY_WINDOW_MS) {
+      await ctx.db.patch(existing._id, { count: 1, windowStart: now });
+      return true;
+    }
+    if (existing.count >= WALLET_NOTIFY_MAX) return false;
+    await ctx.db.patch(existing._id, { count: existing.count + 1 });
+    return true;
   },
 });

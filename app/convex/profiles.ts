@@ -868,6 +868,7 @@ export const updateProfile = mutation({
         collabReminders: v.optional(v.boolean()),
         marketing: v.optional(v.boolean()),
       })),
+      google_wallet_push_enabled: v.optional(v.boolean()),
       preferred_language: v.optional(v.string()),
       preferred_currency: v.optional(v.string()),
       timezone: v.optional(v.string()),

@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { query, mutation } from "./_generated/server";
+import { query, mutation, internalMutation } from "./_generated/server";
 import { requireOwnerOrAdmin, canAccessOwner } from "./lib/auth";
 
 // Referred signups get a longer trial instead of a free month — see
@@ -49,38 +49,57 @@ export const validateCode = query({
   },
 });
 
+async function ensureReferralCode(ctx: any, profileId: string, username: string): Promise<string> {
+  const profile: any = await ctx.db.get(profileId as any);
+  const existing = await ctx.db
+    .query("referral_codes")
+    .withIndex("by_owner", (q: any) => q.eq("owner_id", profileId))
+    .unique();
+  if (existing) {
+    // Older rows can exist without the mirrored profile field.
+    if (profile && profile.referral_code !== existing.code) {
+      await ctx.db.patch(profileId as any, { referral_code: existing.code });
+    }
+    return existing.code;
+  }
+
+  let code = "";
+  for (let i = 0; i < 10; i++) {
+    const candidate = makeCode(username);
+    const collision = await ctx.db
+      .query("referral_codes")
+      .withIndex("by_code", (q: any) => q.eq("code", candidate))
+      .unique();
+    if (!collision) { code = candidate; break; }
+  }
+  if (!code) code = makeCode(username + Date.now());
+
+  await ctx.db.insert("referral_codes", {
+    owner_id: profileId,
+    code,
+    use_count: 0,
+    max_uses: REFERRAL_CODE_MAX_USES,
+  });
+  if (profile) {
+    await ctx.db.patch(profileId as any, { referral_code: code });
+  }
+  return code;
+}
+
 export const ensureCode = mutation({
   args: { profileId: v.string(), username: v.string() },
   handler: async (ctx, args) => {
     await requireOwnerOrAdmin(ctx, args.profileId);
-    const existing = await ctx.db
-      .query("referral_codes")
-      .withIndex("by_owner", (q) => q.eq("owner_id", args.profileId))
-      .unique();
-    if (existing) return existing.code;
+    return await ensureReferralCode(ctx, args.profileId, args.username);
+  },
+});
 
-    let code = "";
-    for (let i = 0; i < 10; i++) {
-      const candidate = makeCode(args.username);
-      const collision = await ctx.db
-        .query("referral_codes")
-        .withIndex("by_code", (q) => q.eq("code", candidate))
-        .unique();
-      if (!collision) { code = candidate; break; }
-    }
-    if (!code) code = makeCode(args.username + Date.now());
-
-    await ctx.db.insert("referral_codes", {
-      owner_id: args.profileId,
-      code,
-      use_count: 0,
-      max_uses: REFERRAL_CODE_MAX_USES,
-    });
-    const profileExists = await ctx.db.get(args.profileId as any);
-    if (profileExists) {
-      await ctx.db.patch(args.profileId as any, { referral_code: code });
-    }
-    return code;
+// Server-only: googleWallet.ts calls this after it has already verified the
+// caller, so every wallet pass has a referral link to carry on its QR.
+export const ensureCodeInternal = internalMutation({
+  args: { profileId: v.string(), username: v.string() },
+  handler: async (ctx, args): Promise<string> => {
+    return await ensureReferralCode(ctx, args.profileId, args.username);
   },
 });
 

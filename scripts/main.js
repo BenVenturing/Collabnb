@@ -1402,6 +1402,16 @@ document.addEventListener('DOMContentLoaded', () => {
     try { localStorage.setItem('collabnb_ambassador_ref', ambRef); } catch { /* ignore */ }
   }
 
+  // Friend referral link (?ref=<CODE>) — from a member's shared link or the
+  // QR on their Google Wallet pass. Stored under the same key the join page's
+  // manual code input uses, so AuthContext.jsx applies it at signup either way.
+  const refCode = (urlParams.get('ref') || '').trim().toUpperCase();
+  if (refCode) {
+    try { localStorage.setItem('collabnb_referral_code', refCode); } catch { /* ignore */ }
+    const refInput = document.getElementById('referral-code-input');
+    if (refInput && !refInput.value) refInput.value = refCode;
+  }
+
   // Instagram auto-DM tracked link (?igref=<token>) — captured sitewide same
   // as ?amb= above, since the /go/ redirect can land on any marketing page.
   // Read at signup by AuthContext.jsx and cleared once applied to a new profile.

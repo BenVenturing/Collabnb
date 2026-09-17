@@ -60,7 +60,7 @@ function creatorSteps(profile, isFirstVisit, hasShared, hasExplored) {
       label: t('creatorSteps.walletNotifications.label'),
       done: !!profile?.google_wallet_object_id,
       optional: true,
-      action: { label: t('creatorSteps.walletNotifications.action'), path: '/settings?tab=notifications' },
+      action: { label: t('creatorSteps.walletNotifications.action'), path: '/settings?tab=notifications&wallet=setup' },
     },
     {
       id: 'share',
@@ -98,7 +98,7 @@ function hostSteps(profile, isFirstVisit, hasShared, hasListing, hasBrowsedCreat
       label: t('hostSteps.walletNotifications.label'),
       done: !!profile?.google_wallet_object_id,
       optional: true,
-      action: { label: t('hostSteps.walletNotifications.action'), path: '/settings?tab=notifications' },
+      action: { label: t('hostSteps.walletNotifications.action'), path: '/settings?tab=notifications&wallet=setup' },
     },
     {
       id: 'share',
@@ -432,9 +432,10 @@ export default function OnboardingChecklist() {
     if (!userId) return;
     const k = userKeys(userId);
     const code = profile?.referral_code || '';
+    // join.html, not /join — the extensionless path 404s on the live site.
     const shareUrl = code
-      ? `${window.location.origin}/join?ref=${code}`
-      : `${window.location.origin}/join`;
+      ? `${window.location.origin}/join.html?ref=${encodeURIComponent(code)}&join=true`
+      : `${window.location.origin}/join.html?join=true`;
     if (navigator.share) {
       navigator.share({ title: t('shareTitle'), url: shareUrl }).catch(() => {});
     } else {

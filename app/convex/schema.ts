@@ -119,6 +119,9 @@ export default defineSchema({
     // (see googleWallet.pushForUser) has anywhere to push to.
     google_wallet_object_id: v.optional(v.string()),
     google_wallet_linked_at: v.optional(v.number()),
+    // Settings > Notifications > "Phone push" master switch. Undefined = on;
+    // false pauses every wallet push while keeping the pass on their phone.
+    google_wallet_push_enabled: v.optional(v.boolean()),
     // Set by profiles.acceptWalletTerms the first time this person agrees to
     // the short wallet-pass consent shown in Settings, before their first
     // "Add to Google Wallet" — required once, never re-shown after.

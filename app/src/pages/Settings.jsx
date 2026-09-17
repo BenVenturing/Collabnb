@@ -343,6 +343,32 @@ export default function Settings() {
     QRCode.toCanvas(walletQrRef.current, walletSaveUrl, { width: 190, margin: 1 }).catch(() => {});
   }, [walletSaveUrl]);
 
+  // Onboarding checklist "Get phone alerts" links here with ?wallet=setup —
+  // open the consent/QR flow straight away instead of making them find the
+  // badge. Waits for the real profile so the consent check reads real data.
+  const walletSetupHandled = useRef(false);
+  useEffect(() => {
+    if (walletSetupHandled.current || isMockUser || !profile?._id) return;
+    if (new URLSearchParams(location.search).get('wallet') !== 'setup') return;
+    walletSetupHandled.current = true;
+    navigate('/settings?tab=notifications', { replace: true });
+    handleAddToGoogleWalletClick();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.search, profile?._id]);
+
+  const walletExplainer = (
+    <div style={{ width: '100%', textAlign: 'left' }}>
+      <p style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--ink)', margin: '0 0 0.4rem' }}>
+        {t('notifications.googleWalletExplainerTitle')}
+      </p>
+      <ul style={{ margin: 0, paddingLeft: '1.1rem', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+        {['googleWalletExplainerWhat', 'googleWalletExplainerPlatforms', 'googleWalletExplainerAccount'].map((k) => (
+          <li key={k} style={{ fontSize: '0.76rem', color: 'var(--slate)', lineHeight: 1.5 }}>{t(`notifications.${k}`)}</li>
+        ))}
+      </ul>
+    </div>
+  );
+
   async function handleRemoveCard() {
     setCardBusy(true);
     setCardError('');
@@ -699,7 +725,8 @@ export default function Settings() {
                   {walletError && <p style={{ fontSize: '0.78rem', color: '#dc2626', margin: '0.6rem 0 0' }}>{walletError}</p>}
                   {walletConsentOpen && (
                     <div style={{ marginTop: '1rem', padding: '1.1rem', background: 'rgba(25,37,36,0.03)', border: '1px solid rgba(60,87,89,0.12)', borderRadius: '0.9rem' }}>
-                      <p style={{ fontSize: '0.8rem', color: 'var(--ink)', margin: '0 0 0.75rem', lineHeight: 1.6 }}>
+                      <div style={{ marginBottom: '0.85rem' }}>{walletExplainer}</div>
+                      <p style={{ fontSize: '0.78rem', color: 'var(--ink)', margin: '0 0 0.75rem', lineHeight: 1.6 }}>
                         {t('notifications.googleWalletConsentText')}
                       </p>
                       <div style={{ display: 'flex', gap: '0.6rem' }}>
@@ -720,7 +747,8 @@ export default function Settings() {
                   )}
                   {walletSaveUrl && (
                     <div style={{ marginTop: '1rem', padding: '1.1rem', background: 'rgba(25,37,36,0.03)', border: '1px solid rgba(60,87,89,0.12)', borderRadius: '0.9rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}>
-                      <p style={{ fontSize: '0.8rem', color: 'var(--slate)', margin: 0, fontWeight: 600, textAlign: 'center' }}>{t('notifications.googleWalletScanPrompt')}</p>
+                      {walletExplainer}
+                      <p style={{ fontSize: '0.8rem', color: 'var(--slate)', margin: '0.25rem 0 0', fontWeight: 600, textAlign: 'center' }}>{t('notifications.googleWalletScanPrompt')}</p>
                       <canvas ref={walletQrRef} style={{ borderRadius: '0.5rem' }} />
                       <a
                         href={walletSaveUrl}
@@ -747,6 +775,14 @@ export default function Settings() {
                     </div>
                   )}
                 </div>
+                {profile?.google_wallet_object_id && (
+                  <ToggleRow
+                    label={t('notifications.googleWalletPushToggle')}
+                    sublabel={t('notifications.googleWalletPushToggleDesc')}
+                    checked={profile?.google_wallet_push_enabled !== false}
+                    onChange={() => updateProfile({ google_wallet_push_enabled: profile?.google_wallet_push_enabled === false })}
+                  />
+                )}
 
                 <SectionLabel>{t('notifications.sectionPreferences')}</SectionLabel>
                 {[

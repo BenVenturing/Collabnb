@@ -204,8 +204,13 @@ function ClerkAuthInner({ children }) {
             } catch { /* non-critical */ }
           }
         }
-        // Apply referral code for brand-new signups
-        if (isNewUser && result?._id && !result.referred_by) {
+        // Apply referral code for brand-new signups. "Recently created" also
+        // counts because the Clerk webhook can create the profile before this
+        // runs, which would otherwise make every such signup look pre-existing
+        // and silently drop the referral. applyReferralCode rejects self-use,
+        // repeat use, and ambassador-tagged accounts server-side.
+        const createdRecently = !!result?._creationTime && Date.now() - result._creationTime < 24 * 60 * 60 * 1000;
+        if ((isNewUser || createdRecently) && result?._id && !result.referred_by) {
           const storedCode = localStorage.getItem('collabnb_referral_code');
           if (storedCode) {
             try {
@@ -259,6 +264,7 @@ function ClerkAuthInner({ children }) {
             profile_visible: updates.profile_visible,
             show_activity_to_hosts: updates.show_activity_to_hosts,
             notification_prefs: updates.notification_prefs,
+            google_wallet_push_enabled: updates.google_wallet_push_enabled,
             preferred_language: updates.preferred_language,
             preferred_currency: updates.preferred_currency,
             timezone: updates.timezone,

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation } from 'convex/react';
+import { Handshake } from 'lucide-react';
 import { api } from '../../../convex/_generated/api';
 
 const INK   = '#192524';
@@ -109,7 +110,7 @@ export default function CollabOversight() {
       {/* ── Empty state ── */}
       {filtered.length === 0 && (
         <div style={{ background: '#fff', border: '1px solid rgba(25,37,36,0.07)', borderRadius: '0.875rem', padding: '2rem', textAlign: 'center' }}>
-          <p style={{ fontSize: '2rem', margin: '0 0 0.5rem' }}>🤝</p>
+          <Handshake size={28} strokeWidth={1.5} color={SAGE} style={{ display: 'block', margin: '0 auto 0.5rem' }} />
           <p style={{ color: SAGE, fontSize: '0.85rem', margin: 0 }}>
             {collabs.length === 0
               ? 'No collaborations on the platform yet.'

@@ -24,6 +24,7 @@ function fmt(n) {
 export default function AdminOverview() {
   const { profile } = useAuth();
   const stats        = useQuery(api.blog.getPlatformStats);
+  const analytics    = useQuery(api.admin.getAnalytics);
   const unreadCount  = useQuery(api.messages.getUnreadCount);
   const unverified   = useQuery(api.profiles.getUnverified);
   const drafts       = useQuery(api.blog.getDrafts);
@@ -58,7 +59,7 @@ export default function AdminOverview() {
     { label: 'Creators',        value: fmt(stats?.creators),        tab: 'users' },
     { label: 'Hosts',           value: fmt(stats?.hosts),           tab: 'users', view: 'hosts' },
     { label: 'Active listings', value: fmt(stats?.activeListings),  tab: 'listings' },
-    { label: 'Collabs',         value: fmt(stats?.approvedCollabs), tab: 'collabs' },
+    { label: 'Collabs',         value: fmt((analytics?.approvedCollabs ?? 0) + (analytics?.completedCollabs ?? 0)), tab: 'collabs' },
     {
       label: 'Ready to confirm today',
       value: `${queuedCreators + queuedHosts}/100`,

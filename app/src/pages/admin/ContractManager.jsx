@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation } from 'convex/react';
+import { FileText } from 'lucide-react';
 import { api } from '../../../convex/_generated/api';
 import { PayoutBadge, PayoutHoldControls, SendWisePayoutButton } from '../../components/admin/PayoutControls';
 
@@ -124,7 +125,7 @@ export default function ContractManager() {
       {/* ── Empty ── */}
       {contracts !== undefined && filtered.length === 0 && (
         <div style={{ padding: '3rem', textAlign: 'center', background: '#fff', border: '1px solid rgba(25,37,36,0.07)', borderRadius: '0.875rem' }}>
-          <p style={{ fontSize: '2rem', margin: '0 0 0.5rem' }}>📄</p>
+          <FileText size={28} strokeWidth={1.5} color={SAGE} style={{ display: 'block', margin: '0 auto 0.5rem' }} />
           <p style={{ color: SAGE, fontSize: '0.85rem', margin: 0 }}>
             {contracts.length === 0
               ? 'No contracts have been created on the platform yet.'

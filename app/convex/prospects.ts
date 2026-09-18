@@ -1923,6 +1923,36 @@ export const enrichProspectLocal = mutation({
   },
 });
 
+// Read-side counterpart to enrichProspectLocal above: confirmed-and-beyond
+// prospects (any CRM stage past 'new' — queued/emailed/contacted/replied/
+// signed) that are still missing a website or email, shaped straight for
+// enrich-via-maps.py's targets.json input. Secret-gated the same way, since
+// it's read by a local script rather than the app.
+export const getConfirmedForEnrichmentLocal = query({
+  args: { secret: v.string(), kind: v.optional(v.string()) },
+  handler: async (ctx, { secret, kind }) => {
+    const expected = process.env.LOCAL_IMPORT_SECRET;
+    if (!expected || secret !== expected) throw new Error("Invalid or missing import secret.");
+    const kinds = kind ? [kind] : ["host", "creator"];
+    const confirmedStatuses = ["queued", "emailed", "contacted", "replied", "signed"];
+    const out: { instagram_handle: string; display_name?: string; location?: string }[] = [];
+    for (const k of kinds) {
+      for (const status of confirmedStatuses) {
+        const rows = await ctx.db
+          .query("prospects")
+          .withIndex("by_kind_status", (q) => q.eq("kind", k).eq("status", status))
+          .collect();
+        for (const r of rows) {
+          if (!r.website || !r.email) {
+            out.push({ instagram_handle: r.instagram_handle, display_name: r.display_name, location: r.location || r.country });
+          }
+        }
+      }
+    }
+    return out;
+  },
+});
+
 // Draft a personalized outreach DM with the writer LLM (NVIDIA chain) and save
 // it on the prospect. The DM itself is still sent manually — ToS safety.
 // Hosts always use the 5 fixed angle templates (angleId picks one explicitly,

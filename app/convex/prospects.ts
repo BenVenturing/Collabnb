@@ -1953,6 +1953,74 @@ export const getConfirmedForEnrichmentLocal = query({
   },
 });
 
+export const getByHandleForConfirmInternal = internalQuery({
+  args: { handle: v.string() },
+  handler: async (ctx, { handle }) => {
+    return await ctx.db
+      .query("prospects")
+      .withIndex("by_handle", (q) => q.eq("instagram_handle", handle))
+      .first();
+  },
+});
+
+export const confirmCreatorInternal = internalMutation({
+  args: { id: v.id("prospects") },
+  handler: async (ctx, { id }) => {
+    const p = await ctx.db.get(id);
+    const log = (p as any)?.outreach_log || [];
+    await ctx.db.patch(id, {
+      status: "queued",
+      queued_for: todayKey(),
+      outreach_log: [...log, { at: Date.now(), type: "confirmed" }],
+    });
+  },
+});
+
+// Local-secret-gated counterpart to "Build fresh 20" — promotes already-
+// imported 'new' prospects straight to the CRM's Confirmed column, matched
+// by handle, without needing a live admin login. Hosts get the same drafted-
+// DM treatment as the dashboard button; creators just get queued. Silently
+// skips a handle that isn't found or isn't still at 'new' (already
+// confirmed, or never imported), rather than erroring the whole batch.
+export const confirmProspectsLocal = action({
+  args: {
+    secret: v.string(),
+    handles: v.array(v.string()),
+    kind: v.union(v.literal("host"), v.literal("creator")),
+  },
+  handler: withSurfacedErrors(async (ctx, { secret, handles, kind }) => {
+    const expected = process.env.LOCAL_IMPORT_SECRET;
+    if (!expected || secret !== expected) throw new Error("Invalid or missing import secret.");
+
+    let templates: typeof HOST_OUTREACH_TEMPLATES | null = null;
+    let counts: Record<string, number> = {};
+    if (kind === "host") {
+      templates = await resolveHostOutreachTemplates(ctx);
+      counts = await ctx.runQuery(internal.prospects.getHostAngleCounts, {});
+    }
+
+    let confirmed = 0;
+    let skipped = 0;
+    for (const raw of handles) {
+      const handle = raw.replace(/^@/, "").trim().toLowerCase();
+      if (!handle) { skipped++; continue; }
+      const p: any = await ctx.runQuery(internal.prospects.getByHandleForConfirmInternal, { handle });
+      if (!p || p.status !== "new") { skipped++; continue; }
+
+      if (kind === "host") {
+        const angle = nextAngle(templates!, counts);
+        counts[angle.id] = (counts[angle.id] || 0) + 1;
+        const dmDraft = await draftHostMessage(p, angle);
+        await ctx.runMutation(internal.prospects.confirmDraft, { id: p._id, dmDraft, dmAngle: angle.id });
+      } else {
+        await ctx.runMutation(internal.prospects.confirmCreatorInternal, { id: p._id });
+      }
+      confirmed++;
+    }
+    return { confirmed, skipped };
+  }),
+});
+
 // Draft a personalized outreach DM with the writer LLM (NVIDIA chain) and save
 // it on the prospect. The DM itself is still sent manually — ToS safety.
 // Hosts always use the 5 fixed angle templates (angleId picks one explicitly,

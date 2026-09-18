@@ -935,7 +935,7 @@ export const unblockUser = mutation({
 export const deleteProfile = mutation({
   args: { profileId: v.id("profiles") },
   handler: async (ctx, args) => {
-    await requireOwnerOrAdmin(ctx, args.profileId);
+    const caller = await requireOwnerOrAdmin(ctx, args.profileId);
     const profile = await ctx.db.get(args.profileId);
     if (!profile) return { deleted: false, reason: "Profile not found" };
 
@@ -958,6 +958,33 @@ export const deleteProfile = mutation({
     const collabsAsHost = await ctx.db.query("collaborations").withIndex("by_host", (q) => q.eq("host_id", pId)).collect();
     const collabs = [...collabsAsCreator, ...collabsAsHost];
     await Promise.all(collabs.map((c) => ctx.db.delete(c._id)));
+
+    // Archive the billing trail + basic identity before everything else is
+    // gone — deleteProfile is permanent, this is the only record left after.
+    await ctx.db.insert("deleted_user_archives", {
+      profile_id: pId,
+      full_name: profile.full_name,
+      email: profile.email,
+      role: profile.role,
+      username: profile.username,
+      is_founder: profile.is_founder,
+      is_verified: profile.is_verified,
+      joined_at: profile._creationTime,
+      stripe_customer_id: profile.stripe_customer_id,
+      stripe_card_brand: profile.stripe_card_brand,
+      stripe_card_last4: profile.stripe_card_last4,
+      subscription_status: profile.subscription_status,
+      subscription_tier: profile.subscription_tier,
+      subscription_expires_at: profile.subscription_expires_at,
+      payout_method: profile.payout_method,
+      stripe_connect_account_id: profile.stripe_connect_account_id,
+      wise_recipient_id: profile.wise_recipient_id,
+      collab_count: collabs.length,
+      pitch_count: pitches.length,
+      profile_snapshot: JSON.stringify(profile),
+      deleted_at: Date.now(),
+      deleted_by: caller.full_name || caller.email,
+    });
 
     // Delete direct-message threads (owner, participant, or linked to one of
     // the collaborations above) and every message inside them

@@ -545,6 +545,36 @@ export default defineSchema({
     created_at: v.number(),
   }).index("by_action", ["action"]),
 
+  // Snapshot taken by profiles.deleteProfile right before a user's data is
+  // cascade-deleted — keeps the billing trail (Stripe/payout ids) and basic
+  // identity around for bookkeeping even after everything else is gone.
+  // profile_snapshot is the full original profile document, JSON-stringified,
+  // as a complete backstop beyond the structured fields below.
+  deleted_user_archives: defineTable({
+    profile_id: v.string(),
+    full_name: v.string(),
+    email: v.string(),
+    role: v.string(),
+    username: v.optional(v.string()),
+    is_founder: v.optional(v.boolean()),
+    is_verified: v.optional(v.boolean()),
+    joined_at: v.number(),
+    stripe_customer_id: v.optional(v.string()),
+    stripe_card_brand: v.optional(v.string()),
+    stripe_card_last4: v.optional(v.string()),
+    subscription_status: v.optional(v.string()),
+    subscription_tier: v.optional(v.string()),
+    subscription_expires_at: v.optional(v.number()),
+    payout_method: v.optional(v.string()),
+    stripe_connect_account_id: v.optional(v.string()),
+    wise_recipient_id: v.optional(v.string()),
+    collab_count: v.optional(v.number()),
+    pitch_count: v.optional(v.number()),
+    profile_snapshot: v.string(),
+    deleted_at: v.number(),
+    deleted_by: v.optional(v.string()),
+  }).index("by_deleted_at", ["deleted_at"]),
+
   broadcasts: defineTable({
     audience: v.string(),
     subject: v.string(),

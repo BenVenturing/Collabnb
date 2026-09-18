@@ -523,6 +523,16 @@ export const getAuditLog = query({
   },
 });
 
+// Billing/identity snapshots left behind by profiles.deleteProfile — the only
+// record of a deleted user's Stripe/payout trail once their profile is gone.
+export const getDeletedUserArchives = query({
+  args: {},
+  handler: async (ctx) => {
+    if (!(await canAccessAdmin(ctx))) return [];
+    return await ctx.db.query("deleted_user_archives").withIndex("by_deleted_at").order("desc").take(200);
+  },
+});
+
 export const addAuditEntry = mutation({
   args: { action: v.string(), targetType: v.string(), targetId: v.string(), details: v.optional(v.string()) },
   handler: async (ctx, args) => {

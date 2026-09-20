@@ -49,11 +49,12 @@ function fmtTime(ts) {
 
 function Avatar({ name, src, size = 40, unread = 0 }) {
   const initials = name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase();
+  const [failed, setFailed] = useState(false);
   return (
     <div style={{ position: 'relative', flexShrink: 0, width: size, height: size }}>
       <div style={{ width: size, height: size, borderRadius: '50%', overflow: 'hidden', background: 'var(--mint)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        {src ? (
-          <img src={src} alt={name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        {src && !failed ? (
+          <img src={src} alt={name} onError={() => setFailed(true)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
         ) : (
           <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, color: 'var(--slate)', fontSize: size * 0.32 }}>{initials}</span>
         )}
@@ -65,8 +66,14 @@ function Avatar({ name, src, size = 40, unread = 0 }) {
   );
 }
 
-function ThreadRow({ thread, active, onClick }) {
+function ThreadRow({ thread, active, onClick, onDelete }) {
+  const [hover, setHover] = useState(false);
   return (
+    <div
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      style={{ position: 'relative' }}
+    >
     <button
       onClick={onClick}
       style={{
@@ -91,6 +98,21 @@ function ThreadRow({ thread, active, onClick }) {
         </p>
       </div>
     </button>
+    {hover && (
+      <button
+        onClick={(e) => { e.stopPropagation(); onDelete(thread); }}
+        title="Delete conversation"
+        style={{
+          position: 'absolute', top: 8, right: 8, width: 22, height: 22, borderRadius: '50%',
+          border: '1px solid rgba(185,28,28,0.25)', background: 'rgba(255,255,255,0.95)',
+          color: '#B91C1C', cursor: 'pointer', display: 'flex', alignItems: 'center',
+          justifyContent: 'center', fontSize: 13, lineHeight: 1, padding: 0,
+        }}
+      >
+        ×
+      </button>
+    )}
+    </div>
   );
 }
 
@@ -167,6 +189,50 @@ const AI_SUGGESTIONS = [
   'Check in and see how it’s going…',
 ];
 
+function MessageBubble({ b, onDelete }) {
+  const [hover, setHover] = useState(false);
+  return (
+    <div
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      style={{ display: 'flex', justifyContent: b.mine ? 'flex-end' : 'flex-start', alignItems: 'center', gap: 6 }}
+    >
+      {b.mine && (
+        <button
+          onClick={() => onDelete(b)}
+          title="Delete message"
+          aria-label="Delete message"
+          style={{ visibility: hover ? 'visible' : 'hidden', border: 'none', background: 'none', color: '#B91C1C', cursor: 'pointer', fontSize: 14, lineHeight: 1, padding: 2 }}
+        >
+          ×
+        </button>
+      )}
+      <div style={{
+        maxWidth: '72%', padding: '8px 14px', borderRadius: 16,
+        background: b.mine ? 'var(--slate)' : 'rgba(255,255,255,0.9)',
+        color: b.mine ? 'var(--bone)' : 'var(--ink)',
+        fontSize: 13, lineHeight: 1.5, whiteSpace: 'pre-wrap',
+        borderBottomRightRadius: b.mine ? 4 : 16,
+        borderBottomLeftRadius: b.mine ? 16 : 4,
+        border: b.mine ? 'none' : '1px solid rgba(25,37,36,0.08)',
+      }}>
+        {b.text}
+        <div style={{ fontSize: 9, marginTop: 3, opacity: 0.6, textAlign: b.mine ? 'right' : 'left' }}>{b.time}</div>
+      </div>
+      {!b.mine && (
+        <button
+          onClick={() => onDelete(b)}
+          title="Delete message"
+          aria-label="Delete message"
+          style={{ visibility: hover ? 'visible' : 'hidden', border: 'none', background: 'none', color: '#B91C1C', cursor: 'pointer', fontSize: 14, lineHeight: 1, padding: 2 }}
+        >
+          ×
+        </button>
+      )}
+    </div>
+  );
+}
+
 function Conversation({ thread, persona }) {
   const [draft, setDraft] = useState(SIGN_BLOCK);
   const [sending, setSending] = useState(false);
@@ -178,6 +244,13 @@ function Conversation({ thread, persona }) {
   const firstName = (thread.participant_name || 'there').split(' ')[0];
   const messages = useQuery(api.threadMessages.getByThread, { threadKey: thread.thread_key });
   const send = useMutation(api.threadMessages.sendMessage);
+  const deleteMessage = useMutation(api.adminThreads.deleteMessage);
+
+  const removeMessage = async (b) => {
+    if (!window.confirm('Delete this message? It disappears for the recipient too.')) return;
+    try { await deleteMessage({ messageId: String(b.id) }); }
+    catch (err) { window.alert(err?.data || err?.message || 'Could not delete that message.'); }
+  };
   const draftMessage = useAction(api.adminThreads.draftMessage);
 
   // The message body is everything before the trailing signature block.
@@ -268,20 +341,7 @@ function Conversation({ thread, persona }) {
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {bubbles.map(b => (
-              <div key={b.id} style={{ display: 'flex', justifyContent: b.mine ? 'flex-end' : 'flex-start' }}>
-                <div style={{
-                  maxWidth: '72%', padding: '8px 14px', borderRadius: 16,
-                  background: b.mine ? 'var(--slate)' : 'rgba(255,255,255,0.9)',
-                  color: b.mine ? 'var(--bone)' : 'var(--ink)',
-                  fontSize: 13, lineHeight: 1.5, whiteSpace: 'pre-wrap',
-                  borderBottomRightRadius: b.mine ? 4 : 16,
-                  borderBottomLeftRadius: b.mine ? 16 : 4,
-                  border: b.mine ? 'none' : '1px solid rgba(25,37,36,0.08)',
-                }}>
-                  {b.text}
-                  <div style={{ fontSize: 9, marginTop: 3, opacity: 0.6, textAlign: b.mine ? 'right' : 'left' }}>{b.time}</div>
-                </div>
-              </div>
+              <MessageBubble key={b.id} b={b} onDelete={removeMessage} />
             ))}
           </div>
         )}
@@ -424,8 +484,17 @@ export default function AdminInbox() {
   const messagable = useQuery(api.profiles.listMessagable) ?? [];
   const startThread = useMutation(api.adminThreads.startWithUser);
   const markThreadRead = useMutation(api.adminThreads.markRead);
+  const deleteThread = useMutation(api.adminThreads.deleteThread);
 
   const [selectedKey, setSelectedKey] = useState(null);
+
+  const removeThread = async (thread) => {
+    if (!window.confirm(`Delete the whole conversation with ${thread.participant_name}? Every message in it is removed for them too, and this can't be undone.`)) return;
+    try {
+      await deleteThread({ threadKey: thread.thread_key });
+      setSelectedKey((k) => (k === thread.thread_key ? null : k));
+    } catch (err) { window.alert(err?.data || err?.message || 'Could not delete that conversation.'); }
+  };
   const [pickerOpen, setPickerOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [photoUploading, setPhotoUploading] = useState(false);
@@ -552,7 +621,7 @@ export default function AdminInbox() {
                 No conversations yet. Click <strong>+</strong> to welcome a creator or host.
               </p>
             ) : threads.map(t => (
-              <ThreadRow key={t._id} thread={t} active={t.thread_key === selectedKey} onClick={() => setSelectedKey(t.thread_key)} />
+              <ThreadRow key={t._id} thread={t} active={t.thread_key === selectedKey} onClick={() => setSelectedKey(t.thread_key)} onDelete={removeThread} />
             ))}
           </div>
         </div>

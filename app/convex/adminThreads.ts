@@ -217,6 +217,42 @@ export const markRead = mutation({
 });
 
 
+// Delete one message from an admin conversation. Removes it for the
+// participant too — there is only one copy of a thread message.
+export const deleteMessage = mutation({
+  args: { messageId: v.string() },
+  handler: async (ctx, { messageId }) => {
+    await requireAdmin(ctx);
+    const docId = ctx.db.normalizeId("thread_messages", messageId);
+    const msg = docId ? await ctx.db.get(docId) : null;
+    if (!msg) return { deleted: false };
+    await ctx.db.delete(msg._id);
+    return { deleted: true };
+  },
+});
+
+// Delete a whole admin conversation — the thread row plus every message in it.
+// The participant loses their copy as well (single shared thread).
+export const deleteThread = mutation({
+  args: { threadKey: v.string() },
+  handler: async (ctx, { threadKey }) => {
+    await requireAdmin(ctx);
+    const msgs = await ctx.db
+      .query("thread_messages")
+      .withIndex("by_thread", (q) => q.eq("thread_key", threadKey))
+      .collect();
+    for (const m of msgs) await ctx.db.delete(m._id);
+
+    const rows = await ctx.db
+      .query("threads")
+      .withIndex("by_thread_key", (q) => q.eq("thread_key", threadKey))
+      .collect();
+    for (const r of rows) await ctx.db.delete(r._id);
+
+    return { messagesDeleted: msgs.length, threadsDeleted: rows.length };
+  },
+});
+
 // AI-draft an admin message to a specific user via the writer LLM (NVIDIA chain).
 // `prompt` is Ben's short intent ("welcome them", "ask about their niche"); the
 // model expands it into a full message body. The signature is added client-side,

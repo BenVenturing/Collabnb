@@ -208,13 +208,22 @@ export default function Settings() {
   const blockUserMutation = useMutation(api.profiles.blockUser);
   const unblockUserMutation = useMutation(api.profiles.unblockUser);
   const generateWalletSaveLink = useAction(api.googleWallet.generateSaveLink);
+  const generateAppleDownloadLink = useAction(api.appleWallet.generateDownloadLink);
+  const appleWalletConfigured = useQuery(api.appleWallet.isConfigured);
   const acceptWalletTerms = useMutation(api.profiles.acceptWalletTerms);
   const [portalLoading, setPortalLoading] = useState(false);
   const [walletBusy, setWalletBusy] = useState(false);
   const [walletError, setWalletError] = useState('');
   const [walletSaveUrl, setWalletSaveUrl] = useState(null);
   const [walletConsentOpen, setWalletConsentOpen] = useState(false);
+  // Which platform the open consent panel should continue into on "Agree" —
+  // one shared consent (profile.wallet_terms_accepted_at) covers both.
+  const [walletConsentTarget, setWalletConsentTarget] = useState('google');
   const walletQrRef = useRef(null);
+  const [appleBusy, setAppleBusy] = useState(false);
+  const [appleError, setAppleError] = useState('');
+  const [appleDownloadUrl, setAppleDownloadUrl] = useState(null);
+  const appleQrRef = useRef(null);
   const [policyExpanded, setPolicyExpanded] = useState(false);
   const [cardBusy, setCardBusy] = useState(false);
   const [cardError, setCardError] = useState('');
@@ -312,16 +321,27 @@ export default function Settings() {
 
   function handleAddToGoogleWalletClick() {
     if (!profile?.wallet_terms_accepted_at) {
+      setWalletConsentTarget('google');
       setWalletConsentOpen(true);
       return;
     }
     handleAddToGoogleWallet();
   }
 
+  function handleAddToAppleWalletClick() {
+    if (!profile?.wallet_terms_accepted_at) {
+      setWalletConsentTarget('apple');
+      setWalletConsentOpen(true);
+      return;
+    }
+    handleAddToAppleWallet();
+  }
+
   async function handleAcceptWalletTermsAndContinue() {
     setWalletConsentOpen(false);
     try { await acceptWalletTerms({ profileId: userId }); } catch { /* best-effort; retry next click if it failed */ }
-    handleAddToGoogleWallet();
+    if (walletConsentTarget === 'apple') handleAddToAppleWallet();
+    else handleAddToGoogleWallet();
   }
 
   async function handleAddToGoogleWallet() {
@@ -337,12 +357,30 @@ export default function Settings() {
     }
   }
 
+  async function handleAddToAppleWallet() {
+    setAppleBusy(true);
+    setAppleError('');
+    try {
+      const { downloadUrl } = await generateAppleDownloadLink({ profileId: userId });
+      setAppleDownloadUrl(downloadUrl);
+    } catch (err) {
+      setAppleError(err?.message || "Couldn't connect Apple Wallet — please try again.");
+    } finally {
+      setAppleBusy(false);
+    }
+  }
+
   // Rendered entirely client-side (no network call) — generated fresh each
   // time so it never needs a third-party QR service.
   useEffect(() => {
     if (!walletSaveUrl || !walletQrRef.current) return;
     QRCode.toCanvas(walletQrRef.current, walletSaveUrl, { width: 190, margin: 1 }).catch(() => {});
   }, [walletSaveUrl]);
+
+  useEffect(() => {
+    if (!appleDownloadUrl || !appleQrRef.current) return;
+    QRCode.toCanvas(appleQrRef.current, appleDownloadUrl, { width: 190, margin: 1 }).catch(() => {});
+  }, [appleDownloadUrl]);
 
   // Onboarding checklist "Get phone alerts" links here with ?wallet=setup —
   // open the consent/QR flow straight away instead of making them find the
@@ -364,6 +402,19 @@ export default function Settings() {
       </p>
       <ul style={{ margin: 0, paddingLeft: '1.1rem', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
         {['googleWalletExplainerWhat', 'googleWalletExplainerPlatforms', 'googleWalletExplainerAccount'].map((k) => (
+          <li key={k} style={{ fontSize: '0.76rem', color: 'var(--slate)', lineHeight: 1.5 }}>{t(`notifications.${k}`)}</li>
+        ))}
+      </ul>
+    </div>
+  );
+
+  const appleWalletExplainer = (
+    <div style={{ width: '100%', textAlign: 'left' }}>
+      <p style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--ink)', margin: '0 0 0.4rem' }}>
+        {t('notifications.appleWalletExplainerTitle')}
+      </p>
+      <ul style={{ margin: 0, paddingLeft: '1.1rem', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+        {['appleWalletExplainerWhat', 'appleWalletExplainerPlatforms', 'appleWalletExplainerAccount'].map((k) => (
           <li key={k} style={{ fontSize: '0.76rem', color: 'var(--slate)', lineHeight: 1.5 }}>{t(`notifications.${k}`)}</li>
         ))}
       </ul>
@@ -725,11 +776,11 @@ export default function Settings() {
                     </button>
                   </div>
                   {walletError && <p style={{ fontSize: '0.78rem', color: '#dc2626', margin: '0.6rem 0 0' }}>{walletError}</p>}
-                  {walletConsentOpen && (
+                  {walletConsentOpen && walletConsentTarget === 'google' && (
                     <div style={{ marginTop: '1rem', padding: '1.1rem', background: 'rgba(25,37,36,0.03)', border: '1px solid rgba(60,87,89,0.12)', borderRadius: '0.9rem' }}>
                       <div style={{ marginBottom: '0.85rem' }}>{walletExplainer}</div>
                       <p style={{ fontSize: '0.78rem', color: 'var(--ink)', margin: '0 0 0.75rem', lineHeight: 1.6 }}>
-                        {t('notifications.googleWalletConsentText')}
+                        {t('notifications.walletConsentText')}
                       </p>
                       <div style={{ display: 'flex', gap: '0.6rem' }}>
                         <button
@@ -784,6 +835,97 @@ export default function Settings() {
                     checked={profile?.google_wallet_push_enabled !== false}
                     onChange={() => updateProfile({ google_wallet_push_enabled: profile?.google_wallet_push_enabled === false })}
                   />
+                )}
+
+                {/* Hidden until appleWallet.isConfigured — no button that would
+                    just error while credentials aren't set up yet. */}
+                {appleWalletConfigured && (
+                  <div style={{ padding: '1.1rem 0', borderBottom: '1px solid var(--hairline)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
+                      <div style={{ minWidth: 0 }}>
+                        <p style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--ink)', margin: '0 0 0.2rem' }}>{t('notifications.appleWallet')}</p>
+                        <p style={{ fontSize: '0.8rem', color: 'var(--sage)', margin: 0, lineHeight: 1.5 }}>
+                          {profile?.apple_pass_serial ? t('notifications.appleWalletLinkedValue') : t('notifications.appleWalletValue')}
+                        </p>
+                      </div>
+                      <button
+                        onClick={appleBusy ? undefined : handleAddToAppleWalletClick}
+                        disabled={appleBusy}
+                        aria-label={t('notifications.appleWalletConnect')}
+                        style={{
+                          background: '#000', color: '#fff', border: 'none', borderRadius: '0.5rem',
+                          padding: '0.7rem 1.1rem', height: 48, boxSizing: 'border-box',
+                          display: 'flex', alignItems: 'center', gap: '0.4rem',
+                          cursor: appleBusy ? 'default' : 'pointer', opacity: appleBusy ? 0.6 : 1,
+                          fontSize: '0.85rem', fontWeight: 600, fontFamily: '-apple-system, var(--font-body)', flexShrink: 0,
+                        }}
+                      >
+                        {t('notifications.appleWalletConnect')}
+                      </button>
+                    </div>
+                    {appleError && <p style={{ fontSize: '0.78rem', color: '#dc2626', margin: '0.6rem 0 0' }}>{appleError}</p>}
+                    {walletConsentOpen && walletConsentTarget === 'apple' && (
+                      <div style={{ marginTop: '1rem', padding: '1.1rem', background: 'rgba(25,37,36,0.03)', border: '1px solid rgba(60,87,89,0.12)', borderRadius: '0.9rem' }}>
+                        <div style={{ marginBottom: '0.85rem' }}>{appleWalletExplainer}</div>
+                        <p style={{ fontSize: '0.78rem', color: 'var(--ink)', margin: '0 0 0.75rem', lineHeight: 1.6 }}>
+                          {t('notifications.walletConsentText')}
+                        </p>
+                        <div style={{ display: 'flex', gap: '0.6rem' }}>
+                          <button
+                            onClick={handleAcceptWalletTermsAndContinue}
+                            style={{ fontSize: '0.82rem', fontWeight: 700, color: '#fff', background: 'var(--ink)', border: 'none', borderRadius: 999, padding: '0.5rem 1.1rem', cursor: 'pointer', fontFamily: 'var(--font-body)' }}
+                          >
+                            {t('notifications.googleWalletConsentAgree')}
+                          </button>
+                          <button
+                            onClick={() => setWalletConsentOpen(false)}
+                            style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--slate)', background: 'none', border: '1.5px solid rgba(25,37,36,0.15)', borderRadius: 999, padding: '0.5rem 1.1rem', cursor: 'pointer', fontFamily: 'var(--font-body)' }}
+                          >
+                            {t('notifications.googleWalletConsentCancel')}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                    {appleDownloadUrl && (
+                      <div style={{ marginTop: '1rem', padding: '1.1rem', background: 'rgba(25,37,36,0.03)', border: '1px solid rgba(60,87,89,0.12)', borderRadius: '0.9rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}>
+                        {appleWalletExplainer}
+                        <p style={{ fontSize: '0.8rem', color: 'var(--slate)', margin: '0.25rem 0 0', fontWeight: 600, textAlign: 'center' }}>{t('notifications.appleWalletScanPrompt')}</p>
+                        <canvas ref={appleQrRef} style={{ borderRadius: '0.5rem' }} />
+                        <a
+                          href={appleDownloadUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={{ fontSize: '0.82rem', fontWeight: 700, color: '#fff', background: 'var(--ink)', borderRadius: 999, padding: '0.55rem 1.25rem', textDecoration: 'none' }}
+                        >
+                          {t('notifications.appleWalletOpenDirectly')}
+                        </a>
+                        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', width: '100%' }}>
+                          <input
+                            readOnly
+                            value={appleDownloadUrl}
+                            onFocus={(e) => e.target.select()}
+                            style={{ flex: 1, minWidth: 0, fontSize: '0.7rem', color: 'var(--slate)', border: '1px solid rgba(60,87,89,0.18)', borderRadius: '0.5rem', padding: '0.4rem 0.6rem', fontFamily: 'monospace', background: 'rgba(255,255,255,0.7)' }}
+                          />
+                          <button
+                            onClick={() => navigator.clipboard?.writeText(appleDownloadUrl)}
+                            style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--slate)', background: 'none', border: '1.5px solid rgba(25,37,36,0.15)', borderRadius: '0.5rem', padding: '0.4rem 0.7rem', cursor: 'pointer', fontFamily: 'var(--font-body)', flexShrink: 0 }}
+                          >
+                            {t('billing.copy')}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                    {profile?.apple_pass_serial && (
+                      <div style={{ marginTop: '0.5rem' }}>
+                        <ToggleRow
+                          label={t('notifications.appleWalletPushToggle')}
+                          sublabel={t('notifications.appleWalletPushToggleDesc')}
+                          checked={profile?.apple_pass_push_enabled !== false}
+                          onChange={() => updateProfile({ apple_pass_push_enabled: profile?.apple_pass_push_enabled === false })}
+                        />
+                      </div>
+                    )}
+                  </div>
                 )}
 
                 <SectionLabel>{t('notifications.sectionPreferences')}</SectionLabel>

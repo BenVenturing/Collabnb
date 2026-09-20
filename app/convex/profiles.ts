@@ -869,6 +869,7 @@ export const updateProfile = mutation({
         marketing: v.optional(v.boolean()),
       })),
       google_wallet_push_enabled: v.optional(v.boolean()),
+      apple_pass_push_enabled: v.optional(v.boolean()),
       preferred_language: v.optional(v.string()),
       preferred_currency: v.optional(v.string()),
       timezone: v.optional(v.string()),

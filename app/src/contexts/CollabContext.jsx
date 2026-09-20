@@ -142,12 +142,10 @@ export function CollabProvider({ children }) {
   // context's local `threads` state, so it wouldn't reach the user's Inbox.
   const myAdminThread = useQuery(api.adminThreads.getMineAsUser, ownerId ? {} : 'skip');
 
-  // The user's own one-way "Notifications" thread, if any — same merge as
-  // above, but Inbox.jsx hides the reply composer for its tag.
-  const myNotificationsThread = useQuery(
-    api.adminThreads.getMineAsUser,
-    ownerId ? { personaUsername: 'notifications' } : 'skip'
-  );
+  // Deliberately NOT loading api.adminThreads.getMineAsUser for the
+  // "notifications" persona here — those broadcasts are phone-push-only by
+  // design (see threadMessages.sendMessage), so they must never surface in
+  // the Inbox thread list, only as a Google Wallet lock-screen push.
 
   // Real threads someone else started with me directly (e.g. a creator
   // messaging a host before applying) — same "not otherwise loaded" gap as
@@ -777,14 +775,11 @@ export function CollabProvider({ children }) {
     if (myAdminThread && !result.some((t) => t.thread_key === myAdminThread.thread_key)) {
       result = [myAdminThread, ...result];
     }
-    if (myNotificationsThread && !result.some((t) => t.thread_key === myNotificationsThread.thread_key)) {
-      result = [myNotificationsThread, ...result];
-    }
     const knownKeys = new Set(result.map((t) => t.thread_key).filter(Boolean));
     const newIncoming = incomingThreadsRaw.filter((t) => !knownKeys.has(t.thread_key));
     if (newIncoming.length) result = [...newIncoming, ...result];
     return result;
-  }, [threads, myAdminThread, myNotificationsThread, incomingThreadsRaw]);
+  }, [threads, myAdminThread, incomingThreadsRaw]);
 
   // Give each listing conversation with the same counterpart its own color, so
   // the colors mean something without any manual setup. Only groups of 2+ are

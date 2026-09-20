@@ -126,6 +126,16 @@ export default defineSchema({
     // the short wallet-pass consent shown in Settings, before their first
     // "Add to Google Wallet" — required once, never re-shown after.
     wallet_terms_accepted_at: v.optional(v.number()),
+    // Apple Wallet counterpart to the google_wallet_* fields above — see
+    // appleWallet.ts. serial is this pass's unique identifier (mirrors
+    // google_wallet_object_id); updated_at is the "tag" PassKit's
+    // passesUpdatedSince polling compares against.
+    apple_pass_serial: v.optional(v.string()),
+    apple_pass_updated_at: v.optional(v.number()),
+    apple_pass_push_enabled: v.optional(v.boolean()),
+    // Last pushed text — re-embedded into pass.json's backFields on every
+    // rebuild so Apple's changeMessage push banner shows the real content.
+    apple_pass_latest_message: v.optional(v.string()),
     // Last time this host was sent the "conversations awaiting your reply"
     // digest (cron: checkAwaitingReply). Gates the repeat interval.
     last_reply_nudge_at: v.optional(v.number()),
@@ -160,7 +170,8 @@ export default defineSchema({
     ambassador_ref: v.optional(v.string()),
   }).index("by_email", ["email"]).index("by_clerk_user_id", ["clerk_user_id"])
     .index("by_stripe_customer", ["stripe_customer_id"])
-    .index("by_stripe_connect_account", ["stripe_connect_account_id"]),
+    .index("by_stripe_connect_account", ["stripe_connect_account_id"])
+    .index("by_apple_pass_serial", ["apple_pass_serial"]),
 
   listings: defineTable({
     title: v.string(),
@@ -930,6 +941,22 @@ export default defineSchema({
     count: v.number(),
     windowStart: v.number(),
   }).index("by_key", ["key"]),
+
+  // Apple's PassKit web service protocol requires the issuer to track which
+  // physical devices have a given pass installed, so an update push (APNs)
+  // can be sent to each of them — unlike Google Wallet, where Google tracks
+  // this and addMessage is all we call. One row per (device, pass) pair; a
+  // pass can be on several devices (e.g. iPhone + iPad) and a device can hold
+  // several Collabnb passes only in theory (one per profile in practice).
+  apple_pass_registrations: defineTable({
+    device_library_identifier: v.string(),
+    pass_type_identifier: v.string(),
+    serial_number: v.string(),
+    push_token: v.string(),
+  })
+    .index("by_device_and_serial", ["device_library_identifier", "serial_number"])
+    .index("by_serial", ["serial_number"])
+    .index("by_device", ["device_library_identifier"]),
 
   // A host/creator's own AI provider key (BYO), used to draft (never
   // auto-send) reply suggestions in Inbox. encrypted_key/iv are AES-GCM

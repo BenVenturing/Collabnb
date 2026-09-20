@@ -536,4 +536,152 @@ http.route({
   }),
 });
 
+// ─── Apple Wallet — PassKit web service protocol + our own distribution link ─
+// See appleWallet.ts for the setup comment. Nothing here does anything until
+// Apple credentials are configured (every branch just 404s until then).
+
+// Our own "Add to Apple Wallet" link (not part of Apple's spec — Apple only
+// standardizes what happens *after* a pass is added, not how someone first
+// gets it). A stateless HMAC-signed token verifies the request server-side;
+// Safari recognizes the pkpass content-type and offers to add it.
+http.route({
+  pathPrefix: "/apple-wallet/download/",
+  method: "GET",
+  handler: httpAction(async (ctx, request) => {
+    const url = new URL(request.url);
+    const token = url.pathname.slice("/apple-wallet/download/".length);
+    const pkpass = await ctx.runAction(internal.appleWallet.buildPkpassForDownloadToken, { token });
+    if (!pkpass) return new Response("Not found", { status: 404 });
+    return new Response(pkpass, {
+      status: 200,
+      headers: {
+        "Content-Type": "application/vnd.apple.pkpass",
+        "Content-Disposition": 'attachment; filename="collabnb.pkpass"',
+      },
+    });
+  }),
+});
+
+// Registration endpoints. Path shape (Apple's spec, not ours):
+//   /apple-wallet/v1/devices/{deviceLibraryIdentifier}/registrations/{passTypeIdentifier}/{serialNumber}  (POST/DELETE)
+//   /apple-wallet/v1/devices/{deviceLibraryIdentifier}/registrations/{passTypeIdentifier}                 (GET, ?passesUpdatedSince=)
+const DEVICES_PREFIX = "/apple-wallet/v1/devices/";
+
+function parseDevicesPath(pathname: string): { deviceLibraryIdentifier: string; passTypeIdentifier: string; serialNumber?: string } | null {
+  const rest = pathname.slice(DEVICES_PREFIX.length).split("/").filter(Boolean);
+  if (rest.length === 3 && rest[1] === "registrations") {
+    return { deviceLibraryIdentifier: rest[0], passTypeIdentifier: rest[2] };
+  }
+  if (rest.length === 4 && rest[1] === "registrations") {
+    return { deviceLibraryIdentifier: rest[0], passTypeIdentifier: rest[2], serialNumber: rest[3] };
+  }
+  return null;
+}
+
+http.route({
+  pathPrefix: DEVICES_PREFIX,
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    const url = new URL(request.url);
+    const parsed = parseDevicesPath(url.pathname);
+    if (!parsed?.serialNumber) return new Response("Not found", { status: 404 });
+    const authorized = await ctx.runAction(internal.appleWallet.verifyAuthHeader, {
+      serialNumber: parsed.serialNumber,
+      authHeader: request.headers.get("authorization") ?? undefined,
+    });
+    if (!authorized) return new Response("Unauthorized", { status: 401 });
+    let pushToken = "";
+    try {
+      pushToken = (JSON.parse(await request.text())).pushToken ?? "";
+    } catch {
+      return new Response("Bad request", { status: 400 });
+    }
+    if (!pushToken) return new Response("Bad request", { status: 400 });
+    const { created } = await ctx.runMutation(internal.appleWallet.registerDevice, {
+      deviceLibraryIdentifier: parsed.deviceLibraryIdentifier,
+      passTypeIdentifier: parsed.passTypeIdentifier,
+      serialNumber: parsed.serialNumber,
+      pushToken,
+    });
+    return new Response(null, { status: created ? 201 : 200 });
+  }),
+});
+
+http.route({
+  pathPrefix: DEVICES_PREFIX,
+  method: "DELETE",
+  handler: httpAction(async (ctx, request) => {
+    const url = new URL(request.url);
+    const parsed = parseDevicesPath(url.pathname);
+    if (!parsed?.serialNumber) return new Response("Not found", { status: 404 });
+    const authorized = await ctx.runAction(internal.appleWallet.verifyAuthHeader, {
+      serialNumber: parsed.serialNumber,
+      authHeader: request.headers.get("authorization") ?? undefined,
+    });
+    if (!authorized) return new Response("Unauthorized", { status: 401 });
+    await ctx.runMutation(internal.appleWallet.unregisterDevice, {
+      deviceLibraryIdentifier: parsed.deviceLibraryIdentifier,
+      serialNumber: parsed.serialNumber,
+    });
+    return new Response(null, { status: 200 });
+  }),
+});
+
+http.route({
+  pathPrefix: DEVICES_PREFIX,
+  method: "GET",
+  handler: httpAction(async (ctx, request) => {
+    const url = new URL(request.url);
+    const parsed = parseDevicesPath(url.pathname);
+    if (!parsed || parsed.serialNumber) return new Response("Not found", { status: 404 });
+    const since = url.searchParams.get("passesUpdatedSince") ?? undefined;
+    const result = await ctx.runQuery(internal.appleWallet.updatedSerialsForDevice, {
+      deviceLibraryIdentifier: parsed.deviceLibraryIdentifier,
+      passTypeIdentifier: parsed.passTypeIdentifier,
+      since,
+    });
+    if (!result) return new Response(null, { status: 204 });
+    return new Response(JSON.stringify({ serialNumbers: result.serialNumbers, lastUpdated: result.lastUpdated }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  }),
+});
+
+// Fetch the latest signed pass — called after a push tells the device to refresh.
+http.route({
+  pathPrefix: "/apple-wallet/v1/passes/",
+  method: "GET",
+  handler: httpAction(async (ctx, request) => {
+    const url = new URL(request.url);
+    const [passTypeIdentifier, serialNumber] = url.pathname.slice("/apple-wallet/v1/passes/".length).split("/").filter(Boolean);
+    if (!passTypeIdentifier || !serialNumber) return new Response("Not found", { status: 404 });
+    const authorized = await ctx.runAction(internal.appleWallet.verifyAuthHeader, {
+      serialNumber,
+      authHeader: request.headers.get("authorization") ?? undefined,
+    });
+    if (!authorized) return new Response("Unauthorized", { status: 401 });
+    const pkpass = await ctx.runAction(internal.appleWallet.buildPkpassForSerial, { passTypeIdentifier, serialNumber });
+    if (!pkpass) return new Response("Not found", { status: 404 });
+    return new Response(pkpass, { status: 200, headers: { "Content-Type": "application/vnd.apple.pkpass" } });
+  }),
+});
+
+// Device-side error logging — low volume, just surfaced in `convex logs --prod`.
+http.route({
+  path: "/apple-wallet/v1/log",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    try {
+      const body = JSON.parse(await request.text());
+      if (Array.isArray(body?.logs)) {
+        await ctx.runMutation(internal.appleWallet.logDeviceMessages, { logs: body.logs.map(String).slice(0, 20) });
+      }
+    } catch {
+      // Never fail this — it's just diagnostics.
+    }
+    return new Response(null, { status: 200 });
+  }),
+});
+
 export default http;

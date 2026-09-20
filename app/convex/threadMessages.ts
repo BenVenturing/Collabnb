@@ -147,38 +147,55 @@ export const sendMessage = mutation({
 
     if (effectiveRecipientId && effectiveRecipientId !== args.senderId) {
       const recipientId = effectiveRecipientId;
-      const notifType = args.senderRole === "host" ? "host_reply" : "new_message";
 
-      // Throttle email: if the recipient already has an unread message notification,
-      // they've been pinged and haven't looked yet — skip the email to avoid spamming
-      // on every message. They get emailed again on the next message after they read.
-      const existing = await ctx.db
-        .query("notifications")
-        .withIndex("by_user", (q) => q.eq("user_id", recipientId))
-        .collect();
-      const hasPendingPing = existing.some(
-        (n) => !n.read && (n.type === "new_message" || n.type === "host_reply")
-      );
+      if (sender?.username === "notifications") {
+        // The "Notifications" broadcast persona is phone-push-only by design
+        // (Inbox.jsx hides its composer for the same reason) — it deliberately
+        // skips the in-app bell/notifications row and the email nudge below,
+        // going straight to both wallets' pushForUser so this shows up on the
+        // phone and nowhere else in the product.
+        const pushArgs = {
+          userId: recipientId,
+          type: "new_message",
+          title: `New message from ${args.senderName}`,
+          body: args.text.length > 80 ? args.text.slice(0, 80) + "…" : args.text,
+        };
+        await ctx.scheduler.runAfter(0, internal.googleWallet.pushForUser, pushArgs);
+        await ctx.scheduler.runAfter(0, internal.appleWallet.pushForUser, pushArgs);
+      } else {
+        const notifType = args.senderRole === "host" ? "host_reply" : "new_message";
 
-      await ctx.runMutation(internal.notifications.create, {
-        userId: recipientId,
-        type: notifType,
-        title: `New message from ${args.senderName}`,
-        body: args.text.length > 80 ? args.text.slice(0, 80) + "…" : args.text,
-        link: `#/inbox?thread=${encodeURIComponent(args.threadKey)}`,
-      });
+        // Throttle email: if the recipient already has an unread message notification,
+        // they've been pinged and haven't looked yet — skip the email to avoid spamming
+        // on every message. They get emailed again on the next message after they read.
+        const existing = await ctx.db
+          .query("notifications")
+          .withIndex("by_user", (q) => q.eq("user_id", recipientId))
+          .collect();
+        const hasPendingPing = existing.some(
+          (n) => !n.read && (n.type === "new_message" || n.type === "host_reply")
+        );
 
-      if (!hasPendingPing) {
-        const recipient = await ctx.db.get(recipientId as any);
-        // Settings > Notifications > Messages — gates the email only; the
-        // in-app notification above still fires either way.
-        if ((recipient as any)?.email && (recipient as any)?.notification_prefs?.messages !== false) {
-          await ctx.scheduler.runAfter(0, internal.emails.sendNewMessageEmail, {
-            recipientEmail: (recipient as any).email,
-            recipientName: (recipient as any).full_name || "there",
-            senderName: args.senderName,
-            preview: args.text,
-          });
+        await ctx.runMutation(internal.notifications.create, {
+          userId: recipientId,
+          type: notifType,
+          title: `New message from ${args.senderName}`,
+          body: args.text.length > 80 ? args.text.slice(0, 80) + "…" : args.text,
+          link: `#/inbox?thread=${encodeURIComponent(args.threadKey)}`,
+        });
+
+        if (!hasPendingPing) {
+          const recipient = await ctx.db.get(recipientId as any);
+          // Settings > Notifications > Messages — gates the email only; the
+          // in-app notification above still fires either way.
+          if ((recipient as any)?.email && (recipient as any)?.notification_prefs?.messages !== false) {
+            await ctx.scheduler.runAfter(0, internal.emails.sendNewMessageEmail, {
+              recipientEmail: (recipient as any).email,
+              recipientName: (recipient as any).full_name || "there",
+              senderName: args.senderName,
+              preview: args.text,
+            });
+          }
         }
       }
     }

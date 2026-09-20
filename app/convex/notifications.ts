@@ -101,9 +101,17 @@ export const create = internalMutation({
       read: false,
       created_at: Date.now(),
     });
-    // Mirrors this notification onto the user's linked Google Wallet pass, if
-    // any — a no-op for anyone who hasn't linked one (see googleWallet.ts).
+    // Mirrors this notification onto whichever wallet pass(es) this user has
+    // linked, if any — a no-op for anyone who hasn't (see googleWallet.ts /
+    // appleWallet.ts). Both scheduled independently so one platform being
+    // unconfigured or erroring never affects the other.
     await ctx.scheduler.runAfter(0, internal.googleWallet.pushForUser, {
+      userId: args.userId,
+      type: args.type,
+      title: args.title,
+      body: args.body,
+    });
+    await ctx.scheduler.runAfter(0, internal.appleWallet.pushForUser, {
       userId: args.userId,
       type: args.type,
       title: args.title,

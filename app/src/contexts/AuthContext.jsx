@@ -265,6 +265,7 @@ function ClerkAuthInner({ children }) {
             show_activity_to_hosts: updates.show_activity_to_hosts,
             notification_prefs: updates.notification_prefs,
             google_wallet_push_enabled: updates.google_wallet_push_enabled,
+            apple_pass_push_enabled: updates.apple_pass_push_enabled,
             preferred_language: updates.preferred_language,
             preferred_currency: updates.preferred_currency,
             timezone: updates.timezone,

@@ -210,6 +210,8 @@ export default function Settings() {
   const generateWalletSaveLink = useAction(api.googleWallet.generateSaveLink);
   const generateAppleDownloadLink = useAction(api.appleWallet.generateDownloadLink);
   const appleWalletConfigured = useQuery(api.appleWallet.isConfigured);
+  const appleWalletLaunched = useQuery(api.admin.getAppleWalletLaunched);
+  const setAdminSetting = useMutation(api.admin.setSetting);
   const acceptWalletTerms = useMutation(api.profiles.acceptWalletTerms);
   const [portalLoading, setPortalLoading] = useState(false);
   const [walletBusy, setWalletBusy] = useState(false);
@@ -837,32 +839,62 @@ export default function Settings() {
                   />
                 )}
 
-                {/* Hidden until appleWallet.isConfigured — no button that would
-                    just error while credentials aren't set up yet. */}
-                {appleWalletConfigured && (
-                  <div style={{ padding: '1.1rem 0', borderBottom: '1px solid var(--hairline)' }}>
+                {/* Always visible: greyed "Coming soon" until the admin flips the
+                    public launch switch below — separate from whether Apple
+                    credentials are actually configured, so Ben can build/test
+                    it (admin always sees the live UI once configured) without
+                    it going live for everyone the instant credentials exist. */}
+                {(() => {
+                  const appleLive = appleWalletConfigured && (appleWalletLaunched || isAdmin);
+                  return (
+                <div style={{ padding: '1.1rem 0', borderBottom: '1px solid var(--hairline)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
                       <div style={{ minWidth: 0 }}>
                         <p style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--ink)', margin: '0 0 0.2rem' }}>{t('notifications.appleWallet')}</p>
                         <p style={{ fontSize: '0.8rem', color: 'var(--sage)', margin: 0, lineHeight: 1.5 }}>
-                          {profile?.apple_pass_serial ? t('notifications.appleWalletLinkedValue') : t('notifications.appleWalletValue')}
+                          {appleLive
+                            ? (profile?.apple_pass_serial ? t('notifications.appleWalletLinkedValue') : t('notifications.appleWalletValue'))
+                            : t('notifications.appleWalletComingSoonValue')}
                         </p>
                       </div>
-                      <button
-                        onClick={appleBusy ? undefined : handleAddToAppleWalletClick}
-                        disabled={appleBusy}
-                        aria-label={t('notifications.appleWalletConnect')}
-                        style={{
-                          background: '#000', color: '#fff', border: 'none', borderRadius: '0.5rem',
-                          padding: '0.7rem 1.1rem', height: 48, boxSizing: 'border-box',
-                          display: 'flex', alignItems: 'center', gap: '0.4rem',
-                          cursor: appleBusy ? 'default' : 'pointer', opacity: appleBusy ? 0.6 : 1,
-                          fontSize: '0.85rem', fontWeight: 600, fontFamily: '-apple-system, var(--font-body)', flexShrink: 0,
-                        }}
-                      >
-                        {t('notifications.appleWalletConnect')}
-                      </button>
+                      {appleLive ? (
+                        <button
+                          onClick={appleBusy ? undefined : handleAddToAppleWalletClick}
+                          disabled={appleBusy}
+                          aria-label={t('notifications.appleWalletConnect')}
+                          style={{
+                            background: '#000', color: '#fff', border: 'none', borderRadius: '0.5rem',
+                            padding: '0.7rem 1.1rem', height: 48, boxSizing: 'border-box',
+                            display: 'flex', alignItems: 'center', gap: '0.4rem',
+                            cursor: appleBusy ? 'default' : 'pointer', opacity: appleBusy ? 0.6 : 1,
+                            fontSize: '0.85rem', fontWeight: 600, fontFamily: '-apple-system, var(--font-body)', flexShrink: 0,
+                          }}
+                        >
+                          {t('notifications.appleWalletConnect')}
+                        </button>
+                      ) : (
+                        <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#A87820', background: 'rgba(212,168,67,0.16)', borderRadius: 999, padding: '0.28rem 0.65rem', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                          {t('comingSoon')}
+                        </span>
+                      )}
                     </div>
+                    {isAdmin && (
+                      <div style={{ marginTop: '0.75rem' }}>
+                        <ToggleRow
+                          label={t('notifications.appleWalletAdminLaunchToggle')}
+                          sublabel={
+                            !appleWalletConfigured
+                              ? t('notifications.appleWalletAdminNotConfigured')
+                              : appleWalletLaunched
+                                ? t('notifications.appleWalletAdminLive')
+                                : t('notifications.appleWalletAdminHidden')
+                          }
+                          checked={appleWalletLaunched === true}
+                          onChange={() => setAdminSetting({ key: 'apple_wallet_launched', value: String(appleWalletLaunched !== true) })}
+                        />
+                      </div>
+                    )}
+                    {!appleLive ? null : (<>
                     {appleError && <p style={{ fontSize: '0.78rem', color: '#dc2626', margin: '0.6rem 0 0' }}>{appleError}</p>}
                     {walletConsentOpen && walletConsentTarget === 'apple' && (
                       <div style={{ marginTop: '1rem', padding: '1.1rem', background: 'rgba(25,37,36,0.03)', border: '1px solid rgba(60,87,89,0.12)', borderRadius: '0.9rem' }}>
@@ -925,8 +957,10 @@ export default function Settings() {
                         />
                       </div>
                     )}
-                  </div>
-                )}
+                    </>)}
+                </div>
+                  );
+                })()}
 
                 <SectionLabel>{t('notifications.sectionPreferences')}</SectionLabel>
                 {[

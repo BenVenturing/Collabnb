@@ -161,6 +161,23 @@ export const getMaintenanceMode = query({
   },
 });
 
+// Settings > Notifications > Apple Wallet — public launch switch, independent
+// of whether Apple credentials are actually configured (appleWallet.
+// isConfigured). Lets the admin build/test Apple Wallet ahead of time and
+// flip it on for everyone else whenever they choose, rather than it going
+// live the instant credentials exist. Written with the existing setSetting
+// mutation above (key: "apple_wallet_launched"), same as maintenance_mode.
+export const getAppleWalletLaunched = query({
+  args: {},
+  handler: async (ctx) => {
+    const row = await ctx.db
+      .query("admin_settings")
+      .withIndex("by_key", (q) => q.eq("key", "apple_wallet_launched"))
+      .first();
+    return row?.value === "true";
+  },
+});
+
 // ─── Founder Counts (live from Convex, replaces localStorage) ────────────────
 export const getFounderCounts = query({
   args: {},

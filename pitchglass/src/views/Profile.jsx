@@ -8,9 +8,12 @@ const FIELDS = [
   ['followers', 'Followers', 'e.g. 18K'],
   ['engagement', 'Engagement', 'e.g. 4.2%'],
   ['basedIn', 'Based in', 'City, Country'],
+  ['travel', 'Where you can travel'],
   ['niches', 'Niches', 'comma separated'],
   ['formats', 'Formats you shoot'],
+  ['turnaround', 'Typical turnaround'],
   ['rate', 'Rate', 'e.g. $250 per Reel or stay + fee'],
+  ['deals', 'Deals you accept'],
   ['portfolio', 'Portfolio / media kit link'],
 ];
 

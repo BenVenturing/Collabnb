@@ -9,6 +9,7 @@ import Connect from './views/Connect.jsx';
 import Report from './views/Report.jsx';
 import Appearance from './views/Appearance.jsx';
 import Legend from './views/Legend.jsx';
+import Onboarding from './views/Onboarding.jsx';
 import Icon from './views/Icon.jsx';
 
 const TABS = [
@@ -33,6 +34,7 @@ export default function App() {
   const [count, setCount] = usePersisted('pg.count', 10);
   const [run, setRun] = useState(null);
   const [report, setReport] = useState(null);
+  const [onboarding, setOnboarding] = useState(() => !profile.onboarded);
 
   const update = (id, patch) => setOpps((all) => all.map((o) => (o.id === id ? { ...o, ...patch } : o)));
 
@@ -177,7 +179,21 @@ export default function App() {
           <div className="stack">
             <Appearance theme={theme} setTheme={(t) => setSettings({ ...settings, theme: t })} />
             <Legend />
+            <div className="glass pad-lg">
+              <h2>Onboarding</h2>
+              <p className="muted small">Walk through the setup questions again to refresh your details.</p>
+              <div><button className="btn" onClick={() => setOnboarding(true)}>Run setup again</button></div>
+            </div>
           </div>
+        )}
+        {onboarding && (
+          <Onboarding
+            profile={profile}
+            setProfile={setProfile}
+            mission={settings.mission}
+            setMission={(mission) => setSettings({ ...settings, mission })}
+            onDone={() => setOnboarding(false)}
+          />
         )}
         {report && (
           <Report

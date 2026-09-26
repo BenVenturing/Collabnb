@@ -58,6 +58,10 @@ export const DEFAULT_PROFILE = {
   mediaKit: null,
   voiceSamples: '',
   banned: 'elevate, unlock, stunning, breathtaking, vibrant, seamless, game-changer, journey, delve, passionate about, dream collab, hope this finds you well',
+  travel: '',
+  turnaround: '',
+  deals: '',
+  onboarded: false,
   updatedAt: null,
 };
 

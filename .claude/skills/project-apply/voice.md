@@ -19,3 +19,11 @@ game-changer, ultimate, journey (metaphorical), embark, tapestry, delve, dive in
 
 - Form "Why you?": "Resort content is most of what I shoot — [N] stays in the last year, each delivered as [deliverables] the property could run in ads."
 - DM opener: "Saw the [brand] reel — the [specific shot/format] is the format I cut most."
+
+## Voice samples (starting drafts — edit until they sound like you)
+
+1. Checked in at 4pm, didn't leave the balcony until the light went. Some rooms you shoot, some you just sit in. This one was both.
+2. What a hotel actually looks like at 7am: coffee on the terrace, housekeeping already on floor two, nobody else awake. Save this for the trip you keep meaning to book.
+3. Three things I check before I film any stay: where the light lands at sunset, how loud the street is, and whether the shower is as good as the listing says. This one passed all three.
+4. Most of the good stays aren't on the first page of anything. Small owners, twelve rooms, someone who remembers your coffee order by day two. That's who I make content for.
+5. Filmed this in one morning, cut it the same afternoon, sent it before check-out. Fast turnaround is part of the job.

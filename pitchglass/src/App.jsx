@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { SAMPLE_POOL, DEFAULT_PROFILE } from './data.js';
-import { usePersisted, fitScore, draftPitch, uid } from './lib.js';
+import { SAMPLE_POOL, DEFAULT_PROFILE, DEFAULT_SETTINGS } from './data.js';
+import { usePersisted, fitScore, draftPitch, draftExtras, uid } from './lib.js';
 import Feed from './views/Feed.jsx';
 import Approvals from './views/Approvals.jsx';
 import Tracker from './views/Tracker.jsx';
 import Profile from './views/Profile.jsx';
 import Connect from './views/Connect.jsx';
+import Report from './views/Report.jsx';
 
 const TABS = [
   { id: 'feed', label: 'Opportunities', icon: '◎' },
@@ -15,36 +16,59 @@ const TABS = [
   { id: 'connect', label: 'Connect', icon: '⌁' },
 ];
 
-const RUN_STEPS = ['Scanning sources', 'Screening for injected text', 'Scoring fit', 'Queueing matches'];
+const RUN_STEPS = ['Scanning sources', 'Reading captions & rules', 'Screening for injected text', 'Scoring fit', 'Printing report'];
 
 export default function App() {
   const [tab, setTab] = usePersisted('pg.tab', 'feed');
   const [profile, setProfile] = usePersisted('pg.profile', DEFAULT_PROFILE);
   const [opps, setOpps] = usePersisted('pg.opps', []);
   const [poolIndex, setPoolIndex] = usePersisted('pg.pool', 0);
+  const [settings, setSettings] = usePersisted('pg.settings', DEFAULT_SETTINGS);
+  const [count, setCount] = usePersisted('pg.count', 10);
   const [run, setRun] = useState(null);
+  const [report, setReport] = useState(null);
 
   const update = (id, patch) => setOpps((all) => all.map((o) => (o.id === id ? { ...o, ...patch } : o)));
 
   const addOpp = (o) =>
     setOpps((all) => [{ id: uid(), status: 'found', foundAt: Date.now(), ...o }, ...all]);
 
+  const draftPatch = (o) => ({ status: 'drafted', draft: draftPitch(o, profile), ...draftExtras(o, profile) });
+
   const draft = (o) => {
-    update(o.id, { status: 'drafted', draft: draftPitch(o, profile) });
+    update(o.id, draftPatch(o));
     setTab('approvals');
+  };
+
+  const confirmBatch = (keepIds) => {
+    setOpps((all) =>
+      all.map((o) => {
+        if (!report?.ids.includes(o.id) || o.status !== 'found') return o;
+        return keepIds.includes(o.id) ? { ...o, ...draftPatch(o) } : { ...o, status: 'skipped' };
+      }),
+    );
+    setReport(null);
+    if (keepIds.length) setTab('approvals');
   };
 
   const runAgent = async () => {
     if (run) return;
+    const n = Math.max(1, Math.min(Number(count) || 1, settings.caps.applications));
     for (let i = 0; i < RUN_STEPS.length; i++) {
       setRun({ step: i });
       await new Promise((r) => setTimeout(r, 650));
     }
-    const batch = SAMPLE_POOL.slice(poolIndex, poolIndex + 2);
-    batch.forEach((o) => addOpp({ ...o }));
+    const batch = SAMPLE_POOL.slice(poolIndex, poolIndex + n).map((o) => ({
+      id: uid(),
+      status: 'found',
+      foundAt: Date.now(),
+      ...o,
+    }));
+    setOpps((all) => [...batch, ...all]);
     setPoolIndex(poolIndex + batch.length);
     setRun({ done: batch.length });
     setTimeout(() => setRun(null), 2200);
+    if (batch.length) setReport({ ids: batch.map((o) => o.id), asked: n, at: Date.now() });
   };
 
   const pending = opps.filter((o) => o.status === 'drafted').length;
@@ -89,9 +113,22 @@ export default function App() {
               {opps.length} found · {pending} awaiting approval · {opps.filter((o) => o.status === 'sent').length} sent
             </p>
           </div>
-          <button className="btn primary" onClick={runAgent} disabled={!!run}>
-            {run && !run.done ? <span className="spin" /> : '▶'} Run agent
-          </button>
+          <div className="runctl">
+            <label className="glass findn">
+              <span>Find</span>
+              <input
+                type="number"
+                min="1"
+                max={settings.caps.applications}
+                value={count}
+                onChange={(e) => setCount(e.target.value)}
+                aria-label="How many applications to find"
+              />
+            </label>
+            <button className="btn primary" onClick={runAgent} disabled={!!run}>
+              {run && !run.done ? <span className="spin" /> : '▶'} Run agent
+            </button>
+          </div>
         </header>
 
         {run && (
@@ -115,7 +152,16 @@ export default function App() {
         {tab === 'approvals' && <Approvals opps={scored} profile={profile} update={update} />}
         {tab === 'tracker' && <Tracker opps={scored} update={update} />}
         {tab === 'profile' && <Profile profile={profile} setProfile={setProfile} />}
-        {tab === 'connect' && <Connect />}
+        {tab === 'connect' && <Connect settings={settings} setSettings={setSettings} />}
+        {report && (
+          <Report
+            report={report}
+            opps={scored.filter((o) => report.ids.includes(o.id))}
+            settings={settings}
+            onConfirm={confirmBatch}
+            onClose={() => setReport(null)}
+          />
+        )}
       </main>
     </div>
   );

@@ -89,7 +89,7 @@ export function draftPitch(opp, p) {
     ``,
     `Deliverables: ${deliver}. Formats I shoot: ${p.formats || '[formats]'}.`,
     ``,
-    `Availability: ${opp.dates || '[dates]'}.${p.basedIn ? ` Based in ${p.basedIn}.` : ''}`,
+    `Availability: ${firstLine(p.availability) || opp.dates || '[dates]'}.${p.basedIn ? ` Based in ${p.basedIn}.` : ''}`,
     ``,
     `Rate: ${p.rate || opp.comp || '[rate]'}.`,
     p.portfolio ? `\nPortfolio: ${p.portfolio}` : null,
@@ -101,8 +101,53 @@ export function draftPitch(opp, p) {
 export function voiceIssues(text, profile) {
   const t = (text || '').toLowerCase();
   const issues = list(profile.banned).filter((w) => t.includes(w));
-  const placeholders = (text.match(/\[[^\]]+\]/g) || []).length;
+  const placeholders = ((text || '').match(/\[[^\]]+\]/g) || []).length;
   return { banned: issues, placeholders };
+}
+
+const firstLine = (s) => (s || '').split('\n').map((x) => x.trim()).find(Boolean) || '';
+
+// Everything besides the main message: comment text, who to tag, and form answers.
+export function draftExtras(opp, p) {
+  const handle = p.handle ? `@${p.handle.replace(/^@/, '')}` : '';
+  const niche = list(p.niches).filter((n) => n !== 'ugc').slice(0, 2).join(' + ');
+  const answerFor = (field) => {
+    const f = field.toLowerCase();
+    if (f.includes('name')) return p.name;
+    if (f.includes('email')) return p.email;
+    if (f.includes('instagram') || f.includes('handle')) return handle;
+    if (f.includes('follower')) return p.followers;
+    if (f.includes('portfolio')) return p.portfolio;
+    if (f.includes('date') || f.includes('availab')) return firstLine(p.availability);
+    if (f.includes('rate')) return p.rate;
+    if (f.includes('media kit')) return p.mediaKit?.name || '';
+    if (f.includes('why')) {
+      const past = firstLine(p.pastWork);
+      return `${niche ? niche[0].toUpperCase() + niche.slice(1) : 'Travel'} content is most of what I make.${past ? ` Most recent: ${past}.` : ''}`;
+    }
+    return '';
+  };
+  return {
+    comment: opp.commentKeyword ? `${opp.commentKeyword}${niche ? ` — ${niche} creator here` : ''}` : '',
+    recipients: '',
+    answers: (opp.fields || []).map((field) => ({ field, value: answerFor(field) || '' })),
+  };
+}
+
+export function stepsReady(opp) {
+  const s = opp.steps || [];
+  const missing = [];
+  if (s.includes('comment') && !opp.comment?.trim()) missing.push('comment');
+  if (s.includes('tag')) {
+    const n = (opp.recipients || '').split(/[\s,]+/).filter((x) => x.startsWith('@')).length;
+    if (n < (opp.tagCount || 1)) missing.push(`tag ${opp.tagCount || 1} people`);
+  }
+  if (s.includes('fill_form') && (opp.answers || []).some((a) => !a.value?.trim())) missing.push('form answers');
+  return missing;
+}
+
+export function daysSince(ts) {
+  return ts ? Math.floor((Date.now() - ts) / 86400000) : null;
 }
 
 export const uid = () => Math.random().toString(36).slice(2, 10);

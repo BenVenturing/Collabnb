@@ -7,7 +7,9 @@ const STEPS = [
   { title: 'Keep it running', cmd: '/loop 2h /pitchglass run', note: 'Runs every 2 hours while your laptop is open.' },
 ];
 
-export default function Connect() {
+export default function Connect({ settings, setSettings }) {
+  const caps = settings.caps;
+  const setCap = (k) => (e) => setSettings({ ...settings, caps: { ...caps, [k]: Math.max(0, Number(e.target.value) || 0) } });
   const [copied, setCopied] = useState(null);
   const copy = async (i, cmd) => {
     try {
@@ -38,6 +40,38 @@ export default function Connect() {
           </div>
         </div>
       ))}
+      <div className="glass pad-lg">
+        <h2>Ping me on my phone</h2>
+        <p className="muted small">After each run you get the brief list and can confirm or remove from your phone.</p>
+        <div className="seg" role="radiogroup" aria-label="Notification channel">
+          {[['telegram', 'Telegram'], ['whatsapp', 'WhatsApp'], ['instagram', 'Instagram'], ['off', 'Off']].map(([v, l]) => (
+            <button key={v} role="radio" aria-checked={settings.notify === v} className={`pill ${settings.notify === v ? 'on' : ''}`} onClick={() => setSettings({ ...settings, notify: v })}>
+              {l}
+            </button>
+          ))}
+        </div>
+        {settings.notify !== 'off' && (
+          <label>
+            <span>{settings.notify === 'whatsapp' ? 'WhatsApp number' : `${settings.notify === 'telegram' ? 'Telegram' : 'Instagram'} username`}</span>
+            <input className="plain" value={settings.notifyHandle} onChange={(e) => setSettings({ ...settings, notifyHandle: e.target.value })} />
+          </label>
+        )}
+      </div>
+
+      <div className="glass pad-lg">
+        <h2>Account safety</h2>
+        <p className="muted small">
+          Daily limits keep your Instagram looking human. Run it on your real, warmed-up creator account — never a fresh one.
+        </p>
+        <div className="caps">
+          {[['applications', 'Applications per run'], ['follows', 'Follows / day'], ['comments', 'Comments / day'], ['dms', 'DMs / day']].map(([k, l]) => (
+            <label key={k}>
+              <span>{l}</span>
+              <input className="plain" type="number" min="0" value={caps[k]} onChange={setCap(k)} />
+            </label>
+          ))}
+        </div>
+      </div>
     </section>
   );
 }

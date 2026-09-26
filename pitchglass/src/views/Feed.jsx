@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { SourceChip, Fit } from './Card.jsx';
-import { SOURCES } from '../data.js';
+import { SOURCES, STEP_KINDS } from '../data.js';
 import { detectSource, hostOf } from '../lib.js';
 
 export default function Feed({ opps, onAdd, onDraft, onSkip, onRun }) {
@@ -80,6 +80,11 @@ export default function Feed({ opps, onAdd, onDraft, onSkip, onRun }) {
                 </ul>
               )}
               {o.requirements && <p className="req muted">{o.requirements}</p>}
+              {o.steps?.length > 0 && (
+                <p className="stepicons" title={o.steps.map((s) => STEP_KINDS[s]?.label).join(' → ')}>
+                  {o.steps.map((s, i) => <span key={s + i}>{STEP_KINDS[s]?.icon}</span>)}
+                </p>
+              )}
               {o.link && <a className="link" href={o.link} target="_blank" rel="noreferrer">Open source ↗</a>}
               <div className="row gap end">
                 <button className="btn ghost" onClick={() => onSkip(o)}>Skip</button>

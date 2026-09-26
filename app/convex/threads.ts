@@ -29,6 +29,17 @@ export const create = mutation({
   },
   handler: async (ctx, args) => {
     const profile = await requireAuthedProfile(ctx);
+    // Idempotent when threadKey is a deterministic key (e.g. thread_<listingId>_<creatorId>,
+    // thread_host_<hostId>_<creatorId>) — a repeat call (retry, double-tap, re-opening an
+    // "invite"/"apply" flow) must reuse the existing conversation instead of forking a
+    // duplicate row that a client-side threadKey-based dedupe check can't catch.
+    if (args.threadKey) {
+      const existing = await ctx.db
+        .query("threads")
+        .withIndex("by_thread_key", (q) => q.eq("thread_key", args.threadKey))
+        .first();
+      if (existing) return existing._id;
+    }
     return await ctx.db.insert("threads", {
       listing_title: args.listingTitle,
       host_name: args.hostName,
@@ -95,6 +106,52 @@ export const getIncomingForMe = query({
             ? new Date(last.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })
             : "New",
           unread: last && last.sender_id === r.owner_id && last.created_at > myReadAt ? 1 : 0,
+          is_founder: (other as any)?.is_founder === true,
+        };
+      })
+    );
+  },
+});
+
+// Threads I started (owner_id === me) — the counterpart to getIncomingForMe.
+// Needed by clients (mobile) that have no local/localStorage thread cache to
+// read their own sent threads from, e.g. an application a creator just sent.
+export const getMine = query({
+  args: {},
+  handler: async (ctx) => {
+    const profile = await getAuthedProfile(ctx);
+    if (!profile) return [];
+    const myId = String(profile._id);
+    const rows = await ctx.db
+      .query("threads")
+      .withIndex("by_owner", (q) => q.eq("owner_id", myId))
+      .collect();
+
+    return Promise.all(
+      rows.map(async (r) => {
+        const key = r.thread_key as string;
+        const other = r.participant_id ? await ctx.db.get(r.participant_id as any) : null;
+        const msgs = key
+          ? await ctx.db
+              .query("thread_messages")
+              .withIndex("by_thread", (q) => q.eq("thread_key", key))
+              .order("desc")
+              .take(1)
+          : [];
+        const last = msgs[0];
+        const myReadAt = r.owner_read_at ?? 0;
+        return {
+          id: key ?? String(r._id),
+          thread_key: key,
+          listing_title: r.listing_title,
+          host_name: (other as any)?.full_name ?? r.host_name,
+          host_avatar: (other as any)?.avatar_url ?? r.host_avatar ?? null,
+          tag: r.tag,
+          last_message: last?.text ?? r.last_message ?? "",
+          timestamp: last?.created_at
+            ? new Date(last.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+            : "New",
+          unread: last && last.sender_id === r.participant_id && last.created_at > myReadAt ? 1 : 0,
           is_founder: (other as any)?.is_founder === true,
         };
       })

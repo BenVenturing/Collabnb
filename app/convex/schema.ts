@@ -18,6 +18,9 @@ export default defineSchema({
     tiktok_handle: v.optional(v.string()),
     youtube_handle: v.optional(v.string()),
     portfolio: v.optional(v.string()),
+    // Creator onboarding's multi-photo/video showcase (mobile app) — distinct
+    // from the single `portfolio` URL field above.
+    portfolio_images: v.optional(v.array(v.string())),
     // Consent to have the hero/profile photo featured on Collabnb's own
     // Instagram. Hosts are always true (set at signup, no UI to change it —
     // this is informational-only for them). Creators default true (opt-out)
@@ -39,6 +42,13 @@ export default defineSchema({
     subscription_status: v.optional(v.string()),
     subscription_tier: v.optional(v.string()),
     subscription_expires_at: v.optional(v.number()),
+    // RevenueCat's mirror of the three fields above (iOS/Android IAP). Kept
+    // separate from the Stripe fields rather than shared — access_state is
+    // recomputed from whichever side is currently active, so a cancellation
+    // on one platform can never clobber an active subscription on the other.
+    revenuecat_status: v.optional(v.string()),
+    revenuecat_tier: v.optional(v.string()),
+    revenuecat_expires_at: v.optional(v.number()),
     stripe_customer_id: v.optional(v.string()),
     // Card on file, required before a host can publish a listing (drafts
     // don't need one) — the same card the platform fee auto-charges when a
@@ -136,6 +146,11 @@ export default defineSchema({
     // Last pushed text — re-embedded into pass.json's backFields on every
     // rebuild so Apple's changeMessage push banner shows the real content.
     apple_pass_latest_message: v.optional(v.string()),
+    // Native mobile app push — Expo push tokens for every device this user
+    // is signed into (see expoPush.ts). No master enable/disable flag here;
+    // OS notification permission plus the notification_prefs category
+    // toggles above are what gate delivery.
+    expo_push_tokens: v.optional(v.array(v.string())),
     // Last time this host was sent the "conversations awaiting your reply"
     // digest (cron: checkAwaitingReply). Gates the repeat interval.
     last_reply_nudge_at: v.optional(v.number()),

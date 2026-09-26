@@ -90,6 +90,7 @@ export function initProductPreview() {
   const captionEl = mockup.querySelector('[data-mac-caption]');
   const order = ['host', 'creator'];
   let orderIndex = 0;
+  let loopStarted = false;
 
   function playNextLoop() {
     const view = order[orderIndex % order.length];
@@ -103,7 +104,22 @@ export function initProductPreview() {
 
   if (loopVideo) {
     loopVideo.addEventListener('ended', playNextLoop);
-    playNextLoop();
+
+    // Gate streaming on actual visibility — this used to autoplay on every
+    // page load (even while hidden at opacity:0 pre-scroll), which is what
+    // was burning through the Blob data-transfer cap.
+    const loopObserver = new IntersectionObserver((entries) => {
+      const visible = entries[0].isIntersecting;
+      if (visible && !loopStarted) {
+        loopStarted = true;
+        playNextLoop();
+      } else if (visible && loopVideo.paused && loopVideo.src) {
+        loopVideo.play().catch(() => {});
+      } else if (!visible) {
+        loopVideo.pause();
+      }
+    }, { threshold: 0.25 });
+    loopObserver.observe(mockup);
   }
 
   /* Floating preview bubble (home hero) — shows after the hero scrolls by,

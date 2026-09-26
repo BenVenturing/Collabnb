@@ -103,8 +103,10 @@ export const create = internalMutation({
     });
     // Mirrors this notification onto whichever wallet pass(es) this user has
     // linked, if any — a no-op for anyone who hasn't (see googleWallet.ts /
-    // appleWallet.ts). Both scheduled independently so one platform being
-    // unconfigured or erroring never affects the other.
+    // appleWallet.ts) — and onto the native mobile app via Expo push, a
+    // no-op for anyone without a registered device (see expoPush.ts). All
+    // three scheduled independently so one channel being unconfigured or
+    // erroring never affects the others.
     await ctx.scheduler.runAfter(0, internal.googleWallet.pushForUser, {
       userId: args.userId,
       type: args.type,
@@ -116,6 +118,13 @@ export const create = internalMutation({
       type: args.type,
       title: args.title,
       body: args.body,
+    });
+    await ctx.scheduler.runAfter(0, internal.expoPush.pushForUser, {
+      userId: args.userId,
+      type: args.type,
+      title: args.title,
+      body: args.body,
+      link: args.link,
     });
   },
 });

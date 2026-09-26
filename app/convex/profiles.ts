@@ -622,6 +622,30 @@ export const checkGuaranteeEligibility = query({
   },
 });
 
+// Shared by the Stripe and RevenueCat webhook mutations below: recomputes the
+// coarse access_state gate from whichever platform's entitlement is still
+// active. Only called on a cancellation/expiration path — never forces
+// "active" on its own, so it can't grant access, only avoid over-revoking it
+// (e.g. a Stripe cancellation shouldn't clobber an active iOS subscription).
+async function recomputeAccessState(ctx: any, profileId: any) {
+  const profile = await ctx.db.get(profileId);
+  if (!profile || profile.access_state === "pending") return;
+  const now = Date.now();
+  const stripeActive =
+    profile.subscription_status === "active" &&
+    (!profile.subscription_expires_at || profile.subscription_expires_at > now);
+  const revenuecatActive =
+    profile.revenuecat_status === "active" &&
+    (!profile.revenuecat_expires_at || profile.revenuecat_expires_at > now);
+  if (profile.is_lifetime === true || stripeActive || revenuecatActive) {
+    if (profile.access_state !== "active") {
+      await ctx.db.patch(profileId, { access_state: "active" });
+    }
+  } else if (profile.access_state === "active" || profile.access_state === "trial") {
+    await ctx.db.patch(profileId, { access_state: "limited" });
+  }
+}
+
 // Server-only: called from the Stripe webhook (http.ts) and stripe.js, never
 // from the client — a client-callable version would let anyone grant
 // themselves an active subscription.
@@ -709,9 +733,48 @@ export const updateSubscriptionByCustomerId = internalMutation({
     const patch: Record<string, any> = { subscription_status: args.subscriptionStatus };
     if (args.subscriptionExpiresAt !== undefined) patch.subscription_expires_at = args.subscriptionExpiresAt;
     if (args.subscriptionStatus === "active") patch.access_state = "active";
-    // Explicit access_state (e.g. "limited" for a hard-cancel) always wins.
-    if (args.accessState !== undefined) patch.access_state = args.accessState;
     await ctx.db.patch(profile._id, patch);
+    // A hard-cancel (accessState: "limited") shouldn't blindly win anymore —
+    // an active RevenueCat (iOS/Android) subscription on the same profile
+    // must keep them unlocked. recomputeAccessState checks that before
+    // downgrading; it never overrides an explicit "active" set above.
+    if (args.accessState !== undefined) {
+      await recomputeAccessState(ctx, profile._id);
+    }
+  },
+});
+
+// Server-only: called from the RevenueCat webhook (http.ts). Mirrors
+// updateSubscriptionByCustomerId's shape but keyed by our own profile id,
+// since the mobile app sets RevenueCat's appUserID to the Convex profile id
+// directly (Purchases.configure/logIn) — no separate customer-id mapping
+// needed.
+export const updateSubscriptionFromRevenueCat = internalMutation({
+  args: {
+    profileId: v.id("profiles"),
+    status: v.union(
+      v.literal("active"),
+      v.literal("expired"),
+      v.literal("billing_issue")
+    ),
+    tier: v.optional(v.string()),
+    expiresAt: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const profile = await ctx.db.get(args.profileId);
+    if (!profile) return;
+    const patch: Record<string, any> = { revenuecat_status: args.status };
+    if (args.tier !== undefined) patch.revenuecat_tier = args.tier;
+    if (args.expiresAt !== undefined) patch.revenuecat_expires_at = args.expiresAt;
+    if (args.status === "active") patch.access_state = "active";
+    await ctx.db.patch(args.profileId, patch);
+    // Only a true expiration should ever downgrade access. "billing_issue" is
+    // a grace period (mirrors Stripe's past_due above, which also doesn't
+    // force a downgrade) — and either way, an active Stripe web subscription
+    // must not be clobbered by an iOS/Android cancellation.
+    if (args.status === "expired") {
+      await recomputeAccessState(ctx, args.profileId);
+    }
   },
 });
 
@@ -853,6 +916,7 @@ export const updateProfile = mutation({
       tiktok_handle: v.optional(v.string()),
       youtube_handle: v.optional(v.string()),
       portfolio: v.optional(v.string()),
+      portfolio_images: v.optional(v.array(v.string())),
       highlight_opt_in: v.optional(v.boolean()),
       city: v.optional(v.string()),
       region: v.optional(v.string()),
@@ -893,6 +957,11 @@ export const updateProfile = mutation({
     if (cleanUpdates.region !== undefined) cleanUpdates.region = cleanPlainText(cleanUpdates.region, 100);
     if (cleanUpdates.country !== undefined) cleanUpdates.country = cleanPlainText(cleanUpdates.country, 100);
     if (cleanUpdates.portfolio !== undefined) cleanUpdates.portfolio = cleanOptionalUrl(cleanUpdates.portfolio, "Portfolio URL");
+    if (cleanUpdates.portfolio_images !== undefined) {
+      cleanUpdates.portfolio_images = cleanUpdates.portfolio_images
+        .filter((url: unknown) => typeof url === "string" && /^https?:\/\//i.test(url))
+        .slice(0, 6);
+    }
     if (cleanUpdates.avatar_url !== undefined) cleanUpdates.avatar_url = cleanOptionalUrl(cleanUpdates.avatar_url, "Avatar URL");
     if (cleanUpdates.banner_url !== undefined) cleanUpdates.banner_url = cleanOptionalUrl(cleanUpdates.banner_url, "Banner URL");
     if (cleanUpdates.preferred_language !== undefined) cleanUpdates.preferred_language = cleanPlainText(cleanUpdates.preferred_language, 40);

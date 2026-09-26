@@ -27,6 +27,7 @@ import type * as email from "../email.js";
 import type * as emailCopy from "../emailCopy.js";
 import type * as emailTemplates from "../emailTemplates.js";
 import type * as emails from "../emails.js";
+import type * as expoPush from "../expoPush.js";
 import type * as fees from "../fees.js";
 import type * as gates from "../gates.js";
 import type * as geocode from "../geocode.js";
@@ -88,6 +89,7 @@ declare const fullApi: ApiFromModules<{
   emailCopy: typeof emailCopy;
   emailTemplates: typeof emailTemplates;
   emails: typeof emails;
+  expoPush: typeof expoPush;
   fees: typeof fees;
   gates: typeof gates;
   geocode: typeof geocode;

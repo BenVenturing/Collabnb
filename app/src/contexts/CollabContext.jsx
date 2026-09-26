@@ -202,6 +202,37 @@ export function CollabProvider({ children }) {
     [collections]
   );
 
+  // Collections were write-only to Convex (toggleSaveCvx/createCollectionCvx
+  // fired-and-forgot, never read back) — a save made on the mobile app never
+  // reached web. Pull the user's Convex collections and merge them in by real
+  // _id so both platforms converge on the same saved state.
+  const convexCollections = useQuery(api.collections.getByUser, ownerId ? { creatorId: ownerId } : 'skip');
+  useEffect(() => {
+    if (!convexCollections) return;
+    setCollections((prev) => {
+      const byId = new Map(prev.map((c) => [c.id, c]));
+      let changed = false;
+      for (const cc of convexCollections) {
+        const id = String(cc._id);
+        const existing = byId.get(id);
+        if (!existing) {
+          byId.set(id, { id, name: cc.name, listingIds: cc.listing_ids || [] });
+          changed = true;
+        } else {
+          const merged = Array.from(new Set([...(existing.listingIds || []), ...(cc.listing_ids || [])]));
+          if (merged.length !== existing.listingIds.length || existing.name !== cc.name) {
+            byId.set(id, { ...existing, name: cc.name, listingIds: merged });
+            changed = true;
+          }
+        }
+      }
+      if (!changed) return prev;
+      const updated = Array.from(byId.values());
+      saveCollectionsToStorage(updated);
+      return updated;
+    });
+  }, [convexCollections]);
+
   const toggleSave = useCallback((listingId) => {
     setCollections((prev) => {
       const inCollection = prev.find((c) => c.listingIds.includes(listingId));
@@ -248,7 +279,7 @@ export function CollabProvider({ children }) {
 
     // Await Convex to get the canonical _id, then replace the temp ID
     try {
-      const convexId = await createCollectionCvx({ name: trimmedName });
+      const convexId = await createCollectionCvx({ name: trimmedName, creatorId: ownerId });
       const canonicalId = convexId ? String(convexId) : tempId;
       setCollections((prev) => {
         const updated = prev.map((c) => c.id === tempId ? { ...c, id: canonicalId } : c);
@@ -262,7 +293,7 @@ export function CollabProvider({ children }) {
       // Convex unavailable — keep tempId; it's consistent within this session
       return newCol;
     }
-  }, [createCollectionCvx]);
+  }, [createCollectionCvx, ownerId]);
 
   const setActiveCollection = useCallback((id) => {
     setActiveCollectionIdState(id);

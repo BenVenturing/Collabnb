@@ -350,6 +350,82 @@ http.route({
   }),
 });
 
+// RevenueCat webhook — the iOS/Android IAP mirror of the Stripe webhook above.
+// The mobile app calls Purchases.configure/logIn with our own Convex profile
+// id as RevenueCat's appUserID, so event.app_user_id here IS the profiles._id
+// to update directly — no separate customer-id mapping needed.
+// Requires: npx convex env set REVENUECAT_WEBHOOK_AUTH <the "Authorization
+// header value" configured in RevenueCat dashboard > Project > Integrations >
+// Webhooks>.
+http.route({
+  path: "/revenuecat-webhook",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    const expectedAuth = process.env.REVENUECAT_WEBHOOK_AUTH;
+    if (!expectedAuth) {
+      return new Response("RevenueCat webhook auth not configured", { status: 503 });
+    }
+    if (request.headers.get("authorization") !== expectedAuth) {
+      return new Response("Unauthorized", { status: 401 });
+    }
+
+    const body = await request.json();
+    const event = body?.event;
+    const profileId = event?.app_user_id;
+    if (!profileId || typeof profileId !== "string") {
+      return new Response("OK", { status: 200 });
+    }
+
+    const tier = typeof event.product_id === "string" ? event.product_id : undefined;
+    const expiresAt = typeof event.expiration_at_ms === "number" ? event.expiration_at_ms : undefined;
+
+    try {
+      switch (event.type) {
+        // Renew, uncancel or a plan change: still (or newly) active. Also
+        // covers CANCELLATION — that only turns off auto-renew, access
+        // continues until expiration_at_ms, which EXPIRATION reports later.
+        case "INITIAL_PURCHASE":
+        case "RENEWAL":
+        case "UNCANCELLATION":
+        case "PRODUCT_CHANGE":
+        case "SUBSCRIPTION_EXTENDED":
+        case "CANCELLATION":
+          await ctx.runMutation(internal.profiles.updateSubscriptionFromRevenueCat, {
+            profileId: profileId as any,
+            status: "active",
+            tier,
+            expiresAt,
+          });
+          break;
+        case "EXPIRATION":
+          await ctx.runMutation(internal.profiles.updateSubscriptionFromRevenueCat, {
+            profileId: profileId as any,
+            status: "expired",
+            tier,
+            expiresAt,
+          });
+          break;
+        case "BILLING_ISSUE":
+          await ctx.runMutation(internal.profiles.updateSubscriptionFromRevenueCat, {
+            profileId: profileId as any,
+            status: "billing_issue",
+            tier,
+            expiresAt,
+          });
+          break;
+        default:
+          break;
+      }
+    } catch {
+      // Unknown/malformed app_user_id (e.g. an anonymous RC id from before
+      // login) — nothing to reconcile against, ignore rather than fail the
+      // webhook (RevenueCat retries on non-2xx).
+    }
+
+    return new Response("OK", { status: 200 });
+  }),
+});
+
 // Analytics ingestion — the marketing site (static HTML) and the app both POST
 // batched events here. Public + permissive CORS: this is fire-and-forget
 // first-party telemetry, no auth, served from *.convex.site (cross-origin to

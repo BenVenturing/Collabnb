@@ -1,3 +1,6 @@
 name = "collabnb"
 pages_build_output_dir = "dist"
 compatibility_date = "2026-09-20"
+
+[vars]
+VITE_CONVEX_URL = "https://outgoing-anaconda-357.convex.cloud"

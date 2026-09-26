@@ -8,6 +8,7 @@ import Profile from './views/Profile.jsx';
 import Connect from './views/Connect.jsx';
 import Report from './views/Report.jsx';
 import Appearance from './views/Appearance.jsx';
+import Legend from './views/Legend.jsx';
 import Icon from './views/Icon.jsx';
 
 const TABS = [
@@ -16,13 +17,14 @@ const TABS = [
   { id: 'tracker', label: 'Tracker', icon: 'board' },
   { id: 'profile', label: 'Profile & voice', icon: 'user' },
   { id: 'connect', label: 'Connect', icon: 'plug' },
-  { id: 'appearance', label: 'Appearance', icon: 'palette' },
+  { id: 'settings', label: 'Settings', icon: 'settings' },
 ];
 
 const RUN_STEPS = ['Scanning sources', 'Reading captions & rules', 'Screening for injected text', 'Scoring fit', 'Printing report'];
 
 export default function App() {
-  const [tab, setTab] = usePersisted('pg.tab', 'feed');
+  const [storedTab, setTab] = usePersisted('pg.tab', 'feed');
+  const tab = TABS.some((t) => t.id === storedTab) ? storedTab : 'feed';
   const [profile, setProfile] = usePersisted('pg.profile', DEFAULT_PROFILE);
   const [opps, setOpps] = usePersisted('pg.opps', []);
   const [poolIndex, setPoolIndex] = usePersisted('pg.pool', 0);
@@ -171,7 +173,12 @@ export default function App() {
         {tab === 'tracker' && <Tracker opps={scored} update={update} />}
         {tab === 'profile' && <Profile profile={profile} setProfile={setProfile} />}
         {tab === 'connect' && <Connect settings={settings} setSettings={setSettings} />}
-        {tab === 'appearance' && <Appearance theme={theme} setTheme={(t) => setSettings({ ...settings, theme: t })} />}
+        {tab === 'settings' && (
+          <div className="stack">
+            <Appearance theme={theme} setTheme={(t) => setSettings({ ...settings, theme: t })} />
+            <Legend />
+          </div>
+        )}
         {report && (
           <Report
             report={report}

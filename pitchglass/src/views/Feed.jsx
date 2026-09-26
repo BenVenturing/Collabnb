@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { SourceChip, Fit } from './Card.jsx';
 import { SOURCES, STEP_KINDS } from '../data.js';
 import Icon from './Icon.jsx';
-import Legend from './Legend.jsx';
 import { detectSource, hostOf } from '../lib.js';
 
 export default function Feed({ opps, mission, setMission, onAdd, onDraft, onSkip, onRun }) {
@@ -55,8 +54,6 @@ export default function Feed({ opps, mission, setMission, onAdd, onDraft, onSkip
         />
         <button className="btn">Add</button>
       </form>
-
-      <Legend />
 
       {sources.length > 1 && (
         <div className="filters">

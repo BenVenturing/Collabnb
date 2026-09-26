@@ -1,0 +1,122 @@
+import { useState } from 'react';
+import { SAMPLE_POOL, DEFAULT_PROFILE } from './data.js';
+import { usePersisted, fitScore, draftPitch, uid } from './lib.js';
+import Feed from './views/Feed.jsx';
+import Approvals from './views/Approvals.jsx';
+import Tracker from './views/Tracker.jsx';
+import Profile from './views/Profile.jsx';
+import Connect from './views/Connect.jsx';
+
+const TABS = [
+  { id: 'feed', label: 'Opportunities', icon: '◎' },
+  { id: 'approvals', label: 'Approvals', icon: '✓' },
+  { id: 'tracker', label: 'Tracker', icon: '▦' },
+  { id: 'profile', label: 'Profile & voice', icon: '◐' },
+  { id: 'connect', label: 'Connect', icon: '⌁' },
+];
+
+const RUN_STEPS = ['Scanning sources', 'Screening for injected text', 'Scoring fit', 'Queueing matches'];
+
+export default function App() {
+  const [tab, setTab] = usePersisted('pg.tab', 'feed');
+  const [profile, setProfile] = usePersisted('pg.profile', DEFAULT_PROFILE);
+  const [opps, setOpps] = usePersisted('pg.opps', []);
+  const [poolIndex, setPoolIndex] = usePersisted('pg.pool', 0);
+  const [run, setRun] = useState(null);
+
+  const update = (id, patch) => setOpps((all) => all.map((o) => (o.id === id ? { ...o, ...patch } : o)));
+
+  const addOpp = (o) =>
+    setOpps((all) => [{ id: uid(), status: 'found', foundAt: Date.now(), ...o }, ...all]);
+
+  const draft = (o) => {
+    update(o.id, { status: 'drafted', draft: draftPitch(o, profile) });
+    setTab('approvals');
+  };
+
+  const runAgent = async () => {
+    if (run) return;
+    for (let i = 0; i < RUN_STEPS.length; i++) {
+      setRun({ step: i });
+      await new Promise((r) => setTimeout(r, 650));
+    }
+    const batch = SAMPLE_POOL.slice(poolIndex, poolIndex + 2);
+    batch.forEach((o) => addOpp({ ...o }));
+    setPoolIndex(poolIndex + batch.length);
+    setRun({ done: batch.length });
+    setTimeout(() => setRun(null), 2200);
+  };
+
+  const pending = opps.filter((o) => o.status === 'drafted').length;
+  const scored = opps.map((o) => ({ ...o, fit: fitScore(o, profile) }));
+
+  return (
+    <div className="shell">
+      <div className="bg" aria-hidden="true">
+        <span className="blob b1" />
+        <span className="blob b2" />
+        <span className="blob b3" />
+      </div>
+
+      <aside className="glass sidebar">
+        <div className="brand">
+          <img src="/icon.svg" alt="" width="34" height="34" />
+          <div>
+            <strong>Pitchglass</strong>
+            <small>your pitching agent</small>
+          </div>
+        </div>
+        <nav>
+          {TABS.map((t) => (
+            <button key={t.id} className={`nav ${tab === t.id ? 'on' : ''}`} onClick={() => setTab(t.id)}>
+              <span className="ico" aria-hidden="true">{t.icon}</span>
+              <span className="lbl">{t.label}</span>
+              {t.id === 'approvals' && pending > 0 && <span className="badge">{pending}</span>}
+            </button>
+          ))}
+        </nav>
+        <div className="glass inset status">
+          <span className="dot off" /> Agent not connected
+          <button className="link" onClick={() => setTab('connect')}>Set up</button>
+        </div>
+      </aside>
+
+      <main>
+        <header className="top">
+          <div>
+            <h1>{TABS.find((t) => t.id === tab)?.label}</h1>
+            <p className="muted">
+              {opps.length} found · {pending} awaiting approval · {opps.filter((o) => o.status === 'sent').length} sent
+            </p>
+          </div>
+          <button className="btn primary" onClick={runAgent} disabled={!!run}>
+            {run && !run.done ? <span className="spin" /> : '▶'} Run agent
+          </button>
+        </header>
+
+        {run && (
+          <div className="glass runbar" role="status">
+            {run.done !== undefined ? (
+              run.done ? `Found ${run.done} new ${run.done === 1 ? 'match' : 'matches'} (demo data).` : 'No new sample briefs left — paste real links below.'
+            ) : (
+              <>
+                <span className="spin" /> {RUN_STEPS[run.step]}…
+                <span className="steps">
+                  {RUN_STEPS.map((s, i) => (
+                    <i key={s} className={i <= run.step ? 'lit' : ''} />
+                  ))}
+                </span>
+              </>
+            )}
+          </div>
+        )}
+
+        {tab === 'feed' && <Feed opps={scored} onAdd={addOpp} onDraft={draft} onSkip={(o) => update(o.id, { status: 'skipped' })} onRun={runAgent} />}
+        {tab === 'approvals' && <Approvals opps={scored} profile={profile} update={update} />}
+        {tab === 'tracker' && <Tracker opps={scored} update={update} />}
+        {tab === 'profile' && <Profile profile={profile} setProfile={setProfile} />}
+        {tab === 'connect' && <Connect />}
+      </main>
+    </div>
+  );
+}

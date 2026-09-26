@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { DEFAULT_FORM_FIELDS } from './data.js';
 
 export function usePersisted(key, initial) {
   const [value, setValue] = useState(() => {
@@ -87,7 +88,7 @@ export function draftPitch(opp, p) {
   const niche = list(p.niches).slice(0, 2).join(' and ') || '[your niche]';
   const deliver = opp.deliverables?.length ? opp.deliverables.join(', ') : 'the deliverables in the brief';
   const past = p.pastWork ? p.pastWork.split('\n')[0].trim() : '';
-  const brand = opp.brand.replace(/^Sample · /, '');
+  const brand = opp.brand;
 
   if (opp.channel === 'dm') {
     return [
@@ -174,6 +175,47 @@ export function confirmPatch(opp, profile, settings) {
   const d = { ...opp, draft: draftPitch(opp, profile), ...draftExtras(opp, profile) };
   const ready = voiceIssues(d.draft, profile).placeholders === 0 && stepsReady(d).length === 0;
   return { draft: d.draft, comment: d.comment, recipients: d.recipients, answers: d.answers, status: settings?.autoSubmit && ready ? 'approved' : 'drafted' };
+}
+
+export function normalizeResult(o) {
+  const steps = Array.isArray(o.steps) && o.steps.length ? o.steps : o.channel === 'form' ? ['open_link', 'fill_form', 'submit'] : ['read_caption', 'dm'];
+  return {
+    ...o,
+    id: uid(),
+    status: 'found',
+    foundAt: Date.now(),
+    source: o.source || detectSource(o.link || ''),
+    brand: o.brand || hostOf(o.link || ''),
+    title: o.title || 'Untitled opportunity',
+    deliverables: Array.isArray(o.deliverables) ? o.deliverables : [],
+    tags: Array.isArray(o.tags) ? o.tags.map((t) => String(t).toLowerCase()) : [],
+    steps,
+    fields: Array.isArray(o.fields) && o.fields.length ? o.fields : steps.includes('fill_form') ? DEFAULT_FORM_FIELDS : [],
+  };
+}
+
+export function since(ts) {
+  const m = Math.round((Date.now() - ts) / 60000);
+  if (m < 1) return 'just now';
+  if (m < 60) return `${m} min ago`;
+  const h = Math.round(m / 60);
+  return h < 24 ? `${h}h ago` : `${Math.round(h / 24)}d ago`;
+}
+
+// The message you paste into Claude Code to run a search.
+export function searchPrompt(settings, count) {
+  const src = Object.entries(settings.sources || {}).filter(([, on]) => on).map(([k]) => ({ instagram: 'Instagram', threads: 'Threads', x: 'X', reddit: 'Reddit' })[k]).filter(Boolean);
+  const t = settings.tags || {};
+  return [
+    `Use the pitchglass-search skill.`,
+    `Find ${count} new opportunities for: ${settings.mission?.trim() || 'paid UGC and creator collaborations'}.`,
+    `Search: ${src.join(', ')}.`,
+    t.hiring?.length ? `Hashtags: ${t.hiring.map((x) => '#' + x).join(' ')}.` : '',
+    t.phrases?.length ? `Phrases: ${t.phrases.map((x) => `"${x}"`).join(', ')}.` : '',
+    `Save the results to pitchglass/public/results.json.`,
+  ]
+    .filter(Boolean)
+    .join('\n');
 }
 
 export const uid = () => Math.random().toString(36).slice(2, 10);

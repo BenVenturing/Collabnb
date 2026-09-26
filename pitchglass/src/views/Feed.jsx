@@ -21,7 +21,7 @@ export default function Feed({ opps, mission, setMission, onAdd, onDraft, onSkip
     onAdd({
       source,
       brand: hostOf(u),
-      title: 'Pasted brief — details are read on the next agent run',
+      title: 'Pasted link — Claude Code reads the details when you apply',
       link: u,
       channel: source === 'instagram' || source === 'x' || source === 'reddit' ? 'dm' : 'form',
       deliverables: [],
@@ -68,8 +68,8 @@ export default function Feed({ opps, mission, setMission, onAdd, onDraft, onSkip
       {found.length === 0 ? (
         <div className="glass empty">
           <h2>Nothing in the queue</h2>
-          <p className="muted">Run the agent to pull matching projects, or paste a link above.</p>
-          <button className="btn primary" onClick={onRun}><Icon name="play" size={14} /> Run agent</button>
+          <p className="muted">Click Search to find real brand call-outs on Instagram, Threads, X and Reddit, or paste a link above.</p>
+          <button className="btn primary" onClick={onRun}><Icon name="play" size={14} /> Search</button>
         </div>
       ) : (
         <div className="grid">

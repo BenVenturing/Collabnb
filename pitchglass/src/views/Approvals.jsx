@@ -21,9 +21,21 @@ export default function Approvals({ opps, profile, update }) {
     update(active.id, { answers: active.answers.map((a, j) => (j === i ? { ...a, value } : a)) });
   const save = (patch) => update(active.id, { draft: text, ...patch });
 
+  const applyPrompt = () =>
+    [
+      `Use the project-apply skill. Apply to ${active.link || active.applyLink || active.brand}.`,
+      `Use this pitch: ${text}`,
+      active.comment && `Comment: ${active.comment}`,
+      active.recipients && `Tag only: ${active.recipients}`,
+      active.answers?.length && `Form answers: ${active.answers.map((a) => `${a.field}: ${a.value}`).join(' | ')}`,
+      'Stop before sending or submitting so I can check it.',
+    ]
+      .filter(Boolean)
+      .join('\n');
+
   const copy = async () => {
     try {
-      await navigator.clipboard.writeText(text);
+      await navigator.clipboard.writeText(applyPrompt());
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch {}
@@ -82,12 +94,12 @@ export default function Approvals({ opps, profile, update }) {
           <div className="row gap end wrap">
             <button className="btn ghost" onClick={() => update(active.id, { status: 'skipped' })}>Skip</button>
             <button className="btn ghost" onClick={() => setText(draftPitch(active, profile))}>Regenerate</button>
-            <button className="btn ghost" onClick={copy}>{copied ? 'Copied' : 'Copy'}</button>
+            <button className="btn ghost" onClick={copy}>{copied ? 'Copied' : 'Copy for Claude Code'}</button>
             <button className="btn primary" onClick={() => save({ status: 'approved' })} disabled={issues.placeholders > 0 || missing.length > 0}>
               Approve
             </button>
           </div>
-          <p className="muted small">Approved pitches are sent by your agent on its next run. Nothing sends without approval.</p>
+          <p className="muted small">Copy for Claude Code, paste it in, and Claude fills everything in your browser and stops before sending. Mark it sent here when it's done.</p>
 
           {active.steps?.length > 0 && (
             <div className="glass inset plan">
@@ -104,7 +116,7 @@ export default function Approvals({ opps, profile, update }) {
                     <span className="sico"><Icon name={STEP_KINDS[s]?.icon} size={15} /></span>
                     <span className="grow">
                       <strong>{STEP_KINDS[s]?.label}</strong>
-                      {s === 'follow' && <span className="muted small"> {active.brand.replace(/^Sample · /, '')}</span>}
+                      {s === 'follow' && <span className="muted small"> {active.brand}</span>}
                       {s === 'fill_form' && active.formType && <span className="muted small"> · {FORM_TYPES[active.formType]}</span>}
                       {s === 'comment' && (
                         <input className="stepin" value={active.comment || ''} onChange={(e) => update(active.id, { comment: e.target.value })} aria-label="Comment text" />

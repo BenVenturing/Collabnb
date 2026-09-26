@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { SAMPLE_POOL, DEFAULT_PROFILE, DEFAULT_SETTINGS } from './data.js';
-import { usePersisted, fitDetails, fitExplain, draftPitch, draftExtras, confirmPatch, uid } from './lib.js';
+import { DEFAULT_PROFILE, DEFAULT_SETTINGS } from './data.js';
+import { usePersisted, fitDetails, fitExplain, draftPitch, draftExtras, confirmPatch, normalizeResult, uid, since } from './lib.js';
 import Feed from './views/Feed.jsx';
 import Approvals from './views/Approvals.jsx';
 import Tracker from './views/Tracker.jsx';
@@ -11,6 +11,7 @@ import Appearance from './views/Appearance.jsx';
 import Legend from './views/Legend.jsx';
 import Onboarding from './views/Onboarding.jsx';
 import Icon from './views/Icon.jsx';
+import Search from './views/Search.jsx';
 
 const TABS = [
   { id: 'feed', label: 'Opportunities', icon: 'target' },
@@ -21,18 +22,16 @@ const TABS = [
   { id: 'settings', label: 'Settings', icon: 'settings' },
 ];
 
-const RUN_STEPS = ['Scanning sources', 'Reading captions & rules', 'Screening for injected text', 'Scoring fit', 'Printing report'];
-
 export default function App() {
   const [storedTab, setTab] = usePersisted('pg.tab', 'feed');
   const tab = TABS.some((t) => t.id === storedTab) ? storedTab : 'feed';
   const [profile, setProfile] = usePersisted('pg.profile', DEFAULT_PROFILE);
   const [opps, setOpps] = usePersisted('pg.opps', []);
-  const [poolIndex, setPoolIndex] = usePersisted('pg.pool', 0);
   const [storedSettings, setSettings] = usePersisted('pg.settings', DEFAULT_SETTINGS);
   const settings = { ...DEFAULT_SETTINGS, ...storedSettings };
   const [count, setCount] = usePersisted('pg.count', 10);
-  const [run, setRun] = useState(null);
+  const [searching, setSearching] = useState(false);
+  const [lastLoad, setLastLoad] = usePersisted('pg.lastLoad', null);
   const [report, setReport] = useState(null);
   const [onboarding, setOnboarding] = useState(() => !profile.onboarded);
 
@@ -59,24 +58,16 @@ export default function App() {
     if (keepIds.length) setTab('approvals');
   };
 
-  const runAgent = async () => {
-    if (run) return;
-    const n = Math.max(1, Math.min(Number(count) || 1, settings.caps.applications));
-    for (let i = 0; i < RUN_STEPS.length; i++) {
-      setRun({ step: i });
-      await new Promise((r) => setTimeout(r, 650));
-    }
-    const batch = SAMPLE_POOL.slice(poolIndex, poolIndex + n).map((o) => ({
-      id: uid(),
-      status: 'found',
-      foundAt: Date.now(),
-      ...o,
-    }));
+  const runAgent = () => setSearching(true);
+
+  // Adds search results Claude Code saved, skipping anything already seen. Returns how many were new.
+  const importResults = (items, asked) => {
+    const seen = new Set(opps.map((o) => o.link).filter(Boolean));
+    const batch = items.filter((o) => o && (!o.link || !seen.has(o.link))).map(normalizeResult);
     setOpps((all) => [...batch, ...all]);
-    setPoolIndex(poolIndex + batch.length);
-    setRun({ done: batch.length });
-    setTimeout(() => setRun(null), 2200);
-    if (batch.length) setReport({ ids: batch.map((o) => o.id), asked: n, at: Date.now() });
+    setLastLoad(Date.now());
+    if (batch.length) setReport({ ids: batch.map((o) => o.id), asked, at: Date.now() });
+    return batch.length;
   };
 
   const pending = opps.filter((o) => o.status === 'drafted').length;
@@ -96,7 +87,7 @@ export default function App() {
 
       <aside className="glass sidebar">
         <div className="brand">
-          <img src="/icon.svg" alt="" width="34" height="34" />
+          <img src="/logo.png" alt="" width="34" height="34" onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = '/icon.svg'; }} />
           <div>
             <strong>Pitchglass</strong>
             <small>your pitching agent</small>
@@ -112,8 +103,8 @@ export default function App() {
           ))}
         </nav>
         <div className="glass inset status">
-          <span className="dot off" /> Agent not connected
-          <button className="link" onClick={() => setTab('connect')}>Set up</button>
+          <span className={`dot ${lastLoad ? '' : 'off'}`} /> {lastLoad ? `Last search ${since(lastLoad)}` : 'No searches yet'}
+          <button className="link" onClick={() => setTab('connect')}>Setup guide</button>
         </div>
       </aside>
 
@@ -137,28 +128,11 @@ export default function App() {
                 aria-label="How many applications to find"
               />
             </label>
-            <button className="btn primary" onClick={runAgent} disabled={!!run}>
-              {run && !run.done ? <span className="spin" /> : <Icon name="play" size={14} />} Run agent
+            <button className="btn primary" onClick={runAgent}>
+              <Icon name="play" size={14} /> Search
             </button>
           </div>
         </header>
-
-        {run && (
-          <div className="glass runbar" role="status">
-            {run.done !== undefined ? (
-              run.done ? `Found ${run.done} new ${run.done === 1 ? 'match' : 'matches'} (demo data).` : 'No new sample briefs left — paste real links below.'
-            ) : (
-              <>
-                <span className="spin" /> {RUN_STEPS[run.step]}…
-                <span className="steps">
-                  {RUN_STEPS.map((s, i) => (
-                    <i key={s} className={i <= run.step ? 'lit' : ''} />
-                  ))}
-                </span>
-              </>
-            )}
-          </div>
-        )}
 
         {tab === 'feed' && (
           <Feed
@@ -192,7 +166,18 @@ export default function App() {
             setProfile={setProfile}
             mission={settings.mission}
             setMission={(mission) => setSettings({ ...settings, mission })}
-            onDone={() => setOnboarding(false)}
+            onDone={() => {
+              setOnboarding(false);
+              if (!lastLoad) setTab('connect');
+            }}
+          />
+        )}
+        {searching && (
+          <Search
+            count={Math.max(1, Math.min(Number(count) || 1, settings.caps.applications))}
+            settings={settings}
+            onImport={importResults}
+            onClose={() => setSearching(false)}
           />
         )}
         {report && (

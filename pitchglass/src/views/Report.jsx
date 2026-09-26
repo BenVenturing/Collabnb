@@ -2,8 +2,6 @@ import { useEffect, useState } from 'react';
 import { SOURCES, STEP_KINDS, FORM_TYPES } from '../data.js';
 import Icon from './Icon.jsx';
 
-const NOTIFY_LABEL = { telegram: 'Telegram', whatsapp: 'WhatsApp', instagram: 'Instagram', off: null };
-
 export default function Report({ report, opps, settings, onConfirm, onClose }) {
   const [keep, setKeep] = useState(() => opps.filter((o) => (o.fit ?? 60) >= 55).map((o) => o.id));
   const toggle = (id) => setKeep((k) => (k.includes(id) ? k.filter((x) => x !== id) : [...k, id]));
@@ -20,7 +18,6 @@ export default function Report({ report, opps, settings, onConfirm, onClose }) {
   const forms = opps.filter((o) => o.steps?.includes('fill_form')).length;
   const engage = opps.filter((o) => o.steps?.some((s) => ['comment', 'tag', 'share_story', 'follow'].includes(s))).length;
   const stamp = new Date(report.at);
-  const notify = NOTIFY_LABEL[settings.notify];
 
   return (
     <div className="overlay" role="dialog" aria-modal="true" aria-label="Run report">
@@ -42,20 +39,6 @@ export default function Report({ report, opps, settings, onConfirm, onClose }) {
           <hr />
           <p className="rc-row big"><span>Selected</span><span>{keep.length}</span></p>
           <p className="rc-foot">nothing is sent until you approve each draft</p>
-          {notify && (
-            <div className="phone">
-              <p className="phone-head">{notify} · Pitchglass</p>
-              <div className="bubble">
-                Found {opps.length} projects for you.
-                {opps.slice(0, 3).map((o) => (
-                  <span key={o.id} className="bl">• {o.oneLiner || o.title}</span>
-                ))}
-                {opps.length > 3 && <span className="bl">+ {opps.length - 3} more</span>}
-                <span className="bbtns"><b>Confirm all</b><b>Review</b></span>
-              </div>
-              <p className="phone-note">Preview — phone delivery comes with the hosted service.</p>
-            </div>
-          )}
         </div>
 
         <div className="briefs">

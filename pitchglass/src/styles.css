@@ -340,3 +340,13 @@ input.plain[type=color]::-webkit-color-swatch { border: 0; border-radius: 8px; }
 .ob-chips .pill { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; font-size: 14px; }
 .ob-body input.plain, .ob-body textarea { width: 100%; }
 .ob-body > .btn { align-self: flex-start; }
+
+/* search + setup */
+.search-steps { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 16px; }
+.search-steps li { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+.cmd.tall { width: 100%; }
+.cmd.tall code { white-space: pre-wrap; overflow-x: visible; line-height: 1.6; }
+.warn-line { color: var(--warn); }
+.num { border: 0; color: inherit; cursor: pointer; }
+.step.done { opacity: .75; }
+.step.done .num { background: rgba(134, 239, 172, .25); color: var(--good); }

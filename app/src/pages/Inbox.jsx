@@ -13,6 +13,7 @@ import { useTranslation } from 'react-i18next';
 import i18nInstance from '../i18n';
 import { api } from '../../convex/_generated/api';
 import SkeletonCard from '../components/SkeletonCard';
+import { ThinkingOrb } from 'thinking-orbs';
 
 const TAG_STYLES = {
   Collab:      'bg-mint text-slate',
@@ -664,9 +665,7 @@ function ConversationPanel({ thread, allThreads, collabs, onViewCollab, onArchiv
               >
                 {drafting ? (
                   <>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.8" strokeLinecap="round" className="w-3.5 h-3.5 animate-spin">
-                      <path d="M21 12a9 9 0 1 1-9-9" />
-                    </svg>
+                    <ThinkingOrb state="composing" size={20} theme="dark" />
                     {t('conversation.generating')}
                   </>
                 ) : (

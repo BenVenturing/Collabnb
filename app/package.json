@@ -31,6 +31,7 @@
     "react-i18next": "^17.0.11",
     "react-router-dom": "^6.23.1",
     "stripe": "^22.1.1",
+    "thinking-orbs": "0.3.2",
     "three": "^0.164.1"
   },
   "devDependencies": {

@@ -1,19 +1,22 @@
 import { useState } from 'react';
 import { SAMPLE_POOL, DEFAULT_PROFILE, DEFAULT_SETTINGS } from './data.js';
-import { usePersisted, fitScore, draftPitch, draftExtras, uid } from './lib.js';
+import { usePersisted, fitDetails, fitExplain, draftPitch, draftExtras, confirmPatch, uid } from './lib.js';
 import Feed from './views/Feed.jsx';
 import Approvals from './views/Approvals.jsx';
 import Tracker from './views/Tracker.jsx';
 import Profile from './views/Profile.jsx';
 import Connect from './views/Connect.jsx';
 import Report from './views/Report.jsx';
+import Appearance from './views/Appearance.jsx';
+import Icon from './views/Icon.jsx';
 
 const TABS = [
-  { id: 'feed', label: 'Opportunities', icon: '◎' },
-  { id: 'approvals', label: 'Approvals', icon: '✓' },
-  { id: 'tracker', label: 'Tracker', icon: '▦' },
-  { id: 'profile', label: 'Profile & voice', icon: '◐' },
-  { id: 'connect', label: 'Connect', icon: '⌁' },
+  { id: 'feed', label: 'Opportunities', icon: 'target' },
+  { id: 'approvals', label: 'Approvals', icon: 'inbox' },
+  { id: 'tracker', label: 'Tracker', icon: 'board' },
+  { id: 'profile', label: 'Profile & voice', icon: 'user' },
+  { id: 'connect', label: 'Connect', icon: 'plug' },
+  { id: 'appearance', label: 'Appearance', icon: 'palette' },
 ];
 
 const RUN_STEPS = ['Scanning sources', 'Reading captions & rules', 'Screening for injected text', 'Scoring fit', 'Printing report'];
@@ -23,7 +26,8 @@ export default function App() {
   const [profile, setProfile] = usePersisted('pg.profile', DEFAULT_PROFILE);
   const [opps, setOpps] = usePersisted('pg.opps', []);
   const [poolIndex, setPoolIndex] = usePersisted('pg.pool', 0);
-  const [settings, setSettings] = usePersisted('pg.settings', DEFAULT_SETTINGS);
+  const [storedSettings, setSettings] = usePersisted('pg.settings', DEFAULT_SETTINGS);
+  const settings = { ...DEFAULT_SETTINGS, ...storedSettings };
   const [count, setCount] = usePersisted('pg.count', 10);
   const [run, setRun] = useState(null);
   const [report, setReport] = useState(null);
@@ -44,7 +48,7 @@ export default function App() {
     setOpps((all) =>
       all.map((o) => {
         if (!report?.ids.includes(o.id) || o.status !== 'found') return o;
-        return keepIds.includes(o.id) ? { ...o, ...draftPatch(o) } : { ...o, status: 'skipped' };
+        return keepIds.includes(o.id) ? { ...o, ...confirmPatch(o, profile, settings) } : { ...o, status: 'skipped' };
       }),
     );
     setReport(null);
@@ -72,10 +76,14 @@ export default function App() {
   };
 
   const pending = opps.filter((o) => o.status === 'drafted').length;
-  const scored = opps.map((o) => ({ ...o, fit: fitScore(o, profile) }));
+  const scored = opps.map((o) => {
+    const d = fitDetails(o, profile, settings.mission);
+    return { ...o, fit: d?.score ?? null, fitWhy: fitExplain(d) };
+  });
+  const theme = settings.theme;
 
   return (
-    <div className="shell">
+    <div className="shell" style={{ '--c1': theme.c1, '--c2': theme.c2, '--c3': theme.c3 }}>
       <div className="bg" aria-hidden="true">
         <span className="blob b1" />
         <span className="blob b2" />
@@ -93,7 +101,7 @@ export default function App() {
         <nav>
           {TABS.map((t) => (
             <button key={t.id} className={`nav ${tab === t.id ? 'on' : ''}`} onClick={() => setTab(t.id)}>
-              <span className="ico" aria-hidden="true">{t.icon}</span>
+              <span className="ico"><Icon name={t.icon} size={18} /></span>
               <span className="lbl">{t.label}</span>
               {t.id === 'approvals' && pending > 0 && <span className="badge">{pending}</span>}
             </button>
@@ -126,7 +134,7 @@ export default function App() {
               />
             </label>
             <button className="btn primary" onClick={runAgent} disabled={!!run}>
-              {run && !run.done ? <span className="spin" /> : '▶'} Run agent
+              {run && !run.done ? <span className="spin" /> : <Icon name="play" size={14} />} Run agent
             </button>
           </div>
         </header>
@@ -148,11 +156,22 @@ export default function App() {
           </div>
         )}
 
-        {tab === 'feed' && <Feed opps={scored} onAdd={addOpp} onDraft={draft} onSkip={(o) => update(o.id, { status: 'skipped' })} onRun={runAgent} />}
+        {tab === 'feed' && (
+          <Feed
+            opps={scored}
+            mission={settings.mission}
+            setMission={(mission) => setSettings({ ...settings, mission })}
+            onAdd={addOpp}
+            onDraft={draft}
+            onSkip={(o) => update(o.id, { status: 'skipped' })}
+            onRun={runAgent}
+          />
+        )}
         {tab === 'approvals' && <Approvals opps={scored} profile={profile} update={update} />}
         {tab === 'tracker' && <Tracker opps={scored} update={update} />}
         {tab === 'profile' && <Profile profile={profile} setProfile={setProfile} />}
         {tab === 'connect' && <Connect settings={settings} setSettings={setSettings} />}
+        {tab === 'appearance' && <Appearance theme={theme} setTheme={(t) => setSettings({ ...settings, theme: t })} />}
         {report && (
           <Report
             report={report}

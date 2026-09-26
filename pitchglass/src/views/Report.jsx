@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { SOURCES, STEP_KINDS, FORM_TYPES } from '../data.js';
+import Icon from './Icon.jsx';
 
 const NOTIFY_LABEL = { telegram: 'Telegram', whatsapp: 'WhatsApp', instagram: 'Instagram', off: null };
 
@@ -90,7 +91,7 @@ export default function Report({ report, opps, settings, onConfirm, onClose }) {
                   <span className="note-line">{o.oneLiner || o.title}</span>
                   <span className="note-steps" aria-label="Steps">
                     {(o.steps || []).map((s) => (
-                      <span key={s} title={STEP_KINDS[s]?.label}>{STEP_KINDS[s]?.icon}</span>
+                      <Icon key={s} name={STEP_KINDS[s]?.icon} size={14} label={STEP_KINDS[s]?.label} />
                     ))}
                   </span>
                   <span className="stamp">{on ? 'CONFIRMED' : 'REMOVED'}</span>

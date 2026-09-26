@@ -7,7 +7,7 @@ Adapted from `BLOG_STYLE_GUIDE.md` §3 and §6 for first-person applications.
 - Name the specific thing: the resort, the deliverable, the reel detail. "Your sunrise pool shot in the reel" beats "your amazing content".
 - Short sentences. Plain verbs: shoot, post, cut, book, deliver. Not: utilize, leverage, harness.
 - Numbers for scanning: "18K followers, 4.2% engagement", "3 Reels + 10 stills in 48h".
-- One clear ask to close. No sales closers, no exclamation-mark stacks, max one emoji in a DM.
+- One clear ask to close. No sales closers, no exclamation-mark stacks, no emojis.
 
 ## Banned
 

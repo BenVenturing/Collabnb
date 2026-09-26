@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { SourceChip, Fit } from './Card.jsx';
 import { draftPitch, voiceIssues, stepsReady } from '../lib.js';
 import { STEP_KINDS, FORM_TYPES } from '../data.js';
+import Icon from './Icon.jsx';
 
 export default function Approvals({ opps, profile, update }) {
   const queue = opps.filter((o) => o.status === 'drafted');
@@ -58,10 +59,10 @@ export default function Approvals({ opps, profile, update }) {
         <div className="glass editor">
           <div className="row between">
             <div>
-              <SourceChip source={active.source} /> <Fit value={active.fit} />
+              <SourceChip source={active.source} /> <Fit value={active.fit} why={active.fitWhy} />
               <h3>{active.title}</h3>
               <p className="muted small">
-                {active.brand} · {active.channel === 'dm' ? 'Direct message' : active.channel === 'collabnb' ? 'Collabnb pitch' : 'Application form'}
+                {active.brand} · {active.channel === 'dm' ? 'Direct message' : 'Application form'}
               </p>
             </div>
           </div>
@@ -69,7 +70,7 @@ export default function Approvals({ opps, profile, update }) {
           <textarea id="draft" value={text} onChange={(e) => setText(e.target.value)} onBlur={() => save({})} rows={12} />
           <div className="voice">
             {issues.banned.length === 0 && issues.placeholders === 0 ? (
-              <span className="ok">✓ Voice check passed</span>
+              <span className="ok"><Icon name="check" size={14} /> Voice check passed</span>
             ) : (
               <>
                 {issues.placeholders > 0 && <span className="warn">{issues.placeholders} placeholder{issues.placeholders > 1 ? 's' : ''} to fill — add details in Profile</span>}
@@ -100,7 +101,7 @@ export default function Approvals({ opps, profile, update }) {
               <ol className="steps-list">
                 {active.steps.map((s, i) => (
                   <li key={s + i}>
-                    <span className="sico" aria-hidden="true">{STEP_KINDS[s]?.icon}</span>
+                    <span className="sico"><Icon name={STEP_KINDS[s]?.icon} size={15} /></span>
                     <span className="grow">
                       <strong>{STEP_KINDS[s]?.label}</strong>
                       {s === 'follow' && <span className="muted small"> {active.brand.replace(/^Sample · /, '')}</span>}
@@ -121,7 +122,6 @@ export default function Approvals({ opps, profile, update }) {
                         </>
                       )}
                       {s === 'dm' && <span className="muted small"> — sends the message above</span>}
-                      {s === 'collabnb_pitch' && <span className="muted small"> — sends the message above</span>}
                     </span>
                   </li>
                 ))}

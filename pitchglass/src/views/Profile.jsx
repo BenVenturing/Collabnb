@@ -1,4 +1,5 @@
 import { daysSince } from '../lib.js';
+import Icon from './Icon.jsx';
 
 const FIELDS = [
   ['name', 'Name'],
@@ -65,7 +66,7 @@ export default function Profile({ profile, setProfile }) {
               <input type="file" accept=".pdf,image/*" onChange={upload} />
               {profile.mediaKit && (
                 <span className="small">
-                  ✓ {profile.mediaKit.name} · {Math.round(profile.mediaKit.size / 1024)} KB
+                  <Icon name="check" size={13} /> {profile.mediaKit.name} · {Math.round(profile.mediaKit.size / 1024)} KB
                   <span className="muted"> (MVP keeps the file name only)</span>
                 </span>
               )}

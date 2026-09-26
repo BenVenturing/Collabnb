@@ -17,20 +17,39 @@ export function usePersisted(key, initial) {
   return [value, setValue];
 }
 
+const niches0 = (w) => ['ugc', 'spa', 'pet', 'car'].includes(w);
+
 const list = (s) =>
   (s || '')
     .split(',')
     .map((x) => x.trim().toLowerCase())
     .filter(Boolean);
 
-export function fitScore(opp, profile) {
-  const niches = list(profile.niches);
+// Fit = 40 base + up to 50 for how many of the brief's niche tags match your niches or mission,
+// + 10 if it's where you're based, + 5 if it's remote. Capped at 99.
+export function fitDetails(opp, profile, mission = '') {
+  const niches = [...list(profile.niches), ...list(mission.replace(/\s+/g, ','))].filter((w) => w.length > 3 || niches0(w));
   if (!opp.tags?.length || !niches.length) return null;
-  const hits = opp.tags.filter((t) => niches.some((n) => t.includes(n) || n.includes(t))).length;
-  let score = 40 + Math.round((hits / opp.tags.length) * 50);
-  if (profile.basedIn && opp.location?.toLowerCase().includes(profile.basedIn.toLowerCase().split(',')[0])) score += 10;
-  if (/remote|anywhere/i.test(opp.location || '')) score += 5;
-  return Math.min(score, 99);
+  const matched = opp.tags.filter((t) => niches.some((n) => t.includes(n) || n.includes(t)));
+  const nicheScore = Math.round((matched.length / opp.tags.length) * 50);
+  const local = !!(profile.basedIn && opp.location?.toLowerCase().includes(profile.basedIn.toLowerCase().split(',')[0].trim()));
+  const remote = /remote|anywhere/i.test(opp.location || '');
+  const score = Math.min(40 + nicheScore + (local ? 10 : 0) + (remote ? 5 : 0), 99);
+  return { score, matched, total: opp.tags.length, nicheScore, local, remote };
+}
+
+export const fitScore = (opp, profile, mission) => fitDetails(opp, profile, mission)?.score ?? null;
+
+export function fitExplain(d) {
+  if (!d) return 'No fit score — the brief has no niche tags yet.';
+  return [
+    `Base 40`,
+    `+${d.nicheScore} niche match (${d.matched.length}/${d.total}${d.matched.length ? `: ${d.matched.join(', ')}` : ''})`,
+    d.local && '+10 where you are based',
+    d.remote && '+5 remote',
+  ]
+    .filter(Boolean)
+    .join(' · ');
 }
 
 export function detectSource(url) {
@@ -44,7 +63,7 @@ export function detectSource(url) {
   if (h.includes('instagram')) return 'instagram';
   if (h.includes('reddit')) return 'reddit';
   if (h === 'x.com' || h.includes('twitter')) return 'x';
-  if (h.includes('collabnb')) return 'collabnb';
+  if (h.includes('threads.')) return 'threads';
   if (h.includes('docs.google') || h.includes('forms.gle') || h.includes('typeform') || h.includes('tally')) return 'form';
   if (h.includes('casting') || h.includes('backstage')) return 'casting';
   return 'link';
@@ -148,6 +167,13 @@ export function stepsReady(opp) {
 
 export function daysSince(ts) {
   return ts ? Math.floor((Date.now() - ts) / 86400000) : null;
+}
+
+// What confirming a brief does: draft it, and queue it straight for sending when nothing is missing.
+export function confirmPatch(opp, profile, settings) {
+  const d = { ...opp, draft: draftPitch(opp, profile), ...draftExtras(opp, profile) };
+  const ready = voiceIssues(d.draft, profile).placeholders === 0 && stepsReady(d).length === 0;
+  return { draft: d.draft, comment: d.comment, recipients: d.recipients, answers: d.answers, status: settings?.autoSubmit && ready ? 'approved' : 'drafted' };
 }
 
 export const uid = () => Math.random().toString(36).slice(2, 10);

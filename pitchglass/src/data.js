@@ -1,9 +1,9 @@
 export const SOURCES = {
-  collabnb: { label: 'Collabnb', hue: 'teal' },
   instagram: { label: 'Instagram', hue: 'pink' },
-  casting: { label: 'Casting', hue: 'amber' },
+  casting: { label: 'Casting board', hue: 'amber' },
   reddit: { label: 'Reddit', hue: 'orange' },
   x: { label: 'X', hue: 'slate' },
+  threads: { label: 'Threads', hue: 'slate' },
   form: { label: 'Form', hue: 'violet' },
   link: { label: 'Link', hue: 'sky' },
 };
@@ -22,17 +22,16 @@ export const STAGE_LABEL = {
 
 // Every application is a sequence of browser steps the agent performs.
 export const STEP_KINDS = {
-  read_caption: { label: 'Read caption & rules', icon: '👁' },
-  follow: { label: 'Follow', icon: '＋' },
-  like: { label: 'Like post', icon: '♥' },
-  comment: { label: 'Comment', icon: '💬', needs: 'comment' },
-  tag: { label: 'Tag people', icon: '@', needs: 'recipients' },
-  share_story: { label: 'Share to story', icon: '◔' },
-  dm: { label: 'Send DM', icon: '✉', needs: 'message' },
-  open_link: { label: 'Open link', icon: '↗' },
-  fill_form: { label: 'Fill form', icon: '▤', needs: 'answers' },
-  collabnb_pitch: { label: 'Send Collabnb pitch', icon: '◎', needs: 'message' },
-  submit: { label: 'Submit', icon: '✓' },
+  read_caption: { label: 'Read caption & rules', icon: 'eye', desc: 'Reads the post so it knows exactly what the brand asks for.' },
+  follow: { label: 'Follow', icon: 'follow', desc: 'Follows the brand account — many posts require it.' },
+  like: { label: 'Like post', icon: 'heart', desc: 'Likes the post when the caption asks for it.' },
+  comment: { label: 'Comment', icon: 'comment', needs: 'comment', desc: 'Leaves the comment the caption asks for, like a keyword.' },
+  tag: { label: 'Tag people', icon: 'at', needs: 'recipients', desc: 'Tags people in a comment. You always choose who.' },
+  share_story: { label: 'Share to story', icon: 'story', desc: 'Shares the post to your story.' },
+  dm: { label: 'Send DM', icon: 'send', needs: 'message', desc: 'Sends your pitch as a direct message.' },
+  open_link: { label: 'Open link', icon: 'external', desc: 'Opens the application link (bio link, form, site).' },
+  fill_form: { label: 'Fill form', icon: 'form', needs: 'answers', desc: 'Fills a Google Form, Typeform, Jotform or site form from your profile.' },
+  submit: { label: 'Submit', icon: 'check', desc: 'Submits the application.' },
 };
 
 export const FORM_TYPES = {
@@ -62,29 +61,52 @@ export const DEFAULT_PROFILE = {
   updatedAt: null,
 };
 
+// Tags brands post under when they're hiring. Creator-side tags (#ugccreator, #hireugc) are
+// mostly creators advertising themselves, so they're searched last.
+export const DEFAULT_TAGS = {
+  hiring: ['creatorsearch', 'castingcall', 'ugcjobs', 'ugccasting', 'creatorswanted', 'lookingforcreators', 'influencercasting', 'ambassadorsearch', 'brandambassadorsearch', 'nowcasting', 'ugcopportunity', 'paidcollab'],
+  community: ['ugccreator', 'ugccommunity', 'ugcmarketing', 'paidugc'],
+  phrases: ['looking for UGC creators', 'UGC creators wanted', 'creator search', 'casting call creators', 'hiring UGC creators', 'seeking influencers', 'looking for travel creators'],
+};
+
 export const DEFAULT_SETTINGS = {
   notify: 'telegram',
   notifyHandle: '',
   caps: { follows: 20, comments: 10, dms: 15, applications: 10 },
   pace: 'human',
+  mission: '',
+  autoSubmit: true,
+  sources: { instagram: true, x: true, threads: true, reddit: true },
+  loopHours: 0,
+  tags: DEFAULT_TAGS,
+  theme: { c1: '#22d3ee', c2: '#a78bfa', c3: '#fb923c' },
 };
+
+export const THEME_PRESETS = [
+  { name: 'Sunset glass', c1: '#22d3ee', c2: '#a78bfa', c3: '#fb923c' },
+  { name: 'Lagoon', c1: '#2dd4bf', c2: '#38bdf8', c3: '#818cf8' },
+  { name: 'Retro diner', c1: '#f43f5e', c2: '#facc15', c3: '#14b8a6' },
+  { name: 'Desert', c1: '#f59e0b', c2: '#e11d48', c3: '#7c3aed' },
+  { name: 'Mint neon', c1: '#4ade80', c2: '#22d3ee', c3: '#e879f9' },
+];
 
 const FORM_FIELDS = ['Full name', 'Email', 'Instagram handle', 'Followers', 'Portfolio link', 'Available dates', 'Why are you a fit?', 'Rate'];
 
 // Fictional sample briefs so the MVP has something to show. Real sources plug in later.
 const RAW_POOL = [
   {
-    source: 'collabnb', brand: 'Casa Alba', title: '3-night stay for Reels + stills',
-    oneLiner: 'Lisbon design guesthouse trading a 3-night stay + €300 for 2 Reels and a stills set.',
-    location: 'Lisbon, Portugal', dates: 'Nov 4 – Nov 20', comp: 'Free stay + €300',
-    deliverables: ['2 Reels', '10 edited stills', '3 Stories'], requirements: 'Travel or design niche, 10K+ followers',
-    tags: ['travel', 'hotels', 'design'], channel: 'collabnb',
-    steps: ['collabnb_pitch'],
+    source: 'threads', brand: '@nomad.kitchen', title: 'Threads post: paid UGC for a travel cookware line',
+    oneLiner: 'Cookware brand paying $180 per video for travel-cooking UGC; reply with your handle, then they DM.',
+    caption: 'Hiring UGC creators for our travel cookware launch. $180/video. Reply with your handle + niche and we will DM you.',
+    location: 'Remote', dates: 'Nov – Dec', comp: '$180 per video',
+    deliverables: ['2 UGC videos'], requirements: 'Travel, food or lifestyle',
+    tags: ['travel', 'food', 'ugc'], channel: 'dm', commentKeyword: 'Interested',
+    steps: ['read_caption', 'comment', 'dm'],
   },
   {
     source: 'instagram', brand: '@salt.and.stone', title: '"Looking for UGC creators" post',
     oneLiner: 'Skincare brand paying $150–250 per 30s UGC video; caption says comment UGC, then DM.',
-    caption: 'We’re looking for UGC creators! Comment “UGC” and DM us your portfolio 🧴',
+    caption: 'We’re looking for UGC creators! Comment “UGC” and DM us your portfolio',
     commentKeyword: 'UGC', location: 'Remote', dates: 'Rolling', comp: '$150–$250 per video',
     deliverables: ['1 UGC video (30s)'], requirements: 'Skincare or lifestyle, any size',
     tags: ['lifestyle', 'beauty', 'ugc'], channel: 'dm',
@@ -101,7 +123,7 @@ const RAW_POOL = [
   {
     source: 'instagram', brand: '@coastline.villas', title: 'Creator search — comment + tag to apply',
     oneLiner: 'Villa group picking 5 creators for free stays; comment CREATOR, tag 2 people, then Typeform in bio.',
-    caption: 'Creators wanted 🌊 1) Follow us 2) Comment “CREATOR” and tag 2 creator friends 3) Apply via link in bio',
+    caption: 'Creators wanted. 1) Follow us 2) Comment “CREATOR” and tag 2 creator friends 3) Apply via link in bio',
     commentKeyword: 'CREATOR', tagCount: 2, location: 'Mallorca, Spain', dates: 'Feb – Apr', comp: 'Free stay (4 nights)',
     deliverables: ['2 Reels', '5 stills'], requirements: 'Travel or lifestyle, 5K+ followers',
     tags: ['travel', 'hotels', 'lifestyle'], channel: 'form', formType: 'typeform', fields: FORM_FIELDS,
@@ -132,7 +154,7 @@ const RAW_POOL = [
   {
     source: 'instagram', brand: '@lumen.glamping', title: 'Reel: "DM us COLLAB"',
     oneLiner: 'Glamping site trading 2 nights for a Reel; caption asks you to DM the word COLLAB.',
-    caption: 'Content creators 🏕️ DM us “COLLAB” with your best travel Reel',
+    caption: 'Content creators — DM us “COLLAB” with your best travel Reel',
     location: 'Cotswolds, UK', dates: 'Oct – Dec', comp: 'Free stay (2 nights)',
     deliverables: ['1 Reel', '3 Stories'], requirements: 'Travel, outdoor',
     tags: ['travel', 'outdoor', 'hotels'], channel: 'dm', steps: ['read_caption', 'dm'],
@@ -156,7 +178,7 @@ const RAW_POOL = [
   {
     source: 'instagram', brand: '@pantry.co', title: 'Story share + form to apply',
     oneLiner: 'Snack brand sending product to 20 UGC creators; share their post to story, then Google Form.',
-    caption: 'UGC creators 🍪 Share this to your story + fill the form in our bio to get a box',
+    caption: 'UGC creators: share this to your story + fill the form in our bio to get a box',
     location: 'US only', dates: 'Rolling', comp: 'Product + $75',
     deliverables: ['1 UGC video'], requirements: 'US based, food or lifestyle',
     tags: ['food', 'ugc', 'lifestyle'], channel: 'form', formType: 'google', fields: FORM_FIELDS,
@@ -171,11 +193,12 @@ const RAW_POOL = [
     steps: ['fill_form', 'submit'],
   },
   {
-    source: 'collabnb', brand: 'Pine & Ember Cabins', title: 'Cabin weekend for UGC',
-    oneLiner: 'Two-cabin host offering a weekend stay for a UGC video set they can run as ads.',
-    location: 'Blue Ridge, USA', dates: 'Oct 20 – Dec 15', comp: 'Free stay + $150',
-    deliverables: ['3 UGC videos', 'Ad usage 6 months'], requirements: 'UGC or outdoor',
-    tags: ['ugc', 'outdoor', 'hotels'], channel: 'collabnb', steps: ['collabnb_pitch'],
+    source: 'x', brand: '@staycation.club', title: 'Hotel collective looking for UGC creators',
+    oneLiner: 'Boutique hotel collective booking weekend stays for UGC sets they run as ads; DM with portfolio.',
+    caption: 'We are looking for UGC creators for our partner hotels. Weekend stay + $150. DM your portfolio.',
+    location: 'US + Canada', dates: 'Oct 20 – Dec 15', comp: 'Free stay + $150',
+    deliverables: ['3 UGC videos', 'Ad usage 6 months'], requirements: 'UGC or travel',
+    tags: ['ugc', 'hotels', 'travel'], channel: 'dm', steps: ['read_caption', 'follow', 'dm'],
   },
   {
     source: 'x', brand: '@railpass.eu', title: 'Rail trip creators thread',

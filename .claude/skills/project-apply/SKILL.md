@@ -49,9 +49,19 @@ the missing facts, then save them to the file so it is never asked again.
 4. **Show the drafts** to the user as a single list: field → answer, plus the DM.
 5. **Fill.** In the browser, fill each field, upload media from paths in
    `profile.md` when asked, screenshot the filled form.
-6. **Stop before submit/send.** Show the screenshot and wait for an explicit
-   "send"/"submit". Only then click submit or send the DM.
-7. **Log.** Append a line to `applications.md` in this folder:
+6. **Stop before submit/send and show a pre-send check.** Report, in this order:
+   - **Account:** the handle/email you are logged in as on that site.
+   - **Where:** the exact page URL, and the brand/post it belongs to.
+   - **Caption rules:** each thing the caption asks for, and whether it's done, ready, or skipped (and why).
+   - **What will be sent:** the full DM or comment text, or every form field as `Question → Answer`.
+   - **Uploads:** any file attached, by name.
+   - **Blanks:** any required question left empty because `profile.md` doesn't cover it.
+   - **Screenshot** of the filled page.
+   Then wait for an explicit "send"/"submit". Only then click submit or send.
+7. **Confirm it went through.** After sending, check for proof (form's confirmation
+   page, the DM showing in the thread, the comment visible) and report it with a
+   screenshot. If there's no proof, say so — never report "sent" on an assumption.
+8. **Log.** Append a line to `applications.md` in this folder:
    `YYYY-MM-DD | brand | project | link | channel | status`.
 
 ## Rules

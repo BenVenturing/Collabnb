@@ -287,6 +287,39 @@ export default function UserDetailPanel({ profileId, onClose }) {
   );
 }
 
+function NudgeSocialsButton({ profileId }) {
+  const nudge = useMutation(api.gates.nudgeAddSocials);
+  const [state, setState] = useState('idle'); // idle | sending | sent
+
+  async function handleClick() {
+    setState('sending');
+    try {
+      await nudge({ profileId });
+      setState('sent');
+    } catch {
+      setState('idle');
+    }
+  }
+
+  return (
+    <button
+      onClick={handleClick}
+      disabled={state !== 'idle'}
+      style={{
+        marginTop: '0.75rem', width: '100%',
+        background: state === 'sent' ? MINT : 'transparent',
+        color: state === 'sent' ? '#166534' : SLATE,
+        border: `1px solid ${state === 'sent' ? 'transparent' : 'rgba(60,87,89,0.35)'}`,
+        borderRadius: '10px', padding: '0.5rem', fontSize: '0.8rem', fontWeight: 600,
+        cursor: state === 'idle' ? 'pointer' : 'default',
+        fontFamily: 'inherit',
+      }}
+    >
+      {state === 'sent' ? 'Reminder sent ✓' : state === 'sending' ? 'Sending…' : 'Remind to add socials'}
+    </button>
+  );
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // Tab Content
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -335,11 +368,12 @@ function TabContent({ tab, data, guarantee }) {
       );
 
     // ── Social ────────────────────────────────────────────────────────────────
-    case 'social':
+    case 'social': {
+      const missingSocials = !p.instagram_handle && !p.tiktok_handle && !p.youtube_handle;
       return (
         <>
           {[
-            { label: 'Instagram', handle: p.instagram_handle, url: p.instagram_handle ? `https://instagram.com/${p.instagram_handle.replace('@', '')}` : null },
+            { label: 'Instagram', handle: p.instagram_handle || p.username, url: (p.instagram_handle || p.username) ? `https://instagram.com/${(p.instagram_handle || p.username).replace('@', '')}` : null },
             { label: 'TikTok',    handle: p.tiktok_handle,    url: p.tiktok_handle    ? `https://tiktok.com/@${p.tiktok_handle.replace('@', '')}` : null },
             { label: 'YouTube',   handle: p.youtube_handle,   url: p.youtube_handle   ? (p.youtube_handle.startsWith('http') ? p.youtube_handle : `https://youtube.com/@${p.youtube_handle.replace('@', '')}`) : null },
             { label: 'Portfolio', handle: p.portfolio,        url: p.portfolio        ? (p.portfolio.startsWith('http') ? p.portfolio : `https://${p.portfolio}`) : null },
@@ -355,8 +389,10 @@ function TabContent({ tab, data, guarantee }) {
               )}
             </div>
           ))}
+          {missingSocials && <NudgeSocialsButton profileId={p._id} />}
         </>
       );
+    }
 
     // ── Collabs ───────────────────────────────────────────────────────────────
     case 'collabs':

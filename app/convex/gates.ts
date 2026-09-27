@@ -355,6 +355,34 @@ export const nudgeFinishSignup = mutation({
   },
 });
 
+// ─── Admin: Nudge to add/fix social accounts ────────────────────────────────────
+export const nudgeAddSocials = mutation({
+  args: { profileId: v.id("profiles") },
+  handler: async (ctx, { profileId }) => {
+    await requireAdmin(ctx);
+    const profile = await ctx.db.get(profileId);
+    if (!profile) return { ok: false, reason: "not_found" };
+
+    await ctx.runMutation(internal.notifications.create, {
+      userId: String(profileId),
+      type: "admin_social_nudge",
+      title: "Add your social accounts",
+      body: "Please add your Instagram, TikTok, or YouTube handle to your profile.",
+      link: "/profile?edit=true",
+    });
+
+    await ctx.db.insert("admin_audit_log", {
+      action: "social_nudge",
+      target_type: "profile",
+      target_id: String(profileId),
+      details: profile.full_name,
+      created_at: Date.now(),
+    });
+
+    return { ok: true };
+  },
+});
+
 // ─── Admin: Set admin note / request interview ──────────────────────────────────
 export const setAdminNote = mutation({
   args: {

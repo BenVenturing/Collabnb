@@ -89,6 +89,12 @@ function hostSteps(profile, isFirstVisit, hasShared, hasListing, hasBrowsedCreat
       action: { label: t('hostSteps.profile.action'), path: '/profile?edit=true' },
     },
     {
+      id: 'social',
+      label: t('hostSteps.social.label'),
+      done: !isFirstVisit && !!(profile?.instagram_handle || profile?.tiktok_handle || profile?.youtube_handle),
+      action: { label: t('hostSteps.social.action'), path: '/profile?edit=true' },
+    },
+    {
       id: 'creators',
       label: t('hostSteps.creators.label'),
       done: hasBrowsedCreators,

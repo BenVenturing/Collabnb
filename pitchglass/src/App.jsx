@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { DEFAULT_PROFILE, DEFAULT_SETTINGS } from './data.js';
-import { usePersisted, fitDetails, fitExplain, draftPitch, draftExtras, confirmPatch, normalizeResult, uid, since } from './lib.js';
+import { usePersisted, fitDetails, fitExplain, confirmPatch, isHospitality, normalizeResult, uid, since } from './lib.js';
 import Feed from './views/Feed.jsx';
 import Approvals from './views/Approvals.jsx';
 import Tracker from './views/Tracker.jsx';
@@ -40,7 +40,7 @@ export default function App() {
   const addOpp = (o) =>
     setOpps((all) => [{ id: uid(), status: 'found', foundAt: Date.now(), ...o }, ...all]);
 
-  const draftPatch = (o) => ({ status: 'drafted', draft: draftPitch(o, profile), ...draftExtras(o, profile) });
+  const draftPatch = (o) => confirmPatch(o, profile, { ...settings, autoSubmit: false });
 
   const draft = (o) => {
     update(o.id, draftPatch(o));
@@ -72,6 +72,10 @@ export default function App() {
 
   const pending = opps.filter((o) => o.status === 'drafted').length;
   const scored = opps.map((o) => {
+    if (settings.pitchAs === 'collabnb') {
+      const ok = isHospitality(o);
+      return { ...o, fit: ok ? 90 : 20, fitWhy: ok ? 'Hospitality brand — a Collabnb fit' : 'Not hospitality — not a Collabnb fit' };
+    }
     const d = fitDetails(o, profile, settings.mission);
     return { ...o, fit: d?.score ?? null, fitWhy: fitExplain(d) };
   });
@@ -145,9 +149,11 @@ export default function App() {
             onRun={runAgent}
           />
         )}
-        {tab === 'approvals' && <Approvals opps={scored} profile={profile} update={update} />}
+        {tab === 'approvals' && <Approvals opps={scored} profile={profile} pitchAs={settings.pitchAs} update={update} />}
         {tab === 'tracker' && <Tracker opps={scored} update={update} />}
-        {tab === 'profile' && <Profile profile={profile} setProfile={setProfile} />}
+        {tab === 'profile' && (
+          <Profile profile={profile} setProfile={setProfile} pitchAs={settings.pitchAs} setPitchAs={(pitchAs) => setSettings({ ...settings, pitchAs })} />
+        )}
         {tab === 'connect' && <Connect settings={settings} setSettings={setSettings} />}
         {tab === 'settings' && (
           <div className="stack">

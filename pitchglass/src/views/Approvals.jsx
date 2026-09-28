@@ -4,7 +4,7 @@ import { draftPitch, voiceIssues, stepsReady } from '../lib.js';
 import { STEP_KINDS, FORM_TYPES } from '../data.js';
 import Icon from './Icon.jsx';
 
-export default function Approvals({ opps, profile, update }) {
+export default function Approvals({ opps, profile, pitchAs, update }) {
   const queue = opps.filter((o) => o.status === 'drafted');
   const ready = opps.filter((o) => o.status === 'approved');
   const [activeId, setActiveId] = useState(queue[0]?.id);
@@ -23,8 +23,10 @@ export default function Approvals({ opps, profile, update }) {
 
   const applyPrompt = () =>
     [
-      `Use the project-apply skill. Apply to ${active.link || active.applyLink || active.brand}.`,
-      `Use this pitch: ${text}`,
+      pitchAs === 'collabnb'
+        ? `Use the collabnb-reply skill. Reply as Collabnb to ${active.link || active.brand}.`
+        : `Use the project-apply skill. Apply to ${active.link || active.applyLink || active.brand}.`,
+      `Use this ${pitchAs === 'collabnb' ? 'message' : 'pitch'}: ${text}`,
       active.comment && `Comment: ${active.comment}`,
       active.recipients && `Tag only: ${active.recipients}`,
       active.answers?.length && `Form answers: ${active.answers.map((a) => `${a.field}: ${a.value}`).join(' | ')}`,
@@ -93,7 +95,7 @@ export default function Approvals({ opps, profile, update }) {
           </div>
           <div className="row gap end wrap">
             <button className="btn ghost" onClick={() => update(active.id, { status: 'skipped' })}>Skip</button>
-            <button className="btn ghost" onClick={() => setText(draftPitch(active, profile))}>Regenerate</button>
+            <button className="btn ghost" onClick={() => setText(draftPitch(active, profile, pitchAs))}>Regenerate</button>
             <button className="btn ghost" onClick={copy}>{copied ? 'Copied' : 'Copy for Claude Code'}</button>
             <button className="btn primary" onClick={() => save({ status: 'approved' })} disabled={issues.placeholders > 0 || missing.length > 0}>
               Approve

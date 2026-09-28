@@ -79,6 +79,7 @@ export const DEFAULT_SETTINGS = {
   caps: { follows: 20, comments: 10, dms: 15, applications: 10 },
   pace: 'human',
   mission: '',
+  pitchAs: 'creator',
   autoSubmit: true,
   sources: { instagram: true, x: true, threads: true, reddit: true },
   loopHours: 0,

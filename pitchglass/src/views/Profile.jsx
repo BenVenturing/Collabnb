@@ -17,7 +17,7 @@ const FIELDS = [
   ['portfolio', 'Portfolio / media kit link'],
 ];
 
-export default function Profile({ profile, setProfile }) {
+export default function Profile({ profile, setProfile, pitchAs, setPitchAs }) {
   const touch = (patch) => setProfile({ ...profile, ...patch, updatedAt: Date.now() });
   const set = (k) => (e) => touch({ [k]: e.target.value });
   const age = daysSince(profile.updatedAt);
@@ -29,6 +29,21 @@ export default function Profile({ profile, setProfile }) {
 
   return (
     <section className="stack">
+      <div className="glass pad-lg">
+        <h2 className="sub">Reply as</h2>
+        <div className="seg" role="radiogroup" aria-label="Reply as">
+          {[['creator', 'Me, as a creator'], ['collabnb', 'Collabnb, as the platform']].map(([v, l]) => (
+            <button key={v} role="radio" aria-checked={pitchAs === v} className={`pill ${pitchAs === v ? 'on' : ''}`} onClick={() => setPitchAs(v)}>
+              {pitchAs === v && <Icon name="check" size={13} />} {l}
+            </button>
+          ))}
+        </div>
+        <p className="muted small">
+          {pitchAs === 'collabnb'
+            ? 'Replies invite hospitality brands to post their creator call-out as a Collabnb listing, signed by Benjamin, founder. Non-hospitality brands are flagged as not a fit.'
+            : 'Pitches apply for the project as you, using the details below.'}
+        </p>
+      </div>
       <div className={`glass fresh ${age == null || age > 14 ? 'stale' : ''}`}>
         {age == null
           ? 'Fill this in once — every pitch pulls from here.'

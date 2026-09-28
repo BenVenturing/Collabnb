@@ -78,8 +78,31 @@ export function hostOf(url) {
   }
 }
 
+// ─── Collabnb mode ───────────────────────────────────────────────────────────
+// Replies to a brand's creator call-out as the platform, inviting them to post
+// it as a Collabnb listing. Collabnb only serves hospitality, so anything else
+// is flagged as not a fit. Stats are the same sourced third-party figures the
+// site and host outreach use — never framed as Collabnb's own results.
+const HOSPITALITY = /hotel|resort|villa|glamping|bnb|b&b|lodge|hostel|inn\b|cabin|retreat|stay|tourism|guesthouse|boutique|hospitality|property/i;
+
+export function isHospitality(opp) {
+  return HOSPITALITY.test([opp.brand, opp.title, opp.oneLiner, opp.caption, ...(opp.tags || [])].join(' '));
+}
+
+export function collabnbPitch(opp) {
+  const brand = opp.brand || 'there';
+  const angles = [
+    `Hi ${brand} — saw you're looking for creators.\n\nI'm Benjamin, founder of Collabnb. We built it for exactly this: you post the collab once — deliverables, dates, and a hosted stay, fee, or both — and vetted creators apply to you, instead of you sorting through comments and DMs.\n\nWe're welcoming our first 100 properties as Founding Hosts, free for life. Happy to set up this campaign as your first listing: collabnb.com`,
+    `Hi ${brand} — a creator call-out like yours usually brings in a flood of comments and DMs to sort through.\n\nCollabnb puts all of it in one place: one listing, every application with portfolio and creator tier side by side, and the agreement and deliverables tracked in the app.\n\nFirst 100 hosts are free for life. Want me to move this one over for you? collabnb.com\n\nBenjamin, founder of Collabnb`,
+    `Hi ${brand} — noticed your post looking for creators.\n\n73% of travelers say influencer recommendations have shaped a trip or booking decision — Expedia Group, 2025. The hard part is finding the right creators without spending hours searching.\n\nThat's what Collabnb does: post your collab once and vetted creators apply to you. Founding Hosts join free for life: collabnb.com\n\nBenjamin, founder of Collabnb`,
+  ];
+  const i = [...String(opp.link || brand)].reduce((s, c) => s + c.charCodeAt(0), 0) % angles.length;
+  return angles[i];
+}
+
 // Template drafter for the MVP. In production, Claude writes this from the full brief.
-export function draftPitch(opp, p) {
+export function draftPitch(opp, p, pitchAs = 'creator') {
+  if (pitchAs === 'collabnb') return isHospitality(opp) ? collabnbPitch(opp) : 'Not a Collabnb fit — Collabnb only works with hotels, stays and tourism brands. Skip this one or reply as yourself.';
   const who = p.name || '[your name]';
   const handle = p.handle ? `@${p.handle.replace(/^@/, '')}` : '[@handle]';
   const reach = [p.followers && `${p.followers} followers`, p.engagement && `${p.engagement} engagement`]
@@ -172,6 +195,7 @@ export function daysSince(ts) {
 
 // What confirming a brief does: draft it, and queue it straight for sending when nothing is missing.
 export function confirmPatch(opp, profile, settings) {
+  if (settings?.pitchAs === 'collabnb') return { draft: draftPitch(opp, profile, 'collabnb'), comment: '', recipients: '', answers: [], status: 'drafted' };
   const d = { ...opp, draft: draftPitch(opp, profile), ...draftExtras(opp, profile) };
   const ready = voiceIssues(d.draft, profile).placeholders === 0 && stepsReady(d).length === 0;
   return { draft: d.draft, comment: d.comment, recipients: d.recipients, answers: d.answers, status: settings?.autoSubmit && ready ? 'approved' : 'drafted' };
@@ -204,11 +228,13 @@ export function since(ts) {
 
 // The message you paste into Claude Code to run a search.
 export function searchPrompt(settings, count) {
+  const collabnb = settings.pitchAs === 'collabnb';
   const src = Object.entries(settings.sources || {}).filter(([, on]) => on).map(([k]) => ({ instagram: 'Instagram', threads: 'Threads', x: 'X', reddit: 'Reddit' })[k]).filter(Boolean);
   const t = settings.tags || {};
   return [
     `Use the pitchglass-search skill.`,
-    `Find ${count} new opportunities for: ${settings.mission?.trim() || 'paid UGC and creator collaborations'}.`,
+    `Find ${count} new opportunities for: ${settings.mission?.trim() || (collabnb ? 'hotels, villas, glamping sites, resorts and tourism boards looking for creators' : 'paid UGC and creator collaborations')}.`,
+    collabnb ? 'Only keep hospitality businesses (hotels, stays, glamping, resorts, tourism boards) — I will reply to them as Collabnb.' : '',
     `Search: ${src.join(', ')}.`,
     t.hiring?.length ? `Hashtags: ${t.hiring.map((x) => '#' + x).join(' ')}.` : '',
     t.phrases?.length ? `Phrases: ${t.phrases.map((x) => `"${x}"`).join(', ')}.` : '',

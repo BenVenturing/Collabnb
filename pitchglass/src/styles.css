@@ -350,3 +350,6 @@ input.plain[type=color]::-webkit-color-swatch { border: 0; border-radius: 8px; }
 .num { border: 0; color: inherit; cursor: pointer; }
 .step.done { opacity: .75; }
 .step.done .num { background: rgba(134, 239, 172, .25); color: var(--good); }
+
+.sendbar { padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 14px; }
+.sendbar > span:first-child { display: inline-flex; align-items: center; gap: 6px; }

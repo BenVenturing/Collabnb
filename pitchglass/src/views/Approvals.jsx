@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { SourceChip, Fit } from './Card.jsx';
-import { draftPitch, voiceIssues, stepsReady } from '../lib.js';
+import { draftPitch, voiceIssues, stepsReady, sendTarget } from '../lib.js';
 import { STEP_KINDS, FORM_TYPES } from '../data.js';
 import Icon from './Icon.jsx';
 
@@ -11,8 +11,12 @@ export default function Approvals({ opps, profile, pitchAs, update }) {
   const active = queue.find((o) => o.id === activeId) || queue[0];
   const [text, setText] = useState(active?.draft || '');
   const [copied, setCopied] = useState(false);
+  const [sending, setSending] = useState(null);
 
-  useEffect(() => setText(active?.draft || ''), [active?.id]);
+  useEffect(() => {
+    setText(active?.draft || '');
+    setSending(null);
+  }, [active?.id]);
 
   const extrasText = active ? [active.comment, ...(active.answers || []).map((a) => a.value)].join('\n') : '';
   const issues = voiceIssues(`${text}\n${extrasText}`, profile);
@@ -34,6 +38,17 @@ export default function Approvals({ opps, profile, pitchAs, update }) {
     ]
       .filter(Boolean)
       .join('\n');
+
+  const sendNow = async () => {
+    const answers = active.answers?.length ? `\n\n${active.answers.map((a) => `${a.field}: ${a.value}`).join('\n')}` : '';
+    const t = sendTarget(active, text);
+    try {
+      await navigator.clipboard.writeText(active.channel === 'form' ? `${text}${answers}` : text);
+    } catch {}
+    save({});
+    if (t.url) window.open(t.url, '_blank', 'noopener');
+    setSending(t.how);
+  };
 
   const copy = async () => {
     try {
@@ -97,11 +112,22 @@ export default function Approvals({ opps, profile, pitchAs, update }) {
             <button className="btn ghost" onClick={() => update(active.id, { status: 'skipped' })}>Skip</button>
             <button className="btn ghost" onClick={() => setText(draftPitch(active, profile, pitchAs))}>Regenerate</button>
             <button className="btn ghost" onClick={copy}>{copied ? 'Copied' : 'Copy for Claude Code'}</button>
-            <button className="btn primary" onClick={() => save({ status: 'approved' })} disabled={issues.placeholders > 0 || missing.length > 0}>
-              Approve
+            <button className="btn primary" onClick={sendNow} disabled={issues.placeholders > 0 || missing.length > 0 || /^Not a Collabnb fit/.test(text)}>
+              <Icon name="send" size={14} /> Send
             </button>
           </div>
-          <p className="muted small">Copy for Claude Code, paste it in, and Claude fills everything in your browser and stops before sending. Mark it sent here when it's done.</p>
+          {sending && (
+            <div className="glass inset sendbar" role="status">
+              <span>
+                <Icon name="check" size={14} /> Message copied. {sending}
+              </span>
+              <span className="row gap">
+                <button className="btn ghost sm" onClick={() => setSending(null)}>Not yet</button>
+                <button className="btn primary sm" onClick={() => update(active.id, { status: 'sent', draft: text, sentAt: Date.now() })}>It’s sent</button>
+              </span>
+            </div>
+          )}
+          <p className="muted small">Send copies the message and opens their DM window — paste and send it yourself, then tap It’s sent. Or copy it for Claude Code to fill forms for you.</p>
 
           {active.steps?.length > 0 && (
             <div className="glass inset plan">

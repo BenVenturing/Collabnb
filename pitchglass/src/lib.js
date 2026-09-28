@@ -90,7 +90,7 @@ export function isHospitality(opp) {
 }
 
 export function collabnbPitch(opp) {
-  const brand = opp.brand || 'there';
+  const brand = (opp.brand || 'there').split(' · ')[0];
   const angles = [
     `Hi ${brand} — saw you're looking for creators.\n\nI'm Benjamin, founder of Collabnb. We built it for exactly this: you post the collab once — deliverables, dates, and a hosted stay, fee, or both — and vetted creators apply to you, instead of you sorting through comments and DMs.\n\nWe're welcoming our first 100 properties as Founding Hosts, free for life. Happy to set up this campaign as your first listing: collabnb.com`,
     `Hi ${brand} — a creator call-out like yours usually brings in a flood of comments and DMs to sort through.\n\nCollabnb puts all of it in one place: one listing, every application with portfolio and creator tier side by side, and the agreement and deliverables tracked in the app.\n\nFirst 100 hosts are free for life. Want me to move this one over for you? collabnb.com\n\nBenjamin, founder of Collabnb`,
@@ -111,7 +111,7 @@ export function draftPitch(opp, p, pitchAs = 'creator') {
   const niche = list(p.niches).slice(0, 2).join(' and ') || '[your niche]';
   const deliver = opp.deliverables?.length ? opp.deliverables.join(', ') : 'the deliverables in the brief';
   const past = p.pastWork ? p.pastWork.split('\n')[0].trim() : '';
-  const brand = opp.brand;
+  const brand = (opp.brand || '').split(' · ')[0];
 
   if (opp.channel === 'dm') {
     return [
@@ -242,6 +242,22 @@ export function searchPrompt(settings, count) {
   ]
     .filter(Boolean)
     .join('\n');
+}
+
+// Where the Send button takes you: the brand's DM window where one exists.
+export function sendTarget(opp, text) {
+  const handle = (opp.brand || '').match(/@([\w.]+)/)?.[1];
+  const redditUser = (opp.brand || '').match(/u\/([\w-]+)/)?.[1];
+  if (opp.channel === 'form' && (opp.applyLink || opp.link)) return { url: opp.applyLink || opp.link, how: 'Form opened — paste each answer into its question.' };
+  if (opp.source === 'reddit' && redditUser)
+    return {
+      url: `https://www.reddit.com/message/compose/?to=${redditUser}&subject=${encodeURIComponent(opp.title || 'Creator collab')}&message=${encodeURIComponent(text)}`,
+      how: 'Reddit message opened with your text filled in — just press Send.',
+    };
+  if (opp.source === 'instagram' && handle) return { url: `https://ig.me/m/${handle}`, how: 'Instagram DM opened — paste (Cmd+V) and press Send.' };
+  if (opp.source === 'x' && handle) return { url: `https://x.com/${handle}`, how: 'Their X profile opened — tap Message, paste (Cmd+V) and send.' };
+  if (opp.source === 'threads' && handle) return { url: `https://www.threads.com/@${handle}`, how: 'Their Threads profile opened — message them, paste (Cmd+V) and send.' };
+  return { url: opp.link, how: 'Post opened — reply using the copied message (Cmd+V).' };
 }
 
 export const uid = () => Math.random().toString(36).slice(2, 10);

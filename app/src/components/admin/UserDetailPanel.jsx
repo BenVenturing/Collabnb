@@ -577,6 +577,13 @@ const TIERS_BY_TRACK = {
   ugc: ['UGC Beginner', 'UGC Pro'],
   influencer: ['Micro Influencer', 'Influencer'],
 };
+// Mirrors FOLLOWER_THRESHOLDS in convex/gates.ts — keep in sync.
+const TIER_RANGES = {
+  'UGC Beginner': '0–5K followers',
+  'UGC Pro': '5K–10K followers',
+  'Micro Influencer': '10K–50K followers',
+  'Influencer': '50K+ followers',
+};
 const CHECKLIST_ITEMS = {
   creator: [
     'Social accounts reviewed',
@@ -632,7 +639,7 @@ function ReviewActions({ profile }) {
   // Auto-select tier based on followers
   useEffect(() => {
     if (creatorTrack === 'influencer') {
-      setCreatorTier(totalFollowers >= 25000 ? 'Influencer' : 'Micro Influencer');
+      setCreatorTier(totalFollowers >= 50000 ? 'Influencer' : 'Micro Influencer');
     } else {
       setCreatorTier('UGC Beginner');
     }
@@ -756,7 +763,10 @@ function ReviewActions({ profile }) {
                 background: creatorTier === t ? MINT : 'rgba(255,255,255,0.7)',
                 color: creatorTier === t ? '#166534' : SLATE,
                 border: creatorTier === t ? '1px solid rgba(22,101,52,0.2)' : '1px solid rgba(25,37,36,0.1)',
-              }}>{t}</button>
+              }}>
+                <div>{t}</div>
+                <div style={{ fontSize: '0.62rem', fontWeight: 400, opacity: 0.7 }}>{TIER_RANGES[t]}</div>
+              </button>
             ))}
           </div>
           {creatorTrack === 'influencer' && (

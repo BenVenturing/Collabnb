@@ -3,7 +3,6 @@ import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-route
 import { useMutation } from 'convex/react';
 import { useTranslation } from 'react-i18next';
 import { api } from '../convex/_generated/api';
-import { Analytics } from '@vercel/analytics/react';
 import i18nInstance, { SUPPORTED_LANGUAGES } from './i18n';
 import collabnbLogo from './assets/collabnb-logo.png';
 import bgClouds from './assets/bg-clouds-hazy.png';
@@ -378,7 +377,6 @@ export default function App() {
             <AnalyticsTracker />
             <AppRoutes />
             <CookieBanner />
-            <Analytics />
           </BrowserRouter>
         </AuthProvider>
       </AppBarProvider>

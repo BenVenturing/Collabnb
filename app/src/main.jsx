@@ -3,7 +3,6 @@ import ReactDOM from 'react-dom/client';
 import { ClerkProvider, useAuth } from '@clerk/clerk-react';
 import { ConvexProviderWithClerk } from 'convex/react-clerk';
 import { ConvexProvider, ConvexReactClient } from 'convex/react';
-import { SpeedInsights } from '@vercel/speed-insights/react';
 import './index.css';
 import './i18n';
 import './lib/pwaInstall'; // registers the beforeinstallprompt listener before any route mounts
@@ -43,13 +42,9 @@ function Root() {
         {convex ? (
           <ConvexProvider client={convex}>
             <App />
-            <SpeedInsights />
           </ConvexProvider>
         ) : (
-          <>
-            <App />
-            <SpeedInsights />
-          </>
+          <App />
         )}
       </React.StrictMode>
     );
@@ -72,13 +67,9 @@ function Root() {
         {convex ? (
           <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
             <App />
-            <SpeedInsights />
           </ConvexProviderWithClerk>
         ) : (
-          <>
-            <App />
-            <SpeedInsights />
-          </>
+          <App />
         )}
       </ClerkProvider>
     </React.StrictMode>

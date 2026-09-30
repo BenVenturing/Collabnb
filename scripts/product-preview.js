@@ -62,6 +62,17 @@ export function initProductPreview() {
     tabs.forEach((t) => t.classList.toggle('active', t.dataset.previewSelect === view));
   }
 
+  // Video unreachable (e.g. host outage) — bounce back to the choice screen
+  // instead of leaving a blank player stuck open.
+  playerVideo.addEventListener('error', () => {
+    if (playerEl.hidden) return; // not mid-playback, ignore
+    if (playerAudio) { playerAudio.pause(); playerAudio.currentTime = 0; }
+    choiceEl.hidden = false;
+    playerEl.hidden = true;
+    if (modalCard) modalCard.classList.remove('is-player');
+    tabs.forEach((t) => t.classList.remove('active'));
+  });
+
   document.querySelectorAll('[data-preview-open]').forEach((btn) => {
     btn.addEventListener('click', openModal);
   });
@@ -91,6 +102,7 @@ export function initProductPreview() {
   const order = ['host', 'creator'];
   let orderIndex = 0;
   let loopStarted = false;
+  let loopBroken = false;
 
   function playNextLoop() {
     const view = order[orderIndex % order.length];
@@ -105,10 +117,19 @@ export function initProductPreview() {
   if (loopVideo) {
     loopVideo.addEventListener('ended', playNextLoop);
 
+    // Video unreachable — stop retrying on every scroll intersection
+    // (that retry-on-scroll loop is what made the mockup feel glitchy)
+    // and just hide the screen instead of showing a stuck/blank video.
+    loopVideo.addEventListener('error', () => {
+      loopBroken = true;
+      mockup.classList.add('mac-screen-unavailable');
+    });
+
     // Gate streaming on actual visibility — this used to autoplay on every
     // page load (even while hidden at opacity:0 pre-scroll), which is what
     // was burning through the Blob data-transfer cap.
     const loopObserver = new IntersectionObserver((entries) => {
+      if (loopBroken) return;
       const visible = entries[0].isIntersecting;
       if (visible && !loopStarted) {
         loopStarted = true;

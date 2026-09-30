@@ -1332,6 +1332,13 @@ h3 { font-weight: 700; }
   object-fit: cover;
   display: block;
 }
+/* Video failed to load — fall back to the screen's own gradient instead of
+   a broken-video icon; the mint gradient on .mac-screen already shows
+   through once the video element is hidden. */
+.mac-screen-unavailable .mac-screen-video,
+.mac-screen-unavailable .mac-caption {
+  display: none;
+}
 .mac-caption {
   position: absolute;
   left: 0.75rem;

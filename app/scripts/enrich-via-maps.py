@@ -85,8 +85,8 @@ def poll_job(job_id: str, timeout_s: int = 90) -> bool:
 # regex picks it up as if it were a real contact address. "user@domain.com"
 # and friends are template placeholder text builders leave in unfinished
 # pages. Squarespace/other builders may have similar tells; extend as needed.
-BOGUS_EMAIL_DOMAINS = ("wixpress.com", "sentry.io", "sentry-next", "domain.com", "example.com", "yoursite.com")
-BOGUS_EMAIL_LOCALS = ("user", "test", "email", "name", "yourname")
+BOGUS_EMAIL_DOMAINS = ("wixpress.com", "sentry.io", "sentry-next", "domain.com", "example.com", "yoursite.com", "email.com")
+BOGUS_EMAIL_LOCALS = ("user", "test", "email", "name", "yourname", "your", "you")
 
 # A "website" that's actually a social link, or an OTA/booking-aggregator
 # listing page (bluepillow, freecancellations, etc. — third-party booking

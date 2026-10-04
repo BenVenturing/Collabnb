@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { useQuery, useAction, useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 
@@ -7,12 +7,20 @@ const SLATE = '#3C5759';
 const SAGE  = '#646B62';
 const MINT  = '#D1EBDB';
 const BONE  = '#F7F5F2';
+const ROSE  = '#E8C9C3';
+const SAND  = '#E6DCC8';
 
 const GLASS = {
   background: 'rgba(255,255,255,0.55)',
   backdropFilter: 'blur(20px) saturate(140%)',
   border: '1px solid rgba(25,37,36,0.08)',
 };
+
+const AVATAR_COLORS = ['#7B68C8', '#4A9B7F', '#C77B4A', '#3C5759', '#A6555C'];
+function colorFor(name) {
+  const i = (name || '').charCodeAt(0) || 0;
+  return AVATAR_COLORS[i % AVATAR_COLORS.length];
+}
 
 async function uploadRawFile(file, generateUploadUrl) {
   const uploadUrl = await generateUploadUrl();
@@ -26,22 +34,91 @@ function handleOf(c) {
   return c.instagram_handle || c.tiktok_handle || '';
 }
 
+function fmtFollowers(n) {
+  if (!n) return null;
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1000) return `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}K`;
+  return String(n);
+}
+
+// Branded "spotlight" slide built from data already on file (avatar, handle,
+// follower count, bio, tier) — not a screenshot. Rasterized to a downloadable
+// PNG client-side via html2canvas, so there's no dependency on Instagram
+// actually letting us in (it doesn't, for logged-out scrapers).
+function SpotlightCard({ creator, cardRef }) {
+  const handle = handleOf(creator);
+  const followers = fmtFollowers(creator.followers);
+  return (
+    <div ref={cardRef} style={{
+      width: 260, aspectRatio: '1', borderRadius: '1rem', overflow: 'hidden', position: 'relative',
+      background: `linear-gradient(160deg, ${SAND} 0%, ${BONE} 55%, ${ROSE} 100%)`,
+      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+      padding: '1.5rem 1.25rem', boxSizing: 'border-box', textAlign: 'center',
+    }}>
+      {creator.avatar_url ? (
+        <img src={creator.avatar_url} alt="" crossOrigin="anonymous"
+          style={{ width: 84, height: 84, borderRadius: '50%', objectFit: 'cover', border: '3px solid rgba(255,255,255,0.8)', boxShadow: '0 4px 16px rgba(25,37,36,0.15)' }} />
+      ) : (
+        <div style={{
+          width: 84, height: 84, borderRadius: '50%', background: colorFor(creator.full_name),
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          color: '#fff', fontSize: '1.8rem', fontWeight: 800, fontFamily: 'Cabinet Grotesk, sans-serif',
+          border: '3px solid rgba(255,255,255,0.8)', boxShadow: '0 4px 16px rgba(25,37,36,0.15)',
+        }}>
+          {(creator.full_name || '?')[0].toUpperCase()}
+        </div>
+      )}
+
+      <p style={{ fontFamily: 'Cabinet Grotesk, sans-serif', fontWeight: 700, fontSize: '1.05rem', color: INK, margin: '0.7rem 0 0.1rem' }}>
+        {creator.full_name}
+      </p>
+      {handle && <p style={{ fontSize: '0.78rem', color: SLATE, margin: 0 }}>@{handle.replace(/^@/, '')}</p>}
+
+      <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.6rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+        {followers && (
+          <span style={{ fontSize: '0.68rem', fontWeight: 700, padding: '0.2rem 0.55rem', borderRadius: 9999, background: 'rgba(255,255,255,0.7)', color: INK }}>
+            {followers} followers
+          </span>
+        )}
+        {creator.tier && (
+          <span style={{ fontSize: '0.68rem', fontWeight: 700, padding: '0.2rem 0.55rem', borderRadius: 9999, background: 'rgba(255,255,255,0.7)', color: INK }}>
+            {creator.tier}
+          </span>
+        )}
+      </div>
+
+      {creator.bio && (
+        <p style={{
+          fontSize: '0.7rem', color: SLATE, margin: '0.7rem 0 0', lineHeight: 1.45,
+          display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+        }}>
+          {creator.bio}
+        </p>
+      )}
+
+      <span style={{
+        position: 'absolute', bottom: 10, right: 14, fontFamily: 'Cabinet Grotesk, sans-serif',
+        fontSize: '0.62rem', fontWeight: 700, color: 'rgba(25,37,36,0.4)', letterSpacing: '0.04em',
+      }}>
+        collabnb
+      </span>
+    </div>
+  );
+}
+
 function CreatorSlide({ creator, selected, onToggle }) {
   const generateUploadUrl = useMutation(api.uploads.generateUploadUrl);
   const setScreenshot = useMutation(api.carousel.setScreenshot);
-  const regenerate = useAction(api.carousel.regenerateScreenshot);
+  const clearScreenshot = useMutation(api.carousel.clearScreenshot);
+  const cardRef = useRef(null);
   const [busy, setBusy] = useState(false);
-  const [imgFailed, setImgFailed] = useState(false);
-
-  async function handleRegenerate() {
-    setBusy(true);
-    try { await regenerate({ profileId: creator._id }); } finally { setBusy(false); }
-  }
+  const [exportError, setExportError] = useState('');
 
   async function handleUpload(e) {
     const file = e.target.files?.[0];
     if (!file) return;
     setBusy(true);
+    setExportError('');
     try {
       const storageId = await uploadRawFile(file, generateUploadUrl);
       await setScreenshot({ profileId: creator._id, storageId });
@@ -51,11 +128,29 @@ function CreatorSlide({ creator, selected, onToggle }) {
     }
   }
 
-  const imageUrl = !imgFailed ? (creator.screenshot_url || creator.avatar_url) : null;
+  async function handleDownload() {
+    setExportError('');
+    setBusy(true);
+    try {
+      const html2canvas = (await import('html2canvas')).default;
+      const canvas = await html2canvas(cardRef.current, { backgroundColor: null, scale: 4, useCORS: true });
+      const url = canvas.toDataURL('image/png');
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${creator.username || creator._id}-welcome.png`;
+      a.click();
+    } catch {
+      setExportError('Could not export — right-click the card and "Save image as" instead.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const hasOverride = !!creator.screenshot_url;
 
   return (
     <div style={{
-      ...GLASS, borderRadius: '1rem', padding: '0.875rem', width: 220,
+      ...GLASS, borderRadius: '1rem', padding: '0.875rem', width: 260,
       opacity: selected ? 1 : 0.5, transition: 'opacity 0.15s',
       display: 'flex', flexDirection: 'column', gap: '0.5rem',
     }}>
@@ -66,41 +161,39 @@ function CreatorSlide({ creator, selected, onToggle }) {
         </span>
       </div>
 
-      <div style={{
-        width: '100%', aspectRatio: '1', borderRadius: '0.7rem', overflow: 'hidden',
-        background: BONE, display: 'flex', alignItems: 'center', justifyContent: 'center',
-      }}>
-        {imageUrl ? (
-          <img src={imageUrl} alt={creator.full_name} onError={() => setImgFailed(true)}
-            style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-        ) : (
-          <span style={{ fontSize: '0.7rem', color: SAGE, padding: '0.5rem', textAlign: 'center' }}>
-            No screenshot captured
-          </span>
+      {hasOverride ? (
+        <div style={{ width: '100%', aspectRatio: '1', borderRadius: '0.7rem', overflow: 'hidden', background: BONE }}>
+          <img src={creator.screenshot_url} alt={creator.full_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        </div>
+      ) : (
+        <SpotlightCard creator={creator} cardRef={cardRef} />
+      )}
+
+      {exportError && <div style={{ fontSize: '0.66rem', color: '#991B1B' }}>{exportError}</div>}
+
+      <div style={{ display: 'flex', gap: '0.375rem' }}>
+        <label style={{ flex: 1, padding: '0.3rem', borderRadius: '0.5rem', background: 'transparent', color: SLATE, fontSize: '0.68rem', border: '1px solid rgba(25,37,36,0.15)', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'center' }}>
+          {hasOverride ? 'Replace image' : 'Use my own image'}
+          <input type="file" accept="image/*" onChange={handleUpload} style={{ display: 'none' }} disabled={busy} />
+        </label>
+        {hasOverride && (
+          <button onClick={() => clearScreenshot({ profileId: creator._id })} disabled={busy}
+            style={{ padding: '0.3rem 0.6rem', borderRadius: '0.5rem', background: 'transparent', color: SLATE, fontSize: '0.68rem', border: '1px solid rgba(25,37,36,0.15)', cursor: busy ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
+            Reset
+          </button>
         )}
       </div>
 
-      <div style={{ fontSize: '0.72rem', color: SLATE }}>
-        {handleOf(creator) ? `@${handleOf(creator).replace(/^@/, '')}` : '—'}
-        {creator.tier ? ` · ${creator.tier}` : ''}
-      </div>
-
-      <div style={{ display: 'flex', gap: '0.375rem' }}>
-        <button onClick={handleRegenerate} disabled={busy}
-          style={{ flex: 1, padding: '0.3rem', borderRadius: '0.5rem', background: 'transparent', color: SLATE, fontSize: '0.68rem', border: '1px solid rgba(25,37,36,0.15)', cursor: busy ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
-          {busy ? '…' : 'Retry screenshot'}
-        </button>
-        <label style={{ flex: 1, padding: '0.3rem', borderRadius: '0.5rem', background: 'transparent', color: SLATE, fontSize: '0.68rem', border: '1px solid rgba(25,37,36,0.15)', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'center' }}>
-          Upload
-          <input type="file" accept="image/*" onChange={handleUpload} style={{ display: 'none' }} disabled={busy} />
-        </label>
-      </div>
-
-      {imageUrl && (
-        <a href={imageUrl} download={`${creator.username || creator._id}-welcome.jpg`}
+      {hasOverride ? (
+        <a href={creator.screenshot_url} download={`${creator.username || creator._id}-welcome.jpg`}
           style={{ fontSize: '0.68rem', color: '#166534', textAlign: 'center', textDecoration: 'none', fontWeight: 600 }}>
           ↓ Download
         </a>
+      ) : (
+        <button onClick={handleDownload} disabled={busy}
+          style={{ fontSize: '0.68rem', color: '#166534', textAlign: 'center', background: 'transparent', border: 'none', cursor: busy ? 'not-allowed' : 'pointer', fontWeight: 600, fontFamily: 'inherit', padding: '0.2rem' }}>
+          {busy ? '…' : '↓ Download'}
+        </button>
       )}
     </div>
   );

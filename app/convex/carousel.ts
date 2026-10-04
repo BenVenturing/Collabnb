@@ -1,95 +1,34 @@
 // "Welcome new creators" Instagram carousel — the admin's weekly/every-5
 // ritual of posting newly-approved creators. Three pieces:
-//   1. captureApprovalScreenshot — scheduled from gates.approveCreator,
-//      best-effort screenshots the creator's public social profile so it's
-//      ready by the time the admin builds a carousel.
-//   2. listFeaturable / markFeatured — picks the newest approved-but-not-yet-
-//      posted creators and, once the admin has posted them, excludes them
-//      from future batches.
+//   1. listFeaturable / markFeatured — picks the newest approved-but-not-yet-
+//      posted creators (with the profile data a spotlight card needs: photo,
+//      handle, follower count, bio) and, once the admin has posted them,
+//      excludes them from future batches.
+//   2. setScreenshot — lets the admin swap in their own image per creator
+//      instead of the generated card (WelcomeCarousel.jsx renders the
+//      default card and rasterizes it client-side with html2canvas; this is
+//      only for an explicit override).
 //   3. generateCaption / generateWelcomeImage — drafts a fun caption via the
 //      platform's shared LLM chain (see blog.llmChat) and a themed welcome
 //      slide via Gemini image generation.
 // Output is downloadable images + editable caption text — there's no
 // Instagram posting integration here, the admin posts manually.
+//
+// An earlier version of this file tried to screenshot each creator's live
+// Instagram/TikTok profile server-side (via microlink.io). Instagram serves
+// a login wall to logged-out/bot traffic almost every time, so every
+// captured "screenshot" was just IG's login page — useless. Removed in
+// favor of a card built from data already on file (avatar_url, handle,
+// metrics_instagram_followers, bio), which is both reliable and on-brand.
 
 import { v, ConvexError } from "convex/values";
-import { action, internalAction, internalMutation, internalQuery, mutation, query } from "./_generated/server";
-import { api, internal } from "./_generated/api";
+import { action, mutation, query } from "./_generated/server";
+import { api } from "./_generated/api";
 import { requireAdmin, requireAdminAction } from "./lib/auth";
 import { llmChat } from "./blog";
 
-// ─── Capture (internal, scheduled from gates.approveCreator) ───────────────
+// ─── Admin: manual image override ───────────────────────────────────────────
 
-export const getProfileHandles = internalQuery({
-  args: { profileId: v.id("profiles") },
-  handler: async (ctx, { profileId }) => {
-    const p = await ctx.db.get(profileId);
-    if (!p) return null;
-    return { instagram_handle: p.instagram_handle, tiktok_handle: p.tiktok_handle };
-  },
-});
-
-export const saveScreenshot = internalMutation({
-  args: { profileId: v.id("profiles"), storageId: v.string() },
-  handler: async (ctx, { profileId, storageId }) => {
-    await ctx.db.patch(profileId, {
-      welcome_screenshot_storage_id: storageId,
-      welcome_screenshot_captured_at: Date.now(),
-    });
-  },
-});
-
-function profileUrlFor(handles: { instagram_handle?: string | null; tiktok_handle?: string | null }) {
-  if (handles.instagram_handle) {
-    return `https://www.instagram.com/${handles.instagram_handle.replace(/^@/, "").trim()}/`;
-  }
-  if (handles.tiktok_handle) {
-    return `https://www.tiktok.com/@${handles.tiktok_handle.replace(/^@/, "").trim()}`;
-  }
-  return null;
-}
-
-// Best-effort — never throws, since this runs fire-and-forget off the
-// approval path. Instagram/TikTok frequently show a login wall to
-// logged-out scrapers; when that happens (or the handle's missing) the
-// admin uploads a replacement screenshot manually in the carousel builder.
-export const captureApprovalScreenshot = internalAction({
-  args: { profileId: v.id("profiles") },
-  handler: async (ctx, { profileId }) => {
-    const handles = await ctx.runQuery(internal.carousel.getProfileHandles, { profileId });
-    if (!handles) return;
-    const target = profileUrlFor(handles);
-    if (!target) return;
-
-    try {
-      const apiUrl = `https://api.microlink.io/?url=${encodeURIComponent(target)}&screenshot=true&meta=false&waitFor=1500`;
-      const res = await fetch(apiUrl);
-      if (!res.ok) return;
-      const json: any = await res.json();
-      const shotUrl = json?.data?.screenshot?.url;
-      if (!shotUrl) return;
-      const imgRes = await fetch(shotUrl);
-      if (!imgRes.ok) return;
-      const blob = await imgRes.blob();
-      const storageId = await ctx.storage.store(blob);
-      await ctx.runMutation(internal.carousel.saveScreenshot, { profileId, storageId });
-    } catch {
-      // swallow — see comment above
-    }
-  },
-});
-
-// Admin-triggered retry (e.g. the first capture hit a login wall).
-export const regenerateScreenshot = action({
-  args: { profileId: v.id("profiles") },
-  handler: async (ctx, { profileId }) => {
-    await requireAdminAction(ctx, api.profiles.getByClerkUserId);
-    await ctx.runAction(internal.carousel.captureApprovalScreenshot, { profileId });
-  },
-});
-
-// Admin manually uploading a replacement (via uploads.generateUploadUrl)
-// when automated capture fails outright.
 export const setScreenshot = mutation({
   args: { profileId: v.id("profiles"), storageId: v.string() },
   handler: async (ctx, { profileId, storageId }) => {
@@ -97,6 +36,17 @@ export const setScreenshot = mutation({
     await ctx.db.patch(profileId, {
       welcome_screenshot_storage_id: storageId,
       welcome_screenshot_captured_at: Date.now(),
+    });
+  },
+});
+
+export const clearScreenshot = mutation({
+  args: { profileId: v.id("profiles") },
+  handler: async (ctx, { profileId }) => {
+    await requireAdmin(ctx);
+    await ctx.db.patch(profileId, {
+      welcome_screenshot_storage_id: undefined,
+      welcome_screenshot_captured_at: undefined,
     });
   },
 });
@@ -122,7 +72,11 @@ export const listFeaturable = query({
         tiktok_handle: p.tiktok_handle,
         tier: p.tier,
         creator_track: p.creator_track,
+        bio: p.bio,
         avatar_url: p.avatar_url,
+        followers:
+          p.metrics_instagram_followers || p.metrics_tiktok_followers || p.metrics_youtube_subscribers || null,
+        // Admin-uploaded override only — there's no automated capture anymore.
         screenshot_url: p.welcome_screenshot_storage_id
           ? await ctx.storage.getUrl(p.welcome_screenshot_storage_id as any)
           : null,

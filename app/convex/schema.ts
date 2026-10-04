@@ -187,11 +187,10 @@ export default defineSchema({
     // indefinitely — every completed contract this profile is party to
     // earns that ambassador their share_pct of the platform fee.
     ambassador_ref: v.optional(v.string()),
-    // Screenshot of this creator's public social profile, captured once at
-    // approval time (see carousel.captureApprovalScreenshot, scheduled from
-    // gates.approveCreator) for the admin's "welcome new creators" carousel.
-    // Can also be set by an admin manually uploading a replacement when the
-    // automated capture hits a login wall or fails outright.
+    // Admin-uploaded override image for this creator's "welcome new
+    // creators" carousel slide (see carousel.ts) — the default slide is a
+    // card generated client-side from avatar_url/handle/follower data, this
+    // is only set when the admin explicitly swaps in their own image.
     welcome_screenshot_storage_id: v.optional(v.string()),
     welcome_screenshot_captured_at: v.optional(v.number()),
     // True once this creator has appeared in a posted welcome carousel —

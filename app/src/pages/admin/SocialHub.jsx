@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useAction, useMutation, useConvex } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
+import WelcomeCarousel from './WelcomeCarousel';
 
 async function uploadRawFile(file, generateUploadUrl, getStorageUrl) {
   const uploadUrl = await generateUploadUrl();
@@ -446,6 +447,10 @@ export default function SocialHub() {
           ))}
         </div>
       )}
+
+      <div style={{ marginTop: '1.5rem', padding: '1.25rem', borderRadius: '1.25rem', background: 'rgba(255,255,255,0.72)', border: '1px solid rgba(255,255,255,0.8)' }}>
+        <WelcomeCarousel />
+      </div>
     </div>
   );
 }

@@ -22,7 +22,6 @@ import BlogManager from './admin/BlogManager';
 import AdminOverview from './admin/AdminOverview';
 import Discovery from './admin/Discovery';
 import SocialHub from './admin/SocialHub';
-import WelcomeCarousel from './admin/WelcomeCarousel';
 import AutoReply from './admin/AutoReply';
 import AmbassadorManager from './admin/AmbassadorManager';
 import AlgorithmLab from './admin/AlgorithmLab';
@@ -115,7 +114,6 @@ function BroadcastPanel()    { return <Broadcast />;            }
 function AuditPanel()        { return <AuditLog />;             }
 function BlogPanel()         { return <BlogManager />;          }
 function SocialPanel()       { return <SocialHub />;            }
-function WelcomeCarouselPanel() { return <WelcomeCarousel />;    }
 function OverviewPanel()     { return <AdminOverview />;        }
 function DiscoveryPanel({ sidebarCollapsed, setSidebarCollapsed }) { return <Discovery sidebarCollapsed={sidebarCollapsed} setSidebarCollapsed={setSidebarCollapsed} />; }
 function AmbassadorsPanel()  { return <AmbassadorManager />;    }
@@ -148,7 +146,6 @@ const PANEL_MAP = {
   settings:     SettingsPanel,
   blog:         BlogPanel,
   social:       SocialPanel,
-  'welcome-carousel': WelcomeCarouselPanel,
   'algo-simulator': AlgoSimulatorPanel,
   'algo-reference': AlgoReferencePanel,
   'creator-algo-simulator': CreatorAlgoSimulatorPanel,

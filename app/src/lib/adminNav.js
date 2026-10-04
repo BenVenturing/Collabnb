@@ -43,7 +43,6 @@ export const GROUPS = [
     { id: 'blog',       label: 'Blog'       },
     { id: 'broadcast',  label: 'Emails'     },
     { id: 'social',     label: 'Social'     },
-    { id: 'welcome-carousel', label: 'Welcome Carousel' },
     { id: 'autoreply',  label: 'Auto-Reply' },
   ] },
   { id: 'suggestions', label: 'Suggestions / Beta', icon: 'suggestions', tabs: [

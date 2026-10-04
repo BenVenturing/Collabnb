@@ -1,5 +1,5 @@
 import { v, ConvexError } from "convex/values";
-import { query, mutation, action, internalMutation } from "./_generated/server";
+import { query, mutation, action, internalMutation, internalQuery } from "./_generated/server";
 import { internal, api } from "./_generated/api";
 import { requireAuthedProfile, requireOwnerOrAdmin, requireAdmin, isServerAdminEmail, canAccessAdmin, canAccessOwner } from "./lib/auth";
 import { cleanPlainText, cleanOptionalUrl } from "./lib/sanitize";
@@ -381,6 +381,20 @@ export const setActivePayoutMethod = mutation({
       : !!profile.wise_recipient_id;
     if (!isConnected) throw new ConvexError("Connect that payout method first.");
     await ctx.db.patch(args.profileId as any, { payout_method: args.payoutMethod });
+  },
+});
+
+// Every profile that has connected a Stripe Express account for payouts —
+// these are the "connected accounts" Stripe requires platforms to notify
+// about Services Agreement updates. Internal-only: called from the
+// admin-gated bulk-notice action in emails.ts, never exposed to the client.
+export const listWithStripeConnect = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    const all = await ctx.db.query("profiles").collect();
+    return all
+      .filter((p) => !!p.stripe_connect_account_id)
+      .map((p) => ({ email: p.email, full_name: p.full_name, stripe_connect_account_id: p.stripe_connect_account_id }));
   },
 });
 

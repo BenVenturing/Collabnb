@@ -4,12 +4,12 @@
 
 ## Quick reference
 
-- **Stack:** React + Vite + Clerk + Convex + Vercel
+- **Stack:** React + Vite + Clerk + Convex + Cloudflare Pages
 - **Admin:** `benventuring@gmail.com` → `/admin`
 - **Database:** Convex (NOT Supabase)
 - **Convex deploy:** `cd app && npx convex deploy` (does NOT happen on git push)
 - **Routing:** BrowserRouter — all app routes are `/path` (e.g. `/blog`, `/explore`, `/admin`)
-- **Hosting:** Vercel at `collabnb.com`; two Vite builds (root `dist/`, app `dist/app/`)
+- **Hosting:** Cloudflare Pages at `collabnb.com` (migrated off Vercel) — build with `npx vite build` from repo root (outputs `dist/`), deploy with `npx wrangler pages deploy dist --project-name=collabnb` (does NOT happen on git push)
 
 ## Collaboration rules
 

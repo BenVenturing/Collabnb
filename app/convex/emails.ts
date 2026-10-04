@@ -1,7 +1,8 @@
 import { v } from "convex/values";
-import { internalAction } from "./_generated/server";
-import { internal } from "./_generated/api";
+import { internalAction, action } from "./_generated/server";
+import { internal, api } from "./_generated/api";
 import { BASE_URL, TRUSTPILOT_BCC, renderTemplate, sendViaResend, layout, callout, button, heroChip } from "./emailCopy";
+import { requireAdminAction } from "./lib/auth";
 
 // All copy below is editable in Admin → Emails → Templates (overrides stored in
 // the email_templates table); defaults live in emailCopy.ts.
@@ -330,5 +331,52 @@ export const sendNewMessageEmail = internalAction({
     const firstName = recipientName.split(" ")[0];
     const trimmed = preview.length > 200 ? preview.slice(0, 200) + "…" : preview;
     await sendFromTemplate(ctx, "new_message", recipientEmail, { firstName, senderName, preview: trimmed });
+  },
+});
+
+// ─── Stripe Services Agreement notice (connected accounts) ───────────────────
+// One-time compliance send, admin-triggered only (via `npx convex run
+// emails:sendStripeServicesAgreementNotice '{"noticeText":"..."}'` or an
+// admin UI action). Stripe requires platforms to notify every connected
+// account without full Dashboard access about Services Agreement updates —
+// see the "Corrected Dashboard links for connected accounts" email and its
+// linked support page for the official required wording. `noticeText` must
+// be that official copy, pasted in as plain text/HTML paragraphs — this
+// function does not supply or guess at legally-required language.
+export const sendStripeServicesAgreementNotice = action({
+  args: { noticeText: v.string(), dryRun: v.optional(v.boolean()) },
+  handler: async (ctx, { noticeText, dryRun }) => {
+    await requireAdminAction(ctx, api.profiles.getByClerkUserId);
+
+    const apiKey = process.env.RESEND_API_KEY;
+    if (!apiKey) throw new Error("RESEND_API_KEY is not set in Convex environment variables");
+
+    const recipients: { email: string; full_name: string; stripe_connect_account_id: string }[] =
+      await ctx.runQuery(internal.profiles.listWithStripeConnect, {});
+
+    if (dryRun) {
+      return { total: recipients.length, sent: 0, failed: 0, dryRun: true, recipients: recipients.map((r) => r.email) };
+    }
+
+    let sent = 0;
+    const failures: { email: string; error: string }[] = [];
+
+    for (const r of recipients) {
+      if (!r.email) continue;
+      const firstName = (r.full_name || "there").split(" ")[0];
+      const body = `
+        <p style="margin:0 0 18px;font-size:22px;font-weight:700;color:#241F19;">Update to the Stripe Services Agreement</p>
+        ${heroChip(`Hi ${firstName} — Stripe, our payment processor, has updated its Services Agreement for connected accounts like yours.`)}
+        <div style="margin:0 0 24px;font-size:14px;color:#5C5347;line-height:1.65;">${noticeText}</div>
+      `;
+      try {
+        await sendViaResend(apiKey, r.email, "Update to the Stripe Services Agreement", layout(body));
+        sent += 1;
+      } catch (err: any) {
+        failures.push({ email: r.email, error: err?.message || String(err) });
+      }
+    }
+
+    return { total: recipients.length, sent, failed: failures.length, failures };
   },
 });

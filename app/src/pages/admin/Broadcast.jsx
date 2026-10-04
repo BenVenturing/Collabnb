@@ -248,6 +248,140 @@ function Templates() {
   );
 }
 
+// ─── Money Moves ────────────────────────────────────────────────────────────
+// One-off, admin-triggered compliance/money notices (Stripe Services
+// Agreement updates, payout-method changes, fee changes, etc). Each entry
+// just needs a Convex action shaped like sendStripeServicesAgreementNotice:
+// `action({ noticeText, dryRun? }) -> { total, sent, failed, failures?, recipients? }`,
+// gated by requireAdminAction server-side. Add new notices here as they come up.
+const MONEY_NOTICES = [
+  {
+    id: 'stripe-services-agreement',
+    title: 'Stripe Services Agreement update',
+    description: "Notifies every creator with a connected Stripe account, as required by Stripe for Connect platforms.",
+    deadline: 'Due Nov 7, 2026',
+    action: (api) => api.emails.sendStripeServicesAgreementNotice,
+    placeholder: "Paste Stripe's official notice copy here (from the support page linked in their email)…",
+  },
+];
+
+function MoneyMoveNoticeCard({ notice }) {
+  const [open, setOpen] = useState(false);
+  const [noticeText, setNoticeText] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [dryRunResult, setDryRunResult] = useState(null);
+  const [sendResult, setSendResult] = useState(null);
+  const sendNotice = useAction(notice.action(api));
+
+  async function handleDryRun() {
+    setBusy(true);
+    setSendResult(null);
+    try {
+      const result = await sendNotice({ noticeText: noticeText.trim() || '(preview)', dryRun: true });
+      setDryRunResult(result);
+    } catch (err) {
+      setDryRunResult({ error: err?.message || 'Dry run failed.' });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleSend() {
+    if (!noticeText.trim()) return;
+    const count = dryRunResult?.total ?? '?';
+    if (!window.confirm(`Send this notice to ${count} recipient(s) now? This can't be undone.`)) return;
+    setBusy(true);
+    setDryRunResult(null);
+    try {
+      const result = await sendNotice({ noticeText: noticeText.trim() });
+      setSendResult(result);
+    } catch (err) {
+      setSendResult({ error: err?.message || 'Send failed.' });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div style={{ background: '#fff', border: '1px solid rgba(25,37,36,0.08)', borderRadius: '0.75rem', overflow: 'hidden' }}>
+      <button
+        onClick={() => setOpen(!open)}
+        style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', width: '100%', padding: '0.8rem 1rem', background: 'transparent', border: 'none', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}
+      >
+        <span style={{ color: SAGE, fontSize: '0.7rem', transform: open ? 'rotate(90deg)' : 'none', transition: 'transform 0.15s' }}>▶</span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontWeight: 600, fontSize: '0.85rem', color: INK }}>{notice.title}</div>
+          <div style={{ fontSize: '0.72rem', color: SAGE, marginTop: '0.1rem' }}>{notice.description}</div>
+        </div>
+        {notice.deadline && (
+          <span style={{ fontSize: '0.68rem', fontWeight: 700, padding: '0.1rem 0.5rem', borderRadius: 99, background: '#FEF3C7', color: '#92400E', flexShrink: 0 }}>{notice.deadline}</span>
+        )}
+      </button>
+
+      {open && (
+        <div style={{ padding: '0 1rem 1rem', borderTop: '1px solid rgba(25,37,36,0.06)' }}>
+          <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, color: SLATE, margin: '0.875rem 0 0.25rem' }}>Notice text</label>
+          <textarea
+            value={noticeText}
+            onChange={(e) => setNoticeText(e.target.value)}
+            placeholder={notice.placeholder}
+            rows={5}
+            style={{ width: '100%', padding: '0.6rem 0.75rem', borderRadius: '0.5rem', border: '1px solid rgba(25,37,36,0.12)', fontSize: '0.8rem', fontFamily: 'inherit', color: INK, outline: 'none', resize: 'vertical', boxSizing: 'border-box', lineHeight: 1.5 }}
+          />
+
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginTop: '0.75rem', flexWrap: 'wrap' }}>
+            <button
+              onClick={handleDryRun}
+              disabled={busy}
+              style={{ padding: '0.4rem 0.875rem', borderRadius: '0.5rem', background: '#fff', color: INK, fontSize: '0.78rem', fontWeight: 600, border: '1px solid rgba(25,37,36,0.15)', cursor: busy ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}
+            >
+              {busy ? 'Working…' : '👁 Dry run'}
+            </button>
+            <button
+              onClick={handleSend}
+              disabled={busy || !noticeText.trim()}
+              style={{ padding: '0.4rem 1rem', borderRadius: '0.5rem', background: (busy || !noticeText.trim()) ? '#D0D5CE' : '#991B1B', color: '#fff', fontSize: '0.78rem', fontWeight: 600, border: 'none', cursor: (busy || !noticeText.trim()) ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}
+            >
+              🚀 Send to all recipients
+            </button>
+            {!noticeText.trim() && <span style={{ fontSize: '0.72rem', color: SAGE }}>Paste the notice text first.</span>}
+          </div>
+
+          {dryRunResult && !dryRunResult.error && (
+            <div style={{ marginTop: '0.75rem', padding: '0.625rem 1rem', borderRadius: '0.5rem', background: BONE, fontSize: '0.8rem', color: SLATE }}>
+              <strong style={{ color: INK }}>{dryRunResult.total}</strong> recipient{dryRunResult.total !== 1 ? 's' : ''} would receive this.
+              {dryRunResult.recipients?.length > 0 && (
+                <div style={{ marginTop: '0.35rem', fontSize: '0.75rem', color: SAGE }}>{dryRunResult.recipients.join(', ')}</div>
+              )}
+            </div>
+          )}
+          {dryRunResult?.error && (
+            <div style={{ marginTop: '0.75rem', padding: '0.625rem 1rem', borderRadius: '0.5rem', background: '#FEF2F2', color: '#991B1B', fontSize: '0.8rem' }}>{dryRunResult.error}</div>
+          )}
+
+          {sendResult && !sendResult.error && (
+            <div style={{ marginTop: '0.75rem', padding: '0.625rem 1rem', borderRadius: '0.5rem', background: '#D1EBDB', color: '#166534', fontSize: '0.8rem', fontWeight: 500 }}>
+              ✓ Sent to {sendResult.sent}/{sendResult.total} recipients
+              {sendResult.failed > 0 && ` — ${sendResult.failed} failed`}
+            </div>
+          )}
+          {sendResult?.error && (
+            <div style={{ marginTop: '0.75rem', padding: '0.625rem 1rem', borderRadius: '0.5rem', background: '#FEF2F2', color: '#991B1B', fontSize: '0.8rem' }}>{sendResult.error}</div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MoneyMoves() {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+      {MONEY_NOTICES.map((n) => <MoneyMoveNoticeCard key={n.id} notice={n} />)}
+    </div>
+  );
+}
+
 export default function Broadcast() {
   const [mode, setMode]         = useState('broadcast');
   const [audience, setAudience] = useState('all');
@@ -305,7 +439,9 @@ export default function Broadcast() {
         Emails
       </h1>
       <p style={{ fontSize: '0.85rem', color: SAGE, marginTop: '0.3rem', marginBottom: '1.25rem' }}>
-        {mode === 'broadcast' ? 'Send an email to a segment of your users.' : 'Edit the copy of every automated email — changes apply to real sends immediately.'}
+        {mode === 'broadcast' ? 'Send an email to a segment of your users.'
+          : mode === 'templates' ? 'Edit the copy of every automated email — changes apply to real sends immediately.'
+          : 'One-off compliance and money-related notices, sent to the exact recipients affected.'}
       </p>
 
       {/* Mode switch */}
@@ -313,6 +449,7 @@ export default function Broadcast() {
         {[
           { id: 'broadcast', label: 'Broadcast' },
           { id: 'templates', label: 'Templates' },
+          { id: 'money', label: 'Money Moves' },
         ].map(m => (
           <button
             key={m.id}
@@ -331,6 +468,7 @@ export default function Broadcast() {
       </div>
 
       {mode === 'templates' && <Templates />}
+      {mode === 'money' && <MoneyMoves />}
 
       {mode === 'broadcast' && <>
       {/* Audience */}

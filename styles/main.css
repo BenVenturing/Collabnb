@@ -927,6 +927,13 @@ h3 { font-weight: 700; }
 .bokeh-4 { animation: drift 18s var(--ease-drawer) infinite; animation-delay: -12s; }
 .bokeh-5 { animation: drift-alt 24s var(--ease-drawer) infinite; animation-delay: -6s; }
 
+/* Scrolled past the hero — stop animating/blurring off-screen bokeh cards
+   so they don't keep costing paint time on the rest of the scroll. */
+.hero.is-offscreen .bokeh-card,
+.hero.is-offscreen .bokeh-sphere {
+  animation-play-state: paused;
+}
+
 /* --- COUNTERS --- */
 .counters-grid {
   display: grid;

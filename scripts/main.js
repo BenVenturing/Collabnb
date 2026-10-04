@@ -1318,6 +1318,26 @@ function initListingStack() {
   const isStatic = isMobileStack || prefersReducedMotion;
 
   startTyping(cards[0], 0, isStatic ? null : scheduleNext);
+
+  // Scrolled past the hero — stop the typing/deal timers and bokeh drift
+  // instead of letting them run forever in the background during scroll.
+  if (!isStatic) {
+    const heroSection = stack.closest('.hero');
+    if (heroSection) {
+      const heroObserver = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting) {
+          heroSection.classList.remove('is-offscreen');
+          const front = getFront();
+          if (front) startTyping(front, parseInt(front.dataset.index, 10), scheduleNext);
+        } else {
+          heroSection.classList.add('is-offscreen');
+          clearTimeout(typingTimer);
+          clearTimeout(cycleTimer);
+        }
+      }, { threshold: 0 });
+      heroObserver.observe(heroSection);
+    }
+  }
 }
 
 /* --- Mockup Carousel (About Page) --- */

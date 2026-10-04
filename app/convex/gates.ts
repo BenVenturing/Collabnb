@@ -139,6 +139,7 @@ export const approveCreator = mutation({
       trial_starts_at: isFounder ? undefined : now,
       trial_ends_at: isFounder ? undefined : now + trialDays * 24 * 60 * 60 * 1000,
       admin_verification_note: args.adminNote,
+      creator_approved_at: now,
     };
     // Approving a role switch is what actually flips the role — the new role's
     // delta fields (Instagram, etc.) haven't been collected, so it also opens
@@ -183,6 +184,15 @@ export const approveCreator = mutation({
           role: "creator",
         });
       }
+    }
+
+    // Capture a screenshot of their public social profile for the admin's
+    // "welcome new creators" carousel — best-effort, never blocks approval.
+    // Skipped for anyone who opted out of being featured (default: in).
+    if (profile.highlight_opt_in !== false) {
+      await ctx.scheduler.runAfter(0, internal.carousel.captureApprovalScreenshot, {
+        profileId: args.profileId,
+      });
     }
   },
 });

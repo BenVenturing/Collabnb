@@ -106,6 +106,10 @@ export default defineSchema({
     reverification_requested_at: v.optional(v.number()),
     host_verified: v.optional(v.boolean()),
     creator_verified: v.optional(v.boolean()),
+    // Set once, the moment approveCreator runs — "newest approved creators"
+    // (e.g. the welcome-carousel picker) sorts on this rather than signup
+    // time, since those can be weeks apart.
+    creator_approved_at: v.optional(v.number()),
     // Creator-controlled listing visibility. Undefined/true = discoverable by
     // hosts; false = hidden from the Creators page and not messageable.
     profile_visible: v.optional(v.boolean()),
@@ -183,6 +187,18 @@ export default defineSchema({
     // indefinitely — every completed contract this profile is party to
     // earns that ambassador their share_pct of the platform fee.
     ambassador_ref: v.optional(v.string()),
+    // Screenshot of this creator's public social profile, captured once at
+    // approval time (see carousel.captureApprovalScreenshot, scheduled from
+    // gates.approveCreator) for the admin's "welcome new creators" carousel.
+    // Can also be set by an admin manually uploading a replacement when the
+    // automated capture hits a login wall or fails outright.
+    welcome_screenshot_storage_id: v.optional(v.string()),
+    welcome_screenshot_captured_at: v.optional(v.number()),
+    // True once this creator has appeared in a posted welcome carousel —
+    // excludes them from the "newest unfeatured creators" picker so the same
+    // person doesn't get queued twice.
+    featured_in_carousel: v.optional(v.boolean()),
+    featured_in_carousel_at: v.optional(v.number()),
   }).index("by_email", ["email"]).index("by_clerk_user_id", ["clerk_user_id"])
     .index("by_stripe_customer", ["stripe_customer_id"])
     .index("by_stripe_connect_account", ["stripe_connect_account_id"])

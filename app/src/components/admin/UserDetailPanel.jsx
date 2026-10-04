@@ -597,6 +597,29 @@ const CHECKLIST_ITEMS = {
   ],
 };
 
+const REJECTION_TEMPLATES = [
+  {
+    label: 'Socials unconfirmed',
+    text: `Good evening,\nI am very sorry but we could not confirm your social, and therefore we could not asses your content style and approve your account.  Please reply and confirm your current social handles at your earliest convenience.  \n\nBlessings, \nCollabnb Team`,
+  },
+  {
+    label: 'Style mismatch',
+    text: `Good afternoon,\nThank you very kindly for your application. After reviewing your profile, your content style does not meet the standard and style we are looking for hotel collaborations. We wish you the best in your content creation journey.\n\nBlessings, \nCollabnb Team`,
+  },
+  {
+    label: 'Not travel-focused',
+    text: `Good afternoon,\nThank you very kindly for your application and it is helpful to see a consistent design style and theme across your profiles. As of now we will have to hold off on granting access due to the lack of specific travel-related content. We want to keep this community very focused primarily on travel and hotel content work.\n\nApologize for the inconvenience this may cause and please do re-apply in a few months time.\n\nCheers, \nCollabnb Team`,
+  },
+  {
+    label: 'Incomplete application',
+    text: `Good evening,\nThank you for your interest in Collabnb. Unfortunately your application does not yet include enough information for us to properly assess your fit with our community. Please feel free to complete your profile and re-apply when ready.\n\nBlessings, \nCollabnb Team`,
+  },
+  {
+    label: 'Below follower threshold',
+    text: `Good evening,\nThank you for applying to Collabnb. At this time, your following does not yet meet what we're looking for in our creator community. We would love to have you re-apply as your audience grows.\n\nBlessings, \nCollabnb Team`,
+  },
+];
+
 function ReviewActions({ profile }) {
   const isRejected = profile.is_rejected === true;
   // Lets an admin approve a not-yet-verified signup under the OTHER role than
@@ -826,11 +849,23 @@ function ReviewActions({ profile }) {
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem' }}>
+            {REJECTION_TEMPLATES.map(t => (
+              <button
+                key={t.label}
+                type="button"
+                onClick={() => setReason(t.text)}
+                style={{ padding: '0.3rem 0.6rem', borderRadius: '0.5rem', background: 'rgba(255,255,255,0.7)', color: '#991B1B', fontSize: '0.7rem', fontWeight: 500, border: '1px solid rgba(153,27,27,0.2)', cursor: 'pointer', fontFamily: 'inherit' }}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
           <textarea
             placeholder="Optional rejection reason (will be included in the email)"
             value={reason}
             onChange={e => setReason(e.target.value)}
-            rows={2}
+            rows={4}
             style={{ width: '100%', padding: '0.5rem 0.7rem', borderRadius: '0.5rem', border: '1px solid rgba(25,37,36,0.15)', fontSize: '0.78rem', fontFamily: 'inherit', resize: 'vertical', outline: 'none', color: INK, lineHeight: 1.5 }}
           />
           <div style={{ display: 'flex', gap: '0.5rem' }}>

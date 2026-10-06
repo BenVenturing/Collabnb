@@ -345,6 +345,7 @@ export default function SocialHub() {
   const [syncing, setSyncing] = useState({});
   const [syncMsg, setSyncMsg] = useState({});
   const [platformFilter, setPlatformFilter] = useState('');
+  const [showAccounts, setShowAccounts] = useState(false);
 
   useEffect(() => {
     getIntegrationStatus({}).then(setIntegrations).catch(() => {});
@@ -374,22 +375,13 @@ export default function SocialHub() {
       <div style={{ marginBottom: '1.25rem' }}>
         <h2 style={{ fontFamily: 'Cabinet Grotesk, sans-serif', fontWeight: 700, fontSize: '1.25rem', color: '#192524', margin: '0 0 0.2rem' }}>Social</h2>
         <p style={{ fontSize: '0.78rem', color: '#646B62', margin: 0 }}>
-          Collabnb's own Instagram and TikTok performance in one place. Connect each platform with the setup guide, then sync.
+          Collabnb's own Instagram and TikTok, plus the weekly welcome carousel. Account linking, API keys, and the inbox live under Account & Connections below.
         </p>
       </div>
 
-      <SearchProviderToggle kind="host" label="Host outreach" />
-      <SearchProviderToggle kind="creator" label="Creator discovery" />
-
-      <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
-        <ConnectorCard platform="instagram" account={igAccount} configured={integrations?.instagram}
-          onSync={() => handleSync('instagram')} syncing={!!syncing.instagram} syncMsg={syncMsg.instagram} />
-        <ConnectorCard platform="tiktok" account={ttAccount} configured={integrations?.tiktok}
-          onSync={() => handleSync('tiktok')} syncing={!!syncing.tiktok} syncMsg={syncMsg.tiktok} />
+      <div style={{ marginTop: '1.5rem', padding: '1.25rem', borderRadius: '1.25rem', background: 'rgba(255,255,255,0.72)', border: '1px solid rgba(255,255,255,0.8)', marginBottom: '1.5rem' }}>
+        <WelcomeCarousel />
       </div>
-
-      <Composer configured={!!integrations?.instagram} />
-      <InboxPanel configured={!!integrations?.instagram} />
 
       {/* Totals */}
       {summary && (posts.length > 0) && (
@@ -448,8 +440,34 @@ export default function SocialHub() {
         </div>
       )}
 
-      <div style={{ marginTop: '1.5rem', padding: '1.25rem', borderRadius: '1.25rem', background: 'rgba(255,255,255,0.72)', border: '1px solid rgba(255,255,255,0.8)' }}>
-        <WelcomeCarousel />
+      {/* Account & Connections — linking, codes, posting, DMs. Tucked away
+          since it's setup/maintenance, not the day-to-day marketing work. */}
+      <div style={{ marginTop: '1.5rem', borderRadius: '1.25rem', background: 'rgba(255,255,255,0.72)', border: '1px solid rgba(255,255,255,0.8)', overflow: 'hidden' }}>
+        <button onClick={() => setShowAccounts(s => !s)}
+          style={{ width: '100%', padding: '1rem 1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit' }}>
+          <div>
+            <p style={{ fontFamily: 'Cabinet Grotesk, sans-serif', fontWeight: 700, fontSize: '0.95rem', color: '#192524', margin: 0 }}>Account & Connections</p>
+            <p style={{ fontSize: '0.74rem', color: '#646B62', margin: '0.15rem 0 0' }}>Linking accounts, API keys, posting, and the Instagram inbox.</p>
+          </div>
+          <span style={{ fontSize: '0.78rem', color: '#3C5759', fontWeight: 600 }}>{showAccounts ? 'Hide ▲' : 'Show ▼'}</span>
+        </button>
+
+        {showAccounts && (
+          <div style={{ padding: '0 1.25rem 1.25rem' }}>
+            <SearchProviderToggle kind="host" label="Host outreach" />
+            <SearchProviderToggle kind="creator" label="Creator discovery" />
+
+            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
+              <ConnectorCard platform="instagram" account={igAccount} configured={integrations?.instagram}
+                onSync={() => handleSync('instagram')} syncing={!!syncing.instagram} syncMsg={syncMsg.instagram} />
+              <ConnectorCard platform="tiktok" account={ttAccount} configured={integrations?.tiktok}
+                onSync={() => handleSync('tiktok')} syncing={!!syncing.tiktok} syncMsg={syncMsg.tiktok} />
+            </div>
+
+            <Composer configured={!!integrations?.instagram} />
+            <InboxPanel configured={!!integrations?.instagram} />
+          </div>
+        )}
       </div>
     </div>
   );

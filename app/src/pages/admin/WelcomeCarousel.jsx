@@ -41,6 +41,33 @@ function fmtFollowers(n) {
   return String(n);
 }
 
+// "October 1–7" / "Sep 29 – Oct 5" style label for the trailing 7 days.
+function weekRangeLabel() {
+  const end = new Date();
+  const start = new Date();
+  start.setDate(end.getDate() - 6);
+  if (start.getMonth() === end.getMonth()) {
+    return `${start.toLocaleDateString('en-US', { month: 'long' })} ${start.getDate()}–${end.getDate()}`;
+  }
+  const fmt = (d) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  return `${fmt(start)} – ${fmt(end)}`;
+}
+
+function defaultWelcomePrompt() {
+  return `Design a square (1:1) Instagram carousel cover image welcoming new creators to Collabnb, a marketplace connecting boutique hotels with content creators.
+
+Style: soft glassmorphism card over a muted "HAZY" palette background — dusty teal, dusty rose, warm sand, fog white. No pure white or black. Airy, boutique-hotel-meets-creator-economy feel, soft natural light, subtle paper/grain texture, no stock-photo people, no clutter.
+
+Headline (clean modern serif): "Welcome to Collabnb"
+Subheadline (smaller clean sans-serif): "Meet our newest creators — week of ${weekRangeLabel()}"
+
+Leave generous negative space so it reads clearly as the first slide of a multi-image carousel.`;
+}
+
+function sanitizeFilename(s) {
+  return (s || 'creator').toString().replace(/[^a-z0-9_-]/gi, '').slice(0, 40) || 'creator';
+}
+
 // Branded "spotlight" slide built from data already on file (avatar, handle,
 // follower count, bio, tier) — not a screenshot. Rasterized to a downloadable
 // PNG client-side via html2canvas, so there's no dependency on Instagram
@@ -49,7 +76,7 @@ function SpotlightCard({ creator, cardRef }) {
   const handle = handleOf(creator);
   const followers = fmtFollowers(creator.followers);
   return (
-    <div ref={cardRef} style={{
+    <div ref={cardRef} id={`spotlight-${creator._id}`} style={{
       width: 260, aspectRatio: '1', borderRadius: '1rem', overflow: 'hidden', position: 'relative',
       background: `linear-gradient(160deg, ${SAND} 0%, ${BONE} 55%, ${ROSE} 100%)`,
       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
@@ -206,15 +233,18 @@ export default function WelcomeCarousel() {
   const generateWelcomeImage = useAction(api.carousel.generateWelcomeImage);
 
   const [selected, setSelected] = useState(null); // Set, initialized once creators load
-  const [prompt, setPrompt] = useState('');
+  const [prompt, setPrompt] = useState(defaultWelcomePrompt);
   const [welcomeImageUrl, setWelcomeImageUrl] = useState(null);
   const [imageBusy, setImageBusy] = useState(false);
   const [imageError, setImageError] = useState('');
+  const [promptCopied, setPromptCopied] = useState(false);
   const [caption, setCaption] = useState('');
   const [captionBusy, setCaptionBusy] = useState(false);
   const [captionError, setCaptionError] = useState('');
   const [copied, setCopied] = useState(false);
   const [posting, setPosting] = useState(false);
+  const [zipBusy, setZipBusy] = useState(false);
+  const [zipError, setZipError] = useState('');
 
   // Default-select the 5 newest once the list first loads.
   const effectiveSelected = useMemo(() => {
@@ -266,6 +296,65 @@ export default function WelcomeCarousel() {
     });
   }
 
+  function handleCopyPrompt() {
+    navigator.clipboard.writeText(prompt || defaultWelcomePrompt()).then(() => {
+      setPromptCopied(true);
+      setTimeout(() => setPromptCopied(false), 1500);
+    });
+  }
+
+  // Bundles the welcome slide + every selected creator's image (+ the
+  // caption as a text file) into one .zip so posting a carousel is a single
+  // drag-and-drop into Instagram instead of five separate downloads.
+  async function handleDownloadAll() {
+    setZipBusy(true);
+    setZipError('');
+    try {
+      const { zipSync, strToU8 } = await import('fflate');
+      const html2canvas = (await import('html2canvas')).default;
+      const files = {};
+
+      if (welcomeImageUrl) {
+        const buf = await (await fetch(welcomeImageUrl)).arrayBuffer();
+        files['00-welcome-slide.png'] = new Uint8Array(buf);
+      }
+
+      let i = 1;
+      for (const c of selectedCreators) {
+        const label = String(i).padStart(2, '0');
+        const name = sanitizeFilename(c.username || handleOf(c) || c._id);
+        if (c.screenshot_url) {
+          const buf = await (await fetch(c.screenshot_url)).arrayBuffer();
+          files[`${label}-${name}.jpg`] = new Uint8Array(buf);
+        } else {
+          const node = document.getElementById(`spotlight-${c._id}`);
+          if (node) {
+            const canvas = await html2canvas(node, { backgroundColor: null, scale: 4, useCORS: true });
+            const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+            const buf = await blob.arrayBuffer();
+            files[`${label}-${name}.png`] = new Uint8Array(buf);
+          }
+        }
+        i++;
+      }
+
+      if (caption) files['caption.txt'] = strToU8(caption);
+
+      const zipped = zipSync(files, { level: 6 });
+      const blob = new Blob([zipped], { type: 'application/zip' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `collabnb-welcome-carousel-${new Date().toISOString().slice(0, 10)}.zip`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      setZipError('Could not build the zip — try downloading images individually instead.');
+    } finally {
+      setZipBusy(false);
+    }
+  }
+
   async function handleMarkPosted() {
     if (!window.confirm(`Mark ${selectedCreators.length} creator${selectedCreators.length === 1 ? '' : 's'} as featured? They won't show up here again.`)) return;
     setPosting(true);
@@ -311,14 +400,21 @@ export default function WelcomeCarousel() {
               placeholder="Optional — leave blank to use the default HAZY-palette welcome prompt"
               value={prompt}
               onChange={e => setPrompt(e.target.value)}
-              rows={4}
-              style={{ width: '100%', padding: '0.5rem 0.7rem', borderRadius: '0.5rem', border: '1px solid rgba(25,37,36,0.15)', fontSize: '0.78rem', fontFamily: 'inherit', resize: 'vertical', outline: 'none', color: INK, lineHeight: 1.5 }}
+              rows={7}
+              style={{ width: '100%', padding: '0.5rem 0.7rem', borderRadius: '0.5rem', border: '1px solid rgba(25,37,36,0.15)', fontSize: '0.74rem', fontFamily: 'inherit', resize: 'vertical', outline: 'none', color: INK, lineHeight: 1.5 }}
             />
+            <p style={{ fontSize: '0.68rem', color: SAGE, margin: 0 }}>
+              Click Generate to build it here via Gemini, or Copy prompt to paste into gemini.google.com yourself.
+            </p>
             {imageError && <div style={{ fontSize: '0.72rem', color: '#991B1B' }}>{String(imageError)}</div>}
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
               <button onClick={handleGenerateImage} disabled={imageBusy}
                 style={{ padding: '0.45rem 1rem', borderRadius: '0.5rem', background: MINT, color: '#166534', fontSize: '0.8rem', fontWeight: 600, border: 'none', cursor: imageBusy ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
                 {imageBusy ? 'Generating…' : welcomeImageUrl ? 'Regenerate' : 'Generate welcome slide'}
+              </button>
+              <button onClick={handleCopyPrompt}
+                style={{ padding: '0.45rem 1rem', borderRadius: '0.5rem', background: 'transparent', color: SLATE, fontSize: '0.8rem', border: '1px solid rgba(25,37,36,0.15)', cursor: 'pointer', fontFamily: 'inherit' }}>
+                {promptCopied ? 'Copied ✓' : 'Copy prompt'}
               </button>
               {welcomeImageUrl && (
                 <a href={welcomeImageUrl} download="welcome-slide.png"
@@ -333,9 +429,16 @@ export default function WelcomeCarousel() {
 
       {/* Creator picks */}
       <div style={{ ...GLASS, borderRadius: '1rem', padding: '1.25rem', marginBottom: '1.5rem' }}>
-        <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#166534', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.6rem' }}>
-          2. Pick creators ({effectiveSelected.size} selected)
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.6rem' }}>
+          <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#166534', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+            2. Pick creators ({effectiveSelected.size} selected)
+          </div>
+          <button onClick={handleDownloadAll} disabled={zipBusy || selectedCreators.length === 0}
+            style={{ padding: '0.4rem 0.9rem', borderRadius: '0.5rem', background: INK, color: '#fff', fontSize: '0.76rem', fontWeight: 600, border: 'none', cursor: (zipBusy || selectedCreators.length === 0) ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
+            {zipBusy ? 'Zipping…' : `↓ Download all as .zip`}
+          </button>
         </div>
+        {zipError && <div style={{ fontSize: '0.72rem', color: '#991B1B', marginBottom: '0.6rem' }}>{zipError}</div>}
         {creators.length === 0 ? (
           <p style={{ fontSize: '0.8rem', color: SAGE }}>No newly approved creators waiting to be featured.</p>
         ) : (

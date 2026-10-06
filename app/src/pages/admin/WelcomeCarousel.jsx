@@ -2,14 +2,15 @@ import { useState, useMemo, useRef } from 'react';
 import { useQuery, useAction, useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { buildWelcomeReel } from './welcomeReel';
+import collabnbLogo from '../../assets/collabnb-logo.png';
 
+// Admin tool chrome (buttons, labels, section cards) — separate from the
+// brand's actual Instagram content palette below.
 const INK   = '#192524';
 const SLATE = '#3C5759';
 const SAGE  = '#646B62';
 const MINT  = '#D1EBDB';
 const BONE  = '#F7F5F2';
-const ROSE  = '#E8C9C3';
-const SAND  = '#E6DCC8';
 
 const GLASS = {
   background: 'rgba(255,255,255,0.55)',
@@ -17,10 +18,19 @@ const GLASS = {
   border: '1px solid rgba(25,37,36,0.08)',
 };
 
-const AVATAR_COLORS = ['#7B68C8', '#4A9B7F', '#C77B4A', '#3C5759', '#A6555C'];
-function colorFor(name) {
+// Anything that gets exported/posted (the spotlight card, the reel) follows
+// the brand's actual Instagram Slide Design System instead: warm cream HAZY
+// paper, umber-brown ink, Fraunces serif + Inter sans, muted earthy accents,
+// no logo on slides. See design.md.
+const CONTENT_CREAM = '#EFECE9';
+const CONTENT_UMBER = '#5A3A28';
+const CONTENT_UMBER_SOFT = '#7A5C47';
+const CONTENT_SERIF = '"Fraunces", serif';
+const CONTENT_SANS = '"Inter", sans-serif';
+const CONTENT_ACCENTS = ['#8A9471', '#B08552', '#7D96A3', '#A9808E', '#8F8AA8'];
+function accentFor(name) {
   const i = (name || '').charCodeAt(0) || 0;
-  return AVATAR_COLORS[i % AVATAR_COLORS.length];
+  return CONTENT_ACCENTS[i % CONTENT_ACCENTS.length];
 }
 
 async function uploadRawFile(file, generateUploadUrl) {
@@ -54,15 +64,17 @@ function weekRangeLabel() {
   return `${fmt(start)} – ${fmt(end)}`;
 }
 
+// Follows design.md's Collabnb Instagram Slide Design System exactly —
+// hand-painted watercolor/gouache, Kinfolk/Cereal editorial, cream HAZY
+// paper, Fraunces-style umber headline, Inter-style umber subhead, one
+// centered watercolor motif, no logo. Reuses their prompt template and
+// "learned the hard way" rules (never say black, no curly quotes outside
+// Myth slides, avoid Instagram/UI words, "no lettering" on the motif).
 function defaultWelcomePrompt() {
-  return `Design a square (1:1) Instagram carousel cover image welcoming new creators to Collabnb, a marketplace connecting boutique hotels with content creators.
-
-Style: soft glassmorphism card over a muted "HAZY" palette background — dusty teal, dusty rose, warm sand, fog white. No pure white or black. Airy, boutique-hotel-meets-creator-economy feel, soft natural light, subtle paper/grain texture, no stock-photo people, no clutter.
-
-Headline (clean modern serif): "Welcome to Collabnb"
-Subheadline (smaller clean sans-serif): "Meet our newest creators — week of ${weekRangeLabel()}"
-
-Leave generous negative space so it reads clearly as the first slide of a multi-image carousel.`;
+  const headline = 'Welcome to Collabnb';
+  const subhead = `Meet our newest creators — week of ${weekRangeLabel()}`;
+  const motif = 'a small hand-painted bundle of botanical sprigs tied with twine, resting on linen, no lettering anywhere';
+  return `Portrait carousel slide, hand-painted watercolor and gouache editorial style (Kinfolk / Cereal magazine feel). The whole canvas is one continuous warm cream watercolor-paper texture with subtle grain and soft wash variations, full-bleed and seamless to all four edges: no visible paper edge, no border, no frame, no inset panel, no lighter strip or band along any edge. Muted, slightly desaturated earthy palette: sage and olive greens, wood and ochre browns, dusty warm blues. Centered single-column layout. Upper-middle: a headline in a bold, high-contrast serif typeface (Fraunces-style), warm dark umber-brown ink tone (not pure black), medium-bold weight matching the painterly linework. The headline text reads exactly: "${headline}" Directly below, a short subhead in a smaller clean sans-serif typeface (Inter-style), same umber-brown tone, centered, text reads exactly: "${subhead}" Do not paint quotation marks around the headline or the subhead. Below the text, exactly one hand-painted watercolor motif, centered: ${motif}. Generous plain cream negative space at the very top and very bottom and in the side margins, free of text or fine detail. No logo, no watermark, no extra text, no additional icons or objects beyond the single motif.`;
 }
 
 function sanitizeFilename(s) {
@@ -72,44 +84,47 @@ function sanitizeFilename(s) {
 // Branded "spotlight" slide built from data already on file (avatar, handle,
 // follower count, bio, tier) — not a screenshot. Rasterized to a downloadable
 // PNG client-side via html2canvas, so there's no dependency on Instagram
-// actually letting us in (it doesn't, for logged-out scrapers).
+// actually letting us in (it doesn't, for logged-out scrapers). Styled to
+// design.md's Instagram Slide Design System — warm cream paper, umber ink,
+// Fraunces/Inter, no logo on the slide.
 function SpotlightCard({ creator, cardRef }) {
   const handle = handleOf(creator);
   const followers = fmtFollowers(creator.followers);
+  const accent = accentFor(creator.full_name);
   return (
     <div ref={cardRef} id={`spotlight-${creator._id}`} style={{
       width: 260, aspectRatio: '1', borderRadius: '1rem', overflow: 'hidden', position: 'relative',
-      background: `linear-gradient(160deg, ${SAND} 0%, ${BONE} 55%, ${ROSE} 100%)`,
+      background: CONTENT_CREAM,
       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
       padding: '1.5rem 1.25rem', boxSizing: 'border-box', textAlign: 'center',
     }}>
       {creator.avatar_url ? (
         <img src={creator.avatar_url} alt="" crossOrigin="anonymous"
-          style={{ width: 84, height: 84, borderRadius: '50%', objectFit: 'cover', border: '3px solid rgba(255,255,255,0.8)', boxShadow: '0 4px 16px rgba(25,37,36,0.15)' }} />
+          style={{ width: 84, height: 84, borderRadius: '50%', objectFit: 'cover', border: `3px solid ${CONTENT_CREAM}`, boxShadow: '0 4px 16px rgba(90,58,40,0.15)' }} />
       ) : (
         <div style={{
-          width: 84, height: 84, borderRadius: '50%', background: colorFor(creator.full_name),
+          width: 84, height: 84, borderRadius: '50%', background: accent,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          color: '#fff', fontSize: '1.8rem', fontWeight: 800, fontFamily: 'Cabinet Grotesk, sans-serif',
-          border: '3px solid rgba(255,255,255,0.8)', boxShadow: '0 4px 16px rgba(25,37,36,0.15)',
+          color: CONTENT_CREAM, fontSize: '1.8rem', fontWeight: 700, fontFamily: CONTENT_SERIF,
+          border: `3px solid ${CONTENT_CREAM}`, boxShadow: '0 4px 16px rgba(90,58,40,0.15)',
         }}>
           {(creator.full_name || '?')[0].toUpperCase()}
         </div>
       )}
 
-      <p style={{ fontFamily: 'Cabinet Grotesk, sans-serif', fontWeight: 700, fontSize: '1.05rem', color: INK, margin: '0.7rem 0 0.1rem' }}>
+      <p style={{ fontFamily: CONTENT_SERIF, fontWeight: 700, fontSize: '1.1rem', color: CONTENT_UMBER, margin: '0.7rem 0 0.1rem' }}>
         {creator.full_name}
       </p>
-      {handle && <p style={{ fontSize: '0.78rem', color: SLATE, margin: 0 }}>@{handle.replace(/^@/, '')}</p>}
+      {handle && <p style={{ fontFamily: CONTENT_SANS, fontSize: '0.78rem', color: CONTENT_UMBER_SOFT, margin: 0 }}>@{handle.replace(/^@/, '')}</p>}
 
       <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.6rem', flexWrap: 'wrap', justifyContent: 'center' }}>
         {followers && (
-          <span style={{ fontSize: '0.68rem', fontWeight: 700, padding: '0.2rem 0.55rem', borderRadius: 9999, background: 'rgba(255,255,255,0.7)', color: INK }}>
+          <span style={{ fontFamily: CONTENT_SANS, fontSize: '0.68rem', fontWeight: 700, padding: '0.2rem 0.55rem', borderRadius: 9999, background: accent, color: CONTENT_CREAM }}>
             {followers} followers
           </span>
         )}
         {creator.tier && (
-          <span style={{ fontSize: '0.68rem', fontWeight: 700, padding: '0.2rem 0.55rem', borderRadius: 9999, background: 'rgba(255,255,255,0.7)', color: INK }}>
+          <span style={{ fontFamily: CONTENT_SANS, fontSize: '0.68rem', fontWeight: 600, padding: '0.2rem 0.55rem', borderRadius: 9999, background: 'rgba(90,58,40,0.08)', color: CONTENT_UMBER_SOFT }}>
             {creator.tier}
           </span>
         )}
@@ -117,19 +132,14 @@ function SpotlightCard({ creator, cardRef }) {
 
       {creator.bio && (
         <p style={{
-          fontSize: '0.7rem', color: SLATE, margin: '0.7rem 0 0', lineHeight: 1.45,
+          fontFamily: CONTENT_SANS, fontSize: '0.7rem', color: CONTENT_UMBER_SOFT, margin: '0.7rem 0 0', lineHeight: 1.45,
           display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
         }}>
           {creator.bio}
         </p>
       )}
 
-      <span style={{
-        position: 'absolute', bottom: 10, right: 14, fontFamily: 'Cabinet Grotesk, sans-serif',
-        fontSize: '0.62rem', fontWeight: 700, color: 'rgba(25,37,36,0.4)', letterSpacing: '0.04em',
-      }}>
-        collabnb
-      </span>
+      <img src={collabnbLogo} alt="" style={{ position: 'absolute', bottom: 12, left: 12, width: 22, height: 22, objectFit: 'contain', opacity: 0.8 }} />
     </div>
   );
 }
@@ -191,15 +201,15 @@ function CreatorSlide({ creator, selected, onToggle, orderIndex, orderTotal }) {
 
       <div style={{
         position: 'relative', borderRadius: '0.9rem',
-        border: selected ? `3px solid ${colorFor(creator.full_name)}` : '3px solid transparent',
+        border: selected ? `3px solid ${accentFor(creator.full_name)}` : '3px solid transparent',
         transition: 'border-color 0.15s',
       }}>
         {selected && orderIndex > -1 && (
           <span style={{
             position: 'absolute', top: 8, left: 8, zIndex: 1,
-            fontSize: '0.64rem', fontWeight: 700, color: '#fff',
-            background: colorFor(creator.full_name), padding: '0.15rem 0.5rem', borderRadius: 9999,
-            fontFamily: 'Cabinet Grotesk, sans-serif',
+            fontSize: '0.64rem', fontWeight: 700, color: CONTENT_CREAM,
+            background: accentFor(creator.full_name), padding: '0.15rem 0.5rem', borderRadius: 9999,
+            fontFamily: CONTENT_SANS,
           }}>
             {orderIndex + 1}/{orderTotal}
           </span>
@@ -501,7 +511,7 @@ export default function WelcomeCarousel() {
           3. Reel (optional)
         </div>
         <p style={{ fontSize: '0.78rem', color: SAGE, margin: '0 0 0.75rem' }}>
-          Turns the welcome slide + selected creators into a vertical video — each creator pops in with their name, handle, and reach. Renders right in your browser, no upload needed. Or skip this and just use the images above.
+          Turns the welcome slide into a vertical video: intro, then a running tally of the creators' combined reach, then each creator pops in with their name, handle, and follower count. Renders right in your browser, no upload needed. Or skip this and just use the images above.
         </p>
         <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'flex-start' }}>
           {reelUrl && (

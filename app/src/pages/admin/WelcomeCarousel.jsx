@@ -419,6 +419,17 @@ export default function WelcomeCarousel() {
   }
 
   async function handleGenerateReel() {
+    // The creators list is a live query — if it refetches between when you
+    // checked boxes and when you hit Generate (someone else features a
+    // creator, the approved-at sort shifts, etc.) a checked id can stop
+    // resolving to a row. Catch that here instead of silently rendering
+    // fewer creators than you picked.
+    if (selectedCreatorsForReel.length !== effectiveSelected.size) {
+      setReelError(
+        `You selected ${effectiveSelected.size} creators but only ${selectedCreatorsForReel.length} are still in this list — the picker may have refreshed. Re-check your selections and try again.`
+      );
+      return;
+    }
     setReelBusy(true);
     setReelError('');
     setReelProgress(0);

@@ -370,7 +370,12 @@ export async function buildWelcomeReel({ creators, welcomeImageUrl, weekLabel, o
     drawIntro(ctx, 0, { welcomeImg, weekLabel });
 
     const stream = canvas.captureStream(30);
-    const mimeCandidates = ['video/mp4;codecs=avc1', 'video/mp4', 'video/webm;codecs=vp9', 'video/webm'];
+    // webm first: Chrome's vp9/vp8 webm muxer is the long-established,
+    // battle-tested path for MediaRecorder output. Its mp4/avc1 muxer is
+    // newer and has shown real corruption on longer single-buffer
+    // recordings (the ~2s freeze was one symptom of this); webm doesn't
+    // have that failure mode.
+    const mimeCandidates = ['video/webm;codecs=vp9', 'video/webm', 'video/mp4;codecs=avc1', 'video/mp4'];
     const mimeType = mimeCandidates.find((m) => MediaRecorder.isTypeSupported(m)) || 'video/webm';
     const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 6_000_000 });
     const chunks = [];

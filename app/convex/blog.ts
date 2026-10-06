@@ -318,8 +318,11 @@ export const getPlatformStats = query({
   args: {},
   handler: async (ctx) => {
     const profiles = await ctx.db.query("profiles").collect();
-    const creators = profiles.filter((p) => p.role === "creator").length;
-    const hosts = profiles.filter((p) => p.role === "host").length;
+    // Verified only — excludes pending/unverified signups so this matches
+    // the Users tab's own "Creators"/"Hosts" counts (Users.jsx's stat tiles
+    // filter the same way), rather than counting every row with that role.
+    const creators = profiles.filter((p) => p.role === "creator" && p.is_verified === true).length;
+    const hosts = profiles.filter((p) => p.role === "host" && p.is_verified === true).length;
     const pitches = await ctx.db.query("pitches").collect();
     const approved = pitches.filter((p) => p.status === "approved" || p.status === "completed").length;
     const listings = await ctx.db.query("listings").filter((q) => q.eq(q.field("is_sample"), false)).collect();
@@ -997,8 +1000,8 @@ export const getPlatformStats_internal = query({
   args: {},
   handler: async (ctx) => {
     const profiles = await ctx.db.query("profiles").collect();
-    const creators = profiles.filter((p) => p.role === "creator").length;
-    const hosts = profiles.filter((p) => p.role === "host").length;
+    const creators = profiles.filter((p) => p.role === "creator" && p.is_verified === true).length;
+    const hosts = profiles.filter((p) => p.role === "host" && p.is_verified === true).length;
     const pitches = await ctx.db.query("pitches").collect();
     const approved = pitches.filter((p) => p.status === "approved" || p.status === "completed").length;
     const listings = await ctx.db.query("listings").filter((q) => q.eq(q.field("is_sample"), false)).collect();

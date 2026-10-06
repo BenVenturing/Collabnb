@@ -3,6 +3,7 @@ import { internalAction, action } from "./_generated/server";
 import { internal, api } from "./_generated/api";
 import { BASE_URL, TRUSTPILOT_BCC, renderTemplate, sendViaResend, layout, callout, button, heroChip } from "./emailCopy";
 import { requireAdminAction } from "./lib/auth";
+import { sanitizeRichHtml } from "./lib/sanitize";
 
 // All copy below is editable in Admin → Emails → Templates (overrides stored in
 // the email_templates table); defaults live in emailCopy.ts.
@@ -360,6 +361,10 @@ export const sendStripeServicesAgreementNotice = action({
 
     let sent = 0;
     const failures: { email: string; error: string }[] = [];
+    // Admin-trusted, but this still goes out verbatim to real inboxes — strip
+    // script/style/event-handler vectors the same way blog post content does
+    // (see lib/sanitize.ts) rather than trusting the textarea input raw.
+    const safeNoticeText = sanitizeRichHtml(noticeText, 20000);
 
     for (const r of recipients) {
       if (!r.email) continue;
@@ -367,7 +372,7 @@ export const sendStripeServicesAgreementNotice = action({
       const body = `
         <p style="margin:0 0 18px;font-size:22px;font-weight:700;color:#241F19;">Update to the Stripe Services Agreement</p>
         ${heroChip(`Hi ${firstName} — Stripe, our payment processor, has updated its Services Agreement for connected accounts like yours.`)}
-        <div style="margin:0 0 24px;font-size:14px;color:#5C5347;line-height:1.65;">${noticeText}</div>
+        <div style="margin:0 0 24px;font-size:14px;color:#5C5347;line-height:1.65;">${safeNoticeText}</div>
       `;
       try {
         await sendViaResend(apiKey, r.email, "Update to the Stripe Services Agreement", layout(body));

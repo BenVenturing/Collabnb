@@ -1,6 +1,7 @@
 import { useState, useMemo, useRef } from 'react';
 import { useQuery, useAction, useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
+import { buildWelcomeReel } from './welcomeReel';
 
 const INK   = '#192524';
 const SLATE = '#3C5759';
@@ -133,7 +134,7 @@ function SpotlightCard({ creator, cardRef }) {
   );
 }
 
-function CreatorSlide({ creator, selected, onToggle }) {
+function CreatorSlide({ creator, selected, onToggle, orderIndex, orderTotal }) {
   const generateUploadUrl = useMutation(api.uploads.generateUploadUrl);
   const setScreenshot = useMutation(api.carousel.setScreenshot);
   const clearScreenshot = useMutation(api.carousel.clearScreenshot);
@@ -188,13 +189,29 @@ function CreatorSlide({ creator, selected, onToggle }) {
         </span>
       </div>
 
-      {hasOverride ? (
-        <div style={{ width: '100%', aspectRatio: '1', borderRadius: '0.7rem', overflow: 'hidden', background: BONE }}>
-          <img src={creator.screenshot_url} alt={creator.full_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-        </div>
-      ) : (
-        <SpotlightCard creator={creator} cardRef={cardRef} />
-      )}
+      <div style={{
+        position: 'relative', borderRadius: '0.9rem',
+        border: selected ? `3px solid ${colorFor(creator.full_name)}` : '3px solid transparent',
+        transition: 'border-color 0.15s',
+      }}>
+        {selected && orderIndex > -1 && (
+          <span style={{
+            position: 'absolute', top: 8, left: 8, zIndex: 1,
+            fontSize: '0.64rem', fontWeight: 700, color: '#fff',
+            background: colorFor(creator.full_name), padding: '0.15rem 0.5rem', borderRadius: 9999,
+            fontFamily: 'Cabinet Grotesk, sans-serif',
+          }}>
+            {orderIndex + 1}/{orderTotal}
+          </span>
+        )}
+        {hasOverride ? (
+          <div style={{ width: '100%', aspectRatio: '1', borderRadius: '0.7rem', overflow: 'hidden', background: BONE }}>
+            <img src={creator.screenshot_url} alt={creator.full_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          </div>
+        ) : (
+          <SpotlightCard creator={creator} cardRef={cardRef} />
+        )}
+      </div>
 
       {exportError && <div style={{ fontSize: '0.66rem', color: '#991B1B' }}>{exportError}</div>}
 
@@ -245,6 +262,11 @@ export default function WelcomeCarousel() {
   const [posting, setPosting] = useState(false);
   const [zipBusy, setZipBusy] = useState(false);
   const [zipError, setZipError] = useState('');
+  const [reelBusy, setReelBusy] = useState(false);
+  const [reelProgress, setReelProgress] = useState(0);
+  const [reelError, setReelError] = useState('');
+  const [reelUrl, setReelUrl] = useState(null);
+  const [reelExt, setReelExt] = useState('mp4');
 
   // Default-select the 5 newest once the list first loads.
   const effectiveSelected = useMemo(() => {
@@ -355,6 +377,28 @@ export default function WelcomeCarousel() {
     }
   }
 
+  async function handleGenerateReel() {
+    setReelBusy(true);
+    setReelError('');
+    setReelProgress(0);
+    if (reelUrl) URL.revokeObjectURL(reelUrl);
+    setReelUrl(null);
+    try {
+      const { blob, mimeType } = await buildWelcomeReel({
+        creators: selectedCreators,
+        welcomeImageUrl,
+        weekLabel: weekRangeLabel(),
+        onProgress: setReelProgress,
+      });
+      setReelExt(mimeType.includes('mp4') ? 'mp4' : 'webm');
+      setReelUrl(URL.createObjectURL(blob));
+    } catch (err) {
+      setReelError(err?.message || 'Could not generate the reel.');
+    } finally {
+      setReelBusy(false);
+    }
+  }
+
   async function handleMarkPosted() {
     if (!window.confirm(`Mark ${selectedCreators.length} creator${selectedCreators.length === 1 ? '' : 's'} as featured? They won't show up here again.`)) return;
     setPosting(true);
@@ -444,16 +488,55 @@ export default function WelcomeCarousel() {
         ) : (
           <div style={{ display: 'flex', gap: '0.875rem', flexWrap: 'wrap' }}>
             {creators.map(c => (
-              <CreatorSlide key={c._id} creator={c} selected={effectiveSelected.has(c._id)} onToggle={() => toggle(c._id)} />
+              <CreatorSlide key={c._id} creator={c} selected={effectiveSelected.has(c._id)} onToggle={() => toggle(c._id)}
+                orderIndex={selectedCreators.findIndex(sc => sc._id === c._id)} orderTotal={selectedCreators.length} />
             ))}
           </div>
         )}
       </div>
 
+      {/* Reel */}
+      <div style={{ ...GLASS, borderRadius: '1rem', padding: '1.25rem', marginBottom: '1.5rem' }}>
+        <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#166534', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.6rem' }}>
+          3. Reel (optional)
+        </div>
+        <p style={{ fontSize: '0.78rem', color: SAGE, margin: '0 0 0.75rem' }}>
+          Turns the welcome slide + selected creators into a vertical video — each creator pops in with their name, handle, and reach. Renders right in your browser, no upload needed. Or skip this and just use the images above.
+        </p>
+        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'flex-start' }}>
+          {reelUrl && (
+            <video src={reelUrl} controls style={{ width: 180, aspectRatio: '9/16', borderRadius: '0.75rem', background: '#000', flexShrink: 0 }} />
+          )}
+          <div style={{ flex: 1, minWidth: 220, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            {reelError && <div style={{ fontSize: '0.72rem', color: '#991B1B' }}>{reelError}</div>}
+            {reelBusy && (
+              <div style={{ fontSize: '0.72rem', color: SLATE }}>
+                Rendering… {Math.round(reelProgress * 100)}%
+                <div style={{ width: '100%', height: 4, background: 'rgba(25,37,36,0.08)', borderRadius: 2, marginTop: '0.3rem', overflow: 'hidden' }}>
+                  <div style={{ width: `${Math.round(reelProgress * 100)}%`, height: '100%', background: MINT }} />
+                </div>
+              </div>
+            )}
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+              <button onClick={handleGenerateReel} disabled={reelBusy || selectedCreators.length === 0}
+                style={{ padding: '0.45rem 1rem', borderRadius: '0.5rem', background: MINT, color: '#166534', fontSize: '0.8rem', fontWeight: 600, border: 'none', cursor: (reelBusy || selectedCreators.length === 0) ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
+                {reelBusy ? 'Rendering…' : reelUrl ? 'Regenerate reel' : 'Generate reel'}
+              </button>
+              {reelUrl && (
+                <a href={reelUrl} download={`collabnb-welcome-reel-${new Date().toISOString().slice(0, 10)}.${reelExt}`}
+                  style={{ padding: '0.45rem 1rem', borderRadius: '0.5rem', background: 'transparent', color: SLATE, fontSize: '0.8rem', border: '1px solid rgba(25,37,36,0.15)', textDecoration: 'none', fontFamily: 'inherit' }}>
+                  ↓ Download {reelExt.toUpperCase()}
+                </a>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Caption */}
       <div style={{ ...GLASS, borderRadius: '1rem', padding: '1.25rem', marginBottom: '1.5rem' }}>
         <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#166534', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.6rem' }}>
-          3. Caption
+          4. Caption
         </div>
         <textarea
           value={caption}

@@ -27,7 +27,9 @@ const CONTENT_UMBER = '#5A3A28';
 const CONTENT_UMBER_SOFT = '#7A5C47';
 const CONTENT_SERIF = '"Fraunces", serif';
 const CONTENT_SANS = '"Inter", sans-serif';
-const CONTENT_ACCENTS = ['#8A9471', '#B08552', '#7D96A3', '#A9808E', '#8F8AA8'];
+// Three muted brand colors only (sage, ochre, dusty blue) — same set
+// welcomeReel.js uses, so the picker and the rendered reel always agree.
+const CONTENT_ACCENTS = ['#8A9471', '#B08552', '#7D96A3'];
 function accentFor(name) {
   const i = (name || '').charCodeAt(0) || 0;
   return CONTENT_ACCENTS[i % CONTENT_ACCENTS.length];
@@ -93,7 +95,7 @@ function SpotlightCard({ creator, cardRef }) {
   const accent = accentFor(creator.full_name);
   return (
     <div ref={cardRef} id={`spotlight-${creator._id}`} style={{
-      width: 260, aspectRatio: '1', borderRadius: '1rem', overflow: 'hidden', position: 'relative',
+      width: '100%', aspectRatio: '1', borderRadius: '1rem', overflow: 'hidden', position: 'relative',
       background: CONTENT_CREAM,
       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
       padding: '1.5rem 1.25rem', boxSizing: 'border-box', textAlign: 'center',
@@ -148,8 +150,10 @@ function CreatorSlide({ creator, selected, onToggle, orderIndex, orderTotal, fol
   const generateUploadUrl = useMutation(api.uploads.generateUploadUrl);
   const setScreenshot = useMutation(api.carousel.setScreenshot);
   const clearScreenshot = useMutation(api.carousel.clearScreenshot);
+  const estimateFollowers = useAction(api.carousel.estimateFollowersFromScreenshot);
   const cardRef = useRef(null);
   const [busy, setBusy] = useState(false);
+  const [estimating, setEstimating] = useState(false);
   const [exportError, setExportError] = useState('');
 
   const effectiveFollowers = followersOverride !== undefined ? followersOverride : creator.followers;
@@ -163,6 +167,13 @@ function CreatorSlide({ creator, selected, onToggle, orderIndex, orderTotal, fol
     try {
       const storageId = await uploadRawFile(file, generateUploadUrl);
       await setScreenshot({ profileId: creator._id, storageId });
+      setEstimating(true);
+      try {
+        const n = await estimateFollowers({ storageId });
+        if (n) onFollowersChange(n);
+      } finally {
+        setEstimating(false);
+      }
     } finally {
       setBusy(false);
       e.target.value = '';
@@ -203,7 +214,7 @@ function CreatorSlide({ creator, selected, onToggle, orderIndex, orderTotal, fol
       </div>
 
       <div style={{
-        position: 'relative', borderRadius: '0.9rem',
+        position: 'relative', borderRadius: '0.9rem', boxSizing: 'border-box',
         border: selected ? `3px solid ${accentFor(creator.full_name)}` : '3px solid transparent',
         transition: 'border-color 0.15s',
       }}>
@@ -227,7 +238,7 @@ function CreatorSlide({ creator, selected, onToggle, orderIndex, orderTotal, fol
       </div>
 
       <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.68rem', color: SLATE }}>
-        Followers (for reach tally)
+        Followers (for reach tally){estimating && ' — reading screenshot…'}
         <input type="number" min="0" placeholder={creator.followers ? String(creator.followers) : 'e.g. 23200'}
           value={followersOverride ?? ''}
           onChange={(e) => onFollowersChange(e.target.value === '' ? undefined : Number(e.target.value))}

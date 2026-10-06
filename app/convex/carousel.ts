@@ -40,6 +40,48 @@ export const setScreenshot = mutation({
   },
 });
 
+// Reads the follower count off an uploaded profile screenshot via Gemini
+// vision, so the admin doesn't have to type it in by hand for the reach
+// tally. Best-effort: returns null (not a thrown error) whenever it can't
+// find a number, since typing it in manually still works either way.
+export const estimateFollowersFromScreenshot = action({
+  args: { storageId: v.string() },
+  handler: async (ctx, { storageId }) => {
+    await requireAdminAction(ctx, internal.profiles.getByClerkUserId);
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) return null;
+    const blob = await ctx.storage.get(storageId as any);
+    if (!blob) return null;
+    const bytes = new Uint8Array(await blob.arrayBuffer());
+    let binary = "";
+    for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+    const base64 = btoa(binary);
+    const res = await fetch(
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
+        body: JSON.stringify({
+          contents: [{
+            parts: [
+              {
+                text: "This is a screenshot of a social media profile. Find the follower count shown on the page (it may read like '12.3K followers' or '1,204 Followers'). Reply with ONLY the fully expanded number and nothing else — no commas, no abbreviations (e.g. 12300, not 12.3K). If you can't find a follower count anywhere in the image, reply with exactly: 0",
+              },
+              { inlineData: { mimeType: blob.type || "image/jpeg", data: base64 } },
+            ],
+          }],
+        }),
+      }
+    );
+    if (!res.ok) return null;
+    const json: any = await res.json();
+    const text: string = json?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    const match = text.replace(/,/g, "").match(/\d+/);
+    const n = match ? parseInt(match[0], 10) : 0;
+    return n > 0 ? n : null;
+  },
+});
+
 export const clearScreenshot = mutation({
   args: { profileId: v.id("profiles") },
   handler: async (ctx, { profileId }) => {

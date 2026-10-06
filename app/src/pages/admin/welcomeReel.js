@@ -29,7 +29,7 @@ const UMBER_SOFT = '#7A5C47';
 const SAGE = '#8A9471';
 const OCHRE = '#B08552';
 const DUSTY_BLUE = '#7D96A3';
-const ACCENT_COLORS = [SAGE, OCHRE, DUSTY_BLUE, '#A9808E', '#8F8AA8'];
+const ACCENT_COLORS = [SAGE, OCHRE, DUSTY_BLUE];
 
 const SERIF = '"Fraunces", serif';
 const SANS = '"Inter", sans-serif';

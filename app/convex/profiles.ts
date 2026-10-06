@@ -333,7 +333,7 @@ export const getPublicGlobeProfiles = query({
   handler: async (ctx) => {
     const all = await ctx.db.query("profiles").collect();
     return all
-      .filter((p) => p.role === "creator" || p.role === "host")
+      .filter((p) => (p.role === "creator" || p.role === "host") && p.is_verified === true)
       .filter((p) => {
         const email = (p.email || "").toLowerCase();
         const uname = (p.username || "").toLowerCase();

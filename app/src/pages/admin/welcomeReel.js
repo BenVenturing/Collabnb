@@ -119,18 +119,29 @@ function drawLogoMark(ctx, alpha = 1) {
   ctx.restore();
 }
 
-function drawBackground(ctx) {
-  ctx.fillStyle = CREAM;
-  ctx.fillRect(0, 0, WIDTH, HEIGHT);
-  // soft wash variation, not a flat fill
+// The wash gradients are static (same geometry every frame) — building
+// them once and reusing avoids re-triggering gradient math on every single
+// frame of a ~10s recording, which was a plausible contributor to the
+// reported stutter/glitchiness.
+let bgGradients = null;
+function getBackgroundGradients(ctx) {
+  if (bgGradients) return bgGradients;
   const g1 = ctx.createRadialGradient(WIDTH * 0.2, HEIGHT * 0.1, 0, WIDTH * 0.2, HEIGHT * 0.1, WIDTH * 0.9);
   g1.addColorStop(0, 'rgba(176,133,82,0.05)');
   g1.addColorStop(1, 'rgba(176,133,82,0)');
-  ctx.fillStyle = g1;
-  ctx.fillRect(0, 0, WIDTH, HEIGHT);
   const g2 = ctx.createRadialGradient(WIDTH * 0.85, HEIGHT * 0.9, 0, WIDTH * 0.85, HEIGHT * 0.9, WIDTH);
   g2.addColorStop(0, 'rgba(138,148,113,0.06)');
   g2.addColorStop(1, 'rgba(138,148,113,0)');
+  bgGradients = { g1, g2 };
+  return bgGradients;
+}
+
+function drawBackground(ctx) {
+  ctx.fillStyle = CREAM;
+  ctx.fillRect(0, 0, WIDTH, HEIGHT);
+  const { g1, g2 } = getBackgroundGradients(ctx);
+  ctx.fillStyle = g1;
+  ctx.fillRect(0, 0, WIDTH, HEIGHT);
   ctx.fillStyle = g2;
   ctx.fillRect(0, 0, WIDTH, HEIGHT);
 }
@@ -324,6 +335,7 @@ export async function buildWelcomeReel({ creators, welcomeImageUrl, weekLabel, o
   if (typeof window === 'undefined' || !window.MediaRecorder) {
     throw new Error('This browser can’t record video — try Chrome or Edge.');
   }
+  bgGradients = null;
 
   // Force both faces to actually download/parse, not just "whatever's
   // already loaded" — document.fonts.ready alone only waits on fonts some

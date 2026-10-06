@@ -144,13 +144,16 @@ function SpotlightCard({ creator, cardRef }) {
   );
 }
 
-function CreatorSlide({ creator, selected, onToggle, orderIndex, orderTotal }) {
+function CreatorSlide({ creator, selected, onToggle, orderIndex, orderTotal, followersOverride, onFollowersChange }) {
   const generateUploadUrl = useMutation(api.uploads.generateUploadUrl);
   const setScreenshot = useMutation(api.carousel.setScreenshot);
   const clearScreenshot = useMutation(api.carousel.clearScreenshot);
   const cardRef = useRef(null);
   const [busy, setBusy] = useState(false);
   const [exportError, setExportError] = useState('');
+
+  const effectiveFollowers = followersOverride !== undefined ? followersOverride : creator.followers;
+  const effectiveCreator = effectiveFollowers !== creator.followers ? { ...creator, followers: effectiveFollowers } : creator;
 
   async function handleUpload(e) {
     const file = e.target.files?.[0];
@@ -219,9 +222,17 @@ function CreatorSlide({ creator, selected, onToggle, orderIndex, orderTotal }) {
             <img src={creator.screenshot_url} alt={creator.full_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           </div>
         ) : (
-          <SpotlightCard creator={creator} cardRef={cardRef} />
+          <SpotlightCard creator={effectiveCreator} cardRef={cardRef} />
         )}
       </div>
+
+      <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.68rem', color: SLATE }}>
+        Followers (for reach tally)
+        <input type="number" min="0" placeholder={creator.followers ? String(creator.followers) : 'e.g. 23200'}
+          value={followersOverride ?? ''}
+          onChange={(e) => onFollowersChange(e.target.value === '' ? undefined : Number(e.target.value))}
+          style={{ width: 90, padding: '0.2rem 0.4rem', borderRadius: '0.4rem', border: '1px solid rgba(25,37,36,0.15)', fontSize: '0.68rem', fontFamily: 'inherit', color: INK }} />
+      </label>
 
       {exportError && <div style={{ fontSize: '0.66rem', color: '#991B1B' }}>{exportError}</div>}
 
@@ -277,6 +288,7 @@ export default function WelcomeCarousel() {
   const [reelError, setReelError] = useState('');
   const [reelUrl, setReelUrl] = useState(null);
   const [reelExt, setReelExt] = useState('mp4');
+  const [followerOverrides, setFollowerOverrides] = useState({});
 
   // Default-select the 5 newest once the list first loads.
   const effectiveSelected = useMemo(() => {
@@ -292,6 +304,14 @@ export default function WelcomeCarousel() {
   }
 
   const selectedCreators = (creators || []).filter(c => effectiveSelected.has(c._id));
+  // Reach tally needs a follower number per creator — falls back to the
+  // manual override typed into each slide when metrics_instagram_followers
+  // etc. were never self-reported (common for creators approved before
+  // this feature existed, or who just haven't filled it in).
+  const selectedCreatorsForReel = selectedCreators.map((c) => ({
+    ...c,
+    followers: followerOverrides[c._id] !== undefined ? followerOverrides[c._id] : c.followers,
+  }));
 
   async function handleGenerateImage() {
     setImageBusy(true);
@@ -395,7 +415,7 @@ export default function WelcomeCarousel() {
     setReelUrl(null);
     try {
       const { blob, mimeType } = await buildWelcomeReel({
-        creators: selectedCreators,
+        creators: selectedCreatorsForReel,
         welcomeImageUrl,
         weekLabel: weekRangeLabel(),
         onProgress: setReelProgress,
@@ -499,7 +519,9 @@ export default function WelcomeCarousel() {
           <div style={{ display: 'flex', gap: '0.875rem', flexWrap: 'wrap' }}>
             {creators.map(c => (
               <CreatorSlide key={c._id} creator={c} selected={effectiveSelected.has(c._id)} onToggle={() => toggle(c._id)}
-                orderIndex={selectedCreators.findIndex(sc => sc._id === c._id)} orderTotal={selectedCreators.length} />
+                orderIndex={selectedCreators.findIndex(sc => sc._id === c._id)} orderTotal={selectedCreators.length}
+                followersOverride={followerOverrides[c._id]}
+                onFollowersChange={(v) => setFollowerOverrides(prev => ({ ...prev, [c._id]: v }))} />
             ))}
           </div>
         )}

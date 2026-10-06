@@ -461,7 +461,7 @@ export default function WelcomeCarousel() {
     <div style={{ maxWidth: 1100 }}>
       <p style={{ fontFamily: 'Cabinet Grotesk, sans-serif', fontWeight: 700, fontSize: '0.95rem', color: INK, margin: '0 0 0.2rem' }}>Welcome Carousel</p>
       <p style={{ fontSize: '0.78rem', color: SAGE, marginBottom: '1.25rem' }}>
-        Pick 3–5 newly approved creators, generate a themed welcome slide and a caption, then download everything and post it yourself.
+        Pick 3–7 newly approved creators, generate a themed welcome slide and a caption, then download everything and post it yourself.
       </p>
 
       {/* Welcome image */}

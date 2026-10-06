@@ -22,6 +22,12 @@ const INTRO_MS = 2200;
 const TALLY_MS = 2200;
 const CREATOR_MS = 2600;
 const OUTRO_MS = 1800;
+// Every scene boundary (intro→tally, creator→creator, last creator→outro)
+// cross-dissolves the previous frame over the new scene's own entrance
+// animation instead of hard-cutting — this is what makes the intro→first
+// slide handoff (and every slide after it) read as "smooth" instead of
+// snapping.
+const CROSSFADE_MS = 500;
 
 const CREAM = '#EFECE9';
 const UMBER = '#5A3A28';
@@ -70,37 +76,6 @@ function fmtFollowers(n) {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
   if (n >= 1000) return `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}K`;
   return String(n);
-}
-
-// Hand-drawn-feeling tally strokes (groups of 5, 4 verticals + a diagonal
-// slash) — a literal "tallying up the reach" flourish while the headline
-// number counts up.
-function drawTallyMarks(ctx, units, x, y, color) {
-  const strokeW = 7, strokeH = 44, gap = 15, groupGap = 30, perRow = 8;
-  let cx = x, cy = y, col = 0;
-  let remaining = units;
-  ctx.strokeStyle = color;
-  ctx.lineWidth = strokeW;
-  ctx.lineCap = 'round';
-  while (remaining > 0) {
-    const inGroup = Math.min(5, remaining);
-    for (let i = 0; i < Math.min(4, inGroup); i++) {
-      ctx.beginPath();
-      ctx.moveTo(cx + i * gap, cy);
-      ctx.lineTo(cx + i * gap, cy + strokeH);
-      ctx.stroke();
-    }
-    if (inGroup === 5) {
-      ctx.beginPath();
-      ctx.moveTo(cx - 8, cy + strokeH + 8);
-      ctx.lineTo(cx + 3 * gap + 8, cy - 8);
-      ctx.stroke();
-    }
-    cx += 4 * gap + groupGap;
-    remaining -= inGroup;
-    col++;
-    if (col % perRow === 0) { cx = x; cy += strokeH + 26; }
-  }
 }
 
 // Module-scoped for the duration of one render — loaded once in
@@ -204,10 +179,6 @@ function drawTally(ctx, t, { total }) {
   ctx.font = `500 36px ${SANS}`;
   ctx.fillStyle = UMBER_SOFT;
   ctx.fillText('followers across these creators', WIDTH / 2, 1000);
-
-  const units = Math.floor(countT * 30);
-  const rowWidth = Math.min(7, Math.ceil(units / 5)) * (4 * 15 + 30) - 30;
-  drawTallyMarks(ctx, units, WIDTH / 2 - Math.max(rowWidth, 0) / 2, 1090, SAGE);
   ctx.restore();
   drawLogoMark(ctx, fade);
 }
@@ -374,6 +345,26 @@ export async function buildWelcomeReel({ creators, welcomeImageUrl, weekLabel, o
     const tallyMs = hasTally ? TALLY_MS : 0;
     const totalMs = INTRO_MS + tallyMs + total * CREATOR_MS + OUTRO_MS;
 
+    // Resolves which scene is active at a given elapsed time, plus a stable
+    // key so the main loop can tell when a scene boundary was just crossed
+    // (that's the cue to snapshot the outgoing frame for the crossfade).
+    function sceneAt(elapsed) {
+      if (elapsed < INTRO_MS) {
+        return { key: 'intro', localT: elapsed / 1000, draw: (c, t) => drawIntro(c, t, { welcomeImg, weekLabel }) };
+      }
+      if (hasTally && elapsed < INTRO_MS + tallyMs) {
+        return { key: 'tally', localT: (elapsed - INTRO_MS) / 1000, draw: (c, t) => drawTally(c, t, { total: totalFollowers }) };
+      }
+      if (elapsed < INTRO_MS + tallyMs + total * CREATOR_MS) {
+        const localMs = elapsed - INTRO_MS - tallyMs;
+        const idx = Math.min(total - 1, Math.floor(localMs / CREATOR_MS));
+        const localT = (localMs - idx * CREATOR_MS) / 1000;
+        return { key: `creator-${idx}`, localT, draw: (c, t) => drawCreator(c, t, { creator: creators[idx], img: creatorImgs[idx], index: idx, total }) };
+      }
+      const localMs = elapsed - INTRO_MS - tallyMs - total * CREATOR_MS;
+      return { key: 'outro', localT: localMs / 1000, draw: (c, t) => drawOutro(c, t) };
+    }
+
     // Paint the first real frame before the recorder starts so frame 0
     // isn't blank.
     drawIntro(ctx, 0, { welcomeImg, weekLabel });
@@ -389,25 +380,43 @@ export async function buildWelcomeReel({ creators, welcomeImageUrl, weekLabel, o
     recorder.start(200);
     const startTime = performance.now();
 
+    const snapshot = document.createElement('canvas');
+    snapshot.width = WIDTH;
+    snapshot.height = HEIGHT;
+    const snapCtx = snapshot.getContext('2d');
+    let activeKey = null;
+    let sceneStartElapsed = 0;
+    let hasSnapshot = false;
+
     await new Promise((resolve) => {
       function frame(now) {
         const elapsed = now - startTime;
         if (onProgress) onProgress(Math.min(1, elapsed / totalMs));
         if (elapsed >= totalMs) { resolve(); return; }
 
-        if (elapsed < INTRO_MS) {
-          drawIntro(ctx, elapsed / 1000, { welcomeImg, weekLabel });
-        } else if (hasTally && elapsed < INTRO_MS + tallyMs) {
-          drawTally(ctx, (elapsed - INTRO_MS) / 1000, { total: totalFollowers });
-        } else if (elapsed < INTRO_MS + tallyMs + total * CREATOR_MS) {
-          const localMs = elapsed - INTRO_MS - tallyMs;
-          const idx = Math.min(total - 1, Math.floor(localMs / CREATOR_MS));
-          const localT = (localMs - idx * CREATOR_MS) / 1000;
-          drawCreator(ctx, localT, { creator: creators[idx], img: creatorImgs[idx], index: idx, total });
-        } else {
-          const localMs = elapsed - INTRO_MS - tallyMs - total * CREATOR_MS;
-          drawOutro(ctx, localMs / 1000);
+        const scene = sceneAt(elapsed);
+        if (scene.key !== activeKey) {
+          // Freeze whatever's currently on screen (the outgoing scene's
+          // last-drawn frame) so it can be dissolved away over the new
+          // scene instead of hard-cutting into it.
+          hasSnapshot = activeKey !== null;
+          if (hasSnapshot) {
+            snapCtx.clearRect(0, 0, WIDTH, HEIGHT);
+            snapCtx.drawImage(canvas, 0, 0);
+          }
+          activeKey = scene.key;
+          sceneStartElapsed = elapsed;
         }
+        scene.draw(ctx, scene.localT);
+
+        const sinceSceneStart = elapsed - sceneStartElapsed;
+        if (hasSnapshot && sinceSceneStart < CROSSFADE_MS) {
+          ctx.save();
+          ctx.globalAlpha = 1 - sinceSceneStart / CROSSFADE_MS;
+          ctx.drawImage(snapshot, 0, 0);
+          ctx.restore();
+        }
+
         requestAnimationFrame(frame);
       }
       requestAnimationFrame(frame);

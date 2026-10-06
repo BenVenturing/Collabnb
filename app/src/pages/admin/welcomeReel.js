@@ -377,7 +377,13 @@ export async function buildWelcomeReel({ creators, welcomeImageUrl, weekLabel, o
     recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
     const stopped = new Promise((resolve) => { recorder.onstop = resolve; });
 
-    recorder.start(200);
+    // No timeslice: Chrome's mp4 muxer only reliably plays back through
+    // the first cleanly-closed fragment when you concatenate multiple
+    // timesliced chunks — that's what produced a video that froze right
+    // around the 10th 200ms chunk (~2s) instead of playing all the way
+    // through. Buffering the whole recording and taking one blob at
+    // stop() avoids that entirely.
+    recorder.start();
     const startTime = performance.now();
 
     const snapshot = document.createElement('canvas');

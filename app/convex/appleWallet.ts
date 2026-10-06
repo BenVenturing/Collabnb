@@ -328,11 +328,11 @@ async function sendApnsPush(creds: AppleCreds, pushToken: string): Promise<{ ok:
 export const generateDownloadLink = action({
   args: { profileId: v.string() },
   handler: async (ctx, { profileId }): Promise<{ downloadUrl: string }> => {
-    await requireOwnerOrAdminAction(ctx, profileId, api.profiles.getByClerkUserId);
+    await requireOwnerOrAdminAction(ctx, profileId, internal.profiles.getByClerkUserId);
     const creds = appleWalletCredentials();
     if (!creds) throw new ConvexError("Apple Wallet isn't set up yet.");
 
-    const profile: any = await ctx.runQuery(api.profiles.getById, { id: profileId });
+    const profile: any = await ctx.runQuery(internal.profiles.getByIdInternal, { id: profileId });
     if (!profile) throw new ConvexError("Profile not found.");
 
     let serial = profile.apple_pass_serial;
@@ -366,7 +366,7 @@ export const buildPkpassForDownloadToken = internalAction({
     if (!creds) return null;
     const profileId = await verifyDownloadToken(creds, token);
     if (!profileId) return null;
-    const profile: any = await ctx.runQuery(api.profiles.getById, { id: profileId });
+    const profile: any = await ctx.runQuery(internal.profiles.getByIdInternal, { id: profileId });
     if (!profile?.apple_pass_serial) return null;
     const referralCode = await referralCodeFor(ctx, profileId, profile);
     return await buildPkpass(creds, profile, profile.apple_pass_serial, referralCode, profile.apple_pass_latest_message || "Welcome to Collabnb!");
@@ -538,7 +538,7 @@ export const pushForUser = internalAction({
     const creds = appleWalletCredentials();
     if (!creds) return;
 
-    const profile: any = await ctx.runQuery(api.profiles.getById, { id: args.userId });
+    const profile: any = await ctx.runQuery(internal.profiles.getByIdInternal, { id: args.userId });
     if (!profile?.apple_pass_serial) return;
     if (profile.apple_pass_push_enabled === false) return;
 

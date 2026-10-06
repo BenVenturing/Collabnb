@@ -61,7 +61,7 @@ export const pushForUser = internalAction({
     link: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const profile: any = await ctx.runQuery(api.profiles.getById, { id: args.userId });
+    const profile: any = await ctx.runQuery(internal.profiles.getByIdInternal, { id: args.userId });
     const tokens: string[] = profile?.expo_push_tokens ?? [];
     if (tokens.length === 0) return;
 

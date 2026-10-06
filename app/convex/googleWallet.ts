@@ -257,11 +257,11 @@ async function referralCodeFor(ctx: any, profileId: string, profile: any): Promi
 export const generateSaveLink = action({
   args: { profileId: v.string() },
   handler: async (ctx, { profileId }): Promise<{ saveUrl: string }> => {
-    await requireOwnerOrAdminAction(ctx, profileId, api.profiles.getByClerkUserId);
+    await requireOwnerOrAdminAction(ctx, profileId, internal.profiles.getByClerkUserId);
     const creds = walletCredentials();
     if (!creds) throw new ConvexError("Google Wallet isn't set up yet — try again shortly.");
 
-    const profile: any = await ctx.runQuery(api.profiles.getById, { id: profileId });
+    const profile: any = await ctx.runQuery(internal.profiles.getByIdInternal, { id: profileId });
     if (!profile) throw new ConvexError("Profile not found.");
 
     const referralCode = await referralCodeFor(ctx, profileId, profile);
@@ -285,7 +285,7 @@ export const generateSaveLinkForTesting = internalAction({
     const creds = walletCredentials();
     if (!creds) throw new Error("Google Wallet isn't configured.");
 
-    const profile: any = await ctx.runQuery(api.profiles.getById, { id: profileId });
+    const profile: any = await ctx.runQuery(internal.profiles.getByIdInternal, { id: profileId });
     if (!profile) throw new Error("Profile not found.");
 
     const referralCode = await referralCodeFor(ctx, profileId, profile);
@@ -347,7 +347,7 @@ export const pushForUser = internalAction({
     const creds = walletCredentials();
     if (!creds) return; // not configured — silently a no-op, same as an unlinked pass
 
-    const profile: any = await ctx.runQuery(api.profiles.getById, { id: args.userId });
+    const profile: any = await ctx.runQuery(internal.profiles.getByIdInternal, { id: args.userId });
     if (!profile?.google_wallet_object_id) return;
     // Settings > Notifications > "Phone push" master switch — undefined = on.
     if (profile.google_wallet_push_enabled === false) return;

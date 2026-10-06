@@ -79,9 +79,9 @@ export async function requireSelfEmailOrAdmin(ctx: AuthCtx, email: string) {
 // Convex actions have no ctx.db, so requireAdmin (which reads the profiles
 // table directly) doesn't work inside one — resolve the caller via a query
 // instead. Use this in any `action` handler that needs an admin-only gate.
-// The caller passes its own imported `api.profiles.getByClerkUserId`
-// reference to avoid a circular import between lib/auth.ts and
-// _generated/api.ts.
+// The caller passes its own imported `internal.profiles.getByClerkUserId`
+// reference (it's an internalQuery, not client-callable — see profiles.ts)
+// to avoid a circular import between lib/auth.ts and _generated/api.ts.
 export async function requireAdminAction(
   ctx: {
     auth: { getUserIdentity: () => Promise<{ subject?: string; email?: string } | null> };

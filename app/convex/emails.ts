@@ -346,7 +346,7 @@ export const sendNewMessageEmail = internalAction({
 export const sendStripeServicesAgreementNotice = action({
   args: { noticeText: v.string(), dryRun: v.optional(v.boolean()) },
   handler: async (ctx, { noticeText, dryRun }) => {
-    await requireAdminAction(ctx, api.profiles.getByClerkUserId);
+    await requireAdminAction(ctx, internal.profiles.getByClerkUserId);
 
     const apiKey = process.env.RESEND_API_KEY;
     if (!apiKey) throw new Error("RESEND_API_KEY is not set in Convex environment variables");

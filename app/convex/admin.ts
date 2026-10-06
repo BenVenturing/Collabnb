@@ -604,7 +604,7 @@ export const saveBroadcastInternal = internalMutation({
 export const broadcastSend = action({
   args: { audience: v.string(), subject: v.string(), body: v.string() },
   handler: async (ctx, { audience, subject, body }) => {
-    await requireAdminAction(ctx, api.profiles.getByClerkUserId);
+    await requireAdminAction(ctx, internal.profiles.getByClerkUserId);
     const recipients: { email: string; full_name: string; role: string }[] =
       await ctx.runQuery(api.admin.getEmailList, { audience });
     if (!recipients.length) return { sent: 0 };
@@ -668,7 +668,7 @@ export const broadcastSend = action({
 export const triggerCleanupAudit = action({
   args: {},
   handler: async (ctx) => {
-    await requireAdminAction(ctx, api.profiles.getByClerkUserId);
+    await requireAdminAction(ctx, internal.profiles.getByClerkUserId);
 
     const token = process.env.GITHUB_ACTIONS_TOKEN;
     if (!token) throw new Error("GITHUB_ACTIONS_TOKEN not configured in Convex environment.");

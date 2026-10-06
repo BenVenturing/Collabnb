@@ -303,7 +303,7 @@ export const processComment = internalAction({
 export const retrySend = action({
   args: { logId: v.id("autoreply_log") },
   handler: async (ctx, { logId }): Promise<{ ok: boolean }> => {
-    await requireAdminAction(ctx, api.profiles.getByClerkUserId);
+    await requireAdminAction(ctx, internal.profiles.getByClerkUserId);
     const entry: any = await ctx.runQuery(internal.autoreply.getLogEntryInternal, { id: logId });
     if (!entry || !entry.rule_id) throw new Error("Nothing to retry for this entry.");
     const rules: any[] = await ctx.runQuery(internal.autoreply.getRulesInternal, {});

@@ -288,7 +288,7 @@ export default function WaitlistPreview() {
     if (liveProfile?.is_verified) window.location.reload();
   }, [liveProfile?.is_verified]);
 
-  const allProfiles = useQuery(api.profiles.getAll);
+  const allProfiles = useQuery(api.profiles.getPublicGlobeProfiles);
   const globeStats  = useMemo(() => countGlobeStats(allProfiles), [allProfiles]);
 
   // Backend redacts this for unverified (pending) viewers automatically — title,

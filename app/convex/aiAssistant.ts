@@ -31,7 +31,7 @@ const DEFAULT_MODEL: Record<Provider, string> = {
 export const saveApiKey = action({
   args: { provider: PROVIDER, apiKey: v.string() },
   handler: withSurfacedErrors(async (ctx, { provider, apiKey }) => {
-    const caller = await requireAuthedProfileAction(ctx, api.profiles.getByClerkUserId);
+    const caller = await requireAuthedProfileAction(ctx, internal.profiles.getByClerkUserId);
     const trimmed = apiKey.trim();
     if (!trimmed) throw new ConvexError("API key is required.");
     const { ciphertext, iv } = await encryptSecret(trimmed);
@@ -219,7 +219,7 @@ async function draftWithOpenAiCompatible(
 export const draftReply = action({
   args: { threadKey: v.string(), instruction: v.optional(v.string()), recipientName: v.optional(v.string()) },
   handler: withSurfacedErrors(async (ctx, { threadKey, instruction, recipientName }): Promise<{ draft: string; provider: Provider | "collabnb" }> => {
-    const caller = await requireAuthedProfileAction(ctx, api.profiles.getByClerkUserId);
+    const caller = await requireAuthedProfileAction(ctx, internal.profiles.getByClerkUserId);
     if (caller.is_verified !== true && caller.is_admin !== true) {
       throw new ConvexError("Your account is pending verification. AI drafting unlocks once you're approved.");
     }

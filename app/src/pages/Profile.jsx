@@ -576,7 +576,7 @@ export default function Profile() {
     [convexCollabs]
   );
   const hasCollabs = realCompletedCollabs.length > 0;
-  const allProfiles = useQuery(api.profiles.getAll);
+  const allProfiles = useQuery(api.profiles.getPublicGlobeProfiles);
   const globeStats  = useMemo(() => countGlobeStats(allProfiles), [allProfiles]);
 
   // Edit profile state

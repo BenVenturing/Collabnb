@@ -94,7 +94,7 @@ export const createCheckoutSession = action({
     const stripe = new Stripe(secretKey);
     const { isFreeStay, cash, fee } = computeContractFee(contract);
     const host = contract.host_id
-      ? await ctx.runQuery(api.profiles.getById, { id: String(contract.host_id) })
+      ? await ctx.runQuery(internal.profiles.getByIdInternal, { id: String(contract.host_id) })
       : null;
     const testDiscount = isTestDollarAccount(host?.email);
     const amountInCents = testDiscount ? Math.min(100, Math.round(fee * 100)) : Math.round(fee * 100);
@@ -142,7 +142,7 @@ export const createSubscriptionSession = action({
     const priceId = isYearly ? process.env.STRIPE_PRICE_YEARLY_ID : process.env.STRIPE_PRICE_MONTHLY_ID;
     if (!priceId) throw new Error('STRIPE_PRICE_MONTHLY_ID/STRIPE_PRICE_YEARLY_ID are not set in Convex environment variables');
 
-    const buyer = await ctx.runQuery(api.profiles.getById, { id: args.profileId });
+    const buyer = await ctx.runQuery(internal.profiles.getByIdInternal, { id: args.profileId });
     const testDiscount = isTestDollarAccount(buyer?.email);
     let discounts;
     if (testDiscount) {
@@ -218,7 +218,7 @@ export const verifySubscriptionSession = action({
       } catch { /* display-only — subscription already activated above */ }
     }
 
-    const profile = await ctx.runQuery(api.profiles.getById, { id: profileId });
+    const profile = await ctx.runQuery(internal.profiles.getByIdInternal, { id: profileId });
     if (profile?.email) {
       await ctx.runAction(internal.email.sendSubscriptionReceiptEmail, {
         to: profile.email,
@@ -247,7 +247,7 @@ export const listBillingHistory = action({
 
     const identity = await ctx.auth.getUserIdentity();
     if (!identity?.subject) throw new Error('You must be signed in to view billing history');
-    const profile = await ctx.runQuery(api.profiles.getByClerkUserId, { clerk_user_id: identity.subject });
+    const profile = await ctx.runQuery(internal.profiles.getByClerkUserId, { clerk_user_id: identity.subject });
     const customerId = profile?.stripe_customer_id;
     if (!customerId) return [];
 
@@ -292,7 +292,7 @@ export const createBillingPortalSession = action({
     // Resolve strictly from the verified Clerk subject — never from a
     // client-supplied profileId (that would let anyone open anyone else's
     // billing portal by passing a different id — an IDOR).
-    const profile = await ctx.runQuery(api.profiles.getByClerkUserId, { clerk_user_id: identity.subject });
+    const profile = await ctx.runQuery(internal.profiles.getByClerkUserId, { clerk_user_id: identity.subject });
     const customerId = profile?.stripe_customer_id;
     if (!customerId) throw new Error('No billing account found for your profile');
 
@@ -323,7 +323,7 @@ export const createLifetimeSession = action({
     let tier = getLifetimeTier(lifetimeCount);
     if (!tier) throw new Error('All lifetime spots are sold out. Please choose a monthly or annual plan.');
 
-    const buyer = await ctx.runQuery(api.profiles.getById, { id: args.profileId });
+    const buyer = await ctx.runQuery(internal.profiles.getByIdInternal, { id: args.profileId });
     const testDiscount = isTestDollarAccount(buyer?.email);
     if (testDiscount) tier = { ...tier, price: 1 };
 
@@ -508,7 +508,7 @@ export const verifyFeeSetupSession = action({
 
     const contract = await ctx.runQuery(internal.contracts.getByIdInternal, { id: contractId });
     const host = contract?.host_id
-      ? await ctx.runQuery(api.profiles.getById, { id: String(contract.host_id) })
+      ? await ctx.runQuery(internal.profiles.getByIdInternal, { id: String(contract.host_id) })
       : null;
     if (host?.email) {
       await ctx.runAction(internal.email.sendCardSavedEmail, {
@@ -552,7 +552,7 @@ export const createHostCardSetupSession = action({
 
     const identity = await ctx.auth.getUserIdentity();
     if (!identity?.subject) throw new Error('You must be signed in to add a card');
-    const profile = await ctx.runQuery(api.profiles.getByClerkUserId, { clerk_user_id: identity.subject });
+    const profile = await ctx.runQuery(internal.profiles.getByClerkUserId, { clerk_user_id: identity.subject });
     if (!profile) throw new Error('Profile not found');
 
     const stripe = new Stripe(secretKey);
@@ -603,7 +603,7 @@ export const verifyHostCardSetupSession = action({
     const profileId = session.metadata?.profileId;
     if (!profileId) throw new Error('No profileId in setup session metadata');
     // The caller must be the same profile the session was created for.
-    const caller = await ctx.runQuery(api.profiles.getByClerkUserId, { clerk_user_id: identity.subject });
+    const caller = await ctx.runQuery(internal.profiles.getByClerkUserId, { clerk_user_id: identity.subject });
     if (!caller || String(caller._id) !== profileId) throw new Error('You do not have permission to do that.');
 
     const customerId = typeof session.customer === 'string' ? session.customer : session.customer?.id;
@@ -660,12 +660,12 @@ export const removeSavedCard = action({
 
     const identity = await ctx.auth.getUserIdentity();
     if (!identity?.subject) throw new Error('You must be signed in to do that');
-    const caller = await ctx.runQuery(api.profiles.getByClerkUserId, { clerk_user_id: identity.subject });
+    const caller = await ctx.runQuery(internal.profiles.getByClerkUserId, { clerk_user_id: identity.subject });
     if (!caller || (String(caller._id) !== args.profileId && caller.is_admin !== true)) {
       throw new Error('You do not have permission to do that.');
     }
 
-    const profile = await ctx.runQuery(api.profiles.getById, { id: args.profileId });
+    const profile = await ctx.runQuery(internal.profiles.getByIdInternal, { id: args.profileId });
     const paymentMethodId = profile?.stripe_default_payment_method_id;
     if (paymentMethodId) {
       const stripe = new Stripe(secretKey);
@@ -698,7 +698,7 @@ export const chargeContractFee = internalAction({
     // Founding / lifetime hosts pay no platform fee — but they still owe the
     // creator their agreed cash payout, since that's not Collabnb's money.
     const host = contract.host_id
-      ? await ctx.runQuery(api.profiles.getById, { id: String(contract.host_id) })
+      ? await ctx.runQuery(internal.profiles.getByIdInternal, { id: String(contract.host_id) })
       : null;
     const hostFeeWaived = host?.is_founder === true || host?.is_lifetime === true;
 
@@ -762,7 +762,7 @@ export const chargeContractFee = internalAction({
 export const approveContractCharge = action({
   args: { contractId: v.string(), passkey: v.string() },
   handler: async (ctx, args) => {
-    await requireAdminAction(ctx, api.profiles.getByClerkUserId);
+    await requireAdminAction(ctx, internal.profiles.getByClerkUserId);
 
     const expected = process.env.PAYOUT_APPROVAL_PASSKEY;
     if (!expected) throw new ConvexError('PAYOUT_APPROVAL_PASSKEY is not set in Convex environment variables — set one before any charge can be approved.');
@@ -796,7 +796,7 @@ export const executeApprovedCharge = internalAction({
     if (contract.payments_blocked) return { skipped: 'payments_blocked' };
 
     const host = contract.host_id
-      ? await ctx.runQuery(api.profiles.getById, { id: String(contract.host_id) })
+      ? await ctx.runQuery(internal.profiles.getByIdInternal, { id: String(contract.host_id) })
       : null;
     const customerId = contract.host_stripe_customer_id;
     const paymentMethodId = contract.host_payment_method_id;
@@ -928,7 +928,7 @@ export const recordCollabPaymentFromWebhook = internalAction({
     const contract = await ctx.runQuery(internal.contracts.getByIdInternal, { id: args.contractId });
     if (!contract || contract.paid) return { skipped: true };
     const host = contract.host_id
-      ? await ctx.runQuery(api.profiles.getById, { id: String(contract.host_id) })
+      ? await ctx.runQuery(internal.profiles.getByIdInternal, { id: String(contract.host_id) })
       : null;
     await finalizeCollabCharge(ctx, {
       contractId: args.contractId,
@@ -959,7 +959,7 @@ export const forwardCreatorPayout = internalAction({
       await ctx.runMutation(internal.contracts.setPayoutStatus, { id: args.contractId, status: 'pending' });
       return { skipped: 'no_creator' };
     }
-    const creator = await ctx.runQuery(api.profiles.getById, { id: String(creatorId) });
+    const creator = await ctx.runQuery(internal.profiles.getByIdInternal, { id: String(creatorId) });
     if (!creator) {
       await ctx.runMutation(internal.contracts.setPayoutStatus, { id: args.contractId, status: 'pending' });
       return { skipped: 'creator_not_found' };
@@ -1016,7 +1016,7 @@ export const forwardCreatorPayout = internalAction({
 export const releasePayoutNow = action({
   args: { contractId: v.string() },
   handler: async (ctx, args) => {
-    await requireAdminAction(ctx, api.profiles.getByClerkUserId);
+    await requireAdminAction(ctx, internal.profiles.getByClerkUserId);
     const contract = await ctx.runQuery(internal.contracts.getByIdInternal, { id: args.contractId });
     if (!contract) throw new Error('Contract not found');
     if (contract.creator_payout_status === 'paid') throw new Error('This contract has already been paid out');
@@ -1047,12 +1047,12 @@ export const releasePayoutNow = action({
 export const createConnectOnboardingLink = action({
   args: { profileId: v.string(), refreshUrl: v.string(), returnUrl: v.string() },
   handler: async (ctx, args) => {
-    await requireOwnerOrAdminAction(ctx, args.profileId, api.profiles.getByClerkUserId);
+    await requireOwnerOrAdminAction(ctx, args.profileId, internal.profiles.getByClerkUserId);
     const secretKey = process.env.STRIPE_SECRET_KEY;
     if (!secretKey) throw new Error('STRIPE_SECRET_KEY is not set in Convex environment variables');
     const stripe = new Stripe(secretKey);
 
-    const profile = await ctx.runQuery(api.profiles.getById, { id: args.profileId });
+    const profile = await ctx.runQuery(internal.profiles.getByIdInternal, { id: args.profileId });
     if (!profile) throw new Error('Profile not found');
 
     let accountId = profile.stripe_connect_account_id;
@@ -1085,12 +1085,12 @@ export const createConnectOnboardingLink = action({
 export const getConnectAccountStatus = action({
   args: { profileId: v.string() },
   handler: async (ctx, args) => {
-    await requireOwnerOrAdminAction(ctx, args.profileId, api.profiles.getByClerkUserId);
+    await requireOwnerOrAdminAction(ctx, args.profileId, internal.profiles.getByClerkUserId);
     const secretKey = process.env.STRIPE_SECRET_KEY;
     if (!secretKey) throw new Error('STRIPE_SECRET_KEY is not set in Convex environment variables');
     const stripe = new Stripe(secretKey);
 
-    const profile = await ctx.runQuery(api.profiles.getById, { id: args.profileId });
+    const profile = await ctx.runQuery(internal.profiles.getByIdInternal, { id: args.profileId });
     if (!profile?.stripe_connect_account_id) return null;
 
     const account = await stripe.accounts.retrieve(profile.stripe_connect_account_id);
@@ -1123,7 +1123,7 @@ const wiseBaseUrl = () =>
 export const listWiseProfiles = action({
   args: {},
   handler: async (ctx) => {
-    await requireAdminAction(ctx, api.profiles.getByClerkUserId);
+    await requireAdminAction(ctx, internal.profiles.getByClerkUserId);
     const token = process.env.WISE_API_TOKEN;
     if (!token) throw new Error('WISE_API_TOKEN is not set in Convex environment variables');
     const res = await fetch(`${wiseBaseUrl()}/v2/profiles`, {
@@ -1148,7 +1148,7 @@ export const createWiseRecipient = action({
     details: v.any(),
   },
   handler: async (ctx, args) => {
-    await requireOwnerOrAdminAction(ctx, args.profileId, api.profiles.getByClerkUserId);
+    await requireOwnerOrAdminAction(ctx, args.profileId, internal.profiles.getByClerkUserId);
     const token = process.env.WISE_API_TOKEN;
     const wiseProfileId = process.env.WISE_PROFILE_ID;
     if (!token || !wiseProfileId) throw new ConvexError('WISE_API_TOKEN/WISE_PROFILE_ID are not set in Convex environment variables');
@@ -1197,7 +1197,7 @@ export const createWiseRecipient = action({
 export const sendWisePayout = action({
   args: { contractId: v.string() },
   handler: async (ctx, args) => {
-    await requireAdminAction(ctx, api.profiles.getByClerkUserId);
+    await requireAdminAction(ctx, internal.profiles.getByClerkUserId);
     const token = process.env.WISE_API_TOKEN;
     const wiseProfileId = process.env.WISE_PROFILE_ID;
     if (!token || !wiseProfileId) throw new Error('WISE_API_TOKEN/WISE_PROFILE_ID are not set in Convex environment variables');
@@ -1208,7 +1208,7 @@ export const sendWisePayout = action({
     if (contract.payments_blocked) throw new ConvexError(PAYMENTS_BLOCKED_MSG);
     if (!contract.creator_id) throw new Error('Contract has no linked creator');
 
-    const creator = await ctx.runQuery(api.profiles.getById, { id: String(contract.creator_id) });
+    const creator = await ctx.runQuery(internal.profiles.getByIdInternal, { id: String(contract.creator_id) });
     if (!creator?.wise_recipient_id) throw new Error('Creator has no connected Wise recipient');
 
     const amount = contract.creator_payout_amount;

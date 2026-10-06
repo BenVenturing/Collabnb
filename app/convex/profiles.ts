@@ -152,9 +152,32 @@ export const getOrCreate = mutation({
   },
 });
 
+// Public query — but NOT an open PII lookup. Convex queries are directly
+// client-callable regardless of who else calls them, so without a check
+// here anyone holding the (public) Convex URL could dump any user's full
+// profile row — email, Stripe/Wise payout ids, subscription state, is_admin
+// — by guessing an email address. Clerk's "convex" JWT template doesn't
+// carry an email claim (see file-level note in lib/auth.ts), so we can't
+// verify "args.email belongs to the caller" outright; instead: require ANY
+// signed-in identity (blocks anonymous scraping entirely), and once that
+// identity already has its own linked profile, only let it look up itself
+// or let an admin look up anyone. A brand-new signed-in Clerk user with no
+// linked profile yet can still look up one arbitrary email — that's the
+// pre-link bootstrap case this query exists for (AuthContext checking "does
+// a waitlist profile already exist for my email" before getOrCreate runs).
 export const getByEmail = query({
   args: { email: v.string() },
   handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity?.subject) return null;
+    const caller = await ctx.db
+      .query("profiles")
+      .withIndex("by_clerk_user_id", (q) => q.eq("clerk_user_id", identity.subject))
+      .unique();
+    if (caller && caller.is_admin !== true) {
+      const self = (caller.email || "").toLowerCase().trim() === args.email.toLowerCase().trim();
+      if (!self) return null;
+    }
     return await ctx.db
       .query("profiles")
       .withIndex("by_email", (q) => q.eq("email", args.email))
@@ -162,10 +185,15 @@ export const getByEmail = query({
   },
 });
 
-// Used by lib/auth.ts's action-context helpers (requireAdminAction,
-// requireOwnerOrAdminAction) — resolves the caller by Clerk's verified
-// `subject`, since the email JWT claim currently isn't populated.
-export const getByClerkUserId = query({
+// Internal-only (not client-callable) — resolves the caller by Clerk's
+// verified `subject` for lib/auth.ts's action-context helpers
+// (requireAdminAction, requireOwnerOrAdminAction, requireAuthedProfileAction).
+// Was previously a public `query`: since the arg is an arbitrary
+// client-supplied clerk_user_id with no identity check, that let anyone
+// fetch any profile's full row (including is_admin + payout ids) by guessing
+// or harvesting a Clerk user id. Server code reaches this via
+// `internal.profiles.getByClerkUserId`.
+export const getByClerkUserId = internalQuery({
   args: { clerk_user_id: v.string() },
   handler: async (ctx, args) => {
     return await ctx.db
@@ -215,7 +243,12 @@ export const clearHostCard = internalMutation({
   },
 });
 
-export const getById = query({
+// Internal-only (not client-callable) full-row lookup by id — used by server
+// code (webhooks, Stripe/Wise actions, wallet passes) that needs another
+// user's payout/billing fields regardless of who's calling, including
+// webhook-triggered contexts with no signed-in identity at all. Reached via
+// `internal.profiles.getByIdInternal`.
+export const getByIdInternal = internalQuery({
   args: { id: v.string() },
   handler: async (ctx, args) => {
     return await ctx.db
@@ -225,10 +258,69 @@ export const getById = query({
   },
 });
 
+// Public query. Used both for self-lookups (e.g. refreshing your own payout
+// fields after a mutation) and cross-user lookups (e.g. a listing page
+// showing its host's name/avatar) — those need very different amounts of
+// data. Was previously an unauthenticated full-row dump: anyone with any
+// profile _id could pull its email, Stripe/Wise payout ids, subscription
+// state, and is_admin flag. Now: the owner or an admin gets the full row;
+// anyone else gets only the subset that's already shown publicly elsewhere
+// (listPublicCreators/getHosts).
+export const getById = query({
+  args: { id: v.string() },
+  handler: async (ctx, args) => {
+    const profile = await ctx.db
+      .query("profiles")
+      .filter((q) => q.eq(q.field("_id"), args.id))
+      .unique();
+    if (!profile) return null;
+    if (await canAccessOwner(ctx, profile._id)) return profile;
+    return {
+      _id: profile._id,
+      full_name: profile.full_name,
+      username: profile.username,
+      avatar_url: profile.avatar_url ?? null,
+      bio: profile.bio ?? "",
+      role: profile.role,
+      city: profile.city ?? null,
+      region: profile.region ?? null,
+      country: profile.country ?? null,
+      is_verified: profile.is_verified === true,
+      is_founder: profile.is_founder === true,
+      portfolio: profile.portfolio ?? null,
+      instagram_handle: profile.instagram_handle ?? null,
+      tiktok_handle: profile.tiktok_handle ?? null,
+      youtube_handle: profile.youtube_handle ?? null,
+      follower_count: profile.follower_count ?? null,
+      niches: profile.niches ?? [],
+    };
+  },
+});
+
+// Admin-only — was previously an unauthenticated full-row dump of every
+// profile (email, Stripe/Wise payout ids, subscription state, is_admin).
+// Fails soft (returns []) rather than throwing, since `query` errors crash
+// the whole component tree wherever they're rendered (see lib/auth.ts).
 export const getAll = query({
   args: {},
   handler: async (ctx) => {
+    if (!(await canAccessAdmin(ctx))) return [];
     return await ctx.db.query("profiles").collect();
+  },
+});
+
+// Public, name/avatar-only directory for Settings > Privacy > Blocked people
+// (search-to-block needs to find anyone, not just creators/hosts). Never
+// include anything beyond what's already shown on a public profile card.
+export const listBlockableDirectory = query({
+  args: {},
+  handler: async (ctx) => {
+    const all = await ctx.db.query("profiles").collect();
+    return all.map((p) => ({
+      _id: String(p._id),
+      full_name: p.full_name,
+      avatar_url: p.avatar_url ?? null,
+    }));
   },
 });
 
@@ -521,6 +613,7 @@ export const getTierChangeRequests = query({
 export const getDetailedProfile = query({
   args: { profileId: v.id("profiles") },
   handler: async (ctx, args) => {
+    if (!(await canAccessAdmin(ctx))) return null;
     const profile = await ctx.db.get(args.profileId);
     if (!profile) return null;
 

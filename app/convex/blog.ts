@@ -909,7 +909,7 @@ export const generatePost = action({
     topicHint: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    await requireAdminAction(ctx, api.profiles.getByClerkUserId);
+    await requireAdminAction(ctx, internal.profiles.getByClerkUserId);
     return runGeneratePost(ctx, args);
   },
 });
@@ -932,7 +932,7 @@ export const regeneratePost = action({
     direction: v.optional(v.string()),
   },
   handler: async (ctx, { id, direction }) => {
-    await requireAdminAction(ctx, api.profiles.getByClerkUserId);
+    await requireAdminAction(ctx, internal.profiles.getByClerkUserId);
     const post: any = await ctx.runQuery(api.blog.getById, { id });
     if (!post) throw new Error("Post not found");
     if (post.status === "published") throw new Error("Unpublish the post before regenerating it.");
@@ -974,7 +974,7 @@ export const regeneratePost = action({
 export const suggestTopics = action({
   args: {},
   handler: async (ctx): Promise<string[]> => {
-    await requireAdminAction(ctx, api.profiles.getByClerkUserId);
+    await requireAdminAction(ctx, internal.profiles.getByClerkUserId);
     let content = "";
     try {
       const headlines = await fetchHeadlines();

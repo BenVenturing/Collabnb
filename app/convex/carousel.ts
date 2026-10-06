@@ -23,7 +23,7 @@
 
 import { v, ConvexError } from "convex/values";
 import { action, mutation, query } from "./_generated/server";
-import { api } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 import { requireAdmin, requireAdminAction } from "./lib/auth";
 import { llmChat } from "./blog";
 
@@ -107,7 +107,7 @@ export const generateCaption = action({
     })),
   },
   handler: async (ctx, { creators }) => {
-    await requireAdminAction(ctx, api.profiles.getByClerkUserId);
+    await requireAdminAction(ctx, internal.profiles.getByClerkUserId);
     if (creators.length === 0) throw new ConvexError("Pick at least one creator first.");
     const roster = creators
       .map((c) => `${c.full_name}${c.handle ? ` (@${c.handle.replace(/^@/, "")})` : ""}`)
@@ -138,7 +138,7 @@ const DEFAULT_WELCOME_PROMPT =
 export const generateWelcomeImage = action({
   args: { prompt: v.optional(v.string()) },
   handler: async (ctx, { prompt }) => {
-    await requireAdminAction(ctx, api.profiles.getByClerkUserId);
+    await requireAdminAction(ctx, internal.profiles.getByClerkUserId);
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
       throw new ConvexError(

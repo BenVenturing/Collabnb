@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { query, mutation, action } from "./_generated/server";
-import { api } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 import { llmChat } from "./blog";
 import { requireAdmin, requireAdminAction, canAccessAdmin, getAuthedProfile } from "./lib/auth";
 import { withSurfacedErrors } from "./lib/errors";
@@ -260,8 +260,8 @@ export const deleteThread = mutation({
 export const draftMessage = action({
   args: { recipientId: v.string(), prompt: v.optional(v.string()) },
   handler: withSurfacedErrors(async (ctx, { recipientId, prompt }): Promise<string> => {
-    await requireAdminAction(ctx, api.profiles.getByClerkUserId);
-    const p: any = await ctx.runQuery(api.profiles.getById, { id: recipientId });
+    await requireAdminAction(ctx, internal.profiles.getByClerkUserId);
+    const p: any = await ctx.runQuery(internal.profiles.getByIdInternal, { id: recipientId });
     const firstName = (p?.full_name || "there").split(" ")[0];
 
     const who = [

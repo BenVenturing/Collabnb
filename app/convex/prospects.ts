@@ -1018,7 +1018,7 @@ async function runBuildFreshQueue(ctx: any, perKind = 50): Promise<{ promoted: {
 export const buildFreshQueue = action({
   args: { perKind: v.optional(v.number()) },
   handler: withSurfacedErrors(async (ctx, { perKind = 50 }) => {
-    await requireAdminAction(ctx, api.profiles.getByClerkUserId);
+    await requireAdminAction(ctx, internal.profiles.getByClerkUserId);
     return runBuildFreshQueue(ctx, perKind);
   }),
 });
@@ -1252,7 +1252,7 @@ export const sendTestWelcomeEmail = action({
     sampleName: v.optional(v.string()),
   },
   handler: withSurfacedErrors(async (ctx, { kind, toEmail, html, sampleName }) => {
-    await requireAdminAction(ctx, api.profiles.getByClerkUserId);
+    await requireAdminAction(ctx, internal.profiles.getByClerkUserId);
     const apiKey = process.env.RESEND_API_KEY;
     if (!apiKey) throw new Error("RESEND_API_KEY not configured in Convex environment.");
     const name = sampleName?.trim() || (kind === "host" ? "Sample Hotel Name" : "Sample Creator");
@@ -1409,7 +1409,7 @@ export const saveHostDraft = internalMutation({
 export const generateDraftsForSelected = action({
   args: { ids: v.array(v.id("prospects")) },
   handler: async (ctx, { ids }): Promise<{ drafted: number }> => {
-    await requireAdminAction(ctx, api.profiles.getByClerkUserId);
+    await requireAdminAction(ctx, internal.profiles.getByClerkUserId);
     const counts: Record<string, number> = await ctx.runQuery(internal.prospects.getHostAngleCounts, {});
     const templates = await resolveHostOutreachTemplates(ctx);
     const results = await mapWithConcurrency(ids, 5, async (id) => {
@@ -1534,7 +1534,7 @@ async function runHostEmailKickoff(ctx: any, id: any): Promise<{ sent: boolean; 
 export const sendHostEmailNow = action({
   args: { id: v.id("prospects") },
   handler: async (ctx, { id }) => {
-    await requireAdminAction(ctx, api.profiles.getByClerkUserId);
+    await requireAdminAction(ctx, internal.profiles.getByClerkUserId);
     const result = await runHostEmailKickoff(ctx, id);
     if (!result.sent) throw new Error(result.reason || "Could not send");
     return result;
@@ -1634,7 +1634,7 @@ async function runCreatorEmailKickoff(ctx: any, id: any): Promise<{ sent: boolea
 export const sendCreatorEmailNow = action({
   args: { id: v.id("prospects") },
   handler: async (ctx, { id }) => {
-    await requireAdminAction(ctx, api.profiles.getByClerkUserId);
+    await requireAdminAction(ctx, internal.profiles.getByClerkUserId);
     const result = await runCreatorEmailKickoff(ctx, id);
     if (!result.sent) throw new Error(result.reason || "Could not send");
     return result;
@@ -1665,7 +1665,7 @@ export const scheduleBulkEmail = action({
     intervalSeconds: v.optional(v.number()),
   },
   handler: withSurfacedErrors(async (ctx, { ids, kind, intervalSeconds }) => {
-    await requireAdminAction(ctx, api.profiles.getByClerkUserId);
+    await requireAdminAction(ctx, internal.profiles.getByClerkUserId);
     const interval = Math.max(intervalSeconds ?? 60, 15) * 1000;
     const fn = kind === "host" ? internal.prospects.sendHostEmailScheduled : internal.prospects.sendCreatorEmailScheduled;
     for (let i = 0; i < ids.length; i++) {
@@ -1709,7 +1709,7 @@ export const saveCreatorEmailSequence = internalMutation({
 export const sendSequenceEmail = action({
   args: { id: v.id("prospects"), step: v.number() },
   handler: async (ctx, { id, step }) => {
-    await requireAdminAction(ctx, api.profiles.getByClerkUserId);
+    await requireAdminAction(ctx, internal.profiles.getByClerkUserId);
     const p: any = await ctx.runQuery(internal.prospects.getById, { id });
     if (!p) throw new Error("Prospect not found");
     // Both kinds prefer the marketing address scraped from their site
@@ -1760,7 +1760,7 @@ export const markSequenceStepSent = internalMutation({
 export const confirmHostBatch = action({
   args: { ids: v.array(v.id("prospects")) },
   handler: async (ctx, { ids }): Promise<{ confirmed: number }> => {
-    await requireAdminAction(ctx, api.profiles.getByClerkUserId);
+    await requireAdminAction(ctx, internal.profiles.getByClerkUserId);
     const templates = await resolveHostOutreachTemplates(ctx);
     const results = await mapWithConcurrency(ids, 5, async (id, i) => {
       const p: any = await ctx.runQuery(internal.prospects.getById, { id });
@@ -2082,7 +2082,7 @@ async function draftCreatorMessage(p: any): Promise<string> {
 export const generateDmDraft = action({
   args: { id: v.id("prospects"), angleId: v.optional(v.string()) },
   handler: withSurfacedErrors(async (ctx, { id, angleId }): Promise<string> => {
-    await requireAdminAction(ctx, api.profiles.getByClerkUserId);
+    await requireAdminAction(ctx, internal.profiles.getByClerkUserId);
     const p: any = await ctx.runQuery(internal.prospects.getById, { id });
     if (!p) throw new Error("Prospect not found");
 
@@ -2161,7 +2161,7 @@ export const importFromApify = action({
     limit: v.optional(v.number()),
   },
   handler: async (ctx, args): Promise<{ inserted: number; fetched: number }> => {
-    await requireAdminAction(ctx, api.profiles.getByClerkUserId);
+    await requireAdminAction(ctx, internal.profiles.getByClerkUserId);
     const limit = Math.min(args.limit ?? 50, 200);
     const accounts = await searchInstagramUsers(args.searchQuery, limit);
 
@@ -2204,7 +2204,7 @@ export const importCsvRows = action({
     ),
   },
   handler: withSurfacedErrors(async (ctx, args): Promise<{ inserted: number; fetched: number }> => {
-    await requireAdminAction(ctx, api.profiles.getByClerkUserId);
+    await requireAdminAction(ctx, internal.profiles.getByClerkUserId);
     const rows = args.rows
       .filter((r) => r.instagram_handle?.trim())
       .map((r) => ({ ...r, kind: args.kind, source: "csv" }));
@@ -2346,7 +2346,7 @@ async function enrichBatch(ctx: any, prospects: any[]): Promise<number> {
 export const enrichProspect = action({
   args: { id: v.id("prospects") },
   handler: async (ctx, { id }): Promise<{ enriched: boolean }> => {
-    await requireAdminAction(ctx, api.profiles.getByClerkUserId);
+    await requireAdminAction(ctx, internal.profiles.getByClerkUserId);
     const p: any = await ctx.runQuery(internal.prospects.getById, { id });
     if (!p) throw new Error("Prospect not found");
     const n = await enrichBatch(ctx, [p]);
@@ -2361,7 +2361,7 @@ export const enrichProspect = action({
 export const enrichPendingCreators = action({
   args: {},
   handler: withSurfacedErrors(async (ctx): Promise<{ enriched: number; remaining: number }> => {
-    await requireAdminAction(ctx, api.profiles.getByClerkUserId);
+    await requireAdminAction(ctx, internal.profiles.getByClerkUserId);
     const pending: any[] = await ctx.runQuery(internal.prospects.getPendingAgentReach, {});
     const batch = pending.slice(0, 30);
     const enriched = await enrichBatch(ctx, batch);
@@ -2476,7 +2476,7 @@ export const searchCreators = action({
     limit: v.optional(v.number()),
   },
   handler: async (ctx, args): Promise<{ imported: number; fetched: number; ranked: any[] }> => {
-    await requireAdminAction(ctx, api.profiles.getByClerkUserId);
+    await requireAdminAction(ctx, internal.profiles.getByClerkUserId);
     return await discoverAndScore(ctx, {
       niche: args.niche,
       location: args.location,
@@ -2494,7 +2494,7 @@ export const searchCreators = action({
 export const runDiscoveryProfileNow = action({
   args: { profileId: v.string(), niche: v.string(), location: v.optional(v.string()), perDay: v.optional(v.number()) },
   handler: withSurfacedErrors(async (ctx, args): Promise<{ imported: number; fetched: number }> => {
-    await requireAdminAction(ctx, api.profiles.getByClerkUserId);
+    await requireAdminAction(ctx, internal.profiles.getByClerkUserId);
     const target = Math.min(args.perDay ?? 10, 20);
     const progressKey = `creator:${args.profileId}`;
     await writeRunProgress(ctx, progressKey, { status: "running", target, found: 0, attempts: 0, maxAttempts: 0 });

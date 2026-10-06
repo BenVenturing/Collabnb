@@ -254,7 +254,7 @@ export default function Settings() {
   const referralStats = useQuery(api.referrals.getMyCode, !isMockUser ? { profileId: userId } : 'skip');
   const hostListings = useQuery(api.listings.getByHost, !isMockUser && profile?.role === 'host' ? { host_id: String(userId) } : 'skip');
   const hostBilling = useQuery(api.fees.getBilling, !isMockUser && profile?.role === 'host' ? { hostId: String(userId) } : 'skip');
-  const allProfiles = useQuery(api.profiles.getAll);
+  const allProfiles = useQuery(api.profiles.listBlockableDirectory);
 
   const hasListing = (hostListings?.length ?? 0) > 0;
   const isHostVerified = profile?.host_verified === true

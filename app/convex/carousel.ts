@@ -24,7 +24,7 @@
 import { v, ConvexError } from "convex/values";
 import { action, mutation, query } from "./_generated/server";
 import { api, internal } from "./_generated/api";
-import { requireAdmin, requireAdminAction } from "./lib/auth";
+import { requireAdmin, requireAdminAction, canAccessAdmin } from "./lib/auth";
 import { llmChat } from "./blog";
 
 // ─── Admin: manual image override ───────────────────────────────────────────
@@ -98,7 +98,13 @@ export const clearScreenshot = mutation({
 export const listFeaturable = query({
   args: {},
   handler: async (ctx) => {
-    await requireAdmin(ctx);
+    // Queries must fail soft, not throw — a throwing query crashes the whole
+    // component tree wherever it's mounted (React can't locally catch a
+    // Convex query error), which is exactly what happened here: a brief
+    // moment of unresolved Clerk identity (page load, token refresh) made
+    // requireAdmin throw and took down the app, not just this page. See
+    // lib/auth.ts's own note on this.
+    if (!(await canAccessAdmin(ctx))) return [];
     const allProfiles = await ctx.db.query("profiles").collect();
     const creators = allProfiles
       .filter((p) => p.role === "creator" && p.creator_verified === true && p.featured_in_carousel !== true)

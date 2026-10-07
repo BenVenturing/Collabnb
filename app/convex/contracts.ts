@@ -772,7 +772,9 @@ export const requestChargeApproval = internalMutation({
 export const getPendingChargeApprovals = query({
   args: {},
   handler: async (ctx) => {
-    await requireAdmin(ctx);
+    // Queries must fail soft, not throw — see lib/auth.ts's note: a throwing
+    // query crashes the whole component tree wherever it's mounted.
+    if (!(await canAccessAdmin(ctx))) return [];
     const pending = await ctx.db
       .query("contracts")
       .withIndex("by_charge_approval_status", (q) => q.eq("charge_approval_status", "pending_approval"))

@@ -11,6 +11,7 @@ import { getPitchCount } from '../lib/pitchCount';
 import { COUNTRIES } from '../lib/countries';
 import { reopenChecklist } from '../components/OnboardingChecklist';
 import ReceiptCheckoutOverlay from '../components/ReceiptCheckoutOverlay';
+import StayAlerts from '../components/StayAlerts';
 import { getInstallState, subscribeInstall, promptInstall } from '../lib/pwaInstall';
 
 const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL;
@@ -383,6 +384,21 @@ export default function Settings() {
     if (!appleDownloadUrl || !appleQrRef.current) return;
     QRCode.toCanvas(appleQrRef.current, appleDownloadUrl, { width: 190, margin: 1 }).catch(() => {});
   }, [appleDownloadUrl]);
+
+  // Onboarding checklist "Set up stay alerts" links here with ?alerts=setup —
+  // highlight the panel so it's obvious which of the notification sections the
+  // checklist step meant, then drop the param so a refresh doesn't re-highlight.
+  const [alertsHighlight, setAlertsHighlight] = useState(false);
+  const alertsSetupHandled = useRef(false);
+  useEffect(() => {
+    if (alertsSetupHandled.current || !profile?._id) return;
+    if (new URLSearchParams(location.search).get('alerts') !== 'setup') return;
+    alertsSetupHandled.current = true;
+    setAlertsHighlight(true);
+    navigate('/settings?tab=notifications', { replace: true });
+    setTimeout(() => document.getElementById('stay-alerts')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 250);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.search, profile?._id]);
 
   // Onboarding checklist "Get phone alerts" links here with ?wallet=setup —
   // open the consent/QR flow straight away instead of making them find the
@@ -978,6 +994,15 @@ export default function Settings() {
                     onChange={() => toggleNotif(item.key)}
                   />
                 ))}
+
+                {/* Stay alerts — creator-only. Sits directly under the
+                    "New listings" toggle above, which is its master switch. */}
+                {profile?.role !== 'host' && (
+                  <div id="stay-alerts">
+                    <SectionLabel>{t('stayAlerts.section')}</SectionLabel>
+                    <StayAlerts highlight={alertsHighlight} />
+                  </div>
+                )}
               </>
             )}
 

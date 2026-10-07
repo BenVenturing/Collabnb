@@ -335,6 +335,110 @@ export const sendNewMessageEmail = internalAction({
   },
 });
 
+// ─── Stay alerts (creator "tell me when a stay like this goes live") ─────────
+// Listing titles and locations are host-authored, and emailCopy's `fill` drops
+// variables straight into HTML, so everything interpolated here is escaped.
+function esc(s: string) {
+  return String(s ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+// Small cover-photo thumbnail beside a listing's details — table-based (not
+// flex/grid, which Outlook mangles) so the image and text stay aligned.
+// `title`, if given, renders bold as the first line; `lines` (pre-escaped
+// HTML, may contain inline tags) stack underneath it. Falls back to a plain
+// tinted square instead of a broken-image icon when there's no cover photo.
+function listingThumbRow(image: string | undefined, title: string | undefined, lines: string[]): string {
+  const thumb = image
+    ? `<img src="${image}" width="56" height="56" alt="" style="display:block;width:56px;height:56px;border-radius:10px;object-fit:cover;border:0;outline:none;" />`
+    : "";
+  const titleHtml = title ? `<strong style="display:block;font-size:15px;color:#241F19;">${title}</strong>` : "";
+  const linesHtml = lines.map((l) => `<span style="display:block;font-size:13px;color:#5C5347;line-height:1.5;margin-top:2px;">${l}</span>`).join("");
+  return (
+    `<table width="100%" cellpadding="0" cellspacing="0"><tr>` +
+    `<td width="56" valign="top" bgcolor="#F0EDE7" style="width:56px;height:56px;border-radius:10px;overflow:hidden;">${thumb}</td>` +
+    `<td width="14" style="width:14px;">&nbsp;</td>` +
+    `<td valign="top">${titleHtml}${linesHtml}</td>` +
+    `</tr></table>`
+  );
+}
+
+export const sendStayAlertMatchEmail = internalAction({
+  args: {
+    email: v.string(),
+    fullName: v.string(),
+    alertName: v.string(),
+    alertSummary: v.string(),
+    listingId: v.string(),
+    listingTitle: v.string(),
+    listingLocation: v.string(),
+    listingImage: v.optional(v.string()),
+    compLine: v.string(),
+    deliverablesLine: v.string(),
+    datesLine: v.string(),
+  },
+  handler: async (ctx, a) => {
+    // Category illustration stays as the email's header art; the listing's
+    // own cover photo shows as a small thumbnail next to its details instead.
+    const collabHtml = listingThumbRow(a.listingImage, undefined, [
+      esc(a.compLine),
+      esc(a.deliverablesLine),
+      esc(a.datesLine),
+    ]);
+    await sendFromTemplate(
+      ctx,
+      "stay_alert_match",
+      a.email,
+      {
+        firstName: esc(a.fullName.split(" ")[0] || "there"),
+        alertName: esc(a.alertName),
+        alertSummary: esc(a.alertSummary),
+        listingTitle: esc(a.listingTitle),
+        listingLocation: esc(a.listingLocation),
+        collabHtml,
+      },
+      `${BASE_URL}/listing/${a.listingId}`
+    );
+  },
+});
+
+export const sendStayAlertDigestEmail = internalAction({
+  args: {
+    email: v.string(),
+    fullName: v.string(),
+    alertNames: v.array(v.string()),
+    matches: v.array(v.object({
+      listingId: v.string(),
+      title: v.string(),
+      location: v.string(),
+      image: v.optional(v.string()),
+      compLine: v.string(),
+      deliverablesLine: v.string(),
+    })),
+  },
+  handler: async (ctx, { email, fullName, alertNames, matches }) => {
+    if (matches.length === 0) return;
+    const listingsHtml = matches
+      .map((m) => {
+        const row = listingThumbRow(m.image, esc(m.title), [
+          `${esc(m.location)} · ${esc(m.compLine)}`,
+          esc(m.deliverablesLine),
+        ]);
+        return `<a href="${BASE_URL}/listing/${m.listingId}" style="display:block;margin:0 0 16px;text-decoration:none;color:#241F19;">${row}</a>`;
+      })
+      .join("");
+    await sendFromTemplate(ctx, "stay_alert_digest", email, {
+      firstName: esc(fullName.split(" ")[0] || "there"),
+      matchCount: String(matches.length),
+      listingsHtml,
+      alertNames: esc(alertNames.join(", ")),
+    });
+  },
+});
+
 // ─── Stripe Services Agreement notice (connected accounts) ───────────────────
 // One-time compliance send, admin-triggered only (via `npx convex run
 // emails:sendStripeServicesAgreementNotice '{"noticeText":"..."}'` or an

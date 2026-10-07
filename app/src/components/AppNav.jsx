@@ -166,6 +166,7 @@ function NotifPanel({ notifications, userId, markRead, clearAllNotifs, onClose, 
                 : (n.type === 'host_reply' || n.type === 'new_message' || n.type === 'awaiting_reply') ? 'rgba(60,87,89,0.1)'
                 : (n.type === 'new_application' || n.type === 'application_reminder') ? 'rgba(212,168,67,0.14)'
                 : n.type === 'contract_reminder' ? 'rgba(60,87,89,0.12)'
+                : n.type === 'stay_alert' ? 'rgba(74,155,127,0.12)'
                 : 'rgba(25,37,36,0.07)',
             }}>
               {n.type === 'pitch_approved' && (
@@ -183,7 +184,10 @@ function NotifPanel({ notifications, userId, markRead, clearAllNotifs, onClose, 
               {n.type === 'contract_reminder' && (
                 <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="#3C5759" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M4 1.5h5l3 3V14a.5.5 0 01-.5.5h-7A.5.5 0 014 14z"/><path d="M9 1.5V4.5h3"/><line x1="6" y1="8" x2="10" y2="8"/><line x1="6" y1="10.5" x2="10" y2="10.5"/></svg>
               )}
-              {!['pitch_approved','pitch_declined','host_reply','new_message','new_application','contract_reminder','application_reminder','awaiting_reply'].includes(n.type) && (
+              {n.type === 'stay_alert' && (
+                <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="#4A9B7F" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M6 12.5a2 2 0 004 0"/><path d="M3.5 7a4.5 4.5 0 019 0c0 2.24.52 3.54.93 4.25a.5.5 0 01-.43.75H3a.5.5 0 01-.43-.75C3 10.54 3.5 9.24 3.5 7z"/></svg>
+              )}
+              {!['pitch_approved','pitch_declined','host_reply','new_message','new_application','contract_reminder','application_reminder','awaiting_reply','stay_alert'].includes(n.type) && (
                 <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="#646B62" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="12" height="10" rx="1.5"/><polyline points="2 5 8 9.5 14 5"/></svg>
               )}
             </span>
@@ -840,6 +844,7 @@ export default function AppNav() {
                             : n.type === 'host_reply' || n.type === 'new_message' ? 'rgba(60,87,89,0.1)'
                             : (n.type === 'new_application' || n.type === 'application_reminder') ? 'rgba(212,168,67,0.14)'
                             : n.type === 'contract_reminder' ? 'rgba(60,87,89,0.12)'
+                            : n.type === 'stay_alert' ? 'rgba(74,155,127,0.12)'
                             : 'rgba(25,37,36,0.07)',
                         }}>
                           {n.type === 'pitch_approved' && (
@@ -857,7 +862,10 @@ export default function AppNav() {
                           {n.type === 'contract_reminder' && (
                             <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="#3C5759" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M4 1.5h5l3 3V14a.5.5 0 01-.5.5h-7A.5.5 0 014 14z"/><path d="M9 1.5V4.5h3"/><line x1="6" y1="8" x2="10" y2="8"/><line x1="6" y1="10.5" x2="10" y2="10.5"/></svg>
                           )}
-                          {!['pitch_approved','pitch_declined','host_reply','new_message','new_application','contract_reminder','application_reminder','awaiting_reply'].includes(n.type) && (
+                          {n.type === 'stay_alert' && (
+                            <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="#4A9B7F" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M6 12.5a2 2 0 004 0"/><path d="M3.5 7a4.5 4.5 0 019 0c0 2.24.52 3.54.93 4.25a.5.5 0 01-.43.75H3a.5.5 0 01-.43-.75C3 10.54 3.5 9.24 3.5 7z"/></svg>
+                          )}
+                          {!['pitch_approved','pitch_declined','host_reply','new_message','new_application','contract_reminder','application_reminder','awaiting_reply','stay_alert'].includes(n.type) && (
                             <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="#646B62" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="12" height="10" rx="1.5"/><polyline points="2 5 8 9.5 14 5"/></svg>
                           )}
                         </span>

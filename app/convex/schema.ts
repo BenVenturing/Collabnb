@@ -104,6 +104,10 @@ export default defineSchema({
     // "please take another look" flag for admin's queue — current verified
     // status is untouched while it's pending.
     reverification_requested_at: v.optional(v.number()),
+    // Last time an admin nudged them from the Users queue — surfaced as a tag
+    // on the pending row so a nudged-but-not-yet-actioned user is obvious.
+    social_nudge_sent_at: v.optional(v.number()),
+    finish_signup_nudge_sent_at: v.optional(v.number()),
     host_verified: v.optional(v.boolean()),
     creator_verified: v.optional(v.boolean()),
     // Set once, the moment approveCreator runs — "newest approved creators"
@@ -166,6 +170,13 @@ export default defineSchema({
     // applicant has received (0/undefined, 1, or 2 = sequence complete).
     // Drives which template checkIncompleteApplications sends next.
     finish_signup_nudge_count: v.optional(v.number()),
+    // Listing-reminder drip (cron: checkListingReminders, listingReminders.ts)
+    // for ALREADY-VERIFIED, fully-registered hosts who still have zero
+    // listings — distinct from checkIncompleteApplications above, which only
+    // nudges pre-verification applicants and stops once they're approved.
+    // 0/undefined = none sent; 1-3 = last step sent, 3 = sequence complete.
+    listing_reminder_step: v.optional(v.number()),
+    listing_reminder_last_sent_at: v.optional(v.number()),
     // Settings > Language & region.
     preferred_language: v.optional(v.string()),
     preferred_currency: v.optional(v.string()),
@@ -293,6 +304,10 @@ export default defineSchema({
       usage_rights: v.optional(v.string()),
     }))),
     is_sample: v.optional(v.boolean()),
+    // Set the first time this listing goes live and stay alerts fan out
+    // (see stayAlerts.notifyForListing) — re-publishing a listing that was
+    // pulled back to draft must never re-notify the same creators.
+    stay_alerts_notified_at: v.optional(v.number()),
   }).index("by_location", ["location"]).index("by_host", ["host_id"]),
 
   collaborations: defineTable({
@@ -645,6 +660,50 @@ export default defineSchema({
     body: v.optional(v.string()),
     link: v.optional(v.string()),
     read: v.boolean(),
+    created_at: v.number(),
+  }).index("by_user", ["user_id"]),
+
+  // Creator-defined "tell me when a stay like this goes live" alerts. Each row
+  // is one named filter set; a creator can have up to MAX_ALERTS_PER_USER of
+  // them (see stayAlerts.ts). An omitted or empty filter field means "no
+  // constraint on this dimension", so a brand-new alert matches everything.
+  // The master on/off switch is profiles.notification_prefs.newListings —
+  // these rows only narrow what gets through it.
+  stay_alerts: defineTable({
+    user_id: v.string(),
+    name: v.string(),
+    paused: v.optional(v.boolean()),
+    // ── Core filters ──
+    // Matched against listings.location_country (plus location/location_city as
+    // a fallback for older rows). Empty/absent = anywhere.
+    countries: v.optional(v.array(v.string())),
+    // DELIVERABLE_TYPES values (photo | storyFrame | carousel | ugcReel |
+    // influencerReel | youtubeVideo). A listing matches when EVERY deliverable
+    // it asks for is one the creator accepts — not merely overlapping, since
+    // the creator has to produce all of them.
+    deliverable_types: v.optional(v.array(v.string())),
+    // Compared against listings.cash_amount ONLY — never cash + stay_value.
+    // A $300 minimum means $300 the creator can actually bank.
+    min_cash: v.optional(v.number()),
+    // 'paid' | 'hybrid'. Empty/absent = both.
+    compensation_types: v.optional(v.array(v.string())),
+    // ── Timing filters ──
+    min_nights: v.optional(v.number()),
+    // ISO yyyy-mm-dd travel window; a listing matches when any of its
+    // date_ranges (or collab_start/collab_end) overlaps this window.
+    travel_start: v.optional(v.string()),
+    travel_end: v.optional(v.string()),
+    // Per-alert email cadence. Instant in-app + wallet always fire on publish;
+    // this only controls whether email goes out immediately or waits for the
+    // weekly digest (the default).
+    instant_email: v.optional(v.boolean()),
+    // Listing ids matched since the last digest, drained by the weekly cron.
+    pending_listing_ids: v.optional(v.array(v.string())),
+    last_digest_at: v.optional(v.number()),
+    last_matched_at: v.optional(v.number()),
+    // Lifetime count of listings this alert has matched — shown in the UI so a
+    // creator can tell a too-narrow alert from a working one.
+    match_count: v.optional(v.number()),
     created_at: v.number(),
   }).index("by_user", ["user_id"]),
 

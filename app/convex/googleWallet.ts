@@ -312,7 +312,7 @@ export const setWalletObjectId = internalMutation({
 // Maps the notification `type` onto the same Settings > Notifications
 // categories the email/in-app toggles already use, so linking a wallet pass
 // doesn't need its own separate preference model.
-const PREF_KEY_BY_TYPE: Record<string, "messages" | "contractUpdates" | "collabReminders"> = {
+const PREF_KEY_BY_TYPE: Record<string, "messages" | "contractUpdates" | "collabReminders" | "newListings"> = {
   new_message: "messages",
   host_reply: "messages",
   new_application: "contractUpdates",
@@ -323,6 +323,7 @@ const PREF_KEY_BY_TYPE: Record<string, "messages" | "contractUpdates" | "collabR
   collab_reminder: "collabReminders",
   awaiting_reply: "collabReminders",
   host_unresponsive: "collabReminders",
+  stay_alert: "newListings",
 };
 
 // Google hard-caps a Generic pass at 3 notifying (TEXT_AND_NOTIFY) messages
@@ -337,8 +338,12 @@ const WALLET_NOTIFY_ELIGIBLE = new Set([
   "pitch_declined",    // a creator's application was declined
   "new_message",       // direct message (also what admin "Notifications" broadcasts use)
   "host_reply",        // direct message, host side
+  "stay_alert",        // a stay matching one of the creator's stay alerts went live
 ]);
 const WALLET_NOTIFY_MAX = 3;
+// Of those 3, stay alerts may claim at most this many — the rest stay reserved
+// for transactional pushes (applications, decisions, messages).
+const STAY_ALERT_NOTIFY_MAX = 1;
 const WALLET_NOTIFY_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 export const pushForUser = internalAction({
@@ -357,7 +362,12 @@ export const pushForUser = internalAction({
 
     if (!WALLET_NOTIFY_ELIGIBLE.has(args.type)) return;
 
-    const allowed: boolean = await ctx.runMutation(internal.googleWallet.consumeNotifySlot, { userId: args.userId });
+    const allowed: boolean = await ctx.runMutation(internal.googleWallet.consumeNotifySlot, {
+      userId: args.userId,
+      // Stay alerts are discretionary — they get at most one of the three daily
+      // slots, so an accepted application or a host's reply always has room.
+      ...(args.type === "stay_alert" ? { subKey: "stay_alert", subMax: STAY_ALERT_NOTIFY_MAX } : {}),
+    });
     if (!allowed) return; // today's 3 slots for this pass are already spent
 
     try {
@@ -376,25 +386,42 @@ export const pushForUser = internalAction({
 // file's enforceRateLimit) because pushForUser wants a quiet skip, not a
 // thrown error, when the daily budget is spent.
 export const consumeNotifySlot = internalMutation({
-  args: { userId: v.string() },
-  handler: async (ctx, { userId }) => {
-    const key = `wallet_notify:${userId}`;
+  args: {
+    userId: v.string(),
+    // Optional sub-budget inside the shared cap, for discretionary push types
+    // that mustn't crowd out transactional ones. Both budgets have to have room
+    // and both are only incremented when the push is actually allowed.
+    subKey: v.optional(v.string()),
+    subMax: v.optional(v.number()),
+  },
+  handler: async (ctx, { userId, subKey, subMax }) => {
     const now = Date.now();
-    const existing = await ctx.db
-      .query("rateLimits")
-      .withIndex("by_key", (q) => q.eq("key", key))
-      .unique();
+    const read = async (key: string) =>
+      ctx.db.query("rateLimits").withIndex("by_key", (q) => q.eq("key", key)).unique();
+    // Returns the live count for this window (0 once the window has rolled over).
+    const countIn = (row: any) =>
+      !row || now - row.windowStart > WALLET_NOTIFY_WINDOW_MS ? 0 : row.count;
+    const bump = async (key: string, row: any) => {
+      if (!row) return ctx.db.insert("rateLimits", { key, count: 1, windowStart: now });
+      if (now - row.windowStart > WALLET_NOTIFY_WINDOW_MS) {
+        return ctx.db.patch(row._id, { count: 1, windowStart: now });
+      }
+      return ctx.db.patch(row._id, { count: row.count + 1 });
+    };
 
-    if (!existing) {
-      await ctx.db.insert("rateLimits", { key, count: 1, windowStart: now });
-      return true;
+    const mainKey = `wallet_notify:${userId}`;
+    const mainRow = await read(mainKey);
+    if (countIn(mainRow) >= WALLET_NOTIFY_MAX) return false;
+
+    let subRow: any = null;
+    const fullSubKey = subKey ? `wallet_notify_${subKey}:${userId}` : null;
+    if (fullSubKey && subMax !== undefined) {
+      subRow = await read(fullSubKey);
+      if (countIn(subRow) >= subMax) return false;
     }
-    if (now - existing.windowStart > WALLET_NOTIFY_WINDOW_MS) {
-      await ctx.db.patch(existing._id, { count: 1, windowStart: now });
-      return true;
-    }
-    if (existing.count >= WALLET_NOTIFY_MAX) return false;
-    await ctx.db.patch(existing._id, { count: existing.count + 1 });
+
+    await bump(mainKey, mainRow);
+    if (fullSubKey) await bump(fullSubKey, subRow);
     return true;
   },
 });

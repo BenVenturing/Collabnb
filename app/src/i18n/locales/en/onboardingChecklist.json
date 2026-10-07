@@ -6,6 +6,7 @@
     "social": { "label": "Connect a social account", "action": "Add socials" },
     "explore": { "label": "Browse sample listings", "action": "Browse listings" },
     "walletNotifications": { "label": "Get phone alerts for new activity", "action": "Set up alerts" },
+    "stayAlerts": { "label": "Set up stay alerts", "action": "Set up alerts" },
     "share": { "label": "Share your sign-up with a friend", "action": "Share link" }
   },
   "hostSteps": {

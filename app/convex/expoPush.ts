@@ -39,7 +39,7 @@ export const unregisterToken = mutation({
   },
 });
 
-const PREF_KEY_BY_TYPE: Record<string, "messages" | "contractUpdates" | "collabReminders"> = {
+const PREF_KEY_BY_TYPE: Record<string, "messages" | "contractUpdates" | "collabReminders" | "newListings"> = {
   new_message: "messages",
   host_reply: "messages",
   new_application: "contractUpdates",
@@ -50,6 +50,7 @@ const PREF_KEY_BY_TYPE: Record<string, "messages" | "contractUpdates" | "collabR
   collab_reminder: "collabReminders",
   awaiting_reply: "collabReminders",
   host_unresponsive: "collabReminders",
+  stay_alert: "newListings",
 };
 
 export const pushForUser = internalAction({

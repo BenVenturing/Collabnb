@@ -5,6 +5,7 @@
     "niches": { "label": "Adicione seus nichos de conteúdo", "action": "Adicionar nichos" },
     "social": { "label": "Conecte uma rede social", "action": "Adicionar redes" },
     "explore": { "label": "Explore anúncios de exemplo", "action": "Explorar anúncios" },
+    "stayAlerts": { "label": "Configura os teus alertas de estadias", "action": "Configurar alertas" },
     "share": { "label": "Compartilhe seu cadastro com um amigo", "action": "Compartilhar link" }
   },
   "hostSteps": {

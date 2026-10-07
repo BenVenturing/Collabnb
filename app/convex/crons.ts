@@ -132,6 +132,28 @@ crons.daily(
   {}
 );
 
+// Daily at 11:30am UTC — 3/7/14-day drip nudging verified, fully-registered
+// hosts who still have zero listings (listingReminders.ts). Distinct from
+// "incomplete application reminders" above, which stops once a host is
+// verified. No-op unless the "listing_reminders_enabled" admin setting is on.
+crons.daily(
+  "listing reminder drip",
+  { hourUTC: 11, minuteUTC: 30 },
+  internal.listingReminders.checkListingReminders,
+  {}
+);
+
+// Weekly on Sunday at 9am UTC — one digest email per creator covering every
+// listing their stay alerts matched during the week. Instant in-app/wallet
+// pushes already went out at publish time (stayAlerts.notifyForListing); this
+// is the email half, batched so a busy week isn't ten emails.
+crons.weekly(
+  "stay alert weekly digest",
+  { dayOfWeek: "sunday", hourUTC: 9, minuteUTC: 0 },
+  internal.stayAlerts.sendWeeklyDigests,
+  {}
+);
+
 // Hourly — sends the Instagram auto-DM follow-up tiers: a no-click nudge
 // (~24h after the first DM) and a clicked-but-no-signup nudge (~48-72h after
 // the click). Tier 4 (welcome + follow-ask) fires on signup itself instead —

@@ -510,6 +510,11 @@ export const create = mutation({
       throw new ConvexError(`Compensation is below the minimum for this workload. The minimum for this listing is $${Math.round(floor.hardFloor)}.`);
     }
     const id = await ctx.db.insert("listings", { ...args, ...sanitizeListingFields(args), below_recommended_comp: floor?.zone === "amber" });
+    // Fan out to creators whose stay alerts match (stayAlerts.ts). Only on a
+    // listing that's actually live — drafts notify nobody.
+    if (args.status === "published") {
+      await ctx.scheduler.runAfter(0, internal.stayAlerts.notifyForListing, { listingId: id });
+    }
     // Geocode city/country → coords for the Explore map (skipped for samples).
     if (args.location_city || args.location_country || args.location) {
       await ctx.scheduler.runAfter(0, internal.geocode.geocodeListing, { listingId: id });
@@ -624,6 +629,18 @@ export const update = mutation({
     if (floor) patch.below_recommended_comp = floor.zone === "amber";
 
     await ctx.db.patch(id, patch);
+
+    // First time this listing goes live, fan out to matching stay alerts
+    // (stayAlerts.ts). notifyForListing is itself idempotent via
+    // stay_alerts_notified_at, so a draft→published→draft→published cycle
+    // still only ever notifies once.
+    if (
+      fields.status === "published" &&
+      (existing as any).status !== "published" &&
+      (existing as any).is_sample !== true
+    ) {
+      await ctx.scheduler.runAfter(0, internal.stayAlerts.notifyForListing, { listingId: id });
+    }
 
     // Re-geocode when the host changes where the listing is — but never
     // when this same update already carries an explicit lat/lng (the host

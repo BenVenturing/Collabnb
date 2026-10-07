@@ -23,7 +23,7 @@ function userKeys(userId) {
   };
 }
 
-function creatorSteps(profile, isFirstVisit, hasShared, hasExplored) {
+function creatorSteps(profile, isFirstVisit, hasShared, hasExplored, hasStayAlert) {
   const t = (k) => i18nInstance.t(`onboardingChecklist:${k}`);
   return [
     {
@@ -62,6 +62,13 @@ function creatorSteps(profile, isFirstVisit, hasShared, hasExplored) {
       done: !!profile?.google_wallet_object_id,
       optional: true,
       action: { label: t('creatorSteps.walletNotifications.action'), path: '/settings?tab=notifications&wallet=setup' },
+    },
+    {
+      id: 'stayAlerts',
+      label: t('creatorSteps.stayAlerts.label'),
+      done: hasStayAlert,
+      optional: true,
+      action: { label: t('creatorSteps.stayAlerts.action'), path: '/settings?tab=notifications&alerts=setup' },
     },
     {
       id: 'share',
@@ -122,7 +129,7 @@ function hostSteps(profile, isFirstVisit, hasShared, hasListing, hasBrowsedCreat
  */
 export function getChecklistProgress(profile) {
   const isHost = profile?.role === 'host';
-  const raw = isHost ? hostSteps(profile, false, false, false, false) : creatorSteps(profile, false, false, false);
+  const raw = isHost ? hostSteps(profile, false, false, false, false) : creatorSteps(profile, false, false, false, false);
   const required = raw.filter(s => !s.optional);
   
   let manualChecked = {};
@@ -293,6 +300,12 @@ export default function OnboardingChecklist() {
     isHost && userId ? { host_id: String(userId) } : 'skip'
   );
   const hasListing = isHost && (hostListings?.length ?? 0) > 0;
+  // Creators only — whether they've set up at least one stay alert (optional step)
+  const stayAlerts = useQuery(
+    api.stayAlerts.listForUser,
+    !isHost && userId ? { userId: String(userId) } : 'skip'
+  );
+  const hasStayAlert = !isHost && (stayAlerts?.length ?? 0) > 0;
 
   // Track the last userId we loaded so we reset state on account switch
   const loadedForUser = useRef(null);
@@ -364,7 +377,7 @@ export default function OnboardingChecklist() {
 
   const rawSteps = isHost
     ? hostSteps(profile, isFirstVisit, hasShared, hasListing, hasBrowsedCreators)
-    : creatorSteps(profile, isFirstVisit, hasShared, hasExplored);
+    : creatorSteps(profile, isFirstVisit, hasShared, hasExplored, hasStayAlert);
 
   const steps = rawSteps.map(s => {
     const isManuallyChecked = manualChecked[s.id];

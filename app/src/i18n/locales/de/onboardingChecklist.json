@@ -5,6 +5,7 @@
     "niches": { "label": "Füge deine Content-Nischen hinzu", "action": "Nischen hinzufügen" },
     "social": { "label": "Verbinde ein Social-Konto", "action": "Socials hinzufügen" },
     "explore": { "label": "Durchstöbere Beispielangebote", "action": "Angebote durchsuchen" },
+    "stayAlerts": { "label": "Aufenthalts-Alerts einrichten", "action": "Alerts einrichten" },
     "share": { "label": "Teile deine Anmeldung mit einem Freund", "action": "Link teilen" }
   },
   "hostSteps": {

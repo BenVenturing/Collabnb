@@ -306,6 +306,42 @@ export const TEMPLATE_DEFAULTS: Record<string, TemplateDef> = {
       buttonLabel: "Reply in inbox",
     },
   },
+  stay_alert_match: {
+    name: "Stay alert — instant match",
+    trigger: "A listing goes live matching a creator's stay alert (instant-email alerts only)",
+    category: "Collabs & Messaging",
+    vars: ["firstName", "alertName", "alertSummary", "listingTitle", "listingLocation", "collabHtml"],
+    calloutColor: "#4A9B7F",
+    copy: {
+      subject: "New stay matching your alert — {{listingLocation}}",
+      heading: "A match for \u201c{{alertName}}\u201d 🔔",
+      body: "{{listingTitle}} just went live in {{listingLocation}}, and it matches the stay alert you set up.",
+      calloutLabel: "The collab",
+      // A small cover-photo thumbnail + the collab facts, built in emails.ts
+      // (listingThumbRow) rather than as plain text here, so the listing's
+      // own photo shows without replacing the category header illustration.
+      calloutText: "{{collabHtml}}",
+      buttonLabel: "View the stay",
+      footnote: "You're getting this because of your stay alert \u201c{{alertName}}\u201d ({{alertSummary}}). Manage, pause, or turn off your alerts under Settings \u2192 Notifications.",
+    },
+  },
+  stay_alert_digest: {
+    name: "Stay alert — weekly digest",
+    trigger: "Weekly cron, for creators whose stay alerts matched new listings that week",
+    category: "Collabs & Messaging",
+    vars: ["firstName", "matchCount", "listingsHtml", "alertNames"],
+    calloutColor: "#4A9B7F",
+    buttonHref: `${BASE_URL}/explore`,
+    copy: {
+      subject: "{{matchCount}} new stays matched your alerts",
+      heading: "Hey {{firstName}} 👋",
+      body: "{{matchCount}} new stays went live this week that match what you told us you're looking for.",
+      calloutLabel: "Your matches",
+      calloutText: "{{listingsHtml}}",
+      buttonLabel: "Browse all stays",
+      footnote: "Based on your stay alerts ({{alertNames}}). Manage, pause, or turn these off under Settings \u2192 Notifications.",
+    },
+  },
   collab_complete_creator: {
     name: "Collab complete (to creator)",
     trigger: "Collaboration marked complete and platform fee settled",
@@ -485,6 +521,43 @@ export const SAMPLE_VARS: Record<string, string> = {
   creatorNames: "Rachel Norton, Maya Chen",
   hostNames: "Landen Scott, Priya Nair",
   counterpartyName: "Landen Scott",
+  // Stay alerts. listingsHtml is the one sample var that carries markup — the
+  // digest builds that fragment itself in emails.ts (escaping host-authored
+  // titles on the way in), so the preview has to be markup too or the admin
+  // sees a layout that the real send won't produce.
+  alertName: "Tulum reels",
+  alertSummary: "Paid \u00b7 Influencer Reel / Photo \u00b7 $300+ \u00b7 3+ nights \u00b7 Mexico",
+  listingLocation: "Tulum, Mexico",
+  matchCount: "3",
+  alertNames: "Tulum reels, Anywhere light workload",
+  // Mirrors emails.ts's listingThumbRow (a small cover-photo thumbnail
+  // beside the collab facts) so the admin preview matches the real send
+  // pixel-for-pixel. Sample photos are the same ones SAMPLE_LISTINGS seeds
+  // (see listings.ts).
+  collabHtml:
+    `<table width="100%" cellpadding="0" cellspacing="0"><tr>` +
+    `<td width="56" valign="top" bgcolor="#F0EDE7" style="width:56px;height:56px;border-radius:10px;overflow:hidden;">` +
+    `<img src="https://images.unsplash.com/photo-1587061949409-02df41d5e562?w=160&q=80" width="56" height="56" alt="" style="display:block;width:56px;height:56px;border-radius:10px;object-fit:cover;border:0;outline:none;" /></td>` +
+    `<td width="14" style="width:14px;">&nbsp;</td>` +
+    `<td valign="top">` +
+    `<span style="display:block;font-size:13px;color:#5C5347;line-height:1.5;margin-top:2px;">3 nights, stay + $450 cash</span>` +
+    `<span style="display:block;font-size:13px;color:#5C5347;line-height:1.5;margin-top:2px;">You'd deliver: 2\u00d7 Influencer Reel, 4\u00d7 Photo</span>` +
+    `<span style="display:block;font-size:13px;color:#5C5347;line-height:1.5;margin-top:2px;">Available: 2026-03-12 \u2192 2026-03-30</span>` +
+    `</td></tr></table>`,
+  listingsHtml: [
+    { title: "Casa L\u00famina", location: "Tulum, Mexico", comp: "3 nights, stay + $450 cash", deliv: "You'd deliver: 2\u00d7 Influencer Reel, 4\u00d7 Photo", img: "https://images.unsplash.com/photo-1587061949409-02df41d5e562?w=160&q=80" },
+    { title: "Quinta do Vale", location: "Comporta, Portugal", comp: "4 nights, stay + $600 cash", deliv: "You'd deliver: 1\u00d7 Influencer Reel, 1\u00d7 Carousel post", img: "https://images.unsplash.com/photo-1449158743715-0a90ebb6d2d8?w=160&q=80" },
+  ].map(
+    (m) =>
+      `<a href="${BASE_URL}/explore" style="display:block;margin:0 0 16px;text-decoration:none;color:#241F19;">` +
+      `<table width="100%" cellpadding="0" cellspacing="0"><tr>` +
+      `<td width="56" valign="top" bgcolor="#F0EDE7" style="width:56px;height:56px;border-radius:10px;overflow:hidden;"><img src="${m.img}" width="56" height="56" alt="" style="display:block;width:56px;height:56px;border-radius:10px;object-fit:cover;border:0;outline:none;" /></td>` +
+      `<td width="14" style="width:14px;">&nbsp;</td>` +
+      `<td valign="top"><strong style="display:block;font-size:15px;color:#241F19;">${m.title}</strong>` +
+      `<span style="display:block;font-size:13px;color:#5C5347;line-height:1.5;margin-top:2px;">${m.location} \u00b7 ${m.comp}</span>` +
+      `<span style="display:block;font-size:13px;color:#5C5347;line-height:1.5;margin-top:2px;">${m.deliv}</span></td>` +
+      `</tr></table></a>`
+  ).join(""),
 };
 
 export function fill(str: string | undefined, vars: Record<string, string>) {

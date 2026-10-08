@@ -770,6 +770,8 @@ export default defineSchema({
     whatsapp: v.optional(v.string()),    // phone number, digits + country code (e.g. "15551234567") for the wa.me deep link
     whatsapped_at: v.optional(v.number()), // independent of `status` — a parallel channel, not a pipeline stage
     starred: v.optional(v.boolean()), // admin flag for "looks especially profitable" — click the avatar to toggle
+    tags: v.optional(v.array(v.string())), // short codes — HC, SCR, contacted, contacted-opened, contacted-clicked (legend: PROSPECT_TAGS in Discovery.jsx)
+    contact_url: v.optional(v.string()), // contact/influencer form for hotels that have no email yet
     created_at: v.number(),
   })
     .index("by_kind_status", ["kind", "status"])

@@ -1856,6 +1856,92 @@ export const importHostsLocal = mutation({
   },
 });
 
+// Bulk hotel import from a purchased/exported contact list (no Instagram
+// handle — a synthetic "hc-…" handle keeps the by_handle uniqueness intact).
+// `emails` are joined with ", " into one field so a single send goes to all
+// of them in one thread. Previously-contacted hotels land in Emailed with
+// step 1 (and 2, if it went out) marked sent, so the Email button sends the
+// NEXT follow-up instead of the intro again. Existing host rows with no tags
+// are tagged SCR (scraped).
+export const importHotelsLocal = mutation({
+  args: {
+    secret: v.string(),
+    sourceTag: v.string(),        // e.g. "HC"
+    source: v.string(),           // e.g. "hotelcreators"
+    rows: v.array(v.object({
+      handle: v.string(),
+      name: v.string(),
+      country: v.optional(v.string()),
+      location: v.optional(v.string()),
+      emails: v.array(v.string()),
+      contact_url: v.optional(v.string()),
+      contacted: v.string(),      // 'no' | 'sent' | 'opened' | 'clicked'
+      followup_sent: v.boolean(),
+      sent_at: v.optional(v.number()),
+    })),
+    tagExisting: v.boolean(),
+  },
+  handler: async (ctx, { secret, sourceTag, source, rows, tagExisting }) => {
+    const expected = process.env.LOCAL_IMPORT_SECRET;
+    if (!expected || secret !== expected) throw new Error("Invalid or missing import secret.");
+    const hosts = await ctx.db.query("prospects").withIndex("by_kind_status", (q) => q.eq("kind", "host")).collect();
+    const seenEmails = new Set<string>();
+    for (const h of hosts) {
+      for (const e of `${h.email || ""},${h.marketing_email || ""}`.split(",")) if (e.trim()) seenEmails.add(e.trim().toLowerCase());
+    }
+    let tagged = 0;
+    if (tagExisting) {
+      for (const h of hosts) {
+        if (!h.tags?.length && h.source !== source) { await ctx.db.patch(h._id, { tags: ["SCR"] }); tagged++; }
+      }
+    }
+    let inserted = 0, skipped = 0;
+    const step = (n: number) => HOST_EMAIL_SEQUENCE.find((s) => s.step === n)!;
+    for (const r of rows) {
+      const existing = await ctx.db.query("prospects").withIndex("by_handle", (q) => q.eq("instagram_handle", r.handle)).first();
+      const fresh = r.emails.filter((e) => !seenEmails.has(e.toLowerCase()));
+      if (existing || (r.emails.length > 0 && fresh.length === 0)) { skipped++; continue; }
+      fresh.forEach((e) => seenEmails.add(e.toLowerCase()));
+      const emailStr = fresh.join(", ") || undefined;
+      const tags = [sourceTag];
+      if (r.contacted !== "no") tags.push(r.contacted === "opened" ? "contacted-opened" : r.contacted === "clicked" ? "contacted-clicked" : "contacted");
+      const at = r.sent_at ?? Date.now();
+      let email_sequence: any[] | undefined;
+      let outreach_log: any[] | undefined;
+      if (r.contacted !== "no" && emailStr) {
+        email_sequence = [
+          { step: 1, subject: HOST_WELCOME_EMAIL_SUBJECT.replace(/\{\{HOTEL_NAME\}\}/g, r.name), body: "(Sent earlier via GoHighLevel)", sent_at: at },
+          ...[2, 3].map((n) => ({
+            step: n,
+            subject: step(n).subject.replace(/\[Hotel Name\]/g, r.name),
+            body: step(n).template.replace(/\[Hotel Name\]/g, r.name).replace("{STATS}", HOST_STATS_BLOCK),
+            sent_at: n === 2 && r.followup_sent ? at : undefined,
+          })),
+        ];
+        outreach_log = [{ at, type: "email_sent", note: "Imported — step 1 sent earlier via GoHighLevel" }];
+      }
+      await ctx.db.insert("prospects", {
+        kind: "host",
+        instagram_handle: r.handle,
+        display_name: r.name,
+        country: r.country,
+        location: r.location,
+        email: emailStr,
+        marketing_email: emailStr,
+        contact_url: r.contact_url,
+        website: r.contact_url,
+        tags,
+        source,
+        status: email_sequence ? "emailed" : "queued",
+        ...(email_sequence ? { email_sequence, outreach_log } : {}),
+        created_at: Date.now(),
+      });
+      inserted++;
+    }
+    return { inserted, skipped, taggedExisting: tagged };
+  },
+});
+
 // Same landing pad as importHostsLocal, for creators — a local Agent-Reach
 // search finds handles (free, no Apify/HikerAPI credits) but can't reliably
 // pull follower counts/bio (see enrichPendingCreators below), so rows land

@@ -704,7 +704,7 @@ export async function sendViaResend(apiKey: string, to: string, subject: string,
       Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ from: FROM, to: [to], subject, html, ...(bcc ? { bcc: [bcc] } : {}) }),
+    body: JSON.stringify({ from: FROM, to: to.split(",").map((a) => a.trim()).filter(Boolean), subject, html, ...(bcc ? { bcc: [bcc] } : {}) }),
   });
   if (!res.ok) {
     const errBody = await res.text().catch(() => "");

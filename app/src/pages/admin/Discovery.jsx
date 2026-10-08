@@ -157,6 +157,40 @@ function Avatar({ url, name, size = 34, starred, onToggleStar }) {
   );
 }
 
+// Short tag codes shown on cards — hover a chip (or see the key above the
+// board) for the full meaning. Source tags (HC/SCR) say where the lead came
+// from; contacted-* tags say how far earlier outreach got.
+const PROSPECT_TAGS = {
+  HC: 'Hotel Creators — bought from the Hotel Creators platform (not scraped by us)',
+  SCR: 'Scraped — found by our own Instagram/Maps scraping',
+  contacted: 'Already emailed earlier (GoHighLevel) — next send is a follow-up',
+  'contacted-opened': 'Already emailed earlier and they opened it, no reply yet',
+  'contacted-clicked': 'Already emailed earlier and they clicked a link',
+};
+
+function TagChips({ tags }) {
+  if (!tags?.length) return null;
+  return tags.map((t) => (
+    <span key={t} title={PROSPECT_TAGS[t] || t}
+      style={{ fontSize: '0.62rem', padding: '0.15rem 0.45rem', borderRadius: 9999, fontWeight: 700, cursor: 'help',
+        background: t.startsWith('contacted') ? 'rgba(212,168,67,0.18)' : 'rgba(60,87,89,0.12)',
+        color: t.startsWith('contacted') ? '#b45309' : '#3C5759' }}>
+      {t}
+    </span>
+  ));
+}
+
+function TagLegend() {
+  return (
+    <div style={{ display: 'flex', gap: '0.9rem', flexWrap: 'wrap', alignItems: 'center', marginBottom: '0.85rem', fontSize: '0.7rem', color: '#646B62' }}>
+      <strong style={{ color: '#192524' }}>Tag key</strong>
+      {Object.entries(PROSPECT_TAGS).map(([k, d]) => (
+        <span key={k} style={{ display: 'inline-flex', gap: '0.3rem', alignItems: 'center' }}><TagChips tags={[k]} /> {d.split(' — ')[0]}</span>
+      ))}
+    </div>
+  );
+}
+
 // ─── Single prospect card ─────────────────────────────────────────────────────
 function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
   const updateStatus = useMutation(api.prospects.updateStatus);
@@ -295,6 +329,7 @@ function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
   const flowIdx = flow.indexOf(prospect.status);
   const nextStatus = flowIdx === -1 ? undefined : flow[flowIdx + 1];
   const emailSent = !!prospect.email_sequence?.[0]?.sent_at;
+  const isHotel = prospect.instagram_handle?.startsWith('hc-');
   const dmed = !!prospect.contacted_at;
   const whatsapped = !!prospect.whatsapped_at;
 
@@ -348,10 +383,18 @@ function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
           starred={prospect.starred} onToggleStar={() => toggleStarred({ id: prospect._id })} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
-            <a href={`https://instagram.com/${prospect.instagram_handle}`} target="_blank" rel="noopener noreferrer"
-              style={{ fontSize: '0.84rem', fontWeight: 700, color: '#192524', textDecoration: 'none' }}>
-              @{prospect.instagram_handle}
-            </a>
+            {isHotel ? (
+              <a href={prospect.contact_url || prospect.website || undefined} target="_blank" rel="noopener noreferrer"
+                style={{ fontSize: '0.84rem', fontWeight: 700, color: '#192524', textDecoration: 'none' }}>
+                {prospect.display_name}
+              </a>
+            ) : (
+              <a href={`https://instagram.com/${prospect.instagram_handle}`} target="_blank" rel="noopener noreferrer"
+                style={{ fontSize: '0.84rem', fontWeight: 700, color: '#192524', textDecoration: 'none' }}>
+                @{prospect.instagram_handle}
+              </a>
+            )}
+            <TagChips tags={prospect.tags} />
             {!crm && <StatusBadge status={prospect.status} />}
             {prospect.tier && <span style={{ fontSize: '0.62rem', padding: '0.15rem 0.45rem', borderRadius: 9999, background: 'rgba(209,235,219,0.6)', color: '#166534', fontWeight: 600, textTransform: 'capitalize' }}>{prospect.tier}</span>}
             {/* Angle + Published badges only clutter the CRM board's collapsed
@@ -371,7 +414,7 @@ function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
             <ScoreChip score={prospect.score} />
           </div>
           <div style={{ fontSize: '0.7rem', color: '#646B62', marginTop: '0.1rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {[prospect.display_name, fmtFollowers(prospect.follower_count) && `${fmtFollowers(prospect.follower_count)} followers`, prospect.location].filter(Boolean).join(' · ')}
+            {[!isHotel && prospect.display_name, fmtFollowers(prospect.follower_count) && `${fmtFollowers(prospect.follower_count)} followers`, prospect.location, isHotel && prospect.country].filter(Boolean).join(' · ')}
           </div>
         </div>
         <button onClick={() => setOpen(o => !o)} aria-label={open ? 'Collapse details' : 'Expand details'} aria-expanded={open} style={{ border: 'none', background: 'rgba(25,37,36,0.05)', borderRadius: 8, width: 26, height: 26, cursor: 'pointer', color: '#3C5759', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -384,7 +427,7 @@ function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
         <div style={{ marginTop: '0.6rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.3rem' }}>
           <div style={{ display: 'flex', justifyContent: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
             <button onClick={handleEmailClick} disabled={sendingStep === 'now'}
-              title={!prospect.email ? 'No email on file — click to add one' : emailSent ? 'Already emailed — click to expand and review or resend' : 'Send the cold outreach email'}
+              title={!prospect.email ? (prospect.contact_url ? 'No email yet — only a website/contact form on file. Click to add an email' : 'No email on file — click to add one') : emailSent ? 'Already emailed — click to expand and review or resend' : 'Send the cold outreach email'}
               style={{
                 padding: '0.32rem 0.8rem', borderRadius: 9999, fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer',
                 border: prospect.email ? 'none' : '1.5px solid rgba(25,37,36,0.2)',
@@ -394,11 +437,17 @@ function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
               }}>
               {sendingStep === 'now' ? 'Emailing…' : 'Email'}
             </button>
-            <button onClick={dmOnInstagram} disabled={genBusy}
+            {isHotel && !prospect.email && prospect.contact_url && (
+              <a href={prospect.contact_url} target="_blank" rel="noopener noreferrer" title="Open their website / contact form"
+                style={{ padding: '0.32rem 0.8rem', borderRadius: 9999, fontSize: '0.72rem', fontWeight: 700, border: '1.5px solid rgba(25,37,36,0.2)', color: '#3C5759', textDecoration: 'none' }}>
+                Site ↗
+              </a>
+            )}
+            {!isHotel && <button onClick={dmOnInstagram} disabled={genBusy}
               title={dmed ? 'Already DMed — click to reopen the thread and copy the message again' : (dmDraft ? 'Copies the draft, then opens their Instagram DM thread' : 'Generates a draft (using Analyze profile data if available), copies it, then opens their Instagram DM thread')}
               style={{ padding: '0.32rem 0.8rem', borderRadius: 9999, border: 'none', background: dmed ? '#166534' : '#192524', color: '#fff', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', opacity: genBusy ? 0.5 : 1 }}>
               {genBusy && !dmDraft ? 'Writing…' : 'DM ↗'}
-            </button>
+            </button>}
             <button onClick={handleWhatsappClick}
               title={!prospect.whatsapp ? 'No WhatsApp number on file — click to add one' : whatsapped ? 'Already messaged on WhatsApp — click to reopen the chat' : 'Opens WhatsApp with their number pre-filled'}
               style={{
@@ -447,9 +496,9 @@ function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
 
           <div>
             <span style={label}>Email{prospect.kind === 'creator' && !prospect.email ? ' — none on file, so this one goes straight to DM' : ''}</span>
-            <input ref={emailInputRef} type="email" value={emailField} onChange={e => setEmailField(e.target.value)}
+            <input ref={emailInputRef} type="email" multiple value={emailField} onChange={e => setEmailField(e.target.value)}
               onBlur={() => emailField.trim() !== (prospect.email || '') && update({ id: prospect._id, email: emailField.trim() })}
-              placeholder="Found automatically from their bio when the search tool sees one" spellCheck={false}
+              placeholder="Found automatically from their bio — separate several with commas (one email goes to all)" spellCheck={false}
               style={{ ...input, width: '100%' }} />
           </div>
 
@@ -1451,6 +1500,8 @@ function HostCrmBoard() {
         {bulkMsg && <span style={{ fontSize: '0.72rem', color: '#166534' }}>{bulkMsg}</span>}
         {emailBulkMsg && <span style={{ fontSize: '0.72rem', color: '#166534' }}>{emailBulkMsg}</span>}
       </div>
+
+      <TagLegend />
 
       {showFilters && (
         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center', marginBottom: '0.85rem', padding: '0.5rem 0.6rem', borderRadius: '0.6rem', background: 'rgba(25,37,36,0.04)' }}>

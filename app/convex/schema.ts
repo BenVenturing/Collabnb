@@ -26,6 +26,11 @@ export default defineSchema({
     // this is informational-only for them). Creators default true (opt-out)
     // via a signup checkbox they can uncheck.
     highlight_opt_in: v.optional(v.boolean()),
+    // Signup-time 18+ attestation + ToS/Privacy Policy acceptance (join
+    // wizard step 1 checkbox, see waitlist.signUp). Required for every new
+    // account; absent on rows created before this field existed.
+    age_confirmed_at: v.optional(v.number()),
+    legal_accepted_at: v.optional(v.number()),
     is_founder: v.optional(v.boolean()),
     beta: v.optional(v.boolean()),
     city: v.optional(v.string()),

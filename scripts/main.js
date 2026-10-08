@@ -457,6 +457,16 @@ function showWizardStep(step) {
     if (subtitleEl) subtitleEl.style.display = '';
     const savedName  = localStorage.getItem('collabnb_waitlist_name')  || '';
     const savedEmail = localStorage.getItem('collabnb_waitlist_email') || '';
+    const savedInstagram = localStorage.getItem('collabnb_waitlist_instagram') || '';
+    // Instagram is required up front for creators — before Clerk account
+    // creation — because people were skipping/mistyping it at the old
+    // post-signup step and we'd end up with accounts with no (or bad) handle.
+    const instagramField = currentRole === 'creator' ? `
+        <div class="form-group">
+          <label class="form-label" for="wl-instagram">Instagram handle <span style="color:#92400E;font-weight:700;">(required)</span></label>
+          <input class="form-input" type="text" id="wl-instagram" placeholder="@yourhandle" autocomplete="off" required value="${savedInstagram.replace(/"/g,'&quot;')}" />
+          <p style="margin:0.375rem 0 0;font-size:0.72rem;color:var(--sage);">Just your handle, e.g. @yourhandle — not the full link.</p>
+        </div>` : '';
     area.innerHTML = `
       <form id="wl-step1" style="display:flex;flex-direction:column;gap:1rem;">
         <div class="form-group">
@@ -467,6 +477,11 @@ function showWizardStep(step) {
           <label class="form-label" for="wl-email">Email address</label>
           <input class="form-input" type="email" id="wl-email" placeholder="jane@example.com" autocomplete="email" required value="${savedEmail.replace(/"/g,'&quot;')}" />
         </div>
+        ${instagramField}
+        <label style="display:flex;align-items:flex-start;gap:0.625rem;cursor:pointer;padding:0.75rem;background:rgba(255,255,255,0.5);border:1px solid rgba(208,213,206,0.7);border-radius:0.875rem;">
+          <input type="checkbox" id="wl-age-legal" style="margin-top:2px;flex-shrink:0;accent-color:var(--slate,#3C5759);width:15px;height:15px;" />
+          <span style="font-size:0.82rem;color:var(--slate,#3C5759);line-height:1.45;">I confirm I am 18 or older and agree to Collabnb's <a href="#" data-open-legal="terms" style="color:var(--ink);font-weight:600;text-decoration:underline;text-underline-offset:2px;">Terms of Service</a> and <a href="#" data-open-legal="privacy" style="color:var(--ink);font-weight:600;text-decoration:underline;text-underline-offset:2px;">Privacy Policy</a>.</span>
+        </label>
         <label style="display:flex;align-items:flex-start;gap:0.625rem;cursor:pointer;padding:0.75rem;background:rgba(255,255,255,0.5);border:1px solid rgba(208,213,206,0.7);border-radius:0.875rem;">
           <input type="checkbox" id="wl-consent" style="margin-top:2px;flex-shrink:0;accent-color:var(--slate,#3C5759);width:15px;height:15px;" />
           <span style="font-size:0.82rem;color:var(--slate,#3C5759);line-height:1.45;">I'm cool with the occasional helpful email — no spam, no daily newsletters, just the good stuff. Pinky promise 🤙</span>
@@ -475,6 +490,15 @@ function showWizardStep(step) {
         <div id="wl-error" style="display:none;color:#e74c3c;font-size:0.8125rem;text-align:center;"></div>
       </form>`;
     document.getElementById('wl-step1')?.addEventListener('submit', handleStep1Submit);
+    // Dynamically-injected [data-open-legal] links miss the global
+    // DOMContentLoaded binding (it only runs once, at load) — wire these up
+    // directly so the age/legal checkbox's links actually open the modal.
+    area.querySelectorAll('[data-open-legal]').forEach((link) => {
+      link.addEventListener('click', (e) => {
+        e.preventDefault();
+        openLegalModal(link.getAttribute('data-open-legal'));
+      });
+    });
 
   } else if (step === 2) {
     if (titleEl) titleEl.textContent = 'Create your account';
@@ -610,10 +634,6 @@ function showWizardStep(step) {
       </div>`;
     const fields = currentRole === 'creator' ? `
       <div class="form-group">
-        <label class="form-label" for="wl-instagram">Instagram handle <span style="color:#92400E;font-weight:700;">(required)</span></label>
-        <input class="form-input" type="text" id="wl-instagram" placeholder="@yourhandle" required />
-      </div>
-      <div class="form-group">
         <label class="form-label" for="wl-tiktok">TikTok handle <span style="color:var(--sage);font-weight:400;">(optional)</span></label>
         <input class="form-input" type="text" id="wl-tiktok" placeholder="@yourhandle" />
       </div>
@@ -735,6 +755,19 @@ function _showWizardDone(userName) {
   typeChar();
 }
 
+// Accepts a bare handle ("yourhandle"), an @-prefixed one, or a full
+// profile URL (instagram.com/yourhandle) and returns the clean handle, or
+// null if what's left doesn't look like a real Instagram handle.
+function normalizeInstagramHandle(raw) {
+  if (!raw) return null;
+  let v = raw.trim();
+  v = v.replace(/^https?:\/\/(www\.)?instagram\.com\//i, '');
+  v = v.replace(/^@/, '');
+  v = v.split(/[/?#]/)[0].trim();
+  if (!/^[a-zA-Z0-9._]{1,30}$/.test(v)) return null;
+  return v;
+}
+
 async function handleStep1Submit(e) {
   e.preventDefault();
   const btn = document.getElementById('wl-submit');
@@ -745,12 +778,25 @@ async function handleStep1Submit(e) {
     if (errorEl) { errorEl.textContent = 'Please enter your name and email.'; errorEl.style.display = 'block'; }
     return;
   }
+  let instagramHandle;
+  if (currentRole === 'creator') {
+    instagramHandle = normalizeInstagramHandle(document.getElementById('wl-instagram')?.value);
+    if (!instagramHandle) {
+      if (errorEl) { errorEl.textContent = 'Please enter a valid Instagram handle, e.g. @yourhandle.'; errorEl.style.display = 'block'; }
+      return;
+    }
+  }
+  const ageLegalConfirmed = !!document.getElementById('wl-age-legal')?.checked;
+  if (!ageLegalConfirmed) {
+    if (errorEl) { errorEl.textContent = 'Please confirm you are 18 or older and accept the Terms of Service and Privacy Policy.'; errorEl.style.display = 'block'; }
+    return;
+  }
   if (errorEl) errorEl.style.display = 'none';
   if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
   try {
     let ambassadorRef;
     try { ambassadorRef = localStorage.getItem('collabnb_ambassador_ref') || undefined; } catch { /* ignore */ }
-    const result = await waitlistSignUp({ full_name: name, email, role: currentRole, ambassador_ref: ambassadorRef });
+    const result = await waitlistSignUp({ full_name: name, email, role: currentRole, instagram_handle: instagramHandle, age_confirmed: ageLegalConfirmed, ambassador_ref: ambassadorRef });
     if (ambassadorRef) {
       try { localStorage.removeItem('collabnb_ambassador_ref'); } catch { /* ignore */ }
     }
@@ -759,6 +805,7 @@ async function handleStep1Submit(e) {
     _wizardName = name;
     localStorage.setItem('collabnb_waitlist_name', name);
     localStorage.setItem('collabnb_waitlist_email', email);
+    if (instagramHandle) localStorage.setItem('collabnb_waitlist_instagram', instagramHandle);
     if (_wizardProfileId) localStorage.setItem('collabnb_waitlist_profile_id', _wizardProfileId);
     launchConfetti();
     initCounters();
@@ -833,16 +880,6 @@ function showReferralCodeReveal() {
 async function handleDetailsSubmit(e) {
   e.preventDefault();
   const errorEl = document.getElementById('wl-details-error');
-  // Validate Instagram is required for creators
-  if (currentRole === 'creator') {
-    const instagramVal = document.getElementById('wl-instagram')?.value?.trim();
-    if (!instagramVal) {
-      if (errorEl) { errorEl.textContent = 'Please provide your Instagram handle — it helps properties match with you.'; errorEl.style.display = 'block'; }
-      const btn = e.target.querySelector('[type="submit"]');
-      if (btn) { btn.disabled = false; btn.textContent = 'Continue →'; }
-      return;
-    }
-  }
   const btn = e.target.querySelector('[type="submit"]');
   if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
   if (errorEl) errorEl.style.display = 'none';
@@ -852,7 +889,7 @@ async function handleDetailsSubmit(e) {
     if (_wizardProfileId) {
       const countryVal = document.getElementById('wl-country')?.value?.trim();
       const raw = currentRole === 'creator'
-        ? { instagram_handle: document.getElementById('wl-instagram')?.value?.trim(), tiktok_handle: document.getElementById('wl-tiktok')?.value?.trim(), portfolio: document.getElementById('wl-portfolio')?.value?.trim(), country: countryVal }
+        ? { tiktok_handle: document.getElementById('wl-tiktok')?.value?.trim(), portfolio: document.getElementById('wl-portfolio')?.value?.trim(), country: countryVal }
         : { city: document.getElementById('wl-city')?.value?.trim(), country: countryVal };
       const updates = Object.fromEntries(Object.entries(raw).filter(([, v]) => v));
       // Boolean — must bypass the truthy filter above, or unchecking (false)
@@ -929,10 +966,20 @@ function switchRole(role) {
   const joinCta = document.getElementById('join-cta');
   if (joinCta && _hasJoinedWaitlist) joinCta.textContent = 'Continue setting up →';
 
-  // Update modal title if modal is open on step 1
-  const titleEl = document.getElementById('modal-title');
-  if (titleEl && document.querySelector('#modal-overlay.open')) {
-    titleEl.textContent = `Finalize your ${role} profile`;
+  // If step 1 is currently showing, re-render so the creator-only Instagram
+  // field appears/disappears live, preserving whatever's already typed.
+  const step1Form = document.getElementById('wl-step1');
+  if (step1Form) {
+    const typedName = document.getElementById('wl-name')?.value || '';
+    const typedEmail = document.getElementById('wl-email')?.value || '';
+    const typedInstagram = document.getElementById('wl-instagram')?.value || '';
+    showWizardStep(1);
+    const nameEl = document.getElementById('wl-name');
+    const emailEl = document.getElementById('wl-email');
+    const igEl = document.getElementById('wl-instagram');
+    if (nameEl && typedName) nameEl.value = typedName;
+    if (emailEl && typedEmail) emailEl.value = typedEmail;
+    if (igEl && typedInstagram) igEl.value = typedInstagram;
   }
 }
 

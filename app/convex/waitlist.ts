@@ -1,4 +1,4 @@
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { requireAdmin, canAccessAdmin } from "./lib/auth";
@@ -22,6 +22,10 @@ export const signUp = mutation({
     property_type: v.optional(v.string()),
     website_url: v.optional(v.string()),
     beta: v.optional(v.boolean()),
+    // 18+ attestation + ToS/Privacy Policy acceptance — required checkbox
+    // on the join wizard's step 1 form. Enforced server-side too, since the
+    // client check alone isn't a real gate.
+    age_confirmed: v.boolean(),
     // Country Ambassador link slug captured from the signup URL (?amb=) —
     // this is the primary pre-Clerk signup path (see waitlistSignUp in
     // scripts/main.js), so this is where most hosts/creators actually get
@@ -29,7 +33,11 @@ export const signUp = mutation({
     ambassador_ref: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const { role, email, ambassador_ref, ...rest } = args;
+    const { role, email, ambassador_ref, age_confirmed, ...rest } = args;
+
+    if (!age_confirmed) {
+      throw new ConvexError("You must confirm you are 18 or older and accept the Terms of Service and Privacy Policy.");
+    }
 
     // Check if already signed up
     const existing = await ctx.db
@@ -76,6 +84,8 @@ export const signUp = mutation({
       // Default true for everyone — hosts stay true permanently (no opt-out
       // UI), creators can uncheck the step-3 signup checkbox to flip it off.
       highlight_opt_in: true,
+      age_confirmed_at: Date.now(),
+      legal_accepted_at: Date.now(),
     });
 
     // Notify admin

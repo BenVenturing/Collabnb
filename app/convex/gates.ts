@@ -344,6 +344,8 @@ export const nudgeFinishSignup = mutation({
       full_name: profile.full_name,
     });
 
+    await ctx.db.patch(profileId, { finish_signup_nudge_sent_at: Date.now() });
+
     await ctx.db.insert("admin_audit_log", {
       action: "finish_signup_nudge",
       target_type: "profile",
@@ -371,6 +373,15 @@ export const nudgeAddSocials = mutation({
       body: "Please add your Instagram, TikTok, or YouTube handle to your profile.",
       link: "/profile?edit=true",
     });
+
+    if (profile.email) {
+      await ctx.scheduler.runAfter(0, internal.emails.sendAddSocialsEmail, {
+        email: profile.email,
+        full_name: profile.full_name,
+      });
+    }
+
+    await ctx.db.patch(profileId, { social_nudge_sent_at: Date.now() });
 
     await ctx.db.insert("admin_audit_log", {
       action: "social_nudge",

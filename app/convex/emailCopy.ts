@@ -413,6 +413,23 @@ export const TEMPLATE_DEFAULTS: Record<string, TemplateDef> = {
       footnote: "You may also receive an invitation email from Trustpilot — reviewing through either link works.",
     },
   },
+  add_socials: {
+    name: "Add or fix your social accounts",
+    trigger: "Admin nudges a pending creator whose socials are missing or can't be verified",
+    category: "Account",
+    vars: ["firstName"],
+    calloutColor: "#8B6F52",
+    buttonHref: `${BASE_URL}/profile?edit=true`,
+    copy: {
+      subject: "Add your social accounts to finish your Collabnb application",
+      heading: "One thing left, {{firstName}} 👋",
+      body: "We're reviewing your Collabnb creator application, but we can't verify your social accounts yet. Add or correct your Instagram, TikTok, or YouTube handle and we'll pick your review back up.",
+      calloutLabel: "Why we need this",
+      calloutText: "Your handles are how we confirm your audience is real — it's the last step before we can approve you.",
+      buttonLabel: "Add your socials",
+      footnote: "Already added them? Double-check the handle is spelled exactly as it appears on your profile.",
+    },
+  },
   finish_signup: {
     name: "Finish creating your account",
     trigger: "Admin nudges an email-only signup to complete their account",

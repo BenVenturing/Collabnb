@@ -52,6 +52,16 @@ export const sendFinishSignupFollowupEmail = internalAction({
   },
 });
 
+// ─── Add/fix socials nudge (pending creator, socials missing or unverifiable) ──
+
+export const sendAddSocialsEmail = internalAction({
+  args: { email: v.string(), full_name: v.string() },
+  handler: async (ctx, { email, full_name }) => {
+    const firstName = full_name.split(" ")[0];
+    await sendFromTemplate(ctx, "add_socials", email, { firstName });
+  },
+});
+
 // ─── Incomplete application nudge (has an account, profile/listing unfinished) ─
 
 export const sendApplicationIncompleteEmail = internalAction({

@@ -287,7 +287,7 @@ export default function UserDetailPanel({ profileId, onClose }) {
   );
 }
 
-function NudgeSocialsButton({ profileId }) {
+function NudgeSocialsButton({ profileId, hasSocials, sentAt }) {
   const nudge = useMutation(api.gates.nudgeAddSocials);
   const [state, setState] = useState('idle'); // idle | sending | sent
 
@@ -302,6 +302,7 @@ function NudgeSocialsButton({ profileId }) {
   }
 
   return (
+    <>
     <button
       onClick={handleClick}
       disabled={state !== 'idle'}
@@ -315,8 +316,18 @@ function NudgeSocialsButton({ profileId }) {
         fontFamily: 'inherit',
       }}
     >
-      {state === 'sent' ? 'Reminder sent ✓' : state === 'sending' ? 'Sending…' : 'Remind to add socials'}
+      {state === 'sent'
+        ? 'Reminder sent ✓'
+        : state === 'sending'
+          ? 'Sending…'
+          : hasSocials ? 'Remind to fix socials' : 'Remind to add socials'}
     </button>
+    {sentAt && state === 'idle' && (
+      <div style={{ marginTop: '0.35rem', fontSize: '0.72rem', color: SAGE, textAlign: 'center' }}>
+        Last reminder sent {fmtDate(sentAt)}
+      </div>
+    )}
+    </>
   );
 }
 
@@ -370,6 +381,9 @@ function TabContent({ tab, data, guarantee }) {
     // ── Social ────────────────────────────────────────────────────────────────
     case 'social': {
       const missingSocials = !p.instagram_handle && !p.tiktok_handle && !p.youtube_handle;
+      // Pending creators get the nudge even with handles on file — a wrong or
+      // unverifiable handle is the common case, not a blank one.
+      const canNudgeSocials = missingSocials || (p.is_verified !== true && !p.is_rejected);
       return (
         <>
           {[
@@ -389,7 +403,7 @@ function TabContent({ tab, data, guarantee }) {
               )}
             </div>
           ))}
-          {missingSocials && <NudgeSocialsButton profileId={p._id} />}
+          {canNudgeSocials && <NudgeSocialsButton profileId={p._id} hasSocials={!missingSocials} sentAt={p.social_nudge_sent_at} />}
         </>
       );
     }

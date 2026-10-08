@@ -386,6 +386,12 @@ export default function Users({ initialTab } = {}) {
                       {p.is_verified !== true && !p.is_rejected && <Badge bg="#FEF3C7" color="#92400E">Pending</Badge>}
                       {p.pending_role && <Badge bg="#DBEAFE" color="#1D4ED8">Wants {p.pending_role}</Badge>}
                       {p.reverification_requested_at != null && <Badge bg="#FEF3C7" color="#92400E">Re-verify</Badge>}
+                      {p.social_nudge_sent_at != null && !p.is_rejected && (
+                        <Badge bg="#FFEDD5" color="#9A3412">Social nudge · {fmtDate(p.social_nudge_sent_at)}</Badge>
+                      )}
+                      {p.finish_signup_nudge_sent_at != null && !p.clerk_registered && !p.is_rejected && (
+                        <Badge bg="#FFEDD5" color="#9A3412">Signup nudge · {fmtDate(p.finish_signup_nudge_sent_at)}</Badge>
+                      )}
                       {p.is_founder && !p.is_rejected && <Badge bg={MINT} color="#166534">Founder</Badge>}
                       {p.beta && <Badge bg="#F3E8FF" color="#7E22CE">Beta</Badge>}
                       {p.referred_by && <Badge bg="#EDE9FE" color="#5B21B6">Referred</Badge>}

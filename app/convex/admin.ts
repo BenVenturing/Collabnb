@@ -273,6 +273,11 @@ export const getEmailList = query({
     if (audience === "creators") pool = pool.filter((p) => p.role === "creator");
     else if (audience === "hosts")    pool = pool.filter((p) => p.role === "host");
     else if (audience === "founders") pool = pool.filter((p) => p.is_founder === true);
+    else if (audience === "hosts_no_listing") {
+      const listings = await ctx.db.query("listings").collect();
+      const hostIdsWithListings = new Set(listings.map((l) => l.host_id).filter(Boolean));
+      pool = pool.filter((p) => p.role === "host" && !hostIdsWithListings.has(String(p._id)));
+    }
 
     // Settings > Notifications > Marketing — respect the opt-out (default is
     // opted in; only an explicit false excludes someone). This is the one
@@ -600,20 +605,10 @@ export const saveBroadcastInternal = internalMutation({
   },
 });
 
-// ─── Broadcast via Resend ─────────────────────────────────────────────────────
-export const broadcastSend = action({
-  args: { audience: v.string(), subject: v.string(), body: v.string() },
-  handler: async (ctx, { audience, subject, body }) => {
-    await requireAdminAction(ctx, internal.profiles.getByClerkUserId);
-    const recipients: { email: string; full_name: string; role: string }[] =
-      await ctx.runQuery(api.admin.getEmailList, { audience });
-    if (!recipients.length) return { sent: 0 };
-
-    const apiKey = process.env.RESEND_API_KEY;
-    if (!apiKey) throw new Error("RESEND_API_KEY not configured in Convex environment.");
-
-    const FROM = "Collabnb <hello@collabnb.com>";
-    const htmlBody = `
+// Shared wrapper for both the real broadcast send and the single-address
+// test send below — keeps the two paths rendering identically.
+function broadcastEmailHtml(body: string): string {
+  return `
 <!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"></head>
@@ -635,6 +630,22 @@ export const broadcastSend = action({
   </table>
 </body>
 </html>`;
+}
+
+// ─── Broadcast via Resend ─────────────────────────────────────────────────────
+export const broadcastSend = action({
+  args: { audience: v.string(), subject: v.string(), body: v.string() },
+  handler: async (ctx, { audience, subject, body }) => {
+    await requireAdminAction(ctx, internal.profiles.getByClerkUserId);
+    const recipients: { email: string; full_name: string; role: string }[] =
+      await ctx.runQuery(api.admin.getEmailList, { audience });
+    if (!recipients.length) return { sent: 0 };
+
+    const apiKey = process.env.RESEND_API_KEY;
+    if (!apiKey) throw new Error("RESEND_API_KEY not configured in Convex environment.");
+
+    const FROM = "Collabnb <hello@collabnb.com>";
+    const htmlBody = broadcastEmailHtml(body);
 
     let sent = 0;
     for (const r of recipients) {
@@ -658,6 +669,33 @@ export const broadcastSend = action({
     });
 
     return { sent };
+  },
+});
+
+// ─── Broadcast test send — one address, not counted in broadcast history ──────
+// Lets Ben send the exact drafted copy to a single real-world address (e.g. a
+// specific hotel he wants to try the "Hosts w/o Listing" nudge on) without
+// that address needing to already match the audience filter in getEmailList.
+export const broadcastSendTest = action({
+  args: { to: v.string(), subject: v.string(), body: v.string() },
+  handler: async (ctx, { to, subject, body }) => {
+    await requireAdminAction(ctx, internal.profiles.getByClerkUserId);
+
+    const apiKey = process.env.RESEND_API_KEY;
+    if (!apiKey) throw new Error("RESEND_API_KEY not configured in Convex environment.");
+
+    const FROM = "Collabnb <hello@collabnb.com>";
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ from: FROM, to: [to], subject: `[TEST] ${subject}`, html: broadcastEmailHtml(body), text: body }),
+    });
+    if (!res.ok) throw new Error(`Resend returned ${res.status}`);
+
+    return { sent: true };
   },
 });
 

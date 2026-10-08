@@ -9,11 +9,19 @@ const BONE  = '#F7F5F2';
 const MINT  = '#D1EBDB';
 
 const AUDIENCES = [
-  { id: 'all',      label: 'All Verified',   icon: 'A', desc: 'Every verified user' },
-  { id: 'creators', label: 'Creators',        icon: 'C', desc: 'Verified creators'    },
-  { id: 'hosts',    label: 'Hosts',           icon: 'H', desc: 'Verified hosts'       },
-  { id: 'founders', label: 'Founders',        icon: 'F', desc: 'Founder-status users' },
+  { id: 'all',             label: 'All Verified',    icon: 'A', desc: 'Every verified user' },
+  { id: 'creators',        label: 'Creators',         icon: 'C', desc: 'Verified creators'    },
+  { id: 'hosts',           label: 'Hosts',            icon: 'H', desc: 'Verified hosts'       },
+  { id: 'founders',        label: 'Founders',         icon: 'F', desc: 'Founder-status users' },
+  { id: 'hosts_no_listing', label: 'Hosts w/o Listing', icon: 'L', desc: "Verified hosts who haven't created a listing yet" },
 ];
+
+const DEFAULT_DRAFTS = {
+  hosts_no_listing: {
+    subject: "Quick nudge — finish setting up your Collabnb listing",
+    body: "Hi there,\n\nWe noticed you joined Collabnb as a host but haven't created your first listing yet — it only takes a few minutes, and once it's live, creators can start reaching out for collaborations.\n\nNeed a hand, or have questions about what to put in it? Just reply to this email and we'll help you get set up.\n\nLooking forward to seeing your property live!\n\nBenjamin\nFounder, Collabnb",
+  },
+};
 
 function fmtDate(ts) {
   if (!ts) return '—';
@@ -391,11 +399,41 @@ export default function Broadcast() {
   const [sending,     setSending]     = useState(false);
   const [sendResult,  setSendResult]  = useState(null); // { sent: N } | { error: string }
   const [showHistory, setShowHistory] = useState(false);
+  const [testTo,      setTestTo]      = useState('');
+  const [testing,     setTesting]     = useState(false);
+  const [testResult,  setTestResult]  = useState(null); // 'ok' | error string
 
   const emailList     = useQuery(api.admin.getEmailList, { audience });
   const broadcasts    = useQuery(api.admin.getBroadcasts);
   const saveBroadcast = useMutation(api.admin.saveBroadcast);
   const broadcastSend = useAction(api.admin.broadcastSend);
+  const sendTest      = useAction(api.admin.broadcastSendTest);
+
+  // Picking a fresh audience with an empty draft offers a starting point —
+  // never overwrites copy the admin already typed.
+  function selectAudience(id) {
+    setAudience(id);
+    const draft = DEFAULT_DRAFTS[id];
+    if (draft && !subject.trim() && !body.trim()) {
+      setSubject(draft.subject);
+      setBody(draft.body);
+    }
+  }
+
+  async function handleSendTest() {
+    if (!testTo.trim() || !subject.trim() || !body.trim() || testing) return;
+    setTesting(true);
+    setTestResult(null);
+    try {
+      await sendTest({ to: testTo.trim(), subject, body });
+      setTestResult('ok');
+    } catch (err) {
+      setTestResult(err?.message || 'Test send failed.');
+    } finally {
+      setTesting(false);
+      setTimeout(() => setTestResult(null), 4000);
+    }
+  }
 
   const emails = emailList?.map((r) => r.email) ?? [];
   const selected = AUDIENCES.find((a) => a.id === audience);
@@ -480,7 +518,7 @@ export default function Broadcast() {
             return (
               <button
                 key={a.id}
-                onClick={() => setAudience(a.id)}
+                onClick={() => selectAudience(a.id)}
                 style={{
                   display: 'flex', alignItems: 'flex-start', gap: '0.75rem',
                   padding: '0.875rem 1rem', borderRadius: '0.75rem', textAlign: 'left',
@@ -531,6 +569,25 @@ export default function Broadcast() {
             style={{ display: 'block', width: '100%', padding: '0.875rem 1rem', border: 'none', fontSize: '0.875rem', fontFamily: 'inherit', color: INK, background: 'transparent', outline: 'none', resize: 'vertical', boxSizing: 'border-box' }}
           />
         </div>
+      </div>
+
+      {/* Test send — one address, uses whatever is in Compose right now */}
+      <div style={{ marginBottom: '1.25rem', display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+        <input
+          value={testTo}
+          onChange={(e) => setTestTo(e.target.value)}
+          placeholder="Test address, e.g. info@lascascadasthefalls.com"
+          style={{ padding: '0.4rem 0.75rem', borderRadius: '0.5rem', border: '1px solid rgba(25,37,36,0.12)', fontSize: '0.8rem', fontFamily: 'inherit', color: INK, outline: 'none', minWidth: 260, background: '#fff' }}
+        />
+        <button
+          onClick={handleSendTest}
+          disabled={!testTo.trim() || !subject.trim() || !body.trim() || testing}
+          style={{ padding: '0.4rem 0.875rem', borderRadius: '0.5rem', background: '#fff', color: '#166534', fontSize: '0.78rem', fontWeight: 600, border: '1px solid rgba(22,101,52,0.25)', cursor: testing ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}
+        >
+          {testing ? 'Sending…' : '✈️ Send test'}
+        </button>
+        {testResult === 'ok' && <span style={{ fontSize: '0.75rem', color: '#166534', fontWeight: 600 }}>Test sent to {testTo}</span>}
+        {testResult && testResult !== 'ok' && <span style={{ fontSize: '0.75rem', color: '#991B1B' }}>{testResult}</span>}
       </div>
 
       {/* Actions */}

@@ -76,6 +76,87 @@ function SaveBtn({ onClick, saved, label = 'Save' }) {
   );
 }
 
+// ─── Host Activation — listing-reminder drip toggle + per-step test send ──────
+// Nudges verified, fully-registered hosts who still have zero listings, at
+// 3/7/14 days (convex/listingReminders.ts). Off by default — the cron is
+// always scheduled, but no-ops unless this toggle flips the setting to "true".
+function HostActivation() {
+  const settings   = useQuery(api.admin.getSettings);
+  const setSetting = useMutation(api.admin.setSetting);
+  const sendTest    = useAction(api.listingReminders.sendListingReminderTest);
+
+  const [enabled, setEnabled] = useState(false);
+  const [saved,   setSaved]   = useState(false);
+  const [testTo,   setTestTo]   = useState('');
+  const [testStep, setTestStep] = useState(null); // which step is currently sending
+  const [testResult, setTestResult] = useState(null); // 'ok' | error string
+
+  useEffect(() => {
+    if (settings) setEnabled(settings.listing_reminders_enabled === 'true');
+  }, [settings]);
+
+  async function save() {
+    await setSetting({ key: 'listing_reminders_enabled', value: String(enabled) });
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2500);
+  }
+
+  async function sendTestStep(step) {
+    if (!testTo.trim()) return;
+    setTestStep(step);
+    setTestResult(null);
+    try {
+      await sendTest({ to: testTo.trim(), step });
+      setTestResult('ok');
+    } catch (err) {
+      setTestResult(err?.message || 'Test send failed.');
+    } finally {
+      setTestStep(null);
+      setTimeout(() => setTestResult(null), 4000);
+    }
+  }
+
+  return (
+    <div style={CARD}>
+      <Toggle
+        label="Nudge verified hosts with no listing (3 / 7 / 14-day drip)"
+        checked={enabled}
+        onChange={(v) => { setEnabled(v); setSaved(false); }}
+      />
+      <SaveBtn onClick={save} saved={saved} />
+
+      <div style={{ marginTop: '1.25rem', paddingTop: '1rem', borderTop: '1px solid rgba(25,37,36,0.06)' }}>
+        <label style={LABEL}>Send a test (any address, doesn't affect the real drip)</label>
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+          <input
+            value={testTo}
+            onChange={(e) => setTestTo(e.target.value)}
+            placeholder="info@lascascadasthefalls.com"
+            style={{ ...INPUT, width: 'auto', flex: 1, minWidth: 220 }}
+          />
+          {[1, 2, 3].map((step) => (
+            <button
+              key={step}
+              onClick={() => sendTestStep(step)}
+              disabled={!testTo.trim() || testStep !== null}
+              style={{
+                padding: '0.4rem 0.75rem', borderRadius: '0.5rem', background: '#fff',
+                color: '#166534', fontSize: '0.78rem', fontWeight: 600,
+                border: '1px solid rgba(22,101,52,0.25)',
+                cursor: testStep !== null ? 'not-allowed' : 'pointer', fontFamily: 'inherit',
+              }}
+            >
+              {testStep === step ? 'Sending…' : `✈️ Step ${step}`}
+            </button>
+          ))}
+        </div>
+        {testResult === 'ok' && <div style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: '#166534', fontWeight: 600 }}>Test sent to {testTo}</div>}
+        {testResult && testResult !== 'ok' && <div style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: '#991B1B' }}>{testResult}</div>}
+      </div>
+    </div>
+  );
+}
+
 // ─── Customize navigation — drag the sidebar's top-level order ────────────────
 function NavOrderEditor() {
   const settings = useQuery(api.admin.getSettings);
@@ -407,6 +488,10 @@ export default function AdminSettings() {
             <Toggle label="Email on collab completed"     checked={notifyCollab}  onChange={(v) => { setNotifyCollab(v);  setNotifSaved(false); }} />
             <SaveBtn onClick={saveNotifications} saved={notifSaved} />
           </div>
+
+          {/* ── Host Activation ── */}
+          <SectionTitle>Host Activation</SectionTitle>
+          <HostActivation />
 
           {/* ── Navigation ── */}
           <SectionTitle>Customize Navigation</SectionTitle>

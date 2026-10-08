@@ -9,7 +9,7 @@
 - **Database:** Convex (NOT Supabase)
 - **Convex deploy:** `cd app && npx convex deploy` (does NOT happen on git push)
 - **Routing:** BrowserRouter — all app routes are `/path` (e.g. `/blog`, `/explore`, `/admin`)
-- **Hosting:** Cloudflare Pages at `collabnb.com` (migrated off Vercel) — build with `npx vite build` from repo root (outputs `dist/`), deploy with `npx wrangler pages deploy dist --project-name=collabnb` (does NOT happen on git push)
+- **Hosting:** Cloudflare Pages at `collabnb.com` (migrated off Vercel) — build with `npm run build` from repo root — this is a TWO-stage build (`vite build` for the marketing site → `dist/`, then `cd app && vite build --outDir ../dist/app` for the React app). Running bare `npx vite build` skips stage 2, ships a `dist/` with no `app/` directory, and every route `_redirects` rewrites to `/app/` (`/admin`, `/explore`, `/profile`, `/inbox`, `/settings`, `/listing/*`, …) dies on the SPA fallback. Deploy with `npx wrangler pages deploy dist --project-name=collabnb` (does NOT happen on git push)
 
 ## Collaboration rules
 

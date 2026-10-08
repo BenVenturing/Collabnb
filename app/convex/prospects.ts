@@ -1478,6 +1478,33 @@ async function runHostEmailKickoff(ctx: any, id: any): Promise<{ sent: boolean; 
   const p: any = await ctx.runQuery(internal.prospects.getById, { id });
   if (!p) return { sent: false, reason: "Prospect not found" };
 
+  // Already has a drafted sequence — send whichever step hasn't gone out yet
+  // instead of re-drafting and re-sending step 1. Bulk "Email" re-runs this
+  // kickoff for every selected row regardless of where each one actually is
+  // in its own sequence, so this guard is what keeps a mixed selection (some
+  // mid-sequence, some brand new) from blasting everyone back to step 1 and
+  // wiping their recorded progress.
+  if (p.email_sequence?.length) {
+    const next = [...p.email_sequence].sort((a: any, b: any) => a.step - b.step).find((e: any) => !e.sent_at);
+    if (!next) return { sent: false, reason: "Sequence already complete — nothing left to send" };
+
+    const toEmail = p.marketing_email || p.email;
+    if (!toEmail) return { sent: false, reason: "No email address found — add one manually on this host, then try again" };
+    const apiKey = process.env.RESEND_API_KEY;
+    if (!apiKey) return { sent: false, reason: "RESEND_API_KEY not configured in Convex environment." };
+
+    try {
+      const html = next.step === 1 ? next.body : textToEmailHtml(next.body);
+      await sendViaResend(apiKey, toEmail, next.subject, html, OUTREACH_BCC);
+    } catch (e: any) {
+      return { sent: false, reason: e?.message || "Resend send failed" };
+    }
+
+    const updatedSequence = p.email_sequence.map((e: any) => (e.step === next.step ? { ...e, sent_at: Date.now() } : e));
+    await ctx.runMutation(internal.prospects.markSequenceStepSent, { id, emailSequence: updatedSequence });
+    return { sent: true };
+  }
+
   const contact = await findMarketingContact(p);
   const marketingEmail = contact.email;
   if (!marketingEmail) return { sent: false, reason: "No email address found — add one manually on this host, then try again" };

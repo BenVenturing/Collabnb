@@ -181,12 +181,20 @@ function TagChips({ tags }) {
 }
 
 function TagLegend() {
+  const [open, setOpen] = useState(false);
   return (
-    <div style={{ display: 'flex', gap: '0.9rem', flexWrap: 'wrap', alignItems: 'center', marginBottom: '0.85rem', fontSize: '0.7rem', color: '#646B62' }}>
-      <strong style={{ color: '#192524' }}>Tag key</strong>
-      {Object.entries(PROSPECT_TAGS).map(([k, d]) => (
-        <span key={k} style={{ display: 'inline-flex', gap: '0.3rem', alignItems: 'center' }}><TagChips tags={[k]} /> {d.split(' — ')[0]}</span>
-      ))}
+    <div style={{ marginBottom: '0.85rem', fontSize: '0.7rem', color: '#646B62' }}>
+      <button onClick={() => setOpen((o) => !o)} aria-expanded={open}
+        style={{ border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', fontSize: '0.7rem', fontWeight: 700, color: '#3C5759' }}>
+        Tag key {open ? '▴' : '▾'}
+      </button>
+      {open && (
+        <div style={{ display: 'flex', gap: '0.9rem', flexWrap: 'wrap', alignItems: 'center', marginTop: '0.4rem' }}>
+          {Object.entries(PROSPECT_TAGS).map(([k, d]) => (
+            <span key={k} style={{ display: 'inline-flex', gap: '0.3rem', alignItems: 'center' }}><TagChips tags={[k]} /> {d.split(' — ')[0]}</span>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

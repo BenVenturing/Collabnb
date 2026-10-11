@@ -110,8 +110,8 @@ export const getCounts = query({
   args: {},
   handler: async (ctx) => {
     const profiles = await ctx.db.query("profiles").collect();
-    // Count real signups: waitlist submissions or verified users
-    const real = profiles.filter((p) => p.tier === "waitlist" || p.is_verified === true);
+    // Matches admin Users tab: only approved (verified, not rejected) profiles
+    const real = profiles.filter((p) => p.is_verified === true && p.is_rejected !== true);
     const creators = real.filter((p) => p.role === "creator").length;
     const hosts    = real.filter((p) => p.role === "host").length;
     return { creators, hosts, total: creators + hosts };

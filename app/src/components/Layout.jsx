@@ -140,12 +140,11 @@ export default function Layout({ children }) {
   const location = useLocation();
   const { profile } = useAuth();
   const isPending = profile?.tier === 'waitlist' && !profile?.is_verified;
-  const userCount = useQuery(api.profiles.countAll) ?? null;
-
   const [bannerDismissed, setBannerDismissed] = useState(
     () => localStorage.getItem(LAUNCH_BANNER_KEY) === '1'
   );
   const bannerVisible = !bannerDismissed && new Date() < LAUNCH_DATE;
+  const userCount = useQuery(api.profiles.countAll, bannerVisible ? {} : 'skip') ?? null;
   const daysLeft = bannerVisible
     ? Math.ceil((LAUNCH_DATE - new Date()) / (1000 * 60 * 60 * 24))
     : 0;

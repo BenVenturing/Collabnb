@@ -214,7 +214,7 @@ export default defineSchema({
     // person doesn't get queued twice.
     featured_in_carousel: v.optional(v.boolean()),
     featured_in_carousel_at: v.optional(v.number()),
-  }).index("by_email", ["email"]).index("by_clerk_user_id", ["clerk_user_id"])
+  }).index("by_email", ["email"]).index("by_clerk_user_id", ["clerk_user_id"]).index("by_username", ["username"]).index("by_role", ["role"])
     .index("by_stripe_customer", ["stripe_customer_id"])
     .index("by_stripe_connect_account", ["stripe_connect_account_id"])
     .index("by_apple_pass_serial", ["apple_pass_serial"]),
@@ -1109,5 +1109,6 @@ export default defineSchema({
     tier4_sent_at: v.optional(v.number()),
   })
     .index("by_comment", ["comment_id"])
-    .index("by_ref_token", ["ref_token"]),
+    .index("by_ref_token", ["ref_token"])
+    .index("by_created_at", ["created_at"]),
 });

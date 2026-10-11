@@ -356,7 +356,7 @@ export const getFollowUpCandidatesInternal = internalQuery({
   args: {},
   handler: async (ctx) => {
     const cutoff = Date.now() - 10 * 24 * 60 * 60 * 1000; // ignore anything older than 10 days
-    const entries = await ctx.db.query("autoreply_log").collect();
+    const entries = await ctx.db.query("autoreply_log").withIndex("by_created_at", (q) => q.gte("created_at", cutoff)).collect();
     const candidates = entries.filter(
       (e) => e.status === "sent" && e.ref_token && e.recipient_igsid && !e.signed_up_at && e.created_at >= cutoff
     );

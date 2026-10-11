@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
+import SocialPortfolio from '../components/SocialPortfolio';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useQuery, useAction, useMutation, useConvex } from 'convex/react';
 import { api } from '../../convex/_generated/api';
@@ -1034,6 +1035,12 @@ export default function Profile() {
             {dp.youtube_handle   && <SocialRow icon={<YouTubeIcon />}   label={t('social.youtube')}   value={`@${dp.youtube_handle.replace(/^@/, '')}`}   href={`https://youtube.com/@${dp.youtube_handle.replace(/^@/, '')}`} />}
           </div>
         </section>
+
+        {dp.role === 'creator' && dp.username && (
+          <section style={{ marginBottom: '1.75rem' }}>
+            <SocialPortfolio username={dp.username} />
+          </section>
+        )}
 
         {/* ── Past Collabs ─────────────────────────────────────────────────── */}
         <section className="section-reveal" ref={(el) => sectionsRef.current[3] = el} style={{ marginBottom: '1.75rem' }}>

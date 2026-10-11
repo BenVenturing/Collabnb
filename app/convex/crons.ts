@@ -165,4 +165,20 @@ crons.hourly(
   {}
 );
 
+// Daily at 5am UTC — refresh linked creator Instagram/TikTok/YouTube stats and
+// portfolio thumbnails (CDN thumbnail URLs expire), and renew OAuth tokens.
+crons.daily(
+  "sync creator social accounts",
+  { hourUTC: 5, minuteUTC: 0 },
+  internal.creatorSocial.syncAll,
+  {}
+);
+
+crons.hourly(
+  "purge stale creator oauth states",
+  { minuteUTC: 30 },
+  internal.creatorSocial.purgeStaleOAuthStates,
+  {}
+);
+
 export default crons;

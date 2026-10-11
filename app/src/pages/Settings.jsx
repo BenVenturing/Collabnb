@@ -12,6 +12,7 @@ import { COUNTRIES } from '../lib/countries';
 import { reopenChecklist } from '../components/OnboardingChecklist';
 import ReceiptCheckoutOverlay from '../components/ReceiptCheckoutOverlay';
 import StayAlerts from '../components/StayAlerts';
+import SocialAccountsSettings from '../components/SocialAccountsSettings';
 import { getInstallState, subscribeInstall, promptInstall } from '../lib/pwaInstall';
 
 const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL;
@@ -652,6 +653,7 @@ export default function Settings() {
                     comingSoon={!!profile?.pending_tier}
                   />
                 )}
+                {profile?.role === 'creator' && <SocialAccountsSettings />}
                 <FieldRow label={t('account.locationSettings')} value={t('account.locationSettingsValue')} action={t('account.edit')} onAction={() => goProfile('location')} />
               </>
             )}

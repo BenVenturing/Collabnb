@@ -80,6 +80,12 @@ export default defineSchema({
     metrics_avg_likes: v.optional(v.number()),
     metrics_avg_comments: v.optional(v.number()),
     metrics_updated_at: v.optional(v.number()),
+    // Written by creatorSocial.recomputeProfileMetrics from connected accounts.
+    // Deliberately separate from metrics_updated_at, which gates the 30-day
+    // manual-edit lock in updateMetrics — a daily auto-sync must not trip it.
+    metrics_synced_at: v.optional(v.number()),
+    metrics_verified_platforms: v.optional(v.array(v.string())),
+    engagement_tier: v.optional(v.string()),
     pending_tier: v.optional(v.string()),
     tier_change_requested_at: v.optional(v.number()),
     niches: v.optional(v.array(v.string())),
@@ -368,6 +374,9 @@ export default defineSchema({
     // "unread" reflects real read state instead of just "who sent last".
     owner_read_at: v.optional(v.number()),
     participant_read_at: v.optional(v.number()),
+    // Profile ids who deleted this conversation from their own inbox. The
+    // thread stays for the other party.
+    hidden_for: v.optional(v.array(v.string())),
   })
     .index("by_collab", ["collab_id"])
     .index("by_owner", ["owner_id"])
@@ -1111,4 +1120,63 @@ export default defineSchema({
     .index("by_comment", ["comment_id"])
     .index("by_ref_token", ["ref_token"])
     .index("by_created_at", ["created_at"]),
+
+  // A creator's linked Instagram / TikTok (OAuth, verified) or YouTube (public
+  // API lookup, unverified). Tokens are AES-GCM encrypted (lib/crypto.ts) and
+  // are never returned by any query — see creatorSocial.ts.
+  creator_social_connections: defineTable({
+    profile_id: v.string(),
+    platform: v.union(v.literal("instagram"), v.literal("tiktok"), v.literal("youtube")),
+    verified: v.boolean(),
+    handle: v.optional(v.string()),
+    account_id: v.optional(v.string()),
+    access_token_enc: v.optional(v.string()),
+    access_token_iv: v.optional(v.string()),
+    refresh_token_enc: v.optional(v.string()),
+    refresh_token_iv: v.optional(v.string()),
+    expires_at: v.optional(v.number()),
+    refresh_expires_at: v.optional(v.number()),
+    follower_count: v.optional(v.number()),
+    media_count: v.optional(v.number()),
+    avg_views: v.optional(v.number()),
+    avg_likes: v.optional(v.number()),
+    avg_comments: v.optional(v.number()),
+    posts_sampled: v.optional(v.number()),
+    connected_at: v.number(),
+    last_synced_at: v.optional(v.number()),
+    sync_error: v.optional(v.string()),
+    needs_reconnect: v.optional(v.boolean()),
+  })
+    .index("by_profile", ["profile_id"])
+    .index("by_profile_platform", ["profile_id", "platform"]),
+
+  // Posts a creator chose to show on their profile. embed_url/permalink are
+  // always built server-side from validated ids, never taken from the client.
+  creator_portfolio_items: defineTable({
+    profile_id: v.string(),
+    platform: v.union(v.literal("instagram"), v.literal("tiktok"), v.literal("youtube")),
+    source: v.union(v.literal("connected"), v.literal("url")),
+    external_id: v.string(),
+    permalink: v.string(),
+    embed_url: v.string(),
+    thumbnail_url: v.optional(v.string()),
+    caption: v.optional(v.string()),
+    media_type: v.optional(v.string()),
+    posted_at: v.optional(v.number()),
+    views: v.optional(v.number()),
+    likes: v.optional(v.number()),
+    comments: v.optional(v.number()),
+    sort_order: v.number(),
+    created_at: v.number(),
+    synced_at: v.optional(v.number()),
+  }).index("by_profile", ["profile_id"]),
+
+  // Single-use OAuth `state` values (10 min TTL) tying a callback back to the
+  // profile that started it.
+  creator_social_oauth_states: defineTable({
+    state: v.string(),
+    profile_id: v.string(),
+    platform: v.union(v.literal("instagram"), v.literal("tiktok")),
+    created_at: v.number(),
+  }).index("by_state", ["state"]),
 });

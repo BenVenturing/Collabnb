@@ -5,6 +5,7 @@ import { requireAuthedProfile, requireOwnerOrAdmin, requireAdmin, isServerAdminE
 import { cleanPlainText, cleanOptionalUrl } from "./lib/sanitize";
 import { enforceRateLimit, RATE_LIMITS } from "./lib/rateLimit";
 import { REFERRAL_CODE_MAX_USES } from "./referrals";
+import { engagementTier } from "./lib/engagement";
 
 export const countAll = query({
   args: {},
@@ -336,15 +337,7 @@ export const getPublicGlobeProfiles = query({
       ctx.db.query("profiles").withIndex("by_role", (q) => q.eq("role", "host")).collect(),
     ]);
     return [...creators, ...hosts]
-      .filter((p) => p.is_verified === true)
-      .filter((p) => {
-        const email = (p.email || "").toLowerCase();
-        const uname = (p.username || "").toLowerCase();
-        if (email.endsWith("@collabnb.com")) return false;
-        if (email === "benventuring@gmail.com") return false;
-        if (uname === "collabnb" || uname === "strawberryandblonde00") return false;
-        return true;
-      })
+      .filter((p) => p.is_verified === true && p.is_rejected !== true)
       .map((p) => ({ role: p.role, city: p.city, country: p.country }));
   },
 });
@@ -1167,6 +1160,12 @@ export const deleteProfile = mutation({
     const pId = String(args.profileId);
     const email = profile.email;
 
+    // Delete linked social accounts + portfolio posts
+    const socialConns = await ctx.db.query("creator_social_connections").withIndex("by_profile", (q) => q.eq("profile_id", pId)).collect();
+    await Promise.all(socialConns.map((c) => ctx.db.delete(c._id)));
+    const socialItems = await ctx.db.query("creator_portfolio_items").withIndex("by_profile", (q) => q.eq("profile_id", pId)).collect();
+    await Promise.all(socialItems.map((i) => ctx.db.delete(i._id)));
+
     // Delete pitch counts
     const pitchCounts = await ctx.db.query("pitch_counts").withIndex("by_user", (q) => q.eq("user_id", pId)).collect();
     await Promise.all(pitchCounts.map((c) => ctx.db.delete(c._id)));
@@ -1336,6 +1335,16 @@ export const updateMetrics = mutation({
     if (profile.metrics_updated_at && Date.now() - profile.metrics_updated_at < 30 * 24 * 60 * 60 * 1000) {
       throw new Error("Metrics can only be updated once every 30 days.");
     }
+    // Platforms linked through OAuth/API own their own numbers; ignore manual input for them.
+    const verified = profile.metrics_verified_platforms ?? [];
+    if (verified.includes("instagram")) instagram = profile.metrics_instagram_followers;
+    if (verified.includes("tiktok")) tiktok = profile.metrics_tiktok_followers;
+    if (verified.includes("youtube")) youtube = profile.metrics_youtube_subscribers;
+    if (verified.length > 0) {
+      avg_views = profile.metrics_avg_views;
+      avg_likes = profile.metrics_avg_likes;
+      avg_comments = profile.metrics_avg_comments;
+    }
     const totalFollowers = (instagram ?? 0) + (tiktok ?? 0) + (youtube ?? 0);
     const er =
       avg_views && avg_views > 0
@@ -1351,7 +1360,10 @@ export const updateMetrics = mutation({
       metrics_updated_at: Date.now(),
     };
     if (totalFollowers > 0) patch.follower_count = totalFollowers;
-    if (er !== undefined) patch.engagement_rate = er;
+    if (er !== undefined) {
+      patch.engagement_rate = er;
+      patch.engagement_tier = engagementTier(er, "views");
+    }
     await ctx.db.patch(profileId as any, patch);
   },
 });
@@ -1501,6 +1513,8 @@ export const listPublicCreators = query({
           avatar: p.avatar_url ?? null,
           followers,
           engagement: p.engagement_rate ?? 0,
+          engagement_tier: p.engagement_tier ?? null,
+          verified_platforms: p.metrics_verified_platforms ?? [],
           collab_count: p.collab_count ?? 0,
           completed_collab_count: collabStats[i].completed,
           total_collab_count: collabStats[i].total,

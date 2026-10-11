@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import collabnbLogo from '../assets/collabnb-logo.png';
+import SocialPortfolio from '../components/SocialPortfolio';
 
 // The one app page a signed-out stranger can reach. It is what the mobile
 // share sheet, the QR code and every pasted profile link resolve to, so it
@@ -126,6 +127,8 @@ export default function PublicProfile() {
               ))}
             </div>
           )}
+
+          {profile.role === 'creator' && <SocialPortfolio username={profile.username} />}
 
           {profile.portfolio_images?.length > 0 && (
             <div style={S.grid}>

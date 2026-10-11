@@ -760,4 +760,24 @@ http.route({
   }),
 });
 
+// OAuth return for creator Instagram / TikTok linking (creatorSocial.ts). The
+// provider redirects the browser here; we finish the exchange and bounce the
+// user back to Settings.
+for (const platform of ["instagram", "tiktok"] as const) {
+  http.route({
+    path: `/creator-social/${platform}/callback`,
+    method: "GET",
+    handler: httpAction(async (ctx, request) => {
+      const q = new URL(request.url).searchParams;
+      const location: string = await ctx.runAction(internal.creatorSocial.handleOAuthCallback, {
+        platform,
+        code: q.get("code") ?? undefined,
+        state: q.get("state") ?? undefined,
+        error: q.get("error") ?? q.get("error_reason") ?? undefined,
+      });
+      return new Response(null, { status: 302, headers: { Location: location } });
+    }),
+  });
+}
+
 export default http;

@@ -1,15 +1,9 @@
-import { useState, useMemo, useRef, useEffect } from 'react';
-import { useQuery } from 'convex/react';
+import { useState, useMemo, useRef } from 'react';
+import { useQuery, useMutation } from 'convex/react';
 import { useTranslation } from 'react-i18next';
 import { api } from '../../convex/_generated/api';
 import { useAuth } from '../contexts/AuthContext';
 import CreatorAvatar from '../components/CreatorAvatar';
-import { ListingCard } from './Explore';
-import benVenturingPhoto from '../assets/ben-venturing.png';
-import collabnbLogo from '../assets/collabnb-logo.png';
-
-// Real Clerk-hosted avatar for the strawberryandblonde00 creator account.
-const STRAWBERRYANDBLONDE_AVATAR = 'https://img.clerk.com/eyJ0eXBlIjoicHJveHkiLCJzcmMiOiJodHRwczovL2ltYWdlcy5jbGVyay5kZXYvdXBsb2FkZWQvaW1nXzNIQU9oN2dxYkRqaTNFbzZzTWp4MnZwM3V5TyJ9';
 
 /*
  * Founders — the lifetime founding-member space.
@@ -17,7 +11,7 @@ const STRAWBERRYANDBLONDE_AVATAR = 'https://img.clerk.com/eyJ0eXBlIjoicHJveHkiLC
  * this page has already been accepted + verified, so there is no locked/claim state.
  *
  * Live: founder counts (api.admin.getFounderCounts) + directory (api.admin.getFounderDirectory).
- * Seed (until the group-chat + resources backend is wired): lounge threads, resources,
+ * Lounge: live Convex threads (api.founderLounge). Seed (until the resources backend is wired): resources
  * and early-access listings (stand-in = SAMPLE_LISTINGS rendered through the real card).
  */
 
@@ -32,7 +26,6 @@ const IconChat  = ({ s = 18 }) => (<svg viewBox="0 0 24 24" width={s} height={s}
 const IconBook  = ({ s = 18 }) => (<svg viewBox="0 0 24 24" width={s} height={s} {...stroke}><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>);
 const IconClock = ({ s = 18 }) => (<svg viewBox="0 0 24 24" width={s} height={s} {...stroke}><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>);
 const IconUsers = ({ s = 18 }) => (<svg viewBox="0 0 24 24" width={s} height={s} {...stroke}><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>);
-const IconPin   = ({ s = 15 }) => (<svg viewBox="0 0 24 24" width={s} height={s} {...stroke}><path d="M9 4v6l-2 4h10l-2-4V4"/><path d="M12 14v7"/><path d="M8 4h8"/></svg>);
 const IconPlus  = ({ s = 15 }) => (<svg viewBox="0 0 24 24" width={s} height={s} {...stroke}><path d="M12 5v14M5 12h14"/></svg>);
 const IconReply = ({ s = 13 }) => (<svg viewBox="0 0 24 24" width={s} height={s} {...stroke}><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>);
 const IconLock  = ({ s = 14 }) => (<svg viewBox="0 0 24 24" width={s} height={s} {...stroke}><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>);
@@ -69,31 +62,6 @@ function AvatarStar({ name, src, size = 38, founder }) {
 }
 
 // ── Seed data ────────────────────────────────────────────────────────────────
-const SEED_THREADS = {
-  creator: [
-    { id: 'c1', author: 'Ben Venturing', avatar: benVenturingPhoto, founder: true, time: '9:12 AM',
-      text: 'Just wrapped my first villa collab in Tulum — the host let me shoot sunrise on the rooftop. Happy to share my shot list if anyone wants it.',
-      reactions: [{ e: '🔥', n: 6 }, { e: '🙌', n: 3 }],
-      replies: [
-        { id: 'c1r1', author: 'StrawberryandBlonde', avatar: STRAWBERRYANDBLONDE_AVATAR, founder: false, time: '9:20 AM', text: 'Yes please! Shooting my first one next week.' },
-        { id: 'c1r2', author: 'Ben Venturing', avatar: benVenturingPhoto, founder: true, time: '9:24 AM', text: 'Dropping it in Resources → Playbooks today.' },
-      ] },
-    { id: 'c2', author: 'Collabnb', avatar: collabnbLogo, founder: false, time: '10:02 AM',
-      text: 'Reminder: early-access listings drop 3 days before they go public. Two new beachfront stays just landed in the Early access tab.',
-      reactions: [{ e: '👀', n: 11 }], replies: [] },
-    { id: 'c3', author: 'StrawberryandBlonde', avatar: STRAWBERRYANDBLONDE_AVATAR, founder: false, time: '11:37 AM',
-      text: 'What rate are people charging for a 3-reel + 5-story package these days? Trying to price a luxury property.',
-      reactions: [{ e: '💭', n: 2 }],
-      replies: [{ id: 'c3r1', author: 'Ben Venturing', avatar: benVenturingPhoto, founder: true, time: '11:41 AM', text: 'Check the Pricing Your Collabs guide — points/tiers math makes this easy.' }] },
-  ],
-  host: [
-    { id: 'h1', author: 'Collabnb', avatar: collabnbLogo, founder: false, time: '9:00 AM',
-      text: "Welcome to the founding hosts lounge — glad you're here. This is your space to ask questions, compare notes with other early hosts, and tell us what you need as we build this out.",
-      reactions: [{ e: '🙌', n: 6 }],
-      replies: [{ id: 'h1r1', author: 'Ben Venturing', avatar: benVenturingPhoto, founder: true, time: '9:14 AM', text: "Thanks for having us — excited to see how everyone's first collabs go." }] },
-  ],
-};
-
 const RESOURCES = [
   { group: 'Playbooks', items: [
     { title: 'The First-Collab Playbook', desc: 'Step-by-step from match to published content.', type: 'PDF' },
@@ -111,20 +79,6 @@ const RESOURCES = [
     { title: 'Hosting Creators 101', desc: 'For hosts — how to run a smooth on-site shoot.', type: 'Video' },
   ] },
 ];
-
-// A single stand-in card that shows what an early-access listing looks like.
-// Remove this once real curated early-access listings exist.
-const EXAMPLE_EARLY_LISTING = {
-  id: 'example',
-  title: 'Cliffside Villa — Amalfi',
-  location: 'Positano, Italy',
-  image: 'https://images.unsplash.com/photo-1533105079780-92b9be482077?w=800&q=80',
-  compensation: '3-night stay + €400',
-  deliverables: '3 Reels · 5 Photos',
-  collab_type: 'UGC Video',
-  dates_available: 'Example listing',
-  is_featured: false, _isSample: false, _redacted: false,
-};
 
 const QUICK_REACTIONS = ['🔥', '🙌', '❤️', '👀', '💭'];
 
@@ -144,52 +98,58 @@ function ComingSoonWatermark({ label }) {
 }
 
 // ── Lounge (single private room, threaded) ────────────────────────────────────
-function Thread({ msg, onReact, onReply }) {
+function timeAgo(ts) {
+  const m = Math.floor((Date.now() - ts) / 60000);
+  if (m < 1) return 'just now';
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  const d = Math.floor(h / 24);
+  if (d < 7) return `${d}d ago`;
+  return new Date(ts).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+
+function Thread({ msg, meId, onReact, onReply, onDelete }) {
   const { t } = useTranslation('founders');
   const [replying, setReplying] = useState(false);
   const [draft, setDraft] = useState('');
+  const canDelete = (id) => id === meId;
   return (
     <div className="fnd-thread" style={{ display: 'flex', gap: '0.75rem', padding: '0.95rem 0' }}>
       <AvatarStar name={msg.author} src={msg.avatar} founder={msg.founder} />
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem', flexWrap: 'wrap' }}>
           <span style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--ink)' }}>{msg.author}</span>
-          <span style={{ fontSize: '0.7rem', color: 'var(--sage)' }}>{msg.time}</span>
+          <span style={{ fontSize: '0.7rem', color: 'var(--sage)' }}>{timeAgo(msg.created_at)}</span>
+          {canDelete(msg.author_id) && <button onClick={() => onDelete(msg.id)} style={{ fontSize: '0.68rem', color: 'var(--sage)' }}>{t('thread.delete')}</button>}
         </div>
-        <p style={{ margin: '0.15rem 0 0', fontSize: '0.875rem', color: 'var(--slate)', lineHeight: 1.5 }}>{msg.text}</p>
+        <p style={{ margin: '0.15rem 0 0', fontSize: '0.875rem', color: 'var(--slate)', lineHeight: 1.5, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{msg.text}</p>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
           {msg.reactions?.map((r) => (
-            <button key={r.e} onClick={() => onReact(msg.id, r.e)} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem', background: 'rgba(255,255,255,0.7)', border: '1px solid var(--hairline)', borderRadius: '999px', padding: '0.1rem 0.5rem', color: 'var(--slate)' }}>{r.e} <span style={{ fontWeight: 600 }}>{r.n}</span></button>
+            <button key={r.e} onClick={() => onReact(msg.id, r.e)} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem', background: r.mine ? GOLD_SOFT : 'rgba(255,255,255,0.7)', border: `1px solid ${r.mine ? GOLD_LINE : 'var(--hairline)'}`, borderRadius: '999px', padding: '0.1rem 0.5rem', color: 'var(--slate)' }}>{r.e} <span style={{ fontWeight: 600 }}>{r.n}</span></button>
           ))}
           <div className="fnd-tools" style={{ display: 'inline-flex', gap: '0.15rem', alignItems: 'center' }}>
             {QUICK_REACTIONS.map((e) => (
               <button key={e} onClick={() => onReact(msg.id, e)} title={t('thread.reactTitle')} style={{ fontSize: '0.82rem', opacity: 0.6, padding: '0.05rem 0.15rem' }}>{e}</button>
             ))}
-            <button onClick={() => setReplying((v) => !v)} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.2rem', fontSize: '0.72rem', fontWeight: 600, color: GOLD, marginLeft: '0.2rem' }}><IconReply /> {t('thread.reply')}</button>
+            {onReply && <button onClick={() => setReplying((v) => !v)} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.2rem', fontSize: '0.72rem', fontWeight: 600, color: GOLD, marginLeft: '0.2rem' }}><IconReply /> {t('thread.reply')}</button>}
           </div>
         </div>
 
         {msg.replies?.length > 0 && (
           <div style={{ marginTop: '0.6rem', paddingLeft: '0.85rem', borderLeft: `2px solid ${GOLD_SOFT}`, display: 'flex', flexDirection: 'column', gap: '0.7rem' }}>
             {msg.replies.map((r) => (
-              <div key={r.id} style={{ display: 'flex', gap: '0.55rem' }}>
-                <AvatarStar name={r.author} src={r.avatar} founder={r.founder} size={26} />
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.4rem' }}>
-                    <span style={{ fontWeight: 700, fontSize: '0.78rem', color: 'var(--ink)' }}>{r.author}</span>
-                    <span style={{ fontSize: '0.65rem', color: 'var(--sage)' }}>{r.time}</span>
-                  </div>
-                  <p style={{ margin: '0.1rem 0 0', fontSize: '0.82rem', color: 'var(--slate)', lineHeight: 1.45 }}>{r.text}</p>
-                </div>
+              <div key={r.id} className="fnd-thread">
+                <Thread msg={{ ...r, replies: [] }} meId={meId} onReact={onReact} onDelete={onDelete} />
               </div>
             ))}
           </div>
         )}
 
-        {replying && (
+        {replying && onReply && (
           <form onSubmit={(e) => { e.preventDefault(); if (draft.trim()) { onReply(msg.id, draft.trim()); setDraft(''); setReplying(false); } }} style={{ display: 'flex', gap: '0.5rem', marginTop: '0.6rem' }}>
-            <input autoFocus value={draft} onChange={(e) => setDraft(e.target.value)} placeholder={t('thread.replyPlaceholder')} style={{ flex: 1, fontSize: '0.82rem', padding: '0.5rem 0.75rem', borderRadius: '999px', border: '1px solid var(--hairline)', background: 'rgba(255,255,255,0.85)', outline: 'none' }} />
+            <input autoFocus maxLength={2000} value={draft} onChange={(e) => setDraft(e.target.value)} placeholder={t('thread.replyPlaceholder')} style={{ flex: 1, fontSize: '0.82rem', padding: '0.5rem 0.75rem', borderRadius: '999px', border: '1px solid var(--hairline)', background: 'rgba(255,255,255,0.85)', outline: 'none' }} />
             <button type="submit" style={{ fontSize: '0.78rem', fontWeight: 700, color: '#fff', background: GOLD, borderRadius: '999px', padding: '0.5rem 0.9rem' }}>{t('thread.send')}</button>
           </form>
         )}
@@ -200,30 +160,32 @@ function Thread({ msg, onReact, onReply }) {
 
 function Lounge({ role }) {
   const { t } = useTranslation('founders');
-  const [threads, setThreads] = useState(() => SEED_THREADS[role].map((m) => ({ ...m })));
+  const { profile } = useAuth();
+  const threads = useQuery(api.founderLounge.list, { room: role });
+  const post = useMutation(api.founderLounge.post);
+  const react = useMutation(api.founderLounge.react);
+  const remove = useMutation(api.founderLounge.remove);
   const [draft, setDraft] = useState('');
+  const [error, setError] = useState('');
   const composerRef = useRef(null);
   const scrollRef = useRef(null);
   const roomLabel = role === 'creator' ? t('lounge.roomLabelCreator') : t('lounge.roomLabelHost');
+  const meId = profile?._id ? String(profile._id) : null;
 
-  useEffect(() => { setThreads(SEED_THREADS[role].map((m) => ({ ...m }))); }, [role]);
-
-  const react = (id, emoji) => setThreads((prev) => prev.map((m) => {
-    if (m.id !== id) return m;
-    const existing = (m.reactions || []).find((r) => r.e === emoji);
-    const reactions = existing ? m.reactions.map((r) => r.e === emoji ? { ...r, n: r.n + 1 } : r) : [...(m.reactions || []), { e: emoji, n: 1 }];
-    return { ...m, reactions };
-  }));
-
-  const reply = (id, text) => setThreads((prev) => prev.map((m) => m.id === id
-    ? { ...m, replies: [...(m.replies || []), { id: `${id}r${Date.now()}`, author: 'You', founder: true, time: 'now', text }] } : m));
+  const run = async (fn) => {
+    setError('');
+    try { await fn(); } catch (e) { setError(e?.data || t('lounge.error')); }
+  };
 
   const startThread = (e) => {
     e.preventDefault();
-    if (!draft.trim()) return;
-    setThreads((prev) => [...prev, { id: `me${Date.now()}`, author: 'You', founder: true, time: 'now', text: draft.trim(), reactions: [], replies: [] }]);
+    const text = draft.trim();
+    if (!text) return;
     setDraft('');
-    requestAnimationFrame(() => scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' }));
+    run(async () => {
+      await post({ room: role, text });
+      requestAnimationFrame(() => scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' }));
+    });
   };
 
   return (
@@ -239,23 +201,27 @@ function Lounge({ role }) {
         <button onClick={() => composerRef.current?.focus()} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.76rem', fontWeight: 700, color: GOLD, background: GOLD_SOFT, border: `1px solid ${GOLD_LINE}`, borderRadius: '999px', padding: '0.4rem 0.8rem' }}><IconPlus /> {t('lounge.newThread')}</button>
       </div>
 
-      <div style={{ display: 'flex', gap: '0.55rem', alignItems: 'flex-start', padding: '0.7rem 1.15rem', background: GOLD_SOFT, borderBottom: `1px solid ${GOLD_LINE}` }}>
-        <span style={{ color: GOLD, display: 'flex', marginTop: 1 }}><IconPin /></span>
-        <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--slate)' }}>
-          <strong style={{ color: GOLD }}>{t('lounge.pinnedByPrefix')}</strong>{t('lounge.pinnedBody')}
-        </p>
-      </div>
-
       <div ref={scrollRef} style={{ flex: 1, overflowY: 'auto', padding: '0.35rem 1.15rem' }}>
-        {threads.map((m, i) => (
+        {threads !== undefined && threads.length === 0 && (
+          <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', gap: '0.5rem', padding: '1rem' }}>
+            <span style={{ color: GOLD, display: 'flex' }}><IconChat s={30} /></span>
+            <p style={{ margin: 0, fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.05rem', color: 'var(--ink)' }}>{t('lounge.emptyTitle')}</p>
+            <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--sage)', maxWidth: 320 }}>{t('lounge.emptyBody', { rolePlural: t(`roleLabelPlural.${role}`) })}</p>
+          </div>
+        )}
+        {threads?.map((m, i) => (
           <div key={m.id} style={{ borderTop: i === 0 ? 'none' : '1px solid var(--hairline)' }}>
-            <Thread msg={m} onReact={react} onReply={reply} />
+            <Thread msg={m} meId={meId}
+              onReact={(id, emoji) => run(() => react({ postId: id, emoji }))}
+              onReply={(id, text) => run(() => post({ room: role, text, parentId: id }))}
+              onDelete={(id) => run(() => remove({ postId: id }))} />
           </div>
         ))}
       </div>
 
+      {error && <p style={{ margin: 0, padding: '0.4rem 1.15rem', fontSize: '0.76rem', color: '#B3402E' }}>{error}</p>}
       <form onSubmit={startThread} style={{ padding: '0.8rem 1.15rem', borderTop: '1px solid var(--hairline)', display: 'flex', gap: '0.6rem', alignItems: 'center' }}>
-        <input ref={composerRef} value={draft} onChange={(e) => setDraft(e.target.value)} placeholder={t('lounge.startThreadPlaceholder')} style={{ flex: 1, fontSize: '0.87rem', padding: '0.7rem 1rem', borderRadius: '999px', border: '1px solid var(--hairline)', background: 'rgba(255,255,255,0.85)', outline: 'none' }} />
+        <input ref={composerRef} maxLength={2000} value={draft} onChange={(e) => setDraft(e.target.value)} placeholder={t('lounge.startThreadPlaceholder')} style={{ flex: 1, fontSize: '0.87rem', padding: '0.7rem 1rem', borderRadius: '999px', border: '1px solid var(--hairline)', background: 'rgba(255,255,255,0.85)', outline: 'none' }} />
         <button type="submit" style={{ fontSize: '0.85rem', fontWeight: 700, color: '#fff', background: GOLD, borderRadius: '999px', padding: '0.7rem 1.25rem' }}>{t('lounge.post')}</button>
       </form>
     </div>
@@ -315,26 +281,30 @@ function Resources() {
   );
 }
 
-// ── Early access — one example card showing how early-access listings appear ──
+// ── Early access — blurred preview until real curated listings exist ─────────
 function EarlyAccess() {
   const { t } = useTranslation('founders');
   return (
-    <div>
-      <div className="glass-card" style={{ padding: '0.9rem 1.15rem', marginBottom: '1.2rem', display: 'flex', gap: '0.6rem', alignItems: 'center' }}>
-        <span style={{ color: GOLD, display: 'flex' }}><IconClock s={18} /></span>
-        <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--slate)' }}>
-          <strong style={{ color: GOLD }}>{t('earlyAccess.headStartPrefix')}</strong> {t('earlyAccess.headStartBody')}
-        </p>
+    <div style={{ position: 'relative', minHeight: 360 }}>
+      <div aria-hidden style={{ pointerEvents: 'none', userSelect: 'none', filter: 'blur(6px)', opacity: 0.45, display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(240px,1fr))', gap: '1rem' }}>
+        {[0, 1, 2].map((i) => (
+          <div key={i} className="glass-card" style={{ padding: 0, overflow: 'hidden' }}>
+            <div style={{ height: 170, background: 'linear-gradient(135deg, rgba(212,168,67,0.35), rgba(25,37,36,0.12))' }} />
+            <div style={{ padding: '0.9rem 1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <div style={{ height: 12, width: '70%', borderRadius: 6, background: 'rgba(25,37,36,0.18)' }} />
+              <div style={{ height: 10, width: '45%', borderRadius: 6, background: 'rgba(25,37,36,0.12)' }} />
+            </div>
+          </div>
+        ))}
       </div>
-
-      <div style={{ position: 'relative', width: 260, maxWidth: '100%' }}>
-        <ListingCard listing={EXAMPLE_EARLY_LISTING} saved={false} onSave={() => {}} delay={0} onNavigate={() => {}} />
-        <span style={{ position: 'absolute', top: '0.75rem', left: '0.75rem', zIndex: 2, display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.04em', textTransform: 'uppercase', color: '#fff', background: 'rgba(184,146,42,0.94)', borderRadius: '999px', padding: '0.28rem 0.6rem', boxShadow: '0 2px 8px rgba(0,0,0,0.18)' }}>
-          <FounderStar size={12} ring={false} /> {t('earlyAccess.earlyBadge')}
-        </span>
-        <span style={{ position: 'absolute', top: '0.75rem', right: '0.75rem', zIndex: 2, fontSize: '0.58rem', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--slate)', background: 'rgba(255,255,255,0.9)', borderRadius: '999px', padding: '0.24rem 0.55rem' }}>
-          {t('earlyAccess.exampleBadge')}
-        </span>
+      <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+        <div className="glass-card" style={{ textAlign: 'center', padding: '1.75rem 2rem', maxWidth: 400 }}>
+          <div style={{ width: 52, height: 52, margin: '0 auto', borderRadius: '50%', background: 'linear-gradient(135deg, #D4A843, #B8922A)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', boxShadow: '0 6px 18px rgba(184,146,42,0.45)' }}>
+            <IconClock s={22} />
+          </div>
+          <p style={{ margin: '0.9rem 0 0', fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.15rem', letterSpacing: '-0.02em', color: 'var(--ink)' }}>{t('earlyAccess.gateHeading')}</p>
+          <p style={{ margin: '0.4rem 0 0', fontSize: '0.82rem', color: 'var(--slate)', lineHeight: 1.5 }}>{t('earlyAccess.gateBody')}</p>
+        </div>
       </div>
     </div>
   );

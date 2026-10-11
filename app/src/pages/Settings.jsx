@@ -1261,18 +1261,20 @@ function SubscriptionCard({ profile, hasActiveSub, portalLoading, onUpgrade, onM
       : 0;
     const lifetimeSavings = Math.round(monthsSincePaidStart * 10);
     return (
-      <div style={{ borderRadius: '1rem', padding: '1.1rem 1.25rem', background: 'linear-gradient(135deg, rgba(212,168,67,0.1) 0%, rgba(212,168,67,0.04) 100%)', border: '1px solid rgba(212,168,67,0.2)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <div style={{ width: 36, height: 36, borderRadius: '50%', flexShrink: 0, background: 'rgba(212,168,67,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <svg viewBox="0 0 16 16" width="15" height="15" fill="#D4A843"><path d="M8 1.5l1.67 3.38 3.73.54-2.7 2.63.64 3.72L8 9.77l-3.34 1.76.64-3.72L2.6 5.42l3.73-.54z"/></svg>
+      <div style={{ position: 'relative', overflow: 'hidden', borderRadius: '1.1rem', padding: '1.25rem 1.35rem', background: 'linear-gradient(135deg, #2A2210 0%, #1B1608 55%, #2E2511 100%)', border: '1px solid rgba(232,196,98,0.55)', boxShadow: '0 10px 30px rgba(184,146,42,0.22), inset 0 1px 0 rgba(255,236,170,0.25)' }}>
+        <div aria-hidden style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle at 12% 0%, rgba(232,196,98,0.28), transparent 55%), linear-gradient(115deg, transparent 40%, rgba(255,236,170,0.09) 50%, transparent 60%)', pointerEvents: 'none' }} />
+        <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '0.9rem' }}>
+          <div style={{ width: 46, height: 46, borderRadius: '50%', flexShrink: 0, background: 'linear-gradient(135deg, #F3D98B 0%, #D4A843 50%, #A87820 100%)', boxShadow: '0 4px 14px rgba(212,168,67,0.5), inset 0 1px 0 rgba(255,255,255,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <svg viewBox="0 0 16 16" width="20" height="20" fill="#fff"><path d="M8 1.5l1.67 3.38 3.73.54-2.7 2.63.64 3.72L8 9.77l-3.34 1.76.64-3.72L2.6 5.42l3.73-.54z"/></svg>
           </div>
-          <div>
-            <p style={{ fontSize: '0.86rem', fontWeight: 700, color: '#A87820', margin: 0 }}>{t('billing.subscription.founderTitle')}</p>
-            <p style={{ fontSize: '0.76rem', color: '#C4921A', margin: '0.1rem 0 0' }}>{t('billing.subscription.founderSub')}</p>
+          <div style={{ minWidth: 0 }}>
+            <p style={{ fontSize: '0.62rem', fontWeight: 800, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#E8C462', margin: 0 }}>Lifetime</p>
+            <p style={{ fontFamily: 'var(--font-display)', fontSize: '1.05rem', fontWeight: 800, letterSpacing: '-0.01em', color: '#FBF1D0', margin: '0.1rem 0 0' }}>{t('billing.subscription.founderTitle')}</p>
+            <p style={{ fontSize: '0.76rem', color: 'rgba(251,241,208,0.72)', margin: '0.15rem 0 0' }}>{t('billing.subscription.founderSub')}</p>
           </div>
         </div>
         {lifetimeSavings > 0 && (
-          <p style={{ fontSize: '0.76rem', color: '#A87820', fontWeight: 600, margin: '0.75rem 0 0', paddingTop: '0.75rem', borderTop: '1px solid rgba(212,168,67,0.2)' }}>
+          <p style={{ position: 'relative', fontSize: '0.76rem', color: '#E8C462', fontWeight: 600, margin: '0.9rem 0 0', paddingTop: '0.8rem', borderTop: '1px solid rgba(232,196,98,0.28)' }}>
             {t('billing.subscription.founderSavings', { amount: lifetimeSavings })}
           </p>
         )}

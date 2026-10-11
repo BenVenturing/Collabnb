@@ -21,6 +21,9 @@ export const RATE_LIMITS = {
   CONTACT_MESSAGE: { max: 5, windowMs: 60 * 60 * 1000 },      // messages.submitMessage (contact form) — 5/hour per email
   THREAD_MESSAGE: { max: 30, windowMs: 60 * 60 * 1000 },      // threadMessages.sendMessage — 30/hour per user
   LISTING_WRITE: { max: 10, windowMs: 24 * 60 * 60 * 1000 },  // listings.create/update — 10/day per host
+  FOUNDER_POST: { max: 60, windowMs: 24 * 60 * 60 * 1000 },   // founderLounge.post — 60/day per founder
+  FOUNDER_POST_BURST: { max: 8, windowMs: 60 * 1000 },         // founderLounge.post — 8/min per founder, stops copy-paste spam
+  FOUNDER_REACT: { max: 120, windowMs: 60 * 60 * 1000 },       // founderLounge.react — 120/hour per founder
   REPORT: { max: 10, windowMs: 24 * 60 * 60 * 1000 },         // reports.submitReport — 10/day per user
   PITCH: { max: 20, windowMs: 24 * 60 * 60 * 1000 },          // pitches.create backstop — 20/day per user (pitch_counts already caps at 10/month; this only guards the direct-mutation-call path that skips it)
   CRASH_REPORT: { max: 20, windowMs: 60 * 60 * 1000 },        // crashReports.submitCrashReport — 20/hour per caller, mainly to cap a crash-loop rather than deter abuse

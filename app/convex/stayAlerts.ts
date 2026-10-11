@@ -183,13 +183,25 @@ export const remove = mutation({
 // Scheduled from listings.create/update the first time a listing reaches
 // "published". listings.stay_alerts_notified_at makes this idempotent, so a
 // listing pulled back to draft and re-published never re-notifies anyone.
+//
+// Founders get it first (phase "founders", at publish); everyone else follows
+// EARLY_ACCESS_DELAY_MS later (phase "everyone"), matching the 3-day head-start
+// promised in the Founders space.
+export const EARLY_ACCESS_DELAY_MS = 3 * 24 * 60 * 60 * 1000;
+
 export const notifyForListing = internalMutation({
-  args: { listingId: v.id("listings") },
-  handler: async (ctx, { listingId }) => {
+  args: { listingId: v.id("listings"), phase: v.optional(v.union(v.literal("founders"), v.literal("everyone"))) },
+  handler: async (ctx, { listingId, phase = "founders" }) => {
     const listing: any = await ctx.db.get(listingId);
     if (!listing || !isAlertableListing(listing)) return;
-    if (listing.stay_alerts_notified_at) return;
-    await ctx.db.patch(listingId, { stay_alerts_notified_at: Date.now() });
+    if (phase === "founders") {
+      if (listing.stay_alerts_notified_at) return;
+      await ctx.db.patch(listingId, { stay_alerts_notified_at: Date.now() });
+      await ctx.scheduler.runAfter(EARLY_ACCESS_DELAY_MS, internal.stayAlerts.notifyForListing, { listingId, phase: "everyone" });
+    } else {
+      if (listing.stay_alerts_public_at) return;
+      await ctx.db.patch(listingId, { stay_alerts_public_at: Date.now() });
+    }
 
     const alerts = await ctx.db.query("stay_alerts").collect();
     const loc = locationLine(listing);
@@ -203,6 +215,7 @@ export const notifyForListing = internalMutation({
 
       const profile: any = await ctx.db.get(alert.user_id as any);
       if (!profile) continue;
+      if ((profile.is_founder === true) !== (phase === "founders")) continue;
       // The host who published it is never alerted about their own listing.
       if (String(profile._id) === String(listing.host_id)) continue;
       // Master switch. Default-off: newListings starts false in the UI, and the

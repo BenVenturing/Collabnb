@@ -319,6 +319,8 @@ export default defineSchema({
     // (see stayAlerts.notifyForListing) — re-publishing a listing that was
     // pulled back to draft must never re-notify the same creators.
     stay_alerts_notified_at: v.optional(v.number()),
+    // Set when the delayed non-founder wave has gone out.
+    stay_alerts_public_at: v.optional(v.number()),
   }).index("by_location", ["location"]).index("by_host", ["host_id"]),
 
   collaborations: defineTable({
@@ -1179,4 +1181,14 @@ export default defineSchema({
     platform: v.union(v.literal("instagram"), v.literal("tiktok")),
     created_at: v.number(),
   }).index("by_state", ["state"]),
+
+  // Founders' lounge: top-level threads (parent_id unset) and replies, one room per role.
+  founder_posts: defineTable({
+    room: v.union(v.literal("creator"), v.literal("host")),
+    author_id: v.string(),
+    parent_id: v.optional(v.id("founder_posts")),
+    text: v.string(),
+    reactions: v.optional(v.array(v.object({ emoji: v.string(), user_ids: v.array(v.string()) }))),
+    created_at: v.number(),
+  }).index("by_room", ["room", "created_at"]).index("by_parent", ["parent_id"]),
 });

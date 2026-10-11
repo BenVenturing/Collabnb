@@ -331,9 +331,12 @@ export const listBlockableDirectory = query({
 export const getPublicGlobeProfiles = query({
   args: {},
   handler: async (ctx) => {
-    const all = await ctx.db.query("profiles").collect();
-    return all
-      .filter((p) => (p.role === "creator" || p.role === "host") && p.is_verified === true)
+    const [creators, hosts] = await Promise.all([
+      ctx.db.query("profiles").withIndex("by_role", (q) => q.eq("role", "creator")).collect(),
+      ctx.db.query("profiles").withIndex("by_role", (q) => q.eq("role", "host")).collect(),
+    ]);
+    return [...creators, ...hosts]
+      .filter((p) => p.is_verified === true)
       .filter((p) => {
         const email = (p.email || "").toLowerCase();
         const uname = (p.username || "").toLowerCase();
@@ -350,9 +353,8 @@ export const getPublicGlobeProfiles = query({
 export const getHosts = query({
   args: {},
   handler: async (ctx) => {
-    const all = await ctx.db.query("profiles").collect();
-    return all
-      .filter((p) => p.role === "host")
+    const hosts = await ctx.db.query("profiles").withIndex("by_role", (q) => q.eq("role", "host")).collect();
+    return hosts
       .map((p) => ({
         _id: p._id,
         full_name: p.full_name,
@@ -366,8 +368,54 @@ export const getHosts = query({
 export const getByUsername = query({
   args: { username: v.string() },
   handler: async (ctx, args) => {
+    const byIdx = (u: string) => ctx.db.query("profiles").withIndex("by_username", (q) => q.eq("username", u)).first();
+    const hit = (await byIdx(args.username)) ?? (await byIdx(args.username.toLowerCase()));
+    if (hit) return hit;
     const all = await ctx.db.query("profiles").collect();
     return all.find((p) => p.username.toLowerCase() === args.username.toLowerCase()) ?? null;
+  },
+});
+
+// Backs the unauthenticated /u/:username page, which the app's share sheet and
+// QR code point at. getByUsername above returns the whole row — email, Stripe
+// customer and payment-method ids, payout details — so it can never serve an
+// anonymous caller. This returns a whitelist instead: adding a field to the
+// profiles table does not silently publish it.
+//
+// Unverified and rejected profiles 404 rather than render, so a shared link
+// can't be used to preview an account that moderation hasn't cleared.
+export const getPublicByUsername = query({
+  args: { username: v.string() },
+  handler: async (ctx, args) => {
+    const wanted = args.username.trim().toLowerCase();
+    if (!wanted) return null;
+
+    const byIdx = (u: string) =>
+      ctx.db.query("profiles").withIndex("by_username", (q) => q.eq("username", u)).first();
+    const hit = (await byIdx(args.username.trim())) ?? (await byIdx(wanted));
+    if (!hit) return null;
+    if (hit.is_verified !== true || hit.is_rejected === true) return null;
+
+    return {
+      username: hit.username,
+      full_name: hit.full_name,
+      role: hit.role,
+      tier: hit.tier ?? null,
+      bio: hit.bio ?? null,
+      avatar_url: hit.avatar_url ?? null,
+      banner_url: hit.banner_url ?? null,
+      follower_count: hit.follower_count ?? null,
+      collab_count: hit.collab_count ?? null,
+      instagram_handle: hit.instagram_handle ?? null,
+      tiktok_handle: hit.tiktok_handle ?? null,
+      youtube_handle: hit.youtube_handle ?? null,
+      portfolio: hit.portfolio ?? null,
+      portfolio_images: hit.portfolio_images ?? [],
+      city: hit.city ?? null,
+      region: hit.region ?? null,
+      country: hit.country ?? null,
+      is_founder: hit.is_founder === true,
+    };
   },
 });
 
@@ -1411,10 +1459,9 @@ function deriveCreatorTier(followers: number): string {
 export const listPublicCreators = query({
   args: {},
   handler: async (ctx) => {
-    const all = await ctx.db.query("profiles").collect();
+    const all = await ctx.db.query("profiles").withIndex("by_role", (q) => q.eq("role", "creator")).collect();
     const creators = all.filter(
       (p) =>
-        p.role === "creator" &&
         p.is_verified === true &&
         p.is_rejected !== true &&
         p.profile_visible !== false

@@ -41,6 +41,7 @@ const Step5Payment         = lazy(() => import('./pages/host/Step5Payment'));
 const AdminDashboard       = lazy(() => import('./pages/AdminDashboard'));
 const Blog                 = lazy(() => import('./pages/Blog'));
 const BlogPost             = lazy(() => import('./pages/BlogPost'));
+const PublicProfile        = lazy(() => import('./pages/PublicProfile'));
 const ReceiptPreview       = lazy(() => import('./pages/dev/ReceiptPreview'));
 const OrbPreview           = lazy(() => import('./pages/dev/OrbPreview'));
 const WaitlistPreview      = lazy(() => import('./pages/WaitlistPreview'));
@@ -234,7 +235,10 @@ function AppRoutes() {
   if (!session) {
     const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
     const path = window.location.pathname;
-    const isPublicRoute = path === '/blog' || path.startsWith('/blog/') || path === '/dev/receipt-preview';
+    // /profile/:username is the shared/QR destination — it has to render for a
+    // signed-out stranger. Bare /profile is the owner's own page and stays gated.
+    const isPublicProfile = path.startsWith('/profile/') && path !== '/profile/';
+    const isPublicRoute = path === '/blog' || path.startsWith('/blog/') || path === '/dev/receipt-preview' || isPublicProfile;
     if (!isLocalhost && !isPublicRoute) {
       window.location.href = '/login.html';
       return null;
@@ -268,6 +272,9 @@ function AppRoutes() {
           <Route path="/admin" element={<AdminDashboard />} />
 
           {/* Public Journal — no nav chrome, no auth, no launch banner */}
+          {/* Public, chrome-less: reached by shared links and QR codes */}
+          <Route path="/profile/:username" element={<PublicProfile />} />
+
           <Route path="/blog"       element={<Blog />} />
           <Route path="/blog/:slug" element={<BlogPost />} />
 

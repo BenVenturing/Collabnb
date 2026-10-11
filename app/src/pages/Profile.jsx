@@ -1038,7 +1038,7 @@ export default function Profile() {
 
         {dp.role === 'creator' && dp.username && (
           <section style={{ marginBottom: '1.75rem' }}>
-            <SocialPortfolio username={dp.username} />
+            <SocialPortfolio username={dp.username} part="stats" />
           </section>
         )}
 
@@ -1112,6 +1112,12 @@ export default function Profile() {
         <section className="glass section-reveal" ref={(el) => sectionsRef.current[3.5] = el} style={{ padding: '1.5rem', marginBottom: '1.75rem' }}>
           <TravelCalendar viewerRole="self" />
         </section>
+
+        {dp.role === 'creator' && dp.username && (
+          <section style={{ marginBottom: '1.75rem' }}>
+            <SocialPortfolio username={dp.username} part="clips" />
+          </section>
+        )}
 
         {/* ── Globe ────────────────────────────────────────────────────────── */}
         <section className="section-reveal" ref={(el) => sectionsRef.current[4] = el} style={{ textAlign: 'center', paddingBottom: '2rem' }}>

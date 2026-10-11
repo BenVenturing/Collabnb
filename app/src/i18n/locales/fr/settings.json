@@ -301,8 +301,8 @@
     "refreshIn": "Nouvelle actualisation possible dans {{minutes}} min",
     "ytDesc": "Utilise l’identifiant YouTube de votre profil. Aucune connexion requise.",
     "ytLine": "@{{handle}} · {{count}} abonnés · données publiques",
-    "portfolioTitle": "Portfolio du profil",
-    "portfolioDesc": "Collez le lien d’une publication ou d’un reel Instagram public, d’une vidéo TikTok ou YouTube. Elle se lit en direct depuis la plateforme sur votre profil, sans réimportation.",
+    "portfolioTitle": "Clips d’exemple",
+    "portfolioDesc": "Ajoutez jusqu’à 10 clips affichés en bas de votre profil. Collez le lien d’une publication ou d’un reel Instagram public, d’une vidéo TikTok ou YouTube : la couverture renvoie à votre propre compte, rien n’est réimporté.",
     "urlPlaceholder": "https://www.instagram.com/reel/…",
     "add": "Ajouter",
     "adding": "Ajout…",
@@ -313,7 +313,7 @@
     "errRefreshCooldown": "Les statistiques viennent d’être actualisées — réessayez un peu plus tard.",
     "errRefreshDaily": "Vous avez atteint la limite d’actualisations du jour. Les statistiques se mettent aussi à jour chaque jour automatiquement.",
     "errInvalidUrl": "Collez le lien d’une publication ou d’un reel Instagram public, d’une vidéo TikTok ou YouTube.",
-    "errPortfolioFull": "Votre portfolio est plein. Retirez d’abord une publication.",
+    "errPortfolioFull": "Vos clips sont au complet. Retirez-en un d’abord.",
     "errNotConnected": "Ce compte n’est pas connecté.",
     "errGeneric": "Une erreur est survenue. Veuillez réessayer."
   }

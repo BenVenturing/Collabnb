@@ -31,6 +31,7 @@ import type * as emailTemplates from "../emailTemplates.js";
 import type * as emails from "../emails.js";
 import type * as expoPush from "../expoPush.js";
 import type * as fees from "../fees.js";
+import type * as founderLounge from "../founderLounge.js";
 import type * as gates from "../gates.js";
 import type * as geocode from "../geocode.js";
 import type * as googleWallet from "../googleWallet.js";
@@ -99,6 +100,7 @@ declare const fullApi: ApiFromModules<{
   emails: typeof emails;
   expoPush: typeof expoPush;
   fees: typeof fees;
+  founderLounge: typeof founderLounge;
   gates: typeof gates;
   geocode: typeof geocode;
   googleWallet: typeof googleWallet;

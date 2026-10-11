@@ -33,7 +33,7 @@ import { enforceRateLimit, RATE_LIMITS } from "./lib/rateLimit";
 type Platform = "instagram" | "tiktok" | "youtube";
 type OAuthPlatform = "instagram" | "tiktok";
 
-const MAX_PORTFOLIO_ITEMS = 12;
+const MAX_PORTFOLIO_ITEMS = 10;
 const SAMPLE_SIZE = 12;
 const DAY = 24 * 60 * 60 * 1000;
 const MANUAL_SYNC_COOLDOWN = 60 * 60 * 1000;
@@ -1066,6 +1066,7 @@ export const addConnectedPosts = action({
     externalIds: v.array(v.string()),
   },
   handler: async (ctx, { platform, externalIds }): Promise<{ added: number }> => {
+    if (!isEnabled()) throw new ConvexError("feature_locked");
     const me: any = await requireAuthedProfileAction(ctx, internal.profiles.getByClerkUserId);
     const conn: any = await ctx.runQuery(internal.creatorSocial.getConnectionInternal, {
       profileId: String(me._id),
@@ -1093,6 +1094,7 @@ export const addConnectedPosts = action({
 export const addPortfolioUrl = action({
   args: { url: v.string() },
   handler: async (ctx, { url }): Promise<{ added: number }> => {
+    if (!isEnabled()) throw new ConvexError("feature_locked");
     const me: any = await requireAuthedProfileAction(ctx, internal.profiles.getByClerkUserId);
     if (me.role !== "creator") throw new ConvexError("Only creators can add portfolio posts.");
     await ctx.runMutation(internal.creatorSocial.consumeLimit, { profileId: String(me._id), kind: "link_add" });

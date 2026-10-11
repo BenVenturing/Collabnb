@@ -130,9 +130,14 @@ export default function SocialAccountsSettings() {
         </div>
       )}
 
-      <p style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--sage)', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '1.75rem 0 0.5rem' }}>
-        {t('social.portfolioTitle')}
-      </p>
+      <div style={{ position: 'relative' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
+          <p style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--sage)', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '1.75rem 0 0.5rem' }}>
+            {t('social.portfolioTitle')}{live ? ` · ${portfolio.length}/${status?.maxPortfolioItems ?? 10}` : ''}
+          </p>
+          {!live && <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#A87820', background: 'rgba(212,168,67,0.16)', borderRadius: 999, padding: '0.28rem 0.65rem', whiteSpace: 'nowrap', marginTop: '1.25rem' }}>{t('comingSoon')}</span>}
+        </div>
+        <div style={{ filter: live ? 'none' : 'blur(3px)', opacity: live ? 1 : 0.55, pointerEvents: live ? 'auto' : 'none', userSelect: live ? 'auto' : 'none' }} aria-hidden={!live} inert={live ? undefined : ''}>
       <p style={{ ...sub, marginBottom: '0.75rem' }}>
         {t('social.portfolioDesc')}
       </p>
@@ -173,6 +178,8 @@ export default function SocialAccountsSettings() {
           ))}
         </div>
       )}
+        </div>
+      </div>
     </div>
   );
 }

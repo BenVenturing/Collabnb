@@ -128,7 +128,7 @@ export default function PublicProfile() {
             </div>
           )}
 
-          {profile.role === 'creator' && <SocialPortfolio username={profile.username} />}
+          {profile.role === 'creator' && <SocialPortfolio username={profile.username} part="stats" />}
 
           {profile.portfolio_images?.length > 0 && (
             <div style={S.grid}>
@@ -137,6 +137,8 @@ export default function PublicProfile() {
               ))}
             </div>
           )}
+
+          {profile.role === 'creator' && <SocialPortfolio username={profile.username} part="clips" />}
         </div>
 
         <div style={S.footer}>

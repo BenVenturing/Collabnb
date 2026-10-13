@@ -1069,6 +1069,9 @@ export const updateProfile = mutation({
       city: v.optional(v.string()),
       region: v.optional(v.string()),
       country: v.optional(v.string()),
+      // Host-only. In the schema and read by the host profile screens, but
+      // absent here, so a host could never save their property name.
+      business_name: v.optional(v.string()),
       role: v.optional(v.string()),
       niches: v.optional(v.array(v.string())),
       profile_visible: v.optional(v.boolean()),
@@ -1098,6 +1101,8 @@ export const updateProfile = mutation({
     if (cleanUpdates.full_name !== undefined) cleanUpdates.full_name = cleanPlainText(cleanUpdates.full_name, 100);
     if (cleanUpdates.username !== undefined) cleanUpdates.username = cleanPlainText(cleanUpdates.username, 30);
     if (cleanUpdates.bio !== undefined) cleanUpdates.bio = cleanPlainText(cleanUpdates.bio, 1000);
+    if (cleanUpdates.business_name !== undefined)
+      cleanUpdates.business_name = cleanPlainText(cleanUpdates.business_name, 100);
     if (cleanUpdates.instagram_handle !== undefined) cleanUpdates.instagram_handle = cleanPlainText(cleanUpdates.instagram_handle, 60);
     if (cleanUpdates.tiktok_handle !== undefined) cleanUpdates.tiktok_handle = cleanPlainText(cleanUpdates.tiktok_handle, 60);
     if (cleanUpdates.youtube_handle !== undefined) cleanUpdates.youtube_handle = cleanPlainText(cleanUpdates.youtube_handle, 60);

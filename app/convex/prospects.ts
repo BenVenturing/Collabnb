@@ -81,7 +81,7 @@ I ask because we built Collabnb specifically to solve that — vetted creators w
 
 {STATS}
 
-We're inviting our first 100 properties in as Founding Hosts — free, lifetime access. Would love for you to take a look: https://www.collabnb.com/`,
+We're inviting our first 100 properties in as Founding Hosts — free lifetime access, a Founding Host badge, first look from our founding creators, and I'll set up your listing for you. Would love for you to take a look: https://www.collabnb.com/`,
   },
   {
     id: "social_proof",
@@ -94,7 +94,7 @@ We connect properties like yours with vetted content creators for paid collabora
 
 {STATS}
 
-We're currently welcoming our first 100 Founding Hosts, completely free for life. Take a look: https://www.collabnb.com/`,
+We're currently welcoming our first 100 Founding Hosts — free lifetime access, a Founding Host badge, first look from our founding creators, and I'll set up your listing for you. Take a look: https://www.collabnb.com/`,
   },
   {
     id: "compliment",
@@ -105,14 +105,14 @@ I'm Benjamin, founder of Collabnb — we help properties like yours connect with
 
 {STATS}
 
-We're inviting our first 100 hosts in as founding members, completely free. Would love for you to check it out: https://www.collabnb.com/`,
+We're inviting our first 100 hosts in as Founding Hosts — free lifetime access, a Founding Host badge, first look from our founding creators, and I'll set up your listing for you. Would love for you to check it out: https://www.collabnb.com/`,
   },
   {
     id: "data_stat",
     name: "Data / Stat-Led",
     template: `Hi! Did you know 92% of travelers trust a creator's recommendation over a traditional ad? 📊
 
-That's exactly why we built Collabnb — connecting hotels, villas, and boutique stays like [Hotel Name] with vetted creators for paid collaborations, so you get authentic content without the guesswork. We're welcoming our first 100 Founding Hosts, free for life.
+That's exactly why we built Collabnb — connecting hotels, villas, and boutique stays like [Hotel Name] with vetted creators for paid collaborations, so you get authentic content without the guesswork. We're welcoming our first 100 Founding Hosts — free lifetime access, a Founding Host badge, first look from our founding creators, and I'll set up your listing for you.
 
 Here's a look: https://www.collabnb.com/`,
   },
@@ -123,7 +123,7 @@ Here's a look: https://www.collabnb.com/`,
 
 {STATS}
 
-We're inviting our first 100 properties in as Founding Hosts — free, lifetime access, no fees, ever. Would love for you to take a look: https://www.collabnb.com/`,
+We're inviting our first 100 properties in as Founding Hosts — free lifetime access, a Founding Host badge, first look from our founding creators, and I'll set up your listing for you. No fees, ever. Would love for you to take a look: https://www.collabnb.com/`,
   },
 ];
 
@@ -153,7 +153,7 @@ Through Collabnb, hosts can:
 • Set up collaboration listings with clear deliverables
 • Manage conversations and partnerships in one place
 
-We're currently welcoming our first 100 properties as Founding Hosts — lifetime access, no admin fees, ever.
+We're currently welcoming our first 100 properties as Founding Hosts — free lifetime access, a Founding Host badge, first look from our founding creators, and I'll set up your listing for you. No admin fees, ever.
 
 Also, is this the best address for your marketing or partnerships team, or is there someone else we should loop in?
 
@@ -188,7 +188,7 @@ Founder, Collabnb`,
     sendDelayDays: 7,
     template: `Hi — totally understand if now isn't the right time.
 
-Just wanted to leave the door open: we're still holding a spot for [Hotel Name] among our first 100 Founding Hosts (free, lifetime access), so if it's ever useful, it's here: https://www.collabnb.com/
+Just wanted to leave the door open: we're still holding a spot for [Hotel Name] among our first 100 Founding Hosts (free lifetime access, a Founding Host badge, and first look from our founding creators), so if it's ever useful, it's here: https://www.collabnb.com/
 
 Either way, wishing you all the best.
 
@@ -1378,7 +1378,7 @@ async function draftHostMessage(p: any, angle: (typeof HOST_OUTREACH_TEMPLATES)[
       ? dmDraft.replace("{STATS}", HOST_STATS_BLOCK)
       : dmDraft.replace(
           /(https:\/\/www\.collabnb\.com\/)/,
-          `${HOST_STATS_BLOCK}\n\n$1`
+          (url) => `${HOST_STATS_BLOCK}\n\n${url}`
         );
     // Safety net on top of the prompt rules — strip any markdown/parens that
     // slipped through so a stray "*" or "(" never reaches a real DM.

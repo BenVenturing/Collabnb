@@ -271,9 +271,15 @@ async function initCounters() {
 
     // Update live caption
     const liveCaption = document.querySelector('#live-caption');
+    const hostsLeft = Math.max(0, 100 - hosts);
+    const creatorsLeft = Math.max(0, 100 - creators);
     if (liveCaption) {
-      const total = creators + hosts;
-      liveCaption.textContent = `${total} members Joined · ${Math.max(0, 200 - total)} Founding spots remaining`;
+      liveCaption.textContent = `${hostsLeft} of 100 founding host spots left · ${creatorsLeft} of 100 creator spots left`;
+    }
+
+    const heroFounding = document.querySelector('#hero-founding');
+    if (heroFounding) {
+      heroFounding.textContent = `Founding members get free lifetime access, a founder badge and first look at new collabs. ${hostsLeft} of 100 host spots · ${creatorsLeft} of 100 creator spots left.`;
     }
   }
 

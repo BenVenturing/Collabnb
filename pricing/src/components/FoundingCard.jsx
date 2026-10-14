@@ -10,7 +10,7 @@ const BENEFITS = [
 
 // Must mirror getLifetimeTier() in stripe.js
 const LIFETIME_TIERS = [
-  { range: 'First 200', label: 'Founding Access',   price: 'Free', cap: 0,   isFounding: true },
+  { range: '100 + 100', label: 'Founding Access',   price: 'Free', cap: 0,   isFounding: true },
   { range: 'Next 50',   label: 'Early Adopter',     price: '$100', cap: 50  },
   { range: 'Next 50',   label: 'Community',          price: '$125', cap: 100 },
   { range: 'Next 50',   label: 'Community',          price: '$150', cap: 150 },

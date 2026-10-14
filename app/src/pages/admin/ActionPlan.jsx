@@ -18,9 +18,10 @@ const TYPE_STYLE = {
 
 // Ordered by impact. Goal: 100 founding hotels + 50 more creators.
 const TASKS = [
-  { id: 'lock-offer', type: 'do', title: 'Lock the offer: first 100 founding hotels',
-    why: 'Your messages say 100 in some places and 200 in others. Fix that before anything else goes out.',
-    steps: ['Decide exactly what a founding hotel gets (lifetime access, badge, priority creator matches).', 'Update the IG bio, the website hero, GoHighLevel templates and the Discovery DM templates.', 'Add a live counter line you can reuse: "37 of 100 founding spots left".'] },
+  { id: 'lock-offer', type: 'do', title: 'Lock the offer: 100 founding hosts + 100 founding creators',
+    why: 'Decided. Founding Hosts get free lifetime access, a Founding Host badge, first look from founding creators, and done-for-you listing setup. The website and Discovery DM templates are already updated.',
+    steps: ['Paste the new IG bio (below) into Instagram.', 'Paste the founding paragraph into every GoHighLevel template.', 'Use the live spots line at the top of this page in DMs and posts.'],
+    script: 'IG bio:\nCreators × boutique stays 🌿\nFree stays & paid collabs, matched for you\n100 founding hosts + 100 creators → free for life\n👇 claim a spot\n\nGoHighLevel founding paragraph:\nWe\'re welcoming our first 100 properties as Founding Hosts: free lifetime access, a Founding Host badge, first look from our founding creators, and I\'ll set up your listing for you. No fees, ever.' },
 
   { id: 'pause-blasts', type: 'do', title: 'Pause the scraped-list email blasts',
     why: '10–15% bounces are hurting your sending domain. Most of the 1,000 CRM hosts came from the Hotel Creators import, and many are chains (Hyatt, Fairmont, Marriott) where nobody can say yes to a founding deal.',
@@ -142,6 +143,7 @@ function parseProgress(raw) {
 
 export default function ActionPlan() {
   const settings = useQuery(api.admin.getSettings);
+  const counts = useQuery(api.admin.getFounderCounts);
   const setSetting = useMutation(api.admin.setSetting);
   const [viewing, setViewing] = useState(null);
   const [showAll, setShowAll] = useState(false);
@@ -188,6 +190,19 @@ export default function ActionPlan() {
           <div style={{ width: `${(doneCount / TASKS.length) * 100}%`, height: '100%', background: SLATE, transition: 'width 0.3s' }} />
         </div>
         <p style={{ margin: '0.35rem 0 0', fontSize: '0.72rem', color: SAGE }}>{doneCount} of {TASKS.length} done</p>
+        {counts && (
+          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.75rem' }}>
+            {[
+              `${Math.max(0, 100 - counts.host)} of 100 founding host spots left`,
+              `${Math.max(0, 100 - counts.creator)} of 100 founding creator spots left`,
+            ].map(line => (
+              <button key={line} onClick={() => copy(line)} title="Copy for DMs / posts"
+                style={{ padding: '0.35rem 0.8rem', borderRadius: 9999, border: 'none', background: MINT, color: INK, fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer' }}>
+                {line} · copy
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {!task ? (

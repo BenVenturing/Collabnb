@@ -23,6 +23,7 @@ import sys
 import time
 from urllib.parse import urljoin, urlparse
 
+import dns.resolver
 from scrapling.fetchers import DynamicFetcher, Fetcher
 
 logging.getLogger("scrapling").setLevel(logging.ERROR)
@@ -67,6 +68,26 @@ def links_of(page, base):
         if urlparse(full).netloc.replace("www.", "") == host:
             out.append((full, str(a.text or "")))
     return out
+
+
+_mx_cache = {}
+
+
+def domain_accepts_mail(domain):
+    """MX lookup (A-record fallback). Drops dead/typo domains — the source of
+    the 10-15% hard bounces. Doesn't prove the mailbox exists; port 25 SMTP
+    probes are blocked from most home connections."""
+    if domain not in _mx_cache:
+        ok = False
+        for rtype in ("MX", "A"):
+            try:
+                dns.resolver.resolve(domain, rtype, lifetime=8)
+                ok = True
+                break
+            except Exception:
+                continue
+        _mx_cache[domain] = ok
+    return _mx_cache[domain]
 
 
 def email_score(email, site_host):
@@ -152,8 +173,9 @@ def scrape(target):
         return {"instagram_handle": target["instagram_handle"], "_error": "site unreachable"}
     emails, whatsapp, people, contact_url = found
 
-    ranked = sorted(emails, key=lambda e: email_score(e, site_host), reverse=True)
-    row = {"instagram_handle": target["instagram_handle"], "_pages": len(pages), "_browser": browser_used, "_emails": ranked}
+    dead = sorted(e for e in emails if not domain_accepts_mail(e.lower().split("@")[1]))
+    ranked = sorted((e for e in emails if e not in dead), key=lambda e: email_score(e, site_host), reverse=True)
+    row = {"instagram_handle": target["instagram_handle"], "_pages": len(pages), "_browser": browser_used, "_emails": ranked, "_dead_emails": dead}
     if ranked and email_score(ranked[0], site_host) > -2:
         row["marketing_email"] = ranked[0].lower()
     if people:

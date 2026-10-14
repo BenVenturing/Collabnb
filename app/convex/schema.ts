@@ -794,6 +794,7 @@ export default defineSchema({
     contact_url: v.optional(v.string()), // contact/influencer form for hotels that have no email yet
     decision_maker_name: v.optional(v.string()), // owner/GM/marketing lead found on the hotel's own site (find-decision-makers.py)
     decision_maker_role: v.optional(v.string()),
+    contact_checked_at: v.optional(v.number()), // set once find-decision-makers.py has crawled the site + MX-checked its emails (green ring in Discovery)
     created_at: v.number(),
   })
     .index("by_kind_status", ["kind", "status"])

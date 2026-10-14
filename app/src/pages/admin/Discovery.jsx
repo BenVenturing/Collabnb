@@ -387,8 +387,11 @@ function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
           <input type="checkbox" aria-label={`Select @${prospect.instagram_handle}`} checked={!!selected}
             onChange={() => onToggleSelect(prospect._id)} style={checkbox} />
         )}
-        <Avatar url={prospect.avatar_url} name={prospect.display_name || prospect.instagram_handle} size={34}
-          starred={prospect.starred} onToggleStar={() => toggleStarred({ id: prospect._id })} />
+        <span title={prospect.contact_checked_at ? `Contact checked ${new Date(prospect.contact_checked_at).toLocaleDateString()}` : undefined}
+          style={{ display: 'inline-flex', borderRadius: '50%', boxShadow: prospect.contact_checked_at ? '0 0 0 2px #22c55e' : 'none' }}>
+          <Avatar url={prospect.avatar_url} name={prospect.display_name || prospect.instagram_handle} size={34}
+            starred={prospect.starred} onToggleStar={() => toggleStarred({ id: prospect._id })} />
+        </span>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
             {isHotel ? (

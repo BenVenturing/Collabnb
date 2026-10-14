@@ -2081,7 +2081,7 @@ export const getHostsForContactScrapeLocal = query({
         .withIndex("by_kind_status", (q) => q.eq("kind", "host").eq("status", status))
         .collect();
       for (const r of rows) {
-        if (r.website && (!r.decision_maker_name || !r.marketing_email)) {
+        if (r.website && !r.contact_checked_at && (!r.decision_maker_name || !r.marketing_email)) {
           out.push({ instagram_handle: r.instagram_handle, display_name: r.display_name, website: r.website, location: r.location || r.country });
         }
       }
@@ -2118,7 +2118,8 @@ export const enrichDecisionMakerLocal = mutation({
         .withIndex("by_handle", (q) => q.eq("instagram_handle", handle))
         .first();
       if (!existing) continue;
-      const patch: Record<string, any> = {};
+      // Every row the finder sends was crawled, even if it found nothing new.
+      const patch: Record<string, any> = { contact_checked_at: Date.now() };
       if (row.decision_maker_name && !existing.decision_maker_name) {
         patch.decision_maker_name = row.decision_maker_name;
         if (row.decision_maker_role) patch.decision_maker_role = row.decision_maker_role;
@@ -2126,7 +2127,6 @@ export const enrichDecisionMakerLocal = mutation({
       if (row.marketing_email && !existing.marketing_email) patch.marketing_email = row.marketing_email;
       if (row.whatsapp && !existing.whatsapp) patch.whatsapp = row.whatsapp;
       if (row.contact_url && !existing.contact_url) patch.contact_url = row.contact_url;
-      if (Object.keys(patch).length === 0) continue;
       await ctx.db.patch(existing._id, patch);
       updated++;
     }

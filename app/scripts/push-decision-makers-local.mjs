@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // Pushes find-decision-makers.py output into Convex. Never overwrites a field
-// that's already set. Debug keys (_emails, _people, ...) stay local.
+// that's already set, but stamps contact_checked_at on every crawled row.
+// Debug keys (_emails, _people, ...) stay local.
 //
 // Usage:
 //   node scripts/push-decision-makers-local.mjs found.json
@@ -20,10 +21,8 @@ if (!CONVEX_URL || !SECRET) {
 
 const FIELDS = ["instagram_handle", "decision_maker_name", "decision_maker_role", "marketing_email", "whatsapp", "contact_url"];
 const rows = JSON.parse(readFileSync(process.argv[2] || "found.json", "utf8"))
-  .filter((r) => !r._error)
-  .map((r) => Object.fromEntries(FIELDS.filter((f) => r[f]).map((f) => [f, r[f]])))
-  .filter((r) => Object.keys(r).length > 1);
+  .map((r) => Object.fromEntries(FIELDS.filter((f) => r[f]).map((f) => [f, r[f]])));
 
 const client = new ConvexHttpClient(CONVEX_URL);
 const result = await client.mutation("prospects:enrichDecisionMakerLocal", { secret: SECRET, rows });
-console.log(`Updated ${result.updated} of ${rows.length} rows with findings.`);
+console.log(`Marked ${result.updated} of ${rows.length} rows as checked.`);

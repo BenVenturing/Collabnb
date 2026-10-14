@@ -351,6 +351,15 @@ export default defineSchema({
     termination_requested_by: v.optional(v.string()),
     termination_requested_at: v.optional(v.number()),
     terminated_at: v.optional(v.number()),
+    // Mobile host/creator pipeline (apps/mobile). contract_draft is the
+    // negotiated-terms scratchpad from the phone app's contract UI
+    // ({ history, signatures, locked }) — it is NOT the signed contracts-table
+    // record that contract_id points at, and carries no payment or fee state.
+    contract_draft: v.optional(v.string()),
+    deliverable_submissions: v.optional(v.string()),
+    host_note: v.optional(v.string()),
+    ended_by: v.optional(v.string()),
+    end_reason: v.optional(v.string()),
   })
     .index("by_creator", ["creator_id"])
     .index("by_host", ["host_id"])
@@ -783,6 +792,8 @@ export default defineSchema({
     starred: v.optional(v.boolean()), // admin flag for "looks especially profitable" — click the avatar to toggle
     tags: v.optional(v.array(v.string())), // short codes — HC, SCR, contacted, contacted-opened, contacted-clicked (legend: PROSPECT_TAGS in Discovery.jsx)
     contact_url: v.optional(v.string()), // contact/influencer form for hotels that have no email yet
+    decision_maker_name: v.optional(v.string()), // owner/GM/marketing lead found on the hotel's own site (find-decision-makers.py)
+    decision_maker_role: v.optional(v.string()),
     created_at: v.number(),
   })
     .index("by_kind_status", ["kind", "status"])

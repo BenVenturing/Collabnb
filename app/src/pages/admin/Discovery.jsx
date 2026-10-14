@@ -550,6 +550,14 @@ function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
             })()}
           </div>
 
+          {prospect.decision_maker_name && (
+            <div>
+              <span style={label}>Decision-maker</span>
+              <p style={{ margin: 0, fontSize: '0.75rem', color: '#192524' }}>
+                {prospect.decision_maker_name}{prospect.decision_maker_role ? ` · ${prospect.decision_maker_role}` : ''}
+              </p>
+            </div>
+          )}
           <div>
             <span style={label}>DM draft</span>
             <textarea value={dmDraft} onChange={e => setDmDraft(e.target.value)}

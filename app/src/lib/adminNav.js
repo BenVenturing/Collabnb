@@ -5,6 +5,7 @@
 // Flat items shown above the collapsible groups — no sub-tabs of their own.
 export const TOP_SECTIONS = [
   { id: 'overview',    label: 'Overview' },
+  { id: 'action-plan', label: 'Action Plan' },
   { id: 'admin-inbox', label: 'Inbox'    },
   { id: 'crashes',     label: 'Crash Reports' },
 ];
@@ -83,7 +84,7 @@ export const NAV_ITEMS_BY_ID = {};
 for (const s of TOP_SECTIONS) NAV_ITEMS_BY_ID[s.id] = { ...s, type: 'flat' };
 for (const g of GROUPS) NAV_ITEMS_BY_ID[g.id] = { ...g, type: 'group' };
 
-export const NAV_ORDER_DEFAULT = ['overview', 'admin-inbox', 'users', 'collabs', 'money', 'marketing', 'suggestions', 'crashes'];
+export const NAV_ORDER_DEFAULT = ['overview', 'action-plan', 'admin-inbox', 'users', 'collabs', 'money', 'marketing', 'suggestions', 'crashes'];
 
 // Parses the saved `nav_order` setting (JSON array of ids) into a full,
 // valid order — unknown ids are dropped, missing ones (e.g. a newly added

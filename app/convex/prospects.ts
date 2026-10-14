@@ -2066,6 +2066,74 @@ export const getConfirmedForEnrichmentLocal = query({
   },
 });
 
+// Input for scripts/find-decision-makers.py (Scrapling): every host with a
+// website that still has no named decision-maker or marketing address, any
+// stage except signed/declined. Secret-gated like the other *Local functions.
+export const getHostsForContactScrapeLocal = query({
+  args: { secret: v.string() },
+  handler: async (ctx, { secret }) => {
+    const expected = process.env.LOCAL_IMPORT_SECRET;
+    if (!expected || secret !== expected) throw new Error("Invalid or missing import secret.");
+    const out: { instagram_handle: string; display_name?: string; website: string; location?: string }[] = [];
+    for (const status of ["new", "queued", "emailed", "contacted", "replied"]) {
+      const rows = await ctx.db
+        .query("prospects")
+        .withIndex("by_kind_status", (q) => q.eq("kind", "host").eq("status", status))
+        .collect();
+      for (const r of rows) {
+        if (r.website && (!r.decision_maker_name || !r.marketing_email)) {
+          out.push({ instagram_handle: r.instagram_handle, display_name: r.display_name, website: r.website, location: r.location || r.country });
+        }
+      }
+    }
+    return out;
+  },
+});
+
+// Push side of find-decision-makers.py. Same never-overwrite rule as
+// enrichProspectLocal — a manually-entered contact always wins.
+export const enrichDecisionMakerLocal = mutation({
+  args: {
+    secret: v.string(),
+    rows: v.array(
+      v.object({
+        instagram_handle: v.string(),
+        decision_maker_name: v.optional(v.string()),
+        decision_maker_role: v.optional(v.string()),
+        marketing_email: v.optional(v.string()),
+        whatsapp: v.optional(v.string()),
+        contact_url: v.optional(v.string()),
+      })
+    ),
+  },
+  handler: async (ctx, { secret, rows }) => {
+    const expected = process.env.LOCAL_IMPORT_SECRET;
+    if (!expected || secret !== expected) throw new Error("Invalid or missing import secret.");
+    let updated = 0;
+    for (const row of rows) {
+      const handle = row.instagram_handle.replace(/^@/, "").trim().toLowerCase();
+      if (!handle) continue;
+      const existing = await ctx.db
+        .query("prospects")
+        .withIndex("by_handle", (q) => q.eq("instagram_handle", handle))
+        .first();
+      if (!existing) continue;
+      const patch: Record<string, any> = {};
+      if (row.decision_maker_name && !existing.decision_maker_name) {
+        patch.decision_maker_name = row.decision_maker_name;
+        if (row.decision_maker_role) patch.decision_maker_role = row.decision_maker_role;
+      }
+      if (row.marketing_email && !existing.marketing_email) patch.marketing_email = row.marketing_email;
+      if (row.whatsapp && !existing.whatsapp) patch.whatsapp = row.whatsapp;
+      if (row.contact_url && !existing.contact_url) patch.contact_url = row.contact_url;
+      if (Object.keys(patch).length === 0) continue;
+      await ctx.db.patch(existing._id, patch);
+      updated++;
+    }
+    return { updated };
+  },
+});
+
 export const getByHandleForConfirmInternal = internalQuery({
   args: { handle: v.string() },
   handler: async (ctx, { handle }) => {

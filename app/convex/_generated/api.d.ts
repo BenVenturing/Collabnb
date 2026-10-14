@@ -39,6 +39,7 @@ import type * as hostCollaborations from "../hostCollaborations.js";
 import type * as hostWelcomeEmail from "../hostWelcomeEmail.js";
 import type * as http from "../http.js";
 import type * as lib_auth from "../lib/auth.js";
+import type * as lib_chains from "../lib/chains.js";
 import type * as lib_compensationPoints from "../lib/compensationPoints.js";
 import type * as lib_crypto from "../lib/crypto.js";
 import type * as lib_engagement from "../lib/engagement.js";
@@ -110,6 +111,7 @@ declare const fullApi: ApiFromModules<{
   hostWelcomeEmail: typeof hostWelcomeEmail;
   http: typeof http;
   "lib/auth": typeof lib_auth;
+  "lib/chains": typeof lib_chains;
   "lib/compensationPoints": typeof lib_compensationPoints;
   "lib/crypto": typeof lib_crypto;
   "lib/engagement": typeof lib_engagement;

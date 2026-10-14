@@ -183,15 +183,15 @@ export default function ActionPlan() {
 
   return (
     <div style={{ maxWidth: 680 }}>
-      <div style={{ marginBottom: '1.25rem' }}>
+      <div style={{ marginBottom: '2rem' }}>
         <h2 style={{ margin: 0, fontSize: '1.25rem', color: INK }}>Action Plan</h2>
-        <p style={{ margin: '0.25rem 0 0.75rem', fontSize: '0.82rem', color: SAGE }}>100 founding hotels + 50 more creators · one task at a time</p>
+        <p style={{ margin: '0.5rem 0 1.25rem', fontSize: '0.82rem', color: SAGE }}>100 founding hosts + 100 founding creators · one task at a time</p>
         <div style={{ height: 6, borderRadius: 99, background: '#E5E2DC', overflow: 'hidden' }}>
           <div style={{ width: `${(doneCount / TASKS.length) * 100}%`, height: '100%', background: SLATE, transition: 'width 0.3s' }} />
         </div>
-        <p style={{ margin: '0.35rem 0 0', fontSize: '0.72rem', color: SAGE }}>{doneCount} of {TASKS.length} done</p>
+        <p style={{ margin: '0.6rem 0 0', fontSize: '0.72rem', color: SAGE }}>{doneCount} of {TASKS.length} done</p>
         {counts && (
-          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.75rem' }}>
+          <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', marginTop: '1.25rem' }}>
             {[
               `${Math.max(0, 100 - counts.host)} of 100 founding host spots left`,
               `${Math.max(0, 100 - counts.creator)} of 100 founding creator spots left`,
@@ -213,38 +213,43 @@ export default function ActionPlan() {
           </div>
         </div>
       ) : (
-        <div style={{ background: '#fff', border: `1px solid ${SLATE}25`, borderRadius: 16, padding: '1.5rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.6rem' }}>
+        <div style={{ background: '#fff', border: `1px solid ${SLATE}25`, borderRadius: 16, padding: '2rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
             <Badge type={task.type} />
             <span style={{ fontSize: '0.72rem', color: SAGE }}>Task {TASKS.indexOf(task) + 1}</span>
             {task.target && <span style={{ fontSize: '0.72rem', color: SAGE }}>· Target: {task.target}</span>}
             {isDone && <span style={{ fontSize: '0.72rem', color: '#2d7d5e', fontWeight: 700 }}>✓ Done</span>}
           </div>
-          <h3 style={{ margin: '0 0 0.4rem', fontSize: '1.1rem', color: INK }}>{task.title}</h3>
-          <p style={{ margin: '0 0 1rem', fontSize: '0.85rem', color: SLATE, lineHeight: 1.5 }}>{task.why}</p>
+          <h3 style={{ margin: '0 0 0.75rem', fontSize: '1.1rem', color: INK, lineHeight: 1.3 }}>{task.title}</h3>
+          <p style={{ margin: '0 0 1.75rem', fontSize: '0.85rem', color: SLATE, lineHeight: 1.6 }}>{task.why}</p>
 
           {task.steps && (
-            <ol style={{ margin: '0 0 1rem', paddingLeft: '1.2rem', fontSize: '0.84rem', color: INK, lineHeight: 1.6 }}>
-              {task.steps.map((s, i) => <li key={i}>{s}</li>)}
-            </ol>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', marginBottom: '1.75rem' }}>
+              {task.steps.map((s, i) => (
+                <div key={i} style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
+                  <span style={{ flexShrink: 0, width: 22, height: 22, borderRadius: '50%', background: BONE, color: SLATE, fontSize: '0.7rem', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: 1 }}>{i + 1}</span>
+                  <span style={{ fontSize: '0.84rem', color: INK, lineHeight: 1.6 }}>{s}</span>
+                </div>
+              ))}
+            </div>
           )}
 
           {task.script && (
-            <div style={{ background: BONE, borderRadius: 12, padding: '0.9rem 1rem', marginBottom: '1rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+            <div style={{ background: BONE, borderRadius: 12, padding: '1.1rem 1.25rem', marginBottom: '1.75rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
                 <span style={{ fontSize: '0.68rem', fontWeight: 700, color: SAGE, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Script</span>
                 <button onClick={() => copy(task.script)} style={{ ...btn(false), padding: '0.2rem 0.7rem', fontSize: '0.7rem' }}>{copied ? 'Copied' : 'Copy'}</button>
               </div>
-              <p style={{ margin: 0, fontSize: '0.84rem', color: INK, lineHeight: 1.55, whiteSpace: 'pre-wrap' }}>{task.script}</p>
+              <p style={{ margin: 0, fontSize: '0.84rem', color: INK, lineHeight: 1.65, whiteSpace: 'pre-wrap' }}>{task.script}</p>
             </div>
           )}
 
           <textarea key={task.id} defaultValue={progress.notes[task.id] || ''}
             onBlur={(e) => e.target.value !== (progress.notes[task.id] || '') && saveNote(e.target.value)}
             rows={3} placeholder="Notes: who you contacted, objections, results…"
-            style={{ width: '100%', boxSizing: 'border-box', border: `1px solid ${SLATE}30`, borderRadius: 10, padding: '0.6rem 0.75rem', fontSize: '0.82rem', fontFamily: 'inherit', resize: 'vertical', marginBottom: '1rem' }} />
+            style={{ width: '100%', boxSizing: 'border-box', border: `1px solid ${SLATE}30`, borderRadius: 10, padding: '0.75rem 0.9rem', fontSize: '0.82rem', fontFamily: 'inherit', resize: 'vertical', marginBottom: '1.5rem' }} />
 
-          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
             {isDone
               ? <button style={btn(false)} onClick={reopen}>Mark not done</button>
               : <button style={btn(true)} onClick={markDone}>Done → next task</button>}
@@ -254,11 +259,11 @@ export default function ActionPlan() {
         </div>
       )}
 
-      <button onClick={() => setShowAll(!showAll)} style={{ marginTop: '1.25rem', background: 'none', border: 'none', color: SLATE, fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', padding: 0 }}>
+      <button onClick={() => setShowAll(!showAll)} style={{ marginTop: '2rem', background: 'none', border: 'none', color: SLATE, fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', padding: 0 }}>
         {showAll ? 'Hide full list ▲' : 'Show full list ▼'}
       </button>
       {showAll && (
-        <ol style={{ margin: '0.6rem 0 0', paddingLeft: '1.2rem', fontSize: '0.8rem', lineHeight: 1.9 }}>
+        <ol style={{ margin: '1rem 0 0', paddingLeft: '1.4rem', fontSize: '0.8rem', lineHeight: 2.1, listStyle: 'decimal' }}>
           {TASKS.map(t => (
             <li key={t.id} onClick={() => setViewing(t.id)} style={{ cursor: 'pointer', color: progress.done.includes(t.id) ? SAGE : INK, textDecoration: progress.done.includes(t.id) ? 'line-through' : 'none', fontWeight: t.id === task?.id ? 700 : 400 }}>
               {t.title}{progress.skipped.includes(t.id) && !progress.done.includes(t.id) ? ' (later)' : ''}

@@ -43,7 +43,7 @@ NOT_NAMES = {"The", "Our", "Hotel", "Villa", "Villas", "Resort", "Contact", "Abo
 ROLE_RANK = ["Owner", "Founder", "Co-Founder", "Cofounder", "Proprietor", "Managing Director", "General Manager", "Marketing", "Director of Sales", "Sales", "PR", "Communications", "Brand", "Hotel Manager", "Resort Manager", "Villa Manager", "Host"]
 GOOD_LOCAL = re.compile(r"market|pr\b|press|media|partner|collab|influenc|creator|owner|founder|^gm\b|manager|director|sales|brand|comms", re.I)
 BAD_LOCAL = re.compile(r"reserv|booking|book|^res\b|frontdesk|front\.desk|reception|noreply|no-reply|career|job|hr\b|account|finance|support|privacy|webmaster", re.I)
-JUNK_EMAIL = re.compile(r"\.(png|jpe?g|gif|webp|svg)$|sentry|wixpress|example|emailaddress|domain\.com|email\.com|yourname|@2x", re.I)
+JUNK_EMAIL = re.compile(r"^(privacy|legal|dpo|gdpr|unsubscribe)@|\.(png|jpe?g|gif|webp|svg)$|sentry|wixpress|example|emailaddress|domain\.com|email\.com|yourname|@2x", re.I)
 
 
 def fetch(url, browser=False):

@@ -81,7 +81,7 @@ export const getIncomingForMe = query({
       .query("threads")
       .withIndex("by_participant", (q) => q.eq("participant_id", myId))
       .collect();
-    const incoming = rows.filter((r) => r.tag !== "Collabnb" && r.tag !== "Admin" && r.owner_id !== myId);
+    const incoming = rows.filter((r) => r.tag !== "Collabnb" && r.tag !== "Admin" && r.owner_id !== myId && !r.hidden_for?.includes(myId));
 
     return Promise.all(
       incoming.map(async (r) => {
@@ -128,7 +128,7 @@ export const getMine = query({
       .collect();
 
     return Promise.all(
-      rows.map(async (r) => {
+      rows.filter((r) => !r.hidden_for?.includes(myId)).map(async (r) => {
         const key = r.thread_key as string;
         const other = r.participant_id ? await ctx.db.get(r.participant_id as any) : null;
         const msgs = key
@@ -184,5 +184,36 @@ export const markReadByMe = mutation({
       return true;
     }
     return false;
+  },
+});
+
+// Delete a conversation from my inbox only. Blocked while the thread's collab
+// has a signed contract that isn't completed/cancelled/terminated, unless the
+// caller passes terminate (the user typed the confirmation).
+export const hideForMe = mutation({
+  args: { threadKey: v.string(), terminate: v.optional(v.boolean()) },
+  handler: async (ctx, { threadKey, terminate }) => {
+    const profile = await requireAuthedProfile(ctx);
+    const myId = String(profile._id);
+    const row = await ctx.db
+      .query("threads")
+      .withIndex("by_thread_key", (q) => q.eq("thread_key", threadKey))
+      .first();
+    if (!row) return false;
+    if (row.owner_id !== myId && row.participant_id !== myId) return false;
+
+    if (row.collab_id && !terminate) {
+      const collab: any = await ctx.db.get(row.collab_id as any).catch(() => null);
+      if (collab?.contract_id && !collab.terminated_at) {
+        const contract: any = await ctx.db.get(collab.contract_id as any).catch(() => null);
+        const st = String(contract?.status || "").toLowerCase();
+        const open = contract && contract.creator_signed && contract.host_signed
+          && st !== "completed" && st !== "cancelled" && st !== "draft";
+        if (open) throw new Error("This conversation is tied to an active contract. Type \"terminate\" to close it anyway.");
+      }
+    }
+
+    await ctx.db.patch(row._id, { hidden_for: [...(row.hidden_for ?? []), myId] });
+    return true;
   },
 });

@@ -109,7 +109,7 @@ export const getMineAsUser = query({
       .withIndex("by_participant", (q) => q.eq("participant_id", myId))
       .filter((q: any) => q.eq(q.field("owner_id"), personaId))
       .first();
-    if (!thread) return null;
+    if (!thread || thread.hidden_for?.includes(myId)) return null;
 
     const key = thread.thread_key || threadKeyFor(myId, persona_);
     const persona: any = await ctx.db.get(personaId as any);

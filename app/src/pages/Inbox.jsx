@@ -838,8 +838,10 @@ function ShimmerRow() {
 
 export default function Inbox() {
   const { t } = useTranslation('inbox');
-  const { threads, collabs, archiveThread, deleteThread, updateThreadTag, setThreadColor, createThread, savedIds } = useCollabs();
+  const { threads, collabs, contracts, archiveThread, deleteThread, updateThreadTag, setThreadColor, createThread, savedIds } = useCollabs();
   const { profile } = useAuth();
+  const [pendingDelete, setPendingDelete] = useState(null);
+  const [deleteError, setDeleteError] = useState('');
   const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
   const [activeFilter, setActiveFilter] = useState('All');
@@ -923,6 +925,32 @@ export default function Inbox() {
     setToastMsg(msg);
     setTimeout(() => setToastMsg(''), 2500);
   }, []);
+
+  // A conversation tied to a signed, still-open contract can't be deleted
+  // until the contract is completed/cancelled or the collab is terminated.
+  const isContractLocked = useCallback((thread) => {
+    const collab = collabs.find((c) => String(c.id) === String(thread.collab_id));
+    if (!collab?.contract_id || collab.terminated_at) return false;
+    const contract = (contracts || []).find((c) => String(c.id ?? c._id) === String(collab.contract_id));
+    if (!contract) return false;
+    const st = String(contract.status || '').toLowerCase();
+    const signed = (contract.creator_signed ?? contract.creatorSigned) && (contract.host_signed ?? contract.hostSigned);
+    return !!signed && !['completed', 'cancelled', 'draft'].includes(st);
+  }, [collabs, contracts]);
+
+  const confirmDelete = () => {
+    const th = pendingDelete.thread;
+    const locked = isContractLocked(th);
+    if (locked && pendingDelete.typed.trim().toLowerCase() !== 'terminate') return;
+    try {
+      deleteThread(th.id, { terminate: locked });
+      if (selectedId === th.id) setSelectedId(null);
+      setPendingDelete(null);
+      setDeleteError('');
+    } catch (err) {
+      setDeleteError(err?.message || 'Could not delete this conversation.');
+    }
+  };
 
   // Handle View Collab click
   const handleViewCollab = useCallback((thread) => {
@@ -1087,10 +1115,7 @@ export default function Inbox() {
                       thread={t}
                       isActive={t.id === selectedId}
                       onClick={() => openThread(t.id)}
-                      onDelete={deleteThread ? () => {
-                        deleteThread(t.id);
-                        if (selectedId === t.id) setSelectedId(null);
-                      } : undefined}
+                      onDelete={deleteThread ? () => setPendingDelete({ thread: t, typed: '' }) : undefined}
                     />
                   ))}
                 </>
@@ -1150,10 +1175,7 @@ export default function Inbox() {
                       thread={t}
                       isActive={t.id === selectedId}
                       onClick={() => openThread(t.id)}
-                      onDelete={deleteThread ? () => {
-                        deleteThread(t.id);
-                        if (selectedId === t.id) setSelectedId(null);
-                      } : undefined}
+                      onDelete={deleteThread ? () => setPendingDelete({ thread: t, typed: '' }) : undefined}
                     />
                   ))}
                 </>
@@ -1189,6 +1211,45 @@ export default function Inbox() {
           onClose={() => setViewingCollab(null)}
         />
       )}
+
+      {pendingDelete && (() => {
+        const locked = isContractLocked(pendingDelete.thread);
+        const ready = !locked || pendingDelete.typed.trim().toLowerCase() === 'terminate';
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" onClick={() => setPendingDelete(null)}>
+            <div className="bg-white rounded-2xl p-5 w-full max-w-sm shadow-xl" onClick={(e) => e.stopPropagation()}>
+              <p className="font-bold text-ink mb-1">{locked ? 'Terminate conversation' : 'Delete conversation?'}</p>
+              <p className="text-sm text-slate mb-3">
+                {locked
+                  ? 'This conversation is tied to a signed contract. Type "terminate" to delete it anyway.'
+                  : 'This removes it from your inbox.'}
+              </p>
+              {locked && (
+                <input
+                  autoFocus
+                  value={pendingDelete.typed}
+                  onChange={(e) => setPendingDelete((p) => ({ ...p, typed: e.target.value }))}
+                  onKeyDown={(e) => { if (e.key === 'Enter') confirmDelete(); }}
+                  placeholder="terminate"
+                  className="w-full border border-stone/40 rounded-lg px-3 py-2 text-sm mb-3"
+                />
+              )}
+              {deleteError && <p className="text-xs text-red-600 mb-2">{deleteError}</p>}
+              <div className="flex justify-end gap-2">
+                <button onClick={() => setPendingDelete(null)} className="px-3 py-1.5 text-sm rounded-lg text-slate">Cancel</button>
+                <button
+                  onClick={confirmDelete}
+                  disabled={!ready}
+                  className="px-3 py-1.5 text-sm rounded-lg text-white font-semibold disabled:opacity-40"
+                  style={{ background: '#c0392b' }}
+                >
+                  {locked ? 'Terminate' : 'Delete'}
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ── Toast notification ── */}
       {toastMsg && (

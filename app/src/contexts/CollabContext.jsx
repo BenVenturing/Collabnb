@@ -186,6 +186,7 @@ export function CollabProvider({ children }) {
   const advanceStageCvx = useMutation(api.collaborations.advanceStage);
   const removeCollabCvx = useMutation(api.collaborations.remove);
   const createThreadCvx = useMutation(api.threads.create);
+  const hideThreadCvx = useMutation(api.threads.hideForMe);
   const sendThreadMessageCvx = useMutation(api.threadMessages.sendMessage);
   const createPitchCvx = useMutation(api.pitches.create);
   const createCollectionCvx = useMutation(api.collections.create);
@@ -782,9 +783,12 @@ export function CollabProvider({ children }) {
     setThreads((prev) => prev.map((t) => t.id === threadId ? { ...t, archived: true } : t));
   }, []);
 
-  const deleteThread = useCallback((threadId) => {
+  const deleteThread = useCallback((threadId, { terminate } = {}) => {
+    const target = threads.find((t) => t.id === threadId);
     setThreads((prev) => prev.filter((t) => t.id !== threadId));
-  }, []);
+    const key = target?.thread_key || threadId;
+    if (ownerId && key) hideThreadCvx({ threadKey: key, terminate: terminate || undefined }).catch(() => {});
+  }, [threads, ownerId, hideThreadCvx]);
 
   const updateThreadTag = useCallback((threadId, newTag) => {
     setThreads((prev) => prev.map((t) => t.id === threadId ? { ...t, tag: newTag } : t));

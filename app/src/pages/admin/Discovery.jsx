@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useAction } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { NICHE_KEYWORDS } from '../../lib/matchScore';
+import { detectChain, outreachRank } from '../../../convex/lib/chains';
 import SearchRegionsMap, { geocodeCountry } from '../../components/map/SearchRegionsMap';
 
 const NICHES = Object.keys(NICHE_KEYWORDS);
@@ -200,6 +201,8 @@ function TagLegend() {
 }
 
 // ─── Single prospect card ─────────────────────────────────────────────────────
+const isHotelProspect = (p) => p.instagram_handle?.startsWith('hc-');
+
 function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
   const updateStatus = useMutation(api.prospects.updateStatus);
   const update = useMutation(api.prospects.update);
@@ -212,6 +215,9 @@ function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
   const sendCreatorEmailNow = useAction(api.prospects.sendCreatorEmailNow);
   const markWhatsapped = useMutation(api.prospects.markWhatsapped);
   const toggleStarred = useMutation(api.prospects.toggleStarred);
+  const toggleTarget = useMutation(api.prospects.toggleTarget);
+  const setChainOverride = useMutation(api.prospects.setChainOverride);
+  const chain = isHotelProspect(prospect) ? detectChain(prospect) : null;
   const [open, setOpen] = useState(false);
   const [dmDraft, setDmDraft] = useState(prospect.dm_draft || '');
   const [emailField, setEmailField] = useState(prospect.email || '');
@@ -381,8 +387,33 @@ function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
   }
 
   return (
-    <div style={{ padding: '0.8rem 0.9rem', borderRadius: '0.875rem', background: 'rgba(255,255,255,0.72)', border: '1px solid rgba(25,37,36,0.07)' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+    <div style={{ position: 'relative', padding: '0.8rem 0.9rem', borderRadius: '0.875rem', background: 'rgba(255,255,255,0.72)', border: '1px solid rgba(25,37,36,0.07)' }}>
+      {isHotelProspect(prospect) && (
+        <div style={{ position: 'absolute', top: 6, right: 8, display: 'flex', alignItems: 'center', gap: 4, zIndex: 1 }}>
+          {chain && (
+            <button onClick={() => setChainOverride({ id: prospect._id, value: 'independent' })}
+              title={`${chain.strength === 'strong' ? 'Chain' : 'Possible chain (name match only)'}: ${chain.brand} (${chain.group}). Click to mark independent / owner-run.`}
+              style={{ fontSize: '0.58rem', fontWeight: 800, letterSpacing: '0.04em', textTransform: 'uppercase', padding: '0.12rem 0.45rem', borderRadius: 9999, border: 'none', cursor: 'pointer', background: chain.strength === 'strong' ? '#fee2e2' : '#fef3c7', color: chain.strength === 'strong' ? '#b91c1c' : '#92400e' }}>
+              ⚑ {chain.strength === 'strong' ? 'Chain' : 'Chain?'} · {chain.group}
+            </button>
+          )}
+          {!chain && prospect.chain_override === 'independent' && (
+            <button onClick={() => setChainOverride({ id: prospect._id, value: null })} title="Marked independent — click to reset to auto-detect"
+              style={{ fontSize: '0.58rem', fontWeight: 700, padding: '0.12rem 0.45rem', borderRadius: 9999, border: 'none', cursor: 'pointer', background: '#dcfce7', color: '#166534' }}>
+              Independent
+            </button>
+          )}
+          {prospect.room_count > 0 && (
+            <span title={`Rooms (${prospect.room_count_source || 'scrape'})`} style={{ fontSize: '0.58rem', fontWeight: 700, color: '#3C5759' }}>{prospect.room_count} rooms</span>
+          )}
+          <button onClick={() => toggleTarget({ id: prospect._id })} aria-label={prospect.target ? 'Remove target' : 'Mark as target'}
+            title={prospect.target ? 'Target — click to remove' : 'Mark as an independent I want to pursue'}
+            style={{ width: 22, height: 22, borderRadius: '50%', border: `1.5px solid ${prospect.target ? '#0f766e' : 'rgba(25,37,36,0.2)'}`, background: prospect.target ? '#0f766e' : 'transparent', color: prospect.target ? '#fff' : '#3C5759', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true"><circle cx="12" cy="12" r="8" /><circle cx="12" cy="12" r="2" fill="currentColor" /><path d="M12 1v4M12 19v4M1 12h4M19 12h4" /></svg>
+          </button>
+        </div>
+      )}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', paddingRight: isHotelProspect(prospect) ? 130 : 0 }}>
         {onToggleSelect && (
           <input type="checkbox" aria-label={`Select @${prospect.instagram_handle}`} checked={!!selected}
             onChange={() => onToggleSelect(prospect._id)} style={checkbox} />
@@ -1237,13 +1268,16 @@ function HostOutreachCampaign() {
   const remove = useMutation(api.prospects.remove);
 
   const [filterText, setFilterText] = useState('');
+  const [hideChains, setHideChains] = useState(true);
   const [selected, setSelected] = useState(() => new Set());
   const [busy, setBusy] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [msg, setMsg] = useState('');
   const [err, setErr] = useState('');
 
+  const chainCount = pool.filter((p) => detectChain(p)).length;
   const filteredPool = pool.filter((p) => {
+    if (hideChains && detectChain(p)) return false;
     if (!filterText.trim()) return true;
     const t = filterText.toLowerCase();
     return p.instagram_handle.toLowerCase().includes(t)
@@ -1252,6 +1286,7 @@ function HostOutreachCampaign() {
       || (p.niche || '').toLowerCase().includes(t)
       || (p.bio || '').toLowerCase().includes(t);
   });
+  filteredPool.sort((a, b) => outreachRank(b) - outreachRank(a));
 
   const allSelected = filteredPool.length > 0 && filteredPool.every((p) => selected.has(String(p._id)));
   function toggleSelectAll() {
@@ -1305,6 +1340,10 @@ function HostOutreachCampaign() {
           <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#192524' }}>Candidate pool ({filteredPool.length})</span>
           <input aria-label="Filter pool" value={filterText} onChange={(e) => setFilterText(e.target.value)}
             placeholder="Filter by name, location, niche…" style={{ ...input, width: 220, padding: '0.35rem 0.6rem', fontSize: '0.74rem' }} />
+          <button onClick={() => setHideChains((h) => !h)} title="Hide big-brand / chain properties (editable list: convex/lib/chains.ts)"
+            style={{ padding: '0.3rem 0.8rem', borderRadius: 9999, border: '1px solid rgba(25,37,36,0.15)', background: hideChains ? '#192524' : 'transparent', color: hideChains ? '#fff' : '#3C5759', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer' }}>
+            {hideChains ? 'Chains hidden' : 'Showing chains'} ({chainCount})
+          </button>
           <button onClick={toggleSelectAll}
             style={{ padding: '0.3rem 0.8rem', borderRadius: 9999, border: '1px solid rgba(25,37,36,0.15)', background: allSelected ? '#192524' : 'transparent', color: allSelected ? '#fff' : '#3C5759', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer' }}>
             {allSelected ? 'Deselect all' : 'Select all'}
@@ -1391,6 +1430,8 @@ function HostCrmBoard() {
   const [location, setLocation] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [filterText, setFilterText] = useState('');
+  const [hideChains, setHideChains] = useState(false);
+  const [targetsOnly, setTargetsOnly] = useState(false);
   const [selected, setSelected] = useState(() => new Set());
   const [dragId, setDragId] = useState(null);
   const [dragOverCol, setDragOverCol] = useState(null);
@@ -1411,6 +1452,8 @@ function HostCrmBoard() {
 
   const filtered = hosts.filter((p) => {
     if (p.status === 'new') return false; // pool candidates live in Host Outreach only
+    if (hideChains && detectChain(p)) return false;
+    if (targetsOnly && !p.target) return false;
     if (!filterText.trim()) return true;
     const t = filterText.toLowerCase();
     return p.instagram_handle.toLowerCase().includes(t)
@@ -1422,7 +1465,7 @@ function HostCrmBoard() {
   const byColumn = {};
   for (const col of CRM_COLUMNS) byColumn[col.id] = [];
   for (const p of filtered) (byColumn[p.status] || byColumn.queued).push(p);
-  for (const col of CRM_COLUMNS) byColumn[col.id].sort((a, b) => (b.starred ? 1 : 0) - (a.starred ? 1 : 0) || lastActivityAt(b) - lastActivityAt(a));
+  for (const col of CRM_COLUMNS) byColumn[col.id].sort((a, b) => (b.starred ? 1 : 0) - (a.starred ? 1 : 0) || outreachRank(b) - outreachRank(a) || lastActivityAt(b) - lastActivityAt(a));
 
   // Per-column select-all — a global one selected across every stage at
   // once, which was rarely what you wanted (e.g. bulk-emailing the whole
@@ -1500,6 +1543,14 @@ function HostCrmBoard() {
         <button onClick={() => setShowFilters((s) => !s)}
           style={{ padding: '0.35rem 0.8rem', borderRadius: 9999, border: '1px solid rgba(25,37,36,0.15)', background: showFilters ? 'rgba(25,37,36,0.06)' : 'transparent', color: '#3C5759', fontSize: '0.74rem', fontWeight: 600, cursor: 'pointer' }}>
           Filters{(tier || location) ? ' •' : ''} {showFilters ? '▴' : '▾'}
+        </button>
+        <button onClick={() => setHideChains((h) => !h)} title="Hide big-brand / chain properties"
+          style={{ padding: '0.35rem 0.8rem', borderRadius: 9999, border: '1px solid rgba(25,37,36,0.15)', background: hideChains ? '#192524' : 'transparent', color: hideChains ? '#fff' : '#3C5759', fontSize: '0.74rem', fontWeight: 600, cursor: 'pointer' }}>
+          {hideChains ? 'Chains hidden' : 'Hide chains'}
+        </button>
+        <button onClick={() => setTargetsOnly((t) => !t)} title="Only independents you marked with the target button"
+          style={{ padding: '0.35rem 0.8rem', borderRadius: 9999, border: '1px solid rgba(25,37,36,0.15)', background: targetsOnly ? '#0f766e' : 'transparent', color: targetsOnly ? '#fff' : '#3C5759', fontSize: '0.74rem', fontWeight: 600, cursor: 'pointer' }}>
+          Targets only
         </button>
         <button onClick={bulkGenerate} disabled={bulkBusy || selected.size === 0}
           title="Drafts a message for each selected host, rotating through the 5 angle templates"

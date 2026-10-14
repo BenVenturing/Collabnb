@@ -31,6 +31,7 @@ logging.getLogger("scrapling").setLevel(logging.ERROR)
 SUBPAGE_HINTS = re.compile(r"about|team|story|our-?people|owner|founder|meet|contact|press|media|partner|collab|influencer|creator|work-with", re.I)
 FORM_HINTS = re.compile(r"collab|influencer|creator|partner|press|media|work-with", re.I)
 EMAIL_RE = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
+ROOMS_RE = re.compile(r"\b(\d{1,3})\s*(?:[- ]?(?:guest|luxury|boutique|individually[- ]designed))?\s*(?:guest\s*)?(?:rooms|suites|keys|bedrooms)\b", re.I)
 WA_RE = re.compile(r"(?:wa\.me/|whatsapp\.com/send\?phone=)\+?(\d{8,15})")
 
 ROLES = r"(Co-?Founder|Founder|Owner|Proprietor|General Manager|Managing Director|Hotel Manager|Resort Manager|Villa Manager|Marketing Manager|Marketing Director|Director of Sales(?: (?:&|and) Marketing)?|Sales (?:&|and) Marketing Manager|PR Manager|Communications Manager|Brand Manager|Host)"
@@ -177,12 +178,17 @@ def scrape(target):
 
     dead = sorted(e for e in emails if not domain_accepts_mail(e.lower().split("@")[1]))
     ranked = sorted((e for e in emails if e not in dead), key=lambda e: email_score(e, site_host), reverse=True)
+    rooms = [int(m.group(1)) for _, p in pages for m in ROOMS_RE.finditer(str(p.get_all_text(separator=" ", ignore_tags=("script", "style")))) if 3 <= int(m.group(1)) <= 999]
     row = {"instagram_handle": target["instagram_handle"], "_pages": len(pages), "_browser": browser_used, "_emails": ranked, "_dead_emails": dead}
     if ranked and email_score(ranked[0], site_host) > -2:
         row["marketing_email"] = ranked[0].lower()
     if people:
         row["decision_maker_name"], row["decision_maker_role"] = people[0]
         row["_people"] = [f"{n} ({r})" for n, r in people[:5]]
+    if rooms:
+        # Highest figure that recurs, else the first: "52 rooms" in the hero text
+        # beats a stray "2 rooms available" in a booking widget.
+        row["room_count"] = max(set(rooms), key=lambda n: (rooms.count(n), n)) if len(rooms) > 2 else rooms[0]
     if whatsapp:
         row["whatsapp"] = whatsapp
     if contact_url:

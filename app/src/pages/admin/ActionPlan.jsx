@@ -25,7 +25,7 @@ const TASKS = [
 
   { id: 'pause-blasts', type: 'do', title: 'Pause the scraped-list email blasts',
     why: '10–15% bounces are hurting your sending domain. Most of the 1,000 CRM hosts came from the Hotel Creators import, and many are chains (Hyatt, Fairmont, Marriott) where nobody can say yes to a founding deal.',
-    steps: ['Pause any scheduled GoHighLevel batches.', 'From now on, only contact independent or boutique properties (under ~50 rooms, owner-run).', 'In Discovery, star the independents you want to target. Skip chains.'] },
+    steps: ['Pause any scheduled GoHighLevel batches.', 'From now on, only contact independent or boutique properties (under ~50 rooms, owner-run).', 'In Discovery, hit the target button on independents you want to pursue (star stays for quick follow-ups). Chains are badged, ranked last, and hidden by default in the pool.'] },
 
   { id: 'first-hotel', type: 'do', title: 'Ask your signed hotel for a testimonial + 2 intros',
     why: 'One owner vouching for you beats 100 cold DMs. Owners know other owners.',

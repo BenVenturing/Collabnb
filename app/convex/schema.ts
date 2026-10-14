@@ -794,6 +794,10 @@ export default defineSchema({
     contact_url: v.optional(v.string()), // contact/influencer form for hotels that have no email yet
     decision_maker_name: v.optional(v.string()), // owner/GM/marketing lead found on the hotel's own site (find-decision-makers.py)
     decision_maker_role: v.optional(v.string()),
+    target: v.optional(v.boolean()), // admin flag: independent property to actively pursue (separate from `starred`, which is follow-up)
+    chain_override: v.optional(v.string()), // 'independent' | 'chain' — beats the CHAINS list in convex/lib/chains.ts (franchised/owner-run hotels)
+    room_count: v.optional(v.number()), // scraped from the hotel's own site by find-decision-makers.py; blank when not found
+    room_count_source: v.optional(v.string()), // 'scrape' | 'manual'
     contact_checked_at: v.optional(v.number()), // set once find-decision-makers.py has crawled the site + MX-checked its emails (green ring in Discovery)
     created_at: v.number(),
   })

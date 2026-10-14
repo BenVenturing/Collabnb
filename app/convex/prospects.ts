@@ -871,6 +871,32 @@ export const toggleStarred = mutation({
   },
 });
 
+export const toggleTarget = mutation({
+  args: { id: v.id("prospects") },
+  handler: async (ctx, { id }) => {
+    await requireAdmin(ctx);
+    const p = await ctx.db.get(id);
+    if (!p) throw new Error("Prospect not found");
+    await ctx.db.patch(id, { target: !(p as any).target });
+  },
+});
+
+export const setChainOverride = mutation({
+  args: { id: v.id("prospects"), value: v.union(v.literal("independent"), v.literal("chain"), v.null()) },
+  handler: async (ctx, { id, value }) => {
+    await requireAdmin(ctx);
+    await ctx.db.patch(id, { chain_override: value ?? undefined });
+  },
+});
+
+export const setRoomCount = mutation({
+  args: { id: v.id("prospects"), room_count: v.union(v.number(), v.null()) },
+  handler: async (ctx, { id, room_count }) => {
+    await requireAdmin(ctx);
+    await ctx.db.patch(id, { room_count: room_count ?? undefined, room_count_source: room_count == null ? undefined : "manual" });
+  },
+});
+
 export const remove = mutation({
   args: { id: v.id("prospects") },
   handler: async (ctx, { id }) => {
@@ -2103,6 +2129,7 @@ export const enrichDecisionMakerLocal = mutation({
         marketing_email: v.optional(v.string()),
         whatsapp: v.optional(v.string()),
         contact_url: v.optional(v.string()),
+        room_count: v.optional(v.number()),
       })
     ),
   },
@@ -2127,6 +2154,10 @@ export const enrichDecisionMakerLocal = mutation({
       if (row.marketing_email && !existing.marketing_email) patch.marketing_email = row.marketing_email;
       if (row.whatsapp && !existing.whatsapp) patch.whatsapp = row.whatsapp;
       if (row.contact_url && !existing.contact_url) patch.contact_url = row.contact_url;
+      if (row.room_count && !existing.room_count) {
+        patch.room_count = row.room_count;
+        patch.room_count_source = "scrape";
+      }
       await ctx.db.patch(existing._id, patch);
       updated++;
     }

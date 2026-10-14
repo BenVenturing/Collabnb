@@ -169,11 +169,11 @@ const PROSPECT_TAGS = {
   'contacted-clicked': 'Already emailed earlier and they clicked a link',
 };
 
-function TagChips({ tags }) {
+function TagChips({ tags, small }) {
   if (!tags?.length) return null;
   return tags.map((t) => (
     <span key={t} title={PROSPECT_TAGS[t] || t}
-      style={{ fontSize: '0.62rem', padding: '0.15rem 0.45rem', borderRadius: 9999, fontWeight: 700, cursor: 'help',
+      style={{ fontSize: small ? '0.54rem' : '0.62rem', padding: small ? '0.08rem 0.35rem' : '0.15rem 0.45rem', borderRadius: 9999, fontWeight: 700, cursor: 'help',
         background: t.startsWith('contacted') ? 'rgba(212,168,67,0.18)' : 'rgba(60,87,89,0.12)',
         color: t.startsWith('contacted') ? '#b45309' : '#3C5759' }}>
       {t}
@@ -388,9 +388,10 @@ function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
 
   return (
     <div style={{ position: 'relative', padding: '0.8rem 0.9rem', borderRadius: '0.875rem', background: 'rgba(255,255,255,0.72)', border: '1px solid rgba(25,37,36,0.07)' }}>
-      {isHotelProspect(prospect) && (
-        <div style={{ position: 'absolute', top: 6, right: 8, display: 'flex', alignItems: 'center', gap: 4, zIndex: 1 }}>
-          {chain && (
+      {(isHotelProspect(prospect) || prospect.tags?.length > 0) && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', flexWrap: 'wrap', gap: 4, margin: '-0.25rem 0 0.3rem' }}>
+          <TagChips tags={prospect.tags} small />
+          {isHotelProspect(prospect) && chain && (
             <button onClick={() => setChainOverride({ id: prospect._id, value: 'independent' })}
               title={`${chain.strength === 'strong' ? 'Chain' : 'Possible chain (name match only)'}: ${chain.brand} (${chain.group}). Click to mark independent / owner-run.`}
               style={{ fontSize: '0.58rem', fontWeight: 800, letterSpacing: '0.04em', textTransform: 'uppercase', padding: '0.12rem 0.45rem', borderRadius: 9999, border: 'none', cursor: 'pointer', background: chain.strength === 'strong' ? '#fee2e2' : '#fef3c7', color: chain.strength === 'strong' ? '#b91c1c' : '#92400e' }}>
@@ -406,14 +407,14 @@ function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
           {prospect.room_count > 0 && (
             <span title={`Rooms (${prospect.room_count_source || 'scrape'})`} style={{ fontSize: '0.58rem', fontWeight: 700, color: '#3C5759' }}>{prospect.room_count} rooms</span>
           )}
-          <button onClick={() => toggleTarget({ id: prospect._id })} aria-label={prospect.target ? 'Remove target' : 'Mark as target'}
+          {isHotelProspect(prospect) && <button onClick={() => toggleTarget({ id: prospect._id })} aria-label={prospect.target ? 'Remove target' : 'Mark as target'}
             title={prospect.target ? 'Target — click to remove' : 'Mark as an independent I want to pursue'}
             style={{ width: 22, height: 22, borderRadius: '50%', border: `1.5px solid ${prospect.target ? '#0f766e' : 'rgba(25,37,36,0.2)'}`, background: prospect.target ? '#0f766e' : 'transparent', color: prospect.target ? '#fff' : '#3C5759', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true"><circle cx="12" cy="12" r="8" /><circle cx="12" cy="12" r="2" fill="currentColor" /><path d="M12 1v4M12 19v4M1 12h4M19 12h4" /></svg>
-          </button>
+          </button>}
         </div>
       )}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', paddingRight: isHotelProspect(prospect) ? 130 : 0 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
         {onToggleSelect && (
           <input type="checkbox" aria-label={`Select @${prospect.instagram_handle}`} checked={!!selected}
             onChange={() => onToggleSelect(prospect._id)} style={checkbox} />
@@ -436,7 +437,6 @@ function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
                 @{prospect.instagram_handle}
               </a>
             )}
-            <TagChips tags={prospect.tags} />
             {!crm && <StatusBadge status={prospect.status} />}
             {prospect.tier && <span style={{ fontSize: '0.62rem', padding: '0.15rem 0.45rem', borderRadius: 9999, background: 'rgba(209,235,219,0.6)', color: '#166534', fontWeight: 600, textTransform: 'capitalize' }}>{prospect.tier}</span>}
             {/* Angle + Published badges only clutter the CRM board's collapsed

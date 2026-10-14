@@ -38,7 +38,7 @@ NAME = r"([A-Z][a-z]+(?:[ -][A-Z][a-z]+){0,2})"
 NAME_THEN_ROLE = re.compile(NAME + r"\s*(?:,|-|–|—|\||·|\(|is (?:the|our))\s*(?:the |our )?" + ROLES)
 ROLE_THEN_NAME = re.compile(ROLES + r"\s*(?::|-|–|—|\|)\s*" + NAME)
 RUN_BY = re.compile(r"(?:owned|run|founded|hosted|managed) by\s+" + r"([A-Z][a-z]+(?: (?:&|and) [A-Z][a-z]+)?)")
-NOT_NAMES = {"The", "Our", "Hotel", "Villa", "Villas", "Resort", "Contact", "About", "Meet", "Team", "Home", "Book", "Welcome", "Your", "We", "Bali", "Lombok", "Gili", "Island", "Beach", "Spa", "Restaurant", "Story", "Message", "Sales", "Marketing", "General", "Manager"}
+NOT_NAMES = {"The", "Our", "Hotel", "Villa", "Villas", "Resort", "Contact", "About", "Meet", "Team", "Home", "Book", "Welcome", "Your", "We", "Bali", "Lombok", "Gili", "Island", "Beach", "Spa", "Restaurant", "Story", "Message", "Sales", "Marketing", "General", "Manager", "These", "This", "That", "Their", "Each", "Every", "All", "Stay", "Guest", "Guests", "Room", "Rooms", "Suite", "Suites", "Experience", "Discover", "Explore", "Learn", "Read", "More", "View", "Call", "Email", "Phone", "Our", "Local", "Private", "Luxury", "Boutique", "Lodge", "Inn", "House", "Collection", "Group", "Family"}
 
 ROLE_RANK = ["Owner", "Founder", "Co-Founder", "Cofounder", "Proprietor", "Managing Director", "General Manager", "Marketing", "Director of Sales", "Sales", "PR", "Communications", "Brand", "Hotel Manager", "Resort Manager", "Villa Manager", "Host"]
 GOOD_LOCAL = re.compile(r"market|pr\b|press|media|partner|collab|influenc|creator|owner|founder|^gm\b|manager|director|sales|brand|comms", re.I)
@@ -49,9 +49,9 @@ JUNK_EMAIL = re.compile(r"\.(png|jpe?g|gif|webp|svg)$|sentry|wixpress|example|em
 def fetch(url, browser=False):
     try:
         if browser:
-            page = DynamicFetcher.fetch(url, headless=True, network_idle=True, timeout=45000)
+            page = DynamicFetcher.fetch(url, headless=True, timeout=20000, wait=1500, retries=1, disable_resources=True)
         else:
-            page = Fetcher.get(url, stealthy_headers=True, timeout=20)
+            page = Fetcher.get(url, stealthy_headers=True, timeout=12, retries=1)
         if page.status and page.status >= 400:
             return None
         return page
@@ -110,7 +110,7 @@ def find_people(text):
         people.append((m.group(1), "Owner"))
     clean = []
     for name, role in people:
-        if name.split()[0] in NOT_NAMES or name in NOT_NAMES:
+        if any(w in NOT_NAMES for w in name.split()):
             continue
         clean.append((name.strip(), role.strip()))
     def rank(p):
@@ -165,8 +165,10 @@ def scrape(target):
     pages = crawl(site, browser=False, max_pages=6)
     found = extract(pages, site)
     browser_used = False
-    if not found[0] and not found[2]:
-        browser_pages = crawl(site, browser=True, max_pages=3)
+    # Browser only helps when the site answered but rendered nothing useful;
+    # DNS/TLS failures fail the same way in a browser, just 20x slower.
+    if pages and not found[0] and not found[2]:
+        browser_pages = crawl(site, browser=True, max_pages=2)
         if browser_pages:
             pages, found, browser_used = browser_pages, extract(browser_pages, site), True
     if not pages:

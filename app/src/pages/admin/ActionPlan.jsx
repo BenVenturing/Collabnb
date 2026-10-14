@@ -182,7 +182,7 @@ export default function ActionPlan() {
   const btn = (primary) => ({ padding: '0.55rem 1.1rem', borderRadius: 9999, border: primary ? 'none' : `1px solid ${SLATE}40`, background: primary ? INK : 'transparent', color: primary ? '#fff' : SLATE, fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer' });
 
   return (
-    <div style={{ maxWidth: 680 }}>
+    <div style={{ maxWidth: 680, padding: '1.25rem 1.75rem 2rem' }}>
       <div style={{ marginBottom: '2rem' }}>
         <h2 style={{ margin: 0, fontSize: '1.25rem', color: INK }}>Action Plan</h2>
         <p style={{ margin: '0.5rem 0 1.25rem', fontSize: '0.82rem', color: SAGE }}>100 founding hosts + 100 founding creators · one task at a time</p>

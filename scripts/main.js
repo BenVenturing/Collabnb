@@ -61,22 +61,11 @@ function getClerkErrorMessage(err) {
   return err.errors?.[0]?.longMessage || err.message || 'Something went wrong. Please try again.';
 }
 
-/* --- Reveal on scroll (IntersectionObserver) --- */
-let revealObserver = null;
-if (window.innerWidth <= 768) {
-  // On mobile: show everything immediately, no threshold-gating
-  document.querySelectorAll('.reveal').forEach(el => el.classList.add('in'));
-} else {
-  revealObserver = new IntersectionObserver((entries) => {
-    entries.forEach((e) => {
-      if (e.isIntersecting) {
-        e.target.classList.add('in');
-        revealObserver.unobserve(e.target);
-      }
-    });
-  }, { threshold: 0.15 });
-  document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
-}
+/* --- Reveal ---
+   Was scroll-gated via IntersectionObserver, but sections sat invisible until they
+   faded in mid-scroll, which read as "not loaded yet". Now everything fades in once
+   on load (mobile already worked this way). */
+document.querySelectorAll('.reveal').forEach(el => el.classList.add('in'));
 
 /* --- Nav: scroll opacity + active link --- */
 const navPill = document.querySelector('.nav-pill');
@@ -315,7 +304,7 @@ function initCountdown() {
   const els = document.querySelectorAll('[data-countdown]');
   if (!els.length) return;
 
-  const target = new Date('2026-10-23T00:00:00+07:00');
+  const target = new Date('2026-11-23T00:00:00+07:00');
 
   function update() {
     const now = new Date();
@@ -1431,10 +1420,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const closeBtn = document.querySelector('#modal-close');
   if (closeBtn) closeBtn.addEventListener('click', () => closeModal());  
 
-  // Re-init reveal observer after DOM is ready (catches any missed elements — desktop only)
-  if (revealObserver) {
-    document.querySelectorAll('.reveal:not(.in)').forEach(el => revealObserver.observe(el));
-  }
+  // Catch any .reveal elements added after the first pass
+  document.querySelectorAll('.reveal:not(.in)').forEach(el => el.classList.add('in'));
 
   // Close on overlay backdrop click
   const overlay = document.querySelector('#modal-overlay');

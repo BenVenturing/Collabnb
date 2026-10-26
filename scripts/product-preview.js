@@ -13,6 +13,12 @@ export function initProductPreview() {
     host: mockup.dataset.videoHost,
     creator: mockup.dataset.videoCreator,
   };
+  // Small silent 720px encodes for the ambient mockup loop — the full walkthroughs
+  // are ~150MB 2.7K files and stalled scrolling while they streamed and decoded.
+  const loops = {
+    host: mockup.dataset.loopHost || videos.host,
+    creator: mockup.dataset.loopCreator || videos.creator,
+  };
   const audioTracks = {
     host: mockup.dataset.audioHost,
     creator: mockup.dataset.audioCreator,
@@ -107,7 +113,7 @@ export function initProductPreview() {
   function playNextLoop() {
     const view = order[orderIndex % order.length];
     orderIndex += 1;
-    const src = videos[view];
+    const src = loops[view];
     if (!src) return;
     loopVideo.src = src;
     if (captionEl) captionEl.textContent = VIEW_LABELS[view];

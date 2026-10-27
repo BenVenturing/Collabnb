@@ -198,7 +198,7 @@ export default function Settings() {
   const navigate = useNavigate();
   const location = useLocation();
   const { t, i18n } = useTranslation('settings');
-  const { profile, updateProfile, signOut, openUserProfile } = useAuth();
+  const { profile, updateProfile, refreshProfile, signOut, openUserProfile } = useAuth();
   const { openModal: openSubModal } = useSubscription();
   const createBillingPortalSession = useAction(api.stripe.createBillingPortalSession);
   const createHostCardSetupSession = useAction(api.stripe.createHostCardSetupSession);
@@ -297,6 +297,7 @@ export default function Settings() {
       verifyHostCardSetupSession({ sessionId })
         .then(({ cardBrand, cardLast4, orderId }) => {
           setCheckoutReceipt({ type: 'host', orderId, cardBrand, cardLast4 });
+          return refreshProfile();
         })
         .catch((err) => setCardError(err?.message || "Couldn't confirm your card — please try again."))
         .finally(() => setCardBusy(false));
@@ -445,6 +446,7 @@ export default function Settings() {
     setCardError('');
     try {
       await removeSavedCard({ profileId: userId });
+      await refreshProfile();
     } catch (err) {
       setCardError(err?.message || "Couldn't remove that card — please try again.");
     } finally {
@@ -1059,12 +1061,6 @@ export default function Settings() {
 
             {activeTab === 'payments' && (
               <>
-                <SectionLabel>{t('payments.sectionPayouts')}</SectionLabel>
-                {profile?.role === 'creator' ? (
-                  <FieldRow label={t('payments.payoutMethod')} value={t('payments.payoutMethodCreatorValue')} action={t('account.manage')} onAction={() => goProfile('payout')} />
-                ) : (
-                  <FieldRow label={t('payments.payoutMethod')} value={t('payments.payoutMethodHostValue')} comingSoon />
-                )}
                 <SectionLabel>{t('payments.sectionPaymentMethods')}</SectionLabel>
                 {profile?.role === 'host' ? (
                   <>
@@ -1083,6 +1079,12 @@ export default function Settings() {
                   </>
                 ) : (
                   <FieldRow label={t('payments.savedCardsCreator')} value={t('payments.savedCardsCreatorValue')} comingSoon />
+                )}
+                {profile?.role === 'creator' && (
+                  <>
+                    <SectionLabel>{t('payments.sectionPayouts')}</SectionLabel>
+                    <FieldRow label={t('payments.payoutMethod')} value={t('payments.payoutMethodCreatorValue')} action={t('account.manage')} onAction={() => goProfile('payout')} />
+                  </>
                 )}
                 <SectionLabel>{t('payments.sectionTax')}</SectionLabel>
                 {profile?.role === 'creator' ? (

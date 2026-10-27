@@ -61,7 +61,7 @@ export function MockAuthProvider({ children }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ session: MOCK_SESSION, profile, loading: false, signOut, updateProfile, toggleSavedCreator, openUserProfile: () => {}, avatarUrl: null }}>
+    <AuthContext.Provider value={{ session: MOCK_SESSION, profile, loading: false, signOut, updateProfile, refreshProfile: async () => {}, toggleSavedCreator, openUserProfile: () => {}, avatarUrl: null }}>
       {children}
     </AuthContext.Provider>
   );
@@ -233,6 +233,15 @@ function ClerkAuthInner({ children }) {
     })();
   }, [clerkLoaded, clerkUser, convex, getOrCreateMutation, applyReferralCodeMutation]);
 
+  // Re-read the profile after a server-side write (e.g. Stripe card save) —
+  // the profile is fetched once at sign-in, not subscribed to.
+  const refreshProfile = useCallback(async () => {
+    const email = clerkUser?.primaryEmailAddress?.emailAddress;
+    if (!email) return;
+    const fresh = await convex.query(api.profiles.getByEmail, { email }).catch(() => null);
+    if (fresh) setProfile(fresh);
+  }, [clerkUser, convex]);
+
   const updateProfile = useCallback(async (updates) => {
     const merged = { ...profile, ...updates };
     setProfile(merged);
@@ -316,7 +325,7 @@ function ClerkAuthInner({ children }) {
   }, [profile, toggleSavedCreatorMutation]);
 
   return (
-    <AuthContext.Provider value={{ session, profile, loading, signOut, updateProfile, toggleSavedCreator, openUserProfile, avatarUrl: clerkUser?.imageUrl ?? null }}>
+    <AuthContext.Provider value={{ session, profile, loading, signOut, updateProfile, refreshProfile, toggleSavedCreator, openUserProfile, avatarUrl: clerkUser?.imageUrl ?? null }}>
       {children}
     </AuthContext.Provider>
   );

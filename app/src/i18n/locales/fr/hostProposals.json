@@ -159,7 +159,7 @@
     },
     "payout": {
       "platformTitle": "Collabnb gère ce paiement",
-      "platformBody": "Votre carte est débitée maintenant. Le paiement du créateur est retenu 48 heures au cas où l'une des parties ouvrirait un litige, puis transféré automatiquement.",
+      "platformBody": "Votre carte enregistrée est débitée une fois que Collabnb a vérifié et approuvé le paiement. Le paiement du créateur est ensuite retenu 48 heures au cas où l'une des parties ouvrirait un litige, puis transféré automatiquement.",
       "inPersonTitle": "Vous payez ce créateur directement",
       "inPersonBody": "Pensez à verser vous-même {{amount}} à {{name}} — Collabnb ne détient jamais cet argent, la fenêtre de litige de 48 heures ne s'applique donc pas. Vos frais de plateforme sont facturés séparément.",
       "agreedAmount": "le montant convenu"

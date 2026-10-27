@@ -67,6 +67,10 @@ const KNOWN_HOSTS = [
   { id: 'host_3', name: 'Napa Valley Estates', avatar: null, properties: ['Vineyard Wine Estate'] },
 ];
 
+const contractTermsKey = (c) =>
+  [c.property_name, c.location, c.dates, c.deliverables, c.currency, c.payment, c.cash_value, c.usage_rights]
+    .map((v) => v ?? '').join('|');
+
 // ─── Helper: format date for filename ──
 function dateStamp() {
   const d = new Date();
@@ -81,6 +85,10 @@ export default function ContractBuilder() {
   const previewRef = useRef(null);
   const { saveContract, updateContract, markContractSent, contracts, sendContractMessage } = useCollabs();
   const { profile } = useAuth();
+  const sendContractUpdate = (id, data) => {
+    if (data.cash_value !== undefined || data.payment !== undefined) lastSentTerms.current = contractTermsKey(data);
+    updateContract(id, data);
+  };
 
   // Real host profiles to send to; fall back to demo hosts when none exist yet.
   const hostProfiles = useQuery(api.profiles.getHosts);
@@ -248,6 +256,38 @@ export default function ContractBuilder() {
     } catch {}
   }, []); // eslint-disable-line
 
+  // The server clears both signatures when either side changes the terms, so
+  // mirror the live record — otherwise a stale signature stays on screen and
+  // gets re-sent on the next save.
+  // A server-originated change must not trigger the auto-save below, or this
+  // tab re-sends its stale form and silently reverts the other party's counter.
+  const lastLiveSigKey = useRef(null);
+  const lastSentTerms = useRef(null);
+  const skipAutoSave = useRef(false);
+  useEffect(() => {
+    if (!editingId) return;
+    const live = (contracts || []).find((c) => String(c.id) === String(editingId));
+    if (!live) return;
+    const key = `${editingId}|${!!live.creator_signed}|${!!live.host_signed}|${live.status}|${contractTermsKey(live)}`;
+    if (key === lastLiveSigKey.current) return;
+    const firstSight = !lastLiveSigKey.current?.startsWith(`${editingId}|`);
+    lastLiveSigKey.current = key;
+    if (firstSight) return;
+    if (contractTermsKey(live) !== lastSentTerms.current) {
+      skipAutoSave.current = true;
+      loadContract(live);
+      return;
+    }
+    const sigsChanged = !!live.creator_signed !== !!creatorSig || !!live.host_signed !== !!hostSig
+      || (live.status && live.status !== status);
+    if (!sigsChanged) return;
+    skipAutoSave.current = true;
+    setCreatorSig(live.creator_signed ? (live.creator_name || t('role.creator')) : '');
+    setHostSig(live.host_signed ? (live.host_name || t('role.host')) : '');
+    if (live.status) setStatus(live.status);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contracts, editingId]);
+
   // Deep-link from notifications: /contract?open=<contractId> opens that contract.
   // Runs after the draft-restore effect so the deep-linked contract wins.
   const [searchParams, setSearchParams] = useSearchParams();
@@ -272,10 +312,14 @@ export default function ContractBuilder() {
   // Debounced auto-save when editing an existing contract
   useEffect(() => {
     if (!editingId) return;
+    if (skipAutoSave.current) {
+      skipAutoSave.current = false;
+      return;
+    }
     setSaveStatus('saving');
     clearTimeout(autoSaveTimer.current);
     autoSaveTimer.current = setTimeout(() => {
-      updateContract(editingId, {
+      sendContractUpdate(editingId, {
         creator_name: form.creator,
         host_name: form.host,
         property_name: form.property_name,
@@ -343,9 +387,9 @@ export default function ContractBuilder() {
       checkOut: epochToInput(c.check_out),
       deliverables: c.deliverables || '',
       currency: isFreeStay ? 'USD' : (c.currency || 'USD'),
-      paymentAmount: isFreeStay ? '' : (c.payment === 'Free Stay' ? '' : c.payment || ''),
+      paymentAmount: isFreeStay ? '' : (typeof c.cash_value === 'number' ? String(c.cash_value) : (c.payment === 'Free Stay' ? '' : c.payment || '')),
       isFreeStay,
-      usageRights: c.usage_rights || '',
+      usageRights: USAGE_RIGHTS.find((u) => u.label === c.usage_rights)?.value || c.usage_rights || '',
     });
     setStatus(c.status || 'draft');
     setCreatorSig(c.creator_signed ? (c.creator_name || profile?.full_name || t('role.creator')) : '');
@@ -397,7 +441,7 @@ export default function ContractBuilder() {
     const contractData = buildContractData();
 
     if (editingId) {
-      updateContract(editingId, contractData);
+      sendContractUpdate(editingId, contractData);
     } else {
       const saved = saveContract(contractData);
       setEditingId(saved.id);
@@ -471,7 +515,10 @@ export default function ContractBuilder() {
   // the payment entirely.
   useEffect(() => {
     if (creatorSig && hostSig && !contractPaid && !cardSaved && profile?.role === 'host') {
-      if (profile?.is_founder) {
+      // Founders skip the platform fee, but a platform-handled cash payout still
+      // has to be charged to the host's card before it can reach the creator.
+      const owesCreatorCash = !form.isFreeStay && form.payoutHandling !== 'in_person' && cashValue > 0;
+      if (profile?.is_founder && !owesCreatorCash) {
         setContractPaid(true);
         setFounderToast(true);
         setTimeout(() => setFounderToast(false), 4000);
@@ -514,13 +561,13 @@ export default function ContractBuilder() {
       const saved = saveContract(buildContractData());
       id = saved.id;
     } else {
-      updateContract(id, buildContractData());
+      sendContractUpdate(id, buildContractData());
     }
 
     // Update status to pending, stamping the real host id when we have one so the
     // server can resolve the recipient directly (instead of by name match).
     setStatus('pending');
-    updateContract(id, {
+    sendContractUpdate(id, {
       ...buildContractData(),
       status: 'pending',
       ...(host.isReal ? { host_id: host.id } : {}),

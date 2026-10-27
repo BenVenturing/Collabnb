@@ -5,6 +5,7 @@ import { totalPoints, normalizeTierId, calcMidpoint, calcHardFloor, evaluateZone
 import { requireOwnerOrAdmin, canAccessOwner } from "./lib/auth";
 import { cleanPlainText } from "./lib/sanitize";
 import { enforceRateLimit, RATE_LIMITS } from "./lib/rateLimit";
+import { completeCollaboration } from "./collaborations";
 
 function currentMonthKey(): string {
   const now = new Date();
@@ -270,6 +271,30 @@ export const updateStatus = mutation({
     const updates: Record<string, unknown> = { status };
     if (hostNote !== undefined) updates.host_note = cleanPlainText(hostNote, 1000);
     await ctx.db.patch(id, updates);
+
+    if (status === "completed" && pitch.status !== "completed") {
+      const collab = await ctx.db
+        .query("collaborations")
+        .filter((q) => q.and(
+          q.eq(q.field("listing_id"), pitch.listing_id),
+          q.eq(q.field("creator_id"), pitch.creator_id),
+        ))
+        .first();
+      if (collab) {
+        await completeCollaboration(ctx, {
+          collabId: String(collab._id),
+          contractId: collab.contract_id ? String(collab.contract_id) : undefined,
+          creatorId: String(pitch.creator_id),
+        });
+        await ctx.runMutation(internal.notifications.create, {
+          userId: String(pitch.creator_id),
+          type: "collab_completed",
+          title: "Collab marked complete 🎉",
+          body: `${pitch.listing_title || "Your collab"} was marked complete by the host. Leave them a review!`,
+          link: "/collabs",
+        });
+      }
+    }
 
     if (status === "approved" || status === "declined") {
       const title = status === "approved"

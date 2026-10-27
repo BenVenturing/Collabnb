@@ -126,6 +126,56 @@ export const create = mutation({
   },
 });
 
+// Shared by the creator's close flow (markCompleted) and the host's "Mark
+// Completed" (pitches.updateStatus) — previously only the creator path billed,
+// so a host completing a collab never triggered the charge or the payout.
+export async function completeCollaboration(
+  ctx: any,
+  { collabId, contractId, creatorId }: { collabId?: string; contractId?: string; creatorId?: string },
+) {
+  if (collabId) {
+    const collab = await ctx.db.get(collabId as any).catch(() => null);
+    // Idempotent: completing twice must not create a second fee record.
+    if ((collab as any)?.status === 'completed') return;
+    await ctx.db.patch(collabId as any, {
+      status: 'completed',
+      status_text: 'Completed',
+      is_active: false,
+    });
+  }
+
+  // ── Fee record + charge at completion ─────────────────────────────────
+  // Founding hosts get a $0 waived fee record, but chargeContractFee still runs:
+  // it waives the platform fee itself and collects the creator's cash payout.
+  const contract = contractId
+    ? await ctx.db.query("contracts").filter((q: any) => q.eq(q.field("_id"), contractId)).first()
+    : null;
+
+  if (contractId && contract) {
+    const cashValue = parseFloat(String(contract.payment ?? '').replace(/[^0-9.]/g, '')) || 0;
+
+    let isFoundingHost = false;
+    if (contract.host_id) {
+      const host = await ctx.db.get(contract.host_id as any);
+      isFoundingHost = host?.is_founder === true || host?.is_lifetime === true;
+    }
+
+    await ctx.runMutation(internal.fees.recordCompletionFee, {
+      collaborationId: collabId as any,
+      contractId,
+      cashValue,
+      isFoundingHost,
+    });
+  }
+
+  const creator = creatorId ?? contract?.creator_id;
+  if (!creator) return;
+  const profile = await ctx.db.get(creator as any);
+  if (profile && !profile.first_collab_completed) {
+    await ctx.db.patch(profile._id, { first_collab_completed: true });
+  }
+}
+
 export const markCompleted = mutation({
   args: {
     // Optional: the local collab layer (CollabContext) doesn't always hold the
@@ -137,55 +187,7 @@ export const markCompleted = mutation({
   },
   handler: async (ctx, args) => {
     if (args.creatorId) await requireOwnerOrAdmin(ctx, args.creatorId);
-    if (args.id) {
-      await ctx.db.patch(args.id as any, {
-        status: 'completed',
-        status_text: 'Completed',
-        is_active: false,
-      });
-    }
-
-    // ── Fee record creation at completion ──────────────────────────────────
-    // If a contract is linked, compute the fee and create a fee_record.
-    // Founding hosts get a $0 waived entry; non-founding hosts get charged.
-    let contract = null;
-    if (args.contractId) {
-      contract = await ctx.db.query("contracts").filter((q) => q.eq(q.field("_id"), args.contractId!)).first();
-    }
-
-    if (args.contractId && contract) {
-      const cashValue = parseFloat(String(contract.payment ?? '').replace(/[^0-9.]/g, '')) || 0;
-
-      // Check if host is a founding member
-      let isFoundingHost = false;
-      if (contract.host_id) {
-        const host = await ctx.db.get(contract.host_id as any);
-        isFoundingHost = host?.is_founder === true || host?.is_lifetime === true;
-      }
-
-      await ctx.runMutation(internal.fees.recordCompletionFee, {
-        collaborationId: args.id as any,  // already checked above
-        contractId: args.contractId,
-        cashValue,
-        isFoundingHost,
-      });
-
-      // Legacy path: queue the off-session charge for non-founding hosts with saved cards
-      if (!isFoundingHost) {
-        await ctx.scheduler.runAfter(0, internal.stripe.chargeContractFee, {
-          contractId: args.contractId,
-        });
-      }
-    }
-
-    if (!args.creatorId) return;
-
-    const profile = await ctx.db.get(args.creatorId as any);
-    if (!profile) return;
-
-    if (!profile.first_collab_completed) {
-      await ctx.db.patch(profile._id, { first_collab_completed: true });
-    }
+    await completeCollaboration(ctx, { collabId: args.id, contractId: args.contractId, creatorId: args.creatorId });
   },
 });
 
@@ -225,6 +227,44 @@ export const advanceStage = mutation({
       current_stage: args.nextStage,
       stages: JSON.stringify(stages),
     });
+  },
+});
+
+// Per-stage data a party records without advancing (the creator's deliverables
+// link, revision notes). Persisted here so the other party actually sees it.
+export const updateStageData = mutation({
+  args: {
+    id: v.string(),
+    stageKey: v.string(),
+    driveUrl: v.optional(v.string()),
+    note: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const { profile, collab, party } = await loadCollabAsParty(ctx, args.id);
+    const stages = collab.stages ? JSON.parse(collab.stages) : {};
+    stages[args.stageKey] = {
+      ...(stages[args.stageKey] || {}),
+      ...(args.note !== undefined ? { note: args.note } : {}),
+      ...(args.driveUrl !== undefined ? { drive_url: args.driveUrl } : {}),
+    };
+    const linkChanged = args.driveUrl !== undefined && args.driveUrl !== (collab.drive_url || "");
+    await ctx.db.patch(collab._id, {
+      stages: JSON.stringify(stages),
+      ...(args.driveUrl !== undefined ? { drive_url: args.driveUrl } : {}),
+    });
+
+    if (linkChanged && args.driveUrl) {
+      const recipientId = party === "creator" ? collab.host_id : collab.creator_id;
+      if (recipientId) {
+        await ctx.runMutation(internal.notifications.create, {
+          userId: String(recipientId),
+          type: "deliverables_submitted",
+          title: party === "creator" ? "Deliverables ready to review" : "Deliverables link updated",
+          body: `${profile.full_name || "Your collaborator"} shared the deliverables for ${collab.property_name || "your collab"}.`,
+          link: party === "creator" ? "/host/proposals" : "/collabs",
+        });
+      }
+    }
   },
 });
 

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useTranslation, Trans } from 'react-i18next';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
@@ -7,6 +7,7 @@ import { api } from '../../convex/_generated/api';
 import { useCollabs } from '../contexts/CollabContext';
 import { useAuth } from '../contexts/AuthContext';
 import { SAMPLE_LISTINGS, SAMPLE_HOST, STAGES, DEMO_STAGE_CARDS } from '../lib/mockData';
+import { withServerCollab } from '../lib/collabStages';
 import {
   Clock, Trash2, ClipboardCheck, RefreshCw, Clapperboard, Camera, PenLine,
   Upload, CheckCircle2, BarChart3, Archive,
@@ -635,23 +636,29 @@ function StarRow({ value, onChange, size = '1.6rem' }) {
 function ClosedPanel({ collab, toggleCloseCollab }) {
   const { t } = useTranslation('collabDetail');
   const stage = collab.stages?.closed || {};
-  const creatorDone = !!stage.creator_closed;
-  const hostDone = !!stage.host_closed;
-  const bothDone = creatorDone && hostDone;
-  const closedCount = [creatorDone, hostDone].filter(Boolean).length;
   const { submitContentMetrics } = useCollabs();
   const { profile } = useAuth();
 
-  // Mutual ratings — required to confirm close
+  // Mutual ratings — required to confirm close. Reviews are keyed by the Convex
+  // collab id (the local id never matches anything server-side).
+  const reviewCollabId = collab.convex_id
+    ? String(collab.convex_id)
+    : (String(collab.id).length > 20 ? String(collab.id) : null);
+  const myParty = collab.creator_id && profile?._id && String(profile._id) !== String(collab.creator_id) ? 'host' : 'creator';
   const submitReviewCvx = useMutation(api.reviews.submit);
-  const reviews = useQuery(api.reviews.getForCollab, { collabId: String(collab.id) }) || [];
+  const reviews = useQuery(api.reviews.getForCollab, reviewCollabId ? { collabId: reviewCollabId } : 'skip') || [];
   const reviewByRole = (role) => reviews.find((r) => r.reviewer_role === role);
+  const creatorDone = !!stage.creator_closed || !!reviewByRole('creator');
+  const hostDone = !!stage.host_closed || !!reviewByRole('host');
+  const bothDone = creatorDone && hostDone;
+  const closedCount = [creatorDone, hostDone].filter(Boolean).length;
   const [ratingParty, setRatingParty] = useState(null); // 'creator' | 'host' | null
   const [stars, setStars] = useState(0);
   const [reviewComment, setReviewComment] = useState('');
   const [submittingReview, setSubmittingReview] = useState(false);
 
   const openRating = (party) => {
+    if (party !== myParty) return;
     if ((party === 'creator' && creatorDone) || (party === 'host' && hostDone)) return;
     setRatingParty(party);
     setStars(0);
@@ -659,11 +666,11 @@ function ClosedPanel({ collab, toggleCloseCollab }) {
   };
 
   const handleSubmitReview = async () => {
-    if (!ratingParty || stars < 1 || submittingReview) return;
+    if (!ratingParty || stars < 1 || submittingReview || !reviewCollabId) return;
     setSubmittingReview(true);
     try {
       await submitReviewCvx({
-        collabId: String(collab.id),
+        collabId: reviewCollabId,
         contractId: collab.contract_id ? String(collab.contract_id) : undefined,
         reviewerRole: ratingParty,
         rating: stars,
@@ -714,13 +721,15 @@ function ClosedPanel({ collab, toggleCloseCollab }) {
             { party: 'host', done: hostDone },
           ].map(({ party, done }) => {
             const rev = reviewByRole(party);
+            const canRate = party === myParty && !done;
             return (
               <button
                 key={party}
                 onClick={() => openRating(party)}
+                disabled={!canRate}
                 style={{
                   flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.35rem',
-                  padding: '0.75rem', borderRadius: '0.875rem', cursor: done ? 'default' : 'pointer',
+                  padding: '0.75rem', borderRadius: '0.875rem', cursor: canRate ? 'pointer' : 'default',
                   background: done ? 'rgba(74,155,127,0.15)' : ratingParty === party ? 'rgba(212,168,67,0.1)' : 'rgba(255,255,255,0.75)',
                   border: `1.5px solid ${done ? '#4A9B7F' : ratingParty === party ? '#D4A843' : 'rgba(25,37,36,0.12)'}`,
                   fontFamily: 'var(--font-body)', fontSize: '0.8rem', fontWeight: 600,
@@ -730,7 +739,7 @@ function ClosedPanel({ collab, toggleCloseCollab }) {
               >
                 <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   {done ? <CheckIcon /> : <span style={{ width: 12, height: 12, borderRadius: '50%', border: '2px solid var(--stone)', display: 'inline-block' }} />}
-                  {t(`closed.parties.${party}`)}: {done ? t('closed.confirmed') : t('closed.rateClose')}
+                  {t(`closed.parties.${party}`)}: {done ? t('closed.confirmed') : party === myParty ? t('closed.rateClose') : t('closed.waiting', 'Waiting')}
                 </span>
                 {rev && (
                   <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#D4A843' }}>
@@ -932,20 +941,30 @@ function ArchivedPanel({ collab }) {
 }
 
 /* ─── Main CollabDetail component ─────────────────────────────────────────── */
-export default function CollabDetail({ collab, onClose }) {
+export default function CollabDetail({ collab: collabProp, onClose }) {
   const { t } = useTranslation('collabDetail');
   const navigate = useNavigate();
-  const { advanceStage, updateStageData, toggleCloseCollab, removeCollab, contracts } = useCollabs();
+  const { collabs, advanceStage, updateStageData, toggleCloseCollab, removeCollab, contracts } = useCollabs();
   const { profile } = useAuth();
+
+  // Render against live state, not the snapshot the parent opened us with, so
+  // stage advances (ours or the host's) show without reopening the modal.
+  const convexCollab = useQuery(
+    api.collaborations.getById,
+    collabProp.convex_id ? { id: String(collabProp.convex_id) } : 'skip',
+  );
+  const collab = useMemo(() => {
+    const local = collabs.find((c) => c.id === collabProp.id);
+    const base = local
+      ? { ...collabProp, current_stage: local.current_stage, stages: local.stages, drive_url: local.drive_url }
+      : collabProp;
+    return withServerCollab(base, convexCollab, contracts);
+  }, [collabs, collabProp, convexCollab, contracts]);
   const [driveUrl, setDriveUrl] = useState(collab.drive_url || '');
   const [confirmTerminate, setConfirmTerminate] = useState(false);
 
   // Ending an accepted collab takes both sides — read the pending request (if
   // any) straight from Convex, which is where the host writes it.
-  const convexCollab = useQuery(
-    api.collaborations.getById,
-    collab.convex_id ? { id: String(collab.convex_id) } : 'skip',
-  );
   const terminationRequestedBy = convexCollab?.termination_requested_by || null;
   const requestTerminationCvx = useMutation(api.collaborations.requestTermination);
   const cancelTerminationCvx  = useMutation(api.collaborations.cancelTermination);

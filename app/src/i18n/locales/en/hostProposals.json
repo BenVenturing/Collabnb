@@ -159,7 +159,7 @@
     },
     "payout": {
       "platformTitle": "Collabnb is handling this payment",
-      "platformBody": "Your card is charged now. The creator's payout is held for 48 hours in case either side raises a dispute, then forwarded automatically.",
+      "platformBody": "Your saved card is charged once Collabnb reviews and approves the payment. The creator's payout is then held for 48 hours in case either side raises a dispute, and forwarded automatically.",
       "inPersonTitle": "You're paying this creator directly",
       "inPersonBody": "Remember to pay {{name}} {{amount}} yourself — Collabnb never holds this money, so the 48-hour dispute window doesn't apply. Your platform fee is charged separately.",
       "agreedAmount": "the agreed amount"
@@ -202,5 +202,12 @@
     "heading": "Mark the collab with {{name}} complete?",
     "cancel": "Cancel",
     "confirm": "Yes, complete"
+  },
+  "review": {
+    "heading": "Rate {{name}}",
+    "done": "Your review of {{name}}",
+    "placeholder": "How was working with them? (optional)",
+    "submit": "Submit review",
+    "error": "Could not save your review. Try again."
   }
 }

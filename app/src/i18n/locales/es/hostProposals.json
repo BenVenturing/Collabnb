@@ -159,7 +159,7 @@
     },
     "payout": {
       "platformTitle": "Collabnb gestiona este pago",
-      "platformBody": "Tu tarjeta se cobra ahora. El pago del creador se retiene 48 horas por si alguna parte abre una disputa y luego se envía automáticamente.",
+      "platformBody": "Tu tarjeta guardada se cobra cuando Collabnb revisa y aprueba el pago. Después, el pago del creador se retiene 48 horas por si alguna parte abre una disputa y se envía automáticamente.",
       "inPersonTitle": "Tú pagas directamente a este creador",
       "inPersonBody": "Recuerda pagar tú mismo {{amount}} a {{name}} — Collabnb nunca retiene este dinero, así que la ventana de disputa de 48 horas no aplica. Tu tarifa de plataforma se cobra por separado.",
       "agreedAmount": "el importe acordado"

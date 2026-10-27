@@ -46,8 +46,9 @@ export const recordCompletionFee = internalMutation({
       created_at: Date.now(),
     });
 
-    // For non-founding hosts with a saved card, schedule the charge.
-    if (!args.isFoundingHost && args.contractId) {
+    // Schedule the charge for every host — chargeContractFee waives the fee for
+    // founders but must still collect the creator's platform-handled payout.
+    if (args.contractId) {
       await ctx.scheduler.runAfter(0, internal.stripe.chargeContractFee, {
         contractId: args.contractId,
       });

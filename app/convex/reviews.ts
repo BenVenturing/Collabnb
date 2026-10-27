@@ -1,7 +1,7 @@
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { internal } from "./_generated/api";
-import { requireOwnerOrAdmin } from "./lib/auth";
+import { requireAuthedProfile } from "./lib/auth";
 import { cleanPlainText } from "./lib/sanitize";
 
 // Mutual ratings collected while closing out a collaboration. One review per
@@ -20,10 +20,23 @@ export const submit = mutation({
     propertyName: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    if (args.reviewerId) await requireOwnerOrAdmin(ctx, args.reviewerId);
     if (args.reviewerRole !== "creator" && args.reviewerRole !== "host") {
       throw new Error("reviewerRole must be 'creator' or 'host'");
     }
+    // Only a party to the collab can review it, and only as their own side.
+    const profile = await requireAuthedProfile(ctx);
+    const cid = ctx.db.normalizeId("collaborations", args.collabId);
+    const collab = cid ? await ctx.db.get(cid) : null;
+    if (!collab) throw new ConvexError("Collaboration not found.");
+    const lid = collab.listing_id ? ctx.db.normalizeId("listings", String(collab.listing_id)) : null;
+    const listing = lid ? await ctx.db.get(lid) : null;
+    const me = String(profile._id);
+    const hostId = (collab as any).host_id ?? listing?.host_id;
+    const party = me === String(collab.creator_id) ? "creator" : hostId && me === String(hostId) ? "host" : null;
+    if (party !== args.reviewerRole && !(party === null && profile.is_admin === true)) {
+      throw new ConvexError("You can only review your own side of this collab.");
+    }
+    args = { ...args, collabId: String(collab._id), reviewerId: me };
     const rating = Math.round(args.rating);
     if (rating < 1 || rating > 5) throw new Error("rating must be 1–5");
 

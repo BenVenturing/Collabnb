@@ -4,6 +4,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Clock, FileText } from 'lucide-react';
 import { useCollabs } from '../contexts/CollabContext';
 import { DEMO_COLLAB } from '../lib/mockData';
+import { withServerCollab } from '../lib/collabStages';
 import CollabDetail from '../components/CollabDetail';
 import ProposalsOverview from '../components/dashboard/ProposalsOverview';
 import { bucketByMonth, toMonthSeries, isoDate } from '../lib/monthSeries';
@@ -271,7 +272,7 @@ export default function Collabs() {
     const localListingIds = new Set(base.map((c) => String(c.listing_id)));
     const realCollabs = (convexCollabs || [])
       .filter((c) => !localListingIds.has(String(c.listing_id)))
-      .map((c) => ({
+      .map((c) => withServerCollab({
         id: String(c._id),
         listing_id: String(c.listing_id),
         property_name: c.property_name || 'Collab',
@@ -289,7 +290,7 @@ export default function Collabs() {
         is_active: c.is_active ?? true,
         current_stage: c.current_stage || 'pending',
         stages: typeof c.stages === 'string' ? JSON.parse(c.stages) : (c.stages || {}),
-      }));
+      }, c, contracts));
 
     // Reconcile local collabs against their real Convex record where one exists —
     // current_stage/stages must come from the server (the host's proposal board
@@ -300,15 +301,7 @@ export default function Collabs() {
       const real = convexByListingId.get(String(c.listing_id));
       const realStatus = pitchStatusMap[String(c.listing_id)];
       let next = c;
-      if (real) {
-        next = {
-          ...next,
-          convex_id: next.convex_id || String(real._id),
-          current_stage: real.current_stage || next.current_stage,
-          stages: typeof real.stages === 'string' ? JSON.parse(real.stages) : (real.stages || next.stages),
-          is_active: real.is_active ?? next.is_active,
-        };
-      }
+      if (real) next = withServerCollab(next, real, contracts);
       if (realStatus && realStatus !== next.status) {
         next = { ...next, status: realStatus, status_text: statusText[realStatus] || next.status_text };
       }
@@ -320,7 +313,7 @@ export default function Collabs() {
     if (demoDismissed) return withReal;
     const hasDemo = withReal.some((c) => c.is_demo);
     return hasDemo ? withReal : [...withReal, DEMO_COLLAB];
-  }, [collabs, convexCollabs, pitchStatusMap, demoDismissed, dismissedSamples]);
+  }, [collabs, convexCollabs, contracts, pitchStatusMap, demoDismissed, dismissedSamples]);
 
   // Deep-link from notifications: /collabs?open=<listing_id> auto-opens that collab
   const [searchParams, setSearchParams] = useSearchParams();
@@ -511,7 +504,7 @@ export default function Collabs() {
 
       {selectedCollab && (
         <CollabDetail
-          collab={selectedCollab}
+          collab={allCollabs.find((c) => String(c.id) === String(selectedCollab.id)) || selectedCollab}
           onClose={() => {
             setSelectedCollab(null);
             // Show dismiss toast for demo tour

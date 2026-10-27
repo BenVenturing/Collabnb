@@ -159,7 +159,7 @@
     },
     "payout": {
       "platformTitle": "Collabnb wickelt diese Zahlung ab",
-      "platformBody": "Deine Karte wird jetzt belastet. Die Auszahlung an den Creator wird 48 Stunden zurückgehalten, falls eine Seite einen Streitfall meldet, und danach automatisch weitergeleitet.",
+      "platformBody": "Deine gespeicherte Karte wird belastet, sobald Collabnb die Zahlung geprüft und freigegeben hat. Die Auszahlung an den Creator wird dann 48 Stunden zurückgehalten, falls eine Seite einen Streitfall meldet, und danach automatisch weitergeleitet.",
       "inPersonTitle": "Du bezahlst diesen Creator direkt",
       "inPersonBody": "Denk daran, {{name}} {{amount}} selbst zu zahlen — Collabnb hält dieses Geld nie, daher gilt das 48-Stunden-Streitfenster nicht. Deine Plattformgebühr wird separat berechnet.",
       "agreedAmount": "den vereinbarten Betrag"

@@ -588,6 +588,76 @@ function MiniStageProgress({ currentStage }) {
   );
 }
 
+// Host's side of the mutual close-out rating (the creator rates from CollabDetail).
+function HostReviewForm({ proposal }) {
+  const { t } = useTranslation('hostProposals');
+  const { profile } = useAuth();
+  const collabId = String(proposal.convexCollabId);
+  const reviews = useQuery(api.reviews.getForCollab, { collabId });
+  const submitReview = useMutation(api.reviews.submit);
+  const [stars, setStars] = useState(0);
+  const [comment, setComment] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const mine = reviews?.find((r) => r.reviewer_role === 'host');
+  if (reviews === undefined) return null;
+
+  async function handleSubmit() {
+    if (stars < 1 || busy) return;
+    setBusy(true);
+    setError('');
+    try {
+      await submitReview({
+        collabId,
+        reviewerRole: 'host',
+        rating: stars,
+        comment: comment.trim() || undefined,
+        reviewerName: profile?.full_name || undefined,
+        revieweeName: proposal.creator?.name || undefined,
+        propertyName: proposal.listing || undefined,
+      });
+    } catch (e) {
+      setError(e?.data || t('review.error', 'Could not save your review. Try again.'));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div style={{ padding: '12px 20px', borderBottom: '1px solid rgba(25,37,36,0.08)' }}>
+      <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink)', margin: '0 0 6px' }}>
+        {mine ? t('review.done', 'Your review of {{name}}', { name: proposal.creator?.name || 'the creator' })
+              : t('review.heading', 'Rate {{name}}', { name: proposal.creator?.name || 'the creator' })}
+      </p>
+      {mine ? (
+        <p style={{ fontSize: 12, color: 'var(--slate)', margin: 0 }}>
+          <span style={{ color: '#D4A843', fontWeight: 700 }}>{'★'.repeat(mine.rating)}{'☆'.repeat(5 - mine.rating)}</span>
+          {mine.comment ? ` — ${mine.comment}` : ''}
+        </p>
+      ) : (
+        <>
+          <div style={{ display: 'flex', gap: 4, marginBottom: 8 }}>
+            {[1, 2, 3, 4, 5].map((n) => (
+              <button key={n} type="button" onClick={() => setStars(n)} aria-label={`${n}`}
+                style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: 22, lineHeight: 1, color: n <= stars ? '#D4A843' : 'rgba(25,37,36,0.2)' }}>
+                ★
+              </button>
+            ))}
+          </div>
+          <textarea value={comment} onChange={(e) => setComment(e.target.value)} rows={2}
+            placeholder={t('review.placeholder', 'How was working with them? (optional)')}
+            style={{ width: '100%', boxSizing: 'border-box', padding: '8px 10px', borderRadius: 10, border: '1px solid rgba(25,37,36,0.12)', fontFamily: 'var(--font-body)', fontSize: 12, resize: 'vertical', marginBottom: 8 }} />
+          {error && <p style={{ fontSize: 11.5, color: '#9b2d2d', margin: '0 0 8px' }}>{String(error)}</p>}
+          <button type="button" onClick={handleSubmit} disabled={stars < 1 || busy}
+            style={{ padding: '7px 16px', borderRadius: 9999, border: 'none', background: stars < 1 ? 'rgba(25,37,36,0.12)' : 'var(--ink)', color: '#fff', fontFamily: 'var(--font-body)', fontSize: 12, fontWeight: 700, cursor: stars < 1 ? 'default' : 'pointer' }}>
+            {t('review.submit', 'Submit review')}
+          </button>
+        </>
+      )}
+    </div>
+  );
+}
+
 function ProposalDrawer({ proposal, onStatusChange, onCounter, onSign, onClose, onStageChange, onTerminate, onCreatorClick, onConfirmComplete, listingById, contractById }) {
   const { t } = useTranslation('hostProposals');
   const navigate = useNavigate();
@@ -665,6 +735,10 @@ function ProposalDrawer({ proposal, onStatusChange, onCounter, onSign, onClose, 
             </p>
           </div>
         </div>
+      )}
+
+      {proposal.status === 'completed' && proposal.isReal && proposal.convexCollabId && (
+        <HostReviewForm proposal={proposal} />
       )}
 
       {/* Termination pending — surfaced above everything else */}
@@ -1439,6 +1513,18 @@ export default function HostProposals() {
     if (action === 'confirm') confirmTerminationCvx(args).catch(() => {});
   }
 
+  // Moving a pending application into Accepted is an approval — without this the
+  // pitch stays 'pending' and the creator never gets the acceptance notice/email.
+  function approveIfPending(proposal, nextStage) {
+    if (nextStage !== 'accepted' || proposal.status !== 'pending' || !proposal.isReal || !proposal.convexId) return;
+    updateStatusCvx({ id: proposal.convexId, status: 'approved' }).catch(() => {});
+    setProposals((prev) => {
+      const next = prev.map((p) => (p.id === proposal.id ? { ...p, status: 'approved' } : p));
+      saveApplications(next);
+      return next;
+    });
+  }
+
   // ── Stage move from the expanded card (Next / Back) ──
   function handleStageChange(proposal, nextStage) {
     if (proposal?.isPreview) {
@@ -1446,6 +1532,7 @@ export default function HostProposals() {
     } else {
       if (!proposal?.convexCollabId) return;
       advanceStageCvx({ id: proposal.convexCollabId, nextStage }).catch(() => {});
+      approveIfPending(proposal, nextStage);
     }
     setFlashStage(nextStage);
     setTimeout(() => setFlashStage(null), 600);
@@ -1546,6 +1633,7 @@ export default function HostProposals() {
     } else {
       if (!proposal.convexCollabId) return;
       advanceStageCvx({ id: proposal.convexCollabId, nextStage: toKey }).catch(() => {});
+      approveIfPending(proposal, toKey);
     }
     setFlashStage(toKey);
     setTimeout(() => setFlashStage(null), 600);

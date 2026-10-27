@@ -116,6 +116,11 @@ export const save = mutation({
   },
 });
 
+const COUNTER_TERM_FIELDS = [
+  "property_name", "location", "dates", "check_in", "check_out", "deliverables",
+  "currency", "payment", "cash_value", "payout_handling", "usage_rights",
+] as const;
+
 export const update = mutation({
   args: {
     id: v.string(),
@@ -145,22 +150,26 @@ export const update = mutation({
   },
   handler: async (ctx, args) => {
     const before = await ctx.db.get(args.id as any);
+    let callerSide: "host" | "creator" | null = null;
     if (before) {
       const b = before as any;
       const caller = await requireAuthedProfile(ctx);
       const me = String(caller._id);
+      callerSide = b.host_id === me ? "host" : b.creator_id === me ? "creator" : null;
       const isParty = [b.owner_id, b.host_id, b.creator_id].some((p) => p === me);
       if (caller.is_admin !== true && !isParty) {
         throw new Error("You don't have permission to do that.");
       }
       // A party to the contract may only sign their own side — being a party
       // (owner/host/creator) grants edit access to the shared fields above,
-      // not the ability to sign on the other party's behalf.
+      // not the ability to sign on the other party's behalf. The builder always
+      // sends both flags, so only a false → true flip counts as signing; an
+      // unchanged flag or a counter-offer clearing a signature is allowed.
       if (caller.is_admin !== true) {
-        if (args.updates.creator_signed !== undefined && caller.role === "host") {
+        if (args.updates.creator_signed === true && !b.creator_signed && caller.role === "host") {
           throw new Error("Only the creator can sign as creator.");
         }
-        if (args.updates.host_signed !== undefined && caller.role !== "host") {
+        if (args.updates.host_signed === true && !b.host_signed && caller.role !== "host") {
           throw new Error("Only the host can sign as host.");
         }
       }
@@ -168,6 +177,21 @@ export const update = mutation({
     const cleanUpdates: Record<string, any> = Object.fromEntries(
       Object.entries(args.updates).filter(([, val]) => val !== undefined)
     );
+
+    // A signature only covers the terms it was given on — any change to an
+    // agreed term is a counter-offer, so the other side must sign again (the
+    // proposer may sign their own counter in the same save).
+    const termsChanged = !!before && COUNTER_TERM_FIELDS.some(
+      (f) => cleanUpdates[f] !== undefined && cleanUpdates[f] !== (before as any)[f]
+    );
+    if (termsChanged) {
+      for (const side of ["creator", "host"] as const) {
+        if (side === callerSide && cleanUpdates[`${side}_signed`] === true) continue;
+        cleanUpdates[`${side}_signed`] = false;
+        cleanUpdates[`${side}_signed_at`] = undefined;
+      }
+      cleanUpdates.status = "pending";
+    }
 
     // Stamp signature timestamps on the transition false → true.
     const nowIso = new Date().toISOString();
@@ -193,7 +217,23 @@ export const update = mutation({
 
     if (creatorJustSigned || hostJustSigned) await linkContractToCollab(ctx, after);
 
-    if (isFullySigned && !wasFullySigned) {
+    if (termsChanged) {
+      const otherSide = callerSide === "host" ? "creator" : "host";
+      const who = callerSide === "host" ? after.host_name || "The host" : after.creator_name || "The creator";
+      await notifyParty(ctx, after, otherSide, {
+        type: "contract_countered",
+        title: "New contract terms — please review",
+        body: `${who} changed the terms for ${propertyLabel}${after.payment ? ` (${after.payment})` : ""}. Review and sign again.`,
+        email: {
+          subject: "Your contract terms were changed",
+          heading: "Hey {name} 👋",
+          message: `${who} proposed new terms for <strong>${propertyLabel}</strong>${after.payment ? ` — now <strong>${after.payment}</strong>` : ""}. Earlier signatures were cleared, so both of you need to sign again.`,
+          calloutLabel: "Action needed",
+          calloutText: "Open Collabnb to review the new terms and sign.",
+        },
+      });
+    } else if (isFullySigned && !wasFullySigned) {
+      await pauseListingAtOfferLimit(ctx, after);
       for (const party of ["host", "creator"] as const) {
         await notifyParty(ctx, after, party, {
           type: "contract_signed",
@@ -317,6 +357,29 @@ async function resolvePartyId(ctx: any, contract: any, party: string): Promise<s
 // Safe to call repeatedly — cheap no-ops once linked, and callers that only
 // need the id can skip straight to contract.linked_collaboration_id without
 // paying for the scan below.
+// Listings promise "once the limit is reached, the listing auto-pauses" — a
+// collab counts toward max_offers once its contract is signed by both sides.
+async function pauseListingAtOfferLimit(ctx: any, contract: any) {
+  const collab = await linkContractToCollab(ctx, contract);
+  if (!collab?.listing_id) return;
+  const listing = await ctx.db.get(collab.listing_id as any).catch(() => null);
+  if (!listing || !(listing as any).max_offers || (listing as any).status !== "published") return;
+  const collabs = await ctx.db.query("collaborations").collect();
+  let signed = 0;
+  for (const cl of collabs) {
+    if (String(cl.listing_id) !== String(collab.listing_id) || !cl.contract_id) continue;
+    const c = await ctx.db.get(cl.contract_id as any).catch(() => null);
+    if (c && (c as any).creator_signed && (c as any).host_signed) signed++;
+  }
+  if (signed < (listing as any).max_offers) return;
+  await ctx.db.patch(listing._id, { status: "paused" });
+  await notifyParty(ctx, contract, "host", {
+    type: "listing_paused",
+    title: "Listing paused — collab limit reached",
+    body: `${(listing as any).title || "Your listing"} reached its limit of ${(listing as any).max_offers} confirmed collab${(listing as any).max_offers === 1 ? "" : "s"} and is no longer shown to creators.`,
+  });
+}
+
 async function linkContractToCollab(ctx: any, contract: any): Promise<any | null> {
   if (contract.linked_collaboration_id) {
     const existing = await ctx.db.get(contract.linked_collaboration_id as any);
@@ -340,8 +403,7 @@ async function linkContractToCollab(ctx: any, contract: any): Promise<any | null
   const prop = (contract.property_name || "").toLowerCase().trim();
   const loc = (contract.location || "").toLowerCase().trim();
 
-  const match = collabs.find((cl: any) => {
-    if (cl.contract_id) return false;
+  const candidates = collabs.filter((cl: any) => {
     const creatorMatch =
       (creatorId && String(cl.creator_id) === String(creatorId)) ||
       (!!creatorName && (cl.creator_name || "").toLowerCase().trim() === creatorName);
@@ -350,6 +412,14 @@ async function linkContractToCollab(ctx: any, contract: any): Promise<any | null
     const locMatch = !!loc && (cl.location || "").toLowerCase().trim() === loc;
     return propMatch || locMatch;
   });
+  // An abandoned or never-signed draft must not hold the collab hostage — the
+  // contract being signed now takes over unless the collab's is already signed.
+  let match: any = null;
+  for (const cl of candidates) {
+    if (!cl.contract_id) { match = cl; break; }
+    const current = await ctx.db.get(cl.contract_id as any).catch(() => null);
+    if (!current || !((current as any).creator_signed || (current as any).host_signed)) { match = cl; break; }
+  }
 
   if (match) {
     await ctx.db.patch(match._id, { contract_id: String(contract._id) });

@@ -159,7 +159,7 @@
     },
     "payout": {
       "platformTitle": "A Collabnb está cuidando deste pagamento",
-      "platformBody": "Seu cartão é cobrado agora. O pagamento do criador fica retido por 48 horas caso alguma parte abra uma disputa e depois é encaminhado automaticamente.",
+      "platformBody": "Seu cartão salvo é cobrado depois que a Collabnb revisa e aprova o pagamento. Em seguida, o pagamento do criador fica retido por 48 horas caso alguma parte abra uma disputa e é encaminhado automaticamente.",
       "inPersonTitle": "Você paga este criador diretamente",
       "inPersonBody": "Lembre-se de pagar {{amount}} a {{name}} você mesmo — a Collabnb nunca retém esse dinheiro, então a janela de disputa de 48 horas não se aplica. Sua taxa de plataforma é cobrada separadamente.",
       "agreedAmount": "o valor acordado"

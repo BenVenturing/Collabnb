@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, useMemo, useEffect } from 'react';
+import { createContext, useContext, useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useMutation, useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { useAuth } from './AuthContext';
@@ -184,6 +184,7 @@ export function CollabProvider({ children }) {
   const createCollabCvx = useMutation(api.collaborations.create);
   const markCollabCompletedCvx = useMutation(api.collaborations.markCompleted);
   const advanceStageCvx = useMutation(api.collaborations.advanceStage);
+  const updateStageDataCvx = useMutation(api.collaborations.updateStageData);
   const removeCollabCvx = useMutation(api.collaborations.remove);
   const createThreadCvx = useMutation(api.threads.create);
   const hideThreadCvx = useMutation(api.threads.hideForMe);
@@ -342,6 +343,15 @@ export function CollabProvider({ children }) {
     }
   }, [activeCollectionId, deleteCollectionCvx]);
 
+  // saveContract returns a local Date.now() id synchronously, but Convex only
+  // accepts its own document ids — so map local → pending Convex id and resolve
+  // it before update/markSent, or every sign/send after the first save is lost.
+  const convexContractIds = useRef(new Map());
+  const resolveContractId = useCallback(
+    async (id) => (convexContractIds.current.has(id) ? await convexContractIds.current.get(id) : id),
+    [],
+  );
+
   const saveContract = useCallback((contractData) => {
     const newContract = {
       id: Date.now().toString(),
@@ -357,7 +367,7 @@ export function CollabProvider({ children }) {
 
     // Sync to Convex (fire-and-forget). Stamp the builder onto the correct party
     // field so the server can resolve the counterparty for notifications.
-    saveContractCvx({
+    const savedId = saveContractCvx({
       ownerId: ownerId || undefined,
       hostId: isHost ? ownerId || undefined : undefined,
       creatorId: isHost ? undefined : ownerId || undefined,
@@ -376,7 +386,8 @@ export function CollabProvider({ children }) {
       creatorSigned: contractData.creator_signed,
       hostSigned: contractData.host_signed,
       summaryNote: contractData.summary_note,
-    }).catch(() => {});
+    }).then((cid) => String(cid)).catch(() => null);
+    convexContractIds.current.set(newContract.id, savedId);
 
     return newContract;
   }, [saveContractCvx, ownerId, isHost]);
@@ -388,8 +399,8 @@ export function CollabProvider({ children }) {
       return updated;
     });
 
-    updateContractCvx({
-      id,
+    resolveContractId(id).then((cid) => cid && updateContractCvx({
+      id: cid,
       updates: {
         host_id: updates.host_id,
         creator_id: updates.creator_id,
@@ -409,8 +420,8 @@ export function CollabProvider({ children }) {
         host_signed: updates.host_signed,
         summary_note: updates.summary_note,
       },
-    }).catch(() => {});
-  }, [updateContractCvx]);
+    })).catch(() => {});
+  }, [updateContractCvx, resolveContractId]);
 
   const markContractSent = useCallback((id) => {
     const sentAt = Date.now();
@@ -420,8 +431,10 @@ export function CollabProvider({ children }) {
       return updated;
     });
     // A host builder sends to the creator; a creator builder sends to the host.
-    markSentCvx({ id, recipientParty: isHost ? 'creator' : 'host' }).catch(() => {});
-  }, [markSentCvx, isHost]);
+    resolveContractId(id)
+      .then((cid) => cid && markSentCvx({ id: cid, recipientParty: isHost ? 'creator' : 'host' }))
+      .catch(() => {});
+  }, [markSentCvx, isHost, resolveContractId]);
 
   const getContracts = useCallback(() => contracts, [contracts]);
 
@@ -692,16 +705,33 @@ export function CollabProvider({ children }) {
   }, []);
 
   const updateStageData = useCallback((id, stageKey, updates) => {
+    let convexId = null;
     setCollabs((prev) => {
-      const updated = prev.map((c) =>
-        c.id === id
-          ? { ...c, [stageKey]: updates, stages: { ...c.stages, [stageKey]: { ...c.stages?.[stageKey], ...updates } } }
-          : c
-      );
+      const updated = prev.map((c) => {
+        if (c.id !== id) return c;
+        convexId = c.convex_id || null;
+        return {
+          ...c,
+          [stageKey]: updates,
+          ...(updates.drive_url !== undefined ? { drive_url: updates.drive_url } : {}),
+          stages: { ...c.stages, [stageKey]: { ...c.stages?.[stageKey], ...updates } },
+        };
+      });
       saveCollabsToStorage(updated);
       return updated;
     });
-  }, [advanceStageCvx]);
+    // Previously local-only: the creator saw "sent to host" while the host
+    // never received the link. Persist it so the other party can see it.
+    const cvxId = convexId || (typeof id === 'string' && id.length > 20 ? id : null);
+    if (cvxId) {
+      updateStageDataCvx({
+        id: String(cvxId),
+        stageKey,
+        driveUrl: updates.drive_url,
+        note: updates.note,
+      }).catch(() => {});
+    }
+  }, [updateStageDataCvx]);
 
   const removeCollab = useCallback((collab) => {
     const id = typeof collab === 'string' ? collab : collab?.id;

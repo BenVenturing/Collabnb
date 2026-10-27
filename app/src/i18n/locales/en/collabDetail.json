@@ -102,7 +102,8 @@
     "paymentsBody": "Collabnb will handle payouts, invoicing, and tax forms so you can focus on creating. Payment processor integration is on the way.",
     "bothConfirmed": "✓ Both parties confirmed — collaboration will be archived",
     "trustpilot": "★ Review Collabnb on Trustpilot",
-    "trustpilotEmail": "We've also emailed you a Trustpilot review link."
+    "trustpilotEmail": "We've also emailed you a Trustpilot review link.",
+    "waiting": "Waiting"
   },
   "archived": {
     "title": "Archived Collaboration",

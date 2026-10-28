@@ -2114,8 +2114,8 @@ function PayoutMethodPanel({ profile: profileProp, onClose, createConnectOnboard
       const appBase = window.location.origin;
       const { url } = await createConnectOnboardingLink({
         profileId,
-        refreshUrl: `${appBase}/profile?payout=refresh`,
-        returnUrl: `${appBase}/profile?payout=return`,
+        refreshUrl: `${appBase}/profile?open=payout`,
+        returnUrl: `${appBase}/profile?open=payout`,
       });
       if (url) window.location.href = url;
     } catch {

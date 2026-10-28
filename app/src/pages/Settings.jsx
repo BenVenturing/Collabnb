@@ -485,8 +485,8 @@ export default function Settings() {
       const appBase = window.location.origin;
       const { url } = await createConnectOnboardingLink({
         profileId: userId,
-        refreshUrl: `${appBase}/settings?tab=payments`,
-        returnUrl: `${appBase}/settings?tab=payments`,
+        refreshUrl: `${appBase}/profile?open=payout`,
+        returnUrl: `${appBase}/profile?open=payout`,
       });
       if (url) window.location.href = url;
     } catch {

@@ -702,8 +702,9 @@ export const chargeContractFee = internalAction({
       : null;
     const hostFeeWaived = host?.is_founder === true || host?.is_lifetime === true;
 
-    const customerId = contract.host_stripe_customer_id;
-    const paymentMethodId = contract.host_payment_method_id;
+    // Card snapshotted at signing, else the host's current card (saved after signing).
+    const customerId = contract.host_stripe_customer_id || host?.stripe_customer_id;
+    const paymentMethodId = contract.host_payment_method_id || host?.stripe_default_payment_method_id;
     // No saved card → can't queue a charge; the manual "Pay Platform Fee" remains.
     if (!customerId || !paymentMethodId) return { skipped: 'no_saved_card' };
 
@@ -798,8 +799,8 @@ export const executeApprovedCharge = internalAction({
     const host = contract.host_id
       ? await ctx.runQuery(internal.profiles.getByIdInternal, { id: String(contract.host_id) })
       : null;
-    const customerId = contract.host_stripe_customer_id;
-    const paymentMethodId = contract.host_payment_method_id;
+    const customerId = contract.host_stripe_customer_id || host?.stripe_customer_id;
+    const paymentMethodId = contract.host_payment_method_id || host?.stripe_default_payment_method_id;
     if (!customerId || !paymentMethodId) return { skipped: 'no_saved_card' };
 
     const fee = contract.charge_approval_fee_amount ?? 0;

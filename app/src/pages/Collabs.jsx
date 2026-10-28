@@ -488,6 +488,8 @@ export default function Collabs() {
                 onStartContract={(c) => navigate('/contract', {
                   state: {
                     prefill: {
+                      creator_id: c.creator_id,
+                      creator: c.creator_name,
                       host: c.host_name,
                       property_name: c.property_name,
                       location: c.location,

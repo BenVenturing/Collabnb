@@ -136,6 +136,7 @@ export default function ContractBuilder() {
     }
     return {
       creator: prefill?.creator || profile?.full_name || '',
+      creatorId: prefill?.creator_id ? String(prefill.creator_id) : '',
       host: prefill?.host || '',
       property_name: prefill?.property_name || '',
       location: prefill?.location || '',
@@ -379,6 +380,7 @@ export default function ContractBuilder() {
     const isFreeStay = c.currency === FREE_STAY_VALUE || c.payment === 'Free Stay';
     setForm({
       creator: c.creator_name || '',
+      creatorId: c.creator_id ? String(c.creator_id) : '',
       host: c.host_name || '',
       property_name: c.property_name || '',
       location: c.location || '',
@@ -419,6 +421,7 @@ export default function ContractBuilder() {
 
   const buildContractData = () => ({
     creator_name: form.creator,
+    ...(form.creatorId ? { creator_id: form.creatorId } : {}),
     host_name: form.host,
     property_name: form.property_name,
     location: form.location,
@@ -570,7 +573,7 @@ export default function ContractBuilder() {
     sendContractUpdate(id, {
       ...buildContractData(),
       status: 'pending',
-      ...(host.isReal ? { host_id: host.id } : {}),
+      ...(host.isReal ? (profile?.role === 'host' ? { creator_id: host.id } : { host_id: host.id }) : {}),
     });
 
     // Create a message thread
@@ -1239,7 +1242,7 @@ export default function ContractBuilder() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
                   {profile?.role === 'host' ? (
                     <button
-                      onClick={() => handleSendToHost({ id: 'creator', name: form.creator || t('role.creator'), avatar: null, properties: [] })}
+                      onClick={() => handleSendToHost({ id: form.creatorId || 'creator', isReal: !!form.creatorId, name: form.creator || t('role.creator'), avatar: null, properties: [] })}
                       className="w-full flex items-center gap-3 p-3 rounded-xl bg-white/60 border border-stone/30 hover:bg-white/90 hover:border-mint transition-all text-left"
                       style={{ fontFamily: 'var(--font-body)', cursor: 'pointer' }}
                     >

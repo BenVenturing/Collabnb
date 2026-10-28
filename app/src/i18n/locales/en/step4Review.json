@@ -57,7 +57,7 @@
   "compZone": {
     "amberTitle": "This compensation is below the recommended range for this workload",
     "amberBody": "Recommended range: ${{low}}–${{high}}. You can still continue — this is a guideline, not a requirement.",
-    "redBody": "This compensation is below the minimum for the selected deliverables and tier. Raise the amount, reduce the deliverables, or add a stay offset to continue."
+    "redBody": "This compensation is below the minimum (${{floor}}) for the selected deliverables and tier. Raise the amount, reduce the deliverables, or add a stay offset to continue."
   },
   "needCompensation": "Add a cash compensation amount in the pricing step before continuing — every collaboration must include payment.",
   "saving": "Saving...",

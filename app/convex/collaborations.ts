@@ -201,6 +201,15 @@ export const markCompleted = mutation({
   },
 });
 
+const STAGE_LABELS: Record<string, string> = {
+  pending: "Pending",
+  accepted: "Accepted",
+  updated: "Adjustments",
+  uploaded_tagged: "Uploaded",
+  closed: "Closed",
+  archived: "Archived",
+};
+
 export const advanceStage = mutation({
   args: {
     id: v.string(),
@@ -237,6 +246,22 @@ export const advanceStage = mutation({
       current_stage: args.nextStage,
       stages: JSON.stringify(stages),
     });
+
+    // The Accepted move already sends pitch_approved from the pitch decision.
+    if (args.nextStage !== "accepted") {
+      const isCreator = String(profile._id) === String(collab.creator_id);
+      const recipientId = isCreator ? collab.host_id : collab.creator_id;
+      if (recipientId) {
+        const label = STAGE_LABELS[args.nextStage] || args.nextStage;
+        await ctx.runMutation(internal.notifications.create, {
+          userId: String(recipientId),
+          type: "collab_stage_changed",
+          title: `Collab moved to ${label}`,
+          body: `${profile.full_name || "Your collaborator"} moved ${collab.property_name || "your collab"} to ${label}.`,
+          link: isCreator ? "/host/proposals" : "/collabs",
+        });
+      }
+    }
   },
 });
 

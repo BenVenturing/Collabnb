@@ -10,7 +10,7 @@ import { useListingDraft } from "../../contexts/ListingDraftContext";
 import { useAuth } from "../../contexts/AuthContext";
 import { formatDateRange } from "../../lib/dateUtils";
 import ListingDetail from "../ListingDetail";
-import { calcMidpoint, calcStayOffset, calcRange, evaluateZone, totalPoints } from "../../../convex/lib/compensationPoints";
+import { calcMidpoint, calcStayOffset, calcRange, calcHardFloor, evaluateZone, totalPoints } from "../../../convex/lib/compensationPoints";
 
 function Section({ title, children }) {
   return (
@@ -143,12 +143,14 @@ export default function Step4Review() {
   // of truth (compensationPoints), so hosts see the warning before they hit it.
   let compZone = null;
   let compRange = null;
+  let compFloor = 0;
   if (draft.creator_tier && draft.deliverables?.length && hasCompensation) {
     const points = totalPoints(draft.deliverables);
     const midpoint = calcMidpoint(points, draft.creator_tier, draft.complexity || "standard");
     const stayOffset = draft.compensation_type === "hybrid" ? calcStayOffset(draft.stay_value || 0, draft.creator_tier, midpoint) : 0;
     compZone = evaluateZone(draft.cash_amount, midpoint, stayOffset);
     compRange = calcRange(midpoint);
+    compFloor = calcHardFloor(midpoint, stayOffset);
   }
 
   return (
@@ -267,7 +269,7 @@ export default function Step4Review() {
         )}
         {compZone === "red" && (
           <p style={{ fontFamily: "Satoshi, sans-serif", fontSize: 13, color: "#b45309", fontWeight: 600, marginBottom: 12 }}>
-            {t('compZone.redBody')}
+            {t('compZone.redBody', { floor: Math.round(compFloor) })}
           </p>
         )}
         {saveError && (

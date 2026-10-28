@@ -1488,6 +1488,7 @@ export default function CollabDetail({ collab: collabProp, onClose }) {
                   style={{ flex: 1, fontSize: '0.75rem', padding: '0.5rem' }}
                   onClick={() => navigate('/contract', { state: { prefill: {
                     creator: creatorDisplayName,
+                    creator_id: collab.creator_id,
                     host: collab.host_name,
                     property_name: collab.property_name,
                     location: collab.location,

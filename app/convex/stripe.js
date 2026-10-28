@@ -955,6 +955,8 @@ export const forwardCreatorPayout = internalAction({
   handler: async (ctx, args) => {
     const contract = await ctx.runQuery(internal.contracts.getByIdInternal, { id: args.contractId });
     if (contract?.creator_payout_held || contract?.payments_blocked) return { held: true };
+    // Release Now + the scheduled 48h release both land here; never re-send.
+    if (contract?.creator_payout_status === 'paid' || contract?.creator_payout_status === 'processing') return { skipped: 'already_sent' };
     const creatorId = contract?.creator_id;
     if (!creatorId) {
       await ctx.runMutation(internal.contracts.setPayoutStatus, { id: args.contractId, status: 'pending' });

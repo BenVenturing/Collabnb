@@ -765,6 +765,10 @@ export const recordPaymentInternal = internalMutation({
       },
     });
 
+    // A charge that includes the creator's payout gets its own (correct) host
+    // receipt from stripe.finalizeCollabCharge — this one would call it all fee.
+    if (((contract as any).charge_approval_creator_payout ?? 0) > 0) return;
+
     await notifyParty(ctx, contract, "host", {
       type: "contract_paid",
       title: "Fee receipt 💸",

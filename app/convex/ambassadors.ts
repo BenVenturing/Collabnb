@@ -1,7 +1,7 @@
 import { mutation, query, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 import type { MutationCtx } from "./_generated/server";
-import { requireAdmin, canAccessAdmin } from "./lib/auth";
+import { requireAdmin, canAccessAdmin, getAuthedProfile } from "./lib/auth";
 import { cleanPlainText } from "./lib/sanitize";
 import { enforceRateLimit, RATE_LIMITS } from "./lib/rateLimit";
 
@@ -431,6 +431,30 @@ async function removeLink(ctx: MutationCtx, link: any, reason: string, actor: st
     created_at: Date.now(),
   });
 }
+
+// The signed-in user's own ambassador standing, matched by application email.
+export const myAmbassadorStatus = query({
+  args: {},
+  handler: async (ctx) => {
+    const profile: any = await getAuthedProfile(ctx);
+    if (!profile?.email) return null;
+    const email = String(profile.email).toLowerCase();
+    const links = (await ctx.db.query("ambassador_countries").collect())
+      .filter((l: any) => l.ambassador_email && String(l.ambassador_email).toLowerCase() === email)
+      .sort((x: any, y: any) => (y.approved_at ?? y._creationTime) - (x.approved_at ?? x._creationTime));
+    const link: any = links.find((l: any) => l.status === "taken") ?? links[0];
+    if (!link) return null;
+    const quota = quotaStatus(link, await hostSignups(ctx, link.slug), Date.now());
+    return {
+      country: link.country,
+      slug: link.slug,
+      status: link.status,
+      share_pct: link.share_pct,
+      removed_reason: link.removed_reason,
+      quota: { hosts: quota.quotaHosts, days: quota.quotaDays, inWindow: quota.inWindow, total: quota.total, graceEndsAt: quota.graceEndsAt },
+    };
+  },
+});
 
 export const adminRemoveAmbassador = mutation({
   args: { slug: v.string(), reason: v.string() },

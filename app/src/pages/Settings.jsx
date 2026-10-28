@@ -1042,6 +1042,7 @@ export default function Settings() {
                     </div>
                   </>
                 )}
+                <AmbassadorQuotaCard />
                 <SectionLabel>{t('billing.sectionAmbassador')}</SectionLabel>
                 <AmbassadorLookup />
                 {profile?.role === 'creator' && (
@@ -1375,12 +1376,50 @@ function PitchCounter({ serverPitchCount }) {
   );
 }
 
+function AmbassadorQuotaCard() {
+  const me = useQuery(api.ambassadors.myAmbassadorStatus);
+  if (!me) return null;
+  const link = `https://collabnb.com/join.html?amb=${me.slug}`;
+  const { hosts, days, inWindow, total, graceEndsAt } = me.quota;
+  const pct = Math.min(100, Math.round((inWindow / Math.max(1, hosts)) * 100));
+  const removed = me.status !== 'taken';
+  const inGrace = Date.now() < graceEndsAt;
+  const daysLeft = Math.max(0, Math.ceil((graceEndsAt - Date.now()) / 86400000));
+  return (
+    <div style={{ borderRadius: '1rem', padding: '1rem 1.1rem', background: '#fff', border: '1px solid var(--hairline)', marginBottom: '1rem' }}>
+      <p style={{ fontSize: '0.84rem', fontWeight: 700, color: 'var(--ink)', margin: '0 0 0.6rem' }}>Your Ambassador quota · {me.country}</p>
+      {removed ? (
+        <p style={{ fontSize: '0.8rem', color: '#991B1B', margin: 0, lineHeight: 1.5 }}>
+          Your ambassador status has ended{me.removed_reason ? ` — ${me.removed_reason}` : ''}. Questions? hellocollabnb@gmail.com
+        </p>
+      ) : (
+        <>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.4rem' }}>
+            <span style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--ink)', lineHeight: 1 }}>{inWindow}/{hosts}</span>
+            <span style={{ fontSize: '0.78rem', color: 'var(--sage)' }}>hotels with a published listing · last {days} days</span>
+          </div>
+          <div style={{ height: 6, borderRadius: 99, background: 'rgba(25,37,36,0.08)', margin: '0.6rem 0' }}>
+            <div style={{ width: `${pct}%`, height: '100%', borderRadius: 99, background: 'var(--slate)' }} />
+          </div>
+          <p style={{ fontSize: '0.74rem', color: 'var(--sage)', margin: 0, lineHeight: 1.5 }}>
+            {inGrace
+              ? `First quota check in ${daysLeft} day${daysLeft === 1 ? '' : 's'}.`
+              : inWindow >= hosts ? 'You are on track.' : `You need ${hosts - inWindow} more to stay in the program.`}
+            {' '}{total} hotel{total === 1 ? '' : 's'} all-time · {me.share_pct}% of the platform fee.
+          </p>
+          <p style={{ fontSize: '0.72rem', color: 'var(--sage)', margin: '0.5rem 0 0', wordBreak: 'break-all' }}>Your link: {link}</p>
+        </>
+      )}
+    </div>
+  );
+}
+
 function AmbassadorLookup() {
   const { t } = useTranslation('settings');
   const countries = useQuery(api.ambassadors.listCountries);
   const [query, setQuery] = useState('');
 
-  const takenMap = new Map((countries || []).map((c) => [c.country, c.ambassador_first_name]));
+  const takenMap = new Map((countries || []).map((c) => [c.country, c.ambassador_first_names.join(', ')]));
   const trimmed = query.trim();
   const match = trimmed ? COUNTRIES.find((c) => c.toLowerCase() === trimmed.toLowerCase()) : null;
   const status = match ? (takenMap.has(match) ? 'taken' : 'available') : null;

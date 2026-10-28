@@ -1,6 +1,6 @@
 /* ============================================================
    Collabnb — Ambassadors page: ambient dot-matrix world map + apply form
-   Country Ambassador program: one exclusive partner per country, applying
+   Country Ambassador program: up to five partners per country, applying
    for a specific country and (once approved) earning a share of the
    platform fee on every completed collab from a host or creator who signed
    up through their unique link.
@@ -189,7 +189,7 @@ function draw() {
 window.addEventListener('resize', draw);
 
 /* ── Country directory: search + filter over every country's status ── */
-let takenByCountry = new Map(); // country name -> ambassador_first_name (or null)
+let takenByCountry = new Map(); // country name -> { active_count, max, ambassador_first_names }
 let directoryFilter = 'all';
 let directoryQuery = '';
 
@@ -201,8 +201,9 @@ function renderDirectory() {
   const q = directoryQuery.trim().toLowerCase();
   const rows = COUNTRIES
     .map((country) => {
-      const taken = takenByCountry.has(country);
-      return { country, status: taken ? 'taken' : 'available', ambassadorFirstName: takenByCountry.get(country) || null };
+      const info = takenByCountry.get(country);
+      const full = !!info && info.active_count >= info.max;
+      return { country, status: full ? 'taken' : 'available', info };
     })
     .filter((r) => (directoryFilter === 'all' || r.status === directoryFilter))
     .filter((r) => !q || r.country.toLowerCase().includes(q));
@@ -214,9 +215,10 @@ function renderDirectory() {
   }
 
   wrap.innerHTML = rows.map((r) => {
-    const pill = r.status === 'available'
-      ? `<span class="status-pill status-available">Available</span>`
-      : `<span class="status-pill status-taken">${r.ambassadorFirstName ? `Represented by ${r.ambassadorFirstName}` : 'Represented'}</span>`;
+    const left = r.info ? r.info.max - r.info.active_count : null;
+    const pill = r.status === 'taken'
+      ? `<span class="status-pill status-taken">Full</span>`
+      : `<span class="status-pill status-available">${left === null ? 'Available' : `${left} spot${left === 1 ? '' : 's'} left`}</span>`;
     const cta = r.status === 'available' ? `<button type="button" class="row-apply-btn" data-apply="${r.country}">Apply</button>` : '';
     return `
       <div class="country-row" data-status="${r.status}">
@@ -324,7 +326,7 @@ if (form) {
   renderDirectory(); // show the full list as "available" immediately, then refine once live data lands
   const live = await listAmbassadorCountries();
   if (Array.isArray(live)) {
-    takenByCountry = new Map(live.map((c) => [c.country, c.ambassador_first_name]));
+    takenByCountry = new Map(live.map((c) => [c.country, c]));
     renderDirectory();
   }
 })();

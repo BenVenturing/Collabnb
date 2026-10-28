@@ -27,7 +27,7 @@ function Section({ title, children }) {
 // One glance at all the money moving through Collabnb: subscription revenue,
 // creator payouts, and platform fees collected. Payout-level detail (holds,
 // Wise sends, per-contract status) lives on the Payouts tab; affiliate
-// earnings live on the Affiliates tab — this page is the roll-up.
+// earnings live on the Ambassadors tab — this page is the roll-up.
 export default function MoneyOverview() {
   const profiles = useQuery(api.profiles.getAll);
   const contracts = useQuery(api.contracts.getAll);

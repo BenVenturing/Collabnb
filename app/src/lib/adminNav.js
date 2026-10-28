@@ -36,7 +36,7 @@ export const GROUPS = [
     { id: 'money-overview',  label: 'Overview'   },
     { id: 'charge-approvals', label: 'Approvals' },
     { id: 'payouts',         label: 'Payouts'    },
-    { id: 'ambassadors',     label: 'Affiliates' },
+    { id: 'ambassadors',     label: 'Ambassadors' },
     { id: 'money-resources', label: 'Resources'  },
   ] },
   { id: 'marketing', label: 'Marketing', icon: 'marketing', tabs: [

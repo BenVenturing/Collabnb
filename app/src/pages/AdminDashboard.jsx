@@ -176,6 +176,7 @@ export default function AdminDashboard() {
   const adminUnread = useQuery(api.adminThreads.unreadCount) ?? 0;
   const crashUnresolved = useQuery(api.crashReports.unresolvedCount) ?? 0;
   const pendingApprovals = useQuery(api.contracts.getPendingChargeApprovals)?.length ?? 0;
+  const pendingAmbassadors = useQuery(api.ambassadors.pendingApplicationCount) ?? 0;
   const adminSettings = useQuery(api.admin.getSettings);
 
   // Manual nav clears any deep-linked Users sub-view (e.g. Overview → pending).
@@ -201,7 +202,7 @@ export default function AdminDashboard() {
   );
 
   const ActivePanel = PANEL_MAP[activeSection] || PANEL_MAP['overview'];
-  const badges = { messages: unreadCount || 0, 'admin-inbox': adminUnread || 0, crashes: crashUnresolved || 0, 'charge-approvals': pendingApprovals };
+  const badges = { messages: unreadCount || 0, 'admin-inbox': adminUnread || 0, crashes: crashUnresolved || 0, 'charge-approvals': pendingApprovals, ambassadors: pendingAmbassadors };
   const groupBadge = (group) => flatTabs(group).reduce((n, t) => n + (badges[t.id] || 0), 0);
   const orderedNavItems = resolveNavOrder(adminSettings?.nav_order).map(id => NAV_ITEMS_BY_ID[id]).filter(Boolean);
   const q = navSearch.trim().toLowerCase();

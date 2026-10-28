@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Ambassadors — Collabnb</title>
-<meta name="description" content="Become a Collabnb Country Ambassador. Bring hosts and creators onto Collabnb through your own unique link and earn a share of the platform fee on everyone who joins through it. Beta program — one exclusive spot per country." />
+<meta name="description" content="Become a Collabnb Country Ambassador. Bring hosts and creators onto Collabnb through your own unique link and earn a share of the platform fee on everyone who joins through it. Beta program — up to five ambassadors per country." />
 <link rel="canonical" href="https://www.collabnb.com/ambassadors.html" />
 <link rel="icon" href="/assets/favicon.png" type="image/png" />
 <link rel="apple-touch-icon" href="/assets/favicon.png" />
@@ -218,7 +218,7 @@
   <section class="section" aria-labelledby="map-heading">
     <div class="container">
       <p class="eyebrow-tag reveal text-center" style="display:table;margin:0 auto;">Beta</p>
-      <h2 id="map-heading" class="display reveal text-center" style="font-size:var(--fs-h2); margin:1rem 0 2.5rem; transition-delay:60ms;">One exclusive spot per country.</h2>
+      <h2 id="map-heading" class="display reveal text-center" style="font-size:var(--fs-h2); margin:1rem 0 2.5rem; transition-delay:60ms;">Five spots per country.</h2>
       <div class="amb-map-wrap glass reveal">
         <canvas id="amb-map" width="1200" height="620" aria-label="World map"></canvas>
       </div>
@@ -228,7 +228,7 @@
         <div class="country-filter-tabs" role="tablist" aria-label="Filter countries by status">
           <button type="button" class="filter-tab active" data-filter="all">All</button>
           <button type="button" class="filter-tab" data-filter="available">Available</button>
-          <button type="button" class="filter-tab" data-filter="taken">Represented</button>
+          <button type="button" class="filter-tab" data-filter="taken">Full</button>
         </div>
       </div>
       <div class="country-directory glass reveal" id="country-directory"><!-- populated by scripts/ambassadors.js --></div>
@@ -362,13 +362,122 @@
     </div>
   </section>
 
+  <!-- ── FAQ ── -->
+  <section class="section" id="faq" aria-labelledby="amb-faq-heading">
+    <div class="container">
+      <p class="eyebrow-tag reveal">FAQ</p>
+      <h2 id="amb-faq-heading" class="display reveal" style="font-size:var(--fs-h2); margin:1rem 0 2rem; transition-delay:60ms;">Ambassador questions.</h2>
+      <div class="faq-list reveal" style="transition-delay:80ms;">
+        <div class="faq-item">
+          <button class="faq-question" aria-expanded="false" aria-controls="amb-faq-1-answer" id="amb-faq-1">
+            How many ambassadors can a country have?
+            <span class="faq-toggle" aria-hidden="true">+</span>
+          </button>
+          <div class="faq-answer" id="amb-faq-1-answer" role="region" aria-labelledby="amb-faq-1">
+            <div class="faq-answer-inner">
+              <p>Up to five. Each ambassador gets their own link and earns only on the hosts and creators who sign up through it. When a country is full, it shows as Full on the map above and applications for it close until a spot opens.</p>
+            </div>
+          </div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-question" aria-expanded="false" aria-controls="amb-faq-2-answer" id="amb-faq-2">
+            What happens after I apply?
+            <span class="faq-toggle" aria-hidden="true">+</span>
+          </button>
+          <div class="faq-answer" id="amb-faq-2-answer" role="region" aria-labelledby="amb-faq-2">
+            <div class="faq-answer-inner">
+              <p>We review your application, then invite shortlisted applicants to a short Zoom call (about 20 minutes) to walk through how the program works, the hotel quota, and how you'd promote Collabnb. You're approved after that call — not before.</p>
+            </div>
+          </div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-question" aria-expanded="false" aria-controls="amb-faq-3-answer" id="amb-faq-3">
+            What is the hotel quota?
+            <span class="faq-toggle" aria-hidden="true">+</span>
+          </button>
+          <div class="faq-answer" id="amb-faq-3-answer" role="region" aria-labelledby="amb-faq-3">
+            <div class="faq-answer-inner">
+              <p>To stay in the program you need to bring new hotels onto Collabnb through your link. The default is 3 hotels every 60 days, counted from your approval date. Your exact numbers are in your acceptance email.</p>
+            </div>
+          </div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-question" aria-expanded="false" aria-controls="amb-faq-4-answer" id="amb-faq-4">
+            What counts as a hotel toward my quota?
+            <span class="faq-toggle" aria-hidden="true">+</span>
+          </button>
+          <div class="faq-answer" id="amb-faq-4-answer" role="region" aria-labelledby="amb-faq-4">
+            <div class="faq-answer-inner">
+              <p>A hotel counts once it has signed up through your link and has at least one published listing on Collabnb. A bare account signup, a draft listing, or a sample listing doesn't count — the hotel has to be live and visible to creators.</p>
+            </div>
+          </div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-question" aria-expanded="false" aria-controls="amb-faq-5-answer" id="amb-faq-5">
+            What happens if I miss my quota?
+            <span class="faq-toggle" aria-hidden="true">+</span>
+          </button>
+          <div class="faq-answer" id="amb-faq-5-answer" role="region" aria-labelledby="amb-faq-5">
+            <div class="faq-answer-inner">
+              <p>If you're below quota when your period ends, your ambassador status ends automatically and your link stops earning on new collabs. Commissions you'd already earned and that have cleared are still paid out. Missing the quota isn't treated as a termination for cause.</p>
+            </div>
+          </div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-question" aria-expanded="false" aria-controls="amb-faq-6-answer" id="amb-faq-6">
+            How and when do I get paid?
+            <span class="faq-toggle" aria-hidden="true">+</span>
+          </button>
+          <div class="faq-answer" id="amb-faq-6-answer" role="region" aria-labelledby="amb-faq-6">
+            <div class="faq-answer-inner">
+              <p>You earn a share of Collabnb's platform fee — not of the collab's value — whenever a collab completes for a host or creator who joined through your link and the fee is actually collected. Each commission clears after 30 days, and cleared balances of $50 or more are paid monthly via Stripe, Wise or PayPal.</p>
+            </div>
+          </div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-question" aria-expanded="false" aria-controls="amb-faq-7-answer" id="amb-faq-7">
+            Where does the commission come from?
+            <span class="faq-toggle" aria-hidden="true">+</span>
+          </button>
+          <div class="faq-answer" id="amb-faq-7-answer" role="region" aria-labelledby="amb-faq-7">
+            <div class="faq-answer-inner">
+              <p>It comes out of Collabnb's own fee. Hosts and creators never pay extra because of you. The platform fee is 5% of the collab's cash value, or a flat $20 for collabs under $500, and your rate is a percentage of that.</p>
+            </div>
+          </div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-question" aria-expanded="false" aria-controls="amb-faq-8-answer" id="amb-faq-8">
+            Do I earn on founding members?
+            <span class="faq-toggle" aria-hidden="true">+</span>
+          </button>
+          <div class="faq-answer" id="amb-faq-8-answer" role="region" aria-labelledby="amb-faq-8">
+            <div class="faq-answer-inner">
+              <p>Founding hosts pay no platform fee, so there's no fee to share on their collabs. They still count toward your hotel quota as long as they have a published listing.</p>
+            </div>
+          </div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-question" aria-expanded="false" aria-controls="amb-faq-9-answer" id="amb-faq-9">
+            Can Collabnb remove me?
+            <span class="faq-toggle" aria-hidden="true">+</span>
+          </button>
+          <div class="faq-answer" id="amb-faq-9-answer" role="region" aria-labelledby="amb-faq-9">
+            <div class="faq-answer-inner">
+              <p>Yes. Collabnb can remove an ambassador who isn't performing, isn't meeting the requirements, or misrepresents Collabnb — including its fees or services. Full details are in Section 11 of the Ambassador Terms below.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- ── TERMS ── -->
   <section class="section" id="terms" aria-labelledby="terms-heading">
     <div class="container" style="max-width:860px;">
       <p class="eyebrow-tag reveal">The fine print</p>
       <h2 id="terms-heading" class="display reveal" style="font-size:var(--fs-h2); margin:1rem 0 2rem; transition-delay:60ms;">Ambassador Terms.</h2>
       <div class="amb-terms glass reveal">
-        <p class="terms-meta">Collabnb Ambassador Program Terms &amp; Conditions · Beta · Last updated September 4, 2026</p>
+        <p class="terms-meta">Collabnb Ambassador Program Terms &amp; Conditions · Beta · Last updated October 28, 2026</p>
 
         <h3>1. The Program</h3>
         <p>The Collabnb Ambassador Program (the "Program") appoints individuals ("Ambassadors") to promote Collabnb and grow its community of hosts and creators in a defined country (a "Country"). Each accepted Ambassador is given a unique referral link tied to their Country and name; anyone who signs up through it is attributed to that Ambassador for as long as the Ambassador remains active. The Program is currently in <strong>beta</strong>: its structure, commission rates, and these terms may change as described in Section 12.</p>
@@ -377,12 +486,12 @@
         <ul>
           <li>You must be at least 18 years old and legally able to enter into contracts.</li>
           <li>You must be able to receive payouts via Stripe, Wise, or PayPal in your country of residence.</li>
-          <li>Acceptance into the Program is at Collabnb's sole discretion. Submitting an application does not create any obligation on Collabnb to accept it.</li>
+          <li>Acceptance into the Program is at Collabnb's sole discretion and follows a video call (e.g. Zoom) with the Collabnb team. Submitting an application does not create any obligation on Collabnb to accept it.</li>
         </ul>
 
         <h3>3. Appointment &amp; Country</h3>
         <ul>
-          <li>During the beta, each Country has at most one active Ambassador — your appointment is exclusive among Ambassadors for that Country.</li>
+          <li>During the beta, each Country has at most five active Ambassadors. Your appointment is not exclusive — other Ambassadors may be appointed in the same Country, and each earns only on signups through their own link.</li>
           <li>It is not exclusive against Collabnb itself: Collabnb may market, operate, and sign hosts or creators in your Country directly at any time. Signups that don't come through your link don't earn you commission.</li>
           <li>Collabnb may deactivate or reassign a Country's Ambassador appointment on 30 days' notice. Commissions already accrued from signups already attributed to your link are unaffected, even after deactivation.</li>
         </ul>
@@ -413,6 +522,7 @@
           <li><strong>Disclosure:</strong> clearly disclose your material connection to Collabnb in all promotional content (e.g. #ad, #partner) as required by the FTC and any equivalent local advertising rules that apply to you.</li>
           <li>No spam, unsolicited bulk messaging, misleading claims, income guarantees, cookie-stuffing, bidding on Collabnb trademarks in paid search, or self-dealing (e.g. fabricating collabs or signups to generate fees).</li>
           <li>Comply with all laws applicable to your activities, including data-protection and consumer-protection laws in your Country.</li>
+          <li><strong>Onboarding quota:</strong> bring a minimum number of new hosts (hotels, guesthouses and other properties) onto Collabnb through your link in every rolling period. A host counts toward your quota once it has signed up through your link and has at least one published listing. The default is 3 hosts every 60 days, measured from your approval date; your specific quota is stated in your acceptance email and may be adjusted under Section 12.</li>
         </ul>
 
         <h3>8. Brand Use</h3>
@@ -427,8 +537,9 @@
         <h3>11. Term &amp; Termination</h3>
         <ul>
           <li>Either party may end participation with 30 days' written notice (email suffices).</li>
-          <li>Collabnb may terminate immediately for breach of these terms, fraud, brand damage, or unlawful conduct.</li>
-          <li>On termination, commissions already cleared and payable are paid out on the normal schedule. Commissions still inside the clearance window are paid once they clear — unless termination was for cause, in which case unvested commissions are forfeited.</li>
+          <li>Collabnb may terminate immediately for breach of these terms, fraud, brand damage, or unlawful conduct — including misrepresenting Collabnb, its fees, or its services to hosts or creators.</li>
+          <li>Collabnb may remove you from the Program at any time if you are not performing to its reasonable expectations or not meeting these requirements. If you miss your onboarding quota for a period, your Ambassador status ends automatically without further notice.</li>
+          <li>On termination, commissions already cleared and payable are paid out on the normal schedule. Commissions still inside the clearance window are paid once they clear — unless termination was for cause, in which case unvested commissions are forfeited. Missing the onboarding quota is not termination for cause. After termination, your link stops earning commission on new collaborations.</li>
         </ul>
 
         <h3>12. Changes to the Program</h3>

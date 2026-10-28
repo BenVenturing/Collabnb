@@ -223,7 +223,8 @@ export default defineSchema({
   }).index("by_email", ["email"]).index("by_clerk_user_id", ["clerk_user_id"]).index("by_username", ["username"]).index("by_role", ["role"])
     .index("by_stripe_customer", ["stripe_customer_id"])
     .index("by_stripe_connect_account", ["stripe_connect_account_id"])
-    .index("by_apple_pass_serial", ["apple_pass_serial"]),
+    .index("by_apple_pass_serial", ["apple_pass_serial"])
+    .index("by_ambassador_ref", ["ambassador_ref"]),
 
   listings: defineTable({
     title: v.string(),
@@ -864,11 +865,18 @@ export default defineSchema({
   ambassador_countries: defineTable({
     country: v.string(),
     slug: v.string(),                         // unique link id, e.g. "thailand-hanna"
-    status: v.string(),                       // 'open' | 'taken'
+    status: v.string(),                       // 'taken' (active) | 'inactive' | 'removed'
     ambassador_name: v.optional(v.string()),
     ambassador_email: v.optional(v.string()),
     application_id: v.optional(v.string()),
     share_pct: v.number(),                    // % of platform fee, set per-link by admin
+    approved_at: v.optional(v.number()),
+    // Performance quota: at least quota_hosts new host signups through the
+    // link in every rolling quota_days window, or the daily cron removes them.
+    quota_hosts: v.optional(v.number()),
+    quota_days: v.optional(v.number()),
+    removed_at: v.optional(v.number()),
+    removed_reason: v.optional(v.string()),
   })
     .index("by_slug", ["slug"])
     .index("by_country", ["country"]),
@@ -886,8 +894,9 @@ export default defineSchema({
     connections: v.string(),
     extra: v.optional(v.string()),
     agreed_terms: v.boolean(),
-    status: v.string(),                       // 'pending' | 'approved' | 'declined'
+    status: v.string(),                       // 'pending' | 'interview' | 'approved' | 'declined'
     admin_note: v.optional(v.string()),
+    interview_at: v.optional(v.number()),
     created_at: v.number(),
     reviewed_at: v.optional(v.number()),
   })

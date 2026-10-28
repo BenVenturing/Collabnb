@@ -47,9 +47,9 @@ export default function PayoutsManager() {
       <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
         {[
           { label: 'Total Payouts',    value: payouts.length,               color: INK },
-          { label: 'Owed (unpaid)',    value: `$${totalPending.toFixed(0)}`, color: '#92400E' },
-          { label: 'Paid Out',         value: `$${totalPaid.toFixed(0)}`,    color: '#166534' },
-          { label: 'On Hold',          value: heldCount,                     color: '#991B1B' },
+          { label: 'Owed (unpaid)',    value: `$${totalPending.toFixed(0)}`, color: INK },
+          { label: 'Paid Out',         value: `$${totalPaid.toFixed(0)}`,    color: INK },
+          { label: 'On Hold',          value: heldCount,                     color: INK },
         ].map((s) => (
           <div key={s.label} style={{ background: '#fff', border: '1px solid rgba(25,37,36,0.07)', borderRadius: '0.75rem', padding: '0.875rem 1.25rem', display: 'flex', flexDirection: 'column', gap: '0.15rem', minWidth: 120 }}>
             <span style={{ fontFamily: 'Cabinet Grotesk, sans-serif', fontSize: '1.5rem', fontWeight: 700, color: s.color, lineHeight: 1 }}>{s.value}</span>

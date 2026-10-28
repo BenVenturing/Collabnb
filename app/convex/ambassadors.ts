@@ -1,4 +1,4 @@
-import { mutation, query } from "./_generated/server";
+import { mutation, query, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 import type { MutationCtx } from "./_generated/server";
 import { requireAdmin, canAccessAdmin } from "./lib/auth";
@@ -6,15 +6,60 @@ import { cleanPlainText } from "./lib/sanitize";
 import { enforceRateLimit, RATE_LIMITS } from "./lib/rateLimit";
 
 // ─── Country Ambassador program (beta) ────────────────────────────────────────
-// One exclusive partner per country. On approval they get a unique link
+// Up to MAX_PER_COUNTRY partners per country, approved after a Zoom call.
+// On approval they get a unique link
 // (?amb=<slug>) tying that country + their name together. Anyone (host or
 // creator — "hotels and such") who signs up through that link is tagged with
 // ambassador_ref = slug for the life of their account; the ambassador then
 // earns share_pct of the platform fee on every completed contract they're
-// party to. The rate is set per-link by admin, not auto-tiered.
+// party to. The rate is set per-link by admin, not auto-tiered. Each must
+// bring in quota_hosts new hosts per rolling quota_days window or the daily
+// enforceQuotas cron removes them; admin can also remove anyone manually.
 
 const DEFAULT_SHARE_PCT = 20;
 const CLAWBACK_DAYS = 30;
+const MAX_PER_COUNTRY = 5;
+const DEFAULT_QUOTA_HOSTS = 3;
+const DEFAULT_QUOTA_DAYS = 60;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+async function activeForCountry(ctx: { db: any }, country: string) {
+  const rows = await ctx.db
+    .query("ambassador_countries")
+    .withIndex("by_country", (q: any) => q.eq("country", country))
+    .collect();
+  return rows.filter((r: any) => r.status === "taken");
+}
+
+// Quota-qualifying hosts: signed up through the link AND have at least one
+// published, non-sample listing — a bare signup doesn't count. `_creationTime`
+// on each returned row is when the host's first qualifying listing went live.
+async function hostSignups(ctx: { db: any }, slug: string) {
+  const rows = await ctx.db
+    .query("profiles")
+    .withIndex("by_ambassador_ref", (q: any) => q.eq("ambassador_ref", slug))
+    .collect();
+  const qualifying = [];
+  for (const p of rows.filter((r: any) => r.role === "host")) {
+    const listings = await ctx.db
+      .query("listings")
+      .withIndex("by_host", (q: any) => q.eq("host_id", p._id))
+      .collect();
+    const live = listings.filter((l: any) => l.status === "published" && !l.is_sample);
+    if (live.length === 0) continue;
+    qualifying.push({ ...p, _creationTime: Math.min(...live.map((l: any) => l._creationTime)) });
+  }
+  return qualifying;
+}
+
+function quotaStatus(link: any, hosts: any[], now: number) {
+  const quotaHosts = link.quota_hosts ?? DEFAULT_QUOTA_HOSTS;
+  const quotaDays = link.quota_days ?? DEFAULT_QUOTA_DAYS;
+  const start = link.approved_at ?? link._creationTime;
+  const inWindow = hosts.filter((p: any) => p._creationTime >= now - quotaDays * DAY_MS).length;
+  const graceEndsAt = start + quotaDays * DAY_MS;
+  return { quotaHosts, quotaDays, inWindow, total: hosts.length, graceEndsAt, failing: now >= graceEndsAt && inWindow < quotaHosts };
+}
 
 function slugify(s: string): string {
   return s.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40);
@@ -39,12 +84,19 @@ export const listCountries = query({
   args: {},
   handler: async (ctx) => {
     const rows = await ctx.db.query("ambassador_countries").collect();
-    return rows
-      .filter((r: any) => r.status === "taken")
-      .map((r: any) => ({
-        country: r.country,
-        ambassador_first_name: r.ambassador_name ? String(r.ambassador_name).split(" ")[0] : null,
-      }));
+    const byCountry = new Map<string, string[]>();
+    for (const r of rows as any[]) {
+      if (r.status !== "taken") continue;
+      const names = byCountry.get(r.country) || [];
+      names.push(r.ambassador_name ? String(r.ambassador_name).split(" ")[0] : "");
+      byCountry.set(r.country, names);
+    }
+    return [...byCountry.entries()].map(([country, names]) => ({
+      country,
+      active_count: names.length,
+      max: MAX_PER_COUNTRY,
+      ambassador_first_names: names.filter(Boolean),
+    }));
   },
 });
 
@@ -96,8 +148,11 @@ export const apply = mutation({
       .query("ambassador_applications")
       .withIndex("by_email", (q) => q.eq("email", email))
       .collect();
-    if (existing.some((a) => a.country === country && a.status === "pending")) {
+    if (existing.some((a) => a.country === country && (a.status === "pending" || a.status === "interview"))) {
       throw new Error("You already have a pending application for this country.");
+    }
+    if ((await activeForCountry(ctx, country)).length >= MAX_PER_COUNTRY) {
+      throw new Error(`${country} already has ${MAX_PER_COUNTRY} ambassadors — pick another country or check back later.`);
     }
 
     await ctx.db.insert("ambassador_applications", {
@@ -197,31 +252,39 @@ export const adminListApplications = query({
   },
 });
 
+export const pendingApplicationCount = query({
+  args: {},
+  handler: async (ctx) => {
+    if (!(await canAccessAdmin(ctx))) return 0;
+    const count = async (status: string) => (await ctx.db
+      .query("ambassador_applications")
+      .withIndex("by_status", (q) => q.eq("status", status))
+      .collect()).length;
+    return (await count("pending")) + (await count("interview"));
+  },
+});
+
 export const adminReviewApplication = mutation({
   args: {
     id: v.id("ambassador_applications"),
-    decision: v.union(v.literal("approved"), v.literal("declined")),
+    decision: v.union(v.literal("interview"), v.literal("approved"), v.literal("declined")),
     note: v.optional(v.string()),
+    interview_at: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
     const app = await ctx.db.get(args.id);
     if (!app) throw new Error("Application not found");
 
-    if (args.decision === "approved") {
-      const existingForCountry = await ctx.db
-        .query("ambassador_countries")
-        .withIndex("by_country", (q) => q.eq("country", app.country))
-        .collect();
-      if (existingForCountry.some((r) => r.status === "taken")) {
-        throw new Error(`${app.country} already has an active ambassador — deactivate them first.`);
-      }
+    if (args.decision === "approved" && (await activeForCountry(ctx, app.country)).length >= MAX_PER_COUNTRY) {
+      throw new Error(`${app.country} already has ${MAX_PER_COUNTRY} active ambassadors — remove one first.`);
     }
 
     await ctx.db.patch(args.id, {
       status: args.decision,
-      admin_note: args.note,
+      admin_note: args.note ?? app.admin_note,
       reviewed_at: Date.now(),
+      ...(args.interview_at !== undefined ? { interview_at: args.interview_at } : {}),
     });
 
     if (args.decision === "approved") {
@@ -234,6 +297,9 @@ export const adminReviewApplication = mutation({
         ambassador_email: app.email,
         application_id: String(args.id),
         share_pct: DEFAULT_SHARE_PCT,
+        approved_at: Date.now(),
+        quota_hosts: DEFAULT_QUOTA_HOSTS,
+        quota_days: DEFAULT_QUOTA_DAYS,
       });
     }
 
@@ -254,21 +320,23 @@ export const adminListCountries = query({
     const countries = await ctx.db.query("ambassador_countries").collect();
     const earnings = await ctx.db.query("ambassador_earnings").collect();
     const now = Date.now();
-    return countries
-      .sort((a: any, b: any) => a.country.localeCompare(b.country))
-      .map((c: any) => {
-        const rows = earnings.filter((e: any) => e.ambassador_slug === c.slug);
-        const sum = (f: (e: any) => boolean) => rows.filter(f).reduce((t: number, e: any) => t + e.amount, 0);
-        return {
-          ...c,
-          stats: {
-            collabs: rows.filter((e: any) => e.status !== "reversed").length,
-            pending: sum((e: any) => e.status === "pending" && e.clawback_until > now),
-            payable: sum((e: any) => e.status === "pending" && e.clawback_until <= now),
-            paid: sum((e: any) => e.status === "paid"),
-          },
-        };
+    countries.sort((a: any, b: any) => a.country.localeCompare(b.country));
+    const out = [];
+    for (const c of countries as any[]) {
+      const rows = earnings.filter((e: any) => e.ambassador_slug === c.slug);
+      const sum = (f: (e: any) => boolean) => rows.filter(f).reduce((t: number, e: any) => t + e.amount, 0);
+      out.push({
+        ...c,
+        quota: quotaStatus(c, await hostSignups(ctx, c.slug), now),
+        stats: {
+          collabs: rows.filter((e: any) => e.status !== "reversed").length,
+          pending: sum((e: any) => e.status === "pending" && e.clawback_until > now),
+          payable: sum((e: any) => e.status === "pending" && e.clawback_until <= now),
+          paid: sum((e: any) => e.status === "paid"),
+        },
       });
+    }
+    return out;
   },
 });
 
@@ -280,16 +348,26 @@ export const adminUpsertCountry = mutation({
     ambassador_name: v.optional(v.string()),
     ambassador_email: v.optional(v.string()),
     share_pct: v.number(),
+    quota_hosts: v.optional(v.number()),
+    quota_days: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
     if (args.share_pct < 0 || args.share_pct > 100) throw new Error("Share % must be between 0 and 100.");
+    if (args.quota_days !== undefined && args.quota_days < 7) throw new Error("Quota window must be at least 7 days.");
     const existing = await ctx.db
       .query("ambassador_countries")
       .withIndex("by_slug", (q) => q.eq("slug", args.slug))
       .unique();
     if (existing) {
-      await ctx.db.patch(existing._id, args);
+      const reactivating = args.status === "taken" && existing.status !== "taken";
+      if (reactivating && (await activeForCountry(ctx, args.country)).length >= MAX_PER_COUNTRY) {
+        throw new Error(`${args.country} already has ${MAX_PER_COUNTRY} active ambassadors.`);
+      }
+      // Reactivating restarts the quota grace period.
+      await ctx.db.patch(existing._id, reactivating
+        ? { ...args, approved_at: Date.now(), removed_at: undefined, removed_reason: undefined }
+        : args);
     } else {
       await ctx.db.insert("ambassador_countries", args);
     }
@@ -340,5 +418,45 @@ export const adminReverseEarning = mutation({
     const e = await ctx.db.get(args.id);
     if (!e || e.status === "paid") throw new Error("Paid earnings can't be reversed — handle manually.");
     await ctx.db.patch(args.id, { status: "reversed" });
+  },
+});
+
+async function removeLink(ctx: MutationCtx, link: any, reason: string, actor: string) {
+  await ctx.db.patch(link._id, { status: "removed", removed_at: Date.now(), removed_reason: reason });
+  await ctx.db.insert("admin_audit_log", {
+    action: "ambassador_removed",
+    target_type: "ambassador_countries",
+    target_id: link.slug,
+    details: `${link.ambassador_name || link.slug} — ${link.country} — ${actor}: ${reason}`,
+    created_at: Date.now(),
+  });
+}
+
+export const adminRemoveAmbassador = mutation({
+  args: { slug: v.string(), reason: v.string() },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    const link = await ctx.db
+      .query("ambassador_countries")
+      .withIndex("by_slug", (q) => q.eq("slug", args.slug))
+      .unique();
+    if (!link) throw new Error("Ambassador not found");
+    await removeLink(ctx, link, cleanPlainText(args.reason, 500) || "Removed by admin", "admin");
+  },
+});
+
+// Daily cron: remove active ambassadors who missed their host quota.
+export const enforceQuotas = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const now = Date.now();
+    const links = await ctx.db.query("ambassador_countries").collect();
+    for (const link of links) {
+      if (link.status !== "taken") continue;
+      const q = quotaStatus(link, await hostSignups(ctx, link.slug), now);
+      if (q.failing) {
+        await removeLink(ctx, link, `Missed quota: ${q.inWindow}/${q.quotaHosts} hosts in the last ${q.quotaDays} days`, "auto");
+      }
+    }
   },
 });

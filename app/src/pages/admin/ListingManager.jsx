@@ -83,9 +83,9 @@ export default function ListingManager() {
       <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
         {[
           { label: 'Total Listings', value: listings?.length ?? '…', color: INK },
-          { label: 'Published',      value: publishedCount,          color: '#166534' },
-          { label: 'Drafts',         value: draftCount,              color: '#92400E' },
-          { label: 'Featured',       value: featuredCount,           color: '#7E22CE' },
+          { label: 'Published',      value: publishedCount,          color: INK },
+          { label: 'Drafts',         value: draftCount,              color: INK },
+          { label: 'Featured',       value: featuredCount,           color: INK },
         ].map((s) => (
           <div key={s.label} style={{ background: '#fff', border: '1px solid rgba(25,37,36,0.07)', borderRadius: '0.75rem', padding: '0.875rem 1.25rem', display: 'flex', flexDirection: 'column', gap: '0.15rem', minWidth: 100 }}>
             <span style={{ fontFamily: 'Cabinet Grotesk, sans-serif', fontSize: '1.5rem', fontWeight: 700, color: s.color, lineHeight: 1 }}>{s.value}</span>

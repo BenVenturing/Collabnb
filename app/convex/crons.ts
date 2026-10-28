@@ -181,4 +181,12 @@ crons.hourly(
   {}
 );
 
+// Daily at 6am UTC — remove ambassadors who missed their host-signup quota.
+crons.daily(
+  "enforce ambassador quotas",
+  { hourUTC: 6, minuteUTC: 0 },
+  internal.ambassadors.enforceQuotas,
+  {}
+);
+
 export default crons;

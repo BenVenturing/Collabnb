@@ -7,6 +7,7 @@ const INK = '#192524', SLATE = '#3C5759', SAGE = '#646B62';
 
 const STATUS_META = {
   pending:  { label: 'Pending',  bg: '#F7F5F2', color: SLATE },
+  interview:{ label: 'Zoom call', bg: '#E0F2FE', color: '#0369A1' },
   approved: { label: 'Approved', bg: '#D1FAE5', color: '#166534' },
   declined: { label: 'Declined', bg: '#FEE2E2', color: '#991B1B' },
   payable:  { label: 'Payable',  bg: '#FEF3C7', color: '#92400E' },
@@ -14,6 +15,7 @@ const STATUS_META = {
   reversed: { label: 'Reversed', bg: '#FEE2E2', color: '#991B1B' },
   taken:    { label: 'Active',   bg: '#D1EBDB', color: SLATE },
   inactive: { label: 'Inactive', bg: '#F7F5F2', color: SAGE },
+  removed:  { label: 'Removed',  bg: '#FEE2E2', color: '#991B1B' },
 };
 
 const AMBASSADOR_LINK_BASE = 'https://collabnb.com/join.html?amb=';
@@ -47,6 +49,13 @@ function ActionBtn({ onClick, children, variant = 'default', disabled }) {
 
 const money = (n) => `$${(n || 0).toFixed(2)}`;
 
+function zoomInviteHref(a) {
+  const first = a.full_name.split(' ')[0];
+  const subject = `Collabnb Ambassador — quick Zoom call (${a.country})`;
+  const body = `Hi ${first},\n\nThanks for applying to be a Collabnb Ambassador for ${a.country}. Before we approve anyone we do a short 20-minute Zoom call to walk through how the program works, the hotel onboarding quota, and how you'd promote Collabnb.\n\nWhat times work for you this week? Reply with a few options and I'll send the link.\n\nBen\nCollabnb`;
+  return `mailto:${a.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+}
+
 // ─── Applications ─────────────────────────────────────────────────────────────
 function Applications() {
   const apps = useQuery(api.ambassadors.adminListApplications);
@@ -54,7 +63,8 @@ function Applications() {
   const [expanded, setExpanded] = useState(null);
   const [showAll, setShowAll] = useState(false);
 
-  const rows = (apps || []).filter(a => showAll || a.status === 'pending');
+  const rows = (apps || []).filter(a => showAll || a.status === 'pending' || a.status === 'interview');
+  const act = (args) => review(args).catch(err => window.alert(err.message));
 
   return (
     <div>
@@ -76,7 +86,7 @@ function Applications() {
             <div key={a._id} style={{ borderBottom: i < rows.length - 1 ? '1px solid rgba(25,37,36,0.05)' : 'none' }}>
               <div
                 onClick={() => setExpanded(expanded === a._id ? null : a._id)}
-                style={{ display: 'grid', gridTemplateColumns: '1.2fr 1.4fr 1fr 90px 110px 150px', gap: '0.5rem', padding: '0.75rem 1rem', alignItems: 'center', cursor: 'pointer' }}
+                style={{ display: 'grid', gridTemplateColumns: '1.1fr 1.3fr 0.9fr 80px 90px 230px', gap: '0.5rem', padding: '0.75rem 1rem', alignItems: 'center', cursor: 'pointer' }}
               >
                 <span style={{ fontSize: '0.85rem', fontWeight: 600, color: INK }}>{a.full_name}</span>
                 <span style={{ fontSize: '0.78rem', color: SLATE, overflow: 'hidden', textOverflow: 'ellipsis' }}>{a.email}</span>
@@ -85,10 +95,15 @@ function Applications() {
                 <Badge status={a.status} />
                 <div style={{ display: 'flex', gap: '0.3rem' }} onClick={e => e.stopPropagation()}>
                   {a.status === 'pending' && (
-                    <>
-                      <ActionBtn variant="check" onClick={() => review({ id: a._id, decision: 'approved' })}>Approve</ActionBtn>
-                      <ActionBtn variant="hide" onClick={() => review({ id: a._id, decision: 'declined' })}>Decline</ActionBtn>
-                    </>
+                    <a href={zoomInviteHref(a)} onClick={() => act({ id: a._id, decision: 'interview' })} style={{ textDecoration: 'none' }}>
+                      <ActionBtn>Invite to Zoom</ActionBtn>
+                    </a>
+                  )}
+                  {a.status === 'interview' && (
+                    <ActionBtn variant="check" onClick={() => act({ id: a._id, decision: 'approved' })}>Approve</ActionBtn>
+                  )}
+                  {(a.status === 'pending' || a.status === 'interview') && (
+                    <ActionBtn variant="hide" onClick={() => act({ id: a._id, decision: 'declined' })}>Decline</ActionBtn>
                   )}
                 </div>
               </div>
@@ -118,20 +133,35 @@ function Applications() {
 function Countries() {
   const countries = useQuery(api.ambassadors.adminListCountries);
   const upsert = useMutation(api.ambassadors.adminUpsertCountry);
+  const remove = useMutation(api.ambassadors.adminRemoveAmbassador);
   const [pctDraft, setPctDraft] = useState({});
 
   if (countries === undefined) return <div style={{ color: SAGE, fontSize: '0.85rem', padding: '3rem 0', textAlign: 'center' }}>Loading…</div>;
   if (countries.length === 0) return (
     <div style={{ color: SAGE, fontSize: '0.85rem', padding: '3rem 0', textAlign: 'center' }}>
-      No ambassadors yet — approve an application to create the first country link.
+      No ambassadors yet — approve an application to create the first link.
     </div>
   );
 
   const save = (c, patch) => upsert({
     slug: c.slug, country: c.country, status: c.status,
     ambassador_name: c.ambassador_name, ambassador_email: c.ambassador_email,
-    share_pct: c.share_pct, ...patch,
-  });
+    share_pct: c.share_pct, quota_hosts: c.quota.quotaHosts, quota_days: c.quota.quotaDays, ...patch,
+  }).catch(err => window.alert(err.message));
+
+  const removeAmbassador = (c) => {
+    const reason = window.prompt(`Remove ${c.ambassador_name || c.slug}? Their link stops earning immediately.\n\nReason (e.g. "misrepresenting Collabnb on Instagram"):`);
+    if (reason) remove({ slug: c.slug, reason }).catch(err => window.alert(err.message));
+  };
+
+  const numInput = (c, field, value, width = '3.5rem') => (
+    <input
+      type="number" min={0} step={1}
+      defaultValue={value}
+      onBlur={e => { const n = Number(e.target.value); if (Number.isFinite(n) && n !== value) save(c, { [field]: n }); }}
+      style={{ width, fontSize: '0.78rem', padding: '0.2rem 0.4rem', borderRadius: '0.35rem', border: '1px solid rgba(25,37,36,0.12)', fontFamily: 'inherit' }}
+    />
+  );
 
   return (
     <div style={{ display: 'grid', gap: '1rem' }}>
@@ -145,13 +175,14 @@ function Countries() {
               <Badge status={c.status} />
               {c.ambassador_name && <span style={{ fontSize: '0.78rem', color: SLATE }}>{c.ambassador_name} · {c.ambassador_email}</span>}
               <select
-                value={c.status}
+                value={c.status === 'removed' ? 'inactive' : c.status}
                 onChange={e => save(c, { status: e.target.value })}
                 style={{ marginLeft: 'auto', fontSize: '0.78rem', padding: '0.3rem 0.5rem', borderRadius: '0.4rem', border: '1px solid rgba(25,37,36,0.12)', color: SLATE, fontFamily: 'inherit', background: '#F7F5F2' }}
               >
                 <option value="taken">Active</option>
                 <option value="inactive">Inactive</option>
               </select>
+              {c.status === 'taken' && <ActionBtn variant="hide" onClick={() => removeAmbassador(c)}>Remove</ActionBtn>}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem' }}>
               <code style={{ fontSize: '0.75rem', color: SAGE, background: '#F7F5F2', padding: '0.2rem 0.5rem', borderRadius: '0.4rem' }}>{link}</code>
@@ -175,9 +206,27 @@ function Countries() {
               </span>
               <span>Collabs: <strong>{c.stats.collabs}</strong></span>
               <span>Pending: <strong>{money(c.stats.pending)}</strong></span>
-              <span style={{ color: '#92400E' }}>Payable: <strong>{money(c.stats.payable)}</strong></span>
-              <span style={{ color: '#166534' }}>Paid: <strong>{money(c.stats.paid)}</strong></span>
+              <span style={{ color: INK }}>Payable: <strong>{money(c.stats.payable)}</strong></span>
+              <span style={{ color: INK }}>Paid: <strong>{money(c.stats.paid)}</strong></span>
             </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.6rem', flexWrap: 'wrap', fontSize: '0.78rem', color: SLATE }}>
+              Quota: {numInput(c, 'quota_hosts', c.quota.quotaHosts)} hotels every {numInput(c, 'quota_days', c.quota.quotaDays)} days
+              <span style={{ marginLeft: '0.75rem' }}>
+                This window: <strong style={{ color: INK }}>{c.quota.inWindow}/{c.quota.quotaHosts}</strong> · {c.quota.total} hotels all-time
+              </span>
+              {c.status === 'taken' && (
+                <span style={{ color: c.quota.failing ? '#991B1B' : SAGE }}>
+                  {Date.now() < c.quota.graceEndsAt
+                    ? `· first check ${formatDate(c.quota.graceEndsAt)}`
+                    : c.quota.failing ? '· below quota — auto-removed at next daily check' : '· on track'}
+                </span>
+              )}
+            </div>
+            {c.status === 'removed' && c.removed_reason && (
+              <div style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: '#991B1B' }}>
+                Removed {c.removed_at ? formatDate(c.removed_at) : ''} — {c.removed_reason}
+              </div>
+            )}
           </div>
         );
       })}
@@ -279,14 +328,14 @@ function Earnings() {
 // ─── Panel ────────────────────────────────────────────────────────────────────
 const VIEWS = [
   { id: 'applications', label: 'Applications' },
-  { id: 'countries', label: 'Countries' },
+  { id: 'countries', label: 'Ambassadors' },
   { id: 'earnings', label: 'Earnings' },
 ];
 
 export default function AmbassadorManager() {
   const [view, setView] = useState('applications');
   const apps = useQuery(api.ambassadors.adminListApplications);
-  const pendingCount = (apps || []).filter(a => a.status === 'pending').length;
+  const pendingCount = (apps || []).filter(a => a.status === 'pending' || a.status === 'interview').length;
 
   return (
     <div style={{ padding: '2rem 2.5rem', maxWidth: 1000 }}>
@@ -294,7 +343,7 @@ export default function AmbassadorManager() {
         Ambassadors <span style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: SLATE, background: '#D1EBDB', borderRadius: 99, padding: '0.15rem 0.5rem', verticalAlign: 'middle' }}>Beta</span>
       </h1>
       <p style={{ fontSize: '0.85rem', color: SAGE, marginTop: '0.3rem', marginBottom: '1.25rem' }}>
-        One exclusive partner per country, earning a share of the platform fee on every completed collab from a host or creator who signed up through their unique link. Payouts are manual for the beta — mark earnings paid once you've sent the transfer.
+        Up to 5 ambassadors per country, each approved after a Zoom call. They earn a share of the platform fee on every paid collab from a host or creator who signed up through their link, and are auto-removed if they miss their hotel quota. Payouts are manual for the beta — mark earnings paid once you've sent the transfer.
       </p>
 
       <div style={{ display: 'flex', gap: '0.25rem', marginBottom: '1.25rem', background: '#F7F5F2', padding: '0.2rem', borderRadius: '0.5rem', width: 'fit-content', border: '1px solid rgba(25,37,36,0.06)' }}>

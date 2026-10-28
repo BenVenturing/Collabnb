@@ -3,6 +3,7 @@ import { useMutation } from 'convex/react';
 import { useTranslation } from 'react-i18next';
 import { api } from '../../convex/_generated/api';
 import { useAuth } from '../contexts/AuthContext';
+import { haptic } from '../lib/haptics';
 
 // Bottom-sheet role-switch signup (creator → host or host → creator).
 // Mirrors a brand-new signup for the target role: pre-filled with the existing
@@ -44,6 +45,7 @@ export default function RoleSwitchSheet({ open, targetRole = 'host', onClose }) 
       return;
     }
     if (!isHostSignup && !instagram.trim()) {
+      haptic('error');
       setError(t('errors.instagramRequired'));
       return;
     }

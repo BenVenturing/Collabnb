@@ -21,6 +21,7 @@ import { AmenityIcon } from '../lib/amenityIcons';
 import ListingLocationMap from '../components/map/ListingLocationMap';
 import Confetti from '../components/Confetti';
 import { TIERS, normalizeTierId } from '../../convex/lib/compensationPoints';
+import { haptic } from '../lib/haptics';
 
 // listing.creator_tier is stored as an id ("ugc_pro") — resolve to the
 // clean display label ("UGC Pro") wherever it's shown to a creator.
@@ -401,10 +402,12 @@ Let's make something great together.`;
         incrementPitchCount();
       }
     }
+    haptic('medium');
     setSubmitting(true);
     const result = await onApply(listing, pitch, creatorProfile);
     setSubmitting(false);
     if (result && result.ok === false) {
+      haptic('error');
       setApplyError(result.error);
       return;
     }

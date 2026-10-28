@@ -1,3 +1,6 @@
+import { useEffect } from "react";
+import { haptic } from "../lib/haptics";
+
 const CONFETTI_COLORS = [
   "#FF3B30","#FF9500","#FFCC00","#34C759","#30D158",
   "#00C7BE","#32ADE6","#007AFF","#5856D6","#AF52DE",
@@ -18,6 +21,7 @@ const PARTICLES = Array.from({ length: 90 }, (_, i) => ({
 }));
 
 export default function Confetti({ show }) {
+  useEffect(() => { if (show) haptic("success"); }, [show]);
   if (!show) return null;
   return (
     <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 999, overflow: "hidden" }}>

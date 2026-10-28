@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { formatDateRange } from '../lib/dateUtils';
+import { haptic } from '../lib/haptics';
 
 // ─── persistence ──────────────────────────────────────────────────────────────
 const CAL_KEY = '@collabnb_travel_calendar_v1';
@@ -354,6 +355,7 @@ export default function TravelCalendar({ viewerRole = 'self' }) {
   // ── Day interaction handlers ────────────────────────────────────────────────
   const handleMouseDown = useCallback((date) => {
     if (!isEditable) return;
+    haptic('selection');
     const s = selRef.current;
 
     if (s?.mode === 'hover') {

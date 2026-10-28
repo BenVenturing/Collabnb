@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
+import { haptic } from '../../lib/haptics';
 
 const INK   = '#192524';
 const SLATE = '#3C5759';
@@ -55,6 +56,7 @@ export default function ListingManager() {
   }
 
   function handleDelete(listingId, title) {
+    haptic('warning');
     setConfirmModal({ id: listingId, title });
   }
 

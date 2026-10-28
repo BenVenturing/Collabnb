@@ -12,6 +12,7 @@ import {
   Clock, Trash2, ClipboardCheck, RefreshCw, Clapperboard, Camera, PenLine,
   Upload, CheckCircle2, BarChart3, Archive,
 } from 'lucide-react';
+import { haptic } from '../lib/haptics';
 
 /* ── Brand stage colors ──────────────────────────────────────────────────── */
 const STAGE_COLORS = {
@@ -288,6 +289,7 @@ function PendingPanel({ collab, advanceStage, onRemove }) {
 /* ─── Withdraw confirmation popup ─────────────────────────────────────────── */
 function WithdrawConfirmModal({ onConfirm, onCancel, titleKey = 'withdraw.title', bodyKey = 'withdraw.body', confirmKey = 'withdraw.confirm', cancelKey = 'withdraw.cancel' }) {
   const { t } = useTranslation('collabDetail');
+  useEffect(() => { haptic('warning'); }, []);
   useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape') onCancel(); };
     window.addEventListener('keydown', onKey);

@@ -28,6 +28,7 @@ import {
   normalizeTierId, totalPoints, calcMidpoint, calcHardFloor, calcRange, evaluateZone,
   isDeliverableAllowedForTier,
 } from '../../../convex/lib/compensationPoints';
+import { haptic } from '../../lib/haptics';
 
 // ─── Mock proposal data ───────────────────────────────────────────────────────
 const PROPOSALS = [
@@ -297,7 +298,8 @@ function CounterPitchModal({ proposal, fromParty, onSend, onClose }) {
   const belowFloor = zone === 'red';
 
   function handleSend() {
-    if (belowFloor) return;
+    if (belowFloor) { haptic('error'); return; }
+    haptic('medium');
     const nextFields = { ...fields };
     if (points > 0) {
       nextFields.cash_amount = cashAmount;

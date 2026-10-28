@@ -103,7 +103,10 @@
     "bothConfirmed": "✓ Both parties confirmed — collaboration will be archived",
     "trustpilot": "★ Review Collabnb on Trustpilot",
     "trustpilotEmail": "We've also emailed you a Trustpilot review link.",
-    "waiting": "Waiting"
+    "waiting": "Waiting",
+    "trustpilotTitle": "Enjoying Collabnb?",
+    "trustpilotBody": "A quick Trustpilot review helps other hosts and creators find us.",
+    "trustpilotCta": "Review on Trustpilot ★"
   },
   "archived": {
     "title": "Archived Collaboration",

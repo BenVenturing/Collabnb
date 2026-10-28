@@ -137,10 +137,20 @@ export async function completeCollaboration(
     const collab = await ctx.db.get(collabId as any).catch(() => null);
     // Idempotent: completing twice must not create a second fee record.
     if ((collab as any)?.status === 'completed') return;
+    // Move to the Closed stage — that's where both sides rate each other.
+    const stages = (() => { try { return JSON.parse((collab as any)?.stages || '{}'); } catch { return {}; } })();
+    const stage = (collab as any)?.current_stage;
+    const date = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    if (stage !== 'closed' && stage !== 'archived') {
+      for (const k of ['pending', 'accepted', 'updated', 'uploaded_tagged']) {
+        if (!stages[k]?.completed) stages[k] = { ...(stages[k] || {}), completed: true, date: stages[k]?.date || date };
+      }
+    }
     await ctx.db.patch(collabId as any, {
       status: 'completed',
       status_text: 'Completed',
       is_active: false,
+      ...(stage !== 'closed' && stage !== 'archived' ? { current_stage: 'closed', stages: JSON.stringify(stages) } : {}),
     });
   }
 

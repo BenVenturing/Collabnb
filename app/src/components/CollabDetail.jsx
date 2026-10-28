@@ -797,6 +797,16 @@ function ClosedPanel({ collab, toggleCloseCollab }) {
         </div>
       </div>
 
+      {(myParty === 'creator' ? creatorDone : hostDone) && (
+        <a href="https://www.trustpilot.com/evaluate/collabnb.com" target="_blank" rel="noopener noreferrer"
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', marginBottom: '1.25rem', padding: '0.875rem 1rem', borderRadius: '0.875rem', background: 'rgba(0,182,122,0.08)', border: '1px solid rgba(0,182,122,0.25)', textDecoration: 'none' }}>
+          <span style={{ fontSize: '0.8rem', color: 'var(--ink)', lineHeight: 1.5 }}>
+            <strong>{t('closed.trustpilotTitle', 'Enjoying Collabnb?')}</strong> {t('closed.trustpilotBody', 'A quick Trustpilot review helps other hosts and creators find us.')}
+          </span>
+          <span style={{ flexShrink: 0, fontSize: '0.78rem', fontWeight: 700, color: '#00865a' }}>{t('closed.trustpilotCta', 'Review on Trustpilot ★')}</span>
+        </a>
+      )}
+
       {/* Content performance — shown once creator has confirmed */}
       {creatorDone && (
         <div style={{ marginBottom: '1.25rem', padding: '1rem', borderRadius: '0.875rem', background: 'rgba(255,255,255,0.5)', border: '1px solid rgba(25,37,36,0.08)' }}>

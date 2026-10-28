@@ -633,6 +633,11 @@ function HostReviewForm({ proposal }) {
         <p style={{ fontSize: 12, color: 'var(--slate)', margin: 0 }}>
           <span style={{ color: '#D4A843', fontWeight: 700 }}>{'★'.repeat(mine.rating)}{'☆'.repeat(5 - mine.rating)}</span>
           {mine.comment ? ` — ${mine.comment}` : ''}
+          <br />
+          <a href="https://www.trustpilot.com/evaluate/collabnb.com" target="_blank" rel="noopener noreferrer"
+            style={{ display: 'inline-block', marginTop: 6, fontSize: 12, fontWeight: 700, color: '#00865a' }}>
+            {t('review.trustpilot', 'Also review Collabnb on Trustpilot ★')}
+          </a>
         </p>
       ) : (
         <>

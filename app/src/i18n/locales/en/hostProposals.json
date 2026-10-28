@@ -208,6 +208,7 @@
     "done": "Your review of {{name}}",
     "placeholder": "How was working with them? (optional)",
     "submit": "Submit review",
-    "error": "Could not save your review. Try again."
+    "error": "Could not save your review. Try again.",
+    "trustpilot": "Also review Collabnb on Trustpilot ★"
   }
 }

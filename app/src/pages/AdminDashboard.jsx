@@ -175,6 +175,7 @@ export default function AdminDashboard() {
   const unreadCount = useQuery(api.messages.getUnreadCount);
   const adminUnread = useQuery(api.adminThreads.unreadCount) ?? 0;
   const crashUnresolved = useQuery(api.crashReports.unresolvedCount) ?? 0;
+  const pendingApprovals = useQuery(api.contracts.getPendingChargeApprovals)?.length ?? 0;
   const adminSettings = useQuery(api.admin.getSettings);
 
   // Manual nav clears any deep-linked Users sub-view (e.g. Overview → pending).
@@ -200,7 +201,8 @@ export default function AdminDashboard() {
   );
 
   const ActivePanel = PANEL_MAP[activeSection] || PANEL_MAP['overview'];
-  const badges = { messages: unreadCount || 0, 'admin-inbox': adminUnread || 0, crashes: crashUnresolved || 0 };
+  const badges = { messages: unreadCount || 0, 'admin-inbox': adminUnread || 0, crashes: crashUnresolved || 0, 'charge-approvals': pendingApprovals };
+  const groupBadge = (group) => flatTabs(group).reduce((n, t) => n + (badges[t.id] || 0), 0);
   const orderedNavItems = resolveNavOrder(adminSettings?.nav_order).map(id => NAV_ITEMS_BY_ID[id]).filter(Boolean);
   const q = navSearch.trim().toLowerCase();
   const navResults = q
@@ -368,6 +370,11 @@ export default function AdminDashboard() {
         >
           <span style={{ display: 'flex', alignItems: 'center', color: isActive ? '#192524' : '#3C5759', opacity: isActive ? 1 : 0.7 }}>{ICONS[group.icon]}</span>
           <span style={{ flex: 1 }}>{group.label}</span>
+          {groupBadge(group) > 0 && (
+            <span style={{ fontSize: '0.65rem', fontWeight: 700, background: '#D1EBDB', color: '#166534', borderRadius: '99px', padding: '0 0.4rem', lineHeight: 1.7 }}>
+              {groupBadge(group)}
+            </span>
+          )}
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ transition: 'transform 150ms', transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)', opacity: 0.5 }}>
             <path d="M9 18l6-6-6-6"/>
           </svg>
@@ -449,7 +456,7 @@ export default function AdminDashboard() {
               <nav style={{ padding: '0.75rem 0.5rem', flex: 1 }}>
                 {orderedNavItems.map(item => item.type === 'flat'
                   ? renderRailIcon(item.id, item.label, activeSection === item.id, () => selectSection(item.id), badges[item.id])
-                  : renderRailIcon(item.icon, item.label, groupContains(item, activeSection), () => selectSection(item.tabs[0].id)))}
+                  : renderRailIcon(item.icon, item.label, groupContains(item, activeSection), () => selectSection(item.tabs[0].id), groupBadge(item)))}
               </nav>
               <div style={{ padding: '0.5rem', borderTop: '1px solid rgba(25,37,36,0.07)' }}>
                 {renderRailIcon('settings', 'Settings', activeSection === 'settings', () => selectSection('settings'))}

@@ -2,7 +2,6 @@ import { createContext, useContext, useState, useCallback, useMemo, useEffect, u
 import { useMutation, useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { useAuth } from './AuthContext';
-import { haptic } from '../lib/haptics';
 import { SAMPLE_THREADS, MOCK_CREATOR, STAGES } from '../lib/mockData';
 import { formatDate } from '../lib/dateUtils';
 import { AUTO_COLOR_IDS, threadColorKey, counterpartKey } from '../lib/threadColors';
@@ -237,7 +236,6 @@ export function CollabProvider({ children }) {
   }, [convexCollections]);
 
   const toggleSave = useCallback((listingId) => {
-    haptic('light');
     setCollections((prev) => {
       const inCollection = prev.find((c) => c.listingIds.includes(listingId));
       let updated;

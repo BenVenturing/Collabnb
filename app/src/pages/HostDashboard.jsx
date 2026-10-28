@@ -15,7 +15,6 @@ import CollabMap, { MapPopup } from '../components/map/CollabMap';
 import { DESTINATIONS, COUNTRIES } from '../lib/searchData';
 import PricingTool, { PointsHelpButton } from '../components/PricingTool';
 import { cache } from '../lib/cache';
-import { haptic } from '../lib/haptics';
 
 const EXPLORE_CACHE_KEY = 'explore_listings_all';
 
@@ -503,7 +502,7 @@ function HostListingCard({ listing, meta, delay, glowState, onToggleStatus, onDu
               } },
               { label: meta.status === 'paused' ? t('listingCard.menu.unpause') : t('listingCard.menu.pause'), action: (e) => { e.stopPropagation(); if (meta.status !== 'draft') onToggleStatus(listing.id); setMenuOpen(false); }, muted: meta.status === 'draft' },
               { label: t('listingCard.menu.duplicate'), action: (e) => { e.stopPropagation(); onDuplicate(listing); setMenuOpen(false); } },
-              { label: t('listingCard.menu.delete'), Icon: Trash2, danger: true, action: (e) => { e.stopPropagation(); setDeleteError(''); haptic('warning'); setConfirmDelete(true); setMenuOpen(false); } },
+              { label: t('listingCard.menu.delete'), Icon: Trash2, danger: true, action: (e) => { e.stopPropagation(); setDeleteError(''); setConfirmDelete(true); setMenuOpen(false); } },
             ]).map(({ label, action, muted, danger, Icon }) => (
               <button
                 key={label}

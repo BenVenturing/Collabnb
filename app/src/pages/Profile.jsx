@@ -77,7 +77,6 @@ import { getPitchCount } from '../lib/pitchCount';
 import { cache } from '../lib/cache';
 import { reopenChecklist } from '../components/OnboardingChecklist';
 import RoleSwitchSheet from '../components/RoleSwitchSheet';
-import { haptic } from '../lib/haptics';
 
 // ─── Creator tier + niche options ────────────────────────────────────────────
 const CREATOR_TIERS = [
@@ -1052,18 +1051,12 @@ export default function Profile() {
             )}
           </div>
           {hasCollabs ? (
-            realCompletedCollabs.length > 3 ? (
-              <div style={{ overflow: 'hidden', paddingBottom: '0.5rem' }}>
-                <div className="scroll-track">
-                  {realCompletedCollabs.map((c) => <PastCollabCard key={String(c._id)} collab={c} />)}
-                  {realCompletedCollabs.map((c) => <PastCollabCard key={`dup-${c._id}`} collab={c} />)}
-                </div>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', gap: '0.875rem', overflowX: 'auto', paddingBottom: '0.5rem' }}>
+            <div style={{ overflow: 'hidden', paddingBottom: '0.5rem' }}>
+              <div className="scroll-track">
                 {realCompletedCollabs.map((c) => <PastCollabCard key={String(c._id)} collab={c} />)}
+                {realCompletedCollabs.map((c) => <PastCollabCard key={`dup-${c._id}`} collab={c} />)}
               </div>
-            )
+            </div>
           ) : (
             <div style={{ position: 'relative', overflow: 'hidden', borderRadius: '12px' }}>
               <div style={{ display: 'flex', gap: '0.875rem', overflow: 'hidden', filter: 'blur(4px)', opacity: 0.5, pointerEvents: 'none', userSelect: 'none' }}>
@@ -2132,7 +2125,6 @@ function PayoutMethodPanel({ profile: profileProp, onClose, createConnectOnboard
 
   const submitWiseRecipient = async () => {
     if (!wiseFormData.isValid) {
-      haptic('error');
       setError(t('payout.fixFields'));
       return;
     }

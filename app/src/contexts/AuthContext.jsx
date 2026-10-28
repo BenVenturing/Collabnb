@@ -3,7 +3,6 @@ import { useMutation, useConvex } from 'convex/react';
 import { useUser, useAuth as useClerkAuth, useClerk } from '@clerk/clerk-react';
 import { api } from '../../convex/_generated/api';
 import { MOCK_CREATOR } from '../lib/mockData';
-import { haptic } from '../lib/haptics';
 
 const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL;
 
@@ -309,7 +308,6 @@ function ClerkAuthInner({ children }) {
   const toggleSavedCreator = useCallback(async (creatorId) => {
     const profileId = profile?._id;
     if (!profileId) return profile?.saved_creator_ids ?? [];
-    haptic('light');
     // Optimistic update
     const cur = profile.saved_creator_ids ?? [];
     const optimistic = cur.includes(creatorId) ? cur.filter((id) => id !== creatorId) : [...cur, creatorId];

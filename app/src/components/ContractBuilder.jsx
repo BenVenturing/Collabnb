@@ -10,7 +10,6 @@ import PaymentModal from './PaymentModal';
 import ReceiptCheckoutOverlay from './ReceiptCheckoutOverlay';
 import Confetti from './Confetti';
 import { computeFee } from '../../convex/lib/fees';
-import { haptic } from '../lib/haptics';
 
 const CURRENCIES = ['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'JPY'];
 const FREE_STAY_VALUE = 'free_stay';
@@ -554,7 +553,6 @@ export default function ContractBuilder() {
   };
 
   const handleSendToHost = async (host) => {
-    haptic('medium');
     setSelectedHost(host);
     updateField('host', host.name);
     // Save first

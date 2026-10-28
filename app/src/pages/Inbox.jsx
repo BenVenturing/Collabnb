@@ -2,7 +2,6 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { useSearchParams, useLocation, useNavigate } from 'react-router-dom';
 import { useCollabs } from '../contexts/CollabContext';
 import { THREAD_MESSAGES, STAGES } from '../lib/mockData';
-import { haptic } from '../lib/haptics';
 import { THEME_COLORS, THEME_COLOR_IDS, threadTheme } from '../lib/threadColors';
 import CollabDetail from '../components/CollabDetail';
 import ProfilePopupCard from '../components/ProfilePopupCard';
@@ -407,9 +406,7 @@ function ConversationPanel({ thread, allThreads, collabs, onViewCollab, onArchiv
       // it optimistically made failed sends look like the message vanished,
       // with no way to recover the typed text.
       setDraft('');
-      haptic('light');
     } catch (err) {
-      haptic('error');
       setSendError(err?.data || err?.message || t('conversation.sendError'));
     } finally {
       setSending(false);
@@ -1118,7 +1115,7 @@ export default function Inbox() {
                       thread={t}
                       isActive={t.id === selectedId}
                       onClick={() => openThread(t.id)}
-                      onDelete={deleteThread ? () => { haptic('warning'); setPendingDelete({ thread: t, typed: '' }); } : undefined}
+                      onDelete={deleteThread ? () => setPendingDelete({ thread: t, typed: '' }) : undefined}
                     />
                   ))}
                 </>
@@ -1178,7 +1175,7 @@ export default function Inbox() {
                       thread={t}
                       isActive={t.id === selectedId}
                       onClick={() => openThread(t.id)}
-                      onDelete={deleteThread ? () => { haptic('warning'); setPendingDelete({ thread: t, typed: '' }); } : undefined}
+                      onDelete={deleteThread ? () => setPendingDelete({ thread: t, typed: '' }) : undefined}
                     />
                   ))}
                 </>

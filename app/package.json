@@ -30,8 +30,7 @@
     "react-router-dom": "^6.23.1",
     "stripe": "^22.1.1",
     "thinking-orbs": "0.3.2",
-    "three": "^0.164.1",
-    "web-haptics": "^0.0.6"
+    "three": "^0.164.1"
   },
   "devDependencies": {
     "@types/node-forge": "^1.3.14",

@@ -3,7 +3,6 @@ import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import collabnbLogo from '../assets/collabnb-logo.png';
 import { useAuth } from '../contexts/AuthContext';
 import { useAppBar } from '../contexts/AppBarContext';
-import { haptic } from '../lib/haptics';
 import { useCollabs } from '../contexts/CollabContext';
 import { reopenChecklist, getChecklistProgress, onChecklistProgress } from './OnboardingChecklist';
 import { SAMPLE_LISTINGS } from '../lib/mockData';
@@ -445,7 +444,6 @@ export default function AppNav() {
                 key={to}
                 to={to}
                 aria-label={navLinkLabel(to)}
-                onClick={() => { if (!active) haptic('selection'); }}
                 style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   width: 44, height: 44, borderRadius: '0.875rem',

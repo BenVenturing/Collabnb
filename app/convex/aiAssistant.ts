@@ -224,45 +224,57 @@ export const draftReply = action({
       throw new ConvexError("Your account is pending verification. AI drafting unlocks once you're approved.");
     }
     const ownerId = String(caller._id);
-    await ctx.runMutation(internal.aiAssistant.checkDraftRateLimit, { key: `ai_draft:${ownerId}` });
-
     const messages: any[] = await ctx.runQuery(api.threadMessages.getByThread, { threadKey });
-    const trimmedInstruction = instruction?.trim().slice(0, 500);
-    const who = recipientName?.trim() ? ` to ${recipientName.trim()}` : "";
-
-    let task: string;
-    if (messages.length === 0) {
-      task = trimmedInstruction
-        ? `This is the very first message${who} — there's no conversation yet. Write the opening message. Follow this instruction: "${trimmedInstruction}"`
-        : `This is the very first message${who} — there's no conversation yet. Write a short, warm opening message: introduce yourself, say hello, and express interest in collaborating. Keep it casual and general since there are no specific details to reference yet.`;
-    } else {
-      task = trimmedInstruction
-        ? `Draft the next reply. Follow this instruction from the user about what to say or how to say it: "${trimmedInstruction}"`
-        : "Draft the next reply.";
-    }
-    const prompt = messages.length > 0
-      ? `Conversation so far:\n\n${formatThreadForPrompt(messages.slice(-20))}\n\n${task}`
-      : task;
-
-    const keyRow: any = await ctx.runQuery(internal.aiAssistant.getKeyForOwner, { ownerId });
-    if (keyRow) {
-      const apiKey = await decryptSecret(keyRow.encrypted_key, keyRow.iv);
-      const provider: Provider = keyRow.provider;
-      const draft =
-        provider === "anthropic"
-          ? await draftWithAnthropic(apiKey, prompt)
-          : provider === "openrouter"
-            ? await draftWithOpenAiCompatible("OpenRouter", "https://openrouter.ai/api/v1/chat/completions", apiKey, DEFAULT_MODEL.openrouter, prompt)
-            : await draftWithOpenAiCompatible("OpenAI", "https://api.openai.com/v1/chat/completions", apiKey, DEFAULT_MODEL.openai, prompt);
-      await ctx.runMutation(internal.aiAssistant.touchLastUsed, { id: keyRow._id });
-      return { draft, provider };
-    }
-
-    // No personal key connected — draft with Collabnb's own NVIDIA key.
-    const raw = await llmChat([
-      { role: "system", content: DRAFT_SYSTEM_PROMPT },
-      { role: "user", content: prompt },
-    ], 400);
-    return { draft: cleanDraftText(raw), provider: "collabnb" };
+    return draftForOwner(ctx, ownerId, messages, instruction, recipientName);
   }),
 });
+
+// Shared by draftReply and the MCP draft_reply tool (mcp.ts). Callers must
+// have already verified ownerId is a party to the thread `messages` came from.
+export async function draftForOwner(
+  ctx: { runQuery: (ref: any, args: any) => Promise<any>; runMutation: (ref: any, args: any) => Promise<any> },
+  ownerId: string,
+  messages: Array<{ sender_role: string; text: string }>,
+  instruction?: string,
+  recipientName?: string
+): Promise<{ draft: string; provider: Provider | "collabnb" }> {
+  await ctx.runMutation(internal.aiAssistant.checkDraftRateLimit, { key: `ai_draft:${ownerId}` });
+
+  const trimmedInstruction = instruction?.trim().slice(0, 500);
+  const who = recipientName?.trim() ? ` to ${recipientName.trim()}` : "";
+
+  let task: string;
+  if (messages.length === 0) {
+    task = trimmedInstruction
+      ? `This is the very first message${who} — there's no conversation yet. Write the opening message. Follow this instruction: "${trimmedInstruction}"`
+      : `This is the very first message${who} — there's no conversation yet. Write a short, warm opening message: introduce yourself, say hello, and express interest in collaborating. Keep it casual and general since there are no specific details to reference yet.`;
+  } else {
+    task = trimmedInstruction
+      ? `Draft the next reply. Follow this instruction from the user about what to say or how to say it: "${trimmedInstruction}"`
+      : "Draft the next reply.";
+  }
+  const prompt = messages.length > 0
+    ? `Conversation so far:\n\n${formatThreadForPrompt(messages.slice(-20))}\n\n${task}`
+    : task;
+
+  const keyRow: any = await ctx.runQuery(internal.aiAssistant.getKeyForOwner, { ownerId });
+  if (keyRow) {
+    const apiKey = await decryptSecret(keyRow.encrypted_key, keyRow.iv);
+    const provider: Provider = keyRow.provider;
+    const draft =
+      provider === "anthropic"
+        ? await draftWithAnthropic(apiKey, prompt)
+        : provider === "openrouter"
+          ? await draftWithOpenAiCompatible("OpenRouter", "https://openrouter.ai/api/v1/chat/completions", apiKey, DEFAULT_MODEL.openrouter, prompt)
+          : await draftWithOpenAiCompatible("OpenAI", "https://api.openai.com/v1/chat/completions", apiKey, DEFAULT_MODEL.openai, prompt);
+    await ctx.runMutation(internal.aiAssistant.touchLastUsed, { id: keyRow._id });
+    return { draft, provider };
+  }
+
+  // No personal key connected — draft with Collabnb's own NVIDIA key.
+  const raw = await llmChat([
+    { role: "system", content: DRAFT_SYSTEM_PROMPT },
+    { role: "user", content: prompt },
+  ], 400);
+  return { draft: cleanDraftText(raw), provider: "collabnb" };
+}

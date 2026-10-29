@@ -1103,6 +1103,19 @@ export default defineSchema({
     last_used_at: v.optional(v.number()),
   }).index("by_owner", ["owner_id"]),
 
+  // Personal keys for the Collabnb MCP server (POST /mcp in http.ts, tools in
+  // mcp.ts) — lets a user drive their own account from Claude, Codex, Grok,
+  // Hermes etc. Only the SHA-256 of the key is stored; the raw key is shown
+  // once at creation and never again.
+  mcp_api_keys: defineTable({
+    owner_id: v.string(),
+    name: v.string(),
+    key_hash: v.string(),
+    key_prefix: v.string(),
+    created_at: v.number(),
+    last_used_at: v.optional(v.number()),
+  }).index("by_owner", ["owner_id"]).index("by_hash", ["key_hash"]),
+
   // Comment-keyword -> auto-DM rules ("OpenReply"-style), fired from the Meta
   // webhook in http.ts. Reuses the same META_ACCESS_TOKEN / IG_BUSINESS_ACCOUNT_ID
   // already wired up for Social/Inbox — no separate connected-account concept.

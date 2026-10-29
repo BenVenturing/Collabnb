@@ -4,6 +4,7 @@ import { useQuery, useAction, useMutation } from 'convex/react';
 import QRCode from 'qrcode';
 import addToGoogleWalletBadge from '../assets/add-to-google-wallet.png';
 import { useTranslation, Trans } from 'react-i18next';
+import AgentAccessModal from '../components/AgentAccessModal';
 import { api } from '../../convex/_generated/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useSubscription } from '../contexts/SubscriptionContext';
@@ -216,6 +217,7 @@ export default function Settings() {
   const setAdminSetting = useMutation(api.admin.setSetting);
   const acceptWalletTerms = useMutation(api.profiles.acceptWalletTerms);
   const [portalLoading, setPortalLoading] = useState(false);
+  const [showAgentAccess, setShowAgentAccess] = useState(false);
   const [walletBusy, setWalletBusy] = useState(false);
   const [walletError, setWalletError] = useState('');
   const [walletSaveUrl, setWalletSaveUrl] = useState(null);
@@ -557,6 +559,7 @@ export default function Settings() {
       ? { label: t('quickLinks.adminDashboard'), onClick: () => navigate('/admin') }
       : { label: t('quickLinks.setupChecklist'), onClick: reopenChecklist },
     { label: t('quickLinks.aiAssistant'), onClick: () => goProfile('aiassistant') },
+    isAdmin && { label: t('quickLinks.agentAccess'), onClick: () => setShowAgentAccess(true) },
     { label: t('quickLinks.demoTour'), onClick: () => { localStorage.removeItem('collabnb_demo_dismissed'); navigate('/collabs'); } },
   ].filter(Boolean);
 
@@ -567,6 +570,7 @@ export default function Settings() {
 
   return (
     <div style={{ maxWidth: '1040px', margin: '0 auto', padding: '1.5rem 1.5rem 5rem' }}>
+      {showAgentAccess && <AgentAccessModal onClose={() => setShowAgentAccess(false)} />}
       {/* ── Header ─────────────────────────────────────────────────────── */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.75rem' }}>
         {isNarrow && activeTab ? (

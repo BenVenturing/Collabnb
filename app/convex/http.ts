@@ -2,6 +2,9 @@ import { httpRouter } from "convex/server";
 import { httpAction } from "./_generated/server";
 import Stripe from "stripe";
 import { api, internal } from "./_generated/api";
+import { ConvexError } from "convex/values";
+import { sha256Hex } from "./mcp";
+import { MCP_TOOLS, MCP_INSTRUCTIONS } from "./lib/mcpTools";
 
 const http = httpRouter();
 
@@ -779,5 +782,108 @@ for (const platform of ["instagram", "tiktok"] as const) {
     }),
   });
 }
+
+// ─── MCP server ────────────────────────────────────────────────────────────
+// Stateless Streamable-HTTP MCP endpoint (JSON responses, no SSE) so a user's
+// own agent — Claude Code, Codex, Grok, Hermes — can run their account with a
+// personal key from Settings → Agent access. Tools: mcp.ts / lib/mcpTools.ts.
+const MCP_PROTOCOL_VERSIONS = ["2025-06-18", "2025-03-26", "2024-11-05"];
+const MCP_CORS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
+  "Access-Control-Allow-Headers": "Authorization, Content-Type, Accept, Mcp-Session-Id, Mcp-Protocol-Version",
+};
+const mcpJson = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json", ...MCP_CORS } });
+const rpcResult = (id: unknown, result: unknown) => ({ jsonrpc: "2.0", id, result });
+const rpcError = (id: unknown, code: number, message: string) => ({ jsonrpc: "2.0", id: id ?? null, error: { code, message } });
+
+http.route({
+  path: "/mcp",
+  method: "OPTIONS",
+  handler: httpAction(async () => new Response(null, { status: 204, headers: MCP_CORS })),
+});
+
+http.route({
+  path: "/mcp",
+  method: "GET",
+  handler: httpAction(async () => new Response("Method Not Allowed", { status: 405, headers: { Allow: "POST", ...MCP_CORS } })),
+});
+
+http.route({
+  path: "/mcp",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    const token = (request.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "").trim();
+    const auth = token.startsWith("cnb_")
+      ? await ctx.runQuery(internal.mcp.resolveKey, { keyHash: await sha256Hex(token) })
+      : null;
+    if (!auth) {
+      return mcpJson(rpcError(null, -32001, "Missing or invalid Collabnb API key. Create one in Collabnb → Settings → Agent access."), 401);
+    }
+
+    let body: any;
+    try {
+      body = await request.json();
+    } catch {
+      return mcpJson(rpcError(null, -32700, "Parse error"), 400);
+    }
+
+    const handle = async (msg: any): Promise<unknown | null> => {
+      const { id, method, params } = msg ?? {};
+      // Notifications (no id) get no response body.
+      if (id === undefined || id === null) return null;
+      switch (method) {
+        case "initialize": {
+          const requested = params?.protocolVersion;
+          return rpcResult(id, {
+            protocolVersion: MCP_PROTOCOL_VERSIONS.includes(requested) ? requested : MCP_PROTOCOL_VERSIONS[0],
+            capabilities: { tools: { listChanged: false } },
+            serverInfo: { name: "collabnb", version: "1.0.0" },
+            instructions: MCP_INSTRUCTIONS,
+          });
+        }
+        case "ping":
+          return rpcResult(id, {});
+        case "tools/list":
+          return rpcResult(id, {
+            tools: MCP_TOOLS.map(({ name, description, inputSchema, kind }) => ({
+              name,
+              description,
+              inputSchema,
+              annotations: { readOnlyHint: kind !== "write" },
+            })),
+          });
+        case "tools/call": {
+          const tool = MCP_TOOLS.find((t) => t.name === params?.name);
+          if (!tool) return rpcError(id, -32602, `Unknown tool: ${params?.name}`);
+          try {
+            await ctx.runMutation(internal.mcp.recordCall, { keyId: auth.keyId, profileId: auth.profileId });
+            const callArgs = { profileId: auth.profileId, tool: tool.name, args: params?.arguments ?? {} };
+            const data =
+              tool.kind === "write" ? await ctx.runMutation(internal.mcp.runWrite, callArgs)
+              : tool.kind === "action" ? await ctx.runAction(internal.mcp.runAction, callArgs)
+              : await ctx.runQuery(internal.mcp.runRead, callArgs);
+            return rpcResult(id, { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] });
+          } catch (err: any) {
+            // ConvexError keeps its message in .data; plain errors stay generic.
+            const message = err instanceof ConvexError ? String(err.data) : "Something went wrong on Collabnb's side.";
+            if (!(err instanceof ConvexError)) console.error("mcp tools/call", tool.name, err);
+            return rpcResult(id, { content: [{ type: "text", text: message }], isError: true });
+          }
+        }
+        default:
+          return rpcError(id, -32601, `Method not found: ${method}`);
+      }
+    };
+
+    if (Array.isArray(body)) {
+      const out = (await Promise.all(body.map(handle))).filter((r) => r !== null);
+      return out.length ? mcpJson(out) : new Response(null, { status: 202, headers: MCP_CORS });
+    }
+    const out = await handle(body);
+    return out === null ? new Response(null, { status: 202, headers: MCP_CORS }) : mcpJson(out);
+  }),
+});
 
 export default http;

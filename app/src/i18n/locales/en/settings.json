@@ -23,6 +23,7 @@
     "adminDashboard": "Admin dashboard",
     "setupChecklist": "Setup checklist",
     "aiAssistant": "AI Assistant",
+    "agentAccess": "Agent access (MCP)",
     "demoTour": "Demo collab tour"
   },
   "logout": "Log out",

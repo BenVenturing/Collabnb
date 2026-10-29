@@ -963,30 +963,32 @@ export default function Profile() {
         </section>
 
         {/* ── Stats card ─────────────────────────────────────────────────── */}
-        <div className="glass section-reveal" ref={(el) => sectionsRef.current[0] = el} style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
+        <div className="glass section-reveal" ref={(el) => sectionsRef.current[0] = el} style={{ padding: '0.875rem 1.25rem', marginBottom: '1.5rem' }}>
           {(() => {
             const collabERs = collabs.filter((c) => c.content_er != null).map((c) => c.content_er);
             const contentER = collabERs.length > 0 ? parseFloat((collabERs.reduce((a, b) => a + b, 0) / collabERs.length).toFixed(2)) : null;
             const isCreator = dp.role === 'creator';
+            // ER only shows once it comes from a connected account's live sync
+            const liveER = !!(dp.metrics_synced_at && dp.engagement_rate);
             const stats = isCreator ? [
               { value: dp.collab_count ?? 0,                                    label: t('stats.collabs'),    tooltip: null },
               { value: fmtFollowers(dp.follower_count),                          label: t('stats.followers'),  tooltip: null },
-              { value: dp.engagement_rate ? `${dp.engagement_rate}%` : '—',     label: t('stats.profileEr'), tooltip: null },
-              { value: contentER != null ? `${contentER}%` : '—',               label: t('stats.contentEr'), tooltip: t('stats.contentErTooltip') },
-            ] : [
+              liveER && { value: `${dp.engagement_rate}%`,                     label: t('stats.profileEr'), tooltip: null },
+              contentER != null && { value: `${contentER}%`,                   label: t('stats.contentEr'), tooltip: t('stats.contentErTooltip') },
+            ].filter(Boolean) : [
               { value: dp.collab_count ?? 0,                                    label: t('stats.collabs'),    tooltip: null },
               { value: fmtFollowers(dp.follower_count),                          label: t('stats.followers'),  tooltip: null },
-              { value: dp.engagement_rate ? `${dp.engagement_rate}%` : '—',     label: t('stats.engagement'), tooltip: null },
-            ];
+              liveER && { value: `${dp.engagement_rate}%`,                     label: t('stats.engagement'), tooltip: null },
+            ].filter(Boolean);
             const cols = isMobile && stats.length === 4 ? 2 : stats.length;
             return (
               <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, rowGap: cols < stats.length ? '0.875rem' : 0 }}>
                 {stats.map((stat, i) => {
                   const lastInRow = (i % cols) === cols - 1;
                   return (
-                  <div key={stat.label} title={stat.tooltip || undefined} style={{ textAlign: 'center', padding: '0.5rem 0.5rem', borderRight: lastInRow ? 'none' : '1px solid rgba(25,37,36,0.06)', cursor: stat.tooltip ? 'help' : 'default' }}>
-                    <p style={{ fontFamily: 'var(--font-display)', fontSize: isCreator ? '1.25rem' : '1.5rem', fontWeight: 800, color: 'var(--ink)', margin: '0 0 0.2rem' }}>{stat.value}</p>
-                    <p style={{ fontSize: '0.72rem', color: 'var(--sage)', margin: 0 }}>
+                  <div key={stat.label} title={stat.tooltip || undefined} style={{ textAlign: 'center', padding: '0.25rem 0.5rem', borderRight: lastInRow ? 'none' : '1px solid rgba(25,37,36,0.06)', cursor: stat.tooltip ? 'help' : 'default' }}>
+                    <p style={{ fontFamily: 'var(--font-display)', fontSize: isCreator ? '1.15rem' : '1.3rem', fontWeight: 800, color: 'var(--ink)', margin: '0 0 0.1rem', lineHeight: 1.2 }}>{stat.value}</p>
+                    <p style={{ fontSize: '0.68rem', color: 'var(--sage)', margin: 0 }}>
                       {stat.label}{stat.tooltip && <span style={{ marginLeft: '0.2rem', opacity: 0.55, fontSize: '0.65rem' }}>ⓘ</span>}
                     </p>
                   </div>
@@ -995,20 +997,21 @@ export default function Profile() {
               </div>
             );
           })()}
-          {(dp.metrics_instagram_followers || dp.metrics_tiktok_followers || dp.metrics_youtube_subscribers) && (
-            <div style={{ display: 'flex', justifyContent: 'center', gap: '0.75rem', flexWrap: 'wrap', marginTop: '0.75rem', paddingTop: '0.625rem', borderTop: '1px solid rgba(25,37,36,0.06)' }}>
-              {dp.metrics_instagram_followers ? <span style={{ fontSize: '0.7rem', color: 'var(--sage)' }}>IG {fmtFollowers(dp.metrics_instagram_followers)}</span> : null}
-              {dp.metrics_tiktok_followers    ? <span style={{ fontSize: '0.7rem', color: 'var(--sage)' }}>TT {fmtFollowers(dp.metrics_tiktok_followers)}</span>    : null}
-              {dp.metrics_youtube_subscribers ? <span style={{ fontSize: '0.7rem', color: 'var(--sage)' }}>YT {fmtFollowers(dp.metrics_youtube_subscribers)}</span>  : null}
-            </div>
-          )}
-          <p style={{ textAlign: 'center', fontSize: '0.7rem', color: 'var(--sage)', marginTop: '0.625rem' }}>
-            {dp.metrics_updated_at
-              ? (Math.floor((Date.now() - dp.metrics_updated_at) / (1000 * 60 * 60 * 24)) === 0
-                  ? t('updated.today')
-                  : t('updated.daysAgo', { count: Math.floor((Date.now() - dp.metrics_updated_at) / (1000 * 60 * 60 * 24)) }))
-              : t('updated.justNow')}
-          </p>
+          {(() => {
+            const platforms = [
+              dp.metrics_instagram_followers && `IG ${fmtFollowers(dp.metrics_instagram_followers)}`,
+              dp.metrics_tiktok_followers    && `TT ${fmtFollowers(dp.metrics_tiktok_followers)}`,
+              dp.metrics_youtube_subscribers && `YT ${fmtFollowers(dp.metrics_youtube_subscribers)}`,
+            ].filter(Boolean);
+            const days = dp.metrics_updated_at ? Math.floor((Date.now() - dp.metrics_updated_at) / (1000 * 60 * 60 * 24)) : null;
+            const updated = days == null ? t('updated.justNow') : days === 0 ? t('updated.today') : t('updated.daysAgo', { count: days });
+            // A single-platform breakdown just repeats the Followers total
+            return (
+              <p style={{ textAlign: 'center', fontSize: '0.68rem', color: 'var(--sage)', margin: '0.625rem 0 0', paddingTop: '0.5rem', borderTop: '1px solid rgba(25,37,36,0.06)', opacity: 0.85 }}>
+                {[...(platforms.length > 1 ? platforms : []), updated].join('  ·  ')}
+              </p>
+            );
+          })()}
         </div>
 
         {/* ── Bio ──────────────────────────────────────────────────────────── */}

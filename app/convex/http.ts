@@ -798,6 +798,59 @@ const mcpJson = (body: unknown, status = 200) =>
 const rpcResult = (id: unknown, result: unknown) => ({ jsonrpc: "2.0", id, result });
 const rpcError = (id: unknown, code: number, message: string) => ({ jsonrpc: "2.0", id: id ?? null, error: { code, message } });
 
+// OAuth (MCP authorization spec): Clerk is the authorization server, this
+// endpoint is the protected resource. Agents that support OAuth discover Clerk
+// via the 401 challenge below, register themselves (Clerk dynamic client
+// registration) and send a Clerk access token; cnb_ keys keep working.
+const CLERK_ISSUER = (process.env.CLERK_FRONTEND_API_URL ?? "https://clerk.collabnb.com").replace(/\/$/, "");
+const mcpResource = () => `${process.env.CONVEX_SITE_URL}/mcp`;
+const resourceMetadataUrl = () => `${process.env.CONVEX_SITE_URL}/.well-known/oauth-protected-resource`;
+
+async function verifyClerkOAuthToken(token: string): Promise<string | null> {
+  const key = process.env.CLERK_SECRET_KEY;
+  if (!key || !token) return null;
+  try {
+    const res = await fetch("https://api.clerk.com/v1/oauth_applications/access_tokens/verify", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ access_token: token }),
+    });
+    if (!res.ok) return null;
+    const t: any = await res.json();
+    if (t.revoked || t.expired || (t.expiration && t.expiration * 1000 < Date.now())) return null;
+    return typeof t.subject === "string" ? t.subject : null;
+  } catch (err) {
+    console.error("mcp oauth verify", err);
+    return null;
+  }
+}
+
+const protectedResourceMetadata = httpAction(async () =>
+  mcpJson({
+    resource: mcpResource(),
+    authorization_servers: [CLERK_ISSUER],
+    bearer_methods_supported: ["header"],
+    scopes_supported: ["profile", "email"],
+    resource_name: "Collabnb",
+    resource_documentation: "https://collabnb.com/settings",
+  }),
+);
+for (const path of ["/.well-known/oauth-protected-resource", "/.well-known/oauth-protected-resource/mcp"]) {
+  http.route({ path, method: "GET", handler: protectedResourceMetadata });
+  http.route({ path, method: "OPTIONS", handler: httpAction(async () => new Response(null, { status: 204, headers: MCP_CORS })) });
+}
+
+// Older clients (2025-03-26 spec) look for auth-server metadata on the MCP
+// origin itself, so mirror Clerk's.
+http.route({
+  path: "/.well-known/oauth-authorization-server",
+  method: "GET",
+  handler: httpAction(async () => {
+    const res = await fetch(`${CLERK_ISSUER}/.well-known/oauth-authorization-server`);
+    return new Response(await res.text(), { status: res.status, headers: { "Content-Type": "application/json", ...MCP_CORS } });
+  }),
+});
+
 http.route({
   path: "/mcp",
   method: "OPTIONS",
@@ -815,11 +868,26 @@ http.route({
   method: "POST",
   handler: httpAction(async (ctx, request) => {
     const token = (request.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "").trim();
-    const auth = token.startsWith("cnb_")
-      ? await ctx.runQuery(internal.mcp.resolveKey, { keyHash: await sha256Hex(token) })
-      : null;
+    let auth: { keyId: any; profileId: string } | null = null;
+    if (token.startsWith("cnb_")) {
+      auth = await ctx.runQuery(internal.mcp.resolveKey, { keyHash: await sha256Hex(token) });
+    } else {
+      const clerkUserId = await verifyClerkOAuthToken(token);
+      if (clerkUserId) auth = await ctx.runQuery(internal.mcp.resolveClerkUser, { clerkUserId });
+    }
     if (!auth) {
-      return mcpJson(rpcError(null, -32001, "Missing or invalid Collabnb API key. Create one in Collabnb → Settings → Agent access."), 401);
+      return new Response(
+        JSON.stringify(rpcError(null, -32001, "Sign in to Collabnb, or use an API key from Collabnb → Settings → Agent access.")),
+        {
+          status: 401,
+          headers: {
+            "Content-Type": "application/json",
+            "WWW-Authenticate": `Bearer resource_metadata="${resourceMetadataUrl()}"`,
+            ...MCP_CORS,
+            "Access-Control-Expose-Headers": "WWW-Authenticate",
+          },
+        },
+      );
     }
 
     let body: any;
@@ -858,7 +926,7 @@ http.route({
           const tool = MCP_TOOLS.find((t) => t.name === params?.name);
           if (!tool) return rpcError(id, -32602, `Unknown tool: ${params?.name}`);
           try {
-            await ctx.runMutation(internal.mcp.recordCall, { keyId: auth.keyId, profileId: auth.profileId });
+            await ctx.runMutation(internal.mcp.recordCall, { keyId: auth.keyId ?? undefined, profileId: auth.profileId });
             const callArgs = { profileId: auth.profileId, tool: tool.name, args: params?.arguments ?? {} };
             const data =
               tool.kind === "write" ? await ctx.runMutation(internal.mcp.runWrite, callArgs)

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import collabnbLogo from '../assets/collabnb-logo.png';
 import { useAuth } from '../contexts/AuthContext';
@@ -201,9 +201,28 @@ export default function AppNav() {
   const checklistProgress = getChecklistProgress(profile, checklistTick);
   const checklistAllDone = checklistProgress.completed >= checklistProgress.total;
   const { compactSearch, hideNav, setMapDestination, mapAreaDisplay, mapView } = useAppBar();
-  const { savedIds } = useCollabs();
+  const { savedIds, threads, ownerId } = useCollabs();
   const navigate = useNavigate();
   const savedCount = savedIds.size;
+
+  // Same unread total as the mobile app's Inbox tab (useConversations): Convex
+  // threads I started + threads started with me + the Collabnb admin thread.
+  // Threads I started live in local state on web with unread: 0, so they have
+  // to come from threads.getMine here.
+  const myThreads = useQuery(api.threads.getMine, ownerId ? {} : 'skip');
+  const incomingThreads = useQuery(api.threads.getIncomingForMe, ownerId ? {} : 'skip');
+  const adminThread = useQuery(api.adminThreads.getMineAsUser, ownerId ? {} : 'skip');
+  const inboxUnread = useMemo(() => {
+    const archived = new Set(threads.filter((th) => th.archived && th.thread_key).map((th) => th.thread_key));
+    const seen = new Set();
+    let total = 0;
+    for (const th of [adminThread, ...(myThreads ?? []), ...(incomingThreads ?? [])]) {
+      if (!th?.thread_key || seen.has(th.thread_key) || archived.has(th.thread_key)) continue;
+      seen.add(th.thread_key);
+      total += th.unread || 0;
+    }
+    return total;
+  }, [threads, myThreads, incomingThreads, adminThread]);
 
   // Transient badge: appears briefly when saved count changes, fades away after 2s
   const prevSavedRef = useRef(savedCount);
@@ -367,6 +386,9 @@ export default function AppNav() {
   const showSearchPill = compactSearch && !menuOpen && !navSearchOpen;
   // Listing pages keep the top pill on phones (it's their way back) and have their own bottom bar.
   const showBottomNav = !location.pathname.startsWith('/listing/');
+  // Explore's own search header disappears once the nav goes compact, so on
+  // phones the top pill comes back as a search-only bar in that state.
+  const phoneSearchOnly = showBottomNav && compactSearch && location.pathname === '/explore';
 
   // Bail out on render only — must come after every hook above so hook
   // call order/count stays identical across renders (hideNav toggles from
@@ -406,6 +428,12 @@ export default function AppNav() {
           .bottom-nav-bar { display: flex; }
           .phone-only { display: flex; }
           .nav-pill.hide-on-phone { display: none; }
+          .nav-pill.phone-search-only .nav-logo,
+          .nav-pill.phone-search-only .nav-pill-chrome,
+          .nav-pill.phone-search-only:not(.searching) .nav-pill-middle { display: none; }
+          .nav-pill.phone-search-only:not(.searching) .nav-pill-actions { flex: 1; }
+          .nav-pill.phone-search-only .nav-search-pill-wrap { flex: 1; max-width: none !important; }
+          .nav-pill.phone-search-only .nav-search-pill-wrap > button { width: 100%; }
         }
       `}</style>
       {showBottomNav && (
@@ -454,6 +482,18 @@ export default function AppNav() {
                       <span style={{ width: 24, height: 24, borderRadius: '50%', background: 'var(--mint)', color: 'var(--ink)', fontSize: '0.6rem', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: active ? '0 0 0 2px var(--ink)' : 'none' }}>{initials}</span>
                     )
                   ) : TAB_ICONS[icon]}
+                  {to === '/inbox' && inboxUnread > 0 && (
+                    <span style={{
+                      position: 'absolute', top: -7, right: -12,
+                      minWidth: 20, height: 20, padding: '0 5px',
+                      background: 'var(--slate)', color: '#fff',
+                      border: '2px solid #fff', borderRadius: 9999,
+                      fontSize: '0.65rem', fontWeight: 600, lineHeight: 1,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                      {inboxUnread > 9 ? '9+' : inboxUnread}
+                    </span>
+                  )}
                   {to === '/saved' && showBadge && (
                     <span style={{
                       position: 'absolute', top: -6, right: -10,
@@ -495,7 +535,7 @@ export default function AppNav() {
       {/* ── Floating pill nav ─────────────────────────────────────────────────── */}
       <nav
         ref={navRef}
-        className={`nav-pill glass ${(scrolled || compactSearch) ? 'scrolled' : ''} ${showBottomNav ? 'hide-on-phone' : ''}`}
+        className={`nav-pill glass ${(scrolled || compactSearch) ? 'scrolled' : ''} ${phoneSearchOnly ? `phone-search-only ${navSearchOpen ? 'searching' : ''}` : showBottomNav ? 'hide-on-phone' : ''}`}
         aria-label={t('mainNavAriaLabel')}
         style={{ top: isPending ? 'calc(var(--banner-h, 0rem) + 1.8rem + 0.5rem)' : 'calc(var(--banner-h, 0rem) + 1rem)' }}
       >
@@ -506,7 +546,7 @@ export default function AppNav() {
         </NavLink>
 
         {/* ── Middle section: nav links | inline menu | expanded search ── */}
-        <div style={{
+        <div className="nav-pill-middle" style={{
           flex: 1,
           display: 'flex',
           alignItems: 'center',
@@ -732,10 +772,10 @@ export default function AppNav() {
         </div>
 
         {/* ── Actions ──────────────────────────────────────────────────────────── */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', flexShrink: 0 }}>
+        <div className="nav-pill-actions" style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', flexShrink: 0 }}>
 
           {/* "Search stays" compact pill — collapses width when hidden so hamburger stays flush */}
-          <div style={{
+          <div className="nav-search-pill-wrap" style={{
             maxWidth: showSearchPill ? '280px' : '0px',
             overflow: 'hidden',
             flexShrink: 0,
@@ -776,7 +816,7 @@ export default function AppNav() {
 
           {/* Bell notification icon — hidden when scrolled or in map view (moves to profile menu) */}
           {userId && !scrolled && !mapView && (
-            <div ref={bellRef} style={{ position: 'relative' }}>
+            <div ref={bellRef} className="nav-pill-chrome" style={{ position: 'relative' }}>
               <button
                 onClick={() => { setNotifOpen(o => !o); if (!notifOpen && userId) markAllRead({ userId }); }}
                 style={{
@@ -905,7 +945,7 @@ export default function AppNav() {
           )}
 
           {/* Combined hamburger + profile pill */}
-          <div className="relative" ref={profileRef}>
+          <div className="relative nav-pill-chrome" ref={profileRef}>
             <div style={{
               display: 'flex', alignItems: 'center',
               borderRadius: '9999px',

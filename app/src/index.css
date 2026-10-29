@@ -476,10 +476,10 @@ button { font: inherit; cursor: pointer; border: none; background: none; }
 
 #main { padding-top: var(--main-pt); }
 /* Phones: the top pill is replaced by the bottom tab pill (AppNav), so drop the
-   space reserved for it. Listing pages keep the top pill. */
+   space reserved for it. Listing pages keep the top pill (and get no bottom bar). */
 @media (max-width: 768px) {
   :root { --bottom-nav-h: calc(4.5rem + env(safe-area-inset-bottom, 0px) + 0.75rem); }
-  body:not(:has(.nav-pill:not(.hide-on-phone))) #main {
+  body:has(.bottom-nav-bar) #main {
     padding-top: max(0px, calc(var(--main-pt) - 7rem + 1rem + env(safe-area-inset-top, 0px)));
   }
 }

@@ -125,10 +125,26 @@ export const resolveKey = internalQuery({
   },
 });
 
+// OAuth path: the bearer is a Clerk-issued access token already verified in
+// http.ts; `subject` is the Clerk user id.
+export const resolveClerkUser = internalQuery({
+  args: { clerkUserId: v.string() },
+  handler: async (ctx, { clerkUserId }) => {
+    const profile: any = await ctx.db
+      .query("profiles")
+      .withIndex("by_clerk_user_id", (q) => q.eq("clerk_user_id", clerkUserId))
+      .first();
+    if (!profile || profile.is_deleted === true) return null;
+    if (MCP_ADMIN_ONLY && profile.is_admin !== true) return null;
+    return { keyId: null, profileId: String(profile._id) };
+  },
+});
+
 export const recordCall = internalMutation({
-  args: { keyId: v.id("mcp_api_keys"), profileId: v.string() },
+  args: { keyId: v.optional(v.id("mcp_api_keys")), profileId: v.string() },
   handler: async (ctx, { keyId, profileId }) => {
     await enforceRateLimit(ctx, `mcp:${profileId}`, RATE_LIMITS.MCP_CALL);
+    if (!keyId) return;
     const row = await ctx.db.get(keyId);
     if (row && (!row.last_used_at || Date.now() - row.last_used_at > 5 * 60 * 1000)) {
       await ctx.db.patch(keyId, { last_used_at: Date.now() });

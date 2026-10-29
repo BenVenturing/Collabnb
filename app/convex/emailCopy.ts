@@ -430,6 +430,23 @@ export const TEMPLATE_DEFAULTS: Record<string, TemplateDef> = {
       footnote: "Already added them? Double-check the handle is spelled exactly as it appears on your profile.",
     },
   },
+  connect_payout: {
+    name: "Connect your payout method",
+    trigger: "1 day after a creator is approved, if they still haven't connected Stripe or Wise",
+    category: "Account",
+    vars: ["firstName"],
+    calloutColor: "#8B6F52",
+    buttonHref: `${BASE_URL}/profile?open=payout`,
+    copy: {
+      subject: "Connect your payout method so hosts can pay you",
+      heading: "Get paid for your collabs, {{firstName}} 💸",
+      body: "You're approved on Collabnb. Before your first collab, connect Stripe or Wise so your payout can land in your account as soon as the work is done.",
+      calloutLabel: "Why now",
+      calloutText: "Hosts can't send payment until a payout method is connected — setting it up now means no delays later.",
+      buttonLabel: "Connect payouts",
+      footnote: "Takes about 2 minutes. Stripe works in most countries; Wise covers the rest.",
+    },
+  },
   finish_signup: {
     name: "Finish creating your account",
     trigger: "Admin nudges an email-only signup to complete their account",

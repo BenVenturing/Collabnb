@@ -69,52 +69,38 @@ function NavDropdown({ children, align = 'left', width }) {
   );
 }
 
-const BOTTOM_NAV_ITEMS = [
-  {
-    to: '/explore',
-    icon: (active) => (
-      <svg viewBox="0 0 24 24" fill={active ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 22, height: 22 }}>
-        <circle cx="12" cy="12" r="10"/>
-        <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" fill={active ? 'white' : 'none'} stroke={active ? 'currentColor' : 'currentColor'}/>
-      </svg>
-    ),
-  },
-  {
-    to: '/saved',
-    icon: (active) => (
-      <svg viewBox="0 0 24 24" fill={active ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 22, height: 22 }}>
-        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
-      </svg>
-    ),
-  },
-  {
-    to: '/collabs',
-    icon: (active) => (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 22, height: 22 }}>
-        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-        <circle cx="9" cy="7" r="4" fill={active ? 'currentColor' : 'none'}/>
-        <path d="M23 21v-2a4 4 0 0 0-3-3.87" strokeOpacity={active ? 1 : 0.5}/>
-        <path d="M16 3.13a4 4 0 0 1 0 7.75" strokeOpacity={active ? 1 : 0.5}/>
-      </svg>
-    ),
-  },
-  {
-    to: '/inbox',
-    icon: (active) => (
-      <svg viewBox="0 0 24 24" fill={active ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 22, height: 22 }}>
-        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-      </svg>
-    ),
-  },
-  {
-    to: '/profile',
-    icon: (active) => (
-      <svg viewBox="0 0 24 24" fill={active ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 22, height: 22 }}>
-        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-        <circle cx="12" cy="7" r="4" fill={active ? 'currentColor' : 'none'}/>
-      </svg>
-    ),
-  },
+// Mirrors the mobile app's tab bars (collabnb-app (tabs)/_layout.jsx and
+// host/(tabs)/_layout.jsx) — same order and lucide icons.
+const tabSvg = (children) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 22, height: 22 }}>
+    {children}
+  </svg>
+);
+const TAB_ICONS = {
+  search: tabSvg(<><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></>),
+  briefcase: tabSvg(<><path d="M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/><rect width="20" height="14" x="2" y="6" rx="2"/></>),
+  heart: tabSvg(<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>),
+  message: tabSvg(<path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/>),
+  dashboard: tabSvg(<><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></>),
+  fileText: tabSvg(<><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></>),
+  users: tabSvg(<><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></>),
+  gear: tabSvg(<><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></>),
+};
+
+const CREATOR_TABS = [
+  { to: '/explore', icon: 'search' },
+  { to: '/collabs', icon: 'briefcase' },
+  { to: '/saved', icon: 'heart' },
+  { to: '/inbox', icon: 'message' },
+  { to: '/profile', icon: 'avatar' },
+];
+
+const HOST_TABS = [
+  { to: '/host', icon: 'dashboard', end: true },
+  { to: '/host/proposals', icon: 'fileText' },
+  { to: '/inbox', icon: 'message' },
+  { to: '/host/creators', icon: 'users' },
+  { to: '/profile', icon: 'avatar' },
 ];
 
 // Notifications dropdown panel. Rendered from the nav bell (normal views) and
@@ -379,6 +365,8 @@ export default function AppNav() {
 
   // Whether the "Search stays" pill is visible
   const showSearchPill = compactSearch && !menuOpen && !navSearchOpen;
+  // Listing pages keep the top pill on phones (it's their way back) and have their own bottom bar.
+  const showBottomNav = !location.pathname.startsWith('/listing/');
 
   // Bail out on render only — must come after every hook above so hook
   // call order/count stays identical across renders (hideNav toggles from
@@ -411,72 +399,103 @@ export default function AppNav() {
         </NavLink>
       </div>
 
-      {/* ── Mobile bottom nav (creator-only, hidden on /host/* routes) ─────── */}
+      {/* ── Mobile bottom tab pill (phones replace the top pill with this) ──── */}
       <style>{`
-        .bottom-nav-bar { display: none; }
+        .bottom-nav-bar, .phone-only { display: none; }
         @media (max-width: 768px) {
           .bottom-nav-bar { display: flex; }
+          .phone-only { display: flex; }
+          .nav-pill.hide-on-phone { display: none; }
         }
       `}</style>
-      {!isHost && !location.pathname.startsWith('/listing/') && (
+      {showBottomNav && (
         <nav
           className="bottom-nav-bar"
           aria-label={t('mobileBottomNavAriaLabel')}
           style={{
-            position: 'fixed', bottom: 0, left: 0, right: 0,
-            zIndex: 55,
-            background: 'rgba(239,236,233,0.94)',
-            backdropFilter: 'blur(24px)',
-            WebkitBackdropFilter: 'blur(24px)',
-            borderTop: '1px solid rgba(25,37,36,0.1)',
+            position: 'fixed', left: 16, right: 16,
+            bottom: 'max(8px, env(safe-area-inset-bottom))',
+            zIndex: 55, height: 64, padding: '0 6px',
+            borderRadius: 32,
+            background: 'rgba(255,255,255,0.72)',
+            backdropFilter: 'blur(24px) saturate(160%)',
+            WebkitBackdropFilter: 'blur(24px) saturate(160%)',
+            border: '1px solid rgba(255,255,255,0.75)',
+            boxShadow: '0 10px 30px rgba(25,37,36,0.16)',
             alignItems: 'center',
-            justifyContent: 'space-around',
-            paddingTop: '0.5rem',
-            paddingBottom: 'calc(0.5rem + env(safe-area-inset-bottom))',
-            paddingLeft: 0,
-            paddingRight: 0,
           }}
         >
-          {BOTTOM_NAV_ITEMS.map(({ to, icon }) => {
-            const active = location.pathname === to || (to !== '/explore' && location.pathname.startsWith(to));
+          {(isHost ? HOST_TABS : CREATOR_TABS).map(({ to, icon, end }) => {
+            const active = end
+              ? location.pathname === to
+              : location.pathname === to || (to !== '/explore' && location.pathname.startsWith(to + '/'));
+            const color = active ? 'var(--ink)' : 'var(--sage)';
             return (
               <NavLink
                 key={to}
                 to={to}
                 aria-label={navLinkLabel(to)}
                 style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  width: 44, height: 44, borderRadius: '0.875rem',
-                  background: active ? 'rgba(25,37,36,0.1)' : 'transparent',
-                  color: active ? 'var(--ink)' : 'rgba(25,37,36,0.4)',
-                  transition: 'background 150ms, color 150ms',
-                  textDecoration: 'none', flexShrink: 0,
-                  position: 'relative',
+                  flex: 1, height: 60,
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3,
+                  borderRadius: 30,
+                  background: active ? 'rgba(25,37,36,0.07)' : 'transparent',
+                  border: `1px solid ${active ? 'rgba(255,255,255,0.95)' : 'transparent'}`,
+                  boxShadow: active ? '0 2px 8px rgba(25,37,36,0.08)' : 'none',
+                  color, textDecoration: 'none',
+                  transition: 'background 200ms, color 200ms',
                 }}
               >
-                {icon(active)}
-                {to === '/saved' && showBadge && (
-                  <span style={{
-                    position: 'absolute', top: 4, right: 4,
-                    minWidth: 14, height: 14,
-                    background: 'var(--ink)', color: 'var(--bone)',
-                    borderRadius: 9999, fontSize: '0.55rem', fontWeight: 700,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    padding: '0 3px', lineHeight: 1,
-                  }}>
-                    {savedCount}
-                  </span>
-                )}
+                <span style={{ position: 'relative', display: 'flex' }}>
+                  {icon === 'avatar' ? (
+                    profile?.avatar_url ? (
+                      <img src={profile.avatar_url} alt="" style={{ width: 24, height: 24, borderRadius: '50%', objectFit: 'cover', boxShadow: `0 0 0 ${active ? 2 : 1.5}px ${active ? 'var(--ink)' : 'rgba(25,37,36,0.25)'}` }} />
+                    ) : (
+                      <span style={{ width: 24, height: 24, borderRadius: '50%', background: 'var(--mint)', color: 'var(--ink)', fontSize: '0.6rem', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: active ? '0 0 0 2px var(--ink)' : 'none' }}>{initials}</span>
+                    )
+                  ) : TAB_ICONS[icon]}
+                  {to === '/saved' && showBadge && (
+                    <span style={{
+                      position: 'absolute', top: -6, right: -10,
+                      minWidth: 16, height: 16,
+                      background: 'var(--ink)', color: 'var(--bone)',
+                      borderRadius: 9999, fontSize: '0.6rem', fontWeight: 700,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      padding: '0 4px', lineHeight: 1,
+                    }}>
+                      {savedCount}
+                    </span>
+                  )}
+                </span>
+                <span style={{ fontSize: '0.66rem', fontWeight: active ? 600 : 500, lineHeight: 1 }}>{navLinkLabel(to)}</span>
               </NavLink>
             );
           })}
         </nav>
       )}
 
+      {/* Settings lives behind the top pill's profile menu on desktop — on phones it's a gear on Profile, like the app. */}
+      {showBottomNav && location.pathname === '/profile' && (
+        <NavLink
+          to="/settings"
+          className="phone-only glass"
+          aria-label={t('menu.settings')}
+          style={{
+            position: 'fixed', top: 'calc(env(safe-area-inset-top) + 0.75rem + var(--banner-h, 0rem))', right: 16, zIndex: 60,
+            width: 44, height: 44, borderRadius: '50%',
+            alignItems: 'center', justifyContent: 'center',
+            color: 'var(--ink)', background: 'rgba(255,255,255,0.75)',
+            boxShadow: '0 4px 16px rgba(25,37,36,0.14)',
+          }}
+        >
+          {TAB_ICONS.gear}
+        </NavLink>
+      )}
+
       {/* ── Floating pill nav ─────────────────────────────────────────────────── */}
       <nav
         ref={navRef}
-        className={`nav-pill glass ${(scrolled || compactSearch) ? 'scrolled' : ''}`}
+        className={`nav-pill glass ${(scrolled || compactSearch) ? 'scrolled' : ''} ${showBottomNav ? 'hide-on-phone' : ''}`}
         aria-label={t('mainNavAriaLabel')}
         style={{ top: isPending ? 'calc(var(--banner-h, 0rem) + 1.8rem + 0.5rem)' : 'calc(var(--banner-h, 0rem) + 1rem)' }}
       >

@@ -34,5 +34,10 @@
     "next": "Next track",
     "dismiss": "Turn off background music",
     "credit": "{{title}} — {{artist}}"
+  },
+  "payoutSetup": {
+    "title": "Add your payout method.",
+    "body": "Hosts can't pay you for a collab until you connect Stripe or Wise — it takes about 2 minutes.",
+    "cta": "Connect payouts"
   }
 }

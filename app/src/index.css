@@ -474,6 +474,16 @@ button { font: inherit; cursor: pointer; border: none; background: none; }
   #main { padding-bottom: var(--bottom-nav-h); }
 }
 
+#main { padding-top: var(--main-pt); }
+/* Phones: the top pill is replaced by the bottom tab pill (AppNav), so drop the
+   space reserved for it. Listing pages keep the top pill. */
+@media (max-width: 768px) {
+  :root { --bottom-nav-h: calc(4.5rem + env(safe-area-inset-bottom, 0px) + 0.75rem); }
+  body:not(:has(.nav-pill:not(.hide-on-phone))) #main {
+    padding-top: max(0px, calc(var(--main-pt) - 7rem + 1rem + env(safe-area-inset-top, 0px)));
+  }
+}
+
 /* Phones: the three fields have to share ~360px, so shrink the type and padding
    and keep every value on one line ("Any time" was wrapping). */
 @media (max-width: 640px) {

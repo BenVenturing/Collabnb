@@ -4,6 +4,7 @@
     "bio": { "label": "Write your bio", "action": "Edit profile" },
     "niches": { "label": "Add your content niches", "action": "Add niches" },
     "social": { "label": "Connect a social account", "action": "Add socials" },
+    "payout": { "label": "Connect your payout method", "action": "Connect payouts" },
     "explore": { "label": "Browse sample listings", "action": "Browse listings" },
     "walletNotifications": { "label": "Get phone alerts for new activity", "action": "Set up alerts" },
     "stayAlerts": { "label": "Set up stay alerts", "action": "Set up alerts" },

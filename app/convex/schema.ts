@@ -140,6 +140,8 @@ export default defineSchema({
       contractUpdates: v.optional(v.boolean()),
       newListings: v.optional(v.boolean()),
       collabReminders: v.optional(v.boolean()),
+      // Days before a content deadline to remind (e.g. [3, 1, 0]); mobile schedules them locally.
+      collabReminderDays: v.optional(v.array(v.number())),
       marketing: v.optional(v.boolean()),
     })),
     // Settings > Notifications > Push notifications — Google Wallet pass
@@ -361,6 +363,12 @@ export default defineSchema({
     host_note: v.optional(v.string()),
     ended_by: v.optional(v.string()),
     end_reason: v.optional(v.string()),
+    // Creator's private CRM metadata (web /collabs + mobile Collaborations).
+    // creator_archived hides it from the creator's active list without ending
+    // it, so it's independent of is_active and invisible to the host.
+    creator_pinned: v.optional(v.boolean()),
+    creator_note: v.optional(v.string()),
+    creator_archived: v.optional(v.boolean()),
   })
     .index("by_creator", ["creator_id"])
     .index("by_host", ["host_id"])

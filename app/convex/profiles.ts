@@ -2,6 +2,7 @@ import { v, ConvexError } from "convex/values";
 import { query, mutation, action, internalMutation, internalQuery } from "./_generated/server";
 import { internal, api } from "./_generated/api";
 import { requireAuthedProfile, requireOwnerOrAdmin, requireAdmin, isServerAdminEmail, canAccessAdmin, canAccessOwner } from "./lib/auth";
+import { REJECTION_ACCESS_PATCH } from "./lib/rejection";
 import { cleanPlainText, cleanOptionalUrl } from "./lib/sanitize";
 import { enforceRateLimit, RATE_LIMITS } from "./lib/rateLimit";
 import { REFERRAL_CODE_MAX_USES } from "./referrals";
@@ -572,6 +573,9 @@ export const approveProfile = mutation({
       rejection_reason: undefined,
     };
     await ctx.db.patch(args.profileId as any, patch);
+    if (profile.role === "creator") {
+      await ctx.scheduler.runAfter(24 * 60 * 60 * 1000, internal.gates.remindPayoutSetup, { profileId: profile._id });
+    }
     if (profile?.email) {
       await ctx.scheduler.runAfter(0, internal.emails.sendAccessGrantedEmail, {
         email: profile.email,
@@ -590,6 +594,7 @@ export const rejectProfile = mutation({
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
     await ctx.db.patch(args.profileId as any, {
+      ...REJECTION_ACCESS_PATCH,
       is_rejected: true,
       rejection_reason: args.reason,
     });
@@ -1081,6 +1086,8 @@ export const updateProfile = mutation({
         contractUpdates: v.optional(v.boolean()),
         newListings: v.optional(v.boolean()),
         collabReminders: v.optional(v.boolean()),
+        // Days before a content deadline to remind (e.g. [3, 1, 0]); mobile schedules them locally.
+        collabReminderDays: v.optional(v.array(v.number())),
         marketing: v.optional(v.boolean()),
       })),
       google_wallet_push_enabled: v.optional(v.boolean()),

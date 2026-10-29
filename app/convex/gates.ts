@@ -2,6 +2,7 @@ import { v, ConvexError } from "convex/values";
 import { query, mutation, internalMutation, internalAction } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { requireAdmin, requireOwnerOrAdmin, canAccessAdmin, canAccessOwner } from "./lib/auth";
+import { REJECTION_ACCESS_PATCH } from "./lib/rejection";
 import { cleanPlainText, cleanOptionalUrl } from "./lib/sanitize";
 
 // ─── Shared Constants ───────────────────────────────────────────────────────────
@@ -167,6 +168,7 @@ export const approveCreator = mutation({
       details: `Track: ${args.track}, Tier: ${tier}, Founder: ${isFounder}`,
       created_at: now,
     });
+    await ctx.scheduler.runAfter(PAYOUT_REMINDER_DELAY_MS, internal.gates.remindPayoutSetup, { profileId: args.profileId });
 
     // Email notification
     if (profile.email) {
@@ -303,9 +305,9 @@ export const rejectProfile = mutation({
       return;
     }
     await ctx.db.patch(args.profileId, {
+      ...REJECTION_ACCESS_PATCH,
       is_rejected: true,
       rejection_reason: args.reason,
-      access_state: undefined,
       pending_role: undefined,
       role_switch_requested_at: undefined,
       role_switch_email: undefined,
@@ -478,7 +480,7 @@ export const canViewListing = query({
     const profile = await ctx.db.get(profileId);
     if (!profile) return { allowed: false, state: "pending" };
     if (profile.is_admin) return { allowed: true, state: "active" };
-    if (profile.is_verified !== true) return { allowed: false, state: "pending" };
+    if (profile.is_verified !== true || profile.is_rejected === true) return { allowed: false, state: "pending" };
     if (profile.role === "host") return { allowed: true, state: "active" };
     if (profile.is_founder) return { allowed: true, state: "active" };
     const state = profile.access_state ?? "active";
@@ -746,5 +748,49 @@ export const forceTrialExpiry = internalMutation({
       trial_ends_at: Date.now() - day,
     });
     return await ctx.db.get(profileId);
+  },
+});
+
+// One-off: profiles rejected before REJECTION_ACCESS_PATCH existed still carry
+// is_verified / is_founder / trial fields from their earlier approval.
+export const backfillRejectedAccess = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const rejected = await ctx.db
+      .query("profiles")
+      .filter((q) => q.eq(q.field("is_rejected"), true))
+      .collect();
+    for (const p of rejected) await ctx.db.patch(p._id, REJECTION_ACCESS_PATCH);
+    return rejected.length;
+  },
+});
+
+const PAYOUT_REMINDER_DELAY_MS = 24 * 60 * 60 * 1000;
+
+// Scheduled 1 day after a creator approval: in-app notification + email if
+// they still haven't connected a payout method.
+export const remindPayoutSetup = internalMutation({
+  args: { profileId: v.id("profiles") },
+  handler: async (ctx, { profileId }) => {
+    const p = await ctx.db.get(profileId);
+    if (!p || p.role !== "creator" || p.is_verified !== true || p.is_rejected === true) return;
+    const connected = (p.payout_method === "stripe_connect" && p.stripe_connect_payouts_enabled === true)
+      || (p.payout_method === "wise" && !!p.wise_recipient_id);
+    if (connected) return;
+    await ctx.db.insert("notifications", {
+      user_id: String(p._id),
+      type: "payout_setup",
+      title: "Connect your payout method",
+      body: "Hosts can't pay you for a collab until Stripe or Wise is connected.",
+      link: "/profile?open=payout",
+      read: false,
+      created_at: Date.now(),
+    });
+    if (p.email) {
+      await ctx.scheduler.runAfter(0, internal.emails.sendConnectPayoutEmail, {
+        email: p.email,
+        full_name: p.full_name,
+      });
+    }
   },
 });

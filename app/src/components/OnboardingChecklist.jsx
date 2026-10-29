@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { api } from '../../convex/_generated/api';
 import { useAuth } from '../contexts/AuthContext';
 import i18nInstance from '../i18n';
+import { hasPayoutConnected } from './Layout';
 
 const KEY_PREFIX = 'collabnb_onboarding_v3';
 const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL;
@@ -49,6 +50,12 @@ function creatorSteps(profile, isFirstVisit, hasShared, hasExplored, hasStayAler
       label: t('creatorSteps.social.label'),
       done: !isFirstVisit && !!(profile?.instagram_handle || profile?.tiktok_handle || profile?.youtube_handle),
       action: { label: t('creatorSteps.social.action'), path: '/profile?edit=true' },
+    },
+    {
+      id: 'payout',
+      label: t('creatorSteps.payout.label'),
+      done: hasPayoutConnected(profile),
+      action: { label: t('creatorSteps.payout.action'), path: '/profile?open=payout' },
     },
     {
       id: 'explore',

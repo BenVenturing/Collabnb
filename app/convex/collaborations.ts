@@ -398,3 +398,24 @@ export const remove = mutation({
     await ctx.db.delete(collab._id);
   },
 });
+
+// Creator's private CRM metadata: pin, note, archive. Only touches creator_*
+// fields, so the host's view of the collab is unchanged.
+export const setCreatorCrm = mutation({
+  args: {
+    id: v.id("collaborations"),
+    pinned: v.optional(v.boolean()),
+    note: v.optional(v.string()),
+    archived: v.optional(v.boolean()),
+  },
+  handler: async (ctx, { id, pinned, note, archived }) => {
+    const collab = await ctx.db.get(id);
+    if (!collab) throw new ConvexError("Collaboration not found.");
+    await requireOwnerOrAdmin(ctx, collab.creator_id);
+    const patch: Record<string, any> = {};
+    if (pinned !== undefined) patch.creator_pinned = pinned;
+    if (note !== undefined) patch.creator_note = note.trim().slice(0, 500) || undefined;
+    if (archived !== undefined) patch.creator_archived = archived;
+    await ctx.db.patch(id, patch);
+  },
+});

@@ -5,10 +5,10 @@ const INK   = '#192524';
 const SLATE = '#3C5759';
 const SAGE  = '#646B62';
 
-function StatCard({ label, value, color = INK, sublabel }) {
+function StatCard({ label, value, sublabel }) {
   return (
     <div style={{ background: '#fff', border: '1px solid rgba(25,37,36,0.07)', borderRadius: '0.75rem', padding: '0.875rem 1.25rem', display: 'flex', flexDirection: 'column', gap: '0.15rem', minWidth: 140 }}>
-      <span style={{ fontFamily: 'Cabinet Grotesk, sans-serif', fontSize: '1.5rem', fontWeight: 700, color, lineHeight: 1 }}>{value}</span>
+      <span style={{ fontFamily: 'Cabinet Grotesk, sans-serif', fontSize: '1.5rem', fontWeight: 700, color: INK, lineHeight: 1 }}>{value}</span>
       <span style={{ fontSize: '0.72rem', color: SAGE }}>{label}</span>
       {sublabel && <span style={{ fontSize: '0.68rem', color: SAGE, opacity: 0.8 }}>{sublabel}</span>}
     </div>
@@ -38,13 +38,15 @@ export default function MoneyOverview() {
   const loading = profiles === undefined || contracts === undefined
     || ambassadorCountries === undefined || ambassadorEarnings === undefined || pendingApprovals === undefined;
 
-  const creators = (profiles ?? []).filter((p) => p.role === 'creator');
+  const live = (profiles ?? []).filter((p) => p.is_rejected !== true);
+  const creators = live.filter((p) => p.role === 'creator');
   const activeMonthly = creators.filter((p) => p.subscription_status === 'active' && p.subscription_tier !== 'yearly').length;
   const activeYearly = creators.filter((p) => p.subscription_status === 'active' && p.subscription_tier === 'yearly').length;
   const mrr = activeMonthly * 10 + (activeYearly * 60) / 12;
-  const inTrial = creators.filter((p) => p.access_state !== 'limited' && p.subscription_status !== 'active' && p.is_founder !== true).length;
-  const founders = (profiles ?? []).filter((p) => p.is_founder === true).length;
-  const lifetimeMembers = (profiles ?? []).filter((p) => p.is_lifetime === true).length;
+  const now = Date.now();
+  const inTrial = creators.filter((p) => p.access_state === 'trial' && p.subscription_status !== 'active' && p.is_founder !== true && (p.trial_ends_at ?? 0) > now).length;
+  const founders = live.filter((p) => p.is_founder === true).length;
+  const lifetimeMembers = live.filter((p) => p.is_lifetime === true).length;
 
   const paidContracts = (contracts ?? []).filter((c) => c.paid === true);
   const feesCollected = paidContracts.reduce((sum, c) => sum + (c.fee_amount || 0), 0);
@@ -58,7 +60,6 @@ export default function MoneyOverview() {
   const noPayoutMethod = creators.filter((p) => !p.payout_method).length;
 
   const activeAmbassadors = (ambassadorCountries ?? []).filter((c) => c.status === 'taken').length;
-  const now = Date.now();
   const ambPending = (ambassadorEarnings ?? []).filter((e) => e.status === 'pending' && e.clawback_until > now).reduce((sum, e) => sum + e.amount, 0);
   const ambPayable = (ambassadorEarnings ?? []).filter((e) => e.status === 'pending' && e.clawback_until <= now).reduce((sum, e) => sum + e.amount, 0);
   const ambPaid = (ambassadorEarnings ?? []).filter((e) => e.status === 'paid').reduce((sum, e) => sum + e.amount, 0);
@@ -81,35 +82,35 @@ export default function MoneyOverview() {
       ) : (
         <>
           <Section title="Creator Plus Subscriptions">
-            <StatCard label="Est. MRR" value={`$${mrr.toFixed(0)}`} color="#166534" sublabel="monthly + amortized yearly" />
+            <StatCard label="Est. MRR" value={`$${mrr.toFixed(0)}`} sublabel="monthly + amortized yearly" />
             <StatCard label="Active — Monthly" value={activeMonthly} />
             <StatCard label="Active — Yearly" value={activeYearly} />
-            <StatCard label="In Free Trial" value={inTrial} color="#0369A1" />
-            <StatCard label="Founders (free forever)" value={founders} color="#A87820" />
+            <StatCard label="In Free Trial" value={inTrial} />
+            <StatCard label="Founders (free forever)" value={founders} />
             <StatCard label="Lifetime Members" value={lifetimeMembers} />
           </Section>
 
           <Section title="Collab Payments">
             <StatCard label="Gross Processed" value={`$${grossProcessed.toFixed(0)}`} sublabel="host charges, all-time" />
-            <StatCard label="Platform Fees Collected" value={`$${feesCollected.toFixed(0)}`} color="#166534" />
-            <StatCard label="Owed to Creators (unpaid)" value={`$${payoutsOwed.toFixed(0)}`} color="#92400E" />
+            <StatCard label="Platform Fees Collected" value={`$${feesCollected.toFixed(0)}`} />
+            <StatCard label="Owed to Creators (unpaid)" value={`$${payoutsOwed.toFixed(0)}`} />
           </Section>
 
           <Section title="Creator Payout Methods">
-            <StatCard label="Stripe Connected & Verified" value={stripeConnected} color="#166534" />
-            <StatCard label="Wise Connected" value={wiseConnected} color="#166534" />
-            <StatCard label="Not Yet Connected" value={noPayoutMethod} color="#92400E" />
+            <StatCard label="Stripe Connected & Verified" value={stripeConnected} />
+            <StatCard label="Wise Connected" value={wiseConnected} />
+            <StatCard label="Not Yet Connected" value={noPayoutMethod} />
           </Section>
 
           <Section title="Country Ambassadors">
             <StatCard label="Active Ambassadors" value={activeAmbassadors} sublabel="countries represented" />
             <StatCard label="Pending" value={`$${ambPending.toFixed(0)}`} sublabel="inside the 30-day hold" />
-            <StatCard label="Payable Now" value={`$${ambPayable.toFixed(0)}`} color="#92400E" />
-            <StatCard label="Paid All-Time" value={`$${ambPaid.toFixed(0)}`} color="#166534" />
+            <StatCard label="Payable Now" value={`$${ambPayable.toFixed(0)}`} />
+            <StatCard label="Paid All-Time" value={`$${ambPaid.toFixed(0)}`} />
           </Section>
 
           <Section title="Charge Approvals">
-            <StatCard label="Awaiting Decision" value={approvalsAwaiting} color={approvalsAwaiting > 0 ? '#92400E' : INK} />
+            <StatCard label="Awaiting Decision" value={approvalsAwaiting} />
           </Section>
         </>
       )}

@@ -161,6 +161,8 @@ export function CollabProvider({ children }) {
       property_name: c.property_name,
       location: c.location,
       dates: c.dates,
+      check_in: c.check_in,
+      check_out: c.check_out,
       deliverables: c.deliverables,
       currency: c.currency,
       payment: c.payment,

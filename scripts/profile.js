@@ -10,10 +10,20 @@ async function getClerk() {
       const { Clerk } = await import('@clerk/clerk-js');
       const key = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
       if (!key) return null;
-      const clerk = new Clerk(key);
-      await clerk.load();
-      return clerk;
+      let lastErr;
+      for (let i = 0; i < 3; i++) {
+        try {
+          const clerk = new Clerk(key);
+          await clerk.load();
+          return clerk;
+        } catch (e) {
+          lastErr = e;
+          await new Promise((r) => setTimeout(r, 800 * (i + 1)));
+        }
+      }
+      throw lastErr;
     })();
+    _clerkPromise.catch(() => { _clerkPromise = null; });
   }
   return _clerkPromise;
 }

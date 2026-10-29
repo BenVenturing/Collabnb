@@ -1003,6 +1003,37 @@ export default function Settings() {
                   />
                 ))}
 
+                {profile?.role !== 'host' && notifPrefs.collabReminders && (() => {
+                  const days = notifPrefs.collabReminderDays ?? [3, 1, 0];
+                  const toggleDay = (d) => updateProfile({
+                    notification_prefs: {
+                      ...notifPrefs,
+                      collabReminderDays: days.includes(d) ? days.filter((x) => x !== d) : [...days, d].sort((x, y) => y - x),
+                    },
+                  });
+                  return (
+                    <div style={{ padding: '0.25rem 0 0.75rem' }}>
+                      <p style={{ fontSize: '0.78rem', color: 'var(--sage)', marginBottom: '0.5rem' }}>Remind me before content is due</p>
+                      <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                        {[[7, '1 week'], [3, '3 days'], [1, '1 day'], [0, 'Due day']].map(([d, label]) => (
+                          <button
+                            key={d}
+                            onClick={() => toggleDay(d)}
+                            style={{
+                              padding: '0.4rem 0.8rem', borderRadius: 9999, border: 'none', cursor: 'pointer',
+                              fontSize: '0.76rem', fontWeight: 600, fontFamily: 'var(--font-body)',
+                              background: days.includes(d) ? 'var(--ink)' : 'rgba(25,37,36,0.06)',
+                              color: days.includes(d) ? 'var(--bone)' : 'var(--slate)',
+                            }}
+                          >
+                            {label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
+
                 {/* Stay alerts — creator-only. Sits directly under the
                     "New listings" toggle above, which is its master switch. */}
                 {profile?.role !== 'host' && (

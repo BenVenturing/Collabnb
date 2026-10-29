@@ -1,14 +1,14 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Clock, FileText } from 'lucide-react';
+import { Clock, FileText, Pin, Archive, ArchiveRestore, StickyNote, ChevronDown } from 'lucide-react';
 import { useCollabs } from '../contexts/CollabContext';
 import { DEMO_COLLAB } from '../lib/mockData';
 import { withServerCollab } from '../lib/collabStages';
 import CollabDetail from '../components/CollabDetail';
 import ProposalsOverview from '../components/dashboard/ProposalsOverview';
 import { bucketByMonth, toMonthSeries, isoDate } from '../lib/monthSeries';
-import { useQuery } from 'convex/react';
+import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -28,8 +28,18 @@ const STATUS_STYLES = {
   demo:     { bg: 'rgba(212,168,67,0.12)', text: '#B8922A', icon: '▶' },
 };
 
-function CollabCard({ collab, onClick, onDismissDemo, onDismissSample, onOpenContract, onStartContract }) {
+const iconBtn = (active) => ({
+  width: '28px', height: '28px', borderRadius: '50%', border: 'none', cursor: 'pointer',
+  display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white',
+  background: active ? 'rgba(25,37,36,0.85)' : 'rgba(0,0,0,0.28)', backdropFilter: 'blur(8px)',
+});
+
+function CollabCard({ collab, onClick, onDismissDemo, onDismissSample, onOpenContract, onStartContract, onPin, onArchive, onSaveNote }) {
   const { t } = useTranslation('collabs');
+  const [editingNote, setEditingNote] = useState(false);
+  const [noteDraft, setNoteDraft] = useState(collab.creator_note || '');
+  const archivedForMe = !collab.is_active || collab.creator_archived;
+  const canOrganise = !!collab.convex_id && !collab.is_demo && !collab.is_sample;
   const style = STATUS_STYLES[collab.status] || STATUS_STYLES.pending;
   const canDismiss = collab.is_demo || collab.is_sample;
   const onDismiss = collab.is_demo ? onDismissDemo : onDismissSample;
@@ -98,6 +108,36 @@ function CollabCard({ collab, onClick, onDismissDemo, onDismissSample, onOpenCon
           </button>
         )}
 
+        {canOrganise && (
+          <div style={{ position: 'absolute', top: '0.5rem', right: '0.5rem', zIndex: 5, display: 'flex', gap: '0.35rem' }}>
+            <button
+              onClick={(e) => { e.stopPropagation(); onPin?.(collab); }}
+              style={iconBtn(collab.creator_pinned)}
+              title={collab.creator_pinned ? 'Unpin' : 'Pin to top'}
+            >
+              <Pin size={13} fill={collab.creator_pinned ? 'white' : 'none'} />
+            </button>
+            {collab.is_active && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onArchive?.(collab); }}
+                style={iconBtn(false)}
+                title={collab.creator_archived ? 'Move back to active' : 'Archive'}
+              >
+                {collab.creator_archived ? <ArchiveRestore size={13} /> : <Archive size={13} />}
+              </button>
+            )}
+          </div>
+        )}
+
+        {archivedForMe && (
+          <span style={{
+            position: 'absolute', top: '0.625rem', left: '0.75rem',
+            fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase',
+            color: '#fff', background: 'rgba(25,37,36,0.6)', padding: '0.2rem 0.55rem', borderRadius: '9999px',
+            backdropFilter: 'blur(8px)',
+          }}>Archived</span>
+        )}
+
         {/* Property name + meta overlaid on image */}
         <div style={{ position: 'absolute', bottom: '0.75rem', left: '0.875rem', right: '0.875rem' }}>
           <p style={{
@@ -134,6 +174,37 @@ function CollabCard({ collab, onClick, onDismissDemo, onDismissSample, onOpenCon
             <span style={{ color: 'var(--sage)' }}>{t('hostLabel')}</span> {collab.host_name}
           </p>
         )}
+
+        {canOrganise && (editingNote ? (
+          <textarea
+            autoFocus
+            value={noteDraft}
+            maxLength={500}
+            onClick={(e) => e.stopPropagation()}
+            onChange={(e) => setNoteDraft(e.target.value)}
+            onBlur={() => { setEditingNote(false); if (noteDraft !== (collab.creator_note || '')) onSaveNote?.(collab, noteDraft); }}
+            placeholder="Private note — only you can see this"
+            rows={2}
+            style={{
+              width: '100%', marginBottom: '0.75rem', padding: '0.5rem 0.65rem', borderRadius: '0.7rem',
+              border: '1px solid rgba(25,37,36,0.12)', background: 'rgba(255,255,255,0.7)',
+              fontSize: '0.8rem', fontFamily: 'var(--font-body)', color: 'var(--ink)', resize: 'none',
+            }}
+          />
+        ) : (
+          <button
+            onClick={(e) => { e.stopPropagation(); setNoteDraft(collab.creator_note || ''); setEditingNote(true); }}
+            style={{
+              display: 'flex', alignItems: 'flex-start', gap: '0.35rem', width: '100%', textAlign: 'left',
+              marginBottom: '0.75rem', padding: 0, border: 'none', background: 'none', cursor: 'text',
+              fontSize: '0.78rem', fontFamily: 'var(--font-body)',
+              color: collab.creator_note ? 'var(--ink)' : 'var(--sage)',
+            }}
+          >
+            <StickyNote size={12} style={{ marginTop: 2, flexShrink: 0, color: 'var(--sage)' }} />
+            {collab.creator_note || 'Add a private note'}
+          </button>
+        ))}
 
         {/* Status + due badge + chevron */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem', paddingBottom: '0.75rem', borderBottom: '1px solid rgba(25,37,36,0.07)' }}>
@@ -214,7 +285,8 @@ export default function Collabs() {
   const { t } = useTranslation('collabs');
   const navigate = useNavigate();
   const { collabs, contracts } = useCollabs();
-  const [filter, setFilter] = useState('active');
+  const [archivedOpen, setArchivedOpen] = useState(false);
+  const [sortBy, setSortBy] = useState('all');
   const [selectedCollab, setSelectedCollab] = useState(null);
   const [statusFilter, setStatusFilter] = useState('all');
   const [search, setSearch] = useState('');
@@ -225,6 +297,8 @@ export default function Collabs() {
   const creatorId = profile?._id ? String(profile._id) : (profile?.id ? String(profile.id) : null);
   const convexPitches = useQuery(api.pitches.getByCreator, creatorId ? { creatorId } : 'skip');
   const convexCollabs = useQuery(api.collaborations.getByCreator, creatorId ? { creatorId } : 'skip');
+  const setCreatorCrm = useMutation(api.collaborations.setCreatorCrm);
+  const crm = (c, patch) => setCreatorCrm({ id: c.convex_id, ...patch }).catch(() => {});
 
   // Inject demo collab into the list
   const [demoDismissed, setDemoDismissed] = useState(() => {
@@ -327,38 +401,43 @@ export default function Collabs() {
     }
   }, [searchParams, allCollabs, setSearchParams]);
 
-  const active   = allCollabs.filter((c) =>  c.is_active);
-  const archived = allCollabs.filter((c) => !c.is_active);
-  const baseList = filter === 'active' ? active : archived;
-
-  // Status filter for active collabs
-  const stageFiltered = filter === 'active' && statusFilter !== 'all'
-    ? baseList.filter((c) => c.current_stage === statusFilter || c.status === statusFilter)
-    : baseList;
+  // creator_archived is the creator's own shelf; it doesn't end the collab for the host.
+  const isArchived = (c) => !c.is_active || c.creator_archived;
+  const active   = allCollabs.filter((c) => !isArchived(c));
+  const archived = allCollabs.filter(isArchived);
 
   const listingOptions = useMemo(() => {
     const names = new Set(allCollabs.map((c) => c.property_name).filter(Boolean));
     return ['all', ...Array.from(names)];
   }, [allCollabs]);
 
-  // Soonest-due collabs surface first; collabs with no due date sink to the bottom.
-  const shown = stageFiltered
-    .filter((c) => listingFilter === 'all' || c.property_name === listingFilter)
-    .filter((c) => {
-      if (dueFilter === 'all') return true;
-      if (dueFilter === 'none') return !c.days_left;
-      if (!c.days_left) return false;
-      if (dueFilter === 'week') return c.days_left <= 7;
-      if (dueFilter === 'month') return c.days_left <= 30;
-      return true;
-    })
-    .filter((c) => !search.trim() || c.property_name?.toLowerCase().includes(search.trim().toLowerCase()))
-    .sort((a, b) => {
-      if (a.days_left == null && b.days_left == null) return 0;
-      if (a.days_left == null) return 1;
-      if (b.days_left == null) return -1;
-      return a.days_left - b.days_left;
-    });
+  const term = search.trim().toLowerCase();
+  const matches = (c) => {
+    if (statusFilter !== 'all' && c.current_stage !== statusFilter && c.status !== statusFilter) return false;
+    if (listingFilter !== 'all' && c.property_name !== listingFilter) return false;
+    if (dueFilter === 'none' && c.days_left) return false;
+    if (['any', 'week', 'month'].includes(dueFilter)) {
+      if (c.days_left == null || ['uploaded_tagged', 'closed', 'archived'].includes(c.current_stage)) return false;
+      if (dueFilter === 'week' && c.days_left > 7) return false;
+      if (dueFilter === 'month' && c.days_left > 30) return false;
+    }
+    if (term && !c.property_name?.toLowerCase().includes(term) && !c.host_name?.toLowerCase().includes(term)) return false;
+    return true;
+  };
+  const compare = (a, b) => {
+    if (!!b.creator_pinned !== !!a.creator_pinned) return b.creator_pinned ? 1 : -1;
+    if (sortBy === 'newest') return (b.created_ms ?? 0) - (a.created_ms ?? 0);
+    if (sortBy === 'az') return (a.property_name || '').localeCompare(b.property_name || '');
+    // Default: soonest-due first; collabs with no due date sink to the bottom.
+    if (a.days_left == null && b.days_left == null) return 0;
+    if (a.days_left == null) return 1;
+    if (b.days_left == null) return -1;
+    return a.days_left - b.days_left;
+  };
+  const shown = active.filter(matches).sort(compare);
+  const shownArchived = archived.filter(matches).sort(compare);
+  // A search reaches into the archive automatically — no mode switch needed to find one.
+  const showArchived = !!term || archivedOpen;
 
   // Real dashboard data — replaces ProposalsOverview's mock defaults wherever
   // we have a clean, honest mapping onto existing Convex records.
@@ -371,11 +450,15 @@ export default function Collabs() {
     const totalEarned = paidContracts.reduce((sum, c) => sum + (c.payment_amount ?? c.cash_value ?? 0), 0);
     const dueCollabs = realActive.filter((c) => c.days_left != null && !['uploaded_tagged', 'closed', 'archived'].includes(c.current_stage));
     const minDue = dueCollabs.length ? Math.min(...dueCollabs.map((c) => c.days_left)) : null;
+    // Signed by both sides but not paid out yet — money on its way.
+    const upcoming = (contracts || [])
+      .filter((c) => c.creator_signed && c.host_signed && !c.paid && !['terminated', 'cancelled', 'declined'].includes(c.status))
+      .reduce((sum, c) => sum + (c.payment_amount ?? c.cash_value ?? 0), 0);
 
     return {
       active:  { value: String(realActive.length), sub: `Across ${uniqueListings.size} listing${uniqueListings.size === 1 ? '' : 's'}` },
       pending: { value: String(realPendingCount), sub: 'Awaiting host reply' },
-      earned:  { value: `$${totalEarned.toLocaleString()}`, sub: `${paidContracts.length} contract${paidContracts.length === 1 ? '' : 's'} paid` },
+      earned:  { value: `$${totalEarned.toLocaleString()}`, sub: upcoming > 0 ? `+$${upcoming.toLocaleString()} upcoming` : `${paidContracts.length} contract${paidContracts.length === 1 ? '' : 's'} paid` },
       due:     { value: String(dueCollabs.length), sub: minDue !== null ? `Next due in ${minDue} day${minDue === 1 ? '' : 's'}` : 'Nothing due' },
     };
   }, [realActive, convexPitches, contracts]);
@@ -398,26 +481,68 @@ export default function Collabs() {
       if (c.days_left != null && !['uploaded_tagged', 'closed', 'archived'].includes(c.current_stage)) {
         const d = new Date();
         d.setDate(d.getDate() + c.days_left);
-        items.push({ type: 'deadline', title: `Upload content — ${c.property_name}`, date: isoDate(d) });
+        items.push({ id: c.id, type: 'deadline', title: `Upload content — ${c.property_name}`, date: isoDate(d) });
       }
+    });
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    (contracts || []).forEach((k) => {
+      if (!k.check_in || k.check_in < today.getTime() || k.check_in - today.getTime() > 30 * 86400000) return;
+      const collab = realActive.find((c) => c.property_name === k.property_name);
+      items.push({ id: collab?.id, type: 'stay_date', title: `Check in — ${k.property_name || 'your stay'}`, date: isoDate(new Date(k.check_in)) });
     });
     (convexPitches || []).forEach((p) => {
       if (p.counter_pending === 'creator') {
-        items.push({ type: 'pending_action', title: `Respond to counter-pitch — ${p.listing_title || 'listing'}`, date: isoDate(new Date(p.created_at ?? Date.now())) });
+        // No creator-side counter UI yet, so this opens the collab for that listing.
+        const collab = realActive.find((c) => String(c.listing_id) === String(p.listing_id));
+        items.push({ id: collab?.id, type: 'pending_action', title: `Respond to counter-pitch — ${p.listing_title || 'listing'}`, date: isoDate(new Date(p.created_at ?? Date.now())) });
       }
     });
     return items;
-  }, [realActive, convexPitches]);
+  }, [realActive, convexPitches, contracts]);
 
+  const handleTodoClick = (todo) => {
+    const match = allCollabs.find((c) => String(c.id) === String(todo.id));
+    if (match) setSelectedCollab(match);
+  };
+
+  const applyStat = (status, due) => { setStatusFilter(status); setDueFilter(due); setListingFilter('all'); };
   const handleStatClick = (presetKey) => {
     switch (presetKey) {
-      case 'active':               setFilter('active'); setStatusFilter('all'); break;
-      case 'pending_applications': setFilter('active'); setStatusFilter('pending'); break;
-      case 'earned':                setFilter('active'); setStatusFilter('closed'); break;
-      case 'content_due':          setFilter('active'); setStatusFilter('pending'); break;
+      case 'active':               applyStat('all', 'all'); break;
+      case 'pending_applications': applyStat('pending', 'all'); break;
+      case 'earned':               applyStat('closed', 'all'); break;
+      case 'content_due':          applyStat('all', 'any'); break;
       default: break;
     }
   };
+
+  const renderCard = (c) => (
+    <CollabCard
+      key={c.id}
+      collab={c}
+      onClick={setSelectedCollab}
+      onDismissDemo={dismissDemo}
+      onDismissSample={() => dismissSample(c.id)}
+      onPin={(x) => crm(x, { pinned: !x.creator_pinned })}
+      onArchive={(x) => crm(x, { archived: !x.creator_archived })}
+      onSaveNote={(x, note) => crm(x, { note })}
+      onOpenContract={(contractId) => navigate(`/contract?open=${contractId}`)}
+      onStartContract={(c) => navigate('/contract', {
+        state: {
+          prefill: {
+            creator_id: c.creator_id,
+            creator: c.creator_name,
+            host: c.host_name,
+            property_name: c.property_name,
+            location: c.location,
+            dates: c.dates,
+            deliverables: c.deliverables,
+          },
+        },
+      })}
+    />
+  );
 
   return (
     <div>
@@ -431,6 +556,7 @@ export default function Collabs() {
         statValues={statValues}
         chartData={chartData}
         todoItems={todoItems}
+        onTodoClick={handleTodoClick}
         filters={[
           {
             key: 'status', value: statusFilter, onChange: setStatusFilter,
@@ -449,57 +575,51 @@ export default function Collabs() {
             key: 'due', value: dueFilter, onChange: setDueFilter,
             options: [
               { value: 'all', label: t('filters.anyDueDate') },
+              { value: 'any', label: 'Has a deadline' },
               { value: 'week', label: t('filters.dueThisWeek') },
               { value: 'month', label: t('filters.dueThisMonth') },
               { value: 'none', label: t('filters.noDeadline') },
             ],
           },
+          {
+            key: 'sort', value: sortBy, onChange: setSortBy,
+            options: [
+              { value: 'all', label: 'Sort: soonest due' },
+              { value: 'newest', label: 'Sort: newest' },
+              { value: 'az', label: 'Sort: A–Z' },
+            ],
+          },
         ]}
-        archiveToggle={{ value: filter === 'archived', onChange: (v) => setFilter(v ? 'archived' : 'active') }}
       >
         <div className="w-full max-w-2xl mx-auto space-y-4">
-          {shown.length === 0 ? (
+          {shown.length === 0 && allCollabs.length === 0 ? (
             <div className="text-center pt-16">
               <p className="text-4xl mb-4">✦</p>
-              <h3 className="font-display font-bold text-ink text-lg mb-2">
-                {baseList.length === 0 ? t('emptyTitleNoCollabs') : t('emptyTitleNoMatches')}
-              </h3>
-              <p className="text-sage text-sm mb-6">
-                {baseList.length === 0 ? t('emptyBodyStart') : t('emptyBodyAdjust')}
-              </p>
-              {baseList.length === 0 && (
-                <button
-                  onClick={() => navigate('/explore')}
-                  className="btn-ink"
-                >
-                  {t('discoverStays')}
-                </button>
-              )}
+              <h3 className="font-display font-bold text-ink text-lg mb-2">{t('emptyTitleNoCollabs')}</h3>
+              <p className="text-sage text-sm mb-6">{t('emptyBodyStart')}</p>
+              <button onClick={() => navigate('/explore')} className="btn-ink">{t('discoverStays')}</button>
             </div>
           ) : (
-            shown.map((c) => (
-              <CollabCard
-                key={c.id}
-                collab={c}
-                onClick={setSelectedCollab}
-                onDismissDemo={dismissDemo}
-                onDismissSample={() => dismissSample(c.id)}
-                onOpenContract={(contractId) => navigate(`/contract?open=${contractId}`)}
-                onStartContract={(c) => navigate('/contract', {
-                  state: {
-                    prefill: {
-                      creator_id: c.creator_id,
-                      creator: c.creator_name,
-                      host: c.host_name,
-                      property_name: c.property_name,
-                      location: c.location,
-                      dates: c.dates,
-                      deliverables: c.deliverables,
-                    },
-                  },
-                })}
-              />
-            ))
+            shown.map(renderCard)
+          )}
+
+          {shownArchived.length > 0 && (
+            <div>
+              <button
+                onClick={() => setArchivedOpen((o) => !o)}
+                disabled={!!term}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '0.5rem', width: '100%', padding: '0.75rem 0.25rem',
+                  border: 'none', background: 'none', cursor: term ? 'default' : 'pointer',
+                  fontSize: '0.82rem', fontWeight: 700, color: 'var(--sage)', fontFamily: 'var(--font-body)',
+                }}
+              >
+                <Archive size={14} />
+                <span style={{ flex: 1, textAlign: 'left' }}>Archived ({shownArchived.length})</span>
+                {!term && <ChevronDown size={15} style={{ transform: showArchived ? 'rotate(180deg)' : 'none', transition: 'transform 150ms' }} />}
+              </button>
+              {showArchived && <div className="space-y-4" style={{ opacity: 0.8 }}>{shownArchived.map(renderCard)}</div>}
+            </div>
           )}
         </div>
       </ProposalsOverview>

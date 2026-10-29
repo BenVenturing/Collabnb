@@ -1882,6 +1882,73 @@ export const importHostsLocal = mutation({
   },
 });
 
+// Hotels that already have a Collabnb audit PDF: lands them in Confirmed,
+// starred + target so they sit at the top of the CRM board. Existing rows keep
+// their stage and only gain blank fields.
+export const upsertAuditedHotelsLocal = mutation({
+  args: {
+    secret: v.string(),
+    rows: v.array(
+      v.object({
+        instagram_handle: v.string(),
+        display_name: v.string(),
+        follower_count: v.optional(v.number()),
+        location: v.optional(v.string()),
+        country: v.optional(v.string()),
+        website: v.optional(v.string()),
+        email: v.optional(v.string()),
+        whatsapp: v.optional(v.string()),
+        contact_url: v.optional(v.string()),
+        bio: v.optional(v.string()),
+        notes: v.string(),
+        room_count: v.optional(v.number()),
+        decision_maker_name: v.optional(v.string()),
+        decision_maker_role: v.optional(v.string()),
+      })
+    ),
+  },
+  handler: async (ctx, { secret, rows }) => {
+    const expected = process.env.LOCAL_IMPORT_SECRET;
+    if (!expected || secret !== expected) throw new Error("Invalid or missing import secret.");
+    let inserted = 0, updated = 0;
+    for (const row of rows) {
+      const handle = row.instagram_handle.replace(/^@/, "").trim().toLowerCase();
+      if (!handle) continue;
+      const existing = await ctx.db
+        .query("prospects")
+        .withIndex("by_handle", (q) => q.eq("instagram_handle", handle))
+        .first();
+      if (!existing) {
+        const { instagram_handle: _h, room_count, ...rest } = row;
+        await ctx.db.insert("prospects", {
+          ...rest,
+          ...(room_count ? { room_count, room_count_source: "manual" } : {}),
+          kind: "host",
+          instagram_handle: handle,
+          tier: tierFromFollowers(row.follower_count),
+          source: "manual",
+          status: "queued",
+          starred: true,
+          target: true,
+          created_at: Date.now(),
+        });
+        inserted++;
+        continue;
+      }
+      const patch: Record<string, any> = { starred: true, target: true };
+      for (const k of ["follower_count", "location", "country", "website", "email", "whatsapp", "contact_url", "bio", "decision_maker_name", "decision_maker_role"] as const) {
+        if ((row as any)[k] && !(existing as any)[k]) patch[k] = (row as any)[k];
+      }
+      if (row.follower_count && !existing.tier) patch.tier = tierFromFollowers(row.follower_count);
+      if (row.room_count && !existing.room_count) { patch.room_count = row.room_count; patch.room_count_source = "manual"; }
+      patch.notes = existing.notes ? `${existing.notes}\n\n${row.notes}` : row.notes;
+      await ctx.db.patch(existing._id, patch);
+      updated++;
+    }
+    return { inserted, updated };
+  },
+});
+
 // Bulk hotel import from a purchased/exported contact list (no Instagram
 // handle — a synthetic "hc-…" handle keeps the by_handle uniqueness intact).
 // `emails` are joined with ", " into one field so a single send goes to all

@@ -142,7 +142,7 @@ export const getAll = query({
       if (viewer && viewer.role === "creator" && !viewer.is_admin) {
         const state = viewer.access_state ?? "active";
         const isFounder = viewer.is_founder === true;
-        const isVerified = viewer.is_verified === true;
+        const isVerified = viewer.is_verified === true && viewer.is_rejected !== true;
         canViewFull = isFounder || state === "trial" || state === "active" || !isVerified;
         // Unverified creators see blurbs only
         if (!isVerified) canViewFull = false;
@@ -244,7 +244,7 @@ export const getById = query({
     if (args.viewerId) {
       const viewer = await ctx.db.get(args.viewerId as any);
       if (viewer && viewer.role === "creator" && !viewer.is_admin) {
-        const isVerified = viewer.is_verified === true;
+        const isVerified = viewer.is_verified === true && viewer.is_rejected !== true;
         const state = viewer.access_state ?? "active";
         const isFounder = viewer.is_founder === true;
         canViewFull = isFounder || state === "trial" || state === "active" || !isVerified;

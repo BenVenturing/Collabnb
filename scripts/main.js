@@ -41,10 +41,20 @@ async function getClerk() {
       const { Clerk } = await import('@clerk/clerk-js');
       const key = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
       if (!key) return null;
-      const clerk = new Clerk(key);
-      await clerk.load();
-      return clerk;
+      let lastErr;
+      for (let i = 0; i < 3; i++) {
+        try {
+          const clerk = new Clerk(key);
+          await clerk.load();
+          return clerk;
+        } catch (e) {
+          lastErr = e;
+          await new Promise((r) => setTimeout(r, 800 * (i + 1)));
+        }
+      }
+      throw lastErr;
     })();
+    _clerkPromise.catch(() => { _clerkPromise = null; });
   }
   return _clerkPromise;
 }
@@ -1009,12 +1019,12 @@ function openLoginModal() {
   if (nav) nav.style.display = 'none';
 
   // Mount Clerk sign-in component (with Google OAuth etc.)
-  getClerk().then((clerk) => {
+  getClerk().catch(() => null).then((clerk) => {
     if (!clerk) {
       if (mountEl) {
         mountEl.innerHTML = `<div style="text-align:center;padding:1rem;">
-          <p style="color:var(--sage);font-size:0.875rem;margin-bottom:1.25rem;">Sign in is not available right now.</p>
-          <a href="/login.html" class="btn-primary" style="display:inline-block;text-decoration:none;padding:0.75rem 1.5rem;">Go to Login →</a>
+          <p style="color:var(--sage);font-size:0.875rem;margin-bottom:1.25rem;">Couldn't load sign-in. If you're in Instagram or TikTok's browser, open this page in Safari or Chrome.</p>
+          <a href="/login.html" class="btn-primary" style="display:inline-block;text-decoration:none;padding:0.75rem 1.5rem;" onclick="location.href='/login.html';return false;">Try again →</a>
         </div>`;
       }
       return;

@@ -49,6 +49,7 @@ import type * as lib_geo from "../lib/geo.js";
 import type * as lib_mcpTools from "../lib/mcpTools.js";
 import type * as lib_moderation from "../lib/moderation.js";
 import type * as lib_rateLimit from "../lib/rateLimit.js";
+import type * as lib_rejection from "../lib/rejection.js";
 import type * as lib_sanitize from "../lib/sanitize.js";
 import type * as lib_stayAlertMatch from "../lib/stayAlertMatch.js";
 import type * as listingReminders from "../listingReminders.js";
@@ -123,6 +124,7 @@ declare const fullApi: ApiFromModules<{
   "lib/mcpTools": typeof lib_mcpTools;
   "lib/moderation": typeof lib_moderation;
   "lib/rateLimit": typeof lib_rateLimit;
+  "lib/rejection": typeof lib_rejection;
   "lib/sanitize": typeof lib_sanitize;
   "lib/stayAlertMatch": typeof lib_stayAlertMatch;
   listingReminders: typeof listingReminders;

@@ -2,6 +2,7 @@ import { v, ConvexError } from "convex/values";
 import { query, mutation, action, internalMutation, internalQuery, type MutationCtx } from "./_generated/server";
 import { internal, api } from "./_generated/api";
 import { requireAdmin, requireAdminAction, canAccessAdmin } from "./lib/auth";
+import { REJECTION_ACCESS_PATCH } from "./lib/rejection";
 
 // ─── Analytics ────────────────────────────────────────────────────────────────
 export const getAnalytics = query({
@@ -779,6 +780,9 @@ export const bulkApproveProfiles = mutation({
       if (!profile) continue;
       const patch: Record<string, any> = { is_verified: true, is_founder: args.isFounder, is_rejected: undefined, rejection_reason: undefined };
       await ctx.db.patch(profileId, patch);
+      if (profile.role === "creator") {
+        await ctx.scheduler.runAfter(24 * 60 * 60 * 1000, internal.gates.remindPayoutSetup, { profileId });
+      }
       if (profile.email) {
         await ctx.scheduler.runAfter(0, internal.emails.sendAccessGrantedEmail, {
           email: profile.email,
@@ -797,7 +801,7 @@ export const bulkRejectProfiles = mutation({
     for (const profileId of args.profileIds) {
       const profile = await ctx.db.get(profileId);
       if (!profile) continue;
-      await ctx.db.patch(profileId, { is_rejected: true, rejection_reason: args.reason });
+      await ctx.db.patch(profileId, { ...REJECTION_ACCESS_PATCH, is_rejected: true, rejection_reason: args.reason });
       if (profile.email) {
         await ctx.scheduler.runAfter(0, internal.emails.sendRejectionEmail, {
           email: profile.email,

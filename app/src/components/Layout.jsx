@@ -103,6 +103,61 @@ function PastDueBanner({ topOffset }) {
   );
 }
 
+export function hasPayoutConnected(p) {
+  return (p?.payout_method === 'stripe_connect' && p?.stripe_connect_payouts_enabled === true)
+    || (p?.payout_method === 'wise' && !!p?.wise_recipient_id);
+}
+
+const PAYOUT_BANNER_KEY = 'collabnb_payout_banner_dismissed';
+
+// Approved creators can't be paid for a collab until a payout method is
+// connected. Closing it only lasts for this session (sessionStorage), so it
+// comes back the next time they open the app. Reads the profile reactively —
+// AuthContext's copy doesn't update after the connect flow.
+function PayoutSetupBanner() {
+  const { t } = useTranslation('layout');
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { profile } = useAuth();
+  const eligible = profile?.role === 'creator' && profile?.is_verified === true
+    && profile?.is_rejected !== true && profile?.is_admin !== true;
+  const [dismissed, setDismissed] = useState(() => {
+    try { return sessionStorage.getItem(PAYOUT_BANNER_KEY) === '1'; } catch { return false; }
+  });
+  const live = useQuery(api.profiles.getById, eligible && !dismissed && profile?._id ? { id: String(profile._id) } : 'skip');
+  if (!eligible || dismissed || !live || hasPayoutConnected(live) || location.pathname === '/profile') return null;
+
+  const dismiss = () => {
+    try { sessionStorage.setItem(PAYOUT_BANNER_KEY, '1'); } catch { /* still hide for this render tree */ }
+    setDismissed(true);
+  };
+
+  return (
+    <div style={{ maxWidth: 1100, margin: '0 auto 1rem', padding: '0 1rem' }}>
+      <div style={{
+        background: '#FFF7ED', border: '1px solid #FED7AA', borderRadius: '0.875rem',
+        padding: '0.75rem 1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        gap: '0.75rem', flexWrap: 'wrap', fontSize: '0.82rem', color: '#192524',
+      }}>
+        <span><strong>{t('payoutSetup.title')}</strong> {t('payoutSetup.body')}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <button
+            onClick={() => navigate('/profile?open=payout')}
+            style={{ background: '#192524', color: '#fff', border: 'none', borderRadius: '999px', padding: '0.4rem 1rem', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
+          >
+            {t('payoutSetup.cta')}
+          </button>
+          <button
+            onClick={dismiss}
+            aria-label={t('dismiss')}
+            style={{ background: 'none', border: 'none', color: '#646B62', fontSize: '1.1rem', cursor: 'pointer', lineHeight: 1, padding: '0.25rem 0.4rem' }}
+          >×</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Shown after a role-switch approval (signup correction or self-serve switch)
 // until the new role's delta fields are filled in via finish-role.html — the
 // same link that was emailed. Hardcoded copy for now, not yet run through
@@ -140,6 +195,7 @@ export default function Layout({ children }) {
   const location = useLocation();
   const { profile } = useAuth();
   const isPending = profile?.tier === 'waitlist' && !profile?.is_verified;
+  const [isPhone] = useState(() => window.matchMedia('(max-width: 768px)').matches);
   const [bannerDismissed, setBannerDismissed] = useState(
     () => localStorage.getItem(LAUNCH_BANNER_KEY) === '1'
   );
@@ -229,11 +285,12 @@ export default function Layout({ children }) {
         id="main"
         className="relative"
         style={{
-          paddingTop: location.pathname === '/profile'
-            ? '0'
+          '--main-pt': location.pathname === '/profile'
+            ? '0px'
             : `calc(7rem${bannerVisible ? ` + ${BANNER_H}` : ''}${isPending ? ' + 1.8rem' : ''}${profile?.pending_role_completion === true ? ' + 1.8rem' : ''})`,
         }}
       >
+        <PayoutSetupBanner />
         {children}
       </main>
 
@@ -287,7 +344,7 @@ export default function Layout({ children }) {
       <OnboardingChecklist />
 
       {/* ── Floating background-music widget (bottom-right, above contract button) ── */}
-      <BackgroundMusicPlayer />
+      {!isPhone && <BackgroundMusicPlayer />}
 
       {/* FloatingHelpButton removed */}
 

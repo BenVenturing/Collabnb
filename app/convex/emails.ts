@@ -84,6 +84,16 @@ export const sendAccessGrantedEmail = internalAction({
   },
 });
 
+// ─── Approved creator hasn't connected a payout method ──────────────────────
+
+export const sendConnectPayoutEmail = internalAction({
+  args: { email: v.string(), full_name: v.string() },
+  handler: async (ctx, { email, full_name }) => {
+    const firstName = full_name.split(" ")[0];
+    await sendFromTemplate(ctx, "connect_payout", email, { firstName });
+  },
+});
+
 // ─── Role-switch approved — finish the new role's profile ────────────────────
 // Sent instead of sendAccessGrantedEmail when the approval flipped the
 // person's role (signup-time admin correction, or a self-serve switch

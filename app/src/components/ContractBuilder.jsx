@@ -116,6 +116,22 @@ export default function ContractBuilder() {
     return 0;
   });
 
+  // A host sends to a creator who applied to one of their listings — the real
+  // profile id lets the server notify them without guessing by name.
+  const isHostRole = profile?.role === 'host';
+  const hostPitches = useQuery(
+    api.pitches.getByHost,
+    isHostRole && profile?._id ? { hostId: String(profile._id) } : 'skip'
+  );
+  const sendCreators = Object.values(
+    (hostPitches || []).reduce((acc, p) => {
+      if (p.creator_id && !acc[p.creator_id]) {
+        acc[p.creator_id] = { id: String(p.creator_id), name: p.creator_name, avatar: p.creator_avatar || null, subtitle: p.listing_title || '', isReal: true };
+      }
+      return acc;
+    }, {})
+  ).sort((a, b) => (b.id === String(prefill?.creator_id) ? 1 : 0) - (a.id === String(prefill?.creator_id) ? 1 : 0));
+
   const [editingId, setEditingId] = useState(null);
   const [contractList, setContractList] = useState([]);
   const [selectedHost, setSelectedHost] = useState(null);
@@ -135,9 +151,9 @@ export default function ContractBuilder() {
       } catch {}
     }
     return {
-      creator: prefill?.creator || profile?.full_name || '',
+      creator: prefill?.creator || (profile?.role === 'host' ? '' : profile?.full_name) || '',
       creatorId: prefill?.creator_id ? String(prefill.creator_id) : '',
-      host: prefill?.host || '',
+      host: prefill?.host || (profile?.role === 'host' ? profile?.full_name : '') || '',
       property_name: prefill?.property_name || '',
       location: prefill?.location || '',
       dates: prefill?.dates || '',
@@ -460,7 +476,7 @@ export default function ContractBuilder() {
   };
 
   const signAsHost = () => {
-    const name = selectedHost?.name || form.host;
+    const name = selectedHost?.name || form.host || (isHostRole ? profile?.full_name : '');
     if (!name) {
       window.alert(t('sendFirstAlert'));
       return;
@@ -556,15 +572,23 @@ export default function ContractBuilder() {
   };
 
   const handleSendToHost = async (host) => {
-    setSelectedHost(host);
-    updateField('host', host.name);
+    // For a host the recipient is the creator — never overwrite the host's own name.
+    const recipientFields = isHostRole
+      ? { creator_name: host.name, ...(host.isReal ? { creator_id: host.id } : {}) }
+      : { host_name: host.name };
+    if (isHostRole) {
+      setForm((f) => ({ ...f, creator: host.name, creatorId: host.isReal ? host.id : f.creatorId }));
+    } else {
+      setSelectedHost(host);
+      updateField('host', host.name);
+    }
     // Save first
     let id = editingId;
     if (!id) {
-      const saved = saveContract(buildContractData());
+      const saved = saveContract({ ...buildContractData(), ...recipientFields });
       id = saved.id;
     } else {
-      sendContractUpdate(id, buildContractData());
+      sendContractUpdate(id, { ...buildContractData(), ...recipientFields });
     }
 
     // Update status to pending, stamping the real host id when we have one so the
@@ -572,8 +596,9 @@ export default function ContractBuilder() {
     setStatus('pending');
     sendContractUpdate(id, {
       ...buildContractData(),
+      ...recipientFields,
       status: 'pending',
-      ...(host.isReal ? (profile?.role === 'host' ? { creator_id: host.id } : { host_id: host.id }) : {}),
+      ...(host.isReal ? (isHostRole ? { creator_id: host.id } : { host_id: host.id }) : {}),
     });
 
     // Create a message thread
@@ -1043,15 +1068,15 @@ export default function ContractBuilder() {
                     </button>
                   )}
 
-                  {/* Host signs (only when contract has been sent to them / is pending) — only the account viewing as host can do this */}
-                  {(status === 'pending' || status === 'draft') && !hostSig && creatorSig && profile?.role === 'host' && (
+                  {/* Host signs — first (then sends to the creator) or after the creator */}
+                  {(status === 'pending' || status === 'draft') && !hostSig && isHostRole && (
                     <button onClick={signAsHost} className="btn-glass">
                       {t('signAccept')}
                     </button>
                   )}
 
                   {/* Send button — role-aware, shows sent state once dispatched */}
-                  {(isSent || (creatorSig && !hostSig && status !== 'in_progress')) && (
+                  {(isSent || ((isHostRole ? hostSig && !creatorSig : creatorSig && !hostSig) && status !== 'in_progress')) && (
                     <button
                       disabled={isSent}
                       onClick={isSent ? undefined : () => setShowSendModal(true)}
@@ -1240,24 +1265,36 @@ export default function ContractBuilder() {
                     : t('sendModalBodyHost')}
                 </p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
-                  {profile?.role === 'host' ? (
+                  {isHostRole ? (
+                    (form.creatorId
+                      ? [{ id: form.creatorId, isReal: true, name: form.creator || t('role.creator'), avatar: null, subtitle: '' }]
+                      : sendCreators.length
+                        ? sendCreators
+                        : [{ id: 'creator', isReal: false, name: form.creator || t('role.creator'), avatar: null, subtitle: '' }]
+                    ).map((c) => (
                     <button
-                      onClick={() => handleSendToHost({ id: form.creatorId || 'creator', isReal: !!form.creatorId, name: form.creator || t('role.creator'), avatar: null, properties: [] })}
+                      key={c.id}
+                      onClick={() => handleSendToHost(c)}
                       className="w-full flex items-center gap-3 p-3 rounded-xl bg-white/60 border border-stone/30 hover:bg-white/90 hover:border-mint transition-all text-left"
                       style={{ fontFamily: 'var(--font-body)', cursor: 'pointer' }}
                     >
                       <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'var(--mint)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: '1rem', fontWeight: 700, color: 'var(--slate)' }}>
-                        {(form.creator || 'C').charAt(0).toUpperCase()}
+                        {c.avatar ? (
+                          <img src={c.avatar} alt="" style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover' }} />
+                        ) : (
+                          (c.name || 'C').charAt(0).toUpperCase()
+                        )}
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <p style={{ fontWeight: 600, fontSize: '0.875rem', color: 'var(--ink)', margin: 0 }}>{form.creator || t('role.creator')}</p>
-                        <p style={{ fontSize: '0.72rem', color: 'var(--sage)', margin: '0.1rem 0 0' }}>{t('sendForReview')}</p>
+                        <p style={{ fontWeight: 600, fontSize: '0.875rem', color: 'var(--ink)', margin: 0 }}>{c.name}</p>
+                        <p style={{ fontSize: '0.72rem', color: 'var(--sage)', margin: '0.1rem 0 0' }}>{c.subtitle || t('sendForReview')}</p>
                       </div>
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--sage)', flexShrink: 0 }}>
                         <line x1="22" y1="2" x2="11" y2="13"/>
                         <polygon points="22 2 15 22 11 13 2 9 22 2"/>
                       </svg>
                     </button>
+                    ))
                   ) : sendHosts.length === 0 ? (
                     <p style={{ fontSize: '0.85rem', color: 'var(--sage)', textAlign: 'center', padding: '0.5rem 0' }}>
                       {t('noHostsAvailable')}

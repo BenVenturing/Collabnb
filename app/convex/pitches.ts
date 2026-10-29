@@ -6,6 +6,7 @@ import { requireOwnerOrAdmin, canAccessOwner } from "./lib/auth";
 import { cleanPlainText } from "./lib/sanitize";
 import { enforceRateLimit, RATE_LIMITS } from "./lib/rateLimit";
 import { completeCollaboration } from "./collaborations";
+import { stampContractSignature } from "./contracts";
 
 function currentMonthKey(): string {
   const now = new Date();
@@ -405,7 +406,8 @@ export const sendCounter = mutation({
     // Keep any linked contract in a negotiating (unsigned) state.
     if (pitch.contract_id) {
       await ctx.db.patch(pitch.contract_id as any, {
-        status: "sent", creator_signed: false, host_signed: false,
+        status: "pending", creator_signed: false, host_signed: false,
+        creator_signed_at: undefined, host_signed_at: undefined,
       });
     }
 
@@ -464,6 +466,20 @@ export const signContract = mutation({
     } else {
       sigs.creatorSignature = signerName; sigs.creatorSignedAt = now; sigs.creatorSignedVersion = version;
     }
+    // The other side may have signed the linked contract directly (phone app or
+    // /contract) — that signature lives only on the contracts row.
+    const contract: any = pitch.contract_id ? await ctx.db.get(pitch.contract_id as any) : null;
+    if (contract) {
+      if (party === "host" && contract.creator_signed && sigs.creatorSignedVersion !== version) {
+        sigs.creatorSignature = contract.creator_name || "Creator";
+        sigs.creatorSignedAt = contract.creator_signed_at || now;
+        sigs.creatorSignedVersion = version;
+      } else if (party === "creator" && contract.host_signed && sigs.hostSignedVersion !== version) {
+        sigs.hostSignature = contract.host_name || "Host";
+        sigs.hostSignedAt = contract.host_signed_at || now;
+        sigs.hostSignedVersion = version;
+      }
+    }
     const bothSigned = !!sigs.hostSignature && !!sigs.creatorSignature &&
                        sigs.hostSignedVersion === sigs.creatorSignedVersion;
 
@@ -474,12 +490,8 @@ export const signContract = mutation({
       counter_pending: bothSigned ? undefined : pitch.counter_pending,
     });
 
-    if (pitch.contract_id) {
-      const cu: Record<string, unknown> = {};
-      if (party === "host") { cu.host_signed = true; cu.host_signed_at = now; }
-      else { cu.creator_signed = true; cu.creator_signed_at = now; }
-      if (bothSigned) cu.status = "signed";
-      await ctx.db.patch(pitch.contract_id as any, cu);
+    if (contract) {
+      await stampContractSignature(ctx, pitch.contract_id, party === "host" ? "host" : "creator");
     }
 
     const recipientId = party === "host" ? pitch.creator_id : pitch.host_id;

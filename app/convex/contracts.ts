@@ -429,6 +429,25 @@ async function linkContractToCollab(ctx: any, contract: any): Promise<any | null
   return null;
 }
 
+// Signing from the host proposals drawer (pitches.signContract) must land on the
+// contracts table with the same side effects as contracts.update — it's the
+// billable record. The pitch sends its own notifications, so none are sent here.
+export async function stampContractSignature(ctx: any, contractId: string, party: "host" | "creator") {
+  const before = await ctx.db.get(contractId as any);
+  if (!before) return;
+  const b = before as any;
+  if (b[`${party}_signed`]) return;
+  const after = { ...b, [`${party}_signed`]: true, [`${party}_signed_at`]: new Date().toISOString() };
+  after.status = after.creator_signed && after.host_signed ? "in_progress" : "pending";
+  await ctx.db.patch(b._id, {
+    [`${party}_signed`]: true,
+    [`${party}_signed_at`]: after[`${party}_signed_at`],
+    status: after.status,
+  });
+  await linkContractToCollab(ctx, after);
+  if (after.status === "in_progress") await pauseListingAtOfferLimit(ctx, after);
+}
+
 // Best-effort: drop a message into the contract's inbox thread (via the linked collab).
 async function postContractThreadMessage(ctx: any, contract: any, party: string, text: string) {
   const collabs = await ctx.db.query("collaborations").collect();

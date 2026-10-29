@@ -1035,7 +1035,8 @@ function ProposalDrawer({ proposal, onStatusChange, onCounter, onSign, onClose, 
             </div>
           </div>
 
-          {/* CREATOR actions (demo) */}
+          {/* CREATOR actions (demo) — sample proposals only; real creators respond from their own account */}
+          {!proposal.isReal && (
           <div style={{ padding: '14px 24px', borderBottom: '1px solid rgba(25,37,36,0.07)', background: 'rgba(239,236,233,0.3)' }}>
             <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--sage)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 10 }}>
               {t('drawer.creatorsResponse')} <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, color: 'var(--stone)' }}>{t('drawer.demo')}</span>
@@ -1060,6 +1061,7 @@ function ProposalDrawer({ proposal, onStatusChange, onCounter, onSign, onClose, 
               </button>
             </div>
           </div>
+          )}
         </div>
       )}
 
@@ -1412,6 +1414,21 @@ export default function HostProposals() {
       const convexCollabId = p.collaboration_id ? String(p.collaboration_id) : null;
       const collab = convexCollabId ? collabByConvexId[convexCollabId] : null;
       const contract = p.contract_id ? contractById[String(p.contract_id)] : null;
+      // The contracts row is the billable record and the only place a signature
+      // made on the phone or in /contract lands — it wins over the pitch copy.
+      if (contract) {
+        const version = base.contractHistory?.length ?? 0;
+        const sigs = base.signatures;
+        base.signatures = {
+          hostSignature: contract.host_signed ? (sigs.hostSignature || contract.host_name || 'Host') : null,
+          hostSignedAt: contract.host_signed ? (contract.host_signed_at || sigs.hostSignedAt) : null,
+          hostSignedVersion: contract.host_signed ? version : null,
+          creatorSignature: contract.creator_signed ? (sigs.creatorSignature || contract.creator_name || base.creator.name) : null,
+          creatorSignedAt: contract.creator_signed ? (contract.creator_signed_at || sigs.creatorSignedAt) : null,
+          creatorSignedVersion: contract.creator_signed ? version : null,
+        };
+        base.locked = !!(contract.host_signed && contract.creator_signed);
+      }
       return {
         ...base,
         convexCollabId,
@@ -1547,7 +1564,7 @@ export default function HostProposals() {
   function handleSendCounter(proposalId, fromParty, fields, note) {
     const target = allProposals.find((p) => p.id === proposalId);
     if (target?.isReal && target.convexId) {
-      sendCounterCvx({ id: target.convexId, fromParty, fields, note }).catch(() => {});
+      sendCounterCvx({ id: target.convexId, fromParty, fields, note }).catch((e) => window.alert(e?.data || e?.message || "Couldn't send the counter. Try again."));
       setCounterModal(null);
       return;
     }
@@ -1573,7 +1590,7 @@ export default function HostProposals() {
   function handleSign(proposalId, party, signerName) {
     const target = allProposals.find((p) => p.id === proposalId);
     if (target?.isReal && target.convexId) {
-      signContractCvx({ id: target.convexId, party, signerName }).catch(() => {});
+      signContractCvx({ id: target.convexId, party, signerName }).catch((e) => window.alert(e?.data || e?.message || "Couldn't save your signature. Try again."));
       setSignModal(null);
       return;
     }

@@ -806,6 +806,11 @@ const CLERK_ISSUER = (process.env.CLERK_FRONTEND_API_URL ?? "https://clerk.colla
 const mcpResource = () => `${process.env.CONVEX_SITE_URL}/mcp`;
 const resourceMetadataUrl = () => `${process.env.CONVEX_SITE_URL}/.well-known/oauth-protected-resource`;
 
+// Clerk opaque OAuth tokens are "oat_…"; JWT-format ones are three base64url
+// segments. Anything else is junk and never reaches Clerk's API.
+const looksLikeClerkToken = (t: string) =>
+  t.length <= 4096 && (/^oat_[A-Za-z0-9_-]+$/.test(t) || /^[\w-]+\.[\w-]+\.[\w-]+$/.test(t));
+
 async function verifyClerkOAuthToken(token: string): Promise<string | null> {
   const key = process.env.CLERK_SECRET_KEY;
   if (!key || !token) return null;
@@ -871,7 +876,13 @@ http.route({
     let auth: { keyId: any; profileId: string } | null = null;
     if (token.startsWith("cnb_")) {
       auth = await ctx.runQuery(internal.mcp.resolveKey, { keyHash: await sha256Hex(token) });
-    } else {
+    } else if (looksLikeClerkToken(token)) {
+      const ip = (request.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() || "unknown";
+      try {
+        await ctx.runMutation(internal.mcp.checkOAuthVerifyBudget, { ip });
+      } catch {
+        return mcpJson(rpcError(null, -32002, "Too many sign-in attempts — try again in a few minutes."), 429);
+      }
       const clerkUserId = await verifyClerkOAuthToken(token);
       if (clerkUserId) auth = await ctx.runQuery(internal.mcp.resolveClerkUser, { clerkUserId });
     }
@@ -946,6 +957,7 @@ http.route({
     };
 
     if (Array.isArray(body)) {
+      if (body.length > 20) return mcpJson(rpcError(null, -32600, "Batch too large (max 20)."), 400);
       const out = (await Promise.all(body.map(handle))).filter((r) => r !== null);
       return out.length ? mcpJson(out) : new Response(null, { status: 202, headers: MCP_CORS });
     }

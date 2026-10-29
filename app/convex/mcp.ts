@@ -31,7 +31,7 @@ import { draftForOwner } from "./aiAssistant";
 const MAX_KEYS = 5;
 // Private beta: only admin accounts can create or use keys. Flip to false
 // (and drop the isAdmin check on the Settings link) to open it to everyone.
-export const MCP_ADMIN_ONLY = true;
+export const MCP_ADMIN_ONLY = false;
 
 export async function sha256Hex(input: string): Promise<string> {
   const bytes = new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(input)));
@@ -137,6 +137,13 @@ export const resolveClerkUser = internalQuery({
     if (!profile || profile.is_deleted === true) return null;
     if (MCP_ADMIN_ONLY && profile.is_admin !== true) return null;
     return { keyId: null, profileId: String(profile._id) };
+  },
+});
+
+export const checkOAuthVerifyBudget = internalMutation({
+  args: { ip: v.string() },
+  handler: async (ctx, { ip }) => {
+    await enforceRateLimit(ctx, `mcp-oauth:${ip}`, RATE_LIMITS.MCP_OAUTH_VERIFY);
   },
 });
 

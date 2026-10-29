@@ -559,7 +559,7 @@ export default function Settings() {
       ? { label: t('quickLinks.adminDashboard'), onClick: () => navigate('/admin') }
       : { label: t('quickLinks.setupChecklist'), onClick: reopenChecklist },
     { label: t('quickLinks.aiAssistant'), onClick: () => goProfile('aiassistant') },
-    isAdmin && { label: t('quickLinks.agentAccess'), onClick: () => setShowAgentAccess(true) },
+    { label: t('quickLinks.agentAccess'), onClick: () => setShowAgentAccess(true) },
     { label: t('quickLinks.demoTour'), onClick: () => { localStorage.removeItem('collabnb_demo_dismissed'); navigate('/collabs'); } },
   ].filter(Boolean);
 

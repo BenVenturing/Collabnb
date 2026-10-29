@@ -31,6 +31,7 @@ export const RATE_LIMITS = {
   AI_DRAFT: { max: 20, windowMs: 60 * 60 * 1000 },            // aiAssistant.draftReply — 20/hour per user, caps Collabnb's NVIDIA spend per user and guards a runaway loop burning a connected personal key
   SOCIAL_REFRESH: { max: 5, windowMs: 24 * 60 * 60 * 1000 },  // creatorSocial.syncMine — 5 manual stat refreshes/day per creator (daily cron covers the rest; protects Meta/TikTok API quotas)
   MCP_CALL: { max: 300, windowMs: 60 * 60 * 1000 },          // POST /mcp tool calls — 300/hour per user, caps a runaway agent loop (writes still hit their own limits above)
+  MCP_OAUTH_VERIFY: { max: 120, windowMs: 10 * 60 * 1000 },  // POST /mcp OAuth token checks — 120/10min per IP, stops unauthenticated spam from burning the Clerk Backend API quota
   SOCIAL_LINK_ADD: { max: 30, windowMs: 24 * 60 * 60 * 1000 }, // creatorSocial.addPortfolioUrl — 30/day per creator (each add can hit an external oEmbed/API)
 } as const;
 

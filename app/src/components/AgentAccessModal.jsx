@@ -56,6 +56,23 @@ export default function AgentAccessModal({ onClose }) {
           {t('agent.body', 'Run your Collabnb account from Claude, Codex, Grok, Hermes or any MCP-compatible agent: search and apply to stays, review applicants, read, draft and send replies, edit listings, manage saved stays and check your stats. Agents act as you, but can never pay, sign contracts or publish.')}
         </p>
 
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem', marginBottom: '1.5rem', padding: '1rem', borderRadius: '1rem', background: 'rgba(209,235,219,0.25)' }}>
+          <span style={label}>{t('agent.signInTitle', 'Claude.ai & Claude Desktop — sign in, no key needed')}</span>
+          <ol style={{ margin: 0, paddingLeft: '1.1rem', fontSize: '0.78rem', color: 'var(--slate)', lineHeight: 1.6 }}>
+            <li>{t('agent.signInStep1', 'In Claude, open Settings → Connectors → Add custom connector.')}</li>
+            <li>{t('agent.signInStep2', 'Name it "Collabnb" and paste this URL:')}</li>
+          </ol>
+          <CopyBlock text={MCP_URL} t={t} />
+          <ol start={3} style={{ margin: 0, paddingLeft: '1.1rem', fontSize: '0.78rem', color: 'var(--slate)', lineHeight: 1.6 }}>
+            <li>{t('agent.signInStep3', 'Click Add, then Connect, and sign in with your Collabnb account.')}</li>
+          </ol>
+          <p style={{ fontSize: '0.72rem', color: 'var(--sage)', margin: 0, lineHeight: 1.5 }}>
+            {t('agent.signInNote', 'Works with any agent that supports MCP sign-in (OAuth). To disconnect, remove the connector in Claude.')}
+          </p>
+        </div>
+
+        <span style={label}>{t('agent.apiKeyTitle', 'Or use an API key (Claude Code, Codex, Cursor, Grok, Hermes)')}</span>
+
         {newKey ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1.5rem' }}>
             <div style={{ padding: '0.75rem 1rem', borderRadius: '0.875rem', background: 'rgba(255,200,80,0.18)', fontSize: '0.78rem', color: 'var(--slate)', fontWeight: 600 }}>

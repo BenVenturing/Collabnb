@@ -371,14 +371,15 @@ export default function AdminDashboard() {
         >
           <span style={{ display: 'flex', alignItems: 'center', color: isActive ? '#192524' : '#3C5759', opacity: isActive ? 1 : 0.7 }}>{ICONS[group.icon]}</span>
           <span style={{ flex: 1 }}>{group.label}</span>
-          {groupBadge(group) > 0 && (
+          {!expanded && groupBadge(group) > 0 ? (
             <span style={{ fontSize: '0.65rem', fontWeight: 700, background: '#D1EBDB', color: '#166534', borderRadius: '99px', padding: '0 0.4rem', lineHeight: 1.7 }}>
               {groupBadge(group)}
             </span>
+          ) : (
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ transition: 'transform 150ms', transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)', opacity: 0.5 }}>
+              <path d="M9 18l6-6-6-6"/>
+            </svg>
           )}
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ transition: 'transform 150ms', transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)', opacity: 0.5 }}>
-            <path d="M9 18l6-6-6-6"/>
-          </svg>
         </button>
         {expanded && group.tabs.map(renderSubTab)}
       </div>

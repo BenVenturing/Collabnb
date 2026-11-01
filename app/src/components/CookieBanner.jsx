@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 // Compact first-party cookie notice, bottom-left, shown once per browser.
 // "Review" expands more detail in-place; tracking runs by default (not a gate).
 const ACK_KEY = 'cnb_cookie_ack';
+const SHOW_DELAY_MS = 30000;
 
 const CookieIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -18,11 +19,15 @@ const CookieIcon = () => (
 
 export default function CookieBanner() {
   const { t } = useTranslation('cookieBanner');
-  const [show, setShow] = useState(() => {
-    try { return localStorage.getItem(ACK_KEY) !== '1'; } catch { return false; }
-  });
+  const [show, setShow] = useState(false);
   const [leaving, setLeaving] = useState(false);
   const [expanded, setExpanded] = useState(false);
+
+  useEffect(() => {
+    try { if (localStorage.getItem(ACK_KEY) === '1') return; } catch { return; }
+    const timer = setTimeout(() => setShow(true), SHOW_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, []);
 
   if (!show) return null;
 

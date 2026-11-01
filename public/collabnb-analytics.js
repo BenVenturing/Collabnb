@@ -220,8 +220,11 @@
       box.addEventListener('mouseenter', function () { clearTimeout(autoTimer); });
       autoTimer = setTimeout(close, 10000);
       document.body.appendChild(box);
+      if (window.__cnbMusicLift) window.__cnbMusicLift();
     };
-    if (document.body) mount(); else document.addEventListener('DOMContentLoaded', mount);
+    setTimeout(function () {
+      if (document.body) mount(); else document.addEventListener('DOMContentLoaded', mount);
+    }, 30000);
   }
 
   // ── Background music widget (bottom-left, liquid glass) ──────────────────
@@ -297,7 +300,7 @@
 
       var wrap = document.createElement('div');
       wrap.className = 'cnb-mp-wrap';
-      wrap.style.bottom = (localStorage.getItem('cnb_cookie_ack') === '1') ? '.85rem' : 'calc(.85rem + 200px)';
+      wrap.style.bottom = document.querySelector('.cnb-cookie') ? 'calc(.85rem + 200px)' : '.85rem';
 
       var panel = document.createElement('div');
       panel.className = 'cnb-mp-panel cnb-mp-glass';
@@ -404,7 +407,8 @@
         }
       });
 
-      // Settle down to the true corner once the cookie notice closes.
+      // Make room while the cookie notice is up, then settle back to the true corner.
+      window.__cnbMusicLift = function () { wrap.style.bottom = 'calc(.85rem + 200px)'; };
       window.__cnbMusicSettle = function () { wrap.style.bottom = '.85rem'; };
 
       // Best-effort autoplay: try with sound, fall back to muted, fall back to idle.

@@ -151,6 +151,9 @@ export function CollabProvider({ children }) {
   // messaging a host before applying) — same "not otherwise loaded" gap as
   // the admin thread above, generalized to any real 1:1 thread.
   const incomingThreadsRaw = useQuery(api.threads.getIncomingForMe, ownerId ? {} : 'skip') ?? [];
+  // Threads I started: localStorage is per-browser, so on a fresh browser or
+  // after clearing site data they'd vanish and replies to them never show.
+  const myStartedThreadsRaw = useQuery(api.threads.getMine, ownerId ? {} : 'skip') ?? [];
   const convexContracts = useMemo(() => {
     if (!convexContractsRaw?.length) return null;
     return convexContractsRaw.map((c) => ({
@@ -847,10 +850,14 @@ export function CollabProvider({ children }) {
       result = [myAdminThread, ...result];
     }
     const knownKeys = new Set(result.map((t) => t.thread_key).filter(Boolean));
-    const newIncoming = incomingThreadsRaw.filter((t) => !knownKeys.has(t.thread_key));
+    const newIncoming = [...incomingThreadsRaw, ...myStartedThreadsRaw].filter((t) => {
+      if (!t.thread_key || knownKeys.has(t.thread_key)) return false;
+      knownKeys.add(t.thread_key);
+      return true;
+    });
     if (newIncoming.length) result = [...newIncoming, ...result];
     return result;
-  }, [threads, myAdminThread, incomingThreadsRaw]);
+  }, [threads, myAdminThread, incomingThreadsRaw, myStartedThreadsRaw]);
 
   // Give each listing conversation with the same counterpart its own color, so
   // the colors mean something without any manual setup. Only groups of 2+ are

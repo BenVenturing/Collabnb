@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQuery, useMutation } from 'convex/react';
+import { useQuery, useMutation, useAction } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { formatDate } from '../../lib/dateUtils';
 
@@ -49,22 +49,29 @@ function ActionBtn({ onClick, children, variant = 'default', disabled }) {
 
 const money = (n) => `$${(n || 0).toFixed(2)}`;
 
-function zoomInviteHref(a) {
-  const first = a.full_name.split(' ')[0];
-  const subject = `Collabnb Ambassador — quick Zoom call (${a.country})`;
-  const body = `Hi ${first},\n\nThanks for applying to be a Collabnb Ambassador for ${a.country}. Before we approve anyone we do a short 20-minute Zoom call to walk through how the program works, the hotel onboarding quota, and how you'd promote Collabnb.\n\nWhat times work for you this week? Reply with a few options and I'll send the link.\n\nBen\nCollabnb`;
-  return `mailto:${a.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-}
-
 // ─── Applications ─────────────────────────────────────────────────────────────
 function Applications() {
   const apps = useQuery(api.ambassadors.adminListApplications);
   const review = useMutation(api.ambassadors.adminReviewApplication);
+  const sendInvite = useAction(api.ambassadorInvite.adminSendInvite);
+  const [sending, setSending] = useState(null);
   const [expanded, setExpanded] = useState(null);
   const [showAll, setShowAll] = useState(false);
 
   const rows = (apps || []).filter(a => showAll || a.status === 'pending' || a.status === 'interview');
   const act = (args) => review(args).catch(err => window.alert(err.message));
+  const invite = async (a) => {
+    setSending(a._id);
+    try {
+      await sendInvite({ id: a._id });
+      if (a.status === 'pending') await review({ id: a._id, decision: 'interview' });
+      window.alert(`Invite sent to ${a.email}`);
+    } catch (err) {
+      window.alert(err.message);
+    } finally {
+      setSending(null);
+    }
+  };
 
   return (
     <div>
@@ -94,10 +101,10 @@ function Applications() {
                 <span style={{ fontSize: '0.75rem', color: SAGE }}>{formatDate(a.created_at)}</span>
                 <Badge status={a.status} />
                 <div style={{ display: 'flex', gap: '0.3rem' }} onClick={e => e.stopPropagation()}>
-                  {a.status === 'pending' && (
-                    <a href={zoomInviteHref(a)} onClick={() => act({ id: a._id, decision: 'interview' })} style={{ textDecoration: 'none' }}>
-                      <ActionBtn>Invite to Zoom</ActionBtn>
-                    </a>
+                  {(a.status === 'pending' || a.status === 'interview') && (
+                    <ActionBtn disabled={sending === a._id} onClick={() => invite(a)}>
+                      {sending === a._id ? 'Sending…' : a.status === 'interview' ? 'Email times' : 'Invite to Zoom'}
+                    </ActionBtn>
                   )}
                   {a.status === 'interview' && (
                     <ActionBtn variant="check" onClick={() => act({ id: a._id, decision: 'approved' })}>Approve</ActionBtn>

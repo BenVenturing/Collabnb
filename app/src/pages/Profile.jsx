@@ -985,81 +985,71 @@ export default function Profile() {
         </section>
 
         {/* ── Stats card ─────────────────────────────────────────────────── */}
-        <div className="glass section-reveal" ref={(el) => sectionsRef.current[0] = el} style={{ padding: '0.875rem 1.25rem', marginBottom: '1.5rem' }}>
-          {(() => {
-            const collabERs = collabs.filter((c) => c.content_er != null).map((c) => c.content_er);
-            const contentER = collabERs.length > 0 ? parseFloat((collabERs.reduce((a, b) => a + b, 0) / collabERs.length).toFixed(2)) : null;
-            const isCreator = dp.role === 'creator';
-            // ER only shows once it comes from a connected account's live sync
-            const liveER = !!(dp.metrics_synced_at && dp.engagement_rate);
-            const stats = isCreator ? [
-              { value: dp.collab_count ?? 0,                                    label: t('stats.collabs'),    tooltip: null },
-              { value: fmtFollowers(dp.follower_count),                          label: t('stats.followers'),  tooltip: null },
-              liveER && { value: `${dp.engagement_rate}%`,                     label: t('stats.profileEr'), tooltip: null },
-              contentER != null && { value: `${contentER}%`,                   label: t('stats.contentEr'), tooltip: t('stats.contentErTooltip') },
-            ].filter(Boolean) : [
-              { value: dp.collab_count ?? 0,                                    label: t('stats.collabs'),    tooltip: null },
-              { value: fmtFollowers(dp.follower_count),                          label: t('stats.followers'),  tooltip: null },
-              liveER && { value: `${dp.engagement_rate}%`,                     label: t('stats.engagement'), tooltip: null },
-            ].filter(Boolean);
-            const cols = isMobile && stats.length === 4 ? 2 : stats.length;
-            return (
-              <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, rowGap: cols < stats.length ? '0.875rem' : 0 }}>
-                {stats.map((stat, i) => {
-                  const lastInRow = (i % cols) === cols - 1;
-                  return (
-                  <div key={stat.label} title={stat.tooltip || undefined} style={{ textAlign: 'center', padding: '0.25rem 0.5rem', borderRight: lastInRow ? 'none' : '1px solid rgba(25,37,36,0.06)', cursor: stat.tooltip ? 'help' : 'default' }}>
-                    <p style={{ fontFamily: 'var(--font-display)', fontSize: isCreator ? '1.15rem' : '1.3rem', fontWeight: 800, color: 'var(--ink)', margin: '0 0 0.1rem', lineHeight: 1.2 }}>{stat.value}</p>
-                    <p style={{ fontSize: '0.68rem', color: 'var(--sage)', margin: 0 }}>
-                      {stat.label}{stat.tooltip && <span style={{ marginLeft: '0.2rem', opacity: 0.55, fontSize: '0.65rem' }}>ⓘ</span>}
-                    </p>
-                  </div>
-                  );
-                })}
-              </div>
-            );
-          })()}
-          {(() => {
-            const platforms = [
-              dp.metrics_instagram_followers && `IG ${fmtFollowers(dp.metrics_instagram_followers)}`,
-              dp.metrics_tiktok_followers    && `TT ${fmtFollowers(dp.metrics_tiktok_followers)}`,
-              dp.metrics_youtube_subscribers && `YT ${fmtFollowers(dp.metrics_youtube_subscribers)}`,
-            ].filter(Boolean);
-            const lastUpdate = Math.max(dp.metrics_updated_at ?? 0, dp.metrics_synced_at ?? 0) || null;
-            const days = lastUpdate ? Math.floor((Date.now() - lastUpdate) / (1000 * 60 * 60 * 24)) : null;
-            const updated = days == null ? t('updated.justNow') : days === 0 ? t('updated.today') : t('updated.daysAgo', { count: days });
-            // A single-platform breakdown just repeats the Followers total
-            const igConn = (socialConnections ?? []).find((c) => c.platform === 'instagram');
-            const canLinkIg = dp.role === 'creator' && socialConnections !== undefined && socialStatus?.enabled && socialStatus?.instagram && (!igConn || igConn.needs_reconnect);
-            return (
-              <div style={{ textAlign: 'center', margin: '0.625rem 0 0', paddingTop: '0.5rem', borderTop: '1px solid rgba(25,37,36,0.06)' }}>
-                {canLinkIg && (
-                  <button
-                    type="button"
-                    className="btn-primary"
-                    disabled={igLinking}
-                    onClick={async () => {
-                      setIgLinking(true);
-                      try { const { url } = await startSocialConnect({ platform: 'instagram' }); window.location.href = url; }
-                      catch { setIgLinking(false); }
-                    }}
-                    style={{ fontSize: '0.78rem', padding: '0.45rem 1rem', margin: '0 0 0.5rem' }}
-                  >
-                    {igLinking ? 'Opening Instagram…' : igConn ? 'Reconnect Instagram' : 'Connect Instagram · live stats'}
-                  </button>
-                )}
-                <button
-                  type="button"
-                  onClick={refreshStats}
-                  disabled={statsRefresh.busy}
-                  style={{ background: 'none', border: 'none', padding: 0, font: 'inherit', fontSize: '0.68rem', color: 'var(--sage)', opacity: statsRefresh.busy ? 0.5 : 0.85, cursor: 'pointer' }}
-                >
-                  {statsRefresh.msg || [...(platforms.length > 1 ? platforms : []), updated].join('  ·  ')}
-                </button>
-              </div>
-            );
-          })()}
-        </div>
+        {(() => {
+          const isCreator = dp.role === 'creator';
+          const igConn = (socialConnections ?? []).find((c) => c.platform === 'instagram');
+          const igLive = !!(igConn && !igConn.needs_reconnect && dp.metrics_synced_at);
+          const canLinkIg = isCreator && socialConnections !== undefined && socialStatus?.enabled && socialStatus?.instagram && (!igConn || igConn.needs_reconnect);
+          const collabERs = collabs.filter((c) => c.content_er != null).map((c) => c.content_er);
+          const contentER = collabERs.length > 0 ? parseFloat((collabERs.reduce((a, b) => a + b, 0) / collabERs.length).toFixed(2)) : null;
+          const liveER = igLive && !!dp.engagement_rate;
+          // Creators see numbers only once they come from a connected, synced account
+          const stats = (isCreator ? igLive : true) ? [
+            (isCreator ? realCompletedCollabs.length > 0 : true) && { value: isCreator ? realCompletedCollabs.length : (dp.collab_count ?? 0), label: t('stats.collabs'), tooltip: null },
+            { value: fmtFollowers(dp.follower_count), label: t('stats.followers'), tooltip: null },
+            liveER && { value: `${dp.engagement_rate}%`, label: isCreator ? t('stats.profileEr') : t('stats.engagement'), tooltip: null },
+            isCreator && contentER != null && { value: `${contentER}%`, label: t('stats.contentEr'), tooltip: t('stats.contentErTooltip') },
+          ].filter(Boolean) : [];
+          if (isCreator && stats.length === 0 && !canLinkIg) return null;
+          const cols = Math.max(1, isMobile && stats.length === 4 ? 2 : stats.length);
+          return (
+            <div className="glass section-reveal" ref={(el) => sectionsRef.current[0] = el} style={{ padding: '0.875rem 1.25rem', marginBottom: '1.5rem' }}>
+              {stats.length > 0 && (
+                <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, rowGap: cols < stats.length ? '0.875rem' : 0 }}>
+                  {stats.map((stat, i) => {
+                    const lastInRow = (i % cols) === cols - 1;
+                    return (
+                      <div key={stat.label} title={stat.tooltip || undefined} style={{ textAlign: 'center', padding: '0.25rem 0.5rem', borderRight: lastInRow ? 'none' : '1px solid rgba(25,37,36,0.06)', cursor: stat.tooltip ? 'help' : 'default' }}>
+                        <p style={{ fontFamily: 'var(--font-display)', fontSize: isCreator ? '1.15rem' : '1.3rem', fontWeight: 800, color: 'var(--ink)', margin: '0 0 0.1rem', lineHeight: 1.2 }}>{stat.value}</p>
+                        <p style={{ fontSize: '0.68rem', color: 'var(--sage)', margin: 0 }}>
+                          {stat.label}{stat.tooltip && <span style={{ marginLeft: '0.2rem', opacity: 0.55, fontSize: '0.65rem' }}>ⓘ</span>}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              {isCreator && (
+                <div style={{ textAlign: 'center', margin: stats.length > 0 ? '0.625rem 0 0' : 0, paddingTop: stats.length > 0 ? '0.5rem' : 0, borderTop: stats.length > 0 ? '1px solid rgba(25,37,36,0.06)' : 'none' }}>
+                  {canLinkIg ? (
+                    <button
+                      type="button"
+                      className="btn-primary"
+                      disabled={igLinking}
+                      onClick={async () => {
+                        setIgLinking(true);
+                        try { const { url } = await startSocialConnect({ platform: 'instagram' }); window.location.href = url; }
+                        catch { setIgLinking(false); }
+                      }}
+                      style={{ fontSize: '0.8rem', padding: '0.5rem 1.25rem' }}
+                    >
+                      {igLinking ? 'Opening Instagram…' : igConn ? 'Reconnect Instagram' : 'Connect Instagram · live stats'}
+                    </button>
+                  ) : igLive ? (
+                    <button
+                      type="button"
+                      onClick={refreshStats}
+                      disabled={statsRefresh.busy}
+                      style={{ background: 'none', border: 'none', padding: 0, font: 'inherit', fontSize: '0.72rem', fontWeight: 600, color: 'var(--sage)', opacity: statsRefresh.busy ? 0.5 : 1, cursor: 'pointer' }}
+                    >
+                      {statsRefresh.msg || '↻ Refresh'}
+                    </button>
+                  ) : null}
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         {/* ── Bio ──────────────────────────────────────────────────────────── */}
         {dp.bio && (

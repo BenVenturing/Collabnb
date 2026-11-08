@@ -760,6 +760,7 @@ export default defineSchema({
     source: v.string(),                  // 'manual' | 'apify' | 'csv' | 'referral'
     status: v.string(),                  // 'new' | 'queued' | 'emailed' | 'contacted' | 'replied' | 'signed' | 'declined' ('emailed'/'contacted' are host-only pipeline stages — see CRM_COLUMNS)
     dm_draft: v.optional(v.string()),
+    brief_sent_at: v.optional(v.number()), // set when the audit/brief PDF has been sent to this prospect
     notes: v.optional(v.string()),
     // Host outreach pipeline reuses `status` for its Kanban stage (queued ->
     // emailed -> contacted -> replied), same field the CRM board already
@@ -1141,8 +1142,9 @@ export default defineSchema({
     // (defaults to the join page) — the redirect also tags the visit with
     // ?igref=<token> so a completed signup can be attributed back here.
     signup_url: v.optional(v.string()),
-    tier2_message: v.optional(v.string()), // no click, ~24h later
-    tier3_message: v.optional(v.string()), // clicked but no signup, ~48-72h later
+    short_path: v.optional(v.string()), // {{link}} renders as collabnb.com/<short_path>/<token>; needs a matching public/_redirects entry
+    tier2_message: v.optional(v.string()), // ~24h later, unless they signed up
+    tier3_message: v.optional(v.string()), // ~72h later, unless they signed up
     tier4_message: v.optional(v.string()), // sent right after signup completes (welcome + follow-ask)
   }),
 
@@ -1164,6 +1166,7 @@ export default defineSchema({
     tier2_sent_at: v.optional(v.number()),
     tier3_sent_at: v.optional(v.number()),
     tier4_sent_at: v.optional(v.number()),
+    followup_error: v.optional(v.string()), // latest Meta rejection for a follow-up DM; retried on the next cron tick
   })
     .index("by_comment", ["comment_id"])
     .index("by_ref_token", ["ref_token"])

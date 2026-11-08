@@ -24,6 +24,7 @@ import { enforceRateLimit, RATE_LIMITS } from "./lib/rateLimit";
 //   CREATOR_SOCIAL_ENABLED   "true" to turn the Connect buttons on
 //   CREATOR_SOCIAL_APP_URL   where OAuth callbacks send the user back, e.g. https://collabnb.com
 //   IG_LOGIN_APP_ID / IG_LOGIN_APP_SECRET   "Instagram API with Instagram Login" app (NOT the Facebook app id)
+//   IG_LOGIN_CONFIG_ID   set when using Meta Unified login (facebook.com dialog); app id/secret are then the Meta app's
 //   TIKTOK_CLIENT_KEY / TIKTOK_CLIENT_SECRET
 //   YOUTUBE_API_KEY
 //   AI_KEY_ENCRYPTION_SECRET (already set — reused to encrypt tokens at rest)
@@ -133,6 +134,11 @@ const clip = (s: unknown, n = 300) => (typeof s === "string" ? s.slice(0, n) : u
 // ─── Provider adapters ────────────────────────────────────────────────────────
 
 const IG_GRAPH = "https://graph.instagram.com/v21.0";
+const FB_GRAPH = "https://graph.facebook.com/v21.0";
+// Unified login (facebook.com dialog + config_id) hands back Facebook user tokens ("EAA…"),
+// which only work on graph.facebook.com; Instagram Login tokens ("IG…") use graph.instagram.com.
+const igGraph = (token: string) => (token.startsWith("IG") ? IG_GRAPH : FB_GRAPH);
+const usesUnifiedLogin = () => !!process.env.IG_LOGIN_CONFIG_ID;
 const IG_POST_FIELDS = "id,caption,media_type,media_product_type,thumbnail_url,media_url,permalink,timestamp,like_count,comments_count";
 
 function normalizeIgPost(m: any): NormalizedPost | null {
@@ -153,7 +159,7 @@ function normalizeIgPost(m: any): NormalizedPost | null {
 
 async function igViews(id: string, token: string): Promise<number | undefined> {
   try {
-    const r = await fetch(`${IG_GRAPH}/${id}/insights?metric=views&access_token=${token}`);
+    const r = await fetch(`${igGraph(token)}/${id}/insights?metric=views&access_token=${token}`);
     if (!r.ok) return undefined;
     const j = await r.json();
     return j?.data?.[0]?.values?.[0]?.value;
@@ -162,13 +168,38 @@ async function igViews(id: string, token: string): Promise<number | undefined> {
   }
 }
 
+// Facebook tokens name the granted IG account in the token's granular scopes (no Page
+// needed); older grants reach it through the Page the account is linked to.
+async function igUserNode(token: string): Promise<string> {
+  if (token.startsWith("IG")) return "me";
+  const appToken = `${process.env.IG_LOGIN_APP_ID}|${process.env.IG_LOGIN_APP_SECRET}`;
+  const dbg = await fetch(`${FB_GRAPH}/debug_token?input_token=${token}&access_token=${encodeURIComponent(appToken)}`);
+  if (dbg.ok) {
+    const scopes: any[] = (await dbg.json())?.data?.granular_scopes ?? [];
+    const ig = scopes.find((g) => g.scope?.startsWith("instagram_") && g.target_ids?.length);
+    if (ig) return String(ig.target_ids[0]);
+  }
+  const r = await fetch(`${FB_GRAPH}/me/accounts?fields=instagram_business_account&access_token=${token}`);
+  if (!r.ok) throw new ProviderError(r.status, await r.text().catch(() => ""));
+  const page = ((await r.json()).data || []).find((p: any) => p.instagram_business_account?.id);
+  if (!page) throw new Error("No Instagram business account found — link your Instagram to a Facebook Page, then reconnect.");
+  return String(page.instagram_business_account.id);
+}
+
 async function igSnapshot(token: string, withViews: boolean): Promise<Snapshot> {
-  const me = await fetch(
-    `${IG_GRAPH}/me?fields=user_id,username,followers_count,media_count&access_token=${token}`
-  );
+  const base = igGraph(token);
+  const node = await igUserNode(token);
+  const fields = node === "me" ? "user_id,username,followers_count,media_count" : "id,username,followers_count,media_count";
+  const me = await fetch(`${base}/${node}?fields=${fields}&access_token=${token}`);
   if (!me.ok) throw new ProviderError(me.status, await me.text().catch(() => ""));
   const profile = await me.json();
-  const media = await fetch(`${IG_GRAPH}/me/media?fields=${IG_POST_FIELDS}&limit=25&access_token=${token}`);
+  if (!profile?.username) {
+    throw new Error(`Meta returned no Instagram profile (token ${token.slice(0, 3)}…, node ${node}, got ${JSON.stringify(profile).slice(0, 120)})`);
+  }
+  if (typeof profile.followers_count !== "number") {
+    throw new Error(`Meta returned @${profile.username} but no follower count (node ${node}, got ${JSON.stringify(profile).slice(0, 120)})`);
+  }
+  const media = await fetch(`${base}/${node}/media?fields=${IG_POST_FIELDS}&limit=25&access_token=${token}`);
   const list = media.ok ? await media.json() : { data: [] };
   const posts = ((list.data || []) as any[]).map(normalizeIgPost).filter(Boolean) as NormalizedPost[];
   if (withViews) {
@@ -191,7 +222,7 @@ async function igPostsByIds(token: string, ids: string[]): Promise<NormalizedPos
   const out: NormalizedPost[] = [];
   for (const id of ids) {
     if (!DIGITS_RE.test(id)) continue;
-    const r = await fetch(`${IG_GRAPH}/${id}?fields=${IG_POST_FIELDS}&access_token=${token}`);
+    const r = await fetch(`${igGraph(token)}/${id}?fields=${IG_POST_FIELDS}&access_token=${token}`);
     if (!r.ok) continue;
     const post = normalizeIgPost(await r.json());
     if (post) {
@@ -465,6 +496,17 @@ export const startConnect = action({
     if (platform === "instagram") {
       const appId = process.env.IG_LOGIN_APP_ID;
       if (!appId) throw new ConvexError("Instagram linking isn't configured yet.");
+      if (usesUnifiedLogin()) {
+        const fq = new URLSearchParams({
+          client_id: appId,
+          config_id: process.env.IG_LOGIN_CONFIG_ID!,
+          redirect_uri: callbackUrl("instagram"),
+          response_type: "code",
+          override_default_response_type: "true",
+          state,
+        });
+        return { url: `https://www.facebook.com/v21.0/dialog/oauth?${fq}` };
+      }
       const q = new URLSearchParams({
         client_id: appId,
         redirect_uri: callbackUrl("instagram"),
@@ -551,7 +593,21 @@ export const handleOAuthCallback = internalAction({
       let expiresAt: number | undefined;
       let refreshExpiresAt: number | undefined;
 
-      if (platform === "instagram") {
+      if (platform === "instagram" && usesUnifiedLogin()) {
+        const ex = (params: Record<string, string>) =>
+          fetch(`${FB_GRAPH}/oauth/access_token?${new URLSearchParams({
+            client_id: process.env.IG_LOGIN_APP_ID!,
+            client_secret: process.env.IG_LOGIN_APP_SECRET!,
+            ...params,
+          })}`);
+        const short = await ex({ redirect_uri: callbackUrl("instagram"), code: code.replace(/#_$/, "") });
+        if (!short.ok) throw new ProviderError(short.status, await short.text().catch(() => ""));
+        const shortTok = (await short.json()).access_token;
+        const long = await ex({ grant_type: "fb_exchange_token", fb_exchange_token: shortTok });
+        const lj = long.ok ? await long.json() : { access_token: shortTok, expires_in: 3600 };
+        accessToken = lj.access_token;
+        expiresAt = Date.now() + (lj.expires_in ?? 60 * DAY / 1000) * 1000;
+      } else if (platform === "instagram") {
         const short = await fetch("https://api.instagram.com/oauth/access_token", {
           method: "POST",
           body: new URLSearchParams({
@@ -680,6 +736,14 @@ async function getFreshToken(ctx: any, conn: any): Promise<string | null> {
   if (conn.platform === "instagram") {
     let token = await decryptSecret(conn.access_token_enc, conn.access_token_iv);
     // Long-lived IG tokens last 60 days and refresh only once ≥24h old.
+    if (!token.startsWith("IG")) {
+      // Facebook user tokens can't be refreshed server-side; the creator reconnects after ~60 days.
+      if (conn.expires_at && conn.expires_at < now) {
+        await ctx.runMutation(internal.creatorSocial.markNeedsReconnect, { connectionId: conn._id });
+        return null;
+      }
+      return token;
+    }
     if (conn.expires_at && conn.expires_at - now < 15 * DAY) {
       const r = await fetch(
         `https://graph.instagram.com/refresh_access_token?grant_type=ig_refresh_token&access_token=${token}`
@@ -792,7 +856,10 @@ export const syncConnection = internalAction({
     if (!conn) return { ok: false };
     try {
       const snap = await snapshotFor(ctx, conn);
-      if (!snap) return { ok: false };
+      if (!snap) {
+        await ctx.runMutation(internal.creatorSocial.recordSyncError, { connectionId: conn._id, error: "No usable access token stored — reconnect." });
+        return { ok: false };
+      }
       await ctx.runMutation(internal.creatorSocial.applySnapshot, {
         connectionId: conn._id,
         handle: snap.handle,
@@ -811,7 +878,9 @@ export const syncConnection = internalAction({
       });
       return { ok: true };
     } catch (e: any) {
-      const detail = e instanceof ProviderError ? `HTTP ${e.status}` : String(e?.message ?? e).slice(0, 120);
+      const detail = e instanceof ProviderError
+        ? `HTTP ${e.status}: ${String(e.detail).slice(0, 200)}`
+        : String(e?.message ?? e).slice(0, 200);
       console.error(`creatorSocial sync ${platform} failed for ${profileId}:`, detail);
       await ctx.runMutation(internal.creatorSocial.recordSyncError, { connectionId: conn._id, error: detail });
       // 401/403 from the provider means the grant is gone.

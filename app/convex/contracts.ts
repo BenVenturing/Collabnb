@@ -1012,3 +1012,27 @@ export const backfillContractParties = internalMutation({
     return { filled, total: contracts.length };
   },
 });
+
+// One-off: contracts whose host is the "Collabnb" placeholder (or has no
+// resolvable host profile) never load for any host. Tie them to Ben so he can
+// answer them from the host side. Run: npx convex run contracts:tieSampleContractsToBen
+export const tieSampleContractsToBen = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const ben = await ctx.db
+      .query("profiles")
+      .withIndex("by_email", (q) => q.eq("email", "benventuring@gmail.com"))
+      .unique();
+    if (!ben) return { ok: false, reason: "no_ben_profile" };
+    const benId = String(ben._id);
+    const all = await ctx.db.query("contracts").collect();
+    const tied: string[] = [];
+    for (const c of all as any[]) {
+      if (c.host_id) continue;
+      if ((c.host_name || "").toLowerCase().trim() !== "collabnb") continue;
+      await ctx.db.patch(c._id, { host_id: benId });
+      tied.push(`${c.creator_name} / ${c.property_name}`);
+    }
+    return { ok: true, tied };
+  },
+});

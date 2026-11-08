@@ -11,6 +11,8 @@
 import type * as admin from "../admin.js";
 import type * as adminThreads from "../adminThreads.js";
 import type * as aiAssistant from "../aiAssistant.js";
+import type * as ambassadorInvite from "../ambassadorInvite.js";
+import type * as ambassadorInviteHtml from "../ambassadorInviteHtml.js";
 import type * as ambassadors from "../ambassadors.js";
 import type * as analytics from "../analytics.js";
 import type * as appleWallet from "../appleWallet.js";
@@ -86,6 +88,8 @@ declare const fullApi: ApiFromModules<{
   admin: typeof admin;
   adminThreads: typeof adminThreads;
   aiAssistant: typeof aiAssistant;
+  ambassadorInvite: typeof ambassadorInvite;
+  ambassadorInviteHtml: typeof ambassadorInviteHtml;
   ambassadors: typeof ambassadors;
   analytics: typeof analytics;
   appleWallet: typeof appleWallet;

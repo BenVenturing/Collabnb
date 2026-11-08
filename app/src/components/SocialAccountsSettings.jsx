@@ -79,6 +79,9 @@ export default function SocialAccountsSettings() {
                     : t('social.connectedLine', { handle: c.handle ?? '', count: c.follower_count ?? 0 })
                   : t(p === 'instagram' ? 'social.igDesc' : 'social.ttDesc')}
               </p>
+              {c?.sync_error && (
+                <p style={{ ...sub, fontSize: '0.72rem', marginTop: '0.15rem', color: '#dc2626', wordBreak: 'break-word' }}>{c.sync_error}</p>
+              )}
               {c && !c.needs_reconnect && (
                 <p style={{ ...sub, fontSize: '0.74rem', marginTop: '0.15rem' }}>
                   {c.last_synced_at ? t('social.lastRefreshed', { date: fmtDate(c.last_synced_at) }) : t('social.neverRefreshed')}

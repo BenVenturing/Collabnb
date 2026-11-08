@@ -214,6 +214,7 @@ function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
   const sendHostEmailNow = useAction(api.prospects.sendHostEmailNow);
   const sendCreatorEmailNow = useAction(api.prospects.sendCreatorEmailNow);
   const markWhatsapped = useMutation(api.prospects.markWhatsapped);
+  const toggleBriefSent = useMutation(api.prospects.toggleBriefSent);
   const toggleStarred = useMutation(api.prospects.toggleStarred);
   const toggleTarget = useMutation(api.prospects.toggleTarget);
   const setChainOverride = useMutation(api.prospects.setChainOverride);
@@ -551,6 +552,11 @@ function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
               placeholder="Country code + number, e.g. 15551234567" spellCheck={false}
               style={{ ...input, width: '100%' }} />
           </div>
+
+          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.78rem', fontWeight: 600, color: '#192524', cursor: 'pointer' }}>
+            <input type="checkbox" checked={!!prospect.brief_sent_at} onChange={() => toggleBriefSent({ id: prospect._id })} />
+            Brief sent{prospect.brief_sent_at ? ` · ${new Date(prospect.brief_sent_at).toLocaleDateString()}` : ''}
+          </label>
 
           {/* Profile analysis: score breakdown when enriched, Analyze button otherwise */}
           <div>

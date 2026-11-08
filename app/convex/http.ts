@@ -591,6 +591,7 @@ http.route({
           postId: value.media?.id ? String(value.media.id) : undefined,
           commentText: value.text,
           commenterUsername: value.from?.username ? String(value.from.username) : undefined,
+          commenterId: value.from?.id ? String(value.from.id) : undefined,
         });
       }
     }

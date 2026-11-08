@@ -15,3 +15,22 @@
 /admin /app/ 200
 /blog/* /app/ 200
 /welcome /app/ 200
+
+/collab /join?role=creator&join=true 302
+/collab/ /join?role=creator&join=true 302
+/collab/* /go/:splat 302
+/hosts /join?role=host&join=true 302
+/hosts/ /join?role=host&join=true 302
+/hosts/* /go/:splat 302
+/founder /join#founding 302
+/founder/ /join#founding 302
+/founder/* /go/:splat 302
+/referral /join#referral 302
+/referral/ /join#referral 302
+/referral/* /go/:splat 302
+/ambassador /ambassadors#apply 302
+/ambassador/ /ambassadors#apply 302
+/ambassador/* /go/:splat 302
+/plus /pricing/ 302
+/plus/ /pricing/ 302
+/plus/* /go/:splat 302

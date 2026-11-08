@@ -180,6 +180,14 @@ export const getByEmail = query({
       const self = (caller.email || "").toLowerCase().trim() === args.email.toLowerCase().trim();
       if (!self) return null;
     }
+    // New rows store the email lowercased but Clerk can return it mixed-case;
+    // the raw fallback covers rows written before that normalization.
+    const normalized = args.email.toLowerCase().trim();
+    const profile = await ctx.db
+      .query("profiles")
+      .withIndex("by_email", (q) => q.eq("email", normalized))
+      .unique();
+    if (profile || normalized === args.email) return profile;
     return await ctx.db
       .query("profiles")
       .withIndex("by_email", (q) => q.eq("email", args.email))

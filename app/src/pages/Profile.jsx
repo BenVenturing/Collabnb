@@ -543,6 +543,12 @@ export default function Profile() {
   const setActivePayoutMethodMutation = useMutation(api.profiles.setActivePayoutMethod);
   const disconnectPayoutMethodMutation = useMutation(api.profiles.disconnectPayoutMethod);
   const saveAiApiKey               = useAction(api.aiAssistant.saveApiKey);
+  const syncMine                   = useAction(api.creatorSocial.syncMine);
+  const socialConnections          = useQuery(api.creatorSocial.getMyConnections, {});
+  const socialStatus               = useQuery(api.creatorSocial.getStatus, {});
+  const startSocialConnect         = useAction(api.creatorSocial.startConnect);
+  const [igLinking, setIgLinking]  = useState(false);
+  const [statsRefresh, setStatsRefresh] = useState({ busy: false, msg: null });
   const disconnectAiApiKey         = useMutation(api.aiAssistant.disconnectApiKey);
   const generateUploadUrl          = useMutation(api.uploads.generateUploadUrl);
   const finalizeUpload             = useMutation(api.uploads.finalizeUpload);
@@ -839,6 +845,22 @@ export default function Profile() {
     }
   }
 
+  // Mirrors the mobile refresh: pulls live stats from linked accounts, 1h server cooldown
+  async function refreshStats() {
+    if (statsRefresh.busy) return;
+    const linked = (socialConnections ?? []).filter((c) => !c.needs_reconnect);
+    if (linked.length === 0) {
+      setStatsRefresh({ busy: false, msg: 'Link Instagram in Settings to refresh live stats' });
+    } else {
+      setStatsRefresh({ busy: true, msg: 'Refreshing…' });
+      const results = await Promise.allSettled(linked.map((c) => syncMine({ platform: c.platform })));
+      const cooled = results.some((r) => r.status === 'rejected' && String(r.reason?.data ?? r.reason).includes('cooldown'));
+      const ok = results.some((r) => r.status === 'fulfilled');
+      setStatsRefresh({ busy: false, msg: ok ? 'Stats updated' : cooled ? 'Already fresh, try again in an hour' : "Couldn't refresh right now" });
+    }
+    setTimeout(() => setStatsRefresh({ busy: false, msg: null }), 3000);
+  }
+
   function handleShare() {
     if (navigator.share) {
       navigator.share({ title: t('shareTitle', { name: dp.full_name }), url: window.location.href }).catch(() => {});
@@ -1003,13 +1025,38 @@ export default function Profile() {
               dp.metrics_tiktok_followers    && `TT ${fmtFollowers(dp.metrics_tiktok_followers)}`,
               dp.metrics_youtube_subscribers && `YT ${fmtFollowers(dp.metrics_youtube_subscribers)}`,
             ].filter(Boolean);
-            const days = dp.metrics_updated_at ? Math.floor((Date.now() - dp.metrics_updated_at) / (1000 * 60 * 60 * 24)) : null;
+            const lastUpdate = Math.max(dp.metrics_updated_at ?? 0, dp.metrics_synced_at ?? 0) || null;
+            const days = lastUpdate ? Math.floor((Date.now() - lastUpdate) / (1000 * 60 * 60 * 24)) : null;
             const updated = days == null ? t('updated.justNow') : days === 0 ? t('updated.today') : t('updated.daysAgo', { count: days });
             // A single-platform breakdown just repeats the Followers total
+            const igConn = (socialConnections ?? []).find((c) => c.platform === 'instagram');
+            const canLinkIg = dp.role === 'creator' && socialConnections !== undefined && socialStatus?.enabled && socialStatus?.instagram && (!igConn || igConn.needs_reconnect);
             return (
-              <p style={{ textAlign: 'center', fontSize: '0.68rem', color: 'var(--sage)', margin: '0.625rem 0 0', paddingTop: '0.5rem', borderTop: '1px solid rgba(25,37,36,0.06)', opacity: 0.85 }}>
-                {[...(platforms.length > 1 ? platforms : []), updated].join('  ·  ')}
-              </p>
+              <div style={{ textAlign: 'center', margin: '0.625rem 0 0', paddingTop: '0.5rem', borderTop: '1px solid rgba(25,37,36,0.06)' }}>
+                {canLinkIg && (
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    disabled={igLinking}
+                    onClick={async () => {
+                      setIgLinking(true);
+                      try { const { url } = await startSocialConnect({ platform: 'instagram' }); window.location.href = url; }
+                      catch { setIgLinking(false); }
+                    }}
+                    style={{ fontSize: '0.78rem', padding: '0.45rem 1rem', margin: '0 0 0.5rem' }}
+                  >
+                    {igLinking ? 'Opening Instagram…' : igConn ? 'Reconnect Instagram' : 'Connect Instagram · live stats'}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={refreshStats}
+                  disabled={statsRefresh.busy}
+                  style={{ background: 'none', border: 'none', padding: 0, font: 'inherit', fontSize: '0.68rem', color: 'var(--sage)', opacity: statsRefresh.busy ? 0.5 : 0.85, cursor: 'pointer' }}
+                >
+                  {statsRefresh.msg || [...(platforms.length > 1 ? platforms : []), updated].join('  ·  ')}
+                </button>
+              </div>
             );
           })()}
         </div>
@@ -1038,12 +1085,6 @@ export default function Profile() {
             {dp.youtube_handle   && <SocialRow icon={<YouTubeIcon />}   label={t('social.youtube')}   value={`@${dp.youtube_handle.replace(/^@/, '')}`}   href={`https://youtube.com/@${dp.youtube_handle.replace(/^@/, '')}`} />}
           </div>
         </section>
-
-        {dp.role === 'creator' && dp.username && (
-          <section style={{ marginBottom: '1.75rem' }}>
-            <SocialPortfolio username={dp.username} part="stats" />
-          </section>
-        )}
 
         {/* ── Past Collabs ─────────────────────────────────────────────────── */}
         <section className="section-reveal" ref={(el) => sectionsRef.current[3] = el} style={{ marginBottom: '1.75rem' }}>

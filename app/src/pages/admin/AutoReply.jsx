@@ -123,17 +123,17 @@ function RuleForm({ existing, onDone }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', padding: '0.75rem', borderRadius: '0.75rem', background: 'rgba(123,104,200,0.05)', border: '1px solid rgba(123,104,200,0.15)' }}>
           <div>
             <span style={label}>Signup page the tracked link redirects to (blank = default join page)</span>
-            <input value={signupUrl} onChange={(e) => setSignupUrl(e.target.value)} placeholder="https://www.collabnb.com/join.html"
+            <input value={signupUrl} onChange={(e) => setSignupUrl(e.target.value)} placeholder="https://collabnb.com/join"
               style={{ ...input, width: '100%' }} />
           </div>
           <div>
-            <span style={label}>Tier 2 — no click, ~24h later</span>
+            <span style={label}>Follow-up 1 — ~24h later, unless they signed up</span>
             <textarea value={tier2Message} onChange={(e) => setTier2Message(e.target.value)} rows={2}
               placeholder="Hey! Just checking you saw this 👋 — here's the link again in case it got buried: {{link}}"
               style={{ ...input, width: '100%', resize: 'vertical' }} />
           </div>
           <div>
-            <span style={label}>Tier 3 — clicked but didn't sign up, ~48-72h later</span>
+            <span style={label}>Follow-up 2 — ~72h later, unless they signed up</span>
             <textarea value={tier3Message} onChange={(e) => setTier3Message(e.target.value)} rows={2}
               placeholder="Founding member spots are going fast — still time to grab yours: {{link}}"
               style={{ ...input, width: '100%', resize: 'vertical' }} />
@@ -237,11 +237,12 @@ function LogRow({ entry }) {
         {entry.ref_token && (
           <div style={{ fontSize: '0.66rem', color: '#5b4aa8', marginTop: '0.2rem' }}>
             {entry.signed_up_at ? '✓ Signed up' : entry.link_clicked_at ? 'Clicked link, no signup yet' : 'Link not clicked yet'}
-            {entry.tier2_sent_at && ' · tier 2 sent'}
-            {entry.tier3_sent_at && ' · tier 3 sent'}
-            {entry.tier4_sent_at && ' · tier 4 sent'}
+            {entry.tier2_sent_at && ' · follow-up 1 sent'}
+            {entry.tier3_sent_at && ' · follow-up 2 sent'}
+            {entry.tier4_sent_at && ' · welcome sent'}
           </div>
         )}
+        {entry.followup_error && <div style={{ fontSize: '0.68rem', color: '#9b2d2d', marginTop: '0.2rem' }}>Follow-up blocked: {entry.followup_error}</div>}
         {entry.error && <div style={{ fontSize: '0.68rem', color: '#9b2d2d', marginTop: '0.2rem' }}>{entry.error}</div>}
         {err && <div style={{ fontSize: '0.68rem', color: '#9b2d2d', marginTop: '0.2rem' }}>{err}</div>}
       </div>

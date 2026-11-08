@@ -141,7 +141,7 @@ export default function ContractManager() {
             <thead>
               <tr style={{ borderBottom: '1px solid rgba(25,37,36,0.07)' }}>
                 {['Creator', 'Host', 'Property', 'Status', 'Dates', 'Payment', 'Payout', 'Signatures', 'Created', 'Actions'].map((h) => (
-                  <th key={h} style={{ padding: '0.75rem', textAlign: 'left', fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: SAGE, whiteSpace: 'nowrap', minWidth: h === 'Actions' ? 150 : undefined }}>
+                  <th key={h} style={{ padding: '0.75rem', textAlign: 'left', fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: SAGE, whiteSpace: 'nowrap', minWidth: h === 'Actions' ? 232 : undefined, ...(h === 'Actions' ? { position: 'sticky', right: 0, background: '#fff', boxShadow: '-8px 0 8px -8px rgba(25,37,36,0.12)' } : {}) }}>
                     {h}
                   </th>
                 ))}
@@ -153,8 +153,8 @@ export default function ContractManager() {
                   key={String(c._id)}
                   onClick={() => setOpenId(c._id)}
                   style={{ borderBottom: i < filtered.length - 1 ? '1px solid rgba(25,37,36,0.05)' : 'none', cursor: 'pointer' }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = BONE; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = BONE; e.currentTarget.querySelector('.cm-actions').style.background = BONE; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.querySelector('.cm-actions').style.background = '#fff'; }}
                 >
                   <td style={{ padding: '0.75rem', fontWeight: 600, color: INK }}>{c.creator_name || '—'}</td>
                   <td style={{ padding: '0.75rem', color: SLATE }}>{c.host_name || '—'}</td>
@@ -190,8 +190,8 @@ export default function ContractManager() {
                   <td style={{ padding: '0.75rem', color: SAGE, fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
                     {fmtDate(c._creationTime)}
                   </td>
-                  <td style={{ padding: '0.75rem' }} onClick={(e) => e.stopPropagation()}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', alignItems: 'flex-start' }}>
+                  <td className="cm-actions" style={{ padding: '0.75rem', position: 'sticky', right: 0, background: '#fff', boxShadow: '-8px 0 8px -8px rgba(25,37,36,0.12)' }} onClick={(e) => e.stopPropagation()}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.35rem', width: 208 }}>
                       <PromptButtons contract={c} size="sm" direction="column" />
                       <ManageButtons contract={c} size="sm" />
                     </div>
@@ -229,7 +229,7 @@ function PromptButtons({ contract: c, size = 'md', direction = 'row' }) {
     }
   };
 
-  const pad = size === 'sm' ? '0.25rem 0.55rem' : '0.4rem 0.8rem';
+  const pad = size === 'sm' ? '0.4rem 0.4rem' : '0.4rem 0.8rem';
   const fs = size === 'sm' ? '0.7rem' : '0.8rem';
 
   const btn = (party, label, disabled) => (
@@ -238,7 +238,7 @@ function PromptButtons({ contract: c, size = 'md', direction = 'row' }) {
       disabled={disabled || busy === party}
       title={disabled ? `${label.replace('Prompt ', '')} has already signed` : ''}
       style={{
-        padding: pad, fontSize: fs, fontWeight: 600, borderRadius: '0.4rem',
+        padding: pad, fontSize: fs, fontWeight: 600, borderRadius: '0.5rem', ...(size === 'sm' ? { width: '100%', textAlign: 'center' } : {}),
         border: `1px solid ${disabled ? 'rgba(25,37,36,0.08)' : 'rgba(60,87,89,0.3)'}`,
         background: disabled ? '#F7F5F2' : '#fff',
         color: disabled ? SAGE : SLATE,
@@ -251,11 +251,11 @@ function PromptButtons({ contract: c, size = 'md', direction = 'row' }) {
   );
 
   return (
-    <div style={{ display: 'flex', flexDirection: direction, gap: '0.35rem', alignItems: direction === 'column' ? 'flex-start' : 'center' }}>
+    <div style={size === 'sm' ? { display: 'contents' } : { display: 'flex', flexDirection: direction, gap: '0.35rem', alignItems: direction === 'column' ? 'flex-start' : 'center' }}>
       {btn('host', 'Prompt Host', !!c.host_signed)}
       {btn('creator', 'Prompt Creator', !!c.creator_signed)}
       {done && (
-        <span style={{ fontSize: '0.7rem', color: done.ok ? '#166534' : '#991B1B', fontWeight: 600, whiteSpace: 'nowrap' }}>
+        <span style={{ gridColumn: '1 / -1', fontSize: '0.7rem', color: done.ok ? '#166534' : '#991B1B', fontWeight: 600, whiteSpace: 'nowrap' }}>
           {done.ok
             ? `Sent to ${done.party}`
             : done.reason === 'no_account' ? 'No linked account' : 'Failed'}
@@ -300,7 +300,7 @@ function ManageButtons({ contract: c, size = 'md' }) {
   const setHandled = useMutation(api.contracts.setHandled);
   const [busy, setBusy] = useState(null);   // 'handle' | 'delete'
 
-  const pad = size === 'sm' ? '0.25rem 0.55rem' : '0.4rem 0.8rem';
+  const pad = size === 'sm' ? '0.4rem 0.4rem' : '0.4rem 0.8rem';
   const fs = size === 'sm' ? '0.7rem' : '0.8rem';
 
   const toggleHandled = async () => {
@@ -317,12 +317,12 @@ function ManageButtons({ contract: c, size = 'md' }) {
   };
 
   return (
-    <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
+    <div style={size === 'sm' ? { display: 'contents' } : { display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
       <button
         onClick={toggleHandled}
         disabled={busy === 'handle'}
         style={{
-          padding: pad, fontSize: fs, fontWeight: 600, borderRadius: '0.4rem',
+          padding: pad, fontSize: fs, fontWeight: 600, borderRadius: '0.5rem', ...(size === 'sm' ? { width: '100%', textAlign: 'center' } : {}),
           border: '1px solid rgba(60,87,89,0.3)', background: c.admin_dismissed ? '#EEF2F0' : '#fff',
           color: SLATE, cursor: busy === 'handle' ? 'default' : 'pointer',
           fontFamily: 'inherit', whiteSpace: 'nowrap', opacity: busy === 'handle' ? 0.6 : 1,
@@ -334,7 +334,7 @@ function ManageButtons({ contract: c, size = 'md' }) {
         onClick={del}
         disabled={busy === 'delete'}
         style={{
-          padding: pad, fontSize: fs, fontWeight: 600, borderRadius: '0.4rem',
+          padding: pad, fontSize: fs, fontWeight: 600, borderRadius: '0.5rem', ...(size === 'sm' ? { width: '100%', textAlign: 'center' } : {}),
           border: '1px solid rgba(153,27,27,0.3)', background: '#fff',
           color: '#991B1B', cursor: busy === 'delete' ? 'default' : 'pointer',
           fontFamily: 'inherit', whiteSpace: 'nowrap', opacity: busy === 'delete' ? 0.6 : 1,

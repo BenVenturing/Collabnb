@@ -2,7 +2,7 @@ import { mutation, query, internalMutation } from "./_generated/server";
 import { v, ConvexError } from "convex/values";
 import { internal } from "./_generated/api";
 import { totalPoints, normalizeTierId, calcMidpoint, calcHardFloor, evaluateZone } from "./lib/compensationPoints";
-import { requireOwnerOrAdmin, canAccessOwner } from "./lib/auth";
+import { requireOwnerOrAdmin, canAccessOwner, requireAuthedProfile } from "./lib/auth";
 import { cleanPlainText } from "./lib/sanitize";
 import { enforceRateLimit, RATE_LIMITS } from "./lib/rateLimit";
 import { completeCollaboration } from "./collaborations";
@@ -191,6 +191,60 @@ export const create = mutation({
     }
 
     return id;
+  },
+});
+
+export const createInvite = mutation({
+  args: {
+    listingId: v.string(),
+    creatorId: v.string(),
+    creatorName: v.string(),
+    creatorUsername: v.optional(v.string()),
+    creatorAvatar: v.optional(v.string()),
+    creatorTier: v.optional(v.string()),
+    creatorFollowers: v.optional(v.number()),
+    creatorEngagement: v.optional(v.number()),
+    message: v.string(),
+    threadKey: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const caller = await requireAuthedProfile(ctx);
+    const listingId = ctx.db.normalizeId("listings", args.listingId);
+    const listing: any = listingId ? await ctx.db.get(listingId) : null;
+    if (!listing) throw new ConvexError("Listing not found.");
+    if (String(listing.host_id) !== String(caller._id) && caller.is_admin !== true) {
+      throw new ConvexError("You can only invite creators to your own listings.");
+    }
+    if (listing.status !== "published") {
+      throw new ConvexError("Publish this listing before inviting creators.");
+    }
+    const hostId = String(listing.host_id);
+    if (args.creatorId === hostId) throw new ConvexError("You can't invite yourself.");
+
+    const existing = await ctx.db
+      .query("pitches")
+      .withIndex("by_listing", (q) => q.eq("listing_id", args.listingId))
+      .filter((q) => q.eq(q.field("creator_id"), args.creatorId))
+      .first();
+    if (existing) return existing._id;
+
+    return await ctx.db.insert("pitches", {
+      listing_id: args.listingId,
+      listing_title: listing.title,
+      host_id: hostId,
+      creator_id: args.creatorId,
+      creator_name: args.creatorName,
+      creator_username: args.creatorUsername,
+      creator_avatar: args.creatorAvatar,
+      creator_tier: args.creatorTier,
+      creator_followers: args.creatorFollowers,
+      creator_engagement: args.creatorEngagement,
+      message: cleanPlainText(args.message, 3000),
+      status: "pending",
+      type: "pitch",
+      created_at: Date.now(),
+      thread_key: args.threadKey,
+    });
   },
 });
 

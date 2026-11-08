@@ -625,31 +625,32 @@ export async function mergedCopy(db: any, templateId: string) {
 
 // ─── HTML rendering ───────────────────────────────────────────────────────────
 
+const SANS = "-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif";
+
 export function layout(body: string, heroUrl?: string) {
   return `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background:#FAF9F6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#FAF9F6;padding:44px 16px;">
+<body style="margin:0;padding:0;background:#f4f6f3;font-family:${SANS};">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6f3;padding:32px 16px;">
     <tr><td align="center">
-      <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background:#ffffff;border-radius:24px;overflow:hidden;border:1px solid #ECE9E3;box-shadow:0 8px 32px rgba(30,26,20,0.05);">
+      <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e6ebe4;">
         ${heroUrl ? `<!-- Hero art, full-bleed at the very top -->
         <tr><td style="line-height:0;"><img src="${heroUrl}" alt="" width="560" style="display:block;width:100%;height:auto;border:0;outline:none;" /></td></tr>` : ""}
         <!-- Body -->
-        <tr><td style="padding:38px 40px 8px;">${body}</td></tr>
-        <!-- Warm sign-off -->
+        <tr><td style="padding:32px 36px 8px;font-family:${SANS};font-size:15px;line-height:1.65;color:#2b3530;">${body}</td></tr>
+        <!-- Sign-off -->
         <tr>
-          <td style="padding:8px 40px 34px;">
-            <p style="margin:0;font-size:15px;color:#5C5347;line-height:1.65;">With gratitude,</p>
-            <p style="margin:2px 0 0;font-size:15px;font-weight:700;color:#241F19;">The Collabnb Team <span style="color:#8B6F52;">🤎</span></p>
+          <td style="padding:8px 36px 32px;font-family:${SANS};">
+            <p style="margin:0;font-size:15px;color:#2b3530;line-height:1.65;">Warmly,</p>
+            <p style="margin:2px 0 0;font-size:15px;font-weight:700;color:#1c2a22;">The Collabnb Team</p>
           </td>
         </tr>
         <!-- Footer, logo at the bottom -->
         <tr>
-          <td bgcolor="#FAF9F6" style="padding:26px 40px;background:#FAF9F6;border-top:1px solid #F1EEE8;text-align:center;">
-            <img src="${LOGO_URL}" alt="Collabnb" width="32" height="32" style="display:block;width:32px;height:32px;margin:0 auto 10px;border:0;outline:none;" />
-            <p style="margin:0 0 4px;font-size:12px;color:#9C9182;">Creators &amp; boutique stays, matched with care.</p>
-            <p style="margin:0;font-size:12px;color:#A69C8C;">© 2026 Collabnb · <a href="${BASE_URL}" style="color:#8B6F52;text-decoration:none;font-weight:600;">collabnb.com</a></p>
+          <td bgcolor="#fafbf9" style="padding:24px 36px;background:#fafbf9;border-top:1px solid #eef1ec;text-align:center;font-family:${SANS};">
+            <img src="${LOGO_URL}" alt="Collabnb" width="28" height="28" style="display:block;width:28px;height:28px;margin:0 auto 10px;border:0;outline:none;" />
+            <p style="margin:0;font-size:12px;color:#8a948d;"><a href="${BASE_URL}" style="color:#3f6b52;text-decoration:none;">collabnb.com</a> &middot; Creators &amp; boutique stays, matched with care</p>
           </td>
         </tr>
       </table>
@@ -659,29 +660,28 @@ export function layout(body: string, heroUrl?: string) {
 </html>`;
 }
 
-// The email's focal point: the key line / summary paragraph in a soft chip.
-// Flat, very slightly warm off-white — not a brown-tinted wash.
+// The email's focal point: the key line / summary paragraph in a flat banner.
 export function heroChip(text: string) {
-  return `<table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px;"><tr>
-    <td style="background:#FAF9F6;border:1px solid #F0EDE7;border-radius:18px;padding:22px 24px;">
-      <p style="margin:0;font-size:16px;font-weight:500;color:#241F19;line-height:1.6;">${text}</p>
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 20px;"><tr>
+    <td style="background:#f4f8f3;border:1px solid #e1eadf;border-radius:12px;padding:14px 18px;">
+      <p style="margin:0;font-size:15px;color:#2b3530;line-height:1.65;">${text}</p>
     </td>
   </tr></table>`;
 }
 
-// Neutral off-white box — color only shows up as the label text and left
-// border, not as a background tint, so the accent color doesn't dominate.
-export function callout(color: string, label: string, text: string) {
-  return `<table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;"><tr>
-    <td style="background:#FAF9F6;border:1px solid #F0EDE7;border-left:3px solid ${color};border-radius:14px;padding:16px 20px;">
-      <div style="font-size:11px;color:${color};font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">${label}</div>
-      <p style="margin:0;font-size:14px;color:#5C5347;line-height:1.65;">${text}</p>
+// Flat banner. `color` is kept for call-site/admin compatibility but is no
+// longer used: every callout label is the same brand green.
+export function callout(_color: string, label: string, text: string) {
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:20px;"><tr>
+    <td style="background:#f4f8f3;border:1px solid #e1eadf;border-radius:12px;padding:14px 18px;">
+      <div style="font-size:11px;color:#3f6b52;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">${label}</div>
+      <p style="margin:0;font-size:15px;color:#2b3530;line-height:1.65;">${text}</p>
     </td>
   </tr></table>`;
 }
 
 export function button(href: string, label: string) {
-  return `<a href="${href}" style="display:inline-block;margin-top:4px;padding:14px 34px;background:linear-gradient(135deg,#241F19,#4A3B2E);color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;border-radius:999px;letter-spacing:-0.1px;box-shadow:0 6px 18px rgba(139,111,82,0.28);">${label}</a>`;
+  return `<a href="${href}" style="display:inline-block;margin-top:4px;padding:13px 30px;background:#1c2a22;color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;border-radius:999px;">${label}</a>`;
 }
 
 // Assemble a full email (subject + html) from merged copy + variables.
@@ -693,8 +693,8 @@ export function renderTemplate(
 ) {
   const f = (s?: string) => fill(s, vars);
   const parts: string[] = [
-    `<p style="margin:0 0 18px;font-size:22px;font-weight:700;color:#241F19;">${f(t.heading)}</p>`,
-    // The body doubles as the focal summary — shown in the liquid-glass chip.
+    `<p style="margin:0 0 18px;font-family:Georgia,'Times New Roman',serif;font-size:24px;font-weight:bold;color:#1c2a22;letter-spacing:-0.3px;line-height:1.3;">${f(t.heading)}</p>`,
+    // The body doubles as the focal summary — shown in the flat summary banner.
     heroChip(f(t.body)),
   ];
   if (t.calloutText && f(t.calloutText).trim()) {
@@ -708,7 +708,7 @@ export function renderTemplate(
     parts.push(button(href, f(t.buttonLabel)));
   }
   if (t.footnote && f(t.footnote).trim()) {
-    parts.push(`<p style="margin:12px 0 0;font-size:13px;color:#A69C8C;line-height:1.65;">${f(t.footnote)}</p>`);
+    parts.push(`<p style="margin:12px 0 0;font-size:13px;color:#8a948d;line-height:1.65;">${f(t.footnote)}</p>`);
   }
   const heroUrl = t.category ? HERO_URLS[t.category] : undefined;
   return { subject: f(t.subject), html: layout(parts.join("\n"), heroUrl) };

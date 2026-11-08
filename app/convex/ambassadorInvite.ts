@@ -6,6 +6,7 @@ import { buildAmbassadorInviteHtml, defaultInviteSlots, tzForApplicant } from ".
 
 const FROM = "Collabnb <hello@collabnb.com>";
 const REPLY_TO = "hellocollabnb@gmail.com";
+const BCC = "hellocollabnb@gmail.com";
 
 export const getApplication = internalQuery({
   args: { id: v.id("ambassador_applications") },
@@ -42,6 +43,7 @@ export const sendInvite = internalAction({
         from: FROM,
         to: [to ?? app.email],
         reply_to: REPLY_TO,
+        ...(to ? {} : { bcc: [BCC] }),
         subject: to ? `[TEST] ${subject}` : subject,
         html,
       }),

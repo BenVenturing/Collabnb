@@ -157,14 +157,22 @@ export const magicLink = action({
 
     let userId: string | undefined = c.clerk_user_id;
     if (!userId) {
-      const found = await fetch(`https://api.clerk.com/v1/users?email_address[]=${encodeURIComponent(c.email)}`, { headers });
-      const list = found.ok ? await found.json() : [];
-      if (Array.isArray(list) && list.length) return { mode: "signin" };
+      const email = String(c.email).toLowerCase();
+      const found = await fetch(`https://api.clerk.com/v1/users?email_address=${encodeURIComponent(email)}`, { headers });
+      if (!found.ok) {
+        console.error("magicLink: Clerk user lookup failed", found.status);
+        return { mode: "signin" };
+      }
+      const list = await found.json();
+      const match = Array.isArray(list) && list.some((u: any) =>
+        (u.email_addresses || []).some((e: any) => String(e.email_address).toLowerCase() === email));
+      if (match) return { mode: "signin" };
       const created = await fetch("https://api.clerk.com/v1/users", {
         method: "POST",
         headers,
         body: JSON.stringify({
           email_address: [c.email],
+          username: `host_${token}`.replace(/[^a-zA-Z0-9_]/g, "_").slice(0, 60),
           skip_password_requirement: true,
           first_name: c.hotel_name,
           unsafe_metadata: { role: "host" },

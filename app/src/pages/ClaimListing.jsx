@@ -93,7 +93,7 @@ export default function ClaimListing() {
         const res = await magicLink({ token });
         if (res.mode === 'ticket' && res.ticket) {
           const si = await signIn.create({ strategy: 'ticket', ticket: res.ticket });
-          if (si.status === 'complete') { await setActive({ session: si.createdSessionId }); return; }
+          if (si.status === 'complete') { await setActive({ session: si.createdSessionId }); window.location.reload(); return; }
         }
         setBusy(false);
         showAuth(res.mode === 'signin' ? 'signin' : 'signup');

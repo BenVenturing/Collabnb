@@ -613,18 +613,18 @@ function broadcastEmailHtml(body: string): string {
 <!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"></head>
-<body style="margin:0;padding:0;background:#F7F5F2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="padding:40px 16px;">
+<body style="margin:0;padding:0;background:#f4f6f3;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="padding:32px 16px;">
     <tr><td align="center">
-      <table width="560" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #E8E4DF;">
+      <table width="560" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e6ebe4;">
         <tr><td style="background:linear-gradient(135deg,#192524,#2d4a3e);padding:28px 40px;text-align:center;">
           <div style="font-size:22px;font-weight:800;color:#ffffff;letter-spacing:-0.5px;">Collabnb</div>
         </td></tr>
-        <tr><td style="padding:36px 40px;font-size:15px;color:#3C5759;line-height:1.7;">
+        <tr><td style="padding:32px 36px;font-size:15px;color:#2b3530;line-height:1.65;">
           ${body.replace(/\n/g, "<br>")}
         </td></tr>
-        <tr><td style="padding:20px 40px;background:#F7F5F2;border-top:1px solid #E8E4DF;text-align:center;font-size:12px;color:#959D90;">
-          © 2026 Collabnb · <a href="https://collabnb.com" style="color:#2dd4bf;text-decoration:none;">collabnb.com</a>
+        <tr><td style="padding:20px 36px;background:#fafbf9;border-top:1px solid #eef1ec;text-align:center;font-size:12px;color:#8a948d;">
+          <a href="https://collabnb.com" style="color:#3f6b52;text-decoration:none;">collabnb.com</a> &middot; Creators &amp; boutique stays, matched with care
         </td></tr>
       </table>
     </td></tr>

@@ -72,19 +72,19 @@ function reminderEmailHtml(heading: string, lead: string, highlight: string, cta
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <style>
-  body { margin:0; padding:0; background:#EFECE9; font-family:'Helvetica Neue',Helvetica,Arial,sans-serif; }
+  body { margin:0; padding:0; background:#f4f6f3; font-family:'Helvetica Neue',Helvetica,Arial,sans-serif; }
   .wrap { max-width:560px; margin:0 auto; padding:40px 20px; }
-  .card { background:#fff; border-radius:20px; overflow:hidden; box-shadow:0 4px 24px rgba(25,37,36,0.07); }
+  .card { background:#fff; border-radius:16px; overflow:hidden; border:1px solid #e6ebe4; }
   .hero { display:block; width:100%; height:auto; }
   .body { padding:32px 40px 32px; }
-  h1 { font-size:1.4rem; font-weight:800; color:#241F19; margin:0 0 12px; line-height:1.25; }
-  p { font-size:0.9375rem; color:#6B6055; line-height:1.65; margin:0 0 16px; }
-  .highlight { background:#F7F2EA; border-left:3px solid #B08968; border-radius:0 12px 12px 0; padding:14px 18px; margin:20px 0; }
-  .highlight p { margin:0; font-size:0.875rem; color:#6B4F3A; font-weight:500; }
-  .btn { display:inline-block; background:linear-gradient(135deg,#241F19,#4A3B2E); color:#fff !important; text-decoration:none; padding:13px 28px; border-radius:12px; font-size:0.9rem; font-weight:700; letter-spacing:0.01em; margin:8px 0 0; }
-  .sign { font-size:0.875rem; color:#6B6055; margin:24px 0 0; }
+  h1 { font-family:Georgia,'Times New Roman',serif; font-size:24px; font-weight:bold; color:#1c2a22; letter-spacing:-0.3px; margin:0 0 12px; line-height:1.25; }
+  p { font-size:15px; color:#2b3530; line-height:1.65; margin:0 0 16px; }
+  .highlight { background:#f4f8f3; border:1px solid #e1eadf; border-radius:12px; padding:14px 18px; margin:20px 0; }
+  .highlight p { margin:0; font-size:15px; color:#2b3530; font-weight:400; }
+  .btn { display:inline-block; background:#1c2a22; color:#fff !important; text-decoration:none; padding:13px 30px; border-radius:999px; font-size:15px; font-weight:600; margin:8px 0 0; }
+  .sign { font-size:15px; color:#2b3530; margin:24px 0 0; }
   .footer { padding:20px 40px 28px; text-align:center; }
-  .footer p { font-size:0.78rem; color:#9C9182; margin:0; line-height:1.6; }
+  .footer p { font-size:0.78rem; color:#8a948d; margin:0; line-height:1.6; }
   @media (max-width:560px) {
     .body, .footer { padding-left:24px; padding-right:24px; }
   }
@@ -102,7 +102,7 @@ function reminderEmailHtml(heading: string, lead: string, highlight: string, cta
       <p class="sign">Benjamin<br/>Founder, Collabnb</p>
     </div>
     <div class="footer">
-      <p>Questions? Reply to this email or reach us at <a href="mailto:hello@collabnb.com" style="color:#5C5347;">hello@collabnb.com</a></p>
+      <p>Questions? Reply to this email or reach us at <a href="mailto:hello@collabnb.com" style="color:#3f6b52;">hello@collabnb.com</a></p>
       <p style="margin-top:6px;">© 2026 Collabnb · You're receiving this because you're a Collabnb host.</p>
     </div>
   </div>

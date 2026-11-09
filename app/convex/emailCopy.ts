@@ -16,7 +16,7 @@ export const TRUSTPILOT_REVIEW_URL = "https://www.trustpilot.com/evaluate/collab
 // Convex file storage same as LOGO_URL. Keyed by TemplateDef.category so
 // renderTemplate can pick the right one automatically.
 export const HERO_URLS: Record<string, string> = {
-  Account: "https://outgoing-anaconda-357.convex.cloud/api/storage/202e3911-974f-4d05-bbe9-6dba8781b478",
+  Account: "https://media.collabnb.com/email/hero-account.jpg",
   "Collabs & Messaging": "https://outgoing-anaconda-357.convex.cloud/api/storage/df4624bf-59e4-47f0-834d-6747e1e4e81b",
   "Contracts & Payments": "https://outgoing-anaconda-357.convex.cloud/api/storage/c53c86b7-f8f3-476c-8a93-03031b21cc36",
   Trials: "https://outgoing-anaconda-357.convex.cloud/api/storage/3f1ef632-055f-4c81-b936-5d830be58c24",

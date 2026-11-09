@@ -161,7 +161,7 @@ export default function ClaimListing() {
 
       {/* Risk reversal */}
       <div style={{ background: C.mintSoft, border: `1px solid ${C.mint}`, borderRadius: 16, padding: '1.1rem 1.25rem', margin: '1.5rem 0', color: C.ink, lineHeight: 1.6, fontSize: '0.95rem' }}>
-        <strong>No catch.</strong> Listing is free, nothing goes live until you publish, and if it's not useful you can close this page and you'll never hear from us again.
+        <strong>No catch.</strong> Listing is free for Founding Hosts, and nothing goes live until you publish.
       </div>
 
       {/* CTA + auth */}

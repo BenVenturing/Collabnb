@@ -8,6 +8,7 @@
 import { v } from "convex/values";
 import { action, internalAction, internalMutation } from "./_generated/server";
 import { internal } from "./_generated/api";
+import { HERO_URLS, LOGO_URL } from "./emailCopy";
 import { requireAdminAction } from "./lib/auth";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -59,7 +60,6 @@ export const LISTING_REMINDER_STEPS: {
 ];
 
 const CREATE_LISTING_URL = "https://www.collabnb.com/host/listings/create";
-const HERO_IMG = "https://www.collabnb.com/email/host-outreach/hero-boutique-stays.jpg";
 
 // Mirrors sendWelcomeEmail's card/highlight/CTA language in email.ts, with
 // the hero cover photo hostWelcomeEmail.ts uses up top instead of a plain
@@ -73,7 +73,7 @@ function reminderEmailHtml(heading: string, lead: string, highlight: string, cta
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <style>
   body { margin:0; padding:0; background:#f4f6f3; font-family:'Helvetica Neue',Helvetica,Arial,sans-serif; }
-  .wrap { max-width:560px; margin:0 auto; padding:40px 20px; }
+  .wrap { max-width:560px; margin:0 auto; padding:0; }
   .card { background:#fff; border-radius:16px; overflow:hidden; border:1px solid #e6ebe4; }
   .hero { display:block; width:100%; height:auto; }
   .body { padding:32px 40px 32px; }
@@ -83,17 +83,18 @@ function reminderEmailHtml(heading: string, lead: string, highlight: string, cta
   .highlight p { margin:0; font-size:15px; color:#2b3530; font-weight:400; }
   .btn { display:inline-block; background:#1c2a22; color:#fff !important; text-decoration:none; padding:13px 30px; border-radius:999px; font-size:15px; font-weight:600; margin:8px 0 0; }
   .sign { font-size:15px; color:#2b3530; margin:24px 0 0; }
-  .footer { padding:20px 40px 28px; text-align:center; }
+  .footer { padding:24px 36px; text-align:center; background:#fafbf9; border-top:1px solid #eef1ec; }
   .footer p { font-size:0.78rem; color:#8a948d; margin:0; line-height:1.6; }
   @media (max-width:560px) {
     .body, .footer { padding-left:24px; padding-right:24px; }
   }
 </style>
 </head>
-<body>
+<body style="margin:0;padding:0;background:#f4f6f3;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#f4f6f3" style="background:#f4f6f3;"><tr><td align="center" style="padding:32px 16px;">
 <div class="wrap">
   <div class="card">
-    <img class="hero" src="${HERO_IMG}" alt="Collabnb" width="560" />
+    <img class="hero" src="${HERO_URLS["Collabs & Messaging"]}" alt="Collabnb" width="560" />
     <div class="body">
       <h1>${heading}</h1>
       <p>${lead}</p>
@@ -102,11 +103,14 @@ function reminderEmailHtml(heading: string, lead: string, highlight: string, cta
       <p class="sign">Benjamin<br/>Founder, Collabnb</p>
     </div>
     <div class="footer">
+      <img src="${LOGO_URL}" alt="Collabnb" width="28" height="28" style="display:block;width:28px;height:28px;margin:0 auto 10px;border:0;outline:none;" />
       <p>Questions? Reply to this email or reach us at <a href="mailto:hello@collabnb.com" style="color:#3f6b52;">hello@collabnb.com</a></p>
       <p style="margin-top:6px;">© 2026 Collabnb · You're receiving this because you're a Collabnb host.</p>
     </div>
   </div>
 </div>
+
+</td></tr></table>
 </body>
 </html>`;
 }

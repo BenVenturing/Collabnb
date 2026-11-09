@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { internalAction } from "./_generated/server";
 import { api } from "./_generated/api";
+import { HERO_URLS, LOGO_URL } from "./emailCopy";
 
 const ADMIN_TO = "hellocollabnb@gmail.com";
 const FROM = "Collabnb <hello@collabnb.com>";
@@ -17,7 +18,7 @@ function receiptEmailHtml({ heading, leadText, orderId, dateStr, cardLine, itemL
 <head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 <style>
   body { margin:0; padding:0; background:#f4f6f3; font-family:'Helvetica Neue',Helvetica,Arial,sans-serif; }
-  .wrap { max-width:480px; margin:0 auto; padding:32px 20px; }
+  .wrap { max-width:560px; margin:0 auto; padding:0; }
   .card { background:#fff; border-radius:16px; overflow:hidden; border:1px solid #e6ebe4; }
   .header { background:linear-gradient(135deg,#241F19,#4A3B2E); padding:30px 32px 24px; text-align:center; }
   .logo-text { color:#fff; font-size:1.2rem; font-weight:800; letter-spacing:-0.02em; }
@@ -30,12 +31,13 @@ function receiptEmailHtml({ heading, leadText, orderId, dateStr, cardLine, itemL
   .receipt .row.item span:last-child { font-weight:700; }
   .receipt hr { border:none; border-top:1px dashed rgba(40,32,20,0.25); margin:10px 0; }
   .receipt .total { display:flex; justify-content:space-between; font-size:0.9rem; font-weight:800; color:#241F19; border-top:1px solid #241F19; padding-top:8px; margin-top:4px; }
-  .footer { padding:16px 32px 28px; text-align:center; }
+  .footer { padding:24px 36px; text-align:center; background:#fafbf9; border-top:1px solid #eef1ec; }
   .footer p { font-size:0.72rem; color:#8a948d; margin:0; line-height:1.6; }
 </style></head>
-<body>
+<body style="margin:0;padding:0;background:#f4f6f3;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#f4f6f3" style="background:#f4f6f3;"><tr><td align="center" style="padding:32px 16px;">
 <div class="wrap"><div class="card">
-  <div class="header"><span class="logo-text">Collabnb</span></div>
+  <img src="${HERO_URLS["Contracts & Payments"]}" alt="Collabnb" width="560" style="display:block;width:100%;height:auto;border:0;outline:none;" />
   <div class="body">
     <h1>${heading}</h1>
     <p class="lead">${leadText}</p>
@@ -49,8 +51,11 @@ function receiptEmailHtml({ heading, leadText, orderId, dateStr, cardLine, itemL
       <div class="total"><span>${totalLabel}</span><span>${amountStr}</span></div>
     </div>
   </div>
-  <div class="footer"><p>${footNote}<br />Collabnb · collabnb.com</p></div>
+  <div class="footer">
+    <img src="${LOGO_URL}" alt="Collabnb" width="28" height="28" style="display:block;width:28px;height:28px;margin:0 auto 10px;border:0;outline:none;" /><p>${footNote}<br />Collabnb · collabnb.com</p></div>
 </div></div>
+
+</td></tr></table>
 </body></html>`;
 }
 
@@ -84,7 +89,7 @@ export const sendWelcomeEmail = internalAction({
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <style>
   body { margin:0; padding:0; background:#f4f6f3; font-family:'Helvetica Neue',Helvetica,Arial,sans-serif; }
-  .wrap { max-width:560px; margin:0 auto; padding:40px 20px; }
+  .wrap { max-width:560px; margin:0 auto; padding:0; }
   .card { background:#fff; border-radius:16px; overflow:hidden; border:1px solid #e6ebe4; }
   .header { background:linear-gradient(135deg,#241F19,#4A3B2E); padding:36px 40px 28px; text-align:center; }
   .header-inner { display:inline-flex; align-items:center; gap:12px; }
@@ -99,7 +104,7 @@ export const sendWelcomeEmail = internalAction({
   .step-num { width:28px; height:28px; min-width:28px; border-radius:50%; background:#1c2a22; color:#fff; font-size:0.75rem; font-weight:800; display:flex; align-items:center; justify-content:center; margin-top:1px; }
   .step p { margin:0; font-size:0.875rem; }
   .btn { display:inline-block; background:#1c2a22; color:#fff !important; text-decoration:none; padding:13px 30px; border-radius:999px; font-size:15px; font-weight:600; margin:8px 0 0; }
-  .footer { padding:20px 40px 28px; text-align:center; }
+  .footer { padding:24px 36px; text-align:center; background:#fafbf9; border-top:1px solid #eef1ec; }
   .footer p { font-size:0.78rem; color:#8a948d; margin:0; line-height:1.6; }
   @media (max-width:560px) {
     .body, .footer { padding-left:24px; padding-right:24px; }
@@ -107,15 +112,11 @@ export const sendWelcomeEmail = internalAction({
   }
 </style>
 </head>
-<body>
+<body style="margin:0;padding:0;background:#f4f6f3;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#f4f6f3" style="background:#f4f6f3;"><tr><td align="center" style="padding:32px 16px;">
 <div class="wrap">
   <div class="card">
-    <div class="header">
-      <div class="header-inner">
-        <img src="https://collabnb.com/assets/collabnb-logo.png" alt="Collabnb" width="40" height="40" style="border-radius:10px;display:inline-block;vertical-align:middle;" />
-        <span class="logo-text">Collabnb</span>
-      </div>
-    </div>
+    <img src="${HERO_URLS["Account"]}" alt="Collabnb" width="560" style="display:block;width:100%;height:auto;border:0;outline:none;" />
     <div class="body">
       <h1>You're on the list, ${firstName}! 🎉</h1>
       <p>Thanks for joining Collabnb as a <strong>${roleLabel}</strong>. Your application is now in review — our team manually verifies every new member to keep the community high quality.</p>
@@ -125,29 +126,32 @@ export const sendWelcomeEmail = internalAction({
       </div>
 
       <p style="font-weight:700;color:#1c2a22;margin-bottom:10px;">What happens next:</p>
-      <div class="steps">
-        <div class="step">
-          <div class="step-num">1</div>
-          <p>Our team reviews your application and verifies your profile.</p>
-        </div>
-        <div class="step">
-          <div class="step-num">2</div>
-          <p>You'll receive an approval email with a link to access the platform.</p>
-        </div>
-        <div class="step">
-          <div class="step-num">3</div>
-          <p>Full listings go live <strong>July 15</strong> — early members get first pick.</p>
-        </div>
-      </div>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:16px 0 20px;">
+        <tr>
+          <td width="28" valign="top" style="width:28px;padding:0 0 14px;"><div style="width:28px;height:28px;border-radius:50%;background:#1c2a22;color:#ffffff;font-size:13px;font-weight:700;line-height:28px;text-align:center;font-family:-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;">1</div></td>
+          <td valign="top" style="padding:3px 0 14px 14px;font-size:15px;color:#2b3530;line-height:1.5;">Our team reviews your application and verifies your profile.</td>
+        </tr>
+        <tr>
+          <td width="28" valign="top" style="width:28px;padding:0 0 14px;"><div style="width:28px;height:28px;border-radius:50%;background:#1c2a22;color:#ffffff;font-size:13px;font-weight:700;line-height:28px;text-align:center;font-family:-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;">2</div></td>
+          <td valign="top" style="padding:3px 0 14px 14px;font-size:15px;color:#2b3530;line-height:1.5;">You'll receive an approval email with a link to access the platform.</td>
+        </tr>
+        <tr>
+          <td width="28" valign="top" style="width:28px;padding:0 0 14px;"><div style="width:28px;height:28px;border-radius:50%;background:#1c2a22;color:#ffffff;font-size:13px;font-weight:700;line-height:28px;text-align:center;font-family:-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;">3</div></td>
+          <td valign="top" style="padding:3px 0 14px 14px;font-size:15px;color:#2b3530;line-height:1.5;">Full listings go live <strong>July 15</strong> — early members get first pick.</td>
+        </tr>
+      </table>
 
       <a href="https://collabnb.com" class="btn">Preview the platform →</a>
     </div>
     <div class="footer">
+    <img src="${LOGO_URL}" alt="Collabnb" width="28" height="28" style="display:block;width:28px;height:28px;margin:0 auto 10px;border:0;outline:none;" />
       <p>Questions? Reply to this email or reach us at <a href="mailto:hello@collabnb.com" style="color:#3f6b52;">hello@collabnb.com</a></p>
       <p style="margin-top:6px;">© 2026 Collabnb · You're receiving this because you joined the waitlist.</p>
     </div>
   </div>
 </div>
+
+</td></tr></table>
 </body>
 </html>`;
 
@@ -247,7 +251,7 @@ export const sendPayoutReceiptEmail = internalAction({
 <head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 <style>
   body { margin:0; padding:0; background:#f4f6f3; font-family:'Helvetica Neue',Helvetica,Arial,sans-serif; }
-  .wrap { max-width:520px; margin:0 auto; padding:40px 20px; }
+  .wrap { max-width:560px; margin:0 auto; padding:0; }
   .card { background:#fff; border-radius:16px; overflow:hidden; border:1px solid #e6ebe4; }
   .header { background:linear-gradient(135deg,#241F19,#4A3B2E); padding:32px 40px 24px; text-align:center; }
   .logo-text { color:#fff; font-size:1.35rem; font-weight:800; letter-spacing:-0.02em; }
@@ -255,22 +259,26 @@ export const sendPayoutReceiptEmail = internalAction({
   h1 { font-family:Georgia,'Times New Roman',serif; font-size:24px; font-weight:bold; color:#1c2a22; letter-spacing:-0.3px; margin:0 0 12px; line-height:1.2; }
   p { font-size:15px; color:#2b3530; line-height:1.65; margin:0 0 16px; }
   .amount { font-size:2rem; font-weight:800; color:#1c2a22; margin:0 0 4px; }
-  .footer { padding:16px 40px 28px; text-align:center; }
+  .footer { padding:24px 36px; text-align:center; background:#fafbf9; border-top:1px solid #eef1ec; }
   .footer p { font-size:0.78rem; color:#8a948d; margin:0; line-height:1.6; }
 </style>
 </head>
-<body>
+<body style="margin:0;padding:0;background:#f4f6f3;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#f4f6f3" style="background:#f4f6f3;"><tr><td align="center" style="padding:32px 16px;">
 <div class="wrap"><div class="card">
-  <div class="header"><span class="logo-text">Collabnb</span></div>
+  <img src="${HERO_URLS["Contracts & Payments"]}" alt="Collabnb" width="560" style="display:block;width:100%;height:auto;border:0;outline:none;" />
   <div class="body">
     <p class="amount">${amountStr}</p>
     <h1>${headline}</h1>
     <p>${bodyLine}</p>
   </div>
   <div class="footer">
+    <img src="${LOGO_URL}" alt="Collabnb" width="28" height="28" style="display:block;width:28px;height:28px;margin:0 auto 10px;border:0;outline:none;" />
     <p>Questions? Reply to this email or reach us at <a href="mailto:hello@collabnb.com" style="color:#3f6b52;">hello@collabnb.com</a></p>
   </div>
 </div></div>
+
+</td></tr></table>
 </body></html>`;
 
     try {

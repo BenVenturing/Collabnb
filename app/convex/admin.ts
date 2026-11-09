@@ -3,6 +3,7 @@ import { query, mutation, action, internalMutation, internalQuery, type Mutation
 import { internal, api } from "./_generated/api";
 import { requireAdmin, requireAdminAction, canAccessAdmin } from "./lib/auth";
 import { REJECTION_ACCESS_PATCH } from "./lib/rejection";
+import { HERO_URLS, LOGO_URL } from "./emailCopy";
 
 // ─── Analytics ────────────────────────────────────────────────────────────────
 export const getAnalytics = query({
@@ -617,13 +618,13 @@ function broadcastEmailHtml(body: string): string {
   <table width="100%" cellpadding="0" cellspacing="0" style="padding:32px 16px;">
     <tr><td align="center">
       <table width="560" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e6ebe4;">
-        <tr><td style="background:linear-gradient(135deg,#192524,#2d4a3e);padding:28px 40px;text-align:center;">
-          <div style="font-size:22px;font-weight:800;color:#ffffff;letter-spacing:-0.5px;">Collabnb</div>
-        </td></tr>
+        <tr><td style="line-height:0;"><img src="${HERO_URLS["Collabs & Messaging"]}" alt="Collabnb" width="560" style="display:block;width:100%;height:auto;border:0;outline:none;" /></td></tr>
         <tr><td style="padding:32px 36px;font-size:15px;color:#2b3530;line-height:1.65;">
           ${body.replace(/\n/g, "<br>")}
+          <div style="margin-top:28px;"><a href="https://www.collabnb.com/explore" style="display:inline-block;padding:13px 30px;background:#1c2a22;color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;border-radius:999px;">Open Collabnb →</a></div>
         </td></tr>
         <tr><td style="padding:20px 36px;background:#fafbf9;border-top:1px solid #eef1ec;text-align:center;font-size:12px;color:#8a948d;">
+          <img src="${LOGO_URL}" alt="Collabnb" width="28" height="28" style="display:block;width:28px;height:28px;margin:0 auto 10px;border:0;outline:none;" />
           <a href="https://collabnb.com" style="color:#3f6b52;text-decoration:none;">collabnb.com</a> &middot; Creators &amp; boutique stays, matched with care
         </td></tr>
       </table>

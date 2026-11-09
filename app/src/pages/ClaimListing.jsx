@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useQuery, useMutation } from 'convex/react';
-import { SignUp, SignIn } from '@clerk/clerk-react';
+import { useQuery, useMutation, useAction } from 'convex/react';
+import { SignUp, SignIn, useSignIn } from '@clerk/clerk-react';
 import { api } from '../../convex/_generated/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useListingDraft } from '../contexts/ListingDraftContext';
@@ -21,11 +21,14 @@ export default function ClaimListing() {
   const claim = useQuery(api.claims.getByToken, token ? { token } : 'skip');
   const markViewed = useMutation(api.claims.markViewed);
   const redeem = useMutation(api.claims.redeem);
+  const magicLink = useAction(api.claims.magicLink);
+  const { signIn, setActive } = useSignIn();
   const [mode, setMode] = useState(null); // null | 'signup' | 'signin'
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const viewed = useRef(false);
   const authRef = useRef(null);
+  const redeemed = useRef(false);
 
   useEffect(() => {
     if (claim && !viewed.current) { viewed.current = true; markViewed({ token }).catch(() => {}); }
@@ -47,6 +50,9 @@ export default function ClaimListing() {
         collaboration_brief: listing.collaboration_brief || '',
         compensation_type: listing.compensation_type || 'hybrid',
         nights: listing.nights || 2,
+        deliverables: Array.isArray(listing.deliverables) ? listing.deliverables : [],
+        deliverable_load: listing.deliverable_load || '',
+        complexity: listing.complexity || 'standard',
         images: listing.gallery_images || [],
         amenities: listing.amenities || [],
         perks: listing.perks || [],
@@ -66,18 +72,38 @@ export default function ClaimListing() {
   useEffect(() => {
     let pending = false;
     try { pending = localStorage.getItem(PENDING_KEY) === token; } catch {}
-    if (session && profile?._id && pending && claim?.status === 'open' && !busy) doRedeem();
+    if (session && profile?._id && pending && claim?.status === 'open' && !redeemed.current) { redeemed.current = true; doRedeem(); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session, profile?._id, claim?.status]);
 
-  function start(which) {
+  function showAuth(which) {
+    setMode(which);
+    setTimeout(() => authRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+  }
+
+  async function start(which) {
     try {
       localStorage.setItem(PENDING_KEY, token);
       localStorage.setItem('collabnb_waitlist_role', 'host');
     } catch {}
-    if (session && profile?._id) { doRedeem(); return; }
-    setMode(which);
-    setTimeout(() => authRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+    if (session && profile?._id) { redeemed.current = true; doRedeem(); return; }
+    if (which === 'signup' && claim?.has_account && signIn) {
+      setBusy(true); setError('');
+      try {
+        const res = await magicLink({ token });
+        if (res.mode === 'ticket' && res.ticket) {
+          const si = await signIn.create({ strategy: 'ticket', ticket: res.ticket });
+          if (si.status === 'complete') { await setActive({ session: si.createdSessionId }); return; }
+        }
+        setBusy(false);
+        showAuth(res.mode === 'signin' ? 'signin' : 'signup');
+      } catch (e) {
+        setBusy(false);
+        showAuth('signup');
+      }
+      return;
+    }
+    showAuth(which);
   }
 
   if (claim === undefined) return <Shell><p style={{ color: C.sage, textAlign: 'center', padding: '4rem 0' }}>Loading your listing…</p></Shell>;
@@ -113,6 +139,15 @@ export default function ClaimListing() {
           )}
         </div>
         <div style={{ padding: '1.25rem 1.4rem 1.4rem' }}>
+          {pv.avatar_url && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: '0.8rem' }}>
+              <img src={pv.avatar_url} alt="" width="36" height="36" style={{ borderRadius: 999, border: `1px solid ${C.line}` }} />
+              <div style={{ fontSize: '0.82rem', color: C.sage, lineHeight: 1.3 }}>
+                Hosted by <strong style={{ color: C.ink }}>{claim.hotel_name}</strong>{pv.instagram_handle ? ` · @${pv.instagram_handle}` : ''}
+              </div>
+              <span style={{ marginLeft: 'auto', fontSize: '0.72rem', fontWeight: 700, color: '#8A6A2F', background: '#F6EEDC', padding: '3px 9px', borderRadius: 999 }}>Draft</span>
+            </div>
+          )}
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'baseline', flexWrap: 'wrap' }}>
             <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.45rem', margin: 0, color: C.ink }}>{p.title || claim.hotel_name}</h2>
             {p.rating ? <span style={{ fontSize: '0.9rem', color: C.ink, fontWeight: 600 }}>★ {p.rating}{p.review_count ? <span style={{ color: C.sage, fontWeight: 400 }}> · {p.review_count} reviews</span> : null}</span> : null}
@@ -171,10 +206,10 @@ export default function ClaimListing() {
         ) : !mode ? (
           <>
             <button onClick={() => start('signup')} disabled={busy} style={cta}>
-              {busy ? 'Opening your listing…' : session && profile ? `Claim ${claim.hotel_name}` : `Claim ${claim.hotel_name} — free`}
+              {busy ? 'Opening your draft…' : 'Open my draft listing →'}
             </button>
             <p style={{ color: C.sage, fontSize: '0.85rem', marginTop: '0.75rem' }}>
-              {session && profile ? `Signed in as ${profile.email}` : <>Already on Collabnb? <button onClick={() => start('signin')} style={linkBtn}>Sign in</button></>}
+              {session && profile ? `Signed in as ${profile.email}` : claim.has_account ? `No password needed. Your account is set up as ${claim.email}.` : <>Already on Collabnb? <button onClick={() => start('signin')} style={linkBtn}>Sign in</button></>}
             </p>
           </>
         ) : (

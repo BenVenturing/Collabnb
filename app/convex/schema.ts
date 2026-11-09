@@ -1256,6 +1256,8 @@ export default defineSchema({
     claimed_by: v.optional(v.string()),
     claimed_at: v.optional(v.number()),
     listing_id: v.optional(v.string()),
+    profile_id: v.optional(v.string()),
+    clerk_user_id: v.optional(v.string()),
     created_at: v.number(),
   }).index("by_token", ["token"]),
 });

@@ -1240,4 +1240,22 @@ export default defineSchema({
     reactions: v.optional(v.array(v.object({ emoji: v.string(), user_ids: v.array(v.string()) }))),
     created_at: v.number(),
   }).index("by_room", ["room", "created_at"]).index("by_parent", ["parent_id"]),
+
+  // Pre-built listing a prospect hotel can claim from an outreach email link
+  // (/claim/:token). `prefill` holds listing fields scraped ahead of time.
+  listing_claims: defineTable({
+    token: v.string(),
+    hotel_name: v.string(),
+    email: v.optional(v.string()),
+    prefill: v.any(),
+    preview: v.optional(v.any()),
+    status: v.string(), // 'open' | 'claimed'
+    view_count: v.optional(v.number()),
+    first_viewed_at: v.optional(v.number()),
+    last_viewed_at: v.optional(v.number()),
+    claimed_by: v.optional(v.string()),
+    claimed_at: v.optional(v.number()),
+    listing_id: v.optional(v.string()),
+    created_at: v.number(),
+  }).index("by_token", ["token"]),
 });

@@ -20,6 +20,7 @@ import type * as autoreply from "../autoreply.js";
 import type * as blog from "../blog.js";
 import type * as blogResearch from "../blogResearch.js";
 import type * as carousel from "../carousel.js";
+import type * as claims from "../claims.js";
 import type * as collaborations from "../collaborations.js";
 import type * as collections from "../collections.js";
 import type * as contracts from "../contracts.js";
@@ -97,6 +98,7 @@ declare const fullApi: ApiFromModules<{
   blog: typeof blog;
   blogResearch: typeof blogResearch;
   carousel: typeof carousel;
+  claims: typeof claims;
   collaborations: typeof collaborations;
   collections: typeof collections;
   contracts: typeof contracts;

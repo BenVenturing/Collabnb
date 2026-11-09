@@ -1397,7 +1397,7 @@ async function draftHostMessage(p: any, angle: (typeof HOST_OUTREACH_TEMPLATES)[
       {
         role: "system",
         content:
-          "You adapt a fixed outreach template for Benjamin, founder of Collabnb (collabnb.com). You do NOT rewrite the message freely — you keep its structure, sentence order, tone, emoji, and call-to-action exactly as given. Your job: (1) replace every '[Hotel Name]' with the real listing name; (2) if the template contains the literal marker '{STATS}', leave it completely unchanged, on its own line — never translate, remove, or alter it. Do NOT add any new sentence or paragraph stating the host's own location, niche, or bio back to them — they already know these facts about their own property, and reciting them back reads as automated/robotic. Formatting rules, no exceptions: never use markdown or asterisks (no *bold* or bullet '*'), never use parentheses anywhere — rephrase instead, never include notes, brackets, or commentary about what you changed. Output ONLY the final message text a host would receive, nothing else.",
+          "You adapt a fixed outreach template for Benjamin, founder of Collabnb (collabnb.com). You do NOT rewrite the message freely — you keep its structure, sentence order, tone, emoji, and call-to-action exactly as given. Your job: (1) replace every '[Hotel Name]' with the real listing name; (2) if the template contains the literal marker '{STATS}', leave it completely unchanged, on its own line — never translate, remove, or alter it. Do NOT add any new sentence or paragraph stating the host's own location, niche, or bio back to them — they already know these facts about their own property, and reciting them back reads as automated/robotic. Never add any date, month, season, year, or time reference such as 'this July', 'this summer', or '2026' — the message must stay timeless. Formatting rules, no exceptions: never use markdown or asterisks (no *bold* or bullet '*'), never use parentheses anywhere — rephrase instead, never include notes, brackets, or commentary about what you changed. Output ONLY the final message text a host would receive, nothing else.",
       },
       {
         role: "user",
@@ -1418,6 +1418,10 @@ async function draftHostMessage(p: any, angle: (typeof HOST_OUTREACH_TEMPLATES)[
     // Safety net on top of the prompt rules — strip any markdown/parens that
     // slipped through so a stray "*" or "(" never reaches a real DM.
     dmDraft = dmDraft.replace(/\*/g, "").replace(/[()]/g, "");
+    dmDraft = dmDraft
+      .replace(/\s*\b(this|in|by|for|starting|from|until)\s+(January|February|March|April|May|June|July|August|September|October|November|December|spring|summer|fall|autumn|winter|season|month|year)(\s+\d{4})?\b/gi, "")
+      .replace(/\s*\b(January|February|March|April|May|June|July|August|September|October|November|December)(\s+\d{1,2}(st|nd|rd|th)?,?(\s+\d{4})?|\s+\d{4})\b/g, "")
+      .replace(/ +([,.!?])/g, "$1");
     return dmDraft.slice(0, 1100);
   } catch {
     // Fallback: raw template with a simple name swap so a batch never

@@ -11,6 +11,8 @@
     "tooLarge": "too large ({{size}}MB — the limit is {{max}}MB)",
     "overLimit": "{{skipped}} photo(s) skipped — the limit is {{max}} images per listing."
   },
+  "mapSummary": "Pin location on map (optional)",
+  "mapLoading": "Loading map…",
   "heading": "Tell us the basics",
   "subtitle": "Start with the essential details about your collaboration opportunity.",
   "labels": {

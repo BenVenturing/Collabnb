@@ -1,12 +1,13 @@
-import { useState, useRef } from "react";
+import { lazy, Suspense, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Camera, X, Plus } from "lucide-react";
 import { useMutation, useQuery } from "convex/react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../../convex/_generated/api";
 import WizardShell from "../../components/host/WizardShell";
-import LocationPicker from "../../components/host/LocationPicker";
 import { useListingDraft } from "../../contexts/ListingDraftContext";
+
+const LocationPicker = lazy(() => import("../../components/host/LocationPicker"));
 
 const MAX_IMAGES = 10;
 // Mirrors the server-side gate in convex/uploads.ts — keep both in sync. Checked
@@ -44,10 +45,12 @@ function Label({ children, required }) {
   );
 }
 
-function Input({ placeholder, value, onChange, type = "text" }) {
+function Input({ placeholder, value, onChange, type = "text", label = placeholder }) {
   return (
     <input
       type={type}
+      aria-label={label}
+      className="wizard-text-input"
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
@@ -64,6 +67,7 @@ export default function Step1Basics() {
   const finalizeUpload = useMutation(api.uploads.finalizeUpload);
   const fileRef = useRef(null);
   const [uploading, setUploading] = useState(false);
+  const [mapOpen, setMapOpen] = useState(false);
   const [uploadError, setUploadError] = useState("");
 
   const canProceed = draft.title.trim() && draft.location_city.trim() && draft.location_country.trim();
@@ -160,32 +164,39 @@ export default function Step1Basics() {
         {/* Location */}
         <div>
           <Label required>{t('labels.location')}</Label>
-          <div style={{ display: "flex", gap: 12, marginBottom: 12 }}>
+          <div className="wizard-location-fields">
             <Input placeholder={t('placeholders.city')} value={draft.location_city} onChange={(v) => updateDraft({ location_city: v })} />
             <Input placeholder={t('placeholders.stateCountry')} value={draft.location_country} onChange={(v) => updateDraft({ location_country: v })} />
           </div>
-          <LocationPicker
-            lat={draft.lat}
-            lng={draft.lng}
-            onChange={({ lat, lng, city, country }) => {
-              const fields = { lat, lng };
-              if (city) fields.location_city = city;
-              if (country) fields.location_country = country;
-              updateDraft(fields);
-            }}
-          />
+          <details className="wizard-map-details" open={mapOpen} onToggle={(event) => setMapOpen(event.currentTarget.open)}>
+            <summary>{t('mapSummary')}</summary>
+            {mapOpen && (
+              <Suspense fallback={<p>{t('mapLoading')}</p>}>
+                <LocationPicker
+                  lat={draft.lat}
+                  lng={draft.lng}
+                  onChange={({ lat, lng, city, country }) => {
+                    const fields = { lat, lng };
+                    if (city) fields.location_city = city;
+                    if (country) fields.location_country = country;
+                    updateDraft(fields);
+                  }}
+                />
+              </Suspense>
+            )}
+          </details>
         </div>
 
         {/* Property URL */}
         <div>
           <Label>{t('labels.propertyUrl')}</Label>
-          <Input placeholder={t('placeholders.propertyUrl')} value={draft.property_url} onChange={(v) => updateDraft({ property_url: v })} />
+          <Input type="url" placeholder={t('placeholders.propertyUrl')} value={draft.property_url} onChange={(v) => updateDraft({ property_url: v })} />
         </div>
 
         {/* Contact phone / WhatsApp */}
         <div>
           <Label>{t('labels.contactPhone')}</Label>
-          <Input placeholder={t('placeholders.contactPhone')} value={draft.contact_phone} onChange={(v) => updateDraft({ contact_phone: v })} />
+          <Input type="tel" placeholder={t('placeholders.contactPhone')} value={draft.contact_phone} onChange={(v) => updateDraft({ contact_phone: v })} />
           <p style={{ fontSize: '0.75rem', color: 'var(--sage)', marginTop: '0.35rem' }}>{t('hints.contactPhone')}</p>
         </div>
 
@@ -238,6 +249,8 @@ export default function Step1Basics() {
           <Label>{t('labels.collaborationBrief')}</Label>
           <div style={{ fontFamily: "Satoshi, sans-serif", fontSize: 12, color: "var(--sage)", marginBottom: 6 }}>{t('briefHint')}</div>
           <textarea
+            className="wizard-text-input"
+            aria-label={t('labels.collaborationBrief')}
             value={draft.collaboration_brief}
             onChange={(e) => updateDraft({ collaboration_brief: e.target.value })}
             placeholder={t('placeholders.collaborationBrief')}

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useLocation } from 'react-router-dom';
 
 // Compact first-party cookie notice, bottom-left, shown once per browser.
 // "Review" expands more detail in-place; tracking runs by default (not a gate).
@@ -19,6 +20,7 @@ const CookieIcon = () => (
 
 export default function CookieBanner() {
   const { t } = useTranslation('cookieBanner');
+  const { pathname } = useLocation();
   const [show, setShow] = useState(false);
   const [leaving, setLeaving] = useState(false);
   const [expanded, setExpanded] = useState(false);
@@ -29,7 +31,8 @@ export default function CookieBanner() {
     return () => clearTimeout(timer);
   }, []);
 
-  if (!show) return null;
+  // Defer the notice until the host leaves the focused listing wizard.
+  if (!show || pathname.startsWith('/host/listings/create')) return null;
 
   const dismiss = () => {
     try { localStorage.setItem(ACK_KEY, '1'); } catch { /* noop */ }

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMutation } from "convex/react";
 import { ConvexError } from "convex/values";
@@ -23,6 +23,13 @@ export default function WizardShell({ step, children, onBack, onNext, nextLabel,
   const resolvedNextLabel = nextLabel ?? t('next');
   const navigate = useNavigate();
   const [showHelp, setShowHelp] = useState(false);
+  const [showInspiration, setShowInspiration] = useState(() => window.matchMedia('(min-width: 1024px)').matches);
+  useEffect(() => {
+    const media = window.matchMedia('(min-width: 1024px)');
+    const sync = () => setShowInspiration(media.matches);
+    media.addEventListener('change', sync);
+    return () => media.removeEventListener('change', sync);
+  }, []);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
   const { draft, combinedDeliverablesList, totalDeliverables } = useListingDraft();
@@ -105,35 +112,35 @@ export default function WizardShell({ step, children, onBack, onNext, nextLabel,
   }
 
   return (
-    <div style={{ height: "100vh", display: "flex", flexDirection: "column" }}>
+    <div className="listing-wizard">
       {/* Top bar */}
-      <div style={{
-        position: "sticky", top: 0, zIndex: 50,
+      <div className="wizard-header" style={{
+        position: "relative", zIndex: 50,
         background: "rgba(239,236,233,0.88)", backdropFilter: "blur(24px) saturate(140%)", WebkitBackdropFilter: "blur(24px) saturate(140%)",
         borderBottom: "1px solid rgba(255,255,255,0.65)",
         padding: "0 24px",
       }}>
         <div style={{ maxWidth: 680, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", height: 56 }}>
-          <button onClick={handleBack} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, color: "var(--ink)", fontFamily: "Satoshi, sans-serif", fontSize: 14, fontWeight: 500, padding: "8px 0" }}>
+          <button aria-label={t('back')} className="wizard-icon-button" onClick={handleBack} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, color: "var(--ink)", fontFamily: "Satoshi, sans-serif", fontSize: 14, fontWeight: 500, padding: "8px 0" }}>
             <ArrowLeft size={18} />
           </button>
           <span style={{ fontFamily: "Satoshi, sans-serif", fontSize: 14, fontWeight: 600, color: "var(--ink)" }}>
             {t('stepOf', { step, total: STEPS.length })}
           </span>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <button onClick={handleSaveExit} disabled={saving} style={{ background: "none", border: "none", cursor: saving ? "default" : "pointer", fontFamily: "Satoshi, sans-serif", fontSize: 13, color: "var(--slate)", textDecoration: "underline", padding: 0, opacity: saving ? 0.6 : 1 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            <button className="wizard-save-button" onClick={handleSaveExit} disabled={saving} style={{ background: "none", border: "none", cursor: saving ? "default" : "pointer", fontFamily: "Satoshi, sans-serif", fontSize: 13, color: "var(--slate)", textDecoration: "underline", padding: 0, opacity: saving ? 0.6 : 1 }}>
               {saving ? t('saving') : t('saveExit')}
             </button>
             <div
               style={{ position: "relative", display: "flex" }}
-              onMouseEnter={() => setShowHelp(true)}
-              onMouseLeave={() => setShowHelp(false)}
+              onKeyDown={(event) => { if (event.key === 'Escape') setShowHelp(false); }}
+              onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setShowHelp(false); }}
             >
-              <button style={{ background: "none", border: "none", cursor: "pointer", color: "var(--sage)", display: "flex", padding: 0 }}>
+              <button className="wizard-icon-button" aria-label={t('helpHeading')} aria-expanded={showHelp} aria-controls="wizard-help" onClick={() => setShowHelp((open) => !open)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--sage)", display: "flex", padding: 0 }}>
                 <HelpCircle size={18} />
               </button>
               {showHelp && (
-                <div style={{
+                <div id="wizard-help" style={{
                   position: "absolute", top: "calc(100% + 10px)", right: 0, width: 240, zIndex: 60,
                   background: "var(--ink)", color: "#fff", borderRadius: "0.75rem", padding: "12px 14px",
                   fontFamily: "Satoshi, sans-serif", fontSize: 12.5, lineHeight: 1.5,
@@ -168,28 +175,26 @@ export default function WizardShell({ step, children, onBack, onNext, nextLabel,
       </div>
 
       {/* Scrollable content — two-panel on desktop (rail left, form right) */}
-      <div style={{ flex: 1, overflowY: "auto", padding: "32px 24px 120px", position: "relative", zIndex: 1 }}>
+      <div className="wizard-content" key={step}>
         <div className="wizard-row" style={{ maxWidth: 1500, margin: "0 auto", display: "flex", alignItems: "stretch" }}>
           {/* Inspiration rail — centered in the left half, sticky, follows scroll */}
-          <div className="wizard-rail" style={{ flex: 1, minWidth: 0, display: "flex", justifyContent: "center" }}>
-            <InspirationRail />
-          </div>
+          {showInspiration && (
+            <div className="wizard-rail">
+              <InspirationRail />
+            </div>
+          )}
           {/* Form — centered in the right half */}
-          <div style={{ flex: 1, minWidth: 0, display: "flex", justifyContent: "center" }}>
+          <div className="wizard-form-column">
             <div style={{ width: "100%", maxWidth: 680 }}>
               {children}
             </div>
           </div>
         </div>
       </div>
-      <style>{`
-        .wizard-rail { display: none; }
-        @media (min-width: 1024px) { .wizard-rail { display: block; } }
-      `}</style>
 
       {/* Bottom action bar */}
-      <div style={{
-        position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 50,
+      <div className="wizard-footer" style={{
+        position: "relative", zIndex: 50,
         background: "rgba(239,236,233,0.92)", backdropFilter: "blur(24px) saturate(140%)", WebkitBackdropFilter: "blur(24px) saturate(140%)",
         borderTop: "1px solid rgba(255,255,255,0.6)",
         padding: "16px 24px",
@@ -208,6 +213,7 @@ export default function WizardShell({ step, children, onBack, onNext, nextLabel,
           </button>
           <button
             onClick={onNext}
+            className="wizard-next-button"
             disabled={nextDisabled}
             style={{
               flex: 2, padding: "14px 0", borderRadius: 9999,

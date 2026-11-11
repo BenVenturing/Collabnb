@@ -1092,43 +1092,35 @@ export default function HostDashboard() {
         })()}
 
         {/* ── Stats strip ── */}
-        <div style={{
+        <div className="host-stats" style={{
           ...GC,
-          display: 'grid',
-          gridTemplateColumns: 'repeat(4, 1fr)',
-          marginBottom: '2.5rem',
           overflow: 'hidden',
         }}>
           {convexPitches === undefined ? (
-            Array.from({ length: 4 }).map((_, i, arr) => (
-              <div key={i} style={{ borderRight: i < arr.length - 1 ? '1px solid rgba(25,37,36,0.07)' : 'none' }}>
-                <SkeletonCard variant="stat" />
+            Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="host-stat host-stat-loading" aria-hidden="true">
+                <span className="host-stat-placeholder" />
+                <span className="host-stat-placeholder host-stat-placeholder-value" />
+                <span className="host-stat-placeholder host-stat-placeholder-label" />
               </div>
             ))
           ) : (
             [
-              { icon: MapPin,        label: 'Active Listings',  value: activeCount,  color: '#4A9B7F', action: triggerActiveGlow },
-              { icon: Users,         label: 'New Applicants',   value: applicantSum, color: '#7B68C8', action: () => navigate('/host/proposals', { state: { filter: 'pending'  } }) },
-              { icon: Calendar,      label: 'Upcoming Stays',   value: upcomingStays,      color: '#D4A843', action: () => navigate('/host/proposals', { state: { filter: 'approved' } }) },
-              { icon: MessageSquare, label: 'Unread Messages',  value: hostUnreadMessages, color: '#C86868', action: () => navigate('/inbox') },
-            ].map(({ icon: Icon, label, value, color, action }, i, arr) => (
-              <div
+              { icon: MapPin,        label: 'Active Listings',  value: activeCount, action: triggerActiveGlow },
+              { icon: Users,         label: 'New Applicants',   value: applicantSum, action: () => navigate('/host/proposals', { state: { filter: 'pending'  } }) },
+              { icon: Calendar,      label: 'Upcoming Stays',   value: upcomingStays, action: () => navigate('/host/proposals', { state: { filter: 'approved' } }) },
+              { icon: MessageSquare, label: 'Unread Messages',  value: hostUnreadMessages, action: () => navigate('/inbox') },
+            ].map(({ icon: Icon, label, value, action }) => (
+              <button
+                type="button"
                 key={label}
+                className="host-stat"
                 onClick={action}
-                style={{
-                  padding: '1.25rem 1.5rem',
-                  borderRight: i < arr.length - 1 ? '1px solid rgba(25,37,36,0.07)' : 'none',
-                  cursor: 'pointer',
-                  transition: 'background 160ms',
-                  borderRadius: i === 0 ? '1.25rem 0 0 1.25rem' : i === arr.length - 1 ? '0 1.25rem 1.25rem 0' : undefined,
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(25,37,36,0.03)'}
-                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
               >
-                <Icon size={15} color={color} strokeWidth={2} />
-                <p style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.75rem', color: 'var(--ink)', margin: '0.4rem 0 0.1rem', lineHeight: 1 }}>{value}</p>
-                <p style={{ fontSize: '0.72rem', color: 'var(--sage)', fontFamily: 'var(--font-body)' }}>{label}</p>
-              </div>
+                <Icon className="host-stat-icon" size={15} color="currentColor" strokeWidth={2} aria-hidden="true" />
+                <span className="host-stat-value">{value}</span>
+                <span className="host-stat-label">{label}</span>
+              </button>
             ))
           )}
         </div>

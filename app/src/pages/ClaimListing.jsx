@@ -130,10 +130,10 @@ export default function ClaimListing() {
       {/* Listing preview, as creators see it */}
       <Label>How creators will see you</Label>
       <div style={{ background: C.white, borderRadius: 20, overflow: 'hidden', border: `1px solid ${C.line}`, boxShadow: '0 20px 40px -18px rgba(25,37,36,0.18)' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: imgs.length > 2 ? '2fr 1fr' : '1fr', gap: 4, height: 280 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: imgs.length > 2 ? '2fr 1fr' : '1fr', gridTemplateRows: 'minmax(0,1fr)', gap: 4, height: 280, overflow: 'hidden' }}>
           <Img src={imgs[0]} />
           {imgs.length > 2 && (
-            <div style={{ display: 'grid', gridTemplateRows: '1fr 1fr', gap: 4 }}>
+            <div style={{ display: 'grid', gridTemplateRows: 'minmax(0,1fr) minmax(0,1fr)', gap: 4, minHeight: 0 }}>
               <Img src={imgs[1]} /><Img src={imgs[2]} />
             </div>
           )}
@@ -249,7 +249,7 @@ function Label({ children }) {
 }
 
 function Img({ src }) {
-  return src ? <img src={src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} /> : <div style={{ background: C.mint }} />;
+  return src ? <img src={src} alt="" style={{ width: '100%', height: '100%', minHeight: 0, objectFit: 'cover', display: 'block' }} /> : <div style={{ background: C.mint }} />;
 }
 
 const pill = { display: 'inline-block', background: C.mint, color: C.green, fontWeight: 700, fontSize: '0.78rem', padding: '5px 12px', borderRadius: 999 };

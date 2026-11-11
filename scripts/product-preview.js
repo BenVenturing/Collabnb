@@ -2,6 +2,8 @@
    Collabnb — About page product preview (MacBook mockup + modal)
    ============================================================ */
 
+import { createDialog } from './dialog.js';
+
 const VIEW_LABELS = { host: 'Host view', creator: 'Creator view' };
 
 export function initProductPreview() {
@@ -31,25 +33,27 @@ export function initProductPreview() {
   const playerVideo = document.querySelector('#preview-player-video');
   const playerAudio = document.querySelector('#preview-player-audio');
   const tabs = overlay.querySelectorAll('.preview-tab');
+  const dialog = createDialog(overlay);
   if (playerAudio) playerAudio.volume = 0.28;
 
   function openModal() {
-    overlay.classList.add('open');
-    overlay.setAttribute('aria-hidden', 'false');
-    document.body.style.overflow = 'hidden';
+    dialog.open();
+    updateLoop();
   }
 
   function closeModal() {
-    overlay.classList.remove('open');
-    overlay.setAttribute('aria-hidden', 'true');
-    document.body.style.overflow = '';
+    dialog.close();
     playerVideo.pause();
     playerVideo.removeAttribute('src');
     if (playerAudio) { playerAudio.pause(); playerAudio.currentTime = 0; }
     choiceEl.hidden = false;
     playerEl.hidden = true;
     if (modalCard) modalCard.classList.remove('is-player');
-    tabs.forEach((t) => t.classList.remove('active'));
+    tabs.forEach((t) => {
+      t.classList.remove('active');
+      t.setAttribute('aria-pressed', 'false');
+    });
+    updateLoop();
   }
 
   function selectView(view) {
@@ -65,7 +69,11 @@ export function initProductPreview() {
     choiceEl.hidden = true;
     playerEl.hidden = false;
     if (modalCard) modalCard.classList.add('is-player');
-    tabs.forEach((t) => t.classList.toggle('active', t.dataset.previewSelect === view));
+    tabs.forEach((t) => {
+      t.classList.toggle('active', t.dataset.previewSelect === view);
+      t.setAttribute('aria-pressed', String(t.dataset.previewSelect === view));
+    });
+    overlay.querySelector(`.preview-tab[data-preview-select="${view}"]`)?.focus();
   }
 
   // Video unreachable (e.g. host outage) — bounce back to the choice screen
@@ -77,6 +85,8 @@ export function initProductPreview() {
     playerEl.hidden = true;
     if (modalCard) modalCard.classList.remove('is-player');
     tabs.forEach((t) => t.classList.remove('active'));
+    tabs.forEach((t) => t.setAttribute('aria-pressed', 'false'));
+    choiceEl.querySelector('button')?.focus();
   });
 
   document.querySelectorAll('[data-preview-open]').forEach((btn) => {
@@ -89,6 +99,16 @@ export function initProductPreview() {
 
   playerVideo.addEventListener('ended', () => {
     if (playerAudio) { playerAudio.pause(); playerAudio.currentTime = 0; }
+  });
+  playerVideo.addEventListener('pause', () => playerAudio?.pause());
+  playerVideo.addEventListener('play', () => {
+    if (playerAudio?.getAttribute('src')) playerAudio.play().catch(() => {});
+  });
+  playerVideo.addEventListener('volumechange', () => {
+    if (playerAudio) {
+      playerAudio.muted = playerVideo.muted;
+      playerAudio.volume = playerVideo.volume * 0.28;
+    }
   });
 
   if (closeBtn) closeBtn.addEventListener('click', closeModal);
@@ -104,13 +124,24 @@ export function initProductPreview() {
   /* Ambient loop on the mockup screen: alternate host/creator clips,
      since <video loop> never fires 'ended' so it couldn't switch sources. */
   const loopVideo = mockup.querySelector('.mac-screen-video');
+  const floating = document.querySelector('[data-floating-preview]');
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const mobile = window.matchMedia('(max-width: 768px)');
   const captionEl = mockup.querySelector('[data-mac-caption]');
   const order = ['host', 'creator'];
   let orderIndex = 0;
   let loopStarted = false;
   let loopBroken = false;
+  let intersects = false;
+
+  function canPlayLoop() {
+    return intersects && !loopBroken && !reducedMotion.matches && !document.hidden
+      && !overlay.classList.contains('open')
+      && (!floating || (floating.classList.contains('visible') && !mobile.matches));
+  }
 
   function playNextLoop() {
+    if (!canPlayLoop()) return;
     const view = order[orderIndex % order.length];
     orderIndex += 1;
     const src = loops[view];
@@ -120,7 +151,23 @@ export function initProductPreview() {
     loopVideo.play().catch(() => {});
   }
 
+  function updateLoop() {
+    if (!loopVideo) return;
+    if (!canPlayLoop()) {
+      loopVideo.pause();
+    } else if (!loopStarted) {
+      loopStarted = true;
+      playNextLoop();
+    } else if (loopVideo.ended) {
+      playNextLoop();
+    } else if (loopVideo.paused) {
+      loopVideo.play().catch(() => {});
+    }
+  }
+
   if (loopVideo) {
+    loopVideo.autoplay = false;
+    loopVideo.preload = 'none';
     loopVideo.addEventListener('ended', playNextLoop);
 
     // Video unreachable — stop retrying on every scroll intersection
@@ -135,43 +182,43 @@ export function initProductPreview() {
     // page load (even while hidden at opacity:0 pre-scroll), which is what
     // was burning through the Blob data-transfer cap.
     const loopObserver = new IntersectionObserver((entries) => {
-      if (loopBroken) return;
-      const visible = entries[0].isIntersecting;
-      if (visible && !loopStarted) {
-        loopStarted = true;
-        playNextLoop();
-      } else if (visible && loopVideo.paused && loopVideo.src) {
-        loopVideo.play().catch(() => {});
-      } else if (!visible) {
-        loopVideo.pause();
-      }
+      intersects = entries[0].isIntersecting;
+      updateLoop();
     }, { threshold: 0.25 });
     loopObserver.observe(mockup);
+    reducedMotion.addEventListener('change', updateLoop);
+    document.addEventListener('visibilitychange', updateLoop);
   }
 
   /* Floating preview bubble (home hero) — shows after the hero scrolls by,
      dismissible for the rest of the session so closing it sticks. */
-  const floating = document.querySelector('[data-floating-preview]');
   if (floating) {
     const dismissBtn = floating.querySelector('[data-floating-dismiss]');
-    const dismissed = sessionStorage.getItem('collabnb_preview_dismissed') === '1';
+    let dismissed = false;
+    try { dismissed = sessionStorage.getItem('collabnb_preview_dismissed') === '1'; } catch { /* Storage can be disabled. */ }
 
-    if (!dismissed) {
-      window.addEventListener('scroll', () => {
-        if (window.scrollY > window.innerHeight * 0.6) {
-          floating.classList.add('visible');
-        } else {
-          floating.classList.remove('visible');
-        }
-      }, { passive: true });
+    function updateFloating() {
+      const visible = !dismissed && !mobile.matches && window.scrollY > window.innerHeight * 0.6;
+      if (!visible && floating.contains(document.activeElement)) {
+        document.querySelector('#hero-cta-primary')?.focus({ preventScroll: true });
+      }
+      floating.classList.toggle('visible', visible);
+      floating.setAttribute('aria-hidden', String(!visible));
+      floating.toggleAttribute('inert', !visible);
+      updateLoop();
     }
+    updateFloating();
+    window.addEventListener('scroll', updateFloating, { passive: true });
+    window.addEventListener('resize', updateFloating);
+    mobile.addEventListener('change', updateFloating);
 
     if (dismissBtn) {
       dismissBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        floating.classList.remove('visible');
+        dismissed = true;
+        updateFloating();
         floating.classList.add('dismissed');
-        sessionStorage.setItem('collabnb_preview_dismissed', '1');
+        try { sessionStorage.setItem('collabnb_preview_dismissed', '1'); } catch { /* Keep dismissed in memory. */ }
       });
     }
   }

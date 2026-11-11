@@ -530,7 +530,7 @@ main .glass-sm { background: rgba(255, 255, 255, 0.65); }
   color: var(--slate);
   border: 1px solid var(--stone);
   text-decoration: none;
-  transition: all 0.2s ease;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
   white-space: nowrap;
 }
 .btn-login:hover {
@@ -1963,7 +1963,7 @@ main .glass-sm { background: rgba(255, 255, 255, 0.65); }
   font-weight: 500;
   font-size: var(--fs-body);
   color: var(--slate);
-  transition: all 200ms var(--ease-out-quart);
+  transition: background-color 200ms var(--ease-out-quart), color 200ms var(--ease-out-quart), box-shadow 200ms var(--ease-out-quart);
   cursor: pointer;
   min-height: 44px;
 }
@@ -2006,7 +2006,7 @@ main .glass-sm { background: rgba(255, 255, 255, 0.65); }
   color: var(--sage);
   background: rgba(255,255,255,0.4);
   border: 1px solid var(--hairline);
-  transition: all 300ms var(--ease-out-quart);
+  transition: background-color 300ms var(--ease-out-quart), border-color 300ms var(--ease-out-quart), color 300ms var(--ease-out-quart);
 }
 .step-dot.active {
   background: var(--ink);
@@ -2182,7 +2182,7 @@ main .glass-sm { background: rgba(255, 255, 255, 0.65); }
   cursor: pointer;
   flex-shrink: 0;
   margin-top: 2px;
-  transition: all 200ms;
+  transition: background-color 200ms, border-color 200ms;
   background: rgba(255,255,255,0.6);
 }
 .form-checkbox:checked {
@@ -3694,7 +3694,7 @@ main .glass-sm { background: rgba(255, 255, 255, 0.65); }
 }
 .faq-bubble-tab.active { background: var(--ink); color: var(--bone); }
 .faq-bubble-divider { height: 1px; background: rgba(25,37,36,0.07); margin: 0.875rem 0 0; flex-shrink: 0; }
-.faq-bubble-body { flex: 1; overflow-y: auto; padding: 1.25rem 1.5rem 1.5rem; }
+.faq-bubble-body { flex: 1; overflow-y: auto; overscroll-behavior: contain; padding: 1.25rem 1.5rem 1.5rem; }
 
 /* FAQ tab */
 .faq-bubble-search-wrap { position: relative; margin-bottom: 1.25rem; }
@@ -3719,8 +3719,7 @@ main .glass-sm { background: rgba(255, 255, 255, 0.65); }
 }
 .faq-bubble-chevron { flex-shrink: 0; color: var(--slate); transition: transform 200ms; }
 .faq-bubble-item.open .faq-bubble-chevron { transform: rotate(180deg); }
-.faq-bubble-answer-wrap { overflow: hidden; max-height: 0; transition: max-height 250ms cubic-bezier(0.16,1,0.3,1); }
-.faq-bubble-item.open .faq-bubble-answer-wrap { max-height: 500px; }
+.faq-bubble-answer-wrap[hidden] { display: none; }
 .faq-bubble-answer { font-size: 0.875rem; color: var(--slate); line-height: 1.75; padding-bottom: 1rem; white-space: pre-line; margin: 0; }
 
 /* Message tab */
@@ -3810,6 +3809,27 @@ main .glass-sm { background: rgba(255, 255, 255, 0.65); }
   font-family: var(--font-body); font-size: 0.875rem; color: var(--ink); outline: none;
 }
 .faq-bubble-suggest-form input:focus { border-color: rgba(25,37,36,0.25); }
+.faq-bubble-overlay :is(button, input, select, textarea):focus-visible,
+.floating-preview button:focus-visible,
+.preview-modal-card :is(button, video):focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+}
+.faq-bubble-form-error { color: #9b2525; font-size: 0.875rem; }
+.faq-bubble-form-error:empty { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .floating-preview,
+  .floating-preview *,
+  .preview-modal-card,
+  .preview-modal-card *,
+  .faq-bubble-trigger,
+  .faq-bubble-overlay,
+  .faq-bubble-overlay * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
 .faq-bubble-suggest-form button {
   padding: 0.7rem 1.25rem; background: var(--ink); color: var(--bone);
   border-radius: 0.75rem; border: none; cursor: pointer;

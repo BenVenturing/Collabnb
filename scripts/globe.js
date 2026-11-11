@@ -4,7 +4,6 @@
 
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.min.js';
 import { getPublicGlobeProfiles, getPublicMapPreview } from './convex.js';
-import { openFullScreenMap } from './globe-map.js';
 
 /* ── Safety: uncaught errors ─────────────────────────────────── */
 window.addEventListener('unhandledrejection', e => console.warn('Globe rejection:', e.reason));
@@ -530,17 +529,35 @@ function initGlobe() {
 
   getPublicMapPreview().then((points) => { mapPoints = points || []; });
 
-  function openMap() {
+  async function openMap() {
     if (zooming || !mapPoints.length) return;
     zooming = true;
-    tooltip.classList.remove('is-visible');
+    tooltip.textContent = 'Loading map…';
+    tooltip.setAttribute('role', 'status');
+    tooltip.classList.add('is-visible');
+    container.setAttribute('aria-busy', 'true');
     container.classList.add('is-zooming');
-    setTimeout(() => {
+    try {
+      // Fetch Mapbox and its CSS only when the visitor opens the map.
+      const [{ openFullScreenMap }] = await Promise.all([
+        import('./globe-map.js'),
+        new Promise((resolve) => setTimeout(resolve, 420)),
+      ]);
       openFullScreenMap(mapPoints, () => {
         container.classList.remove('is-zooming');
         zooming = false;
       });
-    }, 420);
+      tooltip.classList.remove('is-visible');
+      tooltip.textContent = 'Curious what’s live? Take a peek →';
+    } catch (error) {
+      container.classList.remove('is-zooming');
+      zooming = false;
+      tooltip.textContent = 'Map could not load. Tap the globe to retry.';
+      tooltip.classList.add('is-visible');
+      console.warn('Could not open map:', error);
+    } finally {
+      container.removeAttribute('aria-busy');
+    }
   }
 
   canvas.addEventListener('mousedown',  e => { dragging = true;  prevMouse = getPos(e); downPos = getPos(e); vel = { x:0, y:0 }; canvas.style.cursor = 'grabbing'; });

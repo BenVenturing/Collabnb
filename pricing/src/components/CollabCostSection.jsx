@@ -1,10 +1,12 @@
 import PricingTool, { PointsHelpButton } from '../../../app/src/components/PricingTool';
+import PricingTranslationProvider from '../../../app/src/i18n/PricingTranslationProvider';
 
 // Reuses the exact same PricingTool the app mounts on Explore + listing forms,
 // so pricing logic stays a single source of truth. Anchored at #calculator for
 // the marketing site's "More → Collab cost calculator" link.
 export default function CollabCostSection() {
   return (
+    <PricingTranslationProvider>
     <section
       id="calculator"
       style={{ maxWidth: 640, margin: '0 auto', padding: '3.5rem 1.25rem 1rem', scrollMarginTop: '6rem' }}
@@ -33,5 +35,6 @@ export default function CollabCostSection() {
         </div>
       </div>
     </section>
+    </PricingTranslationProvider>
   );
 }

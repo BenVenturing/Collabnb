@@ -75,6 +75,9 @@ function buildLockedCard(l) {
 }
 
 export function openFullScreenMap(points, onClose) {
+  const previousOverflow = document.body.style.overflow;
+  let map;
+  let closed = false;
   const overlay = document.createElement('div');
   overlay.className = 'globe-map-overlay';
 
@@ -96,6 +99,7 @@ export function openFullScreenMap(points, onClose) {
   // while the full-screen map is open — it floats at z-index 99997, above
   // everything, so it would otherwise sit on top of the map.
   const musicWrap = document.querySelector('.cnb-mp-wrap');
+  const previousMusicDisplay = musicWrap?.style.display;
   const musicAudio = musicWrap?.querySelector('audio');
   if (musicAudio && !musicAudio.paused) musicAudio.pause();
   if (musicWrap) musicWrap.style.display = 'none';
@@ -103,13 +107,18 @@ export function openFullScreenMap(points, onClose) {
   // Start zoomed all the way out on the same globe projection as the Three.js
   // globe, then fitBounds animates in below — a continuous "zoom into the
   // globe, then the globe becomes the map" motion instead of a hard cut.
-  const map = new mapboxgl.Map({
-    container: mapEl,
-    style: 'mapbox://styles/mapbox/outdoors-v12',
-    projection: 'globe',
-    center: [-98.5, 39.5],
-    zoom: 0.4,
-  });
+  try {
+    map = new mapboxgl.Map({
+      container: mapEl,
+      style: 'mapbox://styles/mapbox/outdoors-v12',
+      projection: 'globe',
+      center: [-98.5, 39.5],
+      zoom: 0.4,
+    });
+  } catch (error) {
+    close();
+    throw error;
+  }
   map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'top-right');
 
   map.on('load', () => {
@@ -136,10 +145,12 @@ export function openFullScreenMap(points, onClose) {
   });
 
   function close() {
-    map.remove();
+    if (closed) return;
+    closed = true;
+    map?.remove();
     overlay.remove();
-    document.body.style.overflow = '';
-    if (musicWrap) musicWrap.style.display = '';
+    document.body.style.overflow = previousOverflow;
+    if (musicWrap) musicWrap.style.display = previousMusicDisplay;
     onClose?.();
   }
   back.addEventListener('click', close);

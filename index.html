@@ -106,7 +106,7 @@
 <div aria-hidden="true" class="bg-grain"></div>
 
 <!-- Mobile nav overlay -->
-<div class="nav-overlay glass" aria-label="Mobile navigation" role="dialog" aria-modal="true">
+<div id="mobile-nav" class="nav-overlay glass" aria-label="Mobile navigation" role="dialog" aria-modal="true">
   <a href="how-it-works.html">How it works</a>
   <a href="/blog">Journal</a>
   <a href="pricing/index.html">Pricing</a>
@@ -215,7 +215,7 @@
   </section>
 
   <!-- ── FLOATING PRODUCT PREVIEW ── -->
-  <div class="floating-preview" data-floating-preview aria-hidden="true">
+  <div class="floating-preview" data-floating-preview aria-hidden="true" inert>
     <button type="button" class="floating-preview-close" data-floating-dismiss aria-label="Dismiss preview">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
     </button>
@@ -230,7 +230,7 @@
       <span class="mac-lid">
         <span class="mac-notch"></span>
         <span class="mac-screen">
-          <video class="mac-screen-video" muted autoplay playsinline aria-hidden="true"></video>
+          <video class="mac-screen-video" muted preload="none" playsinline aria-hidden="true"></video>
           <span class="mac-caption" data-mac-caption>Host view</span>
           <span class="mac-expand" aria-hidden="true">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 00-2 2v3M16 3h3a2 2 0 012 2v3M21 16v3a2 2 0 01-2 2h-3M8 21H5a2 2 0 01-2-2v-3"/></svg>

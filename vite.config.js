@@ -4,9 +4,12 @@ import { resolve } from 'path';
 
 export default defineConfig({
   plugins: [react()],
+  // Shared app components and marketing entry points must use one React copy.
+  resolve: { dedupe: ['react', 'react-dom'] },
   base: '/',
   publicDir: 'public',
   build: {
+    manifest: true,
     target: 'es2022',
     rollupOptions: {
       input: {

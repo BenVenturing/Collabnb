@@ -6,6 +6,7 @@
 
 import { submitMessage, getMessagesByEmail, getSuggestions, seedSuggestions, submitSuggestion, voteSuggestion } from './convex.js';
 import { launchConfetti } from './main.js';
+import { createDialog } from './dialog.js';
 
 /* ── Lazy Clerk instance (same pattern as main.js/login.js/profile.js) ── */
 let _clerkPromise = null;
@@ -123,7 +124,7 @@ function buildSkeleton() {
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17" stroke-width="3"/></svg>
       <span class="faq-bubble-trigger-label">Help</span>
     </button>
-    <div class="faq-bubble-overlay" id="faq-bubble-panel" role="dialog" aria-modal="true" aria-labelledby="faq-bubble-title">
+    <div class="faq-bubble-overlay" id="faq-bubble-panel" role="dialog" aria-modal="true" aria-labelledby="faq-bubble-title" aria-hidden="true" inert>
       <div class="faq-bubble-card">
         <div class="faq-bubble-header">
           <div class="faq-bubble-header-title">
@@ -136,10 +137,10 @@ function buildSkeleton() {
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
         </div>
-        <div class="faq-bubble-tabs">
-          <button type="button" class="faq-bubble-tab active" data-tab="faq">FAQ</button>
-          <button type="button" class="faq-bubble-tab" data-tab="message">Send a Message</button>
-          <button type="button" class="faq-bubble-tab" data-tab="suggestions">Suggestions</button>
+        <div class="faq-bubble-tabs" role="group" aria-label="Help sections">
+          <button type="button" class="faq-bubble-tab active" data-tab="faq" aria-pressed="true">FAQ</button>
+          <button type="button" class="faq-bubble-tab" data-tab="message" aria-pressed="false">Send a Message</button>
+          <button type="button" class="faq-bubble-tab" data-tab="suggestions" aria-pressed="false">Suggestions</button>
         </div>
         <div class="faq-bubble-divider"></div>
         <div class="faq-bubble-body">
@@ -158,7 +159,7 @@ function renderFAQTab(container) {
   container.innerHTML = `
     <div class="faq-bubble-search-wrap">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="faq-bubble-search-icon"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-      <input type="text" class="faq-bubble-search" placeholder="Search questions…" />
+      <input type="search" name="faq-search" class="faq-bubble-search" aria-label="Search questions" autocomplete="off" placeholder="Search questions…" />
     </div>
     <div class="faq-bubble-sections"></div>
   `;
@@ -180,13 +181,13 @@ function renderFAQTab(container) {
     sectionsEl.innerHTML = filtered.map((section) => `
       <div class="faq-bubble-section">
         <p class="faq-bubble-section-title">${escapeHtml(section.title)}</p>
-        ${section.items.map((item) => `
+        ${section.items.map((item, index) => `
           <div class="faq-bubble-item">
-            <button type="button" class="faq-bubble-question">
+            <button type="button" class="faq-bubble-question" aria-expanded="false" aria-controls="faq-answer-${FAQ_SECTIONS.findIndex((s) => s.title === section.title)}-${index}">
               <span>${escapeHtml(item.q)}</span>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" class="faq-bubble-chevron"><polyline points="6 9 12 15 18 9"/></svg>
             </button>
-            <div class="faq-bubble-answer-wrap">
+            <div class="faq-bubble-answer-wrap" id="faq-answer-${FAQ_SECTIONS.findIndex((s) => s.title === section.title)}-${index}" hidden>
               <p class="faq-bubble-answer">${escapeHtml(item.a)}</p>
             </div>
           </div>
@@ -196,7 +197,9 @@ function renderFAQTab(container) {
 
     sectionsEl.querySelectorAll('.faq-bubble-question').forEach((btn) => {
       btn.addEventListener('click', () => {
-        btn.parentElement.classList.toggle('open');
+        const expanded = btn.parentElement.classList.toggle('open');
+        btn.setAttribute('aria-expanded', String(expanded));
+        btn.nextElementSibling.hidden = !expanded;
       });
     });
   }
@@ -216,17 +219,17 @@ async function renderMessageTab(container) {
     <form class="faq-bubble-message-form">
       <div class="faq-bubble-form-row">
         <div>
-          <label>Name</label>
-          <input type="text" name="name" required value="${escapeHtml(prefillName)}" />
+          <label for="help-name">Name</label>
+          <input id="help-name" type="text" name="name" autocomplete="name" required value="${escapeHtml(prefillName)}" />
         </div>
         <div>
-          <label>Email</label>
-          <input type="email" name="email" required value="${escapeHtml(prefillEmail)}" />
+          <label for="help-email">Email</label>
+          <input id="help-email" type="email" name="email" autocomplete="email" spellcheck="false" required value="${escapeHtml(prefillEmail)}" />
         </div>
       </div>
       <div>
-        <label>Category</label>
-        <select name="category">
+        <label for="help-category">Category</label>
+        <select id="help-category" name="category">
           <option value="">Select a category…</option>
           <option>Bug Report</option>
           <option>Feature Request</option>
@@ -236,12 +239,13 @@ async function renderMessageTab(container) {
         </select>
       </div>
       <div>
-        <label>Message</label>
-        <textarea name="message" rows="5" required placeholder="Describe your question or issue…"></textarea>
+        <label for="help-message">Message</label>
+        <textarea id="help-message" name="message" rows="5" required placeholder="Describe your question or issue…"></textarea>
       </div>
       <button type="submit" class="faq-bubble-submit">Send Message</button>
+      <p class="faq-bubble-form-error" role="alert"></p>
     </form>
-    <div class="faq-bubble-message-sent" hidden>
+    <div class="faq-bubble-message-sent" tabindex="-1" role="status" hidden>
       <div class="faq-bubble-sent-icon">
         <svg viewBox="0 0 24 24" fill="none" stroke="#2d6a4f" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
       </div>
@@ -281,6 +285,8 @@ async function renderMessageTab(container) {
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const submitBtn = form.querySelector('.faq-bubble-submit');
+    const errorEl = form.querySelector('.faq-bubble-form-error');
+    errorEl.textContent = '';
     submitBtn.disabled = true;
     submitBtn.textContent = 'Sending…';
     const data = Object.fromEntries(new FormData(form).entries());
@@ -295,11 +301,13 @@ async function renderMessageTab(container) {
       console.warn('submitMessage failed:', err.message);
       submitBtn.disabled = false;
       submitBtn.textContent = 'Try again';
+      errorEl.textContent = 'Your message could not be sent. Check your connection and try again.';
       return;
     }
     form.hidden = true;
     prevWrap.hidden = true;
     sentEl.hidden = false;
+    sentEl.focus();
     launchConfetti();
   });
 }
@@ -316,7 +324,7 @@ async function renderSuggestionsTab(container) {
     </div>
     <div class="faq-bubble-suggestions-list"><div class="faq-bubble-loading"></div></div>
     <form class="faq-bubble-suggest-form">
-      <input type="text" maxlength="200" placeholder="Suggest a feature…" />
+      <input type="text" name="suggestion" aria-label="Suggest a feature" autocomplete="off" maxlength="200" placeholder="Suggest a feature…" />
       <button type="submit">Submit</button>
     </form>
   `;
@@ -393,20 +401,22 @@ export function initFAQBubble() {
   };
 
   let faqBuilt = false, messageBuilt = false, suggestionsBuilt = false;
+  const dialog = createDialog(overlay, { returnFocus: () => trigger });
 
   function open() {
-    overlay.classList.add('open');
     trigger.setAttribute('aria-expanded', 'true');
-    document.body.style.overflow = 'hidden';
     if (!faqBuilt) { renderFAQTab(panels.faq); faqBuilt = true; }
+    dialog.open();
   }
   function close() {
-    overlay.classList.remove('open');
+    dialog.close();
     trigger.setAttribute('aria-expanded', 'false');
-    document.body.style.overflow = '';
   }
   function switchTab(name) {
-    tabs.forEach((t) => t.classList.toggle('active', t.dataset.tab === name));
+    tabs.forEach((t) => {
+      t.classList.toggle('active', t.dataset.tab === name);
+      t.setAttribute('aria-pressed', String(t.dataset.tab === name));
+    });
     Object.entries(panels).forEach(([key, el]) => { el.hidden = key !== name; });
     if (name === 'message' && !messageBuilt) { renderMessageTab(panels.message); messageBuilt = true; }
     if (name === 'suggestions' && !suggestionsBuilt) { renderSuggestionsTab(panels.suggestions); suggestionsBuilt = true; }

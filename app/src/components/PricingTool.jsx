@@ -1,6 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import i18nInstance from "../i18n";
 import {
   TIER_IDS, TIERS, DELIVERABLE_TYPES, DELIVERABLE_LABELS, DELIVERABLE_POINTS,
   PRESET_PACKAGES, LOAD_TIER_LABELS,
@@ -11,8 +10,6 @@ import {
 
 // Range bar: a single smooth gradient from very light green to deep green.
 // The hard floor, caution threshold, and recommended range stay labelled beneath.
-function zoneCopy(zone) { return i18nInstance.t(`pricingTool:zoneCopy.${zone}`); }
-
 function fmt(n) {
   return `$${Math.round(n).toLocaleString()}`;
 }
@@ -532,7 +529,7 @@ export default function PricingTool({ mode = "sandbox", initialValue, onChange }
 
               {zone && zone !== "green" && (
                 <p style={{ marginTop: 10, fontSize: 11, color: "var(--sage)", lineHeight: 1.4 }}>
-                  {zoneCopy(zone)}
+                  {t(`zoneCopy.${zone}`)}
                 </p>
               )}
             </>

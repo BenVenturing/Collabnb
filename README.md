@@ -16,7 +16,7 @@ Hosts offer free or discounted stays. Creators deliver content — UGC video, Re
 
 ## For AI tools
 
-See [`llms.txt`](./llms.txt) for a structured overview of the codebase, tech stack, business rules, and constraints. That file follows the [llms.txt standard](https://llmstxt.org) and is the best starting point for any AI assistant working in this repo.
+See [`public/llms.txt`](./public/llms.txt) for project background. Some launch and hosting details there are historical; use the source and deployment configuration to confirm current behavior.
 
 ## Tech stack
 
@@ -26,7 +26,7 @@ See [`llms.txt`](./llms.txt) for a structured overview of the codebase, tech sta
 | Auth | Clerk (Google OAuth) |
 | Database | Convex |
 | Email | Resend |
-| Hosting | Vercel |
+| Hosting | Cloudflare Pages (`wrangler.toml`, `public/_redirects`, `functions/`) |
 
 ## Project structure
 
@@ -36,3 +36,20 @@ app/        React SPA — all product UI lives here
   src/
   convex/   Backend functions and schema
 ```
+
+## Quality checks
+
+Run `npm run check` to test the Help Center and product preview accessibility,
+build both sites, and check built marketing links/assets, canonical hosts,
+sitemap entries, and robots configuration. CI runs the same checks on pushes and
+pull requests. Tests mock authentication and backend calls; they never submit
+messages or create production data. Layout and contrast still need browser review.
+
+The checks also enforce static JavaScript budgets for How It Works (200 kB) and
+the calculator (300 kB), including their shared static imports. Mapbox loads on
+request, and the public calculator uses only its English translation namespace.
+These are bundle budgets, not measured page-load times; external scripts and
+runtime requests such as authentication are outside those totals.
+
+The existing canonical host is `https://www.collabnb.com`. The checks validate
+metadata consistency; they do not configure DNS or enforce a live host redirect.

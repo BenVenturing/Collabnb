@@ -1,0 +1,11 @@
+import { chromium } from 'playwright';
+const browser = await chromium.launch();
+const page = await browser.newPage({ viewport: { width: 1400, height: 1100 } });
+await page.goto('http://localhost:5174/admin', { waitUntil: 'networkidle' });
+await page.waitForTimeout(1200);
+await page.locator('text=Money').first().click();
+await page.waitForTimeout(300);
+await page.locator('text=Overview').last().click();
+await page.waitForTimeout(1200);
+await page.screenshot({ path: '/private/tmp/claude-501/-Users-macbookair-Documents-Claude-Projects-Collabnb-Website/e16f646b-082d-45cd-bbd3-ebac1a780f73/scratchpad/money-overview-new.png', fullPage: true });
+await browser.close();

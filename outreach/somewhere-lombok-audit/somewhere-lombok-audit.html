@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Somewhere Lombok Marketing Audit</title>
+<style>
+  @page { size: A4; margin: 0; }
+  :root { --ink:#192524; --muted:#5d6a64; --paper:#f4f8f3; --line:#dde8da; --accent:#3f6b52; --mint:#d1ebdb; --mint2:#e8f4ec; --card:#fff; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { background:#ddd; font-family: -apple-system, "Helvetica Neue", Arial, sans-serif; color:var(--ink); font-size:9.6pt; line-height:1.45; }
+  .page { width:210mm; height:297mm; background:var(--paper); margin:0 auto; padding:14mm 15mm 12mm; position:relative; overflow:hidden; page-break-after:always; display:flex; flex-direction:column; }
+  .page::before { content:""; position:absolute; top:0; left:0; right:0; height:3mm; background:var(--mint); }
+  .page:last-child { page-break-after:auto; }
+  .top { display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--line); padding-bottom:3.5mm; margin-bottom:5mm; }
+  .brand { display:flex; align-items:center; gap:2.5mm; font-weight:700; letter-spacing:.02em; }
+  .brand img { height:8mm; }
+  .tag { font-size:7.5pt; letter-spacing:.14em; text-transform:uppercase; color:var(--accent); background:var(--mint2); padding:1.2mm 2.6mm; border-radius:10mm; font-weight:600; }
+  h1 { font-family: Georgia, "Times New Roman", serif; font-weight:400; font-size:23pt; line-height:1.1; letter-spacing:-.01em; }
+  h1 em { color:var(--accent); font-style:italic; }
+  h2 { font-size:7.5pt; letter-spacing:.16em; text-transform:uppercase; color:var(--accent); margin:4.5mm 0 2.2mm; font-weight:700; }
+  .lede { color:var(--muted); margin-top:2.5mm; max-width:160mm; }
+  .hero { display:grid; grid-template-columns: 1.55fr 1fr; gap:3mm; margin-top:5mm; height:44mm; grid-template-rows:44mm; }
+  .hero > img { height:44mm; }
+  .hero img { width:100%; height:100%; object-fit:cover; border-radius:2mm; display:block; }
+  .hero .stack { display:grid; grid-template-rows:minmax(0,1fr) minmax(0,1fr); gap:3mm; min-height:0; height:44mm; overflow:hidden; }
+  .hero .stack img { height:100%; min-height:0; }
+  .stats { display:grid; grid-template-columns:repeat(4,1fr); gap:3mm; }
+  .stat { background:var(--card); border:1px solid var(--line); border-radius:2mm; padding:3mm 3.2mm; }
+  .stat b { display:block; font-family:Georgia,serif; font-weight:400; font-size:19pt; line-height:1; }
+  .stat span { display:block; font-size:7.4pt; color:var(--muted); margin-top:1.2mm; }
+  .stat.warn { background:var(--mint2); border-color:var(--mint); }
+  .stat.warn b { color:var(--accent); }
+  .cols { display:grid; grid-template-columns:1fr 1fr; gap:6mm; }
+  ul { list-style:none; }
+  li { padding:1.3mm 0 1.3mm 4mm; position:relative; border-bottom:1px solid var(--line); }
+  li:last-child { border-bottom:0; }
+  li::before { content:""; position:absolute; left:0; top:3.1mm; width:1.8mm; height:1.8mm; border-radius:50%; background:var(--accent); }
+  li.gap::before { background:transparent; border:1.4px solid var(--accent); width:1.4mm; height:1.4mm; }
+  li b { font-weight:700; }
+  .posts { display:grid; grid-template-columns:repeat(3,1fr); gap:3mm; }
+  .post { background:var(--card); border:1px solid var(--line); border-radius:2mm; overflow:hidden; }
+  .post img { width:100%; height:30mm; object-fit:cover; display:block; }
+  .post p { padding:2mm 2.6mm 2.4mm; font-size:7.4pt; color:var(--muted); line-height:1.35; }
+  .foot { margin-top:auto; padding-top:3mm; border-top:1px solid var(--line); display:flex; justify-content:space-between; font-size:7pt; color:var(--muted); gap:4mm; } .foot span:last-child { white-space:nowrap; }
+  .steps { display:grid; grid-template-columns:repeat(3,1fr); gap:3mm; }
+  .step { background:var(--card); border:1px solid var(--line); border-radius:2mm; padding:3.5mm; }
+  .step i { font-style:normal; font-family:Georgia,serif; font-size:17pt; color:var(--accent); display:block; margin-bottom:1mm; }
+  .step b { display:block; margin-bottom:1mm; }
+  .step p { font-size:8.4pt; color:var(--muted); }
+  .bench { background:var(--ink); color:#fff; border-radius:2.5mm; padding:4mm 6mm; display:grid; grid-template-columns:auto 1fr; gap:6mm; align-items:center; }
+  .bench .n { font-family:Georgia,serif; font-size:30pt; line-height:1; color:var(--mint); white-space:nowrap; }
+  .bench p { font-size:8.8pt; color:#dfe7e2; }
+  .bench small { display:block; margin-top:1.5mm; font-size:6.8pt; color:#98a59f; }
+  .ideas { display:grid; grid-template-columns:repeat(3,1fr); gap:3mm; }
+  .idea { display:grid; grid-template-rows:26mm auto; background:var(--card); border:1px solid var(--line); border-radius:2mm; overflow:hidden; }
+  .idea img { width:100%; height:26mm; object-fit:cover; display:block; }
+  .idea div { padding:2.2mm 2.8mm 2.6mm; }
+  .idea b { display:block; font-size:8.6pt; }
+  .idea span { font-size:7.8pt; color:var(--muted); }
+  .cta { margin-top:4mm; background:var(--mint); color:var(--ink); border-radius:2.5mm; padding:5mm 6mm; display:flex; justify-content:space-between; align-items:center; gap:6mm; }
+  .cta b { font-family:Georgia,serif; font-weight:400; font-size:14pt; display:block; line-height:1.2; }
+  .cta span { font-size:8.4pt; color:#2f4a3c; }
+  .cta .links { display:flex; flex-direction:column; align-items:flex-end; gap:1.5mm; }
+  .cta .links a { color:var(--ink); font-weight:700; font-size:10pt; white-space:nowrap; text-decoration:none; border-bottom:1px solid rgba(25,37,36,.4); }
+  .cta .links a.btn { background:var(--ink); color:#fff; border:0; padding:2mm 4mm; border-radius:10mm; }
+  .foot a { color:var(--ink); text-decoration:none; }
+  @media screen { .page { margin:8mm auto; box-shadow:0 2px 14px rgba(0,0,0,.15); } }
+</style>
+</head>
+<body>
+
+<section class="page">
+  <div class="top">
+    <div class="brand"><img src="img/collabnb-logo.png" alt="">Collabnb</div>
+    <div class="tag">Marketing audit · Somewhere Lombok · November 2026</div>
+  </div>
+
+  <h1>Somewhere Lombok, <em>as your guests see it online.</em></h1>
+  <p class="lede">A snapshot of your Google profile, booking sites, website and Instagram, built from public data. Twenty hillside villas, fire-side dinners and sunrise over Are Guling Bay give you plenty to film. Here’s where creator video could help.</p>
+
+  <div class="hero">
+    <img src="img/hero.jpg" alt="Somewhere Lombok from above" style="object-position:center 60%">
+    <div class="stack">
+      <img src="img/terrace.jpg" alt="Villa terrace with ocean view">
+      <img src="img/pool-villas.jpg" alt="Pool and villas">
+    </div>
+  </div>
+
+  <h2>The numbers</h2>
+  <div class="stats">
+    <div class="stat"><b>4.8</b><span>Google rating · 476 reviews</span></div>
+    <div class="stat"><b>9.6</b><span>Dinogo · 241 reviews</span></div>
+    <div class="stat"><b>17.9k</b><span>Instagram followers · 99 posts</span></div>
+    <div class="stat warn"><b>3 / 12</b><span>Reels in your latest 12 posts</span></div>
+  </div>
+  <div class="stats" style="margin-top:3mm">
+    <div class="stat"><b>20</b><span>Villas, each with a plunge pool</span></div>
+    <div class="stat"><b>9.4</b><span>ViaMichelin · 81 reviews</span></div>
+    <div class="stat"><b>15 min</b><span>Drive to Kuta</span></div>
+    <div class="stat warn"><b>1 page</b><span>On your website, no rooms or booking</span></div>
+  </div>
+
+  <h2>Recent Instagram posts</h2>
+  <div class="posts">
+    <div class="post"><img src="img/ig-fire.jpg" alt=""><p>“Dinner plans, upgraded. An evening by the fire, a table set just for you…” Carousel. Your strongest offer, shown as stills.</p></div>
+    <div class="post"><img src="img/ig-guest.jpg" alt=""><p>“We love seeing your pictures! Thank you for sharing.” Carousel of guest photos. Guests already make content here.</p></div>
+    <div class="post"><img src="img/ig-creator.jpg" alt=""><p>“Somewhere Lombok aka heaven to capture (and stay).” A creator collab carousel, reshared to your feed.</p></div>
+  </div>
+
+  <h2>What stands out</h2>
+  <div class="cols">
+    <ul>
+      <li><b>A 4.8 on Google from 476 reviews</b>, and 9+ on booking sites. That is the hard part.</li>
+      <li><b>Design Hotels member</b>, bookable through Marriott Bonvoy and listed in the MICHELIN Guide.</li>
+      <li><b>Creators already love shooting here:</b> @theobalbach’s Super 8 reel, @blakehobsonphoto, guest reshares.</li>
+    </ul>
+    <ul>
+      <li class="gap"><b>Your website is one splash page</b> with an email address. Instagram visitors can’t see villas or book direct.</li>
+      <li class="gap"><b>Creator content is ad hoc.</b> It arrives when someone happens to visit, not on a schedule you set.</li>
+      <li class="gap"><b>99 posts for 17.9k followers.</b> The audience is there; the feed is thin, with few Reels.</li>
+    </ul>
+  </div>
+
+  <div class="foot"><span>Sources: Google Maps, somewherelombok.com, Instagram @somewherelombok, Dinogo, ViaMichelin, Design Hotels, MICHELIN Guide. Public data, Nov 2026.</span><span>1 / 2</span></div>
+</section>
+
+<section class="page">
+  <div class="top">
+    <div class="brand"><img src="img/collabnb-logo.png" alt="">Collabnb</div>
+    <div class="tag">Creator campaigns for Somewhere Lombok</div>
+  </div>
+
+  <h1>Turn one-off creator visits <em>into a steady pipeline.</em></h1>
+  <p class="lede">Collabnb connects boutique stays with pre-vetted travel and lifestyle creators. A creator stays with you and delivers the content you agree on. You set up and manage listings how you want, and we stay in the background if you need help.</p>
+
+  <h2>Why it works</h2>
+  <div class="bench">
+    <div class="n">$5–6.50</div>
+    <p>Industry surveys report that brands earn roughly <b>$5 to $6.50 in revenue for every $1</b> spent on influencer marketing, with top campaigns well above that. A creator stay costs you a few nights in a villa you already have.
+      <small>Vendor-reported averages from Tomoson (via Shopify) and Stack Influence, not Collabnb results. Directional only.</small></p>
+  </div>
+
+  <h2>How it works</h2>
+  <div class="steps">
+    <div class="step"><i>1</i><b>Your listing is already built</b><p>We pre-filled it from your public profile: photos, location, rating, a creator brief. Check it, edit anything, publish when ready.</p></div>
+    <div class="step"><i>2</i><b>Pre-vetted creators apply</b><p>Creators are vetted before they can apply. You see their profiles, audience and past work, and you choose who stays.</p></div>
+    <div class="step"><i>3</i><b>They stay, film, post</b><p>You manage each collab how you want. Content lands in your inbox with usage rights, ready for your feed and ads.</p></div>
+  </div>
+
+  <h2>What this could look like at Somewhere</h2>
+  <div class="ideas">
+    <div class="idea"><img src="img/sunset-table.jpg" alt="" style="object-position:center 75%"><div><b>The private table</b><span>Fire-side dinner on the lawn, filmed from set-up to sunset. Made for proposals and birthdays.</span></div></div>
+    <div class="idea"><img src="img/pool-family.jpg" alt="" style="object-position:center 40%"><div><b>Sunrise at the infinity pool</b><span>The bay before anyone’s up. One Reel, one carousel, endless reposts.</span></div></div>
+    <div class="idea"><img src="img/villa-view.jpg" alt=""><div><b>Villa tour, door to bay</b><span>Walk-through from the entrance to your own plunge pool and the view.</span></div></div>
+  </div>
+
+  <h2>What you stay in control of</h2>
+  <div class="cols">
+    <ul>
+      <li>Which villas and dates you open up</li>
+      <li>Which creators you accept</li>
+      <li>What content you ask for</li>
+    </ul>
+    <ul>
+      <li>How you communicate with each creator</li>
+      <li>Your calendar and direct-booking link</li>
+      <li>Pausing or ending a listing at any time</li>
+    </ul>
+  </div>
+
+  <div class="cta">
+    <div><b>Your listing is ready to claim.</b><span>Under 5 minutes to check and publish. Free, and nothing goes live until you say so.</span></div>
+    <div class="links">
+      <a class="btn" href="https://collabnb.com/claim/somewhere-lombok-g57sv7fg7">Claim your listing</a>
+      <a href="https://wa.me/16232212170">WhatsApp +1 623-221-2170</a>
+    </div>
+  </div>
+
+  <div class="foot"><span><a href="https://collabnb.com">collabnb.com</a> · <a href="https://wa.me/16232212170">WhatsApp +1 623-221-2170</a></span><span>2 / 2</span></div>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,69 @@
+{
+  "token": "somewhere-lombok-g57sv7fg7",
+  "hotel_name": "Somewhere Lombok",
+  "email": "reservations@somewherelombok.com",
+  "prefill": {
+    "title": "Somewhere Lombok",
+    "location_city": "Lombok",
+    "location_country": "Indonesia",
+    "lat": -8.8982342,
+    "lng": 116.245171,
+    "property_url": "https://www.somewherelombok.com",
+    "contact_phone": "+62 813-7230-0100",
+    "property_type": "Boutique resort",
+    "rating": 4.8,
+    "review_count": 476,
+    "about": "Twenty standalone villas set into the hillside above Are Guling Bay on Lombok's south coast, each with its own plunge pool. A member of Design Hotels, with a restaurant and bar open daily, 15 minutes from Kuta.",
+    "collaboration_brief": "Twenty hillside villas with private plunge pools above Are Guling Bay. We'd love three stories filmed during a 2-night stay: 1) The private table: our fire-side dinner on the lawn, from set-up to sunset. 2) Sunrise at the infinity pool: the bay before anyone's up. 3) Villa tour, door to bay: from the entrance to your own plunge pool and the view. We're looking for creators who shoot slow, natural, design-led travel content.",
+    "gallery_images": [
+      "https://media.collabnb.com/claims/somewhere-lombok/hero.jpg",
+      "https://media.collabnb.com/claims/somewhere-lombok/terrace.jpg",
+      "https://media.collabnb.com/claims/somewhere-lombok/pool-family.jpg",
+      "https://media.collabnb.com/claims/somewhere-lombok/pool-villas.jpg",
+      "https://media.collabnb.com/claims/somewhere-lombok/villa-view.jpg",
+      "https://media.collabnb.com/claims/somewhere-lombok/sunset-table.jpg",
+      "https://media.collabnb.com/claims/somewhere-lombok/bedroom.jpg",
+      "https://media.collabnb.com/claims/somewhere-lombok/restaurant.jpg",
+      "https://media.collabnb.com/claims/somewhere-lombok/aerial-pool.jpg"
+    ],
+    "vibe_tags": [
+      "Luxury",
+      "Tropical",
+      "Secluded",
+      "Wellness",
+      "Pool Access",
+      "Instagrammable"
+    ],
+    "perks": [
+      "Villa with private plunge pool",
+      "Daily breakfast",
+      "Ocean-view dining at the restaurant"
+    ],
+    "nights": 2,
+    "compensation_type": "hybrid",
+    "deliverables": [
+      {
+        "type": "ugcReel",
+        "quantity": 3
+      },
+      {
+        "type": "storyFrame",
+        "quantity": 4
+      },
+      {
+        "type": "photo",
+        "quantity": 5
+      }
+    ]
+  },
+  "host": {
+    "full_name": "Somewhere Lombok",
+    "username": "somewherelombok",
+    "avatar_url": "https://media.collabnb.com/claims/somewhere-lombok/avatar.jpg",
+    "instagram_handle": "somewherelombok"
+  },
+  "preview": {
+    "avatar_url": "https://media.collabnb.com/claims/somewhere-lombok/avatar.jpg",
+    "instagram_handle": "somewherelombok"
+  }
+}

@@ -923,3 +923,11 @@ button { font: inherit; cursor: pointer; border: none; background: none; }
     margin-bottom: 8px !important;
   }
 }
+
+.wizard-missing {
+  outline: 1.5px solid rgba(220, 38, 38, 0.75);
+  outline-offset: 6px;
+  border-radius: 0.875rem;
+  scroll-margin: 120px;
+  transition: outline-color 0.2s;
+}

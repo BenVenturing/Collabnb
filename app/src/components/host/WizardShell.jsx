@@ -18,7 +18,10 @@ const STEPS = [
   { label: "Payment", path: "/host/listings/create/payment" },
 ];
 
-export default function WizardShell({ step, children, onBack, onNext, nextLabel, nextDisabled = false, nextHint = "" }) {
+// `missing`: [{ target, hint }] — required fields still empty, in page order.
+// `target` is the DOM id of the field's wrapper; it gets a red outline once the
+// host tries to continue, and the hint / Next button scroll to the first one.
+export default function WizardShell({ step, children, onBack, onNext, nextLabel, nextDisabled = false, nextHint = "", missing = [] }) {
   const { t } = useTranslation('wizardShell');
   const resolvedNextLabel = nextLabel ?? t('next');
   const navigate = useNavigate();
@@ -30,6 +33,30 @@ export default function WizardShell({ step, children, onBack, onNext, nextLabel,
     media.addEventListener('change', sync);
     return () => media.removeEventListener('change', sync);
   }, []);
+  const [attempted, setAttempted] = useState(false);
+  const missingKey = missing.map((m) => m.target).join("|");
+  const hint = missing[0]?.hint || nextHint;
+  useEffect(() => {
+    if (!attempted) return;
+    const els = missing.map((m) => document.getElementById(m.target)).filter(Boolean);
+    els.forEach((el) => el.classList.add("wizard-missing"));
+    return () => els.forEach((el) => el.classList.remove("wizard-missing"));
+  }, [attempted, missingKey]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function goToMissing() {
+    setAttempted(true);
+    const el = missing[0] && document.getElementById(missing[0].target);
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    const field = el.querySelector("input, textarea, select, button");
+    field?.focus({ preventScroll: true });
+  }
+
+  function handleNext() {
+    if (missing.length) { goToMissing(); return; }
+    if (!nextDisabled) onNext?.();
+  }
+  const blocked = nextDisabled || missing.length > 0;
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
   const { draft, combinedDeliverablesList, totalDeliverables } = useListingDraft();
@@ -199,9 +226,15 @@ export default function WizardShell({ step, children, onBack, onNext, nextLabel,
         borderTop: "1px solid rgba(255,255,255,0.6)",
         padding: "16px 24px",
       }}>
-        {nextDisabled && nextHint && (
-          <div style={{ maxWidth: 680, margin: "0 auto 10px", fontFamily: "Satoshi, sans-serif", fontSize: 12.5, fontWeight: 600, color: "#b45309", textAlign: "center" }}>
-            {nextHint}
+        {blocked && hint && (
+          <div style={{ maxWidth: 680, margin: "0 auto 10px", textAlign: "center" }}>
+            {missing.length ? (
+              <button type="button" onClick={goToMissing} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontFamily: "Satoshi, sans-serif", fontSize: 12.5, fontWeight: 600, color: "#b45309", textDecoration: "underline", textUnderlineOffset: 3 }}>
+                {hint}
+              </button>
+            ) : (
+              <span style={{ fontFamily: "Satoshi, sans-serif", fontSize: 12.5, fontWeight: 600, color: "#b45309" }}>{hint}</span>
+            )}
           </div>
         )}
         <div style={{ maxWidth: 680, margin: "0 auto", display: "flex", gap: 12 }}>
@@ -212,22 +245,23 @@ export default function WizardShell({ step, children, onBack, onNext, nextLabel,
             {t('back')}
           </button>
           <button
-            onClick={onNext}
+            onClick={handleNext}
             className="wizard-next-button"
-            disabled={nextDisabled}
+            disabled={nextDisabled && !missing.length}
+            aria-disabled={blocked}
             style={{
               flex: 2, padding: "14px 0", borderRadius: 9999,
               border: "1px solid rgba(255,255,255,0.6)",
-              background: nextDisabled
+              background: blocked
                 ? "linear-gradient(135deg, rgba(209,235,219,0.45) 0%, rgba(168,206,184,0.5) 100%)"
                 : "linear-gradient(135deg, rgba(193,235,210,0.95) 0%, rgba(138,202,170,0.96) 100%)",
               backdropFilter: "blur(14px) saturate(180%)", WebkitBackdropFilter: "blur(14px) saturate(180%)",
-              boxShadow: nextDisabled
+              boxShadow: blocked
                 ? "inset 0 1px 0 rgba(255,255,255,0.5)"
                 : "0 6px 20px rgba(74,155,127,0.32), inset 0 1px 0 rgba(255,255,255,0.75)",
               fontFamily: "Satoshi, sans-serif", fontSize: 15, fontWeight: 700,
-              color: nextDisabled ? "rgba(40,70,58,0.5)" : "#15392a",
-              cursor: nextDisabled ? "not-allowed" : "pointer",
+              color: blocked ? "rgba(40,70,58,0.5)" : "#15392a",
+              cursor: blocked && !missing.length ? "not-allowed" : "pointer",
               transition: "background 0.2s, box-shadow 0.2s",
             }}
           >

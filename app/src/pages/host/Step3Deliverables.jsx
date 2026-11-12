@@ -70,6 +70,12 @@ export default function Step3Deliverables() {
         : completeRanges.length === 0
           ? t('nextHint.needDates')
           : "";
+  const missing = [
+    !draft.creator_tier && { target: "wiz-pricing", hint: t('nextHint.needTier') },
+    !hasCompensation && { target: "wiz-pricing", hint: t('nextHint.needCompensation') },
+    !hasDeliverables && { target: "wiz-deliverables", hint: t('nextHint.needDeliverables') },
+    completeRanges.length === 0 && { target: "wiz-dates", hint: t('nextHint.needDates') },
+  ].filter(Boolean);
 
   function resetForm() {
     setCustomQty(1); setCustomType(""); setCustomDesc(""); setCustomUsage(draft.usage_rights || DEFAULT_USAGE_RIGHTS);
@@ -133,6 +139,7 @@ export default function Step3Deliverables() {
       step={3}
       nextDisabled={!canProceed}
       nextHint={nextHint}
+      missing={missing}
       onNext={() => navigate("/host/listings/create/review")}
     >
       <h2 style={{ fontFamily: "Cabinet Grotesk, serif", fontWeight: 800, fontSize: 28, color: "var(--ink)", margin: "0 0 6px" }}>
@@ -144,6 +151,7 @@ export default function Step3Deliverables() {
 
       <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
         {/* Pricing tool — creator tier, compensation, complexity, deliverables */}
+        <div id="wiz-pricing">
         <PricingTool
           mode="listing"
           initialValue={{
@@ -156,6 +164,7 @@ export default function Step3Deliverables() {
           }}
           onChange={(fields) => updateDraft(fields)}
         />
+        </div>
 
         {/* Summary banner */}
         {totalDeliverables > 0 && (
@@ -170,7 +179,7 @@ export default function Step3Deliverables() {
         )}
 
         {/* Deliverables list — auto cards from the cost calculator above, plus any custom cards added below. Always kept in sync with the calculator. */}
-        <div>
+        <div id="wiz-deliverables">
           <Label>{t('deliverables.label')}</Label>
           {combinedDeliverablesList.length === 0 ? (
             <div style={{ fontFamily: "Satoshi, sans-serif", fontSize: 13, color: "var(--sage)" }}>
@@ -288,7 +297,7 @@ export default function Step3Deliverables() {
         </div>
 
         {/* Collaboration windows (up to 3) */}
-        <div>
+        <div id="wiz-dates">
           <Label required>{t('windows.label')}</Label>
           <div style={{ fontFamily: "Satoshi, sans-serif", fontSize: 12, color: "var(--sage)", marginBottom: 8 }}>{t('windows.hint', { max: MAX_DATE_RANGES })}</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>

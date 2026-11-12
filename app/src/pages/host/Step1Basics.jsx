@@ -76,6 +76,10 @@ export default function Step1Basics() {
     : (!draft.location_city.trim() || !draft.location_country.trim())
       ? t('nextHint.needLocation')
       : "";
+  const missing = [
+    !draft.title.trim() && { target: "wiz-title", hint: t('nextHint.needTitle') },
+    (!draft.location_city.trim() || !draft.location_country.trim()) && { target: "wiz-location", hint: t('nextHint.needLocation') },
+  ].filter(Boolean);
 
   // Rejects a file the server would reject anyway, so the user gets a reason
   // naming the file instead of a failed round-trip. Returns null if it's fine.
@@ -145,6 +149,7 @@ export default function Step1Basics() {
       step={1}
       nextDisabled={!canProceed}
       nextHint={nextHint}
+      missing={missing}
       onNext={() => navigate("/host/listings/create/offer")}
     >
       <h2 style={{ fontFamily: "Cabinet Grotesk, serif", fontWeight: 800, fontSize: 28, color: "var(--ink)", margin: "0 0 6px" }}>
@@ -156,13 +161,13 @@ export default function Step1Basics() {
 
       <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
         {/* Title */}
-        <div>
+        <div id="wiz-title">
           <Label required>{t('labels.listingTitle')}</Label>
           <Input placeholder={t('placeholders.listingTitle')} value={draft.title} onChange={(v) => updateDraft({ title: v })} />
         </div>
 
         {/* Location */}
-        <div>
+        <div id="wiz-location">
           <Label required>{t('labels.location')}</Label>
           <div className="wizard-location-fields">
             <Input placeholder={t('placeholders.city')} value={draft.location_city} onChange={(v) => updateDraft({ location_city: v })} />

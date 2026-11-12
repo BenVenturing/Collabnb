@@ -280,8 +280,8 @@ export const redeem = mutation({
 // Cold outreach via Resend (DKIM/SPF on collabnb.com), so links stay direct and
 // images are hosted. Run: npx convex run claims:sendOutreach --prod '{...}'
 export const sendOutreach = internalAction({
-  args: { to: v.string(), subject: v.string(), html: v.string(), text: v.string() },
-  handler: async (_ctx, { to, subject, html, text }) => {
+  args: { to: v.string(), subject: v.string(), html: v.string(), text: v.string(), bcc: v.optional(v.string()) },
+  handler: async (_ctx, { to, subject, html, text, bcc = "benventuring@gmail.com" }) => {
     const apiKey = process.env.RESEND_API_KEY;
     if (!apiKey) throw new ConvexError("RESEND_API_KEY not set");
     const res = await fetch("https://api.resend.com/emails", {
@@ -291,6 +291,7 @@ export const sendOutreach = internalAction({
         from: "Benjamin at Collabnb <hello@collabnb.com>",
         reply_to: "hellocollabnb@gmail.com",
         to: [to],
+        ...(bcc && bcc.toLowerCase() !== to.toLowerCase() ? { bcc: [bcc] } : {}),
         subject,
         html,
         text,

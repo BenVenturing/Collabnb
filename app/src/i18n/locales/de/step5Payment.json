@@ -39,7 +39,7 @@
     "heading": "Nur für Gastgeber: Preise & Gebühren",
     "platformFee": "Plattformgebühr",
     "processingFee": "Zahlungsabwicklung",
-    "processingDesc": "3,5 % der Barauszahlung, nur zur Deckung der Stripe-Karten- und Überweisungskosten. Founding Hosts zahlen keine Plattformgebühr, Collabnb behält davon nichts",
+    "processingDesc": "6 % der Barauszahlung, nur zur Deckung der Stripe-Karten- und Überweisungskosten. Founding Hosts zahlen keine Plattformgebühr, Collabnb behält davon nichts",
     "percentDesc": "5 % der Bargeldauszahlung (mind. 20 $)",
     "flatDesc": "Pauschale Plattformgebühr von 20 $",
     "chargedOnlyOnce": "wird nur berechnet, sobald eine Kollaboration abgeschlossen ist",

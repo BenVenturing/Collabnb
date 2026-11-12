@@ -39,7 +39,7 @@
     "heading": "Somente anfitrião: preços e taxas",
     "platformFee": "Taxa da plataforma",
     "processingFee": "Processamento do pagamento",
-    "processingDesc": "3,5% do pagamento em dinheiro, apenas para cobrir os custos de cartão e transferência da Stripe. Founding Hosts não pagam taxa de plataforma e o Collabnb não fica com nada",
+    "processingDesc": "6% do pagamento em dinheiro, apenas para cobrir os custos de cartão e transferência da Stripe. Founding Hosts não pagam taxa de plataforma e o Collabnb não fica com nada",
     "percentDesc": "5% do pagamento em dinheiro (mín. US$ 20)",
     "flatDesc": "Taxa fixa de plataforma de US$ 20",
     "chargedOnlyOnce": "cobrada somente quando uma colaboração é concluída",

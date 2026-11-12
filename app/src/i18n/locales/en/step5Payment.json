@@ -39,7 +39,7 @@
     "heading": "Host-only: Pricing & Fees",
     "platformFee": "Platform fee",
     "processingFee": "Payment processing",
-    "processingDesc": "3.5% of the cash payout, only to cover Stripe's card and transfer costs. Founding Hosts pay no platform fee, and Collabnb keeps nothing from this",
+    "processingDesc": "6% of the cash payout, only to cover Stripe's card (including international) and transfer costs. Founding Hosts pay no platform fee, and Collabnb keeps nothing from this",
     "percentDesc": "5% of cash payout (min $20)",
     "flatDesc": "Flat $20 platform fee",
     "chargedOnlyOnce": "charged only once a collaboration is completed",

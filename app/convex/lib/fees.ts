@@ -19,7 +19,7 @@ export const ACH_REQUIRED_ABOVE_CASH_VALUE = 300;
 // Founding hosts pay no platform fee. When Collabnb collects and forwards the
 // creator's cash, they cover Stripe's processing/transfer cost at this rate
 // (no margin). Self-pay founders pay nothing.
-export const FOUNDER_PROCESSING_RATE = 0.035;
+export const FOUNDER_PROCESSING_RATE = 0.06;
 
 export interface FeeInput {
   /** Cash-only contract value (e.g., $300 cash from a $300 cash + $400 stay hybrid) */

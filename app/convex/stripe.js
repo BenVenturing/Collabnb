@@ -104,7 +104,7 @@ export const createCheckoutSession = action({
     if (fee <= 0) throw new ConvexError('No platform fee is due: Founding Hosts pay no fees.');
     const amountInCents = testDiscount ? Math.min(100, Math.round(fee * 100)) : Math.round(fee * 100);
     const description = host?.is_founder === true || host?.is_lifetime === true
-      ? `Payment processing (3.5% of $${cash.toFixed(0)}, covers Stripe costs only)`
+      ? `Payment processing (6% of $${cash.toFixed(0)}, covers Stripe costs only)`
       : isFreeStay
       ? 'Flat platform fee for free-stay collaboration'
       : `5% of $${cash.toFixed(0)} collaboration value (min. $20)`;

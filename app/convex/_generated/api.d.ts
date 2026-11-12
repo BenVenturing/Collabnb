@@ -51,6 +51,7 @@ import type * as lib_fees from "../lib/fees.js";
 import type * as lib_geo from "../lib/geo.js";
 import type * as lib_mcpTools from "../lib/mcpTools.js";
 import type * as lib_moderation from "../lib/moderation.js";
+import type * as lib_pendingClaims from "../lib/pendingClaims.js";
 import type * as lib_rateLimit from "../lib/rateLimit.js";
 import type * as lib_rejection from "../lib/rejection.js";
 import type * as lib_sanitize from "../lib/sanitize.js";
@@ -129,6 +130,7 @@ declare const fullApi: ApiFromModules<{
   "lib/geo": typeof lib_geo;
   "lib/mcpTools": typeof lib_mcpTools;
   "lib/moderation": typeof lib_moderation;
+  "lib/pendingClaims": typeof lib_pendingClaims;
   "lib/rateLimit": typeof lib_rateLimit;
   "lib/rejection": typeof lib_rejection;
   "lib/sanitize": typeof lib_sanitize;

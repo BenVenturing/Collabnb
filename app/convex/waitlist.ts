@@ -1,3 +1,4 @@
+import { pendingClaimProfileIds } from "./lib/pendingClaims";
 import { v, ConvexError } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { internal } from "./_generated/api";
@@ -111,7 +112,8 @@ export const getCounts = query({
   handler: async (ctx) => {
     const profiles = await ctx.db.query("profiles").collect();
     // Matches admin Users tab: only approved (verified, not rejected) profiles
-    const real = profiles.filter((p) => p.is_verified === true && p.is_rejected !== true);
+    const pending = await pendingClaimProfileIds(ctx);
+    const real = profiles.filter((p) => p.is_verified === true && p.is_rejected !== true && !pending.has(String(p._id)));
     const creators = real.filter((p) => p.role === "creator").length;
     const hosts    = real.filter((p) => p.role === "host").length;
     return { creators, hosts, total: creators + hosts };

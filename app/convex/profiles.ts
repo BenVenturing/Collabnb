@@ -1,3 +1,4 @@
+import { pendingClaimProfileIds } from "./lib/pendingClaims";
 import { v, ConvexError } from "convex/values";
 import { query, mutation, action, internalMutation, internalQuery } from "./_generated/server";
 import { internal, api } from "./_generated/api";
@@ -345,8 +346,9 @@ export const getPublicGlobeProfiles = query({
       ctx.db.query("profiles").withIndex("by_role", (q) => q.eq("role", "creator")).collect(),
       ctx.db.query("profiles").withIndex("by_role", (q) => q.eq("role", "host")).collect(),
     ]);
+    const pending = await pendingClaimProfileIds(ctx);
     return [...creators, ...hosts]
-      .filter((p) => p.is_verified === true && p.is_rejected !== true)
+      .filter((p) => p.is_verified === true && p.is_rejected !== true && !pending.has(String(p._id)))
       .map((p) => ({ role: p.role, city: p.city, country: p.country }));
   },
 });
@@ -356,7 +358,9 @@ export const getHosts = query({
   args: {},
   handler: async (ctx) => {
     const hosts = await ctx.db.query("profiles").withIndex("by_role", (q) => q.eq("role", "host")).collect();
+    const pending = await pendingClaimProfileIds(ctx);
     return hosts
+      .filter((p) => !pending.has(String(p._id)))
       .map((p) => ({
         _id: p._id,
         full_name: p.full_name,

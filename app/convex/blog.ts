@@ -4,6 +4,7 @@ import { api, internal } from "./_generated/api";
 import { STYLE_GUIDE } from "./styleGuide";
 import { buildResearchBrief, fetchHeadlines } from "./blogResearch";
 import { requireAdmin, requireAdminAction, canAccessAdmin } from "./lib/auth";
+import { pendingClaimProfileIds } from "./lib/pendingClaims";
 import { sanitizeRichHtml, cleanPlainText } from "./lib/sanitize";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -322,7 +323,8 @@ export const getPlatformStats = query({
     // the Users tab's own "Creators"/"Hosts" counts (Users.jsx's stat tiles
     // filter the same way), rather than counting every row with that role.
     const creators = profiles.filter((p) => p.role === "creator" && p.is_verified === true).length;
-    const hosts = profiles.filter((p) => p.role === "host" && p.is_verified === true).length;
+    const pendingClaims = await pendingClaimProfileIds(ctx);
+    const hosts = profiles.filter((p) => p.role === "host" && p.is_verified === true && !pendingClaims.has(String(p._id))).length;
     const pitches = await ctx.db.query("pitches").collect();
     const approved = pitches.filter((p) => p.status === "approved" || p.status === "completed").length;
     const listings = await ctx.db.query("listings").filter((q) => q.eq(q.field("is_sample"), false)).collect();
@@ -1001,7 +1003,8 @@ export const getPlatformStats_internal = query({
   handler: async (ctx) => {
     const profiles = await ctx.db.query("profiles").collect();
     const creators = profiles.filter((p) => p.role === "creator" && p.is_verified === true).length;
-    const hosts = profiles.filter((p) => p.role === "host" && p.is_verified === true).length;
+    const pendingClaims = await pendingClaimProfileIds(ctx);
+    const hosts = profiles.filter((p) => p.role === "host" && p.is_verified === true && !pendingClaims.has(String(p._id))).length;
     const pitches = await ctx.db.query("pitches").collect();
     const approved = pitches.filter((p) => p.status === "approved" || p.status === "completed").length;
     const listings = await ctx.db.query("listings").filter((q) => q.eq(q.field("is_sample"), false)).collect();

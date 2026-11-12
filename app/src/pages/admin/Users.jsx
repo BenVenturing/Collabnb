@@ -231,7 +231,7 @@ export default function Users({ initialTab } = {}) {
   const stats = [
     { label: 'Pending',  value: pending.length,                                              color: INK },
     { label: 'Creators', value: creatorsAll.filter(p => p.is_verified === true).length,       color: INK },
-    { label: 'Hosts',    value: hostsAll.filter(p => p.is_verified === true).length,          color: INK },
+    { label: 'Hosts',    value: hostsAll.filter(p => p.is_verified === true && !(claimByProfile[String(p._id)] && !claimByProfile[String(p._id)].opened)).length,          color: INK },
     { label: 'Rejected', value: rejectedAll.length,                                           color: INK },
   ];
 
@@ -264,7 +264,7 @@ export default function Users({ initialTab } = {}) {
           Creators <CountBadge n={creatorsAll.length} />
         </TabBtn>
         <TabBtn active={tab === 'hosts'} onClick={() => setTab('hosts')}>
-          Hosts <CountBadge n={hostsAll.length} />
+          Hosts <CountBadge n={hostsAll.filter(p => !(claimByProfile[String(p._id)] && !claimByProfile[String(p._id)].opened)).length} />
         </TabBtn>
         <TabBtn active={tab === 'rejected'} onClick={() => setTab('rejected')}>
           Rejected <CountBadge n={rejectedAll.length} variant="red" />

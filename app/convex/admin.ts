@@ -1,3 +1,4 @@
+import { pendingClaimProfileIds } from "./lib/pendingClaims";
 import { v, ConvexError } from "convex/values";
 import { query, mutation, action, internalMutation, internalQuery, type MutationCtx } from "./_generated/server";
 import { internal, api } from "./_generated/api";
@@ -185,7 +186,8 @@ export const getFounderCounts = query({
   args: {},
   handler: async (ctx) => {
     const profiles = await ctx.db.query("profiles").collect();
-    const founders = profiles.filter((p) => p.is_founder === true);
+    const pending = await pendingClaimProfileIds(ctx);
+    const founders = profiles.filter((p) => p.is_founder === true && !pending.has(String(p._id)));
     return {
       creator: founders.filter((p) => p.role === "creator").length,
       host: founders.filter((p) => p.role === "host").length,

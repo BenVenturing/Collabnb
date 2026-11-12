@@ -1,3 +1,4 @@
+import { pendingClaimProfileIds } from "./lib/pendingClaims";
 import { query } from "./_generated/server";
 
 // Founding cohort size per side — mirrors the cap already used on the
@@ -15,7 +16,8 @@ export const getStats = query({
       ctx.db.query("listings").collect(),
     ]);
 
-    const verifiedHosts = profiles.filter((p: any) => p.role === "host" && p.is_verified === true);
+    const pending = await pendingClaimProfileIds(ctx);
+    const verifiedHosts = profiles.filter((p: any) => p.role === "host" && p.is_verified === true && !pending.has(String(p._id)));
     const verifiedCreators = profiles.filter((p: any) => p.role === "creator" && p.is_verified === true);
     const foundingHosts = verifiedHosts.filter((p: any) => p.is_founder === true).length;
     const foundingCreators = verifiedCreators.filter((p: any) => p.is_founder === true).length;

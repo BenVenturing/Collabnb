@@ -39,6 +39,15 @@ function listingFields(p: any, c: { hotel_name: string }) {
 // Admin-only (run via `npx convex run claims:createClaim`), so internal.
 // With `email` + `host`, pre-creates a pending host profile owning the draft
 // listing, so the hotel lands in a ready account via the magic link.
+export const deleteClaim = internalMutation({
+  args: { token: v.string() },
+  handler: async (ctx, { token }) => {
+    const c = await ctx.db.query("listing_claims").withIndex("by_token", (q) => q.eq("token", token)).unique();
+    if (c) await ctx.db.delete(c._id);
+    return !!c;
+  },
+});
+
 export const createClaim = internalMutation({
   args: {
     hotel_name: v.string(),

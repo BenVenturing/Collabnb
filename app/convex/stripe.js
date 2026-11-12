@@ -31,12 +31,16 @@ function getLifetimeTier(count) {
 // math to fees.ts's computeFee so there's exactly one place fee rules live.
 // Prefers the structured cash_value field; falls back to parsing the legacy
 // free-text `payment` string for contracts created before cash_value existed.
-function computeContractFee(contract) {
+function computeContractFee(contract, host) {
   const isFreeStay = contract.payment === 'Free Stay' || contract.currency === 'free_stay';
   const cash = typeof contract.cash_value === 'number'
     ? contract.cash_value
     : (parseFloat(String(contract.payment ?? '').replace(/[^0-9.]/g, '')) || 0);
-  const { fee, basis } = computeFee({ cashValue: isFreeStay ? 0 : cash });
+  const { fee, basis } = computeFee({
+    cashValue: isFreeStay ? 0 : cash,
+    isFoundingHost: host?.is_founder === true || host?.is_lifetime === true,
+    payoutHandling: contract.payout_handling === 'in_person' ? 'in_person' : 'platform',
+  });
   return { cash: basis, fee, isFreeStay };
 }
 
@@ -92,13 +96,16 @@ export const createCheckoutSession = action({
     if (contract.payments_blocked) throw new ConvexError(PAYMENTS_BLOCKED_MSG);
 
     const stripe = new Stripe(secretKey);
-    const { isFreeStay, cash, fee } = computeContractFee(contract);
     const host = contract.host_id
       ? await ctx.runQuery(internal.profiles.getByIdInternal, { id: String(contract.host_id) })
       : null;
+    const { isFreeStay, cash, fee } = computeContractFee(contract, host);
     const testDiscount = isTestDollarAccount(host?.email);
+    if (fee <= 0) throw new ConvexError('No platform fee is due: Founding Hosts pay no fees.');
     const amountInCents = testDiscount ? Math.min(100, Math.round(fee * 100)) : Math.round(fee * 100);
-    const description = isFreeStay
+    const description = host?.is_founder === true || host?.is_lifetime === true
+      ? `Payment processing (3.5% of $${cash.toFixed(0)}, covers Stripe costs only)`
+      : isFreeStay
       ? 'Flat platform fee for free-stay collaboration'
       : `5% of $${cash.toFixed(0)} collaboration value (min. $20)`;
 
@@ -707,9 +714,10 @@ export const chargeContractFee = internalAction({
     if (!customerId || !paymentMethodId) return { skipped: 'no_saved_card' };
 
     // Prefer the fee captured at signing; otherwise recompute from the contract.
-    let fee = hostFeeWaived ? 0 : contract.fee_amount;
-    const { cash, isFreeStay } = computeContractFee(contract);
-    if (!hostFeeWaived && (!fee || fee <= 0)) fee = computeContractFee(contract).fee;
+    // Founders: no platform fee, only the at-cost processing fee when Collabnb forwards the cash.
+    const { cash, isFreeStay, fee: computedFee } = computeContractFee(contract, host);
+    let fee = hostFeeWaived ? computedFee : contract.fee_amount;
+    if (!hostFeeWaived && (!fee || fee <= 0)) fee = computedFee;
     // "Pay in person": host pays the creator directly, off-platform — Collabnb
     // still charges its own fee, but never collects or forwards the cash.
     const isInPerson = contract.payout_handling === 'in_person';

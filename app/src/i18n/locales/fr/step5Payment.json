@@ -38,6 +38,8 @@
   "fees": {
     "heading": "Réservé à l'hôte : tarifs et frais",
     "platformFee": "Frais de plateforme",
+    "processingFee": "Traitement du paiement",
+    "processingDesc": "3,5 % du paiement en espèces, uniquement pour couvrir les frais de carte et de virement Stripe. Les Founding Hosts ne paient aucuns frais de plateforme et Collabnb ne garde rien",
     "percentDesc": "5 % du paiement en espèces (min. 20 $)",
     "flatDesc": "Frais de plateforme fixes de 20 $",
     "chargedOnlyOnce": "facturés uniquement une fois la collaboration terminée",

@@ -16,17 +16,24 @@
 // line is a one-line change instead of hunting down every hardcoded copy.
 export const ACH_REQUIRED_ABOVE_CASH_VALUE = 300;
 
+// Founding hosts pay no platform fee. When Collabnb collects and forwards the
+// creator's cash, they cover Stripe's processing/transfer cost at this rate
+// (no margin). Self-pay founders pay nothing.
+export const FOUNDER_PROCESSING_RATE = 0.035;
+
 export interface FeeInput {
   /** Cash-only contract value (e.g., $300 cash from a $300 cash + $400 stay hybrid) */
   cashValue: number;
   /** Whether the host is a Founding Member (fees waived for life) */
   isFoundingHost?: boolean;
+  /** 'platform' = Collabnb collects + forwards the cash; 'in_person' = host pays creator directly */
+  payoutHandling?: 'platform' | 'in_person';
 }
 
 export interface FeeResult {
   fee: number;
   basis: number;          // the cashValue used for calculation
-  method: 'flat' | 'percent' | 'waived';
+  method: 'flat' | 'percent' | 'waived' | 'processing';
   contractValue: number;  // same as cashValue
 }
 
@@ -43,10 +50,14 @@ export interface FeeResult {
  * Tests: see fees.test.ts
  */
 export function computeFee(input: FeeInput): FeeResult {
-  const { cashValue, isFoundingHost } = input;
-  const safeCash = Math.max(0, Math.round(cashValue * 100) / 100); // round to cents
+  const { cashValue, isFoundingHost, payoutHandling } = input;
+  const safeCash = Math.max(0, Math.round((cashValue || 0) * 100) / 100); // round to cents
 
   if (isFoundingHost) {
+    if (payoutHandling === 'platform' && safeCash > 0) {
+      const fee = Math.round(safeCash * FOUNDER_PROCESSING_RATE * 100) / 100;
+      return { fee, basis: safeCash, method: 'processing', contractValue: safeCash };
+    }
     return { fee: 0, basis: safeCash, method: 'waived', contractValue: safeCash };
   }
 

@@ -10,6 +10,7 @@ import Confetti from "../../components/Confetti";
 import ReceiptCheckoutOverlay from "../../components/ReceiptCheckoutOverlay";
 import { useListingDraft } from "../../contexts/ListingDraftContext";
 import { useAuth } from "../../contexts/AuthContext";
+import { computeFee } from "../../../convex/lib/fees";
 
 function PayoutSwitch({ value, onChange, disabled }) {
   const isPlatform = value !== "in_person";
@@ -66,6 +67,9 @@ export default function Step5Payment() {
   const payoutHandling = draft.payout_handling || "platform";
 
   const isFounder = profile?.is_founder === true;
+  const isPaidOrHybrid = draft.compensation_type === "paid" || draft.compensation_type === "hybrid";
+  const founderFee = computeFee({ cashValue: isPaidOrHybrid ? draft.cash_amount : 0, isFoundingHost: true, payoutHandling: payoutHandling === "in_person" ? "in_person" : "platform" }).fee;
+  const showFees = !(isFounder && payoutHandling === "in_person");
   const hasSavedMethod = !!profile?.stripe_default_payment_method_id;
 
   // Founding Hosts pay no fees, so self-pay founders have nothing to charge.
@@ -243,6 +247,7 @@ export default function Step5Payment() {
         </div>
 
         {/* Host-only fees */}
+        {showFees && (
         <div style={{ border: "1.5px solid rgba(25,37,36,0.12)", borderRadius: "1rem", overflow: "hidden", marginBottom: 20 }}>
           <button
             onClick={() => setFeesOpen(!feesOpen)}
@@ -256,15 +261,16 @@ export default function Step5Payment() {
           </button>
           {feesOpen && (
             <div style={{ padding: "16px 20px", background: "rgba(255,251,240,0.7)", borderTop: "1px solid rgba(25,37,36,0.08)" }}>
-              <div style={{ fontFamily: "Satoshi, sans-serif", fontSize: 13, color: "var(--slate)", marginBottom: 4 }}>{t('fees.platformFee')}</div>
-              <div style={{ fontFamily: "Satoshi, sans-serif", fontWeight: 800, fontSize: 22, color: "var(--ink)", marginBottom: 2 }}>${fee.toFixed(0)}</div>
+              <div style={{ fontFamily: "Satoshi, sans-serif", fontSize: 13, color: "var(--slate)", marginBottom: 4 }}>{isFounder ? t('fees.processingFee') : t('fees.platformFee')}</div>
+              <div style={{ fontFamily: "Satoshi, sans-serif", fontWeight: 800, fontSize: 22, color: "var(--ink)", marginBottom: 2 }}>${(isFounder ? founderFee : fee).toFixed(isFounder ? 2 : 0)}</div>
               <div style={{ fontFamily: "Satoshi, sans-serif", fontSize: 12, color: "var(--slate)", marginBottom: 8, lineHeight: 1.5 }}>
-                {draft.compensation_type === "paid" || draft.compensation_type === "hybrid" ? t('fees.percentDesc') : t('fees.flatDesc')} — <strong>{t('fees.chargedOnlyOnce')}</strong>{t('fees.chargedNoteSuffix')}
+                {isFounder ? t('fees.processingDesc') : (isPaidOrHybrid ? t('fees.percentDesc') : t('fees.flatDesc'))} — <strong>{t('fees.chargedOnlyOnce')}</strong>{t('fees.chargedNoteSuffix')}
               </div>
               <div style={{ fontFamily: "Satoshi, sans-serif", fontSize: 12, color: "#b45309", fontWeight: 600 }}>{t('fees.hiddenNote')}</div>
             </div>
           )}
         </div>
+        )}
 
         {publishError && (
           <p style={{ fontFamily: "Satoshi, sans-serif", fontSize: 13, color: "#b45309", fontWeight: 600, marginBottom: 12 }}>

@@ -1209,7 +1209,7 @@ export default function ContractBuilder() {
       <PaymentModal
         isOpen={showPaymentModal}
         onClose={() => setShowPaymentModal(false)}
-        fee={computeFee({ cashValue: form.isFreeStay ? 0 : cashValue, isFoundingHost: profile?.is_founder }).fee}
+        fee={computeFee({ cashValue: form.isFreeStay ? 0 : cashValue, isFoundingHost: profile?.is_founder, payoutHandling: form.payoutHandling === 'in_person' ? 'in_person' : 'platform' }).fee}
         isFreeStay={form.isFreeStay}
         cashAmount={cashValue}
         contractId={editingId || 'draft'}

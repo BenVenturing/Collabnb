@@ -75,6 +75,7 @@ export const createClaim = internalMutation({
             tier: !existing.tier || existing.tier === "waitlist" ? "Founding Host" : existing.tier,
             is_rejected: undefined,
             rejection_reason: undefined,
+            ...(host.avatar_url ? { avatar_url: host.avatar_url } : {}),
           });
         }
       } else {
@@ -92,12 +93,20 @@ export const createClaim = internalMutation({
           highlight_opt_in: true,
         }));
       }
-      const id = await ctx.db.insert("listings", { ...listingFields(args.prefill || {}, args), host_id: profile_id, host_name: host.full_name } as any);
+      const fields = { ...listingFields(args.prefill || {}, args), host_id: profile_id, host_name: host.full_name } as any;
+      const prior: any = existingClaim?.listing_id ? await ctx.db.get(existingClaim.listing_id as any) : null;
+      let id: any;
+      if (prior && prior.status === "draft") {
+        await ctx.db.replace(prior._id, fields);
+        id = prior._id;
+      } else {
+        id = await ctx.db.insert("listings", fields);
+      }
       listing_id = String(id);
       await ctx.scheduler.runAfter(0, internal.geocode.geocodeListing, { listingId: id });
     }
 
-    const doc = { ...args, token, status: "open", created_at: Date.now(), profile_id, listing_id };
+    const doc = { ...args, token, status: "open", created_at: Date.now(), profile_id, listing_id, clerk_user_id: existingClaim?.clerk_user_id };
     if (existingClaim) await ctx.db.replace(existingClaim._id, doc);
     else await ctx.db.insert("listing_claims", doc);
     return { token, profile_id, listing_id };

@@ -28,7 +28,8 @@
   "payoutSwitch": {
     "inPerson": "Ich zahle den Creator selbst",
     "platform": "Collabnb übernimmt die Zahlung",
-    "recommended": "Empfohlen"
+    "recommended": "Empfohlen",
+    "founderRecommended": "Empfohlen · keine Gebühren für Founding Hosts"
   },
   "infoCol": {
     "forHost": "Für dich (den Gastgeber)",

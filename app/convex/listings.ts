@@ -501,7 +501,7 @@ export const create = mutation({
       if (host && host.pending_role_completion === true && host.is_admin !== true) {
         throw new ConvexError("Finish your host profile to unlock publishing — check your email for the link, or find it under Settings.");
       }
-      if (host && !host.stripe_default_payment_method_id && host.is_admin !== true) {
+      if (host && !host.stripe_default_payment_method_id && host.is_admin !== true && !(host.is_founder === true && args.payout_handling === "in_person")) {
         throw new ConvexError("Add a card before publishing — it's only used for Collabnb's platform fee once a collaboration completes. You can save this listing as a draft in the meantime.");
       }
     }
@@ -590,7 +590,7 @@ export const update = mutation({
       if (host && host.pending_role_completion === true && host.is_admin !== true) {
         throw new ConvexError("Finish your host profile to unlock publishing — check your email for the link, or find it under Settings.");
       }
-      if (host && !host.stripe_default_payment_method_id && host.is_admin !== true) {
+      if (host && !host.stripe_default_payment_method_id && host.is_admin !== true && !(host.is_founder === true && (fields.payout_handling ?? (existing as any).payout_handling) === "in_person")) {
         throw new ConvexError("Add a card before publishing — it's only used for Collabnb's platform fee once a collaboration completes. You can save this listing as a draft in the meantime.");
       }
     }

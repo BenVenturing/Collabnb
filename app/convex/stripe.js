@@ -437,7 +437,8 @@ export const createFeeSetupSession = action({
 
     const session = await stripe.checkout.sessions.create({
       mode: 'setup',
-      payment_method_types: requiresACH ? ['us_bank_account'] : ['card'],
+      // Card always works (non-US hosts can't use ACH); a US bank is offered on larger collabs for lower fees.
+      payment_method_types: requiresACH ? ['card', 'us_bank_account'] : ['card'],
       ...(requiresACH ? { payment_method_options: { us_bank_account: { verification_method: 'automatic' } } } : {}),
       customer: customer.id,
       success_url: args.successUrl,
@@ -445,7 +446,7 @@ export const createFeeSetupSession = action({
       metadata: { contractId: args.contractId, feeAmount: String(fee), type: 'fee_setup' },
       custom_text: {
         submit: { message: requiresACH
-          ? `This is a larger collaboration ($${cash.toFixed(0)}+) — we ask for bank account (ACH) details on collaborations of $${ACH_REQUIRED_ABOVE_CASH_VALUE} or more to keep processing costs sustainable for the platform. You won't be charged now.`
+          ? "You won't be charged now. Add a card, or a US bank account for lower fees. The platform fee is only charged once the collaboration is completed."
           : "You won't be charged now — the platform fee is only charged once the collaboration is completed." },
       },
     });
@@ -564,20 +565,17 @@ export const createHostCardSetupSession = action({
     // ACH is capped at ~$5 regardless of amount. Required above the
     // threshold unless the host has self-declared they have no US bank
     // account (ACH is US-only).
-    const requiresACH = (args.cashAmount ?? 0) >= ACH_REQUIRED_ABOVE_CASH_VALUE && !args.noUSBank;
 
     const session = await stripe.checkout.sessions.create({
       mode: 'setup',
-      payment_method_types: requiresACH ? ['us_bank_account'] : ['card'],
-      ...(requiresACH ? { payment_method_options: { us_bank_account: { verification_method: 'automatic' } } } : {}),
+      payment_method_types: ['card', 'us_bank_account'],
+      payment_method_options: { us_bank_account: { verification_method: 'automatic' } },
       customer: customerId,
       success_url: args.successUrl,
       cancel_url: args.cancelUrl,
       metadata: { profileId: String(profile._id), type: 'host_card_setup' },
       custom_text: {
-        submit: { message: requiresACH
-          ? `This is a larger collaboration ($${(args.cashAmount ?? 0).toFixed(0)}+) — we ask for bank account (ACH) details on collaborations of $${ACH_REQUIRED_ABOVE_CASH_VALUE} or more to keep processing costs sustainable for the platform. You won't be charged now.`
-          : "You won't be charged now — this card is used for Collabnb's platform fee once a collaboration is completed." },
+        submit: { message: "You won't be charged now. Add a card, or a US bank account for lower fees. It's used for Collabnb's platform fee once a collaboration is completed." },
       },
     });
 

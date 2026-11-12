@@ -178,7 +178,7 @@ function ClerkAuthInner({ children }) {
         // Always surface Clerk/Google avatar locally; also persist to Convex whenever
         // it's missing or stale (Clerk's cached Google photo URL can rotate/expire —
         // only checking "missing" left accounts stuck on a dead URL forever).
-        if (clerkUser.imageUrl && result && result.avatar_url !== clerkUser.imageUrl) {
+        if (clerkUser.hasImage && clerkUser.imageUrl && result && result.avatar_url !== clerkUser.imageUrl) {
           result = { ...result, avatar_url: clerkUser.imageUrl };
           if (result._id) {
             try {

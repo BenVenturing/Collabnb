@@ -93,10 +93,12 @@ export default function ClaimListing() {
 
   useEffect(() => {
     if (!direct || !claim || directStarted.current) return;
-    if (claim.status !== 'open') { directStarted.current = true; setDirectFailed(true); return; }
     if (session && !profile?._id) return;
     directStarted.current = true;
     if (mismatch) { switchAccount(); return; }
+    // Already claimed: returning visits go straight to the dashboard.
+    if (claim.status === 'claimed' && session && profile?._id) { navigate('/host', { replace: true }); return; }
+    if (claim.status !== 'open' && claim.status !== 'claimed') { setDirectFailed(true); return; }
     if (session && profile?._id) { try { localStorage.setItem(PENDING_KEY, token); } catch {} redeemed.current = true; doRedeem(); return; }
     if (!claim.has_account || !signIn) { setDirectFailed(true); return; }
     (async () => {

@@ -28,7 +28,8 @@
     "inPerson": "I'll pay the creator myself",
     "platform": "Collabnb handles payment",
     "selfPay": "You handle payment",
-    "recommended": "Recommended"
+    "recommended": "Recommended",
+    "founderRecommended": "Recommended · no fees for Founding Hosts"
   },
   "infoCol": {
     "forHost": "For you (the host)",

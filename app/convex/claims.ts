@@ -1,4 +1,4 @@
-import { action, internalMutation, internalQuery, mutation, query } from "./_generated/server";
+import { action, internalAction, internalMutation, internalQuery, mutation, query } from "./_generated/server";
 import { v, ConvexError } from "convex/values";
 import { internal } from "./_generated/api";
 import { requireAuthedProfile } from "./lib/auth";
@@ -68,14 +68,24 @@ export const createClaim = internalMutation({
       const existing = await ctx.db.query("profiles").withIndex("by_email", (q) => q.eq("email", email)).unique();
       if (existing) {
         profile_id = String(existing._id);
+        if (existing.is_admin !== true) {
+          await ctx.db.patch(existing._id, {
+            is_verified: true,
+            is_founder: true,
+            tier: !existing.tier || existing.tier === "waitlist" ? "Founding Host" : existing.tier,
+            is_rejected: undefined,
+            rejection_reason: undefined,
+          });
+        }
       } else {
         profile_id = String(await ctx.db.insert("profiles", {
           email,
           full_name: host.full_name,
           username: host.username,
           role: "host",
-          tier: "waitlist",
-          is_verified: false,
+          tier: "Founding Host",
+          is_verified: true,
+          is_founder: true,
           avatar_url: host.avatar_url,
           instagram_handle: host.instagram_handle,
           bio: "",
@@ -206,6 +216,10 @@ export const redeem = mutation({
     const c = await ctx.db.query("listing_claims").withIndex("by_token", (q) => q.eq("token", token)).unique();
     if (!c) throw new ConvexError("This link is no longer valid.");
 
+    if (c.email && String(profile.email || "").toLowerCase().trim() !== String(c.email).toLowerCase().trim()) {
+      throw new ConvexError(`This link is for ${c.email}. Sign out and open it again.`);
+    }
+
     const me = String(profile._id);
     const existing: any = c.listing_id ? await ctx.db.get(c.listing_id as any) : null;
 
@@ -242,5 +256,30 @@ export const redeem = mutation({
     });
 
     return { listingId: String(listingId), listing: await ctx.db.get(listingId) };
+  },
+});
+
+// Cold outreach via Resend (DKIM/SPF on collabnb.com), so links stay direct and
+// images are hosted. Run: npx convex run claims:sendOutreach --prod '{...}'
+export const sendOutreach = internalAction({
+  args: { to: v.string(), subject: v.string(), html: v.string(), text: v.string() },
+  handler: async (_ctx, { to, subject, html, text }) => {
+    const apiKey = process.env.RESEND_API_KEY;
+    if (!apiKey) throw new ConvexError("RESEND_API_KEY not set");
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        from: "Benjamin at Collabnb <hello@collabnb.com>",
+        reply_to: "hellocollabnb@gmail.com",
+        to: [to],
+        subject,
+        html,
+        text,
+      }),
+    });
+    const body = await res.text();
+    if (!res.ok) throw new ConvexError(`Resend ${res.status}: ${body}`);
+    return body;
   },
 });

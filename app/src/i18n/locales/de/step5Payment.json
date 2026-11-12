@@ -1,6 +1,7 @@
 {
   "payoutInfo": {
     "platform": {
+    "selfPay": "Du übernimmst die Zahlung",
       "host": "Deine Karte wird automatisch belastet, sobald die Kollaboration als abgeschlossen markiert ist — keine manuellen Überweisungen, kein Hinterherlaufen. Collabnb hält die Auszahlung des Creators 48 Stunden nach Abschluss zurück, falls eine Seite einen Streitfall melden muss, und leitet sie dann automatisch weiter.",
       "creator": "Die Zahlung ist garantiert und automatisch — keine Rechnungsstellung, kein Warten auf dich. Die Gelder werden kurz nach Ablauf des 48-Stunden-Streitfensters freigegeben, und Creator sehen von vornherein, dass die Zahlung geschützt ist — das zieht tendenziell stärkere Bewerber an."
     },

@@ -219,11 +219,13 @@ export default function Step5Payment() {
         <div style={{ background: "rgba(255,255,255,0.85)", backdropFilter: "blur(14px) saturate(130%)", WebkitBackdropFilter: "blur(14px) saturate(130%)", borderRadius: "1rem", border: "1px solid rgba(255,255,255,0.88)", padding: "22px", marginBottom: 18, boxShadow: "0 2px 12px rgba(25,37,36,0.05)" }}>
           <div style={{ marginBottom: 18 }}>
             <div style={{ fontFamily: "Satoshi, sans-serif", fontWeight: 800, fontSize: 17, color: "var(--ink)" }}>
-              {t('payoutSwitch.platform')}
+              {payoutHandling === 'in_person' ? t('payoutSwitch.selfPay') : t('payoutSwitch.platform')}
             </div>
-            <div style={{ fontFamily: "Satoshi, sans-serif", fontSize: 11, fontWeight: 700, color: "#2d6a4f", textTransform: "uppercase", letterSpacing: "0.05em", marginTop: 2 }}>
-              {t('payoutSwitch.recommended')}
-            </div>
+            {payoutHandling !== 'in_person' && (
+              <div style={{ fontFamily: "Satoshi, sans-serif", fontSize: 11, fontWeight: 700, color: "#2d6a4f", textTransform: "uppercase", letterSpacing: "0.05em", marginTop: 2 }}>
+                {t('payoutSwitch.recommended')}
+              </div>
+            )}
           </div>
 
           <div style={{ display: "flex", flexWrap: "wrap", gap: 20, paddingBottom: 18, borderBottom: "1px solid rgba(25,37,36,0.08)" }}>

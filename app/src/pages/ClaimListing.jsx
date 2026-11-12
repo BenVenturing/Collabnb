@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useAction } from 'convex/react';
-import { SignUp, SignIn, useSignIn } from '@clerk/clerk-react';
+import { SignUp, SignIn, useSignIn, useClerk } from '@clerk/clerk-react';
 import { api } from '../../convex/_generated/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useListingDraft } from '../contexts/ListingDraftContext';
@@ -23,6 +23,11 @@ export default function ClaimListing() {
   const redeem = useMutation(api.claims.redeem);
   const magicLink = useAction(api.claims.magicLink);
   const { signIn, setActive } = useSignIn();
+  const { signOut } = useClerk();
+  const [params] = useSearchParams();
+  const direct = params.get('go') === '1';
+  const [directFailed, setDirectFailed] = useState(false);
+  const directStarted = useRef(false);
   const [mode, setMode] = useState(null); // null | 'signup' | 'signin'
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -72,9 +77,42 @@ export default function ClaimListing() {
   useEffect(() => {
     let pending = false;
     try { pending = localStorage.getItem(PENDING_KEY) === token; } catch {}
-    if (session && profile?._id && pending && claim?.status === 'open' && !redeemed.current) { redeemed.current = true; doRedeem(); }
+    if (session && profile?._id && pending && !mismatch && claim?.status === 'open' && !redeemed.current) { redeemed.current = true; doRedeem(); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session, profile?._id, claim?.status]);
+
+  const mismatch = !!(session && profile?.email && claim?.email &&
+    profile.email.toLowerCase().trim() !== claim.email.toLowerCase().trim());
+
+  function switchAccount() {
+    try { localStorage.setItem(PENDING_KEY, token); } catch {}
+    const url = new URL(window.location.href);
+    url.searchParams.set('go', '1');
+    signOut({ redirectUrl: url.toString() });
+  }
+
+  useEffect(() => {
+    if (!direct || !claim || directStarted.current) return;
+    if (claim.status !== 'open') { directStarted.current = true; setDirectFailed(true); return; }
+    if (session && !profile?._id) return;
+    directStarted.current = true;
+    if (mismatch) { switchAccount(); return; }
+    if (session && profile?._id) { try { localStorage.setItem(PENDING_KEY, token); } catch {} redeemed.current = true; doRedeem(); return; }
+    if (!claim.has_account || !signIn) { setDirectFailed(true); return; }
+    (async () => {
+      try {
+        localStorage.setItem(PENDING_KEY, token);
+        localStorage.setItem('collabnb_waitlist_role', 'host');
+        const res = await magicLink({ token });
+        if (res.mode === 'ticket' && res.ticket) {
+          const si = await signIn.create({ strategy: 'ticket', ticket: res.ticket });
+          if (si.status === 'complete') { await setActive({ session: si.createdSessionId }); window.location.reload(); return; }
+        }
+      } catch {}
+      setDirectFailed(true);
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [direct, claim, session, profile?._id, signIn]);
 
   function showAuth(which) {
     setMode(which);
@@ -86,6 +124,7 @@ export default function ClaimListing() {
       localStorage.setItem(PENDING_KEY, token);
       localStorage.setItem('collabnb_waitlist_role', 'host');
     } catch {}
+    if (mismatch) { switchAccount(); return; }
     if (session && profile?._id) { redeemed.current = true; doRedeem(); return; }
     if (which === 'signup' && claim?.has_account && signIn) {
       setBusy(true); setError('');
@@ -109,6 +148,8 @@ export default function ClaimListing() {
   if (claim === undefined) return <Shell><p style={{ color: C.sage, textAlign: 'center', padding: '4rem 0' }}>Loading your listing…</p></Shell>;
   if (claim === null) return <Shell><p style={{ color: C.sage, textAlign: 'center', padding: '4rem 0' }}>This link has expired. Reach us at hellocollabnb@gmail.com.</p></Shell>;
 
+  if (direct && !directFailed && !error) return <Shell><p style={{ color: C.sage, textAlign: 'center', padding: '4rem 0' }}>Opening your listing…</p></Shell>;
+
   const p = claim.prefill || {};
   const pv = claim.preview || {};
   const imgs = p.gallery_images || [];
@@ -126,6 +167,36 @@ export default function ClaimListing() {
           We filled it in from your public profile. Check it, change anything you like, and publish when you're ready. It takes under 5 minutes.
         </p>
       </section>
+
+      {/* CTA + auth */}
+      <div ref={authRef} style={{ textAlign: 'center', padding: '0 0 0.5rem' }}>
+        {claimed && !(session && profile) ? (
+          <p style={{ color: C.slate }}>This listing has been claimed. <a href="/login.html" style={{ color: C.green, fontWeight: 600 }}>Sign in</a> to continue.</p>
+        ) : !mode ? (
+          <>
+            <button onClick={() => start('signup')} disabled={busy} style={cta}>
+              {busy ? 'Opening your draft…' : 'Open my draft listing →'}
+            </button>
+            <p style={{ color: C.sage, fontSize: '0.85rem', marginTop: '0.75rem' }}>
+              {mismatch ? `You're signed in as ${profile.email}. We'll switch you to ${claim.email}.` : session && profile ? `Signed in as ${profile.email}` : claim.has_account ? `No password needed. Your account is set up as ${claim.email}.` : <>Already on Collabnb? <button onClick={() => start('signin')} style={linkBtn}>Sign in</button></>}
+            </p>
+          </>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}>
+            <p style={{ fontWeight: 600, color: C.ink, margin: 0 }}>Step 1 of 2 · create your account</p>
+            {mode === 'signup' ? (
+              <SignUp routing="hash" initialValues={claim.email ? { emailAddress: claim.email } : undefined}
+                unsafeMetadata={{ role: 'host' }} forceRedirectUrl={here} signInForceRedirectUrl={here} signInUrl={`${here}#signin`} />
+            ) : (
+              <SignIn routing="hash" forceRedirectUrl={here} signUpForceRedirectUrl={here} />
+            )}
+            <button onClick={() => setMode(mode === 'signup' ? 'signin' : 'signup')} style={linkBtn}>
+              {mode === 'signup' ? 'I already have an account' : 'Create a new account instead'}
+            </button>
+          </div>
+        )}
+        {error && <p style={{ color: '#B5544B', marginTop: '0.75rem' }}>{error}</p>}
+      </div>
 
       {/* Listing preview, as creators see it */}
       <Label>How creators will see you</Label>
@@ -199,35 +270,6 @@ export default function ClaimListing() {
         <strong>No catch.</strong> Listing is free for Founding Hosts, and nothing goes live until you publish.
       </div>
 
-      {/* CTA + auth */}
-      <div ref={authRef} style={{ textAlign: 'center', paddingBottom: '3rem' }}>
-        {claimed && !(session && profile) ? (
-          <p style={{ color: C.slate }}>This listing has been claimed. <a href="/login.html" style={{ color: C.green, fontWeight: 600 }}>Sign in</a> to continue.</p>
-        ) : !mode ? (
-          <>
-            <button onClick={() => start('signup')} disabled={busy} style={cta}>
-              {busy ? 'Opening your draft…' : 'Open my draft listing →'}
-            </button>
-            <p style={{ color: C.sage, fontSize: '0.85rem', marginTop: '0.75rem' }}>
-              {session && profile ? `Signed in as ${profile.email}` : claim.has_account ? `No password needed. Your account is set up as ${claim.email}.` : <>Already on Collabnb? <button onClick={() => start('signin')} style={linkBtn}>Sign in</button></>}
-            </p>
-          </>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}>
-            <p style={{ fontWeight: 600, color: C.ink, margin: 0 }}>Step 1 of 2 · create your account</p>
-            {mode === 'signup' ? (
-              <SignUp routing="hash" initialValues={claim.email ? { emailAddress: claim.email } : undefined}
-                unsafeMetadata={{ role: 'host' }} forceRedirectUrl={here} signInForceRedirectUrl={here} signInUrl={`${here}#signin`} />
-            ) : (
-              <SignIn routing="hash" forceRedirectUrl={here} signUpForceRedirectUrl={here} />
-            )}
-            <button onClick={() => setMode(mode === 'signup' ? 'signin' : 'signup')} style={linkBtn}>
-              {mode === 'signup' ? 'I already have an account' : 'Create a new account instead'}
-            </button>
-          </div>
-        )}
-        {error && <p style={{ color: '#B5544B', marginTop: '0.75rem' }}>{error}</p>}
-      </div>
     </Shell>
   );
 }

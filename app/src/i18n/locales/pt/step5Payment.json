@@ -1,6 +1,7 @@
 {
   "payoutInfo": {
     "platform": {
+    "selfPay": "Você cuida do pagamento",
       "host": "Seu cartão é cobrado automaticamente assim que a colab é marcada como concluída — sem transferências manuais, sem precisar cobrar ninguém. O Collabnb retém o pagamento do criador por 48 horas após a conclusão, caso qualquer uma das partes precise abrir uma disputa, e depois o repassa automaticamente.",
       "creator": "O pagamento é garantido e automático — sem faturamento, sem esperar por você. Os fundos são liberados pouco depois que a janela de disputa de 48 horas se encerra, e os criadores podem ver antecipadamente que o pagamento está protegido — o que tende a atrair candidatos mais fortes."
     },

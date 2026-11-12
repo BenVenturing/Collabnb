@@ -1,6 +1,7 @@
 {
   "payoutInfo": {
     "platform": {
+    "selfPay": "Vous gérez le paiement",
       "host": "Votre carte est débitée automatiquement dès que la collab est marquée comme terminée — pas de virements manuels, pas besoin de relancer qui que ce soit. Collabnb conserve le paiement du créateur pendant 48 heures après la fin, au cas où l'une des parties devrait ouvrir un litige, puis le transfère automatiquement.",
       "creator": "Le paiement est garanti et automatique — pas de facturation, pas d'attente. Les fonds sont libérés peu après la fermeture de la fenêtre de litige de 48 heures, et les créateurs peuvent voir dès le départ que le paiement est protégé — ce qui tend à attirer de meilleurs candidats."
     },

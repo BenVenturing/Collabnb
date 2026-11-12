@@ -27,6 +27,7 @@
   "payoutSwitch": {
     "inPerson": "I'll pay the creator myself",
     "platform": "Collabnb handles payment",
+    "selfPay": "You handle payment",
     "recommended": "Recommended"
   },
   "infoCol": {

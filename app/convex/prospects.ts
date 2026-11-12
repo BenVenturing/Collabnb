@@ -845,6 +845,30 @@ export const update = mutation({
   },
 });
 
+export const toggleInstantLaunchSent = mutation({
+  args: { id: v.id("prospects") },
+  handler: async (ctx, { id }) => {
+    await requireAdmin(ctx);
+    const p = await ctx.db.get(id);
+    await ctx.db.patch(id, { instant_launch_sent_at: (p as any)?.instant_launch_sent_at ? undefined : Date.now() });
+  },
+});
+
+export const markAuditSent = internalMutation({
+  args: { email: v.string(), hotel_name: v.string() },
+  handler: async (ctx, { email, hotel_name }) => {
+    const e = email.toLowerCase().trim();
+    const n = hotel_name.toLowerCase().trim();
+    const hosts = await ctx.db.query("prospects").withIndex("by_kind_status", (q) => q.eq("kind", "host")).collect();
+    const now = Date.now();
+    for (const p of hosts as any[]) {
+      const match = [p.email, p.marketing_email].some((x) => x && String(x).toLowerCase().trim() === e)
+        || (p.display_name && String(p.display_name).toLowerCase().trim() === n);
+      if (match) await ctx.db.patch(p._id, { brief_sent_at: p.brief_sent_at || now, instant_launch_sent_at: p.instant_launch_sent_at || now });
+    }
+  },
+});
+
 export const toggleBriefSent = mutation({
   args: { id: v.id("prospects") },
   handler: async (ctx, { id }) => {

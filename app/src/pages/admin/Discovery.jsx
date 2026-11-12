@@ -215,6 +215,7 @@ function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
   const sendCreatorEmailNow = useAction(api.prospects.sendCreatorEmailNow);
   const markWhatsapped = useMutation(api.prospects.markWhatsapped);
   const toggleBriefSent = useMutation(api.prospects.toggleBriefSent);
+  const toggleInstantLaunchSent = useMutation(api.prospects.toggleInstantLaunchSent);
   const toggleStarred = useMutation(api.prospects.toggleStarred);
   const toggleTarget = useMutation(api.prospects.toggleTarget);
   const setChainOverride = useMutation(api.prospects.setChainOverride);
@@ -581,6 +582,10 @@ function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
           <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.78rem', fontWeight: 600, color: '#192524', cursor: 'pointer' }}>
             <input type="checkbox" checked={!!prospect.brief_sent_at} onChange={() => toggleBriefSent({ id: prospect._id })} />
             Brief sent{prospect.brief_sent_at ? ` · ${new Date(prospect.brief_sent_at).toLocaleDateString()}` : ''}
+          </label>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.78rem', fontWeight: 600, color: '#192524', cursor: 'pointer' }}>
+            <input type="checkbox" checked={!!prospect.instant_launch_sent_at} onChange={() => toggleInstantLaunchSent({ id: prospect._id })} />
+            Hot link / instant launch sent{prospect.instant_launch_sent_at ? ` · ${new Date(prospect.instant_launch_sent_at).toLocaleDateString()}` : ''}
           </label>
 
           {/* Profile analysis: score breakdown when enriched, Analyze button otherwise */}
@@ -1496,7 +1501,7 @@ function HostCrmBoard() {
   const byColumn = {};
   for (const col of CRM_COLUMNS) byColumn[col.id] = [];
   for (const p of filtered) (byColumn[p.status] || byColumn.queued).push(p);
-  const readiness = (p) => (p.whatsapp && (isHotelProspect(p) ? p.ig_handle : p.instagram_handle) ? 2 : 0) + ((p.email || p.marketing_email) ? 1 : 0);
+  const readiness = (p) => (p.whatsapp ? 2 : 0) + ((isHotelProspect(p) ? p.ig_handle : p.instagram_handle) ? 2 : 0) + ((p.email || p.marketing_email) ? 1 : 0);
   for (const col of CRM_COLUMNS) byColumn[col.id].sort((a, b) => (b.starred ? 1 : 0) - (a.starred ? 1 : 0) || (col.id === 'queued' ? readiness(b) - readiness(a) : 0) || outreachRank(b) - outreachRank(a) || lastActivityAt(b) - lastActivityAt(a));
 
   // Per-column select-all — a global one selected across every stage at

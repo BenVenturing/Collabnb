@@ -122,6 +122,18 @@ export const createClaim = internalMutation({
   },
 });
 
+export const statusByProfile = query({
+  args: {},
+  handler: async (ctx) => {
+    const me = await ctx.auth.getUserIdentity();
+    if (!me) return [];
+    const claims = await ctx.db.query("listing_claims").collect();
+    return claims
+      .filter((c) => c.profile_id)
+      .map((c) => ({ profile_id: c.profile_id, opened: !!c.first_viewed_at, claimed: c.status === "claimed" }));
+  },
+});
+
 export const getByToken = query({
   args: { token: v.string() },
   handler: async (ctx, { token }) => {
@@ -280,8 +292,8 @@ export const redeem = mutation({
 // Cold outreach via Resend (DKIM/SPF on collabnb.com), so links stay direct and
 // images are hosted. Run: npx convex run claims:sendOutreach --prod '{...}'
 export const sendOutreach = internalAction({
-  args: { to: v.string(), subject: v.string(), html: v.string(), text: v.string(), bcc: v.optional(v.string()) },
-  handler: async (_ctx, { to, subject, html, text, bcc = "benventuring@gmail.com" }) => {
+  args: { to: v.string(), subject: v.string(), html: v.string(), text: v.string(), bcc: v.optional(v.string()), hotel_name: v.optional(v.string()) },
+  handler: async (ctx, { to, subject, html, text, bcc = "benventuring@gmail.com", hotel_name }) => {
     const apiKey = process.env.RESEND_API_KEY;
     if (!apiKey) throw new ConvexError("RESEND_API_KEY not set");
     const res = await fetch("https://api.resend.com/emails", {
@@ -299,6 +311,7 @@ export const sendOutreach = internalAction({
     });
     const body = await res.text();
     if (!res.ok) throw new ConvexError(`Resend ${res.status}: ${body}`);
+    await ctx.runMutation(internal.prospects.markAuditSent, { email: to, hotel_name: hotel_name || "" });
     return body;
   },
 });

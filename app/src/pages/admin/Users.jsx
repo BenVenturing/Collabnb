@@ -185,6 +185,8 @@ export default function Users({ initialTab } = {}) {
 
   const allProfiles   = useQuery(api.profiles.getAll);
   const founderCounts = useQuery(api.admin.getFounderCounts);
+  const claimStatus = useQuery(api.claims.statusByProfile);
+  const claimByProfile = Object.fromEntries((claimStatus || []).map(c => [String(c.profile_id), c]));
 
   const counts = founderCounts ?? { creator: 0, host: 0 };
   const isLoading = allProfiles === undefined;
@@ -354,7 +356,12 @@ export default function Users({ initialTab } = {}) {
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
                       <Avatar url={p.avatar_url} name={p.full_name} />
                       <div style={{ minWidth: 0 }}>
-                        <div style={{ fontWeight: 600, color: INK }}>{p.full_name}</div>
+                        <div style={{ fontWeight: 600, color: INK, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                          {p.full_name}
+                          {claimByProfile[String(p._id)] && (claimByProfile[String(p._id)].opened
+                            ? <Badge bg="#DCFCE7" color="#166534">Via link · opened</Badge>
+                            : <Badge bg="#FEF3C7" color="#92400E">Via link · not clicked yet</Badge>)}
+                        </div>
                         <div style={{ color: SAGE, fontSize: '0.75rem' }}>{p.email}</div>
                         {tab === 'rejected' && p.rejection_reason && (
                           <div style={{ color: '#991B1B', fontSize: '0.72rem', marginTop: '0.15rem' }}>Reason: {p.rejection_reason}</div>

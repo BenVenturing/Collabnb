@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useState, useEffect, useRef } from "react";
 import { computeLoadTier, totalPoints, DELIVERABLE_LABELS } from "../../convex/lib/compensationPoints";
 import { computeFee } from "../../convex/lib/fees";
 
@@ -79,6 +79,7 @@ function calculateFee(draft) {
 const ListingDraftContext = createContext(null);
 
 export function ListingDraftProvider({ children }) {
+  const draftSaveLock = useRef(false);
   const [draft, setDraft] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
@@ -148,7 +149,7 @@ export function ListingDraftProvider({ children }) {
   const pricingPoints = totalPoints(draft.deliverables);
 
   return (
-    <ListingDraftContext.Provider value={{ draft, updateDraft, loadDraft, hydrateFromStorage, clearDraft, fee, totalDeliverables, formatCount, pricingPoints, combinedDeliverablesList, autoDeliverableCount, DELIVERABLE_PRESETS, DEFAULT_USAGE_RIGHTS }}>
+    <ListingDraftContext.Provider value={{ draftSaveLock, draft, updateDraft, loadDraft, hydrateFromStorage, clearDraft, fee, totalDeliverables, formatCount, pricingPoints, combinedDeliverablesList, autoDeliverableCount, DELIVERABLE_PRESETS, DEFAULT_USAGE_RIGHTS }}>
       {children}
     </ListingDraftContext.Provider>
   );

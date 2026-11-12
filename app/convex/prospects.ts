@@ -822,6 +822,7 @@ export const update = mutation({
     dmDraft: v.optional(v.string()),
     score: v.optional(v.number()),
     whatsapp: v.optional(v.string()),
+    igHandle: v.optional(v.string()),
   },
   handler: async (ctx, { id, ...fields }) => {
     await requireAdmin(ctx);
@@ -839,6 +840,7 @@ export const update = mutation({
     if (fields.dmDraft !== undefined) patch.dm_draft = fields.dmDraft;
     if (fields.score !== undefined) patch.score = fields.score;
     if (fields.whatsapp !== undefined) patch.whatsapp = fields.whatsapp;
+    if (fields.igHandle !== undefined) patch.ig_handle = fields.igHandle || undefined;
     await ctx.db.patch(id, patch);
   },
 });
@@ -2115,6 +2117,7 @@ export const enrichProspectLocal = mutation({
         website: v.optional(v.string()),
         email: v.optional(v.string()),
         whatsapp: v.optional(v.string()),
+        ig_handle: v.optional(v.string()),
       })
     ),
   },
@@ -2134,6 +2137,7 @@ export const enrichProspectLocal = mutation({
       if (row.website && !existing.website) patch.website = row.website;
       if (row.email && !existing.email) patch.email = row.email;
       if (row.whatsapp && !(existing as any).whatsapp) patch.whatsapp = row.whatsapp;
+      if (row.ig_handle && !(existing as any).ig_handle) patch.ig_handle = row.ig_handle.replace(/^@/, "").trim();
       if (Object.keys(patch).length === 0) continue;
       await ctx.db.patch(existing._id, patch);
       updated++;

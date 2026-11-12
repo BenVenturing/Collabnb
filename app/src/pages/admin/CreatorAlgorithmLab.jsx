@@ -2,8 +2,8 @@ import { useMemo, useState } from 'react';
 import { useQuery } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import {
-  buildHostContext, scoreCreators,
-  WEIGHTS, NEW_CREATOR_WINDOW_DAYS,
+  buildHostContext, scoreCreators, sortByCompleteness, completenessScore, missingCompleteness,
+  WEIGHTS, NEW_CREATOR_WINDOW_DAYS, COMPLETENESS_PARTS, COMPLETENESS_BAND,
 } from '../../lib/creatorScore';
 import { INK, SLATE, SAGE, MINT, AvatarBubble, Chip, Card, SectionLabel, PartBar } from './algoLabUI';
 
@@ -19,16 +19,18 @@ function Simulator() {
   const realCreators = useQuery(api.profiles.listPublicCreators);
   const [search, setSearch] = useState('');
   const [selectedId, setSelectedId] = useState(null);
+  const [filtered, setFiltered] = useState(false);
 
   const selectedHost = profiles?.find((p) => String(p._id) === selectedId) || null;
 
   const { hostCtx, ranked } = useMemo(() => {
     if (!selectedHost) return { hostCtx: null, ranked: [] };
     const hostCtx = buildHostContext(selectedHost);
-    const ranked = scoreCreators(realCreators || [], hostCtx)
+    const scored = scoreCreators(realCreators || [], hostCtx)
       .sort((a, b) => b._score - a._score || (b.followers ?? 0) - (a.followers ?? 0));
+    const ranked = filtered ? scored : sortByCompleteness(scored);
     return { hostCtx, ranked };
-  }, [selectedHost, realCreators]);
+  }, [selectedHost, realCreators, filtered]);
 
   const matches = (p) => {
     const q = search.toLowerCase();
@@ -116,13 +118,19 @@ function Simulator() {
           <Card>
             <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
               <SectionLabel>Their Creators feed — {ranked.length} creators ranked</SectionLabel>
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+                <label style={{ fontSize: '0.72rem', color: SLATE, display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer' }}>
+                  <input type="checkbox" checked={filtered} onChange={(e) => setFiltered(e.target.checked)} />
+                  Simulate host with filters on (completeness ignored)
+                </label>
                 <Chip bg={MINT} color="#166534">joined ≤{NEW_CREATOR_WINDOW_DAYS}d ago gets full recency boost</Chip>
               </div>
             </div>
             <div style={{ maxHeight: 520, overflowY: 'auto', marginTop: '0.4rem' }}>
               {ranked.map((c, i) => {
                 const sc = scoreColor(c._score);
+                const comp = completenessScore(c);
+                const missing = missingCompleteness(c);
                 return (
                   <div key={c.id} style={{ display: 'flex', gap: '0.9rem', alignItems: 'center', padding: '0.65rem 0.25rem', borderTop: i === 0 ? 'none' : '1px solid rgba(25,37,36,0.06)' }}>
                     <span style={{ fontSize: '0.7rem', color: SAGE, width: 22, textAlign: 'right', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>{i + 1}</span>
@@ -136,6 +144,10 @@ function Simulator() {
                       </p>
                       <div style={{ display: 'flex', gap: 5, marginTop: 3, flexWrap: 'wrap' }}>
                         {c.tier && <Chip bg={MINT} color="#166534">{c.tier}</Chip>}
+                        <Chip bg={comp >= 70 ? MINT : 'rgba(220,38,38,0.08)'} color={comp >= 70 ? '#166534' : '#b45309'}>
+                          Profile {comp}%{!filtered ? ' · leads sort' : ''}
+                        </Chip>
+                        {missing.length > 0 && <span style={{ fontSize: '0.66rem', color: '#b45309', alignSelf: 'center' }}>missing: {missing.join(', ')}</span>}
                         {c._scoreMeta.daysSinceJoin != null && c._scoreMeta.daysSinceJoin <= NEW_CREATOR_WINDOW_DAYS && (
                           <Chip bg="rgba(25,37,36,0.85)" color="#F7F5F2">New · {c._scoreMeta.daysSinceJoin}d</Chip>
                         )}
@@ -153,7 +165,7 @@ function Simulator() {
               {ranked.length === 0 && <p style={{ fontSize: '0.8rem', color: SAGE }}>No verified creators to rank yet.</p>}
             </div>
             <p style={{ fontSize: '0.7rem', color: SAGE, margin: '0.75rem 0 0' }}>
-              In the app, this only drives the "Recommended" sort option — picking Most Followers / Highest Engagement / Most Collabs on the Creators tab always overrides personalization, same as Explore search.
+              With no filters, creators are grouped by profile completeness ({COMPLETENESS_BAND}-pt bands) first, then by this score. Any filter, search, or explicit sort drops the completeness step. Picking Most Followers / Highest Engagement / Most Collabs on the Creators tab always overrides personalization, same as Explore search.
             </p>
           </Card>
         </>
@@ -185,6 +197,24 @@ function Reference() {
           <Chip>Drives the "Recommended" sort only — nothing is ever hidden</Chip>
           <Chip>An explicit sort choice (Followers/Engagement/Collabs) always overrides this</Chip>
         </div>
+      </Card>
+
+      <Card style={{ marginBottom: '1rem' }}>
+        <SectionLabel>0 · Profile completeness — applied first, when the host has no filters</SectionLabel>
+        <p style={{ fontSize: '0.8rem', color: SLATE, margin: '0 0 0.6rem', lineHeight: 1.55 }}>
+          Before the score below is used, creators are grouped into {COMPLETENESS_BAND}-point bands by how complete their profile is, most complete first. The score then orders creators within each band — so a creator with no photo can never outrank one with a photo.
+        </p>
+        <table style={{ borderCollapse: 'collapse', width: '100%' }}>
+          <thead><tr><th style={th}>Profile has</th><th style={th}>Points (of 100)</th></tr></thead>
+          <tbody>
+            {COMPLETENESS_PARTS.map((p) => (
+              <tr key={p.key}><td style={td}>{p.label}</td><td style={td}>{p.weight}</td></tr>
+            ))}
+          </tbody>
+        </table>
+        <p style={{ fontSize: '0.75rem', color: SAGE, margin: '0.6rem 0 0' }}>
+          Turned off as soon as the host shows intent: a search term, Nearby / location, dates, past collaborations, tier (experience), platform, Saved only, or any sort other than Recommended. Also applies to the swipe deck unless a tier or search is set.
+        </p>
       </Card>
 
       <Card style={{ marginBottom: '1rem' }}>
@@ -222,6 +252,7 @@ function Reference() {
         <SectionLabel>Guarantees</SectionLabel>
         <ul style={{ fontSize: '0.8rem', color: SLATE, margin: 0, paddingLeft: '1.1rem', lineHeight: 1.7 }}>
           <li>Nothing is ever hidden — every verified, visible creator appears; scores only reorder.</li>
+          <li>With no filters, complete profiles (photo + full bio) always lead; filters remove that preference.</li>
           <li>Choosing an explicit sort (Followers / Engagement / Collabs) always overrides this ranking.</li>
           <li>All scoring is computed client-side on load from data already fetched — nothing extra is stored.</li>
         </ul>

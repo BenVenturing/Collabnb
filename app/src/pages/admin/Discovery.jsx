@@ -223,6 +223,7 @@ function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
   const [dmDraft, setDmDraft] = useState(prospect.dm_draft || '');
   const [emailField, setEmailField] = useState(prospect.email || '');
   const [whatsappField, setWhatsappField] = useState(prospect.whatsapp || '');
+  const [igField, setIgField] = useState(prospect.ig_handle || '');
   const [notes, setNotes] = useState(prospect.notes || '');
   // These mirror prospect fields into local state so an onBlur can tell
   // "did the user actually change this" apart from "just re-rendered" — but
@@ -234,6 +235,7 @@ function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
   useEffect(() => { setDmDraft(prospect.dm_draft || ''); }, [prospect.dm_draft]);
   useEffect(() => { setEmailField(prospect.email || ''); }, [prospect.email]);
   useEffect(() => { setWhatsappField(prospect.whatsapp || ''); }, [prospect.whatsapp]);
+  useEffect(() => { setIgField(prospect.ig_handle || ''); }, [prospect.ig_handle]);
   useEffect(() => { setNotes(prospect.notes || ''); }, [prospect.notes]);
   const [genBusy, setGenBusy] = useState(false);
   const [genErr, setGenErr] = useState('');
@@ -252,6 +254,11 @@ function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
   }, [open, focusEmailPending]);
   const [focusWhatsappPending, setFocusWhatsappPending] = useState(false);
   const whatsappInputRef = useRef(null);
+  const igInputRef = useRef(null);
+  const [focusIgPending, setFocusIgPending] = useState(false);
+  useEffect(() => {
+    if (open && focusIgPending) { igInputRef.current?.focus(); setFocusIgPending(false); }
+  }, [open, focusIgPending]);
   useEffect(() => {
     if (open && focusWhatsappPending) {
       whatsappInputRef.current?.focus();
@@ -293,6 +300,8 @@ function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
   }
 
   async function dmOnInstagram() {
+    const igHandle = isHotel ? prospect.ig_handle : prospect.instagram_handle;
+    if (!igHandle) { setOpen(true); setFocusIgPending(true); return; }
     let text = dmDraft;
     if (!text) {
       // No draft yet — generate one now (using analyzed data if available)
@@ -309,11 +318,12 @@ function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
       setGenBusy(false);
     }
     try { await navigator.clipboard.writeText(text); } catch { /* clipboard unavailable */ }
-    window.open(`https://ig.me/m/${prospect.instagram_handle}`, '_blank', 'noopener');
+    window.open(`https://ig.me/m/${igHandle}`, '_blank', 'noopener');
     // Moves the card into the "DMed" column the moment you actually go do
     // it — no separate click needed, for either kind. Only from earlier in
-    // the pipeline, so this never rewinds a card that's already moved further.
-    if (['new', 'queued', 'emailed'].includes(prospect.status)) {
+    // the pipeline. Emailed sits to the right of DMed, so a DM after an email
+    // leaves the card in Emailed instead of bouncing it back.
+    if (['new', 'queued'].includes(prospect.status)) {
       updateStatus({ id: prospect._id, status: 'contacted' }).catch(() => {});
     }
   }
@@ -480,17 +490,16 @@ function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
               }}>
               {sendingStep === 'now' ? 'Emailing…' : 'Email'}
             </button>
-            {isHotel && !prospect.email && prospect.contact_url && (
-              <a href={prospect.contact_url} target="_blank" rel="noopener noreferrer" title="Open their website / contact form"
-                style={{ padding: '0.32rem 0.8rem', borderRadius: 9999, fontSize: '0.72rem', fontWeight: 700, border: '1.5px solid rgba(25,37,36,0.2)', color: '#3C5759', textDecoration: 'none' }}>
-                Site ↗
-              </a>
-            )}
-            {!isHotel && <button onClick={dmOnInstagram} disabled={genBusy}
+            <button onClick={dmOnInstagram} disabled={genBusy}
               title={dmed ? 'Already DMed — click to reopen the thread and copy the message again' : (dmDraft ? 'Copies the draft, then opens their Instagram DM thread' : 'Generates a draft (using Analyze profile data if available), copies it, then opens their Instagram DM thread')}
-              style={{ padding: '0.32rem 0.8rem', borderRadius: 9999, border: 'none', background: dmed ? '#166534' : '#192524', color: '#fff', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', opacity: genBusy ? 0.5 : 1 }}>
-              {genBusy && !dmDraft ? 'Writing…' : 'DM ↗'}
-            </button>}
+              style={{
+                padding: '0.32rem 0.8rem', borderRadius: 9999, fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', opacity: genBusy ? 0.5 : 1,
+                border: isHotel && !prospect.ig_handle ? '1.5px solid rgba(25,37,36,0.2)' : 'none',
+                background: dmed ? '#166534' : isHotel && !prospect.ig_handle ? 'transparent' : '#192524',
+                color: isHotel && !prospect.ig_handle ? '#3C5759' : '#fff',
+              }}>
+              {genBusy && !dmDraft ? 'Writing…' : isHotel && !prospect.ig_handle ? 'DM' : 'DM ↗'}
+            </button>
             <button onClick={handleWhatsappClick}
               title={!prospect.whatsapp ? 'No WhatsApp number on file — click to add one' : whatsapped ? 'Already messaged on WhatsApp — click to reopen the chat' : 'Opens WhatsApp with their number pre-filled'}
               style={{
@@ -501,6 +510,12 @@ function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
               }}>
               WA{prospect.whatsapp ? ' ↗' : ''}
             </button>
+            {(prospect.website || prospect.contact_url) && (
+              <a href={/^https?:\/\//.test(prospect.website || prospect.contact_url) ? (prospect.website || prospect.contact_url) : `https://${prospect.website || prospect.contact_url}`} target="_blank" rel="noopener noreferrer" title="Open their website"
+                style={{ padding: '0.2rem 0.55rem', borderRadius: 9999, fontSize: '0.64rem', fontWeight: 600, color: '#646B62', background: 'rgba(25,37,36,0.05)', textDecoration: 'none', alignSelf: 'center' }}>
+                Site ↗
+              </a>
+            )}
           </div>
           {seqErr && <span style={{ fontSize: '0.66rem', color: '#9b2d2d' }}>{seqErr}</span>}
         </div>
@@ -544,6 +559,16 @@ function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
               placeholder="Found automatically from their bio — separate several with commas (one email goes to all)" spellCheck={false}
               style={{ ...input, width: '100%' }} />
           </div>
+
+          {isHotel && (
+            <div>
+              <span style={label}>Instagram handle (for DMs)</span>
+              <input ref={igInputRef} value={igField} onChange={e => setIgField(e.target.value)}
+                onBlur={() => { const h = igField.trim().replace(/^@/, '').replace(/^https?:\/\/(www\.)?instagram\.com\//, '').replace(/\/.*$/, ''); if (h !== (prospect.ig_handle || '')) update({ id: prospect._id, igHandle: h }); }}
+                placeholder="e.g. somewherelombok" spellCheck={false}
+                style={{ ...input, width: '100%' }} />
+            </div>
+          )}
 
           <div>
             <span style={label}>WhatsApp</span>
@@ -1471,7 +1496,8 @@ function HostCrmBoard() {
   const byColumn = {};
   for (const col of CRM_COLUMNS) byColumn[col.id] = [];
   for (const p of filtered) (byColumn[p.status] || byColumn.queued).push(p);
-  for (const col of CRM_COLUMNS) byColumn[col.id].sort((a, b) => (b.starred ? 1 : 0) - (a.starred ? 1 : 0) || outreachRank(b) - outreachRank(a) || lastActivityAt(b) - lastActivityAt(a));
+  const readiness = (p) => (p.whatsapp && (isHotelProspect(p) ? p.ig_handle : p.instagram_handle) ? 2 : 0) + ((p.email || p.marketing_email) ? 1 : 0);
+  for (const col of CRM_COLUMNS) byColumn[col.id].sort((a, b) => (b.starred ? 1 : 0) - (a.starred ? 1 : 0) || (col.id === 'queued' ? readiness(b) - readiness(a) : 0) || outreachRank(b) - outreachRank(a) || lastActivityAt(b) - lastActivityAt(a));
 
   // Per-column select-all — a global one selected across every stage at
   // once, which was rarely what you wanted (e.g. bulk-emailing the whole

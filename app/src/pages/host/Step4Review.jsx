@@ -2,8 +2,8 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, ArrowRight, Star, Eye, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { useMutation, useQuery } from "convex/react";
-import { ConvexError } from "convex/values";
+import { useQuery } from "convex/react";
+import useSaveListingDraft from "../../hooks/useSaveListingDraft";
 import { api } from "../../../convex/_generated/api";
 import WizardShell from "../../components/host/WizardShell";
 import { useListingDraft } from "../../contexts/ListingDraftContext";
@@ -39,14 +39,10 @@ export default function Step4Review() {
   const COMP_LABELS = t('compLabels', { returnObjects: true });
   const LOAD_LABELS = t('loadLabels', { returnObjects: true });
   const navigate = useNavigate();
-  const { draft, updateDraft, clearDraft, totalDeliverables, formatCount, combinedDeliverablesList } = useListingDraft();
+  const { draft, updateDraft, totalDeliverables, formatCount, combinedDeliverablesList } = useListingDraft();
   const { profile } = useAuth();
-  const createListing = useMutation(api.listings.create);
-  const updateListing = useMutation(api.listings.update);
-  const editingId = typeof window !== 'undefined' ? localStorage.getItem('collabnb_editing_listing_id_v1') : null;
-  const [saving, setSaving] = useState(false);
+  const { saving, saveError, saveDraft: handleSaveDraft } = useSaveListingDraft(t('saveFallbackError'));
   const [creatorView, setCreatorView] = useState(false);
-  const [saveError, setSaveError] = useState("");
 
   // Resolve uploaded photos (storageIds → URLs) for reordering + creator preview
   const imageUrls = useQuery(api.uploads.getImageUrls, draft.images.length ? { storageIds: draft.images } : "skip") || [];
@@ -118,26 +114,6 @@ export default function Step4Review() {
     image: resolvedImages[0],
     collaboration_brief: draft.collaboration_brief,
   };
-
-  async function handleSaveDraft() {
-    setSaving(true);
-    setSaveError("");
-    try {
-      if (editingId) {
-        await updateListing({ id: editingId, ...listingFields, status: "draft" });
-        localStorage.removeItem('collabnb_editing_listing_id_v1');
-      } else {
-        await createListing({ ...listingFields, status: "draft" });
-      }
-      clearDraft();
-      navigate("/host");
-    } catch (err) {
-      console.error(err);
-      const message = err instanceof ConvexError ? err.data : err?.message;
-      setSaveError(typeof message === "string" && message ? message : t('saveFallbackError'));
-      setSaving(false);
-    }
-  }
 
   // Client-side mirror of the server's three-zone floor check — same source
   // of truth (compensationPoints), so hosts see the warning before they hit it.
@@ -286,7 +262,7 @@ export default function Step4Review() {
         )}
         <button
           onClick={handleSaveDraft}
-          disabled={saving || !hasCompensation}
+          disabled={saving}
           style={{ width: "100%", padding: "14px 0", marginBottom: 16, background: "none", border: "none", cursor: "pointer", fontFamily: "Satoshi, sans-serif", fontSize: 15, fontWeight: 600, color: "var(--slate)", textDecoration: "underline" }}
         >
           {saving ? t('saving') : t('saveDraft')}

@@ -95,3 +95,35 @@ export function scoreCreators(creators, hostCtx) {
     return { ...c, _score: m.score, _scoreParts: m.parts, _scoreReasons: m.reasons, _scoreMeta: m.meta };
   });
 }
+
+// Profile completeness (0–100). Photo is weighted heaviest since a card
+// without one reads as an empty account. Used as the primary sort only when
+// the host hasn't expressed intent via filters — see HostCreators.jsx.
+const bioLen = (c) => (c.bio || '').trim().length;
+export const COMPLETENESS_PARTS = [
+  { key: 'photo',     label: 'Profile photo',               weight: 40, test: (c) => !!c.avatar },
+  { key: 'bio',       label: 'Bio ≥ 20 characters',         weight: 15, test: (c) => bioLen(c) >= 20 },
+  { key: 'bioFull',   label: 'Bio ≥ 120 characters',        weight: 15, test: (c) => bioLen(c) >= 120 },
+  { key: 'niches',    label: 'At least one niche',          weight: 10, test: (c) => (c.niches?.length ?? 0) > 0 },
+  { key: 'location',  label: 'Location set',                weight: 10, test: (c) => !!(c.location || c.city || c.country) },
+  { key: 'platforms', label: 'At least one social handle',  weight: 5,  test: (c) => (c.platforms?.length ?? 0) > 0 },
+  { key: 'portfolio', label: 'Portfolio link',              weight: 5,  test: (c) => !!c.portfolioUrl },
+];
+export const COMPLETENESS_BAND = 10;
+
+export function completenessScore(creator) {
+  return COMPLETENESS_PARTS.reduce((sum, p) => sum + (p.test(creator) ? p.weight : 0), 0);
+}
+
+export function missingCompleteness(creator) {
+  return COMPLETENESS_PARTS.filter((p) => !p.test(creator)).map((p) => p.label);
+}
+
+// Stable re-order: most complete profiles first, existing order kept within
+// each COMPLETENESS_BAND-point band so the secondary sort still matters.
+export function sortByCompleteness(creators) {
+  return creators
+    .map((c, i) => ({ c, i, band: Math.floor(completenessScore(c) / COMPLETENESS_BAND) }))
+    .sort((a, b) => b.band - a.band || a.i - b.i)
+    .map(({ c }) => c);
+}

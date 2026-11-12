@@ -797,6 +797,7 @@ export default defineSchema({
     published: v.optional(v.boolean()),  // admin reviewed + approved this draft to send
     contacted_at: v.optional(v.number()),
     replied_at: v.optional(v.number()),
+    ig_handle: v.optional(v.string()),   // real Instagram handle for hotels (their instagram_handle is a synthetic hc-… key)
     whatsapp: v.optional(v.string()),    // phone number, digits + country code (e.g. "15551234567") for the wa.me deep link
     whatsapped_at: v.optional(v.number()), // independent of `status` — a parallel channel, not a pipeline stage
     starred: v.optional(v.boolean()), // admin flag for "looks especially profitable" — click the avatar to toggle

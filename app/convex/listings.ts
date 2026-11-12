@@ -49,9 +49,11 @@ function evaluateCompensationFloor(fields: {
 
 function validateListingFields(
   fields: { compensation_type?: string; cash_amount?: number; date_ranges?: { startDate: string; endDate: string }[] },
-  { requireCompensation = false } = {}
+  { requireCompensation = false, isDraft = false } = {}
 ) {
   const { compensation_type, cash_amount, date_ranges } = fields;
+  // Drafts preserve work in progress. Publication validates the complete record.
+  if (isDraft) return;
   if (requireCompensation || compensation_type !== undefined) {
     if (compensation_type !== "paid" && compensation_type !== "hybrid") {
       throw new ConvexError('Collaboration type must be "paid" or "hybrid" — a stay alone is not valid compensation.');
@@ -490,7 +492,8 @@ export const create = mutation({
   handler: async (ctx, args) => {
     if (args.host_id) await requireOwnerOrAdmin(ctx, args.host_id);
     if (args.host_id) await enforceRateLimit(ctx, `listing:${args.host_id}`, RATE_LIMITS.LISTING_WRITE);
-    validateListingFields(args, { requireCompensation: true });
+    const isDraft = args.status === "draft";
+    validateListingFields(args, { requireCompensation: true, isDraft });
     // Publishing requires a verified host with a card on file — pending hosts,
     // and hosts who haven't added a card yet, can still save drafts.
     if (args.status === "published" && args.host_id) {
@@ -506,7 +509,7 @@ export const create = mutation({
       }
     }
     const floor = evaluateCompensationFloor(args);
-    if (floor?.zone === "red") {
+    if (!isDraft && floor?.zone === "red") {
       throw new ConvexError(`Compensation is below the minimum for this workload. The minimum for this listing is $${Math.round(floor.hardFloor)}.`);
     }
     const id = await ctx.db.insert("listings", { ...args, ...sanitizeListingFields(args), below_recommended_comp: floor?.zone === "amber" });
@@ -576,7 +579,8 @@ export const update = mutation({
     if (!existing) throw new ConvexError("Listing not found.");
     await requireOwnerOrAdmin(ctx, (existing as any).host_id);
     if ((existing as any).host_id) await enforceRateLimit(ctx, `listing:${(existing as any).host_id}`, RATE_LIMITS.LISTING_WRITE);
-    validateListingFields(fields);
+    const isDraft = (fields.status ?? existing.status) === "draft";
+    validateListingFields({ ...existing, ...fields }, { requireCompensation: true, isDraft });
     // Sample listings are permanently locked to draft — no UI path may publish them
     if ((existing as any).is_sample === true && fields.status && fields.status !== "draft") {
       throw new ConvexError("Sample listings can't be published — they stay drafts. Create your own listing to go live.");
@@ -623,7 +627,7 @@ export const update = mutation({
       stay_value: fields.stay_value ?? (existing as any).stay_value,
     };
     const floor = evaluateCompensationFloor(merged);
-    if (floor?.zone === "red") {
+    if (!isDraft && floor?.zone === "red") {
       throw new ConvexError(`Compensation is below the minimum for this workload. The minimum for this listing is $${Math.round(floor.hardFloor)}.`);
     }
     if (floor) patch.below_recommended_comp = floor.zone === "amber";

@@ -14,7 +14,7 @@ import CreatorAvatar from '../../components/CreatorAvatar';
 import CreatorCard from '../../components/CreatorCard';
 import { useAppBar } from '../../contexts/AppBarContext';
 import { useAuth } from '../../contexts/AuthContext';
-import { buildHostContext, scoreCreators } from '../../lib/creatorScore';
+import { buildHostContext, scoreCreators, sortByCompleteness } from '../../lib/creatorScore';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const LOCATION_CONSENT_KEY = '@collabnb_location_consent_v1';
@@ -774,6 +774,7 @@ function SwipeView({ creators, onBack, savedIds, onToggleSaved }) {
         c.location?.toLowerCase().includes(q)
       );
     }
+    if (swipeTier === 'All' && !swipeQuery.trim()) base = sortByCompleteness(base);
     return [
       ...base.filter(c => !deprioSet.has(c.id)),
       ...base.filter(c =>  deprioSet.has(c.id)),
@@ -1200,6 +1201,9 @@ export default function HostCreators() {
     else if (sortBy === 'followers') base = [...base].sort((a, b) => b.followers - a.followers);
     else if (sortBy === 'engagement') base = [...base].sort((a, b) => b.engagement - a.engagement);
     else if (sortBy === 'collabs') base = [...base].sort((a, b) => b.collab_count - a.collab_count);
+    // No intent filters → lead with complete profiles (photo + full bio). Any filter or explicit sort overrides this.
+    const hasIntentFilters = !!query || activeFilterCount > 0 || sortBy !== 'recommended';
+    if (!hasIntentFilters) base = sortByCompleteness(base);
     // Pin real (non-sample) creators above samples, preserving sort within each group.
     base = [...base.filter(c => !c.isSample), ...base.filter(c => c.isSample)];
     return base;

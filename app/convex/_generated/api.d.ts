@@ -16,6 +16,7 @@ import type * as ambassadorInviteHtml from "../ambassadorInviteHtml.js";
 import type * as ambassadors from "../ambassadors.js";
 import type * as analytics from "../analytics.js";
 import type * as appleWallet from "../appleWallet.js";
+import type * as autoOutreach from "../autoOutreach.js";
 import type * as autoreply from "../autoreply.js";
 import type * as blog from "../blog.js";
 import type * as blogResearch from "../blogResearch.js";
@@ -95,6 +96,7 @@ declare const fullApi: ApiFromModules<{
   ambassadors: typeof ambassadors;
   analytics: typeof analytics;
   appleWallet: typeof appleWallet;
+  autoOutreach: typeof autoOutreach;
   autoreply: typeof autoreply;
   blog: typeof blog;
   blogResearch: typeof blogResearch;

@@ -189,4 +189,14 @@ crons.daily(
   {}
 );
 
+// Daily at 1am UTC (9am Bali) — automated hotel outreach: audit page + one-click
+// claim + named email, spread over ~4h, ramping 15→50/day. Off until
+// autoOutreach:setConfig {"enabled":true}.
+crons.daily(
+  "auto hotel outreach",
+  { hourUTC: 1, minuteUTC: 0 },
+  internal.autoOutreach.runDaily,
+  {}
+);
+
 export default crons;

@@ -46,6 +46,7 @@ const ReceiptPreview       = lazy(() => import('./pages/dev/ReceiptPreview'));
 const OrbPreview           = lazy(() => import('./pages/dev/OrbPreview'));
 const WaitlistPreview      = lazy(() => import('./pages/WaitlistPreview'));
 const ClaimListing         = lazy(() => import('./pages/ClaimListing'));
+const HotelAudit           = lazy(() => import('./pages/HotelAudit'));
 
 // One-click "send this crash to the dev team" button shown in the crash
 // screen below. Lives outside the class ErrorBoundary since hooks need a
@@ -239,7 +240,7 @@ function AppRoutes() {
     // /profile/:username is the shared/QR destination — it has to render for a
     // signed-out stranger. Bare /profile is the owner's own page and stays gated.
     const isPublicProfile = path.startsWith('/profile/') && path !== '/profile/';
-    const isPublicRoute = path === '/blog' || path.startsWith('/blog/') || path.startsWith('/claim/') || path === '/dev/receipt-preview' || isPublicProfile;
+    const isPublicRoute = path === '/blog' || path.startsWith('/blog/') || path.startsWith('/claim/') || path.startsWith('/audit/') || path === '/dev/receipt-preview' || isPublicProfile;
     if (!isLocalhost && !isPublicRoute) {
       window.location.href = '/login.html';
       return null;
@@ -286,6 +287,7 @@ function AppRoutes() {
           {/* Pending-approval waitlist screen — full-screen, no nav chrome */}
           <Route path="/welcome" element={<WaitlistPreview />} />
           <Route path="/claim/:token" element={<ClaimListing />} />
+          <Route path="/audit/:token" element={<HotelAudit />} />
 
           {/* All other routes — wrapped in Layout (nav + HAZY bg) */}
           <Route path="*" element={

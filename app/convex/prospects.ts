@@ -360,7 +360,7 @@ async function draftCreatorEmail(p: any, step: { subject: string; template: stri
 // the site can't be reached or has no listed contact — this must never block
 // the confirm flow. Never overwrites an already-known marketing_email/whatsapp
 // (e.g. typed in by hand), only fills in what's missing.
-async function findMarketingContact(p: any): Promise<{ email?: string; phone?: string }> {
+export async function findMarketingContact(p: any): Promise<{ email?: string; phone?: string }> {
   // marketing_email/whatsapp are already-resolved real addresses (scraped
   // previously, or typed in by hand) — always win outright. p.email (the bio
   // address) is only a last-resort fallback, ranked BELOW a fresh scrape.
@@ -416,7 +416,7 @@ function searchProviderFor(settings: Record<string, string>, kind: "host" | "cre
   return settings[`${kind}_search_provider`] || "agent_reach";
 }
 
-async function hikerGet(path: string, params: Record<string, any>): Promise<any> {
+export async function hikerGet(path: string, params: Record<string, any>): Promise<any> {
   const key = process.env.HIKERAPI_KEY!;
   const qs = new URLSearchParams(
     Object.entries(params).filter(([, val]) => val !== undefined).map(([k, val]) => [k, String(val)])
@@ -2903,5 +2903,50 @@ export const runDailyHostDiscovery = internalAction({
       results.push({ query: profile.query, imported: inserted });
     }
     return { ran: true, results };
+  },
+});
+
+// Aggregate-only outreach tally for marketing reviews (counts, no contact data).
+export const outreachTally = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    const rows = (await ctx.db.query("prospects").collect()) as any[];
+    const out: Record<string, any> = {};
+    const days: Record<string, number> = {};
+    const bump = (at: number | undefined) => {
+      if (!at) return;
+      const d = new Date(at).toISOString().slice(0, 10);
+      days[d] = (days[d] || 0) + 1;
+    };
+    for (const p of rows) {
+      const k = p.kind;
+      const t = (out[k] ||= { prospects: 0, touched: 0, emails: 0, dms: 0, whatsapps: 0, replied: 0, signed: 0, multiChannel: 0 });
+      t.prospects++;
+      const log = p.outreach_log || [];
+      const logEmails = log.filter((e: any) => e.type === "email_sent");
+      const seqSent = (p.email_sequence || []).filter((s: any) => s.sent_at);
+      let emails = Math.max(logEmails.length, seqSent.length);
+      if (!emails && p.brief_sent_at) emails = 1;
+      const dmLog = log.find((e: any) => e.type === "contacted");
+      const dm = p.contacted_at || dmLog ? 1 : 0;
+      const wa = p.whatsapped_at ? Math.max(1, log.filter((e: any) => e.type === "whatsapped").length) : 0;
+      t.emails += emails; t.dms += dm; t.whatsapps += wa;
+      const channels = (emails ? 1 : 0) + dm + (wa ? 1 : 0);
+      if (channels) t.touched++;
+      if (channels > 1) t.multiChannel++;
+      if (p.replied_at || p.status === "replied" || p.status === "signed") t.replied++;
+      if (p.status === "signed") t.signed++;
+      (logEmails.length ? logEmails.map((e: any) => e.at) : seqSent.map((s: any) => s.sent_at)).forEach(bump);
+      if (!emails || logEmails.length || seqSent.length) {} else bump(p.brief_sent_at);
+      if (dm) bump(p.contacted_at || dmLog?.at);
+      log.filter((e: any) => e.type === "whatsapped").forEach((e: any) => bump(e.at));
+    }
+    const claims = (await ctx.db.query("listing_claims").collect()) as any[];
+    const recent = Object.entries(days).sort().slice(-21);
+    return {
+      byKind: out,
+      claims: { total: claims.length, viewed: claims.filter((c) => c.view_count).length, claimed: claims.filter((c) => c.status === "claimed").length },
+      last21Days: recent,
+    };
   },
 });

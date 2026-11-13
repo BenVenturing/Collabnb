@@ -16,6 +16,7 @@
 /blog/* /app/ 200
 /welcome /app/ 200
 /claim/* /app/ 200
+/audit/* /app/ 200
 
 /collab /join?role=creator&join=true 302
 /collab/ /join?role=creator&join=true 302

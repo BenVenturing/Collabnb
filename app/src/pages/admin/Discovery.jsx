@@ -167,6 +167,8 @@ const PROSPECT_TAGS = {
   contacted: 'Already emailed earlier (GoHighLevel) — next send is a follow-up',
   'contacted-opened': 'Already emailed earlier and they opened it, no reply yet',
   'contacted-clicked': 'Already emailed earlier and they clicked a link',
+  auto: 'Auto outreach sent: audit page + claim link emailed, DM nudge drafted below (send it ~2 days later)',
+  'auto-skip': 'Auto outreach skipped this hotel (reason in the outreach log)',
 };
 
 function TagChips({ tags, small }) {

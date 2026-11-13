@@ -1260,6 +1260,7 @@ export default defineSchema({
     listing_id: v.optional(v.string()),
     profile_id: v.optional(v.string()),
     clerk_user_id: v.optional(v.string()),
+    audit: v.optional(v.any()), // autoOutreach: IG audit shown at /audit/:token
     created_at: v.number(),
   }).index("by_token", ["token"]),
 });

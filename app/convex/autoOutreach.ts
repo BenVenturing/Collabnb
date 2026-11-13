@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { internalAction, internalMutation, internalQuery, query } from "./_generated/server";
+import { internalAction, internalMutation, internalQuery, mutation, query } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { hikerGet, findMarketingContact } from "./prospects";
 import { llmChat } from "./blog";
@@ -291,7 +291,7 @@ async function rehost(ctx: any, url?: string): Promise<string | undefined> {
 // ─── Email ───────────────────────────────────────────────────────────────────
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-function emailParts(o: { greeting: string; hotel: string; teaser: string; auditUrl: string; claimUrl: string; photos: number }) {
+function emailParts(o: { greeting: string; hotel: string; teaser: string; auditUrl: string; buildUrl: string }) {
   const text = `${o.greeting}
 
 I'm Benjamin, founder of Collabnb. I ran a quick audit of ${o.hotel}'s Instagram, and one number stood out: ${o.teaser}.
@@ -299,12 +299,12 @@ I'm Benjamin, founder of Collabnb. I ran a quick audit of ${o.hotel}'s Instagram
 The full audit is here (free, no signup):
 ${o.auditUrl}
 
-We also set up a Collabnb listing for you: ${o.photos ? `${o.photos} photos from your feed, ` : ""}your location and a creator brief built around the gaps in the audit. All that's left is setting what you'd pay creators on top of the stay and publishing. It takes under 5 minutes, with no password or signup form.
+Collabnb connects boutique stays with pre-vetted creators who make Reels and photos in exchange for a stay. Your listing is one click away: we build it for you from your feed, with your best photos, your location and a creator brief built around the gaps in the audit. No password or signup form.
 
-Open your draft listing:
-${o.claimUrl}
+Build my listing:
+${o.buildUrl}
 
-It's free for Founding Hosts, nothing goes live until you publish, and pre-vetted creators are already on Collabnb.
+It's free for Founding Hosts, and nothing goes live until you publish.
 
 Warmly,
 Benjamin
@@ -321,9 +321,9 @@ ${p(esc(o.greeting))}
 ${p(`I'm Benjamin, founder of Collabnb. I ran a quick audit of ${esc(o.hotel)}'s Instagram, and one number stood out:`)}
 <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 16px"><tr><td bgcolor="#e8f4ec" style="background:#e8f4ec;border-radius:10px;padding:14px 16px;font-size:16px;font-weight:bold;color:#1f2a24">${esc(o.teaser.charAt(0).toUpperCase() + o.teaser.slice(1))}</td></tr></table>
 ${p(`<a href="${o.auditUrl}" style="color:#3f6b52;font-weight:bold">Read the full audit</a> (free, no signup).`)}
-${p(`We also set up a Collabnb listing for you: ${o.photos ? `${o.photos} photos from your feed, ` : ""}your location and a creator brief built around the gaps in the audit. All that's left is setting what you'd pay creators on top of the stay and publishing. It takes under 5 minutes, with no password or signup form.`)}
-<table cellpadding="0" cellspacing="0" style="margin:4px 0 20px"><tr><td bgcolor="#3f6b52" style="background:#3f6b52;border-radius:999px;padding:13px 26px"><a href="${o.claimUrl}" style="text-decoration:none"><font color="#ffffff" style="color:#ffffff;font-size:15px;font-weight:bold">Open your draft listing</font></a></td></tr></table>
-${p("It's free for Founding Hosts, nothing goes live until you publish, and pre-vetted creators are already on Collabnb.")}
+${p(`Collabnb connects boutique stays with pre-vetted creators who make Reels and photos in exchange for a stay. Your listing is one click away: we build it for you from your feed, with your best photos, your location and a creator brief built around the gaps in the audit. No password or signup form.`)}
+<table cellpadding="0" cellspacing="0" style="margin:4px 0 20px"><tr><td bgcolor="#3f6b52" style="background:#3f6b52;border-radius:999px;padding:13px 26px"><a href="${o.buildUrl}" style="text-decoration:none"><font color="#ffffff" style="color:#ffffff;font-size:15px;font-weight:bold">Build my listing</font></a></td></tr></table>
+${p("It's free for Founding Hosts, and nothing goes live until you publish.")}
 ${p("Warmly,<br>Benjamin<br>Founder, Collabnb<br>WhatsApp +1 623-221-2170")}
 </td></tr>
 <tr><td align="center" style="padding:22px 0 0;font-size:12px;color:#6b7a70"><img src="${LOGO}" width="80" alt="Collabnb" style="display:block;margin:0 auto 8px">Collabnb · Lombok, Indonesia</td></tr>
@@ -348,7 +348,13 @@ async function sendEmail(to: string, subject: string, html: string, text: string
   return body;
 }
 
-// ─── Per-hotel pipeline ──────────────────────────────────────────────────────
+function newToken(hotel: string) {
+  const slug = hotel.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 32) || "hotel";
+  const rand = Array.from(crypto.getRandomValues(new Uint8Array(9))).map((b) => "abcdefghijkmnpqrstuvwxyz23456789"[b % 32]).join("");
+  return `${slug}-${rand}`;
+}
+
+// ─── Step 1, every hotel: audit + email (no claim, no account, no photos) ────
 export const processOne = internalAction({
   args: { id: v.id("prospects"), cap: v.optional(v.number()), preview: v.optional(v.boolean()) },
   handler: async (ctx, { id, cap, preview }): Promise<any> => {
@@ -385,57 +391,31 @@ export const processOne = internalAction({
     const dm = p.decision_maker_name ? { name: p.decision_maker_name, role: p.decision_maker_role || "" } : await findDecisionMaker(website);
     const first = dm?.name?.split(" ")[0];
     const greeting = first ? `Hi ${first},` : `Hi ${hotel} team,`;
-
     const audit = buildAudit(ig);
-    const copy = await draftListingCopy(hotel, p, ig);
     const subject = `${hotel}: ${audit.teaser}`;
-
-    if (preview) {
-      const { text } = emailParts({ greeting, hotel, teaser: audit.teaser, auditUrl: "https://collabnb.com/audit/<token>", claimUrl: "https://collabnb.com/claim/<token>?go=1", photos: Math.min(8, ig.posts.filter((x) => x.image).length) });
-      return { hotel, handle, email, decisionMaker: dm, subject, text, audit, copy };
-    }
-
-    const photos = (await Promise.all(ig.posts.filter((x) => x.image).slice(0, 8).map((x) => rehost(ctx, x.image)))).filter(Boolean) as string[];
-    const avatar = await rehost(ctx, ig.avatar);
-    const username = (handle.replace(/[^a-z0-9_]/g, "") || "host").slice(0, 30);
-
-    const { token } = await ctx.runMutation(internal.claims.createClaim, {
-      hotel_name: hotel,
-      email,
-      host: { full_name: hotel, username, avatar_url: avatar, instagram_handle: handle },
-      preview: { avatar_url: avatar, instagram_handle: handle },
-      prefill: {
-        title: hotel,
-        location_city: copy.city || ig.city || p.location || undefined,
-        location_country: copy.country || p.country || undefined,
-        property_url: website,
-        contact_phone: phone,
-        about: copy.about,
-        collaboration_brief: copy.brief,
-        gallery_images: photos,
-        vibe_tags: copy.vibe_tags,
-        perks: copy.perks,
-        nights: 2,
-        compensation_type: "hybrid",
-        deliverables: [{ type: "ugcReel", quantity: 3 }, { type: "storyFrame", quantity: 4 }, { type: "photo", quantity: 5 }],
-      },
-    });
-    const claimUrl = `https://collabnb.com/claim/${token}?go=1`;
+    const token = newToken(hotel);
     const auditUrl = `https://collabnb.com/audit/${token}`;
-    await ctx.runMutation(internal.autoOutreach.saveAudit, {
-      token,
-      audit: { ...audit, hotel, handle, avatar, photos: photos.slice(0, 6), ideas: copy.ideas, subject, greeting, created_at: Date.now() },
+    const buildUrl = `${auditUrl}?build=1`;
+    const { html, text } = emailParts({ greeting, hotel, teaser: audit.teaser, auditUrl, buildUrl });
+
+    if (preview) return { hotel, handle, email, decisionMaker: dm, subject, text, audit };
+
+    const avatar = await rehost(ctx, ig.avatar);
+    await ctx.runMutation(internal.autoOutreach.createAudit, {
+      token, prospect_id: id, hotel_name: hotel, email, handle,
+      website, phone, city: ig.city || p.location || undefined, country: p.country || undefined,
+      greeting, subject,
+      audit: { ...audit, hotel, handle, avatar, created_at: Date.now() },
     });
 
     const settings: Record<string, string> = await ctx.runQuery(internal.admin.getSettingsInternal, {});
-    const { html, text } = emailParts({ greeting, hotel, teaser: audit.teaser, auditUrl, claimUrl, photos: photos.length });
     try {
       await sendEmail(email, subject, html, text, readConfig(settings).bcc);
     } catch (e: any) {
       return skip(`send failed: ${String(e?.message || e).slice(0, 120)}`);
     }
 
-    const nudge = `Hi${first ? ` ${first}` : ""}! I just sent ${first ? "you" : `the ${hotel} team`} a quick Instagram audit at ${email}. Short version: ${audit.teaser}. I also built ${hotel} a ready-to-publish Collabnb listing (link's in the email). Happy to walk you through it here.`;
+    const nudge = `Hi${first ? ` ${first}` : ""}! I just sent ${first ? "you" : `the ${hotel} team`} a quick Instagram audit at ${email}. Short version: ${audit.teaser}. There's also a one-click button in there that builds ${hotel} a ready-to-publish Collabnb listing from your feed. Happy to walk you through it here.`;
     await ctx.runMutation(internal.autoOutreach.markSent, {
       id, token, email, nudge,
       dmName: dm?.name, dmRole: dm?.role, phone,
@@ -450,36 +430,117 @@ export const followUp = internalAction({
   args: { id: v.id("prospects"), token: v.string() },
   handler: async (ctx, { id, token }) => {
     const p: any = await ctx.runQuery(internal.prospects.getById, { id });
-    const claim: any = await ctx.runQuery(internal.claims._getClaim, { token });
-    if (!p || !claim || claim.status === "claimed" || p.replied_at || !["emailed", "contacted"].includes(p.status)) return { skipped: true };
-    const a = claim.audit || {};
-    const greeting = a.greeting || "Hi there,";
-    const claimUrl = `https://collabnb.com/claim/${token}?go=1`;
+    const a: any = await ctx.runQuery(internal.autoOutreach.getAuditInternal, { token });
+    if (!p || !a || a.claim_token || p.replied_at || !["emailed", "contacted"].includes(p.status)) return { skipped: true };
+    const buildUrl = `https://collabnb.com/audit/${token}?build=1`;
     const auditUrl = `https://collabnb.com/audit/${token}`;
-    const text = `${greeting}
+    const text = `${a.greeting}
 
-Just bumping this in case it got buried. ${claim.hotel_name}'s Collabnb listing is still saved as a draft:
-${claimUrl}
+Just bumping this in case it got buried. ${a.hotel_name}'s Collabnb listing is still one click away:
+${buildUrl}
 
 If creator stays aren't a fit right now, the audit is yours to keep:
 ${auditUrl}
 
 Benjamin`;
-    const html = `<div style="font-family:Helvetica,Arial,sans-serif;font-size:15px;line-height:1.6;color:#1f2a24">${esc(text).replace(/\n/g, "<br>").replace(claimUrl, `<a href="${claimUrl}">${claimUrl}</a>`).replace(auditUrl, `<a href="${auditUrl}">${auditUrl}</a>`)}</div>`;
+    const html = `<div style="font-family:Helvetica,Arial,sans-serif;font-size:15px;line-height:1.6;color:#1f2a24">${esc(text).replace(/\n/g, "<br>").replace(buildUrl, `<a href="${buildUrl}">${buildUrl}</a>`).replace(auditUrl + "<", `<a href="${auditUrl}">${auditUrl}</a><`)}</div>`;
     const settings: Record<string, string> = await ctx.runQuery(internal.admin.getSettingsInternal, {});
-    await sendEmail(claim.email, `Re: ${a.subject || `${claim.hotel_name}'s Collabnb listing`}`, html, text, readConfig(settings).bcc);
-    await ctx.runMutation(internal.autoOutreach.logFollowUp, { id });
+    await sendEmail(a.email, `Re: ${a.subject}`, html, text, readConfig(settings).bcc);
+    await ctx.runMutation(internal.autoOutreach.logEvent, { id, type: "email_sent", note: "auto-followup" });
     return { sent: true };
   },
 });
 
-// ─── Writes ──────────────────────────────────────────────────────────────────
-export const saveAudit = internalMutation({
-  args: { token: v.string(), audit: v.any() },
-  handler: async (ctx, { token, audit }) => {
-    const c = await ctx.db.query("listing_claims").withIndex("by_token", (q) => q.eq("token", token)).unique();
-    if (c) await ctx.db.patch(c._id, { audit });
+// ─── Step 2, only on click: build the one-click claim ────────────────────────
+// Steps drive the loading screen: 1 photos, 2 listing copy, 3 account, 4 done.
+export const requestBuild = mutation({
+  args: { token: v.string() },
+  handler: async (ctx, { token }) => {
+    const a = await ctx.db.query("hotel_audits").withIndex("by_token", (q) => q.eq("token", token)).unique();
+    if (!a) return { ok: false };
+    if (a.claim_token || (a.build_step && a.build_step > 0 && !a.build_error)) return { ok: true };
+    await ctx.db.patch(a._id, { build_step: 1, build_error: undefined, build_started_at: Date.now(), build_photos: [] });
+    await ctx.scheduler.runAfter(0, internal.autoOutreach.buildClaim, { token });
+    return { ok: true };
   },
+});
+
+export const buildClaim = internalAction({
+  args: { token: v.string() },
+  handler: async (ctx, { token }) => {
+    const a: any = await ctx.runQuery(internal.autoOutreach.getAuditInternal, { token });
+    if (!a || a.claim_token) return;
+    const step = (patch: Record<string, any>) => ctx.runMutation(internal.autoOutreach.patchAudit, { token, patch });
+    try {
+      const ig = await fetchIg(a.handle);
+      if (!ig) throw new Error("Instagram profile unavailable");
+      const photos: string[] = [];
+      for (const post of ig.posts.filter((x) => x.image && !x.video).concat(ig.posts.filter((x) => x.image && x.video)).slice(0, 10)) {
+        if (photos.length >= 8) break;
+        const url = await rehost(ctx, post.image);
+        if (url) { photos.push(url); await step({ build_photos: [...photos] }); }
+      }
+      await step({ build_step: 2 });
+      const copy = await draftListingCopy(a.hotel_name, { location: a.city, country: a.country }, ig);
+      await step({ build_step: 3, build_ideas: copy.ideas });
+      const avatar = a.audit?.avatar || (await rehost(ctx, ig.avatar));
+      const username = (a.handle.replace(/[^a-z0-9_]/g, "") || "host").slice(0, 30);
+      const res: any = await ctx.runMutation(internal.claims.createClaim, {
+        hotel_name: a.hotel_name,
+        email: a.email,
+        host: { full_name: a.hotel_name, username, avatar_url: avatar, instagram_handle: a.handle },
+        preview: { avatar_url: avatar, instagram_handle: a.handle },
+        prefill: {
+          title: a.hotel_name,
+          location_city: copy.city || a.city,
+          location_country: copy.country || a.country,
+          property_url: a.website,
+          contact_phone: a.phone,
+          about: copy.about,
+          collaboration_brief: copy.brief,
+          gallery_images: photos,
+          vibe_tags: copy.vibe_tags,
+          perks: copy.perks,
+          nights: 2,
+          compensation_type: "hybrid",
+          deliverables: [{ type: "ugcReel", quantity: 3 }, { type: "storyFrame", quantity: 4 }, { type: "photo", quantity: 5 }],
+        },
+      });
+      await step({ build_step: 4, claim_token: res.token, built_at: Date.now() });
+      await ctx.runMutation(internal.autoOutreach.markBuilt, { id: a.prospect_id, token: res.token });
+      // Hot lead: tell Ben right away.
+      try {
+        await sendEmail(REPLY_TO, `🔥 ${a.hotel_name} just built their Collabnb listing`,
+          `<p>${esc(a.hotel_name)} (@${esc(a.handle)}, ${esc(a.email)}) clicked "Build my listing" and their draft is ready.</p><p>Audit: https://collabnb.com/audit/${token}<br>Teaser: ${esc(a.audit?.teaser || "")}</p><p>Good moment for a personal WhatsApp or DM, or say "target ${esc(a.hotel_name)}" for the hand-built PDF.</p>`,
+          `${a.hotel_name} (@${a.handle}, ${a.email}) clicked "Build my listing". Audit: https://collabnb.com/audit/${token}`);
+      } catch { /* alert is best-effort */ }
+    } catch (e: any) {
+      await step({ build_error: String(e?.message || e).slice(0, 200) });
+    }
+  },
+});
+
+// ─── Writes ──────────────────────────────────────────────────────────────────
+export const createAudit = internalMutation({
+  args: {
+    token: v.string(), prospect_id: v.id("prospects"), hotel_name: v.string(), email: v.string(), handle: v.string(),
+    website: v.optional(v.string()), phone: v.optional(v.string()), city: v.optional(v.string()), country: v.optional(v.string()),
+    greeting: v.string(), subject: v.string(), audit: v.any(),
+  },
+  handler: async (ctx, a) => { await ctx.db.insert("hotel_audits", { ...a, created_at: Date.now() }); },
+});
+
+export const patchAudit = internalMutation({
+  args: { token: v.string(), patch: v.any() },
+  handler: async (ctx, { token, patch }) => {
+    const a = await ctx.db.query("hotel_audits").withIndex("by_token", (q) => q.eq("token", token)).unique();
+    if (a) await ctx.db.patch(a._id, patch);
+  },
+});
+
+export const getAuditInternal = internalQuery({
+  args: { token: v.string() },
+  handler: async (ctx, { token }) => ctx.db.query("hotel_audits").withIndex("by_token", (q) => q.eq("token", token)).unique(),
 });
 
 export const markSent = internalMutation({
@@ -494,12 +555,25 @@ export const markSent = internalMutation({
       ...(a.dmName && !p.decision_maker_name ? { decision_maker_name: a.dmName, decision_maker_role: a.dmRole } : {}),
       ...(a.phone && !p.whatsapp ? { whatsapp: a.phone.replace(/\D/g, "") } : {}),
       brief_sent_at: now,
-      instant_launch_sent_at: now,
       dm_draft: a.nudge,
       dm_angle: "audit-nudge",
       queued_for: a.nudgeDate,
       tags: Array.from(new Set([...(p.tags || []), "auto"])),
       outreach_log: [...(p.outreach_log || []), { at: now, type: "email_sent", note: `auto ${a.token}` }],
+    });
+  },
+});
+
+export const markBuilt = internalMutation({
+  args: { id: v.id("prospects"), token: v.string() },
+  handler: async (ctx, { id, token }) => {
+    const p: any = await ctx.db.get(id);
+    if (!p) return;
+    await ctx.db.patch(id, {
+      instant_launch_sent_at: Date.now(),
+      starred: true,
+      tags: Array.from(new Set([...(p.tags || []), "auto-built"])),
+      outreach_log: [...(p.outreach_log || []), { at: Date.now(), type: "claim_built", note: token }],
     });
   },
 });
@@ -516,21 +590,34 @@ export const markSkipped = internalMutation({
   },
 });
 
-export const logFollowUp = internalMutation({
-  args: { id: v.id("prospects") },
-  handler: async (ctx, { id }) => {
+export const logEvent = internalMutation({
+  args: { id: v.id("prospects"), type: v.string(), note: v.optional(v.string()) },
+  handler: async (ctx, { id, type, note }) => {
     const p: any = await ctx.db.get(id);
-    if (p) await ctx.db.patch(id, { outreach_log: [...(p.outreach_log || []), { at: Date.now(), type: "email_sent", note: "auto-followup" }] });
+    if (p) await ctx.db.patch(id, { outreach_log: [...(p.outreach_log || []), { at: Date.now(), type, note }] });
   },
 });
 
-// ─── Public audit page data (collabnb.com/audit/:token) ──────────────────────
+export const markViewed = mutation({
+  args: { token: v.string() },
+  handler: async (ctx, { token }) => {
+    const a = await ctx.db.query("hotel_audits").withIndex("by_token", (q) => q.eq("token", token)).unique();
+    if (!a) return;
+    const now = Date.now();
+    await ctx.db.patch(a._id, { view_count: (a.view_count || 0) + 1, first_viewed_at: a.first_viewed_at || now, last_viewed_at: now });
+  },
+});
+
+// ─── Public: audit page + build progress (collabnb.com/audit/:token) ─────────
 export const getAudit = query({
   args: { token: v.string() },
   handler: async (ctx, { token }) => {
-    const c: any = await ctx.db.query("listing_claims").withIndex("by_token", (q) => q.eq("token", token)).unique();
-    if (!c?.audit) return null;
-    const { greeting, subject, ...audit } = c.audit;
-    return { hotel_name: c.hotel_name, claimed: c.status === "claimed", audit };
+    const a: any = await ctx.db.query("hotel_audits").withIndex("by_token", (q) => q.eq("token", token)).unique();
+    if (!a) return null;
+    return {
+      hotel_name: a.hotel_name,
+      audit: a.audit,
+      build: { step: a.build_step || 0, error: a.build_error, photos: a.build_photos || [], ideas: a.build_ideas || [], claim_token: a.claim_token },
+    };
   },
 });

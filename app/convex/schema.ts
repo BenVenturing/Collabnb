@@ -1260,7 +1260,34 @@ export default defineSchema({
     listing_id: v.optional(v.string()),
     profile_id: v.optional(v.string()),
     clerk_user_id: v.optional(v.string()),
-    audit: v.optional(v.any()), // autoOutreach: IG audit shown at /audit/:token
+    created_at: v.number(),
+  }).index("by_token", ["token"]),
+
+  // autoOutreach: one per emailed hotel. The claim (account + listing) is only
+  // built when the hotel clicks "Build my listing" on /audit/:token.
+  hotel_audits: defineTable({
+    token: v.string(),
+    prospect_id: v.id("prospects"),
+    hotel_name: v.string(),
+    email: v.string(),
+    handle: v.string(),
+    website: v.optional(v.string()),
+    phone: v.optional(v.string()),
+    city: v.optional(v.string()),
+    country: v.optional(v.string()),
+    greeting: v.string(),
+    subject: v.string(),
+    audit: v.any(),
+    build_step: v.optional(v.number()), // 1 photos, 2 copy, 3 account, 4 done
+    build_error: v.optional(v.string()),
+    build_started_at: v.optional(v.number()),
+    build_photos: v.optional(v.array(v.string())),
+    build_ideas: v.optional(v.array(v.string())),
+    claim_token: v.optional(v.string()),
+    built_at: v.optional(v.number()),
+    view_count: v.optional(v.number()),
+    first_viewed_at: v.optional(v.number()),
+    last_viewed_at: v.optional(v.number()),
     created_at: v.number(),
   }).index("by_token", ["token"]),
 });

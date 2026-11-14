@@ -9,6 +9,7 @@
     "share": { "label": "Comparte tu registro con un amigo", "action": "Compartir enlace" }
   },
   "hostSteps": {
+    "secure": { "label": "Crea una contraseña y confirma tu email", "action": "Proteger cuenta" },
     "listing": { "label": "Crea tu primer anuncio", "action": "Crear anuncio" },
     "profile": { "label": "Completa tu perfil de anfitrión", "action": "Editar perfil" },
     "creators": { "label": "Explora creadores que combinen con tu estilo", "action": "Descubrir creadores" },

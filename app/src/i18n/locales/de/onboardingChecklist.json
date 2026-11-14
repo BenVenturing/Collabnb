@@ -9,6 +9,7 @@
     "share": { "label": "Teile deine Anmeldung mit einem Freund", "action": "Link teilen" }
   },
   "hostSteps": {
+    "secure": { "label": "Passwort festlegen & E-Mail bestätigen", "action": "Konto sichern" },
     "listing": { "label": "Erstelle dein erstes Angebot", "action": "Angebot erstellen" },
     "profile": { "label": "Vervollständige dein Gastgeberprofil", "action": "Profil bearbeiten" },
     "creators": { "label": "Durchstöbere Creator, die zu dir passen", "action": "Creator entdecken" },

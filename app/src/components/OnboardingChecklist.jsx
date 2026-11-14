@@ -6,6 +6,7 @@ import { api } from '../../convex/_generated/api';
 import { useAuth } from '../contexts/AuthContext';
 import i18nInstance from '../i18n';
 import { hasPayoutConnected } from './Layout';
+import { useSecureAccount, OPEN_SECURE_EVENT } from './SecureAccount';
 
 const KEY_PREFIX = 'collabnb_onboarding_v3';
 const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL;
@@ -87,9 +88,15 @@ function creatorSteps(profile, isFirstVisit, hasShared, hasExplored, hasStayAler
   ];
 }
 
-function hostSteps(profile, isFirstVisit, hasShared, hasListing, hasBrowsedCreators) {
+function hostSteps(profile, isFirstVisit, hasShared, hasListing, hasBrowsedCreators, secure) {
   const t = (k) => i18nInstance.t(`onboardingChecklist:${k}`);
   return [
+    ...(secure?.show ? [{
+      id: 'secure',
+      label: t('hostSteps.secure.label'),
+      done: secure.done,
+      action: { label: t('hostSteps.secure.action'), path: null, type: 'secure' },
+    }] : []),
     {
       id: 'listing',
       label: t('hostSteps.listing.label'),
@@ -279,6 +286,7 @@ function DraggablePill({ widgetStyle, cardStyle, toggleCollapse, allDone, requir
 export default function OnboardingChecklist() {
   const { t } = useTranslation('onboardingChecklist');
   const { profile } = useAuth();
+  const secure = useSecureAccount();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -383,7 +391,7 @@ export default function OnboardingChecklist() {
   if (isAdmin) return null;
 
   const rawSteps = isHost
-    ? hostSteps(profile, isFirstVisit, hasShared, hasListing, hasBrowsedCreators)
+    ? hostSteps(profile, isFirstVisit, hasShared, hasListing, hasBrowsedCreators, secure)
     : creatorSteps(profile, isFirstVisit, hasShared, hasExplored, hasStayAlert);
 
   const steps = rawSteps.map(s => {
@@ -394,7 +402,6 @@ export default function OnboardingChecklist() {
   const requiredSteps     = steps.filter(s => !s.optional);
   const requiredCompleted = requiredSteps.filter(s => s.done).length;
   const requiredTotal     = requiredSteps.length;
-  const optionalCompleted = steps.filter(s => s.optional && s.done).length;
   const allDone = requiredCompleted === requiredTotal;
 
   const isNewUser = !profile?._creationTime || Date.now() - profile._creationTime < 14 * 24 * 60 * 60 * 1000;
@@ -539,8 +546,7 @@ export default function OnboardingChecklist() {
               {allDone ? t('header.allDoneTitle') : t('header.title')}
             </p>
             <p style={{ fontSize: '0.75rem', color: 'var(--slate, #3C5759)', margin: '0.125rem 0 0' }}>
-              {t('header.stepsComplete', { completed: requiredCompleted, total: requiredTotal })}
-              {optionalCompleted > 0 && t('header.bonus', { count: optionalCompleted })}
+              {t('header.stepsComplete', { completed: steps.filter(s => s.done).length, total: steps.length })}
             </p>
           </div>
           <div style={{ display: 'flex', gap: '0.25rem', flexShrink: 0, marginLeft: '0.5rem' }}>
@@ -625,6 +631,7 @@ export default function OnboardingChecklist() {
                 onClick={() => {
                   if (step.done) return;
                   if (step.action.type === 'share') { handleShare(); return; }
+                  if (step.action.type === 'secure') { window.dispatchEvent(new Event(OPEN_SECURE_EVENT)); return; }
                   if (step.action.path) navigate(step.action.path);
                 }}
                 style={{
@@ -693,6 +700,7 @@ export default function OnboardingChecklist() {
                         handleShare();
                         return;
                       }
+                      if (step.action.type === 'secure') { window.dispatchEvent(new Event(OPEN_SECURE_EVENT)); return; }
                       navigate(step.action.path);
                     }}
                     style={{

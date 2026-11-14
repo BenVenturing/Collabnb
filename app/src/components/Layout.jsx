@@ -3,6 +3,7 @@ import VerificationPendingModal from './VerificationPendingModal';
 import SubscriptionModal from './SubscriptionModal';
 import FloatingHelpButton from './FloatingHelpButton';
 import OnboardingChecklist from './OnboardingChecklist'; // self-positions via fixed CSS
+import SecureAccountBanner from './SecureAccount';
 import BackgroundMusicPlayer from './BackgroundMusicPlayer'; // self-positions via fixed CSS
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useQuery, useAction } from 'convex/react';
@@ -276,6 +277,7 @@ export default function Layout({ children }) {
 
       {/* ── Role-switch-locked banner (fixed top) ───────────────────────────── */}
       <RoleSwitchLockedBanner topOffset={isPending ? '1.8rem' : 0} />
+      <SecureAccountBanner topOffset={isPending ? '1.8rem' : 0} />
 
       {/* ── Floating nav pill ───────────────────────────────────────────────── */}
       <AppNav />

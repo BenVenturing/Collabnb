@@ -143,14 +143,13 @@ export const runDaily = internalAction({
     const cap = force ?? dailyCap(cfg);
     const peek = await ctx.runQuery(internal.autoOutreach.pool, { limit: 0 });
     const remaining = Math.max(0, cap - peek.sentToday);
-    const { ids, stats } = await ctx.runQuery(internal.autoOutreach.pool, { limit: Math.ceil(remaining * 1.6) });
+    const { ids, stats } = await ctx.runQuery(internal.autoOutreach.pool, { limit: Math.ceil(remaining * 3) });
     const summary = { enabled: cfg.enabled, cap, sentToday: peek.sentToday, scheduling: ids.length, pool: stats, from: process.env.OUTREACH_FROM || FALLBACK_FROM };
     if (dryRun || (!cfg.enabled && force === undefined) || !remaining) return summary;
-    // Spread sends over ~4 hours so they don't land as one burst.
-    const spread = (4 * 3600_000) / Math.max(1, ids.length);
-    ids.forEach((id: any, i: number) => {
-      ctx.scheduler.runAfter(Math.round(i * spread + Math.random() * 60_000), internal.autoOutreach.processOne, { id, cap });
-    });
+    // One candidate every ~30s (plus jitter) so they don't land as one burst.
+    const spread = 30_000;
+    await Promise.all(ids.map((id: any, i: number) =>
+      ctx.scheduler.runAfter(Math.round(i * spread + Math.random() * 10_000), internal.autoOutreach.processOne, { id, cap })));
     return summary;
   },
 });
@@ -691,6 +690,29 @@ export const getAudit = query({
 
 
 // ─── Admin tracking (read-only over hotel_audits + prospect replies) ─────────
+export const todayStats = query({
+  args: {},
+  handler: async (ctx) => {
+    await requireAdmin(ctx);
+    const settings = await ctx.db.query("admin_settings").withIndex("by_key", (q) => q.eq("key", CONFIG_KEY)).first();
+    const cfg = readConfig(settings ? { [CONFIG_KEY]: settings.value } : {});
+    const start = new Date(); start.setUTCHours(0, 0, 0, 0);
+    const t0 = start.getTime();
+    const audits = (await ctx.db.query("hotel_audits").collect()) as any[];
+    const prospects = (await ctx.db.query("prospects").collect()) as any[];
+    const logToday = (p: any, type: string) => (p.outreach_log || []).some((e: any) => e.type === type && e.at >= t0);
+    return {
+      enabled: cfg.enabled,
+      cap: dailyCap(cfg),
+      sent: audits.filter((a) => a.created_at >= t0).length,
+      opened: audits.filter((a) => (a.first_viewed_at || 0) >= t0).length,
+      replies: prospects.filter((p) => (p.replied_at || 0) >= t0).length,
+      dms: prospects.filter((p) => logToday(p, "dm_sent")).length,
+      claims: audits.filter((a) => (a.built_at || 0) >= t0).length,
+    };
+  },
+});
+
 export const adminFunnel = query({
   args: {},
   handler: async (ctx) => {

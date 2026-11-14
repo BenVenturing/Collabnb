@@ -1452,7 +1452,7 @@ function HostOutreachCampaign() {
 // Plain "new" (unconfirmed pool candidates) live only in Host Outreach, not
 // on this board.
 const CRM_COLUMNS = [
-  { id: 'queued', label: 'Confirmed' },
+  { id: 'queued', label: 'Confirmed / cold' },
   { id: 'contacted', label: 'DMed' },
   { id: 'emailed', label: 'Emailed' },
   { id: 'replied', label: 'Responded' },
@@ -1508,7 +1508,9 @@ function HostCrmBoard() {
 
   const byColumn = {};
   for (const col of CRM_COLUMNS) byColumn[col.id] = [];
-  for (const p of filtered) (byColumn[p.status] || byColumn.queued).push(p);
+  // Auto outreach (cold email) stays in Confirmed so manual DM/WhatsApp can follow.
+  const colOf = (p) => (p.status === 'emailed' && (p.tags || []).includes('auto') ? 'queued' : p.status);
+  for (const p of filtered) (byColumn[colOf(p)] || byColumn.queued).push(p);
   const readiness = (p) => (p.whatsapp ? 2 : 0) + ((isHotelProspect(p) ? p.ig_handle : p.instagram_handle) ? 2 : 0) + ((p.email || p.marketing_email) ? 1 : 0);
   for (const col of CRM_COLUMNS) byColumn[col.id].sort((a, b) => (b.starred ? 1 : 0) - (a.starred ? 1 : 0) || (col.id === 'queued' ? readiness(b) - readiness(a) : 0) || outreachRank(b) - outreachRank(a) || lastActivityAt(b) - lastActivityAt(a));
 

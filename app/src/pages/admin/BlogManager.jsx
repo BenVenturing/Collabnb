@@ -80,6 +80,8 @@ export default function BlogManager() {
   const generatePost   = useAction(api.blog.generatePost);
   const suggestTopics  = useAction(api.blog.suggestTopics);
   const createBlank    = useMutation(api.blog.createBlankPost);
+  const paused         = useQuery(api.blog.getAutomationPaused);
+  const setPaused      = useMutation(api.blog.setAutomationPaused);
   const getIntegrationStatus = useAction(api.social.getIntegrationStatus);
   const [integrations, setIntegrations] = useState(null);
 
@@ -204,6 +206,14 @@ export default function BlogManager() {
               {drafts.length} draft{drafts.length !== 1 ? 's' : ''} · {published.length} published
             </p>
           </div>
+          <button
+            onClick={() => setPaused({ paused: !paused })}
+            disabled={paused === undefined}
+            title="Daily and monthly auto-generated posts"
+            style={{ padding: '0.55rem 1.1rem', borderRadius: 9999, border: '1.5px solid var(--ink)', background: paused ? 'var(--ink)' : 'transparent', cursor: 'pointer', fontFamily: 'var(--font-body)', fontSize: '0.8rem', fontWeight: 600, color: paused ? '#fff' : 'var(--ink)', whiteSpace: 'nowrap', marginLeft: 'auto' }}
+          >
+            {paused ? 'Auto-posting paused · Turn on' : 'Auto-posting on · Pause'}
+          </button>
           <button
             onClick={handleNewPost}
             style={{ padding: '0.55rem 1.1rem', borderRadius: 9999, border: '1.5px solid rgba(25,37,36,0.15)', background: 'transparent', cursor: 'pointer', fontFamily: 'var(--font-body)', fontSize: '0.8rem', fontWeight: 600, color: 'var(--ink)', whiteSpace: 'nowrap' }}

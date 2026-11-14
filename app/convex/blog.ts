@@ -922,7 +922,40 @@ export const generatePostInternal = internalAction({
     isStatsPost: v.optional(v.boolean()),
     topicHint: v.optional(v.string()),
   },
-  handler: async (ctx, args) => runGeneratePost(ctx, args),
+  handler: async (ctx, args) => {
+    if (await ctx.runQuery(internal.blog.isAutomationPaused, {})) return { skipped: "automation paused" };
+    return runGeneratePost(ctx, args);
+  },
+});
+
+const BLOG_AUTOMATION_KEY = "blog_automation_paused";
+
+export const isAutomationPaused = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    const row = await ctx.db.query("admin_settings").withIndex("by_key", (q) => q.eq("key", BLOG_AUTOMATION_KEY)).first();
+    return row?.value === "true";
+  },
+});
+
+export const getAutomationPaused = query({
+  args: {},
+  handler: async (ctx) => {
+    await requireAdmin(ctx);
+    const row = await ctx.db.query("admin_settings").withIndex("by_key", (q) => q.eq("key", BLOG_AUTOMATION_KEY)).first();
+    return row?.value === "true";
+  },
+});
+
+export const setAutomationPaused = mutation({
+  args: { paused: v.boolean() },
+  handler: async (ctx, { paused }) => {
+    await requireAdmin(ctx);
+    const row = await ctx.db.query("admin_settings").withIndex("by_key", (q) => q.eq("key", BLOG_AUTOMATION_KEY)).first();
+    const value = String(paused);
+    if (row) await ctx.db.patch(row._id, { value });
+    else await ctx.db.insert("admin_settings", { key: BLOG_AUTOMATION_KEY, value });
+  },
 });
 
 // ─── Action: regenerate an existing draft in place ────────────────────────────

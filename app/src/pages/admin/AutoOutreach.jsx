@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
+import OutreachFlow from './OutreachFlow';
 
 const INK = '#192524', SLATE = '#3C5759', SAGE = '#646B62', BONE = '#F7F5F2', MINT = '#D1EBDB';
 const ago = (t) => {
@@ -31,6 +32,7 @@ export default function AutoOutreach() {
   const d = useQuery(api.autoOutreach.adminFunnel);
   const setEnabled = useMutation(api.autoOutreach.adminSetEnabled);
   const [filter, setFilter] = useState('all');
+  const [flow, setFlow] = useState(null);
   if (!d) return <div style={{ padding: 24, color: SAGE }}>Loading…</div>;
 
   const pct = (a, b) => (b ? `${Math.round((a / b) * 100)}%` : '–');
@@ -53,12 +55,15 @@ export default function AutoOutreach() {
             {d.enabled ? `On · cap today ${d.capToday} (max ${d.max})` : 'Paused'} · automated sends only; earlier manual outreach is unchanged in Discovery
           </div>
         </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+        <button onClick={() => setFlow({})} style={{ background: '#fff', color: INK, border: `1px solid ${INK}`, borderRadius: 999, padding: '9px 18px', fontWeight: 600, cursor: 'pointer' }}>How it works</button>
         <button
           onClick={() => setEnabled({ enabled: !d.enabled })}
           style={{ background: d.enabled ? '#fff' : INK, color: d.enabled ? INK : '#fff', border: `1px solid ${INK}`, borderRadius: 999, padding: '9px 18px', fontWeight: 600, cursor: 'pointer' }}
         >
           {d.enabled ? 'Pause sending' : 'Start sending'}
         </button>
+        </div>
       </div>
 
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', margin: '18px 0' }}>
@@ -69,6 +74,14 @@ export default function AutoOutreach() {
         <Stat label="Replied" value={d.replied} sub={pct(d.replied, d.all.sent)} />
         <Stat label="Total sent" value={d.all.sent} />
       </div>
+
+      {d.byVariant && (
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 18 }}>
+          {d.byVariant.map((v) => (
+            <Stat key={v.variant} label={`Copy ${v.variant}`} value={v.sent} sub={`viewed ${pct(v.viewed, v.sent)} · built ${pct(v.built, v.sent)}`} />
+          ))}
+        </div>
+      )}
 
       {d.perDay.length > 0 && (
         <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, height: 60, marginBottom: 18 }}>
@@ -94,16 +107,18 @@ export default function AutoOutreach() {
                 <div style={{ fontWeight: 600, color: INK }}>{r.hotel}</div>
                 <div style={{ fontSize: 12, color: SAGE }}>{r.email} · @{r.handle} · {(r.followers || 0).toLocaleString()} followers</div>
                 <div style={{ fontSize: 12, color: SAGE }}>{r.teaser}</div>
+                <div style={{ fontSize: 12, color: SLATE, marginTop: 2 }}>Copy {r.variant} · follow-ups {r.followups}/3{r.replied && !r.clicked ? ' · replied' : ''}</div>
               </div>
               <div><span style={{ background: s.bg, color: s.color, borderRadius: 999, padding: '3px 10px', fontSize: 12, fontWeight: 600 }}>{s.label}</span></div>
               <div style={{ fontSize: 12, color: SAGE, textAlign: 'right' }}>
                 Sent {ago(r.sent_at)}{r.first_viewed_at ? ` · viewed ${ago(r.first_viewed_at)}` : ''}
-                <div><a href={`/audit/${r.token}`} target="_blank" rel="noreferrer" style={{ color: SLATE }}>Open audit</a></div>
+                <div><button onClick={() => setFlow(r)} style={{ background: 'none', border: 'none', padding: 0, color: SLATE, textDecoration: 'underline', cursor: 'pointer', fontSize: 12, marginRight: 10 }}>Show in flow</button><a href={`/audit/${r.token}`} target="_blank" rel="noreferrer" style={{ color: SLATE }}>Open audit</a></div>
               </div>
             </div>
           );
         })}
       </div>
+      {flow && <OutreachFlow row={flow.token ? flow : null} onClose={() => setFlow(null)} />}
     </div>
   );
 }

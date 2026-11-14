@@ -1278,6 +1278,9 @@ export default defineSchema({
     country: v.optional(v.string()),
     greeting: v.string(),
     subject: v.string(),
+    variant: v.optional(v.string()), // A/B/C email copy
+    followups_sent: v.optional(v.number()),
+    last_followup_at: v.optional(v.number()),
     audit: v.any(),
     build_step: v.optional(v.number()), // 1 photos, 2 copy, 3 account, 4 done
     build_error: v.optional(v.string()),

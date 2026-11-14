@@ -414,11 +414,9 @@ function emailParts(o: { variant: Variant; greeting: string; hotel: string; teas
 
   const p = (s: string) => `<p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#1f2a24">${s}</p>`;
   const auditLink = `<a href="${o.auditUrl}" style="color:#3f6b52;font-weight:bold">${esc(c.auditLabel)}</a>`;
-  const topLogo = o.variant === "A" ? `<tr><td style="padding:0 0 20px"><img src="${LOGO}" width="120" alt="Collabnb" style="display:block"></td></tr>` : "";
   const html = `<!doctype html><html><body style="margin:0;background:#f4f6f3" bgcolor="#f4f6f3">
 <table width="100%" cellpadding="0" cellspacing="0" bgcolor="#f4f6f3" style="background:#f4f6f3"><tr><td align="center" style="padding:28px 12px">
 <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;font-family:Helvetica,Arial,sans-serif">
-${topLogo}
 <tr><td bgcolor="#ffffff" style="background:#ffffff;border-radius:14px;padding:28px 26px">
 ${p(esc(o.greeting))}
 ${p(esc(c.lead))}

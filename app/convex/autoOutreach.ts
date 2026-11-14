@@ -12,7 +12,7 @@ import { requireAdmin } from "./lib/auth";
 // Config lives in admin_settings "auto_outreach" (see setConfig).
 
 const CONFIG_KEY = "auto_outreach";
-const BANNER = "https://collabnb.com/email/host-outreach/banner.jpg";
+const BANNER = "https://collabnb.com/email/host-outreach/banner.jpg?v=2";
 const LOGO = "https://media.collabnb.com/claims/somewhere-lombok/email/logo.png";
 const REPLY_TO = "ben@collabnb.com";
 const FALLBACK_FROM = "Benjamin at Collabnb <ben@outreach.collabnb.com>";

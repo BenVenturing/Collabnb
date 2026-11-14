@@ -710,6 +710,7 @@ export const buildClaim = internalAction({
       await step({ build_step: 4, claim_token: res.token, built_at: Date.now() });
       if (a.demo) return;
       await ctx.runMutation(internal.autoOutreach.markBuilt, { id: a.prospect_id, token: res.token });
+      if (res.listing_id && res.profile_id) await ctx.scheduler.runAfter(PUBLISH_NUDGE_MS, internal.autoOutreach.publishReminder, { token, listing_id: res.listing_id, profile_id: res.profile_id, claim_token: res.token, stage: 1 });
       // Hot lead: tell Ben right away.
       try {
         await sendEmail(REPLY_TO, `🔥 ${a.hotel_name} just built their Collabnb listing`,
@@ -719,6 +720,62 @@ export const buildClaim = internalAction({
     } catch (e: any) {
       await step({ build_error: String(e?.message || e).slice(0, 200) });
     }
+  },
+});
+
+// Same-day publish nudge: in-app at +4h, then email at +8h, only while the listing is still a draft.
+const PUBLISH_NUDGE_MS = 4 * 3_600_000;
+export const publishReminder = internalAction({
+  args: { token: v.string(), listing_id: v.string(), profile_id: v.string(), claim_token: v.string(), stage: v.number() },
+  handler: async (ctx, args) => {
+    const r: any = await ctx.runMutation(internal.autoOutreach.publishNudgeStep, args);
+    if (!r?.email) return;
+    const url = `https://collabnb.com/claim/${args.claim_token}?go=1`;
+    const text = `${r.greeting}
+
+Your Collabnb listing for ${r.hotel} is built and waiting, but it isn't live yet, so creators can't find it.
+
+It takes about a minute: check the photos and dates, then hit Publish.
+${url}
+
+Benjamin`;
+    const p = (x: string) => `<p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#1f2a24">${x}</p>`;
+    const html = `<!doctype html><html><body style="margin:0;background:#f4f6f3" bgcolor="#f4f6f3">
+<table width="100%" cellpadding="0" cellspacing="0" bgcolor="#f4f6f3" style="background:#f4f6f3"><tr><td align="center" style="padding:28px 12px">
+<table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;font-family:Helvetica,Arial,sans-serif">
+<tr><td bgcolor="#ffffff" style="background:#ffffff;border-radius:14px;padding:28px 26px">
+${p(esc(r.greeting))}
+${p(`Your Collabnb listing for <strong>${esc(r.hotel)}</strong> is built and waiting, but it isn't live yet, so creators can't find it.`)}
+${p("It takes about a minute: check the photos and dates, then hit Publish.")}
+<table cellpadding="0" cellspacing="0" style="margin:4px 0 20px"><tr><td bgcolor="#3f6b52" style="background:#3f6b52;border-radius:999px;padding:13px 26px"><a href="${url}" style="text-decoration:none"><font color="#ffffff" style="color:#ffffff;font-size:15px;font-weight:bold">Publish my listing</font></a></td></tr></table>
+${p("Benjamin")}
+</td></tr>
+<tr><td align="center" style="padding:22px 0 0;font-size:12px;color:#6b7a70"><img src="${LOGO}" width="80" alt="Collabnb" style="display:block;margin:0 auto 8px">Collabnb · Lombok, Indonesia</td></tr>
+</table></td></tr></table></body></html>`;
+    try { await sendEmail(r.email, `${r.hotel}'s listing is one click from live`, html, text); }
+    catch (e: any) { await ctx.runMutation(internal.autoOutreach.patchAudit, { token: args.token, patch: { build_error: `reminder: ${String(e?.message || e).slice(0, 150)}` } }); }
+  },
+});
+
+export const publishNudgeStep = internalMutation({
+  args: { token: v.string(), listing_id: v.string(), profile_id: v.string(), claim_token: v.string(), stage: v.number() },
+  handler: async (ctx, args) => {
+    const a: any = await ctx.db.query("hotel_audits").withIndex("by_token", (q) => q.eq("token", args.token)).unique();
+    const listing: any = await ctx.db.get(args.listing_id as any).catch(() => null);
+    if (!a || !listing) return null;
+    if (listing.status === "published") { if (!a.published_at) await ctx.db.patch(a._id, { published_at: Date.now() }); return null; }
+    await ctx.db.patch(a._id, { publish_reminders: args.stage });
+    if (args.stage === 1) {
+      await ctx.db.insert("notifications", {
+        user_id: args.profile_id, type: "publish_reminder",
+        title: "Your listing is ready to publish",
+        body: `${a.hotel_name} is built but not live yet. Check it over and hit Publish so creators can find you.`,
+        link: "/host", read: false, created_at: Date.now(),
+      });
+      await ctx.scheduler.runAfter(PUBLISH_NUDGE_MS, internal.autoOutreach.publishReminder, { ...args, stage: 2 });
+      return null;
+    }
+    return { email: a.email, hotel: a.hotel_name, greeting: a.greeting || "Hi there," };
   },
 });
 
@@ -876,6 +933,7 @@ export const adminFunnel = query({
         teaser: a.audit?.teaser, followers: a.audit?.followers,
         sent_at: a.created_at, viewed: a.view_count || 0, first_viewed_at: a.first_viewed_at,
         built_at: a.built_at, build_error: a.build_error, claim_token: a.claim_token,
+        publish_reminders: a.publish_reminders || 0, published_at: a.published_at,
         variant: a.variant || "A", followups: a.followups_sent || 0, last_followup_at: a.last_followup_at,
         clicked: !!(a.claim_token || a.build_step || a.built_at),
         bot_views: a.bot_views || 0, bot_reset: !!a.bot_reset_at,

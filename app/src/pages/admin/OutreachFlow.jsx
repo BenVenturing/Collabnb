@@ -41,6 +41,11 @@ export default function OutreachFlow({ row, onClose }) {
     if (pos !== 'built' && id === pos) return 'current';
     return i <= reached ? 'done' : undefined;
   };
+  const nudge = (n) => {
+    if (pos !== 'built' || row.published_at) return row?.published_at && (row.publish_reminders || 0) >= n ? 'done' : undefined;
+    const done = row.publish_reminders || 0;
+    return done > n ? 'done' : done === n ? 'current' : undefined;
+  };
   // grid rows: each main step takes 2 rows (box + arrow)
   const r = (id) => order.indexOf(id) * 2 + 1;
 
@@ -87,7 +92,13 @@ export default function OutreachFlow({ row, onClose }) {
               <div style={{ fontSize: 12, color: SAGE }}>Any time they click it</div>
               <Box title="Clicked Build my listing" sub="From any email" state={pos === 'built' ? 'done' : undefined} />
               <Down />
-              <Box title="Listing built" sub="You get a 🔥 email · follow-ups stop" state={pos === 'built' ? 'current' : undefined} />
+              <Box title="Listing built" sub="You get a 🔥 email · follow-ups stop" state={pos === 'built' ? (row.publish_reminders || row.published_at ? 'done' : 'current') : undefined} />
+              <Down />
+              <Box title="Reminder on platform" sub="Same day, +4h · only if not published" state={nudge(1)} />
+              <Down />
+              <Box title="Reminder email" sub="Same day, +8h · only if still a draft" state={nudge(2)} />
+              <Down />
+              <Box title="Published" sub="Live for creators · reminders stop" state={row?.published_at ? 'current' : undefined} />
             </div>
           </div>
         </div>

@@ -12,6 +12,7 @@ import { requireAdmin } from "./lib/auth";
 // Config lives in admin_settings "auto_outreach" (see setConfig).
 
 const CONFIG_KEY = "auto_outreach";
+const BANNER = "https://collabnb.com/email/host-outreach/banner.jpg";
 const LOGO = "https://media.collabnb.com/claims/somewhere-lombok/email/logo.png";
 const REPLY_TO = "ben@collabnb.com";
 const FALLBACK_FROM = "Benjamin at Collabnb <ben@outreach.collabnb.com>";
@@ -322,24 +323,35 @@ async function findDecisionMaker(website?: string): Promise<{ name: string; role
 }
 
 // ─── Listing copy ────────────────────────────────────────────────────────────
-async function draftListingCopy(hotel: string, p: any, ig: any) {
-  const captions = ig.posts.slice(0, 8).map((x: Post) => x.caption).filter(Boolean).join("\n---\n");
-  try {
-    const out = await llmChat([
-      { role: "system", content: "You write factual hotel listing copy for a creator-collab marketplace. Only use facts present in the input. Return JSON only." },
-      { role: "user", content: `Hotel: ${hotel}\nLocation hint: ${p.location || ig.city || ""} ${p.country || ""}\nInstagram bio: ${ig.bio}\nRecent captions:\n${captions}\n\nReturn {"city":"","country":"","about":"2-3 sentence description","brief":"2-3 sentence creator collaboration brief built around 3 content ideas","ideas":["idea 1","idea 2","idea 3"],"perks":["up to 3 real amenities mentioned"],"vibe_tags":["up to 4 from: ${VIBE_TAG_POOL.join(", ")}"]}` },
-    ], 900, 45_000);
-    const j = JSON.parse(out.slice(out.indexOf("{"), out.lastIndexOf("}") + 1));
-    return {
-      city: j.city || undefined, country: j.country || undefined,
-      about: String(j.about || ""), brief: String(j.brief || ""),
-      ideas: Array.isArray(j.ideas) ? j.ideas.slice(0, 3).map(String) : [],
-      perks: Array.isArray(j.perks) ? j.perks.slice(0, 3).map(String) : [],
-      vibe_tags: Array.isArray(j.vibe_tags) ? j.vibe_tags.filter((t: string) => VIBE_TAG_POOL.includes(t)).slice(0, 4) : [],
-    };
-  } catch {
-    return { about: ig.bio, brief: "", ideas: [], perks: [], vibe_tags: [] as string[] };
-  }
+// Template copy (no LLM): fast and predictable. Ideas and vibe tags come from
+// keywords in the bio and recent captions; hosts edit the draft before publishing.
+const IDEA_THEMES: { re: RegExp; idea: (h: string) => string; tags: string[] }[] = [
+  { re: /beach|ocean|sea\b|seaside|shore|sand/i, idea: () => "Golden-hour Reel from the beach to your doorstep", tags: ["Beachfront", "Tropical"] },
+  { re: /pool|swim/i, idea: () => "Slow pool-day POV Reel", tags: ["Tropical"] },
+  { re: /surf/i, idea: () => "Dawn surf session and the walk back for breakfast", tags: ["Adventure"] },
+  { re: /breakfast|restaurant|kitchen|chef|dining|brunch|cocktail|bar\b|coffee/i, idea: (h) => `A full day of eating and drinking at ${h}`, tags: [] },
+  { re: /spa|yoga|wellness|massage|retreat|sauna/i, idea: () => "Wellness morning: spa, yoga or a quiet reset", tags: ["Wellness"] },
+  { re: /hike|mountain|volcano|trail|jungle|forest/i, idea: () => "Adventure day out from the hotel and back by sunset", tags: ["Adventure", "Mountain View"] },
+  { re: /histor|heritage|since 1|original|vintage|classic/i, idea: (h) => `The story behind ${h}: details guests miss`, tags: ["Historic"] },
+  { re: /downtown|city|neighbou?rhood|walk to|district/i, idea: () => "Neighbourhood guide: where to eat and wander nearby", tags: ["Urban"] },
+  { re: /garden|eco|sustainab|farm|organic/i, idea: () => "Behind the scenes of your garden and sustainable touches", tags: ["Eco-Friendly"] },
+  { re: /romantic|honeymoon|couple/i, idea: () => "Couples' getaway story from check-in to sunset", tags: ["Romantic"] },
+  { re: /pet|dog/i, idea: () => "A stay through the eyes of a travelling dog", tags: ["Pet-Friendly"] },
+];
+
+function draftListingCopy(hotel: string, p: any, ig: any) {
+  const text = [ig.bio, ...ig.posts.slice(0, 12).map((x: Post) => x.caption || "")].join("\n");
+  const hits = IDEA_THEMES.filter((t) => t.re.test(text));
+  const ideas = [`Room tour Reel: arriving at ${hotel}`, ...hits.map((t) => t.idea(hotel)), `24 hours at ${hotel}`]
+    .filter((x, i, arr) => arr.indexOf(x) === i).slice(0, 3);
+  if (ideas.length < 3) ideas.push(`Local guide: the best spots near ${hotel}`);
+  const vibe_tags = Array.from(new Set(["Cozy", ...hits.flatMap((t) => t.tags)])).filter((t) => VIBE_TAG_POOL.includes(t)).slice(0, 4);
+  const city = p.location || ig.city || undefined;
+  const where = [city, p.country].filter(Boolean).join(", ");
+  const bio = String(ig.bio || "").replace(/https?:\/\/\S+/g, "").replace(/\s+/g, " ").trim();
+  const about = `${hotel} is a boutique stay${where ? ` in ${where}` : ""}.${bio ? ` ${bio}` : ""}`;
+  const brief = `We're looking for creators to capture what a stay at ${hotel} actually feels like. Ideas we'd love to see: ${ideas.map((x) => x.charAt(0).toLowerCase() + x.slice(1)).join("; ")}.`;
+  return { city: undefined as string | undefined, country: undefined as string | undefined, about, brief, ideas: ideas.slice(0, 3), perks: [] as string[], vibe_tags };
 }
 
 async function rehost(ctx: any, url?: string): Promise<string | undefined> {
@@ -417,7 +429,8 @@ function emailParts(o: { variant: Variant; greeting: string; hotel: string; teas
   const html = `<!doctype html><html><body style="margin:0;background:#f4f6f3" bgcolor="#f4f6f3">
 <table width="100%" cellpadding="0" cellspacing="0" bgcolor="#f4f6f3" style="background:#f4f6f3"><tr><td align="center" style="padding:28px 12px">
 <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;font-family:Helvetica,Arial,sans-serif">
-<tr><td bgcolor="#ffffff" style="background:#ffffff;border-radius:14px;padding:28px 26px">
+<tr><td style="line-height:0;border-radius:14px 14px 0 0;overflow:hidden"><img src="${BANNER}" width="560" alt="Collabnb: where boutique stays and creators collab" style="display:block;width:100%;height:auto;border:0;border-radius:14px 14px 0 0"></td></tr>
+<tr><td bgcolor="#ffffff" style="background:#ffffff;border-radius:0 0 14px 14px;padding:28px 26px">
 ${p(esc(o.greeting))}
 ${p(esc(c.lead))}
 <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 16px"><tr><td bgcolor="#e8f4ec" style="background:#e8f4ec;border-radius:10px;padding:14px 16px;font-size:16px;font-weight:bold;color:#1f2a24">${esc(teaser)}</td></tr></table>
@@ -662,15 +675,16 @@ export const buildClaim = internalAction({
       const ig = await fetchIg(a.handle);
       if (!ig) throw new Error("Instagram profile unavailable");
       const photos: string[] = [];
-      for (const post of ig.posts.filter((x) => x.image && !x.video).concat(ig.posts.filter((x) => x.image && x.video)).slice(0, 10)) {
-        if (photos.length >= 8) break;
+      const candidates = ig.posts.filter((x) => x.image && !x.video).concat(ig.posts.filter((x) => x.image && x.video)).slice(0, 10);
+      const avatarP = a.audit?.avatar ? Promise.resolve(a.audit.avatar) : rehost(ctx, ig.avatar);
+      await Promise.all(candidates.map(async (post) => {
         const url = await rehost(ctx, post.image);
-        if (url) { photos.push(url); await step({ build_photos: [...photos] }); }
-      }
+        if (url && photos.length < 8) { photos.push(url); await step({ build_photos: [...photos] }); }
+      }));
       await step({ build_step: 2 });
-      const copy = await draftListingCopy(a.hotel_name, { location: a.city, country: a.country }, ig);
+      const copy = draftListingCopy(a.hotel_name, { location: a.city, country: a.country }, ig);
       await step({ build_step: 3, build_ideas: copy.ideas });
-      const avatar = a.audit?.avatar || (await rehost(ctx, ig.avatar));
+      const avatar = await avatarP;
       const username = (a.handle.replace(/[^a-z0-9_]/g, "") || "host").slice(0, 30);
       const res: any = await ctx.runMutation(internal.claims.createClaim, {
         hotel_name: a.hotel_name,

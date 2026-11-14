@@ -130,8 +130,7 @@ export default function HotelAudit() {
 // ─── Build loading screen ────────────────────────────────────────────────────
 const STEPS = [
   { title: 'Picking your best photos', done: 2 },
-  { title: 'Writing your listing', sub: 'About, perks and vibe', done: 3 },
-  { title: 'Drafting your creator brief', sub: 'Built around the gaps in your audit', done: 3 },
+  { title: 'Drafting your listing and creator brief', sub: 'Content ideas matched to your feed', done: 3 },
   { title: 'Setting up your Founding Host account', sub: 'No password needed', done: 4 },
 ];
 const TIPS = [
@@ -180,10 +179,10 @@ export function Builder({ data, retry, opening = false }) {
   return (
     <div className="cb-build" style={{ minHeight: '100vh', background: `radial-gradient(1200px 600px at 50% -10%, ${C.mint} 0%, ${C.bg} 55%)`, padding: '0 16px 3rem' }}>
       <style>{BUILD_CSS}</style>
+      <header style={{ padding: '1.25rem 0', display: 'flex', justifyContent: 'flex-start' }}>
+        <img src={collabnbLogo} alt="Collabnb" style={{ height: 26 }} />
+      </header>
       <div style={{ maxWidth: 520, margin: '0 auto' }}>
-        <header style={{ padding: '1.25rem 0', display: 'flex', justifyContent: 'center' }}>
-          <img src={collabnbLogo} alt="Collabnb" style={{ height: 26 }} />
-        </header>
 
         <div style={{ textAlign: 'center', padding: '1.5rem 0 1.25rem' }}>
           <div className={`cb-avatar ${done ? 'is-done' : build.error ? '' : 'is-spinning'}`}>
@@ -194,7 +193,7 @@ export function Builder({ data, retry, opening = false }) {
             {build.error ? 'We hit a snag' : done ? 'Your listing is ready' : <>Building {hotel_name}'s listing</>}
           </h1>
           <p style={{ color: C.slate, margin: 0 }}>
-            {build.error ? "Something went wrong on our side. Your audit is safe." : done ? (opening ? 'Opening your listing…' : 'Everything is set. Have a look whenever you’re ready.') : <>Pulling from @{a.handle}. This takes about a minute.</>}
+            {build.error ? "Something went wrong on our side. Your audit is safe." : done ? (opening ? 'Opening your listing…' : 'Everything is set. Have a look whenever you’re ready.') : <>Pulling from @{a.handle}. This takes about 30 seconds.</>}
           </p>
         </div>
 

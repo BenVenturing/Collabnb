@@ -218,6 +218,7 @@ function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
   const markWhatsapped = useMutation(api.prospects.markWhatsapped);
   const toggleBriefSent = useMutation(api.prospects.toggleBriefSent);
   const toggleInstantLaunchSent = useMutation(api.prospects.toggleInstantLaunchSent);
+  const toggleAuditPdfSent = useMutation(api.prospects.toggleAuditPdfSent);
   const toggleStarred = useMutation(api.prospects.toggleStarred);
   const toggleTarget = useMutation(api.prospects.toggleTarget);
   const setChainOverride = useMutation(api.prospects.setChainOverride);
@@ -359,6 +360,7 @@ function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
   const emailSent = !!prospect.email_sequence?.[0]?.sent_at;
   const isHotel = prospect.instagram_handle?.startsWith('hc-');
   const dmed = !!prospect.contacted_at;
+  const dmReady = !!dmDraft.trim() && !(isHotel && !prospect.ig_handle);
   const whatsapped = !!prospect.whatsapped_at;
 
   // Email button click behavior depends on state: no address on file yet ->
@@ -497,9 +499,9 @@ function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
               title={dmed ? 'Already DMed — click to reopen the thread and copy the message again' : (dmDraft ? 'Copies the draft, then opens their Instagram DM thread' : 'Generates a draft (using Analyze profile data if available), copies it, then opens their Instagram DM thread')}
               style={{
                 padding: '0.32rem 0.8rem', borderRadius: 9999, fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', opacity: genBusy ? 0.5 : 1,
-                border: isHotel && !prospect.ig_handle ? '1.5px solid rgba(25,37,36,0.2)' : 'none',
-                background: dmed ? '#166534' : isHotel && !prospect.ig_handle ? 'transparent' : '#192524',
-                color: isHotel && !prospect.ig_handle ? '#3C5759' : '#fff',
+                border: dmed || dmReady ? 'none' : '1.5px solid rgba(25,37,36,0.2)',
+                background: dmed ? '#166534' : dmReady ? '#192524' : 'transparent',
+                color: dmed || dmReady ? '#fff' : '#3C5759',
               }}>
               {genBusy && !dmDraft ? 'Writing…' : isHotel && !prospect.ig_handle ? 'DM' : 'DM ↗'}
             </button>
@@ -588,6 +590,10 @@ function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
           <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.78rem', fontWeight: 600, color: '#192524', cursor: 'pointer' }}>
             <input type="checkbox" checked={!!prospect.instant_launch_sent_at} onChange={() => toggleInstantLaunchSent({ id: prospect._id })} />
             Hot link / instant launch sent{prospect.instant_launch_sent_at ? ` · ${new Date(prospect.instant_launch_sent_at).toLocaleDateString()}` : ''}
+          </label>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.78rem', fontWeight: 600, color: '#192524', cursor: 'pointer' }}>
+            <input type="checkbox" checked={!!prospect.audit_pdf_sent_at} onChange={() => toggleAuditPdfSent({ id: prospect._id })} />
+            Audit PDF sent{prospect.audit_pdf_sent_at ? ` · ${new Date(prospect.audit_pdf_sent_at).toLocaleDateString()}` : ''}
           </label>
 
           {/* Profile analysis: score breakdown when enriched, Analyze button otherwise */}
@@ -2510,17 +2516,12 @@ export default function Discovery({ sidebarCollapsed, setSidebarCollapsed }) {
           <h2 style={{ fontFamily: 'Cabinet Grotesk, sans-serif', fontWeight: 700, fontSize: '1.25rem', color: '#192524', margin: 0 }}>Discovery</h2>
         </div>
         <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexShrink: 0 }}>
+          {side === 'hosts' && hostView === 'outreach' && (
           <button onClick={handleBuildQueue} disabled={queueBusy}
             title="Confirms up to 20 new creators and 20 new hosts each — drafts DMs, tops up with a live HikerAPI search first if the pool's short. Emailing is a separate step you trigger yourself; Instagram DM volume stays capped separately."
             style={{ padding: '0.5rem 1rem', borderRadius: 9999, border: '1.5px solid rgba(22,101,52,0.3)', background: 'rgba(209,235,219,0.5)', color: '#166534', fontSize: '0.76rem', fontWeight: 700, cursor: 'pointer', opacity: queueBusy ? 0.6 : 1 }}>
             {queueBusy ? 'Building…' : 'Build fresh 20'}
           </button>
-          {typeof setSidebarCollapsed === 'function' && (
-            <button onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-              title={sidebarCollapsed ? 'Exit focus mode — show the sidebar again' : 'Focus mode — collapse the sidebar for more room'}
-              style={{ padding: '0.5rem 0.9rem', borderRadius: 9999, border: '1.5px solid rgba(25,37,36,0.15)', background: sidebarCollapsed ? '#192524' : 'transparent', color: sidebarCollapsed ? '#fff' : '#3C5759', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}>
-              {sidebarCollapsed ? 'Exit focus mode' : 'Focus mode ⤢'}
-            </button>
           )}
           <div style={{ display: 'flex', borderRadius: 9999, border: '1.5px solid rgba(25,37,36,0.15)', overflow: 'hidden' }}>
             {[{ id: 'hosts', label: 'Hosts' }, { id: 'creators', label: 'Creators' }].map(({ id, label: l }) => (
@@ -2538,19 +2539,18 @@ export default function Discovery({ sidebarCollapsed, setSidebarCollapsed }) {
           <>
             <div style={{ display: 'flex', borderRadius: 9999, border: '1.5px solid rgba(25,37,36,0.15)', overflow: 'hidden' }}>
               {[{ id: 'outreach', label: 'Outreach' }, { id: 'crm', label: 'CRM board' }].map(({ id, label: l }) => (
-                <button key={id} onClick={() => setHostView(id)}
+                <button key={id} onClick={() => { setHostView(id); setOpenPanel(null); }}
                   title={id === 'outreach' ? 'Search/select/confirm workflow for new leads' : 'Full lifecycle board — Confirmed, DMed, Emailed, Responded'}
                   style={{ padding: '0.5rem 1.1rem', border: 'none', background: hostView === id ? '#192524' : 'transparent', color: hostView === id ? '#fff' : '#3C5759', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}>
                   {l}
                 </button>
               ))}
             </div>
-            {hostView === 'outreach' && (
+            {hostView === 'outreach' && (<>
               <button onClick={() => togglePanel('add')} title="Add one specific host you already know the handle for, without running a search"
                 style={{ padding: '0.5rem 1.1rem', borderRadius: 9999, border: '1.5px solid rgba(25,37,36,0.2)', background: openPanel === 'add' ? 'rgba(25,37,36,0.06)' : 'transparent', color: '#192524', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}>
                 Add manually
               </button>
-            )}
             <button onClick={() => togglePanel('dm_angles')} title="Edit the text of the 5 DM angle templates"
               style={{ padding: '0.5rem 1.1rem', borderRadius: 9999, border: '1.5px solid rgba(25,37,36,0.2)', background: openPanel === 'dm_angles' ? 'rgba(25,37,36,0.06)' : 'transparent', color: '#192524', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}>
               DM angles
@@ -2567,6 +2567,7 @@ export default function Discovery({ sidebarCollapsed, setSidebarCollapsed }) {
               style={{ padding: '0.5rem 1.1rem', borderRadius: 9999, border: '1.5px solid rgba(25,37,36,0.2)', background: openPanel === 'search_regions' ? 'rgba(25,37,36,0.06)' : 'transparent', color: '#192524', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}>
               Search regions
             </button>
+            </>)}
           </>
         ) : (
           CREATOR_TOOLS.map(({ id, label: l, title: t }) => (

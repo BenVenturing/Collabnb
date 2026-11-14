@@ -762,6 +762,7 @@ export default defineSchema({
     dm_draft: v.optional(v.string()),
     brief_sent_at: v.optional(v.number()), // set when the audit/brief PDF has been sent to this prospect
     instant_launch_sent_at: v.optional(v.number()), // set when the hot-link / instant-launch claim link has been sent
+    audit_pdf_sent_at: v.optional(v.number()), // set by hand when the hand-built audit PDF has been sent
     notes: v.optional(v.string()),
     // Host outreach pipeline reuses `status` for its Kanban stage (queued ->
     // emailed -> contacted -> replied), same field the CRM board already

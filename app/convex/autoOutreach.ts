@@ -66,7 +66,7 @@ export const setConfig = internalMutation({
   },
 });
 
-const MAX_FOLLOWERS = 15_000;
+const MAX_FOLLOWERS = 25_000;
 const BIG_PROPERTY = /\b(resort|resorts|casino|convention|conference cent(er|re)|shingle creek|halekulani|tower|towers|club|vacation (club|rentals?)|timeshare|condo(minium)?s?)\b/i;
 
 // ─── Candidate pool ──────────────────────────────────────────────────────────
@@ -79,7 +79,7 @@ export const pool = internalQuery({
     const stats = { hosts: rows.length, fresh: 0, withHandle: 0, withEmail: 0, independent: 0, eligible: 0 };
     const eligible = rows.filter((p) => {
       if (!["new", "queued"].includes(p.status)) return false;
-      if ((p.outreach_log || []).some((e: any) => e.type === "email_sent") || p.brief_sent_at || p.instant_launch_sent_at || p.contacted_at) return false;
+      if ((p.outreach_log || []).some((e: any) => e.type === "email_sent") || p.brief_sent_at || p.instant_launch_sent_at || p.audit_pdf_sent_at || p.contacted_at) return false;
       if ((p.tags || []).some((t: string) => t.startsWith("contacted") || t.startsWith("auto"))) return false;
       stats.fresh++;
       if (!realHandle(p) && !p.website) return false;
@@ -103,6 +103,11 @@ export const pool = internalQuery({
     const sizeBonus = (p: any) => (p.follower_count == null ? 0.5 : 1 - Math.min(1, p.follower_count / MAX_FOLLOWERS));
     const rank = (p: any) => outreachRank(p) + (p.score ?? 0) / 100 + sizeBonus(p) + (realHandle(p) ? 1 : 0);
     eligible.sort((a, b) => rank(b) - rank(a));
+    // Light shuffle: keep the overall order but mix within blocks of 10.
+    for (let i = 0; i < eligible.length; i += 10) {
+      const block = eligible.slice(i, i + 10).sort(() => Math.random() - 0.5);
+      eligible.splice(i, block.length, ...block);
+    }
     return { sentToday, stats, ids: eligible.slice(0, limit).map((p) => p._id) };
   },
 });
@@ -617,6 +622,7 @@ export const markSent = internalMutation({
       ...(a.dmName && !p.decision_maker_name ? { decision_maker_name: a.dmName, decision_maker_role: a.dmRole } : {}),
       ...(a.phone && !p.whatsapp ? { whatsapp: a.phone.replace(/\D/g, "") } : {}),
       brief_sent_at: now,
+      instant_launch_sent_at: now,
       dm_draft: a.nudge,
       dm_angle: "audit-nudge",
       queued_for: a.nudgeDate,
@@ -632,9 +638,8 @@ export const markBuilt = internalMutation({
     const p: any = await ctx.db.get(id);
     if (!p) return;
     await ctx.db.patch(id, {
-      instant_launch_sent_at: Date.now(),
       starred: true,
-      tags: Array.from(new Set([...(p.tags || []), "auto-built"])),
+      tags: (p.tags || []).filter((t: string) => t !== "auto-built"),
       outreach_log: [...(p.outreach_log || []), { at: Date.now(), type: "claim_built", note: token }],
     });
   },
@@ -731,5 +736,25 @@ export const adminSetEnabled = mutation({
     const value = JSON.stringify(next);
     if (row) await ctx.db.patch(row._id, { value });
     else await ctx.db.insert("admin_settings", { key: CONFIG_KEY, value });
+  },
+});
+
+// One-off: npx convex run --prod autoOutreach:tidyAutoTags
+export const tidyAutoTags = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const rows = (await ctx.db.query("prospects").withIndex("by_kind_status", (q) => q.eq("kind", "host")).collect()) as any[];
+    let n = 0;
+    for (const p of rows) {
+      const auto = (p.tags || []).includes("auto");
+      const hasBuilt = (p.tags || []).includes("auto-built");
+      if (!auto && !hasBuilt) continue;
+      await ctx.db.patch(p._id, {
+        tags: (p.tags || []).filter((t: string) => t !== "auto-built"),
+        ...(auto && !p.instant_launch_sent_at ? { instant_launch_sent_at: p.brief_sent_at || Date.now() } : {}),
+      });
+      n++;
+    }
+    return { updated: n };
   },
 });

@@ -878,6 +878,15 @@ export const toggleBriefSent = mutation({
   },
 });
 
+export const toggleAuditPdfSent = mutation({
+  args: { id: v.id("prospects") },
+  handler: async (ctx, { id }) => {
+    await requireAdmin(ctx);
+    const p = await ctx.db.get(id);
+    await ctx.db.patch(id, { audit_pdf_sent_at: (p as any)?.audit_pdf_sent_at ? undefined : Date.now() });
+  },
+});
+
 // WhatsApp is tracked independently of `status` (unlike Email/DM, which are
 // pipeline stages) — it's a parallel "did I also reach out here" flag, since
 // Ben asked for it to work "as well as" Email/DM, not as a replacement stage.

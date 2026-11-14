@@ -532,11 +532,29 @@ export const TEMPLATE_DEFAULTS: Record<string, TemplateDef> = {
       footnote: "For your security, this link will expire shortly and can only be used once.",
     },
   },
+  publish_reminder: {
+    name: "Publish reminder (auto outreach)",
+    trigger: "Hotel built its listing from a cold email but hasn't published it 8 hours later — buttonHref is their claim link",
+    category: "Account",
+    vars: ["hotelName"],
+    calloutColor: "#8B6F52",
+    buttonHref: `${BASE_URL}/host`,
+    copy: {
+      subject: "{{hotelName}}'s listing is one click from live",
+      heading: "Your listing is almost live",
+      body: "Your Collabnb listing for <strong>{{hotelName}}</strong> is built and waiting, but it isn't published yet, so creators can't find it.",
+      calloutLabel: "Takes about a minute",
+      calloutText: "Check the photos and dates, then hit Publish. You approve every creator before anyone books, and you can pause any time.",
+      buttonLabel: "Publish my listing",
+      footnote: "Free for Founding Hosts. No fee, no contract.",
+    },
+  },
 };
 
 // Sample values used by "Send test" in the admin panel.
 export const SAMPLE_VARS: Record<string, string> = {
   firstName: "Ben",
+  hotelName: "Somewhere Lombok",
   name: "Ben",
   reason: "This is a sample rejection reason.",
   creatorName: "Rachel Norton",

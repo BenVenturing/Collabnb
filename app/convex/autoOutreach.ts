@@ -5,6 +5,7 @@ import { hikerGet, findMarketingContact } from "./prospects";
 import { llmChat } from "./blog";
 import { detectChain, outreachRank } from "./lib/chains";
 import { requireAdmin } from "./lib/auth";
+import { renderTemplate } from "./emailCopy";
 
 // Daily automated hotel outreach: named-person email with a real IG audit page
 // (collabnb.com/audit/<token>) + one-click pre-filled claim link, A/B/C copy
@@ -731,28 +732,11 @@ export const publishReminder = internalAction({
     const r: any = await ctx.runMutation(internal.autoOutreach.publishNudgeStep, args);
     if (!r?.email) return;
     const url = `https://collabnb.com/claim/${args.claim_token}?go=1`;
-    const text = `${r.greeting}
-
-Your Collabnb listing for ${r.hotel} is built and waiting, but it isn't live yet, so creators can't find it.
-
-It takes about a minute: check the photos and dates, then hit Publish.
-${url}
-
-Benjamin`;
-    const p = (x: string) => `<p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#1f2a24">${x}</p>`;
-    const html = `<!doctype html><html><body style="margin:0;background:#f4f6f3" bgcolor="#f4f6f3">
-<table width="100%" cellpadding="0" cellspacing="0" bgcolor="#f4f6f3" style="background:#f4f6f3"><tr><td align="center" style="padding:28px 12px">
-<table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;font-family:Helvetica,Arial,sans-serif">
-<tr><td bgcolor="#ffffff" style="background:#ffffff;border-radius:14px;padding:28px 26px">
-${p(esc(r.greeting))}
-${p(`Your Collabnb listing for <strong>${esc(r.hotel)}</strong> is built and waiting, but it isn't live yet, so creators can't find it.`)}
-${p("It takes about a minute: check the photos and dates, then hit Publish.")}
-<table cellpadding="0" cellspacing="0" style="margin:4px 0 20px"><tr><td bgcolor="#3f6b52" style="background:#3f6b52;border-radius:999px;padding:13px 26px"><a href="${url}" style="text-decoration:none"><font color="#ffffff" style="color:#ffffff;font-size:15px;font-weight:bold">Publish my listing</font></a></td></tr></table>
-${p("Benjamin")}
-</td></tr>
-<tr><td align="center" style="padding:22px 0 0;font-size:12px;color:#6b7a70"><img src="${LOGO}" width="80" alt="Collabnb" style="display:block;margin:0 auto 8px">Collabnb · Lombok, Indonesia</td></tr>
-</table></td></tr></table></body></html>`;
-    try { await sendEmail(r.email, `${r.hotel}'s listing is one click from live`, html, text); }
+    const t: any = await ctx.runQuery(internal.emailTemplates.getCopy, { templateId: "publish_reminder" });
+    const { html } = renderTemplate(t, { hotelName: esc(r.hotel) }, url);
+    const subject = String(t.subject || "").replace(/\{\{hotelName\}\}/g, r.hotel);
+    const text = `${r.greeting}\n\nYour Collabnb listing for ${r.hotel} is built and waiting, but it isn't published yet, so creators can't find it.\n\nCheck the photos and dates, then hit Publish:\n${url}\n\nBenjamin`;
+    try { await sendEmail(r.email, subject, html, text); }
     catch (e: any) { await ctx.runMutation(internal.autoOutreach.patchAudit, { token: args.token, patch: { build_error: `reminder: ${String(e?.message || e).slice(0, 150)}` } }); }
   },
 });
@@ -837,10 +821,27 @@ export const markBuilt = internalMutation({
     const p: any = await ctx.db.get(id);
     if (!p) return;
     await ctx.db.patch(id, {
-      starred: true,
+      target: true,
       tags: (p.tags || []).filter((t: string) => t !== "auto-built"),
       outreach_log: [...(p.outreach_log || []), { at: Date.now(), type: "claim_built", note: token }],
     });
+  },
+});
+
+// One-off: hotels that built a listing before builds set `target` were starred instead.
+export const builtStarToTarget = internalMutation({
+  args: { dryRun: v.optional(v.boolean()) },
+  handler: async (ctx, { dryRun }) => {
+    const audits = (await ctx.db.query("hotel_audits").collect()) as any[];
+    const out: string[] = [];
+    for (const a of audits) {
+      if (!a.built_at || a.demo) continue;
+      const p: any = await ctx.db.get(a.prospect_id);
+      if (!p || (p.target && !p.starred)) continue;
+      out.push(a.hotel_name);
+      if (!dryRun) await ctx.db.patch(p._id, { target: true, starred: false });
+    }
+    return { dryRun: !!dryRun, changed: out };
   },
 });
 

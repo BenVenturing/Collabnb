@@ -830,12 +830,14 @@ export const markBuilt = internalMutation({
 
 // One-off: hotels that built a listing before builds set `target` were starred instead.
 export const builtStarToTarget = internalMutation({
-  args: { dryRun: v.optional(v.boolean()) },
-  handler: async (ctx, { dryRun }) => {
+  args: { dryRun: v.optional(v.boolean()), hotels: v.optional(v.array(v.string())) },
+  handler: async (ctx, { dryRun, hotels }) => {
     const audits = (await ctx.db.query("hotel_audits").collect()) as any[];
+    const want = hotels?.map((h) => h.toLowerCase().trim());
     const out: string[] = [];
     for (const a of audits) {
-      if (!a.built_at || a.demo) continue;
+      if (a.demo) continue;
+      if (want ? !want.includes(String(a.hotel_name).toLowerCase().trim()) : !a.built_at) continue;
       const p: any = await ctx.db.get(a.prospect_id);
       if (!p || (p.target && !p.starred)) continue;
       out.push(a.hotel_name);

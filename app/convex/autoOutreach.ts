@@ -28,7 +28,7 @@ type Config = { enabled: boolean; start: string; startCap: number; step: number;
 const todayKey = () => new Date().toISOString().slice(0, 10);
 const DAY = 86_400_000;
 // Corporate mail scanners open every link within seconds of delivery; a person rarely does.
-const BOT_WINDOW = 3 * 60_000;
+const BOT_WINDOW = 10 * 60_000; // scanners re-open links for ~5 min after delivery
 const lastSendAt = (a: any) => Math.max(a.created_at || 0, a.last_followup_at || 0);
 
 function readConfig(settings: Record<string, string>): Config {

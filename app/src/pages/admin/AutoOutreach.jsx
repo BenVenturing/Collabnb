@@ -111,7 +111,7 @@ export default function AutoOutreach() {
               </div>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
                 <span style={{ background: s.bg, color: s.color, borderRadius: 999, padding: '3px 10px', fontSize: 12, fontWeight: 600 }}>{s.label}</span>
-                {r.bot_views > 0 && <span title={`${r.bot_views} open(s) within 3 minutes of sending, typical of email security scanners. Not counted as views.${r.bot_reset ? ' A listing they triggered was removed.' : ''}`} style={{ background: '#F1F0FA', color: '#5B5590', border: '1px dashed #9A95C8', borderRadius: 999, padding: '2px 9px', fontSize: 11, fontWeight: 600 }}>Possible bot ×{r.bot_views}</span>}
+                {r.bot_views > 0 && <span title={`${r.bot_views} open(s) within 10 minutes of sending, typical of email security scanners. Not counted as views.${r.bot_reset ? ' A listing they triggered was removed.' : ''}`} style={{ background: '#F1F0FA', color: '#5B5590', border: '1px dashed #9A95C8', borderRadius: 999, padding: '2px 9px', fontSize: 11, fontWeight: 600 }}>Possible bot ×{r.bot_views}</span>}
               </div>
               <div style={{ fontSize: 12, color: SAGE, textAlign: 'right' }}>
                 Sent {ago(r.sent_at)}{r.first_viewed_at ? ` · viewed ${ago(r.first_viewed_at)}` : ''}

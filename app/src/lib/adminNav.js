@@ -44,6 +44,7 @@ export const GROUPS = [
     { id: 'blog',       label: 'Blog'       },
     { id: 'broadcast',  label: 'Emails'     },
     { id: 'social',     label: 'Social'     },
+    { id: 'autooutreach', label: 'Auto Outreach' },
     { id: 'autoreply',  label: 'Auto-Reply' },
   ] },
   { id: 'suggestions', label: 'Suggestions / Beta', icon: 'suggestions', tabs: [

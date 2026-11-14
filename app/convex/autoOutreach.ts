@@ -4,6 +4,7 @@ import { internal } from "./_generated/api";
 import { hikerGet, findMarketingContact } from "./prospects";
 import { llmChat } from "./blog";
 import { detectChain, outreachRank } from "./lib/chains";
+import { requireAdmin } from "./lib/auth";
 
 // Daily automated hotel outreach: named-person email with a real IG audit page
 // (collabnb.com/audit/<token>) + one-click pre-filled claim link, a 4-day
@@ -12,9 +13,8 @@ import { detectChain, outreachRank } from "./lib/chains";
 
 const CONFIG_KEY = "auto_outreach";
 const LOGO = "https://media.collabnb.com/claims/somewhere-lombok/email/logo.png";
-const REPLY_TO = "hellocollabnb@gmail.com";
-const FALLBACK_FROM = "Benjamin at Collabnb <hello@collabnb.com>";
-const FALLBACK_MAX = 20; // shared transactional domain: keep cold volume low
+const REPLY_TO = "ben@collabnb.com";
+const FALLBACK_FROM = "Benjamin at Collabnb <ben@outreach.collabnb.com>";
 const VIBE_TAG_POOL = [
   "Cozy", "Luxury", "Adventure", "Minimalist", "Romantic", "Rustic", "Modern",
   "Tropical", "Boho", "Family-Friendly", "Pet-Friendly", "Remote Work", "Wellness",
@@ -37,7 +37,7 @@ function readConfig(settings: Record<string, string>): Config {
 function dailyCap(cfg: Config): number {
   const days = Math.max(0, Math.floor((Date.now() - Date.parse(cfg.start)) / DAY));
   const ramp = cfg.startCap + cfg.step * Math.floor(days / cfg.everyDays);
-  const max = process.env.OUTREACH_FROM ? cfg.max : Math.min(cfg.max, FALLBACK_MAX);
+  const max = cfg.max;
   return Math.min(max, ramp);
 }
 
@@ -88,6 +88,12 @@ export const pool = internalQuery({
       return true;
     });
     stats.eligible = eligible.length;
+    const key = (p: any) => [String(p.marketing_email || p.email || "").toLowerCase(), String(realHandle(p) || "").toLowerCase()].filter(Boolean);
+    const taken = new Set<string>();
+    rows.filter((p) => (p.tags || []).some((t: string) => t.startsWith("auto") || t.startsWith("contacted")) || p.status === "emailed").forEach((p) => key(p).forEach((k) => taken.add(k)));
+    const seen = new Set(taken);
+    const unique = eligible.filter((p) => { const ks = key(p); if (ks.some((k) => seen.has(k))) return false; ks.forEach((k) => seen.add(k)); return true; });
+    eligible.length = 0; eligible.push(...unique);
     eligible.sort((a, b) => outreachRank(b) + (b.score ?? 0) / 100 - (outreachRank(a) + (a.score ?? 0) / 100));
     return { sentToday, stats, ids: eligible.slice(0, limit).map((p) => p._id) };
   },
@@ -98,6 +104,14 @@ export const sentTodayCount = internalQuery({
   handler: async (ctx) => {
     const rows = (await ctx.db.query("prospects").withIndex("by_kind_status", (q) => q.eq("kind", "host").eq("status", "emailed")).collect()) as any[];
     return rows.filter((p) => isAutoToday(p, todayKey())).length;
+  },
+});
+
+export const alreadyAudited = internalQuery({
+  args: { email: v.string(), handle: v.string() },
+  handler: async (ctx, { email, handle }) => {
+    const rows = await ctx.db.query("hotel_audits").collect();
+    return rows.some((r: any) => String(r.email).toLowerCase() === email.toLowerCase() || String(r.handle).toLowerCase() === handle.toLowerCase());
   },
 });
 
@@ -136,7 +150,43 @@ function mediaImage(m: any): string | undefined {
   return m.thumbnail_url || m.image_versions2?.candidates?.[0]?.url || r?.thumbnail_url || r?.image_versions2?.candidates?.[0]?.url;
 }
 
+async function fetchIgApify(handle: string) {
+  const res = await fetch(`https://api.apify.com/v2/actors/apify~instagram-scraper/run-sync-get-dataset-items?token=${process.env.APIFY_TOKEN}&timeout=90`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ directUrls: [`https://www.instagram.com/${handle}/`], resultsType: "details", resultsLimit: 1, addParentData: false }),
+  });
+  const body = await res.text();
+  if (!res.ok) throw new Error(`Apify ${res.status}: ${body.slice(0, 120)}`);
+  const items: any[] = JSON.parse(body);
+  const u = items.find((x) => x && (x.username || x.latestPosts)) || null;
+  if (!u || u.private || u.error) return null;
+  const posts: Post[] = (u.latestPosts || []).slice(0, 12).map((m: any) => ({
+    likes: Math.max(0, Number(m.likesCount) || 0),
+    comments: Math.max(0, Number(m.commentsCount) || 0),
+    views: m.videoPlayCount ?? m.videoViewCount ?? undefined,
+    video: m.type === "Video" || /clips/i.test(String(m.productType || "")),
+    at: m.timestamp ? Date.parse(m.timestamp) || undefined : undefined,
+    image: m.displayUrl,
+    code: m.shortCode,
+    caption: String(m.caption || "").slice(0, 280),
+  }));
+  return {
+    followers: Number(u.followersCount || 0),
+    fullName: u.fullName as string | undefined,
+    bio: String(u.biography || ""),
+    website: u.externalUrl as string | undefined,
+    avatar: (u.profilePicUrlHD || u.profilePicUrl) as string | undefined,
+    email: (u.businessEmail as string | undefined) || undefined,
+    phone: (u.businessPhoneNumber as string | undefined) || undefined,
+    city: (u.businessAddress?.city_name as string | undefined) || undefined,
+    mediaCount: Number(u.postsCount || 0),
+    posts: posts.sort((a, b) => (b.at || 0) - (a.at || 0)),
+  };
+}
+
 async function fetchIg(handle: string) {
+  if (process.env.APIFY_TOKEN) return fetchIgApify(handle);
   const u = await hikerGet("/v1/user/by/username", { username: handle });
   if (!u?.pk || u.is_private) return null;
   const raw = await hikerGet("/v1/user/medias", { user_id: String(u.pk), amount: 12 });
@@ -250,7 +300,8 @@ async function findDecisionMaker(website?: string): Promise<{ name: string; role
       { role: "user", content: `From this hotel website text, find the person most responsible for marketing decisions: marketing/PR/social media manager first, then owner/founder, then general manager. Only use a name that appears verbatim in the text. Return {"name":"Full Name","role":"Their role"} or {"name":null}.\n\n${text.slice(0, 15000)}` },
     ], 200, 30_000);
     const j = JSON.parse(out.slice(out.indexOf("{"), out.lastIndexOf("}") + 1));
-    if (!j?.name || !text.includes(j.name) || j.name.split(" ").length > 4) return null;
+    if (!j?.name || !text.includes(j.name) || j.name.trim().split(/\s+/).length < 2 || j.name.split(" ").length > 4) return null;
+    if (/\b(chef|sous|cook|bartender|sommelier|server|housekeep)/i.test(`${j.name} ${j.role || ""}`)) return null;
     return { name: String(j.name), role: String(j.role || "") };
   } catch { return null; }
 }
@@ -375,6 +426,7 @@ export const processOne = internalAction({
       return skip(`instagram fetch failed: ${msg.slice(0, 80)}`);
     }
     if (!ig || ig.posts.length < 3 || ig.followers < 100) return skip("private, inactive or tiny instagram");
+    if (ig.followers > 40_000) return skip("too large for boutique outreach");
 
     const website = p.website || ig.website;
     let email = validEmail(p.marketing_email) ? p.marketing_email : undefined;
@@ -386,9 +438,11 @@ export const processOne = internalAction({
     }
     if (!email) return skip("no email found");
     if (await ctx.runQuery(internal.autoOutreach.profileExists, { email })) return skip("email already has a Collabnb account");
+    if (!preview && (await ctx.runQuery(internal.autoOutreach.alreadyAudited, { email, handle }))) return skip("same email or instagram already audited");
 
     const hotel = String(p.display_name || ig.fullName || handle).replace(/\s*[|·•-]\s.*$/, "").trim().slice(0, 80);
-    const dm = p.decision_maker_name ? { name: p.decision_maker_name, role: p.decision_maker_role || "" } : await findDecisionMaker(website);
+    const okName = (n?: string, r?: string) => !!n && n.trim().split(/\s+/).length >= 2 && !/\b(chef|sous|cook|bartender|sommelier|server|housekeep)/i.test(`${n} ${r || ""}`);
+    const dm = okName(p.decision_maker_name, p.decision_maker_role) ? { name: p.decision_maker_name, role: p.decision_maker_role || "" } : await findDecisionMaker(website);
     const first = dm?.name?.split(" ")[0];
     const greeting = first ? `Hi ${first},` : `Hi ${hotel} team,`;
     const audit = buildAudit(ig);
@@ -619,5 +673,55 @@ export const getAudit = query({
       audit: a.audit,
       build: { step: a.build_step || 0, error: a.build_error, photos: a.build_photos || [], ideas: a.build_ideas || [], claim_token: a.claim_token },
     };
+  },
+});
+
+
+// ─── Admin tracking (read-only over hotel_audits + prospect replies) ─────────
+export const adminFunnel = query({
+  args: {},
+  handler: async (ctx) => {
+    await requireAdmin(ctx);
+    const settings = await ctx.db.query("admin_settings").withIndex("by_key", (q) => q.eq("key", CONFIG_KEY)).first();
+    const cfg = readConfig(settings ? { [CONFIG_KEY]: settings.value } : {});
+    const audits = (await ctx.db.query("hotel_audits").collect()) as any[];
+    const now = Date.now();
+    const rows: any[] = [];
+    for (const a of audits.sort((x, y) => y.created_at - x.created_at).slice(0, 150)) {
+      const p: any = await ctx.db.get(a.prospect_id);
+      rows.push({
+        token: a.token, hotel: a.hotel_name, email: a.email, handle: a.handle, subject: a.subject,
+        teaser: a.audit?.teaser, followers: a.audit?.followers,
+        sent_at: a.created_at, viewed: a.view_count || 0, first_viewed_at: a.first_viewed_at,
+        built_at: a.built_at, build_error: a.build_error, claim_token: a.claim_token,
+        replied: !!p?.replied_at, status: p?.status, dm_draft: p?.dm_draft, dm_done: (p?.outreach_log || []).some((e: any) => e.type === "dm_sent"),
+      });
+    }
+    const since = (ms: number) => audits.filter((a) => now - a.created_at < ms);
+    const stat = (list: any[]) => ({ sent: list.length, viewed: list.filter((a) => a.view_count).length, built: list.filter((a) => a.built_at || a.claim_token).length });
+    const days: Record<string, number> = {};
+    audits.forEach((a) => { const d = new Date(a.created_at).toISOString().slice(0, 10); days[d] = (days[d] || 0) + 1; });
+    return {
+      enabled: cfg.enabled, capToday: dailyCap(cfg), max: cfg.max,
+      today: stat(since(DAY)), week: stat(since(7 * DAY)), all: stat(audits),
+      replied: rows.filter((r) => r.replied).length,
+      perDay: Object.entries(days).sort().slice(-14).map(([date, n]) => ({ date, n })),
+      rows,
+    };
+  },
+});
+
+export const adminSetEnabled = mutation({
+  args: { enabled: v.boolean() },
+  handler: async (ctx, { enabled }) => {
+    await requireAdmin(ctx);
+    const row = await ctx.db.query("admin_settings").withIndex("by_key", (q) => q.eq("key", CONFIG_KEY)).first();
+    let cur: any = {};
+    try { cur = JSON.parse(row?.value || "{}"); } catch { /* reset */ }
+    const next = { ...cur, enabled };
+    if (!next.start || (enabled && !cur.enabled)) next.start = todayKey();
+    const value = JSON.stringify(next);
+    if (row) await ctx.db.patch(row._id, { value });
+    else await ctx.db.insert("admin_settings", { key: CONFIG_KEY, value });
   },
 });

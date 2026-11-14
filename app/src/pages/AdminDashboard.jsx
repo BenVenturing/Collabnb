@@ -23,6 +23,7 @@ import AdminOverview from './admin/AdminOverview';
 import Discovery from './admin/Discovery';
 import SocialHub from './admin/SocialHub';
 import AutoReply from './admin/AutoReply';
+import AutoOutreach from './admin/AutoOutreach';
 import AmbassadorManager from './admin/AmbassadorManager';
 import AlgorithmLab from './admin/AlgorithmLab';
 import CreatorAlgorithmLab from './admin/CreatorAlgorithmLab';
@@ -162,6 +163,8 @@ const PANEL_MAP = {
 // with in-progress edits elsewhere in this file's panel list.
 function AutoReplyPanel() { return <AutoReply />; }
 PANEL_MAP.autoreply = AutoReplyPanel;
+function AutoOutreachPanel() { return <AutoOutreach />; }
+PANEL_MAP.autooutreach = AutoOutreachPanel;
 
 // ─── AdminDashboard ───────────────────────────────────────────────────────────
 export default function AdminDashboard() {

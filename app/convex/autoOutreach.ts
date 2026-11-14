@@ -596,6 +596,39 @@ export const followUp = internalAction({
   },
 });
 
+// Demo for Ben: clones a real audit (default: newest) under a new token + email, sends that variant's email.
+export const sendDemo = internalAction({
+  args: { to: v.string(), from: v.optional(v.string()), variant: v.optional(v.string()) },
+  handler: async (ctx, { to, from, variant }): Promise<any> => {
+    const src: any = await ctx.runMutation(internal.autoOutreach.insertDemoAudit, { to, from, token: newToken("demo") });
+    if (!src) return { error: "no source audit" };
+    const v_ = ((VARIANTS as string[]).includes(variant || "") ? variant : "A") as Variant;
+    const auditUrl = `https://collabnb.com/audit/${src.token}`;
+    const subject = variantSubject(v_, src.hotel_name, src.audit.teaser);
+    const { html, text } = emailParts({ variant: v_, greeting: src.greeting, hotel: src.hotel_name, teaser: src.audit.teaser, auditUrl, buildUrl: `${auditUrl}?build=1` });
+    await sendEmail(to, subject, html, text);
+    return { sent: true, hotel: src.hotel_name, auditUrl };
+  },
+});
+
+export const insertDemoAudit = internalMutation({
+  args: { to: v.string(), from: v.optional(v.string()), token: v.string() },
+  handler: async (ctx, { to, from, token }) => {
+    const rows = (await ctx.db.query("hotel_audits").collect()) as any[];
+    const src = (from ? rows.filter((r) => r.token === from || r.hotel_name.toLowerCase().includes(from.toLowerCase())) : rows.filter((r) => !r.demo))
+      .sort((x, y) => y.created_at - x.created_at)[0];
+    if (!src) return null;
+    const row = {
+      token, prospect_id: src.prospect_id, hotel_name: src.hotel_name, email: to, handle: src.handle,
+      website: src.website, phone: src.phone, city: src.city, country: src.country,
+      greeting: src.greeting, subject: src.subject, variant: src.variant, audit: { ...src.audit, created_at: Date.now() },
+      demo: true, created_at: Date.now() - 10 * 60_000,
+    };
+    await ctx.db.insert("hotel_audits", row);
+    return row;
+  },
+});
+
 export const nextVariant = internalMutation({
   args: {},
   handler: async (ctx): Promise<Variant> => {
@@ -663,6 +696,7 @@ export const buildClaim = internalAction({
         },
       });
       await step({ build_step: 4, claim_token: res.token, built_at: Date.now() });
+      if (a.demo) return;
       await ctx.runMutation(internal.autoOutreach.markBuilt, { id: a.prospect_id, token: res.token });
       // Hot lead: tell Ben right away.
       try {
@@ -799,7 +833,7 @@ export const todayStats = query({
     const cfg = readConfig(settings ? { [CONFIG_KEY]: settings.value } : {});
     const start = new Date(); start.setUTCHours(0, 0, 0, 0);
     const t0 = start.getTime();
-    const audits = (await ctx.db.query("hotel_audits").collect()) as any[];
+    const audits = ((await ctx.db.query("hotel_audits").collect()) as any[]).filter((a) => !a.demo);
     const prospects = (await ctx.db.query("prospects").collect()) as any[];
     const logToday = (p: any, type: string) => (p.outreach_log || []).some((e: any) => e.type === type && e.at >= t0);
     return {
@@ -820,7 +854,7 @@ export const adminFunnel = query({
     await requireAdmin(ctx);
     const settings = await ctx.db.query("admin_settings").withIndex("by_key", (q) => q.eq("key", CONFIG_KEY)).first();
     const cfg = readConfig(settings ? { [CONFIG_KEY]: settings.value } : {});
-    const audits = (await ctx.db.query("hotel_audits").collect()) as any[];
+    const audits = ((await ctx.db.query("hotel_audits").collect()) as any[]).filter((a) => !a.demo);
     const now = Date.now();
     const rows: any[] = [];
     for (const a of audits.sort((x, y) => y.created_at - x.created_at).slice(0, 150)) {

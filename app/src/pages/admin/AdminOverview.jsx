@@ -29,7 +29,7 @@ export default function AdminOverview() {
   const unverified   = useQuery(api.profiles.getUnverified);
   const drafts       = useQuery(api.blog.getDrafts);
   const contracts    = useQuery(api.contracts.getAll);
-  const prospectStats = useQuery(api.prospects.getStats);
+  const outreach = useQuery(api.autoOutreach.todayStats);
 
   const firstName = (profile?.full_name || 'Ben').split(' ')[0];
   const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
@@ -41,12 +41,6 @@ export default function AdminOverview() {
     return !c.admin_dismissed && s !== 'completed' && s !== 'cancelled' && s !== 'draft' && !(c.creator_signed && c.host_signed);
   }).length;
   const failedFees = (contracts || []).filter(c => c.fee_charge_failed && !c.paid).length;
-  // Ready-to-confirm queue depth (target 50 creators + 50 hosts/day), not
-  // actual DMs sent — Instagram DM volume stays capped separately at the
-  // safe ~20/day rate (see Discovery's "Build fresh 50").
-  const queuedCreators = prospectStats?.queuedToday?.creators ?? 0;
-  const queuedHosts = prospectStats?.queuedToday?.hosts ?? 0;
-
   const attention = [
     pendingVerifications > 0 && { label: `${pendingVerifications} profile${pendingVerifications === 1 ? '' : 's'} waiting for verification`, tab: 'users', view: 'pending' },
     (unreadCount ?? 0) > 0 && { label: `${unreadCount} unread user message${unreadCount === 1 ? '' : 's'}`, tab: 'messages' },
@@ -61,10 +55,10 @@ export default function AdminOverview() {
     { label: 'Active listings', value: fmt(stats?.activeListings),  tab: 'listings' },
     { label: 'Collabs',         value: fmt((analytics?.approvedCollabs ?? 0) + (analytics?.completedCollabs ?? 0)), tab: 'collabs' },
     {
-      label: 'Ready to confirm today',
-      value: `${queuedCreators + queuedHosts}/100`,
-      sublabel: `${queuedCreators}/50 creators · ${queuedHosts}/50 hosts`,
-      tab: 'discovery',
+      label: 'Outreach sent today',
+      value: outreach ? `${outreach.sent}/${outreach.cap}` : '–',
+      sublabel: outreach ? `${outreach.opened} opened · ${outreach.replies} replies · ${outreach.dms} DMs` : '',
+      tab: 'autooutreach',
     },
   ];
 

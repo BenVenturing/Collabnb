@@ -1283,6 +1283,7 @@ export default defineSchema({
     last_followup_at: v.optional(v.number()),
     bot_views: v.optional(v.number()), // opens within minutes of a send (mail scanners)
     bot_reset_at: v.optional(v.number()),
+    demo: v.optional(v.boolean()), // demo send to Ben: hidden from stats, no follow-ups, build doesn't touch the prospect
     audit: v.any(),
     build_step: v.optional(v.number()), // 1 photos, 2 copy, 3 account, 4 done
     build_error: v.optional(v.string()),

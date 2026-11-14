@@ -32,14 +32,17 @@ export default function HotelAudit() {
 
   const start = () => { setBuilding(true); requestBuild({ token }).catch(() => {}); };
 
-  // Started from JS (not on page load server-side), so email link scanners
-  // that prefetch ?build=1 never trigger a build.
+  // Mail scanners load links in a real browser, so ?build=1 only scrolls to the
+  // button; a build needs a human tap. An in-progress build still resumes.
+  const ctaRef = useRef(null);
+  const wantsBuild = params.get('build') === '1';
   useEffect(() => {
     if (!data || autoStarted.current) return;
     autoStarted.current = true;
     markViewed({ token }).catch(() => {});
     if (data.build.claim_token) return;
-    if (params.get('build') === '1' || data.build.step > 0) start();
+    if (data.build.step > 0 && !data.build.error) start();
+    else if (wantsBuild) setTimeout(() => ctaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300);
   }, [data]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (data === undefined) return <Shell><p style={muted}>Loading your audit…</p></Shell>;
@@ -106,7 +109,7 @@ export default function HotelAudit() {
         ))}
       </div>
 
-      <section style={{ background: C.white, border: `1px solid ${C.line}`, borderRadius: 20, padding: '1.75rem 1.4rem', textAlign: 'center', margin: '2rem 0 1rem' }}>
+      <section ref={ctaRef} style={{ background: C.white, border: `${wantsBuild && !built ? 2 : 1}px solid ${wantsBuild && !built ? C.green : C.line}`, borderRadius: 20, padding: '1.75rem 1.4rem', textAlign: 'center', margin: '2rem 0 1rem' }}>
         <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.5rem', color: C.ink, margin: '0 0 0.5rem' }}>
           {built ? 'Your Collabnb listing is ready' : 'Close these gaps with creator content'}
         </h2>

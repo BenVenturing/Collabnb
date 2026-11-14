@@ -27,6 +27,9 @@ type Config = { enabled: boolean; start: string; startCap: number; step: number;
 
 const todayKey = () => new Date().toISOString().slice(0, 10);
 const DAY = 86_400_000;
+// Corporate mail scanners open every link within seconds of delivery; a person rarely does.
+const BOT_WINDOW = 3 * 60_000;
+const lastSendAt = (a: any) => Math.max(a.created_at || 0, a.last_followup_at || 0);
 
 function readConfig(settings: Record<string, string>): Config {
   let c: any = {};
@@ -518,6 +521,8 @@ export const processOne = internalAction({
     if (!email) return skip("no email found");
     if (await ctx.runQuery(internal.autoOutreach.profileExists, { email })) return skip("email already has a Collabnb account");
     if (!preview && (await ctx.runQuery(internal.autoOutreach.alreadyAudited, { email, handle }))) return skip("same email or instagram already audited");
+    const chain = detectChain({ display_name: p.display_name, website: `https://${email.split("@")[1]}` } as any) || detectChain({ display_name: p.display_name, website } as any);
+    if (chain) return skip(`chain or management group (${chain.group})`);
 
     const hotel = String(p.display_name || ig.fullName || handle).replace(/\s*[|·•-]\s.*$/, "").trim().slice(0, 80);
     const okName = (n?: string, r?: string) => !!n && n.trim().split(/\s+/).length >= 2 && !/\b(chef|sous|cook|bartender|sommelier|server|housekeep)/i.test(`${n} ${r || ""}`);
@@ -540,12 +545,13 @@ export const processOne = internalAction({
     const { html, text } = emailParts({ variant, greeting, hotel, teaser: audit.teaser, auditUrl, buildUrl });
 
     const avatar = await rehost(ctx, ig.avatar);
-    await ctx.runMutation(internal.autoOutreach.createAudit, {
+    const reserved = await ctx.runMutation(internal.autoOutreach.createAudit, {
       token, prospect_id: id, hotel_name: hotel, email, handle,
       website, phone, city: ig.city || p.location || undefined, country: p.country || undefined,
       greeting, subject, variant,
       audit: { ...audit, hotel, handle, avatar, created_at: Date.now() },
     });
+    if (!reserved) return skip("same email or instagram already audited");
 
     const settings: Record<string, string> = await ctx.runQuery(internal.admin.getSettingsInternal, {});
     try {
@@ -677,7 +683,14 @@ export const createAudit = internalMutation({
     website: v.optional(v.string()), phone: v.optional(v.string()), city: v.optional(v.string()), country: v.optional(v.string()),
     greeting: v.string(), subject: v.string(), variant: v.optional(v.string()), audit: v.any(),
   },
-  handler: async (ctx, a) => { await ctx.db.insert("hotel_audits", { ...a, created_at: Date.now() }); },
+  // Re-checks inside the mutation (serialized) so two parallel sends can't both claim the same hotel.
+  handler: async (ctx, a) => {
+    const rows = await ctx.db.query("hotel_audits").collect();
+    const e = a.email.toLowerCase(), h = a.handle.toLowerCase();
+    if (rows.some((r: any) => String(r.email).toLowerCase() === e || String(r.handle).toLowerCase() === h)) return false;
+    await ctx.db.insert("hotel_audits", { ...a, created_at: Date.now() });
+    return true;
+  },
 });
 
 export const patchAudit = internalMutation({
@@ -754,6 +767,10 @@ export const markViewed = mutation({
     const a = await ctx.db.query("hotel_audits").withIndex("by_token", (q) => q.eq("token", token)).unique();
     if (!a) return;
     const now = Date.now();
+    if (now - lastSendAt(a) < BOT_WINDOW) {
+      await ctx.db.patch(a._id, { bot_views: (a.bot_views || 0) + 1 });
+      return;
+    }
     await ctx.db.patch(a._id, { view_count: (a.view_count || 0) + 1, first_viewed_at: a.first_viewed_at || now, last_viewed_at: now });
   },
 });
@@ -815,6 +832,7 @@ export const adminFunnel = query({
         built_at: a.built_at, build_error: a.build_error, claim_token: a.claim_token,
         variant: a.variant || "A", followups: a.followups_sent || 0, last_followup_at: a.last_followup_at,
         clicked: !!(a.claim_token || a.build_step || a.built_at),
+        bot_views: a.bot_views || 0, bot_reset: !!a.bot_reset_at,
         replied: !!p?.replied_at || p?.status === "replied", status: p?.status, dm_draft: p?.dm_draft, dm_done: (p?.outreach_log || []).some((e: any) => e.type === "dm_sent"),
       });
     }
@@ -865,5 +883,52 @@ export const tidyAutoTags = internalMutation({
       n++;
     }
     return { updated: n };
+  },
+});
+
+// One-off cleanup for listings that mail scanners built before the build needed a real click.
+// Only touches builds started within BOT_WINDOW of the email that nobody has claimed.
+// Run: npx convex run --prod autoOutreach:resetBotBuilds '{"dryRun":true}'
+export const resetBotBuilds = internalMutation({
+  args: { dryRun: v.optional(v.boolean()) },
+  handler: async (ctx, { dryRun }) => {
+    const audits = (await ctx.db.query("hotel_audits").collect()) as any[];
+    const out: any[] = [];
+    for (const a of audits) {
+      const quickView = a.first_viewed_at && a.first_viewed_at - a.created_at < BOT_WINDOW;
+      const quickBuild = a.build_started_at && a.build_started_at - a.created_at < BOT_WINDOW;
+      if (!quickView && !quickBuild) continue;
+      const claim: any = a.claim_token ? await ctx.db.query("listing_claims").withIndex("by_token", (q) => q.eq("token", a.claim_token)).unique() : null;
+      const claimed = claim && (claim.status === "claimed" || claim.clerk_user_id);
+      if (claimed) { out.push({ hotel: a.hotel_name, kept: "claimed by a real sign-in" }); continue; }
+      const allQuick = !a.last_viewed_at || a.last_viewed_at - a.created_at < BOT_WINDOW;
+      const botViews = allQuick ? a.view_count || 0 : 1;
+      const row: any = { hotel: a.hotel_name, botViews, removedBuild: !!quickBuild };
+      if (!dryRun) {
+        if (quickBuild && claim) {
+          const listing: any = claim.listing_id ? await ctx.db.get(claim.listing_id as any) : null;
+          if (listing && listing.status === "draft") { await ctx.db.delete(listing._id); row.listing = "deleted"; }
+          const prof: any = claim.profile_id ? await ctx.db.get(claim.profile_id as any) : null;
+          if (prof && !prof.clerk_registered && !prof.is_admin) {
+            const other = await ctx.db.query("listings").withIndex("by_host", (q) => q.eq("host_id", String(prof._id))).first();
+            if (!other) { await ctx.db.delete(prof._id); row.profile = "deleted"; }
+          }
+          await ctx.db.delete(claim._id);
+        }
+        await ctx.db.patch(a._id, {
+          view_count: Math.max(0, (a.view_count || 0) - botViews) || undefined,
+          ...(allQuick ? { first_viewed_at: undefined, last_viewed_at: undefined } : {}),
+          bot_views: (a.bot_views || 0) + botViews,
+          bot_reset_at: Date.now(),
+          ...(quickBuild ? { claim_token: undefined, built_at: undefined, build_step: undefined, build_started_at: undefined, build_photos: undefined, build_ideas: undefined, build_error: undefined } : {}),
+        });
+        if (quickBuild) {
+          const p: any = await ctx.db.get(a.prospect_id);
+          if (p) await ctx.db.patch(p._id, { starred: false, outreach_log: [...(p.outreach_log || []), { at: Date.now(), type: "bot_build_reset", note: a.token }] });
+        }
+      }
+      out.push(row);
+    }
+    return out;
   },
 });

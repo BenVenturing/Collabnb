@@ -41,6 +41,7 @@ export default function Step4Review() {
   const navigate = useNavigate();
   const { draft, updateDraft, totalDeliverables, formatCount, combinedDeliverablesList } = useListingDraft();
   const { profile } = useAuth();
+  const editingId = (() => { try { return localStorage.getItem('collabnb_editing_listing_id_v1'); } catch { return null; } })();
   const { saving, saveError, saveDraft: handleSaveDraft } = useSaveListingDraft(t('saveFallbackError'));
   const [creatorView, setCreatorView] = useState(false);
 

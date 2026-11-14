@@ -429,7 +429,7 @@ export default function PricingTool({ mode = "sandbox", initialValue, onChange }
         <div>
           <div style={{ marginBottom: 14 }}>
             <div style={{ fontSize: 11.5, fontWeight: 700, color: "var(--sage)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>{t('budgetMode.cashBudget')}</div>
-            <div style={{ position: "relative", maxWidth: 160 }}>
+            <div id="wiz-cash" style={{ position: "relative", maxWidth: 160, borderRadius: 10 }}>
               <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 14, color: "var(--sage)" }}>$</span>
               <input
                 type="number"

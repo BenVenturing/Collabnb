@@ -113,6 +113,8 @@ export default function BackgroundMusicPlayer() {
     audio.volume = 0.35;
     audio.loop = true;
     audio.src = track.src;
+    // Hotels arriving from an audit/claim link already have a lot going on.
+    try { if (sessionStorage.getItem('cb_quiet') === '1') return; } catch {}
 
     const wantsSound = !muted;
     audio.muted = !wantsSound;

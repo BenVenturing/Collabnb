@@ -6,6 +6,7 @@ import { api } from '../../convex/_generated/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useListingDraft } from '../contexts/ListingDraftContext';
 import collabnbLogo from '../assets/collabnb-logo.png';
+import { Builder } from './HotelAudit';
 
 const C = {
   bg: '#F4F8F3', mint: '#D1EBDB', mintSoft: '#E8F4EC', green: '#3F6B52',
@@ -32,6 +33,8 @@ export default function ClaimListing() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const viewed = useRef(false);
+  const buildScreen = (() => { try { return JSON.parse(sessionStorage.getItem(`cb_build_${token}`) || 'null'); } catch { return null; } })();
+  useEffect(() => { if (direct) try { sessionStorage.setItem('cb_quiet', '1'); } catch {} }, [direct]);
   const authRef = useRef(null);
   const redeemed = useRef(false);
 
@@ -150,6 +153,7 @@ export default function ClaimListing() {
   if (claim === undefined) return <Shell><p style={{ color: C.sage, textAlign: 'center', padding: '4rem 0' }}>Loading your listing…</p></Shell>;
   if (claim === null) return <Shell><p style={{ color: C.sage, textAlign: 'center', padding: '4rem 0' }}>This link has expired. Reach us at hellocollabnb@gmail.com.</p></Shell>;
 
+  if (direct && !directFailed && !error && buildScreen) return <Builder data={buildScreen} opening />;
   if (direct && !directFailed && !error) return <Shell><p style={{ color: C.sage, textAlign: 'center', padding: '4rem 0' }}>Opening your listing…</p></Shell>;
 
   const p = claim.prefill || {};

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useParams, useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import collabnbLogo from '../assets/collabnb-logo.png';
@@ -12,6 +12,14 @@ const SEV = { high: C.red, medium: C.amber, good: C.green };
 const SEV_LABEL = { high: 'Gap', medium: 'Watch', good: 'Strength' };
 const WHATSAPP = 'https://wa.me/16232212170';
 
+// Same figures and sources as collabnb.com/how-it-works.
+const CREATOR_STATS = [
+  ['73%', 'of travelers say influencer recommendations have shaped a trip or booking decision', 'Expedia Group, Traveler Value Index 2025'],
+  ['61%', 'of travelers now find trip inspiration on social media, up from 35% in 2022', 'Expedia Group, Traveler Value Index 2025'],
+  ['$5.78', 'average return for every $1 spent on influencer marketing', 'Influencer Marketing Hub, Benchmark Report 2026'],
+  ['74%', 'of consumers say they trust influencer product recommendations', 'Sprout Social, Consumer Behavior Survey 2026'],
+];
+
 export default function HotelAudit() {
   const { token } = useParams();
   const [params] = useSearchParams();
@@ -20,6 +28,7 @@ export default function HotelAudit() {
   const markViewed = useMutation(api.autoOutreach.markViewed);
   const [building, setBuilding] = useState(false);
   const autoStarted = useRef(false);
+  useEffect(() => { try { sessionStorage.setItem('cb_quiet', '1'); } catch {} }, []);
 
   const start = () => { setBuilding(true); requestBuild({ token }).catch(() => {}); };
 
@@ -72,7 +81,7 @@ export default function HotelAudit() {
       <Label>What we found</Label>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {(a.findings || []).map((f, i) => (
-          <div key={i} style={{ background: C.white, border: `1px solid ${C.line}`, borderLeft: `4px solid ${SEV[f.severity] || C.sage}`, borderRadius: 12, padding: '1rem 1.1rem' }}>
+          <div key={i} style={{ background: C.white, border: `1px solid ${C.line}`, borderRadius: 12, padding: '1rem 1.1rem' }}>
             <div style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: SEV[f.severity] || C.sage }}>{SEV_LABEL[f.severity] || 'Note'}</div>
             <div style={{ fontWeight: 700, color: C.ink, margin: '0.2rem 0 0.3rem' }}>{f.title}</div>
             <div style={{ color: C.slate, lineHeight: 1.55, fontSize: '0.95rem' }}>{f.detail}</div>
@@ -86,12 +95,23 @@ export default function HotelAudit() {
         </p>
       )}
 
+      <Label>Why creator content works</Label>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: 10 }}>
+        {CREATOR_STATS.map(([n, label, src]) => (
+          <div key={n} style={{ background: C.white, border: `1px solid ${C.line}`, borderRadius: 14, padding: '1rem 1.1rem' }}>
+            <div style={{ fontSize: '1.6rem', fontWeight: 700, color: C.ink }}>{n}</div>
+            <div style={{ color: C.slate, lineHeight: 1.45, fontSize: '0.9rem', margin: '0.2rem 0 0.4rem' }}>{label}</div>
+            <div style={{ fontSize: '0.72rem', color: C.sage }}>{src}</div>
+          </div>
+        ))}
+      </div>
+
       <section style={{ background: C.white, border: `1px solid ${C.line}`, borderRadius: 20, padding: '1.75rem 1.4rem', textAlign: 'center', margin: '2rem 0 1rem' }}>
         <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.5rem', color: C.ink, margin: '0 0 0.5rem' }}>
           {built ? 'Your Collabnb listing is ready' : 'Close these gaps with creator content'}
         </h2>
         <p style={{ color: C.slate, lineHeight: 1.6, margin: '0 auto 1.2rem', maxWidth: 460 }}>
-          Collabnb connects boutique stays with pre-vetted creators who make Reels and photos in exchange for a stay. We'll build your listing from your feed in about 30 seconds. It's free for Founding Hosts, and nothing goes live until you publish.
+          Collabnb connects boutique stays with pre-vetted creators who make Reels and photos in exchange for a stay. We'll build your listing from your feed in about a minute. It's free for Founding Hosts, and nothing goes live until you publish.
         </p>
         {built
           ? <a href={`/claim/${data.build.claim_token}?go=1`} style={cta}>Open my listing →</a>
@@ -119,11 +139,12 @@ const TIPS = [
   'Pre-vetted creators are already on Collabnb',
 ];
 
-function Builder({ data, retry }) {
+export function Builder({ data, retry, opening = false }) {
+  const navigate = useNavigate();
   const { build, audit: a, hotel_name } = data;
   // Rows tick over at most every 900ms so fast server steps still read clearly.
   const target = STEPS.filter((s) => build.step >= s.done).length;
-  const [shown, setShown] = useState(0);
+  const [shown, setShown] = useState(opening ? STEPS.length : 0);
   const [tip, setTip] = useState(0);
   const [creep, setCreep] = useState(0);
 
@@ -143,11 +164,12 @@ function Builder({ data, retry }) {
   }, [shown]);
 
   const done = shown >= STEPS.length && !!build.claim_token;
-  useEffect(() => {
-    if (!done) return;
-    const t = setTimeout(() => { window.location.href = `/claim/${build.claim_token}?go=1`; }, 1800);
-    return () => clearTimeout(t);
-  }, [done, build.claim_token]);
+  // Same screen carries over into the claim sign-in, so it reads as one page.
+  const openListing = (e) => {
+    e.preventDefault();
+    try { sessionStorage.setItem(`cb_build_${build.claim_token}`, JSON.stringify({ build, audit: { avatar: a.avatar, handle: a.handle }, hotel_name })); } catch {}
+    navigate(`/claim/${build.claim_token}?go=1`);
+  };
 
   const pct = done ? 100 : Math.min(97, ((shown + (build.error ? 0 : creep)) / STEPS.length) * 100);
   const photos = build.photos || [];
@@ -169,7 +191,7 @@ function Builder({ data, retry }) {
             {build.error ? 'We hit a snag' : done ? 'Your listing is ready' : <>Building {hotel_name}'s listing</>}
           </h1>
           <p style={{ color: C.slate, margin: 0 }}>
-            {build.error ? "Something went wrong on our side. Your audit is safe." : done ? 'Taking you to it now…' : <>Pulling from @{a.handle}. This takes about 30 seconds.</>}
+            {build.error ? "Something went wrong on our side. Your audit is safe." : done ? (opening ? 'Opening your listing…' : 'Everything is set. Have a look whenever you’re ready.') : <>Pulling from @{a.handle}. This takes about a minute.</>}
           </p>
         </div>
 
@@ -196,7 +218,7 @@ function Builder({ data, retry }) {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 6, marginTop: '1.1rem' }}>
           {Array.from({ length: 8 }).map((_, i) => (
             photos[i]
-              ? <img key={photos[i]} src={photos[i]} alt="" className="cb-tile cb-in" />
+              ? <img key={photos[i]} src={photos[i]} alt="" decoding="async" className="cb-tile cb-shimmer" onLoad={(e) => e.currentTarget.classList.replace('cb-shimmer', 'cb-in')} />
               : <div key={`e${i}`} className={`cb-tile ${build.error ? '' : 'cb-shimmer'}`} />
           ))}
         </div>
@@ -215,7 +237,9 @@ function Builder({ data, retry }) {
               <p style={{ color: C.sage, fontSize: '0.85rem', marginTop: '0.8rem' }}>Or WhatsApp Benjamin on <a href={WHATSAPP} style={{ color: C.green, fontWeight: 600 }}>+1 623-221-2170</a> and he'll set it up for you.</p>
             </>
           ) : done ? (
-            <a href={`/claim/${build.claim_token}?go=1`} style={cta}>Open my listing →</a>
+            opening
+              ? <p style={{ color: C.slate, fontSize: '0.92rem', margin: 0 }}><span className="cb-spin" style={{ display: 'inline-block', verticalAlign: '-2px', marginRight: 8 }} />Signing you in…</p>
+              : <a href={`/claim/${build.claim_token}?go=1`} onClick={openListing} style={cta}>Open my listing →</a>
           ) : (
             <p key={tip} className="cb-tip" style={{ color: C.slate, fontSize: '0.92rem', margin: 0 }}>{TIPS[tip]}</p>
           )}

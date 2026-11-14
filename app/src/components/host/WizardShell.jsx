@@ -17,6 +17,8 @@ const STEPS = [
 // `missing`: [{ target, hint }] — required fields still empty, in page order.
 // `target` is the DOM id of the field's wrapper; it gets a red outline once the
 // host tries to continue, and the hint / Next button scroll to the first one.
+const findTarget = (m) => document.getElementById(m.target) || (m.fallback && document.getElementById(m.fallback));
+
 export default function WizardShell({ step, children, onBack, onNext, nextLabel, nextDisabled = false, nextHint = "", missing = [] }) {
   const { t } = useTranslation('wizardShell');
   const resolvedNextLabel = nextLabel ?? t('next');
@@ -34,14 +36,14 @@ export default function WizardShell({ step, children, onBack, onNext, nextLabel,
   const hint = missing[0]?.hint || nextHint;
   useEffect(() => {
     if (!attempted) return;
-    const els = missing.map((m) => document.getElementById(m.target)).filter(Boolean);
+    const els = missing.map(findTarget).filter(Boolean);
     els.forEach((el) => el.classList.add("wizard-missing"));
     return () => els.forEach((el) => el.classList.remove("wizard-missing"));
   }, [attempted, missingKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function goToMissing() {
     setAttempted(true);
-    const el = missing[0] && document.getElementById(missing[0].target);
+    const el = missing[0] && findTarget(missing[0]);
     if (!el) return;
     el.scrollIntoView({ behavior: "smooth", block: "center" });
     const field = el.querySelector("input, textarea, select, button");

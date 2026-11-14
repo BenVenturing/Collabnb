@@ -72,9 +72,9 @@ export default function Step3Deliverables() {
           : "";
   const missing = [
     !draft.creator_tier && { target: "wiz-pricing", hint: t('nextHint.needTier') },
-    !hasCompensation && { target: "wiz-pricing", hint: t('nextHint.needCompensation') },
+    !hasCompensation && { target: "wiz-cash", fallback: "wiz-pricing", hint: t('nextHint.needCompensation') },
     !hasDeliverables && { target: "wiz-deliverables", hint: t('nextHint.needDeliverables') },
-    completeRanges.length === 0 && { target: "wiz-dates", hint: t('nextHint.needDates') },
+    completeRanges.length === 0 && { target: "wiz-dates-box", fallback: "wiz-dates", hint: t('nextHint.needDates') },
   ].filter(Boolean);
 
   function resetForm() {
@@ -303,7 +303,7 @@ export default function Step3Deliverables() {
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {dateRanges.map((r, i) => (
               <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
-                <div style={{ flex: 1 }}>
+                <div id={i === 0 ? "wiz-dates-box" : undefined} style={{ flex: 1 }}>
                   <ThemedDateRangePicker
                     start={r.startDate}
                     end={r.endDate}

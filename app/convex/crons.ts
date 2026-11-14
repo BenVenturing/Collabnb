@@ -53,6 +53,20 @@ crons.daily(
   { isStatsPost: false }
 );
 
+// Twice daily — publish the oldest draft each run (2 posts/day) until none remain.
+crons.daily(
+  "publish blog draft (morning)",
+  { hourUTC: 8, minuteUTC: 30 },
+  internal.blog.publishNextDraft,
+  {}
+);
+crons.daily(
+  "publish blog draft (evening)",
+  { hourUTC: 17, minuteUTC: 0 },
+  internal.blog.publishNextDraft,
+  {}
+);
+
 // Monthly on the 1st at 10am UTC — generate a platform stats roundup post.
 crons.monthly(
   "generate monthly stats post",

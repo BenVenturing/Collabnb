@@ -947,6 +947,31 @@ export const getAutomationPaused = query({
   },
 });
 
+export const setAutomationPausedInternal = internalMutation({
+  args: { paused: v.boolean() },
+  handler: async (ctx, { paused }) => {
+    const row = await ctx.db.query("admin_settings").withIndex("by_key", (q) => q.eq("key", BLOG_AUTOMATION_KEY)).first();
+    const value = String(paused);
+    if (row) await ctx.db.patch(row._id, { value });
+    else await ctx.db.insert("admin_settings", { key: BLOG_AUTOMATION_KEY, value });
+  },
+});
+
+// Cron-only: publishes the oldest draft. Stops silently when none are left.
+export const publishNextDraft = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const draft = await ctx.db
+      .query("blog_posts")
+      .withIndex("by_status", (q) => q.eq("status", "draft"))
+      .order("asc")
+      .first();
+    if (!draft) return { skipped: "no drafts left" };
+    await ctx.db.patch(draft._id, { status: "published", published_at: Date.now() });
+    return { published: draft.slug };
+  },
+});
+
 export const setAutomationPaused = mutation({
   args: { paused: v.boolean() },
   handler: async (ctx, { paused }) => {

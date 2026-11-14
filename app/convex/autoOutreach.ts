@@ -66,6 +66,9 @@ export const setConfig = internalMutation({
   },
 });
 
+const MAX_FOLLOWERS = 15_000;
+const BIG_PROPERTY = /\b(resort|resorts|casino|convention|conference cent(er|re)|shingle creek|halekulani|tower|towers|club|vacation (club|rentals?)|timeshare|condo(minium)?s?)\b/i;
+
 // ─── Candidate pool ──────────────────────────────────────────────────────────
 export const pool = internalQuery({
   args: { limit: v.number() },
@@ -84,6 +87,8 @@ export const pool = internalQuery({
       if (!validEmail(p.marketing_email) && !validEmail(p.email) && !p.website) return false;
       stats.withEmail++;
       if (detectChain(p)) return false;
+      if (BIG_PROPERTY.test(String(p.display_name || ""))) return false;
+      if ((p.follower_count ?? 0) > MAX_FOLLOWERS) return false;
       stats.independent++;
       return true;
     });
@@ -94,7 +99,10 @@ export const pool = internalQuery({
     const seen = new Set(taken);
     const unique = eligible.filter((p) => { const ks = key(p); if (ks.some((k) => seen.has(k))) return false; ks.forEach((k) => seen.add(k)); return true; });
     eligible.length = 0; eligible.push(...unique);
-    eligible.sort((a, b) => outreachRank(b) + (b.score ?? 0) / 100 - (outreachRank(a) + (a.score ?? 0) / 100));
+    // Smaller, boutique accounts first; unknown size sits in the middle.
+    const sizeBonus = (p: any) => (p.follower_count == null ? 0.5 : 1 - Math.min(1, p.follower_count / MAX_FOLLOWERS));
+    const rank = (p: any) => outreachRank(p) + (p.score ?? 0) / 100 + sizeBonus(p) + (realHandle(p) ? 1 : 0);
+    eligible.sort((a, b) => rank(b) - rank(a));
     return { sentToday, stats, ids: eligible.slice(0, limit).map((p) => p._id) };
   },
 });
@@ -426,7 +434,7 @@ export const processOne = internalAction({
       return skip(`instagram fetch failed: ${msg.slice(0, 80)}`);
     }
     if (!ig || ig.posts.length < 3 || ig.followers < 100) return skip("private, inactive or tiny instagram");
-    if (ig.followers > 40_000) return skip("too large for boutique outreach");
+    if (ig.followers > MAX_FOLLOWERS) return skip("too large for boutique outreach");
 
     const website = p.website || ig.website;
     let email = validEmail(p.marketing_email) ? p.marketing_email : undefined;

@@ -1,4 +1,4 @@
-import { useQuery } from 'convex/react';
+import { useQuery, useConvexAuth } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -29,7 +29,8 @@ export default function AdminOverview() {
   const unverified   = useQuery(api.profiles.getUnverified);
   const drafts       = useQuery(api.blog.getDrafts);
   const contracts    = useQuery(api.contracts.getAll);
-  const outreach = useQuery(api.autoOutreach.todayStats);
+  const { isAuthenticated } = useConvexAuth();
+  const outreach = useQuery(api.autoOutreach.todayStats, isAuthenticated ? {} : 'skip');
 
   const firstName = (profile?.full_name || 'Ben').split(' ')[0];
   const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });

@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { internalAction } from "./_generated/server";
-import { api } from "./_generated/api";
+import { internal } from "./_generated/api";
 import { HERO_URLS, LOGO_URL } from "./emailCopy";
 
 const ADMIN_TO = "hellocollabnb@gmail.com";
@@ -193,7 +193,7 @@ export const sendAdminNotification = internalAction({
     // email means real money sits waiting on nobody, so these always go out
     // regardless of the notification settings.
     if (type !== "crash" && type !== "payout_approval") {
-      const settings = await ctx.runQuery(api.admin.getSettings);
+      const settings = await ctx.runQuery(internal.admin.getSettingsInternal, {});
       if (settings?.[`notify_${type}`] !== "true") return;
     }
 

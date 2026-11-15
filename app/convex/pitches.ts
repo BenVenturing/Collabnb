@@ -226,9 +226,9 @@ export const createInvite = mutation({
       .withIndex("by_listing", (q) => q.eq("listing_id", args.listingId))
       .filter((q) => q.eq(q.field("creator_id"), args.creatorId))
       .first();
-    if (existing) return existing._id;
+    if (existing) return { id: existing._id, created: false };
 
-    return await ctx.db.insert("pitches", {
+    const id = await ctx.db.insert("pitches", {
       listing_id: args.listingId,
       listing_title: listing.title,
       host_id: hostId,
@@ -245,6 +245,16 @@ export const createInvite = mutation({
       created_at: Date.now(),
       thread_key: args.threadKey,
     });
+
+    await ctx.runMutation(internal.notifications.create, {
+      userId: args.creatorId,
+      type: "invite",
+      title: `${caller.full_name || "A host"} invited you to collaborate`,
+      body: listing.title,
+      link: `#/collabs?open=${args.listingId}`,
+    });
+
+    return { id, created: true };
   },
 });
 

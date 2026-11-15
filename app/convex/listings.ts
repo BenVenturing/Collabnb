@@ -577,7 +577,10 @@ export const update = mutation({
     const { id, ...fields } = args;
     const existing = await ctx.db.get(id);
     if (!existing) throw new ConvexError("Listing not found.");
-    await requireOwnerOrAdmin(ctx, (existing as any).host_id);
+    const caller: any = await requireOwnerOrAdmin(ctx, (existing as any).host_id);
+    if ((existing as any).is_sample === true && caller?.is_admin !== true) {
+      throw new ConvexError("Sample listings can't be edited. Create your own listing instead.");
+    }
     if ((existing as any).host_id) await enforceRateLimit(ctx, `listing:${(existing as any).host_id}`, RATE_LIMITS.LISTING_WRITE);
     const isDraft = (fields.status ?? existing.status) === "draft";
     validateListingFields({ ...existing, ...fields }, { requireCompensation: true, isDraft });

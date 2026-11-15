@@ -298,6 +298,7 @@ export const getById = query({
       country: profile.country ?? null,
       is_verified: profile.is_verified === true,
       is_founder: profile.is_founder === true,
+      is_founding_partner: profile.is_founding_partner === true,
       portfolio: profile.portfolio ?? null,
       instagram_handle: profile.instagram_handle ?? null,
       tiktok_handle: profile.tiktok_handle ?? null,

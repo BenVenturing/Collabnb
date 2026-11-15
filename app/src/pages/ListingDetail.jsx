@@ -1598,6 +1598,11 @@ export default function ListingDetail({ previewListing = null, preview = false }
                   {t('listedBy', { name: hostDisplayName })}
                 </p>
                 <p style={{ fontSize: '0.82rem', color: 'var(--sage)' }}>{isRealHostListing ? t('hostModal.defaultRole') : SAMPLE_HOST.role}</p>
+                {isRealHostListing && hostProfile.is_founding_partner === true && (
+                  <span style={{ display: 'inline-block', marginTop: '0.3rem', padding: '0.15rem 0.55rem', borderRadius: '999px', background: 'rgba(74,155,127,0.14)', color: '#234A3A', fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.02em' }}>
+                    {t('foundingPartner', 'Founding Partner')}
+                  </span>
+                )}
               </div>
             </div>
 
@@ -1777,6 +1782,11 @@ export default function ListingDetail({ previewListing = null, preview = false }
                   </button>
                   <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1rem', color: 'var(--ink)', marginBottom: '0.15rem' }}>{hostDisplayName}</p>
                   <p style={{ fontSize: '0.75rem', color: 'var(--sage)', marginBottom: '0.875rem' }}>{t('collabnbHost')}</p>
+                  {isRealHostListing && hostProfile.is_founding_partner === true && (
+                  <span style={{ display: 'inline-block', marginBottom: '0.6rem', padding: '0.15rem 0.55rem', borderRadius: '999px', background: 'rgba(74,155,127,0.14)', color: '#234A3A', fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.02em' }}>
+                    {t('foundingPartner', 'Founding Partner')}
+                  </span>
+                )}
                   {!isRealHostListing && [{ val: `${SAMPLE_HOST.years_hosting}`, label: t('yearsHosting') }].map(({ val, label }) => (
                     <div key={label} style={{ borderTop: '1px solid rgba(25,37,36,0.07)', paddingTop: '0.5rem', marginTop: '0.5rem' }}>
                       <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.05rem', color: 'var(--ink)' }}>{val}</p>

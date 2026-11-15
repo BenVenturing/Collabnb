@@ -4,6 +4,7 @@ import { internal } from "./_generated/api";
 import { requireAdmin, requireOwnerOrAdmin, canAccessAdmin, canAccessOwner } from "./lib/auth";
 import { REJECTION_ACCESS_PATCH } from "./lib/rejection";
 import { cleanPlainText, cleanOptionalUrl } from "./lib/sanitize";
+import { countApprovedHostReferrals, FOUNDING_PARTNER_HOTELS } from "./referrals";
 
 // ─── Shared Constants ───────────────────────────────────────────────────────────
 export const FOLLOWER_THRESHOLDS = {
@@ -235,6 +236,15 @@ export const approveHost = mutation({
       patch.role_switch_token_expires_at = now + ROLE_SWITCH_LINK_TTL_DAYS * 24 * 60 * 60 * 1000;
     }
     await ctx.db.patch(args.profileId, patch);
+
+    const referrerId = (profile as any).referred_by;
+    if (referrerId) {
+      const referrer: any = await ctx.db.get(referrerId as any);
+      if (referrer && referrer.role === "host" && referrer.is_founding_partner !== true
+        && (await countApprovedHostReferrals(ctx, String(referrerId))) >= FOUNDING_PARTNER_HOTELS) {
+        await ctx.db.patch(referrer._id, { is_founding_partner: true });
+      }
+    }
 
     await ctx.db.insert("admin_audit_log", {
       action: "approve_host",

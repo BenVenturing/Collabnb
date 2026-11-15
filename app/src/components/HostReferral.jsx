@@ -46,7 +46,7 @@ export default function HostReferral() {
   return (
     <div style={{ background: 'rgba(209,235,219,0.15)', border: '1px solid rgba(74,155,127,0.2)', borderRadius: '1rem', padding: '1rem 1.1rem' }}>
       <p style={{ fontSize: '0.8rem', color: 'var(--sage)', margin: '0 0 0.75rem', lineHeight: 1.55 }}>
-        {t('hostReferral.intro', 'Know another hotel or villa that would fit? Send them your link. They join as a founding host while spots last.')}
+        {t('hostReferral.intro', 'Know another hotel or villa that would fit? Send them your link. They join as a founding host while spots last. Once {{target}} hotels you invited are approved, your listing gets a Founding Partner badge.', { target: stats?.partner_target || 3 })}
       </p>
       {!stats?.code ? (
         <button type="button" onClick={create} disabled={busy || stats === undefined} style={{ ...btn, background: 'var(--ink)', color: '#fff', borderColor: 'var(--ink)', opacity: busy ? 0.6 : 1 }}>
@@ -59,7 +59,9 @@ export default function HostReferral() {
             <button type="button" onClick={copy} style={btn}>{copied ? t('hostReferral.copied', 'Copied') : t('hostReferral.copy', 'Copy link')}</button>
             <a href={`https://wa.me/?text=${encodeURIComponent(message)}`} target="_blank" rel="noopener noreferrer" style={btn}>{t('hostReferral.whatsapp', 'Send on WhatsApp')}</a>
             <span style={{ fontSize: '0.78rem', color: 'var(--sage)' }}>
-              {t('hostReferral.joined', '{{count}} joined with your link', { count: stats.signups_rewarded || 0 })}
+              {profile?.is_founding_partner
+                ? t('hostReferral.partner', 'Founding Partner badge earned')
+                : t('hostReferral.progress', '{{approved}} of {{target}} approved · {{count}} signed up', { approved: stats.approved_hosts || 0, target: stats.partner_target || 3, count: stats.signups_rewarded || 0 })}
             </span>
           </div>
         </>

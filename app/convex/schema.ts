@@ -32,6 +32,7 @@ export default defineSchema({
     age_confirmed_at: v.optional(v.number()),
     legal_accepted_at: v.optional(v.number()),
     is_founder: v.optional(v.boolean()),
+    is_founding_partner: v.optional(v.boolean()),
     beta: v.optional(v.boolean()),
     city: v.optional(v.string()),
     region: v.optional(v.string()),
@@ -574,7 +575,8 @@ export default defineSchema({
     signup_bonus_awarded: v.boolean(),
   })
     .index("by_code", ["code"])
-    .index("by_user", ["used_by_id"]),
+    .index("by_user", ["used_by_id"])
+    .index("by_referrer", ["referrer_id"]),
 
   pitches: defineTable({
     listing_id: v.string(),

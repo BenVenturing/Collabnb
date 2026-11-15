@@ -5,6 +5,20 @@ import { requireOwnerOrAdmin, canAccessOwner } from "./lib/auth";
 // Referred signups get a longer trial instead of a free month — see
 // gates.ts TRIAL_DURATION_DAYS / REFERRED_TRIAL_DURATION_DAYS.
 export const REFERRAL_CODE_MAX_USES = 6;
+export const FOUNDING_PARTNER_HOTELS = 3;
+
+export async function countApprovedHostReferrals(ctx: any, referrerId: string): Promise<number> {
+  const uses = await ctx.db
+    .query("referral_uses")
+    .withIndex("by_referrer", (q: any) => q.eq("referrer_id", referrerId))
+    .collect();
+  let n = 0;
+  for (const u of uses) {
+    const p: any = await ctx.db.get(u.used_by_id as any);
+    if (p && p.role === "host" && p.host_verified === true) n++;
+  }
+  return n;
+}
 
 function makeCode(username: string): string {
   const prefix = username.replace(/[^a-z0-9]/gi, "").toUpperCase().slice(0, 4) || "USER";
@@ -32,6 +46,8 @@ export const getMyCode = query({
       use_count: codeDoc.use_count,
       max_uses: codeDoc.max_uses,
       signups_rewarded: uses.filter((u) => u.signup_bonus_awarded).length,
+      approved_hosts: await countApprovedHostReferrals(ctx, args.profileId),
+      partner_target: FOUNDING_PARTNER_HOTELS,
     };
   },
 });

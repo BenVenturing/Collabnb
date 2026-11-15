@@ -9,6 +9,8 @@ const REPORT_REASONS = [
   "poor_communication",
   "failed_collaboration",
   "unprofessional_behavior",
+  "harassment",
+  "spam",
   "other",
 ] as const;
 

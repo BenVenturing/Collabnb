@@ -81,7 +81,8 @@ export const getIncomingForMe = query({
       .query("threads")
       .withIndex("by_participant", (q) => q.eq("participant_id", myId))
       .collect();
-    const incoming = rows.filter((r) => r.tag !== "Collabnb" && r.tag !== "Admin" && r.owner_id !== myId && !r.hidden_for?.includes(myId));
+    const blocked = new Set<string>((profile as any).blocked_user_ids ?? []);
+    const incoming = rows.filter((r) => r.tag !== "Collabnb" && r.tag !== "Admin" && r.owner_id !== myId && !r.hidden_for?.includes(myId) && !(r.owner_id && blocked.has(r.owner_id)));
 
     return Promise.all(
       incoming.map(async (r) => {
@@ -107,6 +108,7 @@ export const getIncomingForMe = query({
             : "New",
           unread: last && last.sender_id === r.owner_id && last.created_at > myReadAt ? 1 : 0,
           is_founder: (other as any)?.is_founder === true,
+          other_id: r.owner_id ?? null,
         };
       })
     );
@@ -127,8 +129,9 @@ export const getMine = query({
       .withIndex("by_owner", (q) => q.eq("owner_id", myId))
       .collect();
 
+    const blocked = new Set<string>((profile as any).blocked_user_ids ?? []);
     return Promise.all(
-      rows.filter((r) => !r.hidden_for?.includes(myId)).map(async (r) => {
+      rows.filter((r) => !r.hidden_for?.includes(myId) && !(r.participant_id && blocked.has(r.participant_id))).map(async (r) => {
         const key = r.thread_key as string;
         const other = r.participant_id ? await ctx.db.get(r.participant_id as any) : null;
         const msgs = key
@@ -153,6 +156,7 @@ export const getMine = query({
             : "New",
           unread: last && last.sender_id === r.participant_id && last.created_at > myReadAt ? 1 : 0,
           is_founder: (other as any)?.is_founder === true,
+          other_id: r.participant_id ?? null,
         };
       })
     );

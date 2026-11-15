@@ -998,6 +998,8 @@ export default defineSchema({
       v.literal("poor_communication"),
       v.literal("failed_collaboration"),
       v.literal("unprofessional_behavior"),
+      v.literal("harassment"),
+      v.literal("spam"),
       v.literal("other")
     ),
     details: v.optional(v.string()),

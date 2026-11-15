@@ -12,6 +12,8 @@ const REASON_LABELS = {
   poor_communication: 'Poor Communication',
   failed_collaboration: 'Failed Collaboration',
   unprofessional_behavior: 'Unprofessional Behavior',
+  harassment: 'Harassment',
+  spam: 'Spam',
   other: 'Other',
 };
 

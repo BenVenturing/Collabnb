@@ -158,6 +158,8 @@ export default defineSchema({
     // the short wallet-pass consent shown in Settings, before their first
     // "Add to Google Wallet" — required once, never re-shown after.
     wallet_terms_accepted_at: v.optional(v.number()),
+    terms_accepted_at: v.optional(v.number()),
+    terms_version: v.optional(v.string()),
     // Apple Wallet counterpart to the google_wallet_* fields above — see
     // appleWallet.ts. serial is this pass's unique identifier (mirrors
     // google_wallet_object_id); updated_at is the "tag" PassKit's
@@ -1000,9 +1002,11 @@ export default defineSchema({
       v.literal("unprofessional_behavior"),
       v.literal("harassment"),
       v.literal("spam"),
+      v.literal("objectionable_content"),
       v.literal("other")
     ),
     details: v.optional(v.string()),
+    context: v.optional(v.string()),
     status: v.union(v.literal("pending"), v.literal("dismissed"), v.literal("actioned")),
     admin_note: v.optional(v.string()),
     created_at: v.number(),

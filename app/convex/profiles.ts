@@ -1505,6 +1505,14 @@ export const acceptWalletTerms = mutation({
   },
 });
 
+export const acceptTerms = mutation({
+  args: { profileId: v.string(), version: v.string() },
+  handler: async (ctx, { profileId, version }) => {
+    await requireOwnerOrAdmin(ctx, profileId);
+    await ctx.db.patch(profileId as any, { terms_accepted_at: Date.now(), terms_version: version });
+  },
+});
+
 function deriveCreatorTier(followers: number): string {
   if (followers >= 50000) return "Influencer";
   if (followers >= 10000) return "Micro Influencer";

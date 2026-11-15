@@ -180,7 +180,7 @@ export const sendWelcomeEmail = internalAction({
 // Set it with: npx convex env set RESEND_API_KEY re_xxxxxxxxxxxx
 export const sendAdminNotification = internalAction({
   args: {
-    type: v.union(v.literal("signup"), v.literal("message"), v.literal("collab"), v.literal("crash"), v.literal("payout_approval")),
+    type: v.union(v.literal("signup"), v.literal("message"), v.literal("collab"), v.literal("crash"), v.literal("payout_approval"), v.literal("report")),
     subject: v.string(),
     body: v.string(),
   },
@@ -192,7 +192,7 @@ export const sendAdminNotification = internalAction({
     // payout approvals, which are never routine/optional: a missed approval
     // email means real money sits waiting on nobody, so these always go out
     // regardless of the notification settings.
-    if (type !== "crash" && type !== "payout_approval") {
+    if (type !== "crash" && type !== "payout_approval" && type !== "report") {
       const settings = await ctx.runQuery(internal.admin.getSettingsInternal, {});
       if (settings?.[`notify_${type}`] !== "true") return;
     }

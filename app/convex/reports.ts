@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
 import { requireOwnerOrAdmin, requireAdmin, canAccessAdmin } from "./lib/auth";
 import { cleanPlainText } from "./lib/sanitize";
+import { internal } from "./_generated/api";
 import { enforceRateLimit, RATE_LIMITS } from "./lib/rateLimit";
 
 const REPORT_REASONS = [
@@ -11,6 +12,7 @@ const REPORT_REASONS = [
   "unprofessional_behavior",
   "harassment",
   "spam",
+  "objectionable_content",
   "other",
 ] as const;
 
@@ -21,6 +23,7 @@ export const submitReport = mutation({
     reporterId: v.string(),
     reason: v.union(...REPORT_REASONS.map((r) => v.literal(r))),
     details: v.optional(v.string()),
+    context: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     await requireOwnerOrAdmin(ctx, args.reporterId);
@@ -30,8 +33,14 @@ export const submitReport = mutation({
       reporter_id: args.reporterId,
       reason: args.reason,
       details: args.details ? cleanPlainText(args.details, 2000) : "",
+      context: args.context ? cleanPlainText(args.context, 300) : undefined,
       status: "pending",
       created_at: Date.now(),
+    });
+    await ctx.scheduler.runAfter(0, internal.email.sendAdminNotification, {
+      type: "report",
+      subject: `User report: ${args.reason}`,
+      body: `A user was reported (${args.reason}).\n${args.context ? `Where: ${args.context}\n` : ""}${args.details ? `Details: ${cleanPlainText(args.details, 500)}\n` : ""}\nReview within 24 hours: https://collabnb.com/admin`,
     });
     return id;
   },

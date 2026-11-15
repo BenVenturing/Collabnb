@@ -1069,7 +1069,7 @@ function openLoginModal() {
         appearance: {
           variables: {
             colorPrimary: '#3C5759',
-            colorBackground: 'rgba(255,255,255,0.24)',
+            colorBackground: '#ffffff',
             colorText: '#192524',
             colorTextSecondary: '#3C5759',
             colorInputBackground: '#ffffff',
@@ -1077,6 +1077,29 @@ function openLoginModal() {
             borderRadius: '12px',
             fontFamily: 'system-ui, -apple-system, sans-serif',
             fontSize: '0.9375rem',
+          },
+          elements: {
+            card: { background: '#ffffff', boxShadow: '0 24px 60px rgba(20,30,28,0.14), 0 2px 6px rgba(20,30,28,0.06)' },
+            cardBox: { background: '#ffffff', boxShadow: '0 24px 60px rgba(20,30,28,0.14)' },
+            footer: { background: '#fafaf9' },
+            formButtonPrimary: {
+              background: 'linear-gradient(180deg, rgba(74,98,100,0.78), rgba(44,64,66,0.92))',
+              backdropFilter: 'blur(14px) saturate(180%)',
+              WebkitBackdropFilter: 'blur(14px) saturate(180%)',
+              border: '1px solid rgba(255,255,255,0.35)',
+              borderRadius: '999px',
+              boxShadow: 'inset 0 1.5px 0 rgba(255,255,255,0.55), inset 0 -8px 14px rgba(255,255,255,0.08), 0 8px 20px rgba(44,64,66,0.28)',
+              textShadow: '0 1px 1px rgba(0,0,0,0.25)',
+            },
+            socialButtonsBlockButton: {
+              background: 'linear-gradient(180deg, rgba(255,255,255,0.85), rgba(240,244,243,0.6))',
+              backdropFilter: 'blur(14px) saturate(180%)',
+              WebkitBackdropFilter: 'blur(14px) saturate(180%)',
+              border: '1px solid rgba(255,255,255,0.9)',
+              borderRadius: '999px',
+              boxShadow: 'inset 0 1.5px 0 rgba(255,255,255,1), inset 0 -6px 12px rgba(120,140,138,0.08), 0 6px 16px rgba(20,30,28,0.12), 0 0 0 1px rgba(20,30,28,0.06)',
+            },
+            formFieldInput: { borderRadius: '999px', background: '#ffffff' },
           },
         },
       });

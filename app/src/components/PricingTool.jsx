@@ -291,7 +291,7 @@ export default function PricingTool({ mode = "sandbox", initialValue, onChange }
   const { t } = useTranslation('pricingTool');
   const [entryMode, setEntryMode] = useState("deliverables");
   const [tierId, setTierId] = useState(normalizeTierId(initialValue?.tierId) || "ugc_pro");
-  const [compensationType, setCompensationType] = useState(initialValue?.compensationType || "paid");
+  const [compensationType, setCompensationType] = useState(initialValue?.compensationType || "hybrid");
   const [complexity, setComplexity] = useState(initialValue?.complexity || "standard");
   const [stayValue, setStayValue] = useState(initialValue?.stayValue || 0);
   const [deliverables, setDeliverables] = useState(initialValue?.deliverables?.length ? initialValue.deliverables : []);
@@ -331,6 +331,8 @@ export default function PricingTool({ mode = "sandbox", initialValue, onChange }
   const hardFloor = calcHardFloor(midpoint, stayOffset);
   const warnThreshold = calcWarnThreshold(midpoint, stayOffset);
   const zone = points > 0 ? evaluateZone(cashAmount, midpoint, stayOffset) : null;
+  const cashMidpoint = Math.max(hardFloor, midpoint - stayOffset);
+  const cashRange = { low: Math.max(hardFloor, range.low - stayOffset), high: Math.max(hardFloor, range.high - stayOffset) };
   const loadTier = computeLoadTier(deliverables);
 
   // Budget mode
@@ -518,14 +520,14 @@ export default function PricingTool({ mode = "sandbox", initialValue, onChange }
           {points > 0 && (
             <>
               <div style={{ fontFamily: "var(--font-blog-display)", fontWeight: 600, fontSize: 28, color: "var(--ink)", margin: "10px 0 2px" }}>
-                {fmt(range.low)}–{fmt(range.high)}
+                {fmt(cashRange.low)}–{fmt(cashRange.high)}
               </div>
               <p style={{ fontSize: 12, color: "var(--slate)", margin: "0 0 4px" }}>
                 {t('mathSummary', { points, rate: fmt(tier.ratePerPoint), tier: tier.label, complexity: complexity === "complex" ? t('complexity.complexShort') : t('complexity.standardShort'), midpoint: fmt(midpoint) })}
                 {stayOffset > 0 && t('stayOffsetSuffix', { offset: fmt(stayOffset) })}
               </p>
 
-              <ThreeZoneScale hardFloor={hardFloor} warnThreshold={warnThreshold} range={range} cashAmount={cashAmount} midpoint={midpoint} />
+              <ThreeZoneScale hardFloor={hardFloor} warnThreshold={warnThreshold} range={cashRange} cashAmount={cashAmount} midpoint={cashMidpoint} />
 
               {zone && zone !== "green" && (
                 <p style={{ marginTop: 10, fontSize: 11, color: "var(--sage)", lineHeight: 1.4 }}>

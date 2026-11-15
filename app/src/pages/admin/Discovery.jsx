@@ -28,6 +28,10 @@ const OUTREACH_LOG_LABELS = {
   emailed: 'Emailed',
   contacted: 'DMed',
   whatsapped: 'WhatsApped',
+  walkin_visited: 'Walk-in visit',
+  walkin_yes: 'Walk-in: yes',
+  walkin_maybe: 'Walk-in: maybe',
+  walkin_no: 'Walk-in: no',
   replied: 'Responded',
   declined: 'Declined',
   signed: 'Signed',
@@ -169,6 +173,8 @@ const PROSPECT_TAGS = {
   'contacted-clicked': 'Already emailed earlier and they clicked a link',
   auto: 'Auto outreach sent: audit page + claim link emailed, DM nudge drafted below (send it ~2 days later)',
   'auto-skip': 'Auto outreach skipped this hotel (reason in the outreach log)',
+  LBK: 'Lombok — from the Google Maps area sweep',
+  BALI: 'Bali — from the Google Maps area sweep',
 };
 
 function TagChips({ tags, small }) {
@@ -488,9 +494,9 @@ function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
               title={!prospect.email ? (prospect.contact_url ? 'No email yet — only a website/contact form on file. Click to add an email' : 'No email on file — click to add one') : emailSent ? 'Already emailed — click to expand and review or resend' : 'Send the cold outreach email'}
               style={{
                 padding: '0.32rem 0.8rem', borderRadius: 9999, fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer',
-                border: prospect.email ? 'none' : '1.5px solid rgba(25,37,36,0.2)',
-                background: emailSent ? '#166534' : prospect.email ? '#192524' : 'transparent',
-                color: emailSent || prospect.email ? '#fff' : '#3C5759',
+                border: (prospect.email || prospect.marketing_email) ? 'none' : '1.5px solid rgba(25,37,36,0.2)',
+                background: emailSent ? '#166534' : (prospect.email || prospect.marketing_email) ? '#192524' : 'transparent',
+                color: emailSent || prospect.email || prospect.marketing_email ? '#fff' : '#3C5759',
                 opacity: sendingStep === 'now' ? 0.5 : 1,
               }}>
               {sendingStep === 'now' ? 'Emailing…' : 'Email'}
@@ -636,12 +642,6 @@ function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
               </p>
             </div>
           )}
-          <div>
-            <span style={label}>DM draft</span>
-            <textarea value={dmDraft} onChange={e => setDmDraft(e.target.value)}
-              onBlur={() => dmDraft !== (prospect.dm_draft || '') && update({ id: prospect._id, dmDraft })}
-              rows={3} placeholder="Write the outreach message here, then copy it into Instagram."
-              style={{ ...input, width: '100%', resize: 'vertical' }} />
           {(prospect.scraped_emails?.length > 0 || prospect.scraped_phones?.length > 0) && (
             <div>
               <span style={label}>Found on their site</span>
@@ -650,6 +650,12 @@ function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
               </p>
             </div>
           )}
+          <div>
+            <span style={label}>DM draft</span>
+            <textarea value={dmDraft} onChange={e => setDmDraft(e.target.value)}
+              onBlur={() => dmDraft !== (prospect.dm_draft || '') && update({ id: prospect._id, dmDraft })}
+              rows={3} placeholder="Write the outreach message here, then copy it into Instagram."
+              style={{ ...input, width: '100%', resize: 'vertical' }} />
             <div style={{ display: 'flex', gap: '0.3rem', marginTop: '0.35rem', flexWrap: 'wrap', alignItems: 'center' }}>
               {prospect.kind === 'host' && (
                 <select aria-label="Copy angle" value={angle} onChange={(e) => setAngle(e.target.value)}
@@ -1477,6 +1483,85 @@ function lastActivityAt(p) {
   return log?.length ? log[log.length - 1].at : p._creationTime;
 }
 
+const WA_MESSAGE_KEY = 'collabnb_walkin_wa_message';
+const WA_MESSAGE_DEFAULT = "Hi {hotel}, I'm Ben from Collabnb. I'm in Lombok this month. Could I stop by to show you how we send content creators to boutique stays in exchange for photos and video you keep?";
+const areaOf = (p) => String(p.location || '').split(',')[0].trim();
+const ratingOf = (p) => { const m = /Google (\d\.\d) \((\d+) reviews\)/.exec(p.notes || ''); return m ? { score: Number(m[1]), count: Number(m[2]) } : null; };
+const addressOf = (p) => { const parts = String(p.notes || '').split(' · '); return /^Google /.test(parts[0]) && parts[2] && !/^Landline/.test(parts[2]) ? parts[2] : ''; };
+const walkInState = (p) => {
+  const types = (p.outreach_log || []).map((e) => e.type);
+  return { visited: types.some((t) => t.startsWith('walkin_')), maybe: types.includes('walkin_maybe') };
+};
+
+function WalkInList({ hosts }) {
+  const logWalkIn = useMutation(api.prospects.logWalkIn);
+  const markWhatsapped = useMutation(api.prospects.markWhatsapped);
+  const [message, setMessage] = useState(() => { try { return localStorage.getItem(WA_MESSAGE_KEY) || WA_MESSAGE_DEFAULT; } catch { return WA_MESSAGE_DEFAULT; } });
+  const [editing, setEditing] = useState(false);
+  const saveMessage = (v) => { setMessage(v); try { localStorage.setItem(WA_MESSAGE_KEY, v); } catch { /* storage blocked */ } };
+
+  const rows = hosts
+    .map((p) => ({ p, rating: ratingOf(p), state: walkInState(p) }))
+    .sort((a, b) => (a.p.whatsapped_at ? 1 : 0) - (b.p.whatsapped_at ? 1 : 0)
+      || (b.p.whatsapp ? 1 : 0) - (a.p.whatsapp ? 1 : 0)
+      || (b.rating?.score || 0) - (a.rating?.score || 0)
+      || (b.rating?.count || 0) - (a.rating?.count || 0));
+  const toMessage = rows.filter((r) => r.p.whatsapp && !r.p.whatsapped_at).length;
+  const visited = rows.filter((r) => r.state.visited).length;
+
+  const openWa = (p) => {
+    const digits = p.whatsapp.replace(/\D/g, '');
+    const text = message.replaceAll('{hotel}', p.display_name || 'there');
+    window.open(`https://wa.me/${digits}?text=${encodeURIComponent(text)}`, '_blank', 'noopener');
+    if (!p.whatsapped_at) markWhatsapped({ id: p._id }).catch(() => {});
+  };
+  const chip = (on, tone) => ({
+    padding: '0.4rem 0.7rem', borderRadius: 9999, fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer',
+    border: on ? '1.5px solid transparent' : '1.5px solid rgba(25,37,36,0.18)', background: on ? tone : 'transparent', color: on ? '#fff' : '#3C5759',
+  });
+
+  return (
+    <div style={{ maxWidth: 760 }}>
+      <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center', marginBottom: '0.6rem', fontSize: '0.76rem', color: '#646B62' }}>
+        <span><strong style={{ color: '#192524' }}>{toMessage}</strong> to message</span>
+        <span><strong style={{ color: '#192524' }}>{visited}</strong> visited</span>
+        <span>{rows.length} hotels</span>
+        <button onClick={() => setEditing((e) => !e)} style={{ ...chip(false), padding: '0.25rem 0.65rem' }}>{editing ? 'Done' : 'Edit WhatsApp message'}</button>
+      </div>
+      {editing && (
+        <div style={{ marginBottom: '0.75rem' }}>
+          <textarea aria-label="WhatsApp message" value={message} onChange={(e) => saveMessage(e.target.value)} rows={4}
+            style={{ ...input, width: '100%', boxSizing: 'border-box', fontSize: '0.8rem', lineHeight: 1.5, resize: 'vertical' }} />
+          <div style={{ fontSize: '0.7rem', color: '#646B62', marginTop: 4 }}>{'{hotel}'} is replaced with the hotel name. Saved on this device only.</div>
+        </div>
+      )}
+      {rows.length === 0 && <div style={{ fontSize: '0.8rem', color: '#646B62', padding: '1rem 0' }}>No hotels match. Pick a region or clear the area filter.</div>}
+      {rows.map(({ p, rating, state }) => (
+        <div key={String(p._id)} style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', padding: '0.7rem 0', borderTop: '1px solid rgba(25,37,36,0.08)' }}>
+          <div style={{ flex: '1 1 240px', minWidth: 0 }}>
+            <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#192524' }}>{p.display_name || p.instagram_handle}</div>
+            <div style={{ fontSize: '0.74rem', color: '#646B62', lineHeight: 1.45 }}>
+              {[rating ? `Google ${rating.score.toFixed(1)} (${rating.count})` : '', areaOf(p)].filter(Boolean).join(' · ')}
+              {addressOf(p) && <div style={{ overflowWrap: 'anywhere' }}>{addressOf(p)}</div>}
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+            <button onClick={() => openWa(p)} disabled={!p.whatsapp}
+              title={!p.whatsapp ? 'No WhatsApp number on file' : p.whatsapped_at ? 'Already messaged. Click to reopen the chat' : 'Opens WhatsApp with the message typed'}
+              style={{ ...chip(!!p.whatsapp, p.whatsapped_at ? '#166534' : '#192524'), opacity: p.whatsapp ? 1 : 0.45, cursor: p.whatsapp ? 'pointer' : 'default' }}>
+              {p.whatsapp ? (p.whatsapped_at ? 'WA sent ↗' : 'WA ↗') : 'No WA'}
+            </button>
+            <button onClick={() => logWalkIn({ id: p._id, outcome: 'visited' }).catch(() => {})} style={chip(state.visited, '#0f766e')}>Visited</button>
+            <button onClick={() => logWalkIn({ id: p._id, outcome: 'yes' }).catch(() => {})} title="Moves the hotel to Responded" style={chip(false)}>Yes</button>
+            <button onClick={() => logWalkIn({ id: p._id, outcome: 'maybe' }).catch(() => {})} style={chip(state.maybe, '#b45309')}>Maybe</button>
+            <button onClick={() => logWalkIn({ id: p._id, outcome: 'no' }).catch(() => {})} title="Moves the hotel to Declined" style={chip(false)}>No</button>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function HostCrmBoard() {
   const [tier, setTier] = useState('');
   const [location, setLocation] = useState('');
@@ -1484,6 +1569,9 @@ function HostCrmBoard() {
   const [filterText, setFilterText] = useState('');
   const [hideChains, setHideChains] = useState(false);
   const [targetsOnly, setTargetsOnly] = useState(false);
+  const [region, setRegion] = useState('');
+  const [area, setArea] = useState('');
+  const [walkIn, setWalkIn] = useState(false);
   const [selected, setSelected] = useState(() => new Set());
   const [dragId, setDragId] = useState(null);
   const [dragOverCol, setDragOverCol] = useState(null);
@@ -1506,6 +1594,8 @@ function HostCrmBoard() {
     if (p.status === 'new') return false; // pool candidates live in Host Outreach only
     if (hideChains && detectChain(p)) return false;
     if (targetsOnly && !p.target) return false;
+    if (region && !(p.tags || []).includes(region)) return false;
+    if (area && areaOf(p) !== area) return false;
     if (!filterText.trim()) return true;
     const t = filterText.toLowerCase();
     return p.instagram_handle.toLowerCase().includes(t)
@@ -1513,6 +1603,8 @@ function HostCrmBoard() {
       || (p.location || '').toLowerCase().includes(t)
       || (p.niche || '').toLowerCase().includes(t);
   });
+
+  const areas = [...new Set(hosts.filter((p) => p.status !== 'new' && (!region || (p.tags || []).includes(region))).map(areaOf).filter(Boolean))].sort();
 
   const byColumn = {};
   for (const col of CRM_COLUMNS) byColumn[col.id] = [];
@@ -1607,6 +1699,18 @@ function HostCrmBoard() {
           style={{ padding: '0.35rem 0.8rem', borderRadius: 9999, border: '1px solid rgba(25,37,36,0.15)', background: targetsOnly ? '#0f766e' : 'transparent', color: targetsOnly ? '#fff' : '#3C5759', fontSize: '0.74rem', fontWeight: 600, cursor: 'pointer' }}>
           Targets only
         </button>
+        <button onClick={() => setRegion((r) => (r === '' ? 'LBK' : r === 'LBK' ? 'BALI' : ''))} title="Show only hotels from the Lombok or Bali sweep"
+          style={{ padding: '0.35rem 0.8rem', borderRadius: 9999, border: '1px solid rgba(25,37,36,0.15)', background: region ? '#0f766e' : 'transparent', color: region ? '#fff' : '#3C5759', fontSize: '0.74rem', fontWeight: 600, cursor: 'pointer' }}>
+          {region === 'LBK' ? 'Lombok only' : region === 'BALI' ? 'Bali only' : 'All regions'}
+        </button>
+        <select aria-label="Filter by area" value={area} onChange={(e) => setArea(e.target.value)} style={{ ...input, padding: '0.35rem 0.6rem', fontSize: '0.74rem', maxWidth: 170 }}>
+          <option value="">All areas</option>
+          {areas.map((x) => <option key={x} value={x}>{x}</option>)}
+        </select>
+        <button onClick={() => setWalkIn((w) => !w)} title="Plain list of Confirmed hotels for WhatsApp and walk-ins, best Google rating first"
+          style={{ padding: '0.35rem 0.8rem', borderRadius: 9999, border: '1px solid rgba(25,37,36,0.15)', background: walkIn ? '#0f766e' : 'transparent', color: walkIn ? '#fff' : '#3C5759', fontSize: '0.74rem', fontWeight: 600, cursor: 'pointer' }}>
+          Walk-in list
+        </button>
         <button onClick={bulkGenerate} disabled={bulkBusy || selected.size === 0}
           title="Drafts a message for each selected host, rotating through the 5 angle templates"
           style={{ padding: '0.35rem 0.8rem', borderRadius: 9999, border: 'none', background: '#192524', color: '#fff', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer', opacity: (bulkBusy || selected.size === 0) ? 0.5 : 1 }}>
@@ -1638,6 +1742,7 @@ function HostCrmBoard() {
         </div>
       )}
 
+      {walkIn ? <WalkInList hosts={byColumn.queued} /> : (
       <div style={{ display: 'flex', gap: '1.25rem', overflowX: 'auto', paddingBottom: '0.5rem', alignItems: 'flex-start' }}>
         {CRM_COLUMNS.map((col) => (
           <div key={col.id}
@@ -1669,6 +1774,7 @@ function HostCrmBoard() {
           </div>
         ))}
       </div>
+      )}
     </div>
   );
 }

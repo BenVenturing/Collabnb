@@ -28,6 +28,7 @@ export const RATE_LIMITS = {
   PITCH: { max: 20, windowMs: 24 * 60 * 60 * 1000 },          // pitches.create backstop — 20/day per user (pitch_counts already caps at 10/month; this only guards the direct-mutation-call path that skips it)
   CRASH_REPORT: { max: 20, windowMs: 60 * 60 * 1000 },        // crashReports.submitCrashReport — 20/hour per caller, mainly to cap a crash-loop rather than deter abuse
   STAY_ALERT_WRITE: { max: 40, windowMs: 24 * 60 * 60 * 1000 }, // stayAlerts.save — 40/day per user (5 alerts, so this only caps a save loop)
+  WISHLIST_WRITE: { max: 60, windowMs: 24 * 60 * 60 * 1000 }, // wishlist.add — 60/day per user
   AI_DRAFT: { max: 20, windowMs: 60 * 60 * 1000 },            // aiAssistant.draftReply — 20/hour per user, caps Collabnb's NVIDIA spend per user and guards a runaway loop burning a connected personal key
   SOCIAL_REFRESH: { max: 5, windowMs: 24 * 60 * 60 * 1000 },  // creatorSocial.syncMine — 5 manual stat refreshes/day per creator (daily cron covers the rest; protects Meta/TikTok API quotas)
   MCP_CALL: { max: 300, windowMs: 60 * 60 * 1000 },          // POST /mcp tool calls — 300/hour per user, caps a runaway agent loop (writes still hit their own limits above)

@@ -903,6 +903,20 @@ export const markWhatsapped = mutation({
   },
 });
 
+export const logWalkIn = mutation({
+  args: { id: v.id("prospects"), outcome: v.union(v.literal("visited"), v.literal("yes"), v.literal("maybe"), v.literal("no")) },
+  handler: async (ctx, { id, outcome }) => {
+    await requireAdmin(ctx);
+    const p = await ctx.db.get(id);
+    if (!p) throw new Error("Prospect not found");
+    const log = (p as any).outreach_log || [];
+    const patch: Record<string, any> = { outreach_log: [...log, { at: Date.now(), type: `walkin_${outcome}` }] };
+    if (outcome === "yes") { patch.status = "replied"; patch.replied_at = Date.now(); }
+    if (outcome === "no") patch.status = "declined";
+    await ctx.db.patch(id, patch);
+  },
+});
+
 // Click-the-avatar star toggle — a plain "this one looks promising" flag,
 // same for hosts and creators, independent of status/pipeline stage.
 export const toggleStarred = mutation({
@@ -2080,6 +2094,71 @@ export const importHotelsLocal = mutation({
       inserted++;
     }
     return { inserted, skipped, taggedExisting: tagged };
+  },
+});
+
+// Google Maps area sweeps (Lombok, Bali): one row per property with whatever
+// contact details Maps + the hotel's own site gave us. Lands in Confirmed with
+// a region tag (LBK / BALI) so the CRM's region filter is the working list.
+export const importMapsHotelsLocal = mutation({
+  args: {
+    secret: v.string(),
+    regionTag: v.string(),
+    rows: v.array(v.object({
+      handle: v.string(),
+      name: v.string(),
+      location: v.optional(v.string()),
+      country: v.optional(v.string()),
+      niche: v.optional(v.string()),
+      email: v.optional(v.string()),
+      whatsapp: v.optional(v.string()),
+      website: v.optional(v.string()),
+      ig_handle: v.optional(v.string()),
+      notes: v.optional(v.string()),
+    })),
+  },
+  handler: async (ctx, { secret, regionTag, rows }) => {
+    const expected = process.env.LOCAL_IMPORT_SECRET;
+    if (!expected || secret !== expected) throw new Error("Invalid or missing import secret.");
+    const hosts = await ctx.db.query("prospects").withIndex("by_kind_status", (q) => q.eq("kind", "host")).collect();
+    const norm = (n?: string) => (n || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+    const seen = new Set<string>();
+    for (const h of hosts) {
+      seen.add(`h:${h.instagram_handle}`);
+      if (h.display_name) seen.add(`n:${norm(h.display_name)}`);
+      if (h.whatsapp) seen.add(`w:${h.whatsapp.replace(/\D/g, "")}`);
+      if (h.ig_handle) seen.add(`i:${h.ig_handle.toLowerCase()}`);
+      for (const e of `${h.email || ""},${h.marketing_email || ""}`.split(",")) if (e.trim()) seen.add(`e:${e.trim().toLowerCase()}`);
+    }
+    let inserted = 0, skipped = 0;
+    for (const r of rows) {
+      const keys = [`h:${r.handle}`, `n:${norm(r.name)}`];
+      if (r.whatsapp) keys.push(`w:${r.whatsapp}`);
+      if (r.ig_handle) keys.push(`i:${r.ig_handle.toLowerCase()}`);
+      if (r.email) keys.push(`e:${r.email.toLowerCase()}`);
+      if (keys.some((k) => seen.has(k))) { skipped++; continue; }
+      keys.forEach((k) => seen.add(k));
+      await ctx.db.insert("prospects", {
+        kind: "host",
+        instagram_handle: r.handle,
+        display_name: r.name,
+        location: r.location,
+        country: r.country,
+        niche: r.niche,
+        email: r.email,
+        marketing_email: r.email,
+        whatsapp: r.whatsapp,
+        website: r.website,
+        ig_handle: r.ig_handle,
+        notes: r.notes,
+        tags: [regionTag],
+        source: "maps",
+        status: "queued",
+        created_at: Date.now(),
+      });
+      inserted++;
+    }
+    return { inserted, skipped };
   },
 });
 

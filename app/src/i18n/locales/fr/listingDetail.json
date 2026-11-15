@@ -24,6 +24,7 @@
   "hostViewNote": "Vue en tant qu'hôte — lecture seule.",
   "freeNote": "Collabnb est gratuit pour les créateurs.",
   "hostCantApply": "Les hôtes ne peuvent pas postuler à d'autres annonces",
+  "demoViewOnly": "Ceci n'est qu'un aperçu de ce que voient les créateurs",
   "sampleTooltip": "Annonce d'exemple · interactions désactivées",
   "sections": {
     "Photos": "Photos",

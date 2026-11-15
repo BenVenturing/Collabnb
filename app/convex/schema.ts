@@ -697,6 +697,18 @@ export default defineSchema({
     created_at: v.number(),
   }).index("by_user", ["user_id"]),
 
+  // Places a creator wants to stay: a named hotel or just a destination.
+  // Admin reads the aggregate (wishlist.adminDemand) to run demand-first
+  // outreach: "3 creators want to stay with you".
+  creator_wishlist: defineTable({
+    user_id: v.string(),
+    kind: v.string(),            // 'hotel' | 'location'
+    name: v.string(),            // hotel name, or the destination itself
+    place: v.optional(v.string()), // where the hotel is (hotel rows only)
+    key: v.string(),             // normalised kind + name, for counting demand
+    created_at: v.number(),
+  }).index("by_user", ["user_id"]).index("by_key", ["key"]),
+
   // Creator-defined "tell me when a stay like this goes live" alerts. Each row
   // is one named filter set; a creator can have up to MAX_ALERTS_PER_USER of
   // them (see stayAlerts.ts). An omitted or empty filter field means "no
@@ -794,6 +806,8 @@ export default defineSchema({
       taken_at: v.optional(v.number()),
     }))),                                // top 5 by engagement
     enriched_at: v.optional(v.number()),
+    scraped_emails: v.optional(v.array(v.string())), // every address found on their site after they built a listing, best first
+    scraped_phones: v.optional(v.array(v.string())),
     queued_for: v.optional(v.string()),  // 'YYYY-MM-DD' daily outreach date
     dm_angle: v.optional(v.string()),    // template id used for dm_draft, see HOST_OUTREACH_TEMPLATES
     published: v.optional(v.boolean()),  // admin reviewed + approved this draft to send
@@ -806,8 +820,6 @@ export default defineSchema({
     tags: v.optional(v.array(v.string())), // short codes — HC, SCR, contacted, contacted-opened, contacted-clicked (legend: PROSPECT_TAGS in Discovery.jsx)
     contact_url: v.optional(v.string()), // contact/influencer form for hotels that have no email yet
     decision_maker_name: v.optional(v.string()), // owner/GM/marketing lead found on the hotel's own site (find-decision-makers.py)
-    scraped_emails: v.optional(v.array(v.string())), // every address found on their site after they built a listing, best first
-    scraped_phones: v.optional(v.array(v.string())),
     decision_maker_role: v.optional(v.string()),
     target: v.optional(v.boolean()), // admin flag: independent property to actively pursue (separate from `starred`, which is follow-up)
     chain_override: v.optional(v.string()), // 'independent' | 'chain' — beats the CHAINS list in convex/lib/chains.ts (franchised/owner-run hotels)

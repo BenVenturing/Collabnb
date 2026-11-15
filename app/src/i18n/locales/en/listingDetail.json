@@ -24,6 +24,7 @@
   "hostViewNote": "Viewing as host — read-only.",
   "freeNote": "Collabnb is free for creators.",
   "hostCantApply": "Hosts can't apply to other listings",
+  "demoViewOnly": "This is just a demo view of what creators see",
   "sampleTooltip": "Sample listing · interactions disabled",
   "sections": {
     "Photos": "Photos",

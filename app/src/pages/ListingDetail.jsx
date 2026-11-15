@@ -934,9 +934,9 @@ function SampleTooltip({ active, label = null, children }) {
 }
 
 // ─── Host Profile Modal ───────────────────────────────────────────────────────
-function HostProfileModal({ host, listing, onClose, onMessage, isSample, hostView }) {
+function HostProfileModal({ host, listing, onClose, onMessage, isSample, hostView, demoView }) {
   const { t } = useTranslation('listingDetail');
-  const blocked = isSample || hostView;
+  const blocked = isSample || hostView || demoView;
   const [imgError, setImgError]   = useState(false);
   const [flipped, setFlipped]     = useState(false);
   const avatar = imgError ? host.avatar_fallback : host.avatar_url;
@@ -1115,7 +1115,7 @@ function HostProfileModal({ host, listing, onClose, onMessage, isSample, hostVie
               </p>
             )}
 
-            <SampleTooltip active={blocked} label={isSample ? undefined : t('hostModal.hostCantMessage')}>
+            <SampleTooltip active={blocked} label={isSample ? undefined : demoView ? t('demoViewOnly') : t('hostModal.hostCantMessage')}>
               <button
                 onClick={blocked ? undefined : onMessage}
                 disabled={blocked}
@@ -1175,10 +1175,14 @@ export default function ListingDetail({ previewListing = null, preview = false }
   const SAMPLE_TOOLTIP = 'This is a sample listing — for reference only. Please delete.';
   // Sample listings AND host-view both disable Apply/Message — same visual
   // treatment (grayed button + tooltip), different reason.
-  const blockActions = isSampleListing || hostView;
-
   const { applyToListing, hasApplied, threads, createThread, toggleSave, isSaved, collections, createCollection, moveToCollection } = useCollabs();
   const { profile } = useAuth();
+  // Host's "View as creator" preview, or a host opening their own listing:
+  // show the creator view but never let them apply to / message themselves.
+  const isOwnListing = !!profile?._id && !!listing?.host_id && String(profile._id) === String(listing.host_id);
+  const isDemoView = isPreview || isOwnListing;
+  const blockActions = isSampleListing || hostView || isDemoView;
+  const blockLabel = isSampleListing ? undefined : isDemoView ? t('demoViewOnly') : null;
   const { openModal } = useVerification();
   const { isSubscribed, openModal: openSubModal } = useSubscription();
   const access = useAccessGate();
@@ -1229,7 +1233,7 @@ export default function ListingDetail({ previewListing = null, preview = false }
   }, []);
 
   const handleMessageHost = useCallback(() => {
-    if (isPreview || hostView) return;
+    if (blockActions) return;
     if (!isVerified) { openModal(); setShowHostModal(false); return; }
     if (!isSubscribed) { openSubModal(); setShowHostModal(false); return; }
     const creatorId = profile?._id ? String(profile._id) : null;
@@ -1246,7 +1250,7 @@ export default function ListingDetail({ previewListing = null, preview = false }
       { hostAvatar: hostProfile?.avatar_url || SAMPLE_HOST.avatar_fallback, participantId: hostId, threadKey }
     );
     navigate('/inbox', { state: { selectedThreadId: threadId } });
-  }, [isPreview, hostView, isVerified, isSubscribed, openModal, openSubModal, threads, createThread, listing, profile, hostProfile, navigate]);
+  }, [blockActions, isVerified, isSubscribed, openModal, openSubModal, threads, createThread, listing, profile, hostProfile, navigate]);
 
   const showToast = useCallback((msg) => {
     setToast(msg);
@@ -1796,7 +1800,7 @@ export default function ListingDetail({ previewListing = null, preview = false }
                     </>
                   )}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-                    <SampleTooltip active={blockActions} label={isSampleListing ? undefined : t('hostModal.hostCantMessage')}>
+                    <SampleTooltip active={blockActions} label={blockLabel === null ? t('hostModal.hostCantMessage') : blockLabel}>
                       <button
                         onClick={blockActions ? undefined : handleMessageHost}
                         disabled={blockActions}
@@ -1900,7 +1904,7 @@ export default function ListingDetail({ previewListing = null, preview = false }
                   ))}
                 </div>
 
-                <SampleTooltip active={blockActions} label={isSampleListing ? undefined : t('hostCantApply')}>
+                <SampleTooltip active={blockActions} label={blockLabel === null ? t('hostCantApply') : blockLabel}>
                   <button
                     onClick={(applied || blockActions) ? undefined : (!isVerified ? openModal : !isSubscribed ? openSubModal : () => setShowApplyModal(true))}
                     disabled={applied || blockActions}
@@ -1954,7 +1958,7 @@ export default function ListingDetail({ previewListing = null, preview = false }
             </p>
             <p style={{ fontSize: '0.75rem', color: 'var(--sage)' }}>{t('sidebar.deliverablesCount', { count: listing.deliverable_count })}</p>
           </div>
-          <SampleTooltip active={blockActions} label={isSampleListing ? undefined : t('hostCantApply')}>
+          <SampleTooltip active={blockActions} label={blockLabel === null ? t('hostCantApply') : blockLabel}>
             <button
               onClick={(applied || blockActions) ? undefined : (!isVerified ? openModal : !isSubscribed ? openSubModal : () => setShowApplyModal(true))}
               disabled={applied || blockActions}
@@ -2011,6 +2015,7 @@ export default function ListingDetail({ previewListing = null, preview = false }
           onMessage={() => { setShowHostModal(false); handleMessageHost(); }}
           isSample={isSampleListing}
           hostView={hostView}
+          demoView={isDemoView}
         />
       )}
 

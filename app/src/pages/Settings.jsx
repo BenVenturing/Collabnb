@@ -13,6 +13,8 @@ import { COUNTRIES } from '../lib/countries';
 import { reopenChecklist } from '../components/OnboardingChecklist';
 import ReceiptCheckoutOverlay from '../components/ReceiptCheckoutOverlay';
 import StayAlerts from '../components/StayAlerts';
+import Wishlist from '../components/Wishlist';
+import HostReferral from '../components/HostReferral';
 import SocialAccountsSettings from '../components/SocialAccountsSettings';
 import { getInstallState, subscribeInstall, promptInstall } from '../lib/pwaInstall';
 
@@ -1042,6 +1044,12 @@ export default function Settings() {
                     <StayAlerts highlight={alertsHighlight} />
                   </div>
                 )}
+                {profile?.role !== 'host' && (
+                  <div id="wishlist">
+                    <SectionLabel>{t('wishlist.section', 'Wishlist')}</SectionLabel>
+                    <Wishlist />
+                  </div>
+                )}
               </>
             )}
 
@@ -1075,6 +1083,12 @@ export default function Settings() {
                       </div>
                       <p style={{ fontSize: '0.74rem', color: 'var(--sage)', margin: '0.6rem 0 0', lineHeight: 1.5 }}>{t('billing.referralDesc')}</p>
                     </div>
+                  </>
+                )}
+                {profile?.role === 'host' && !isMockUser && (
+                  <>
+                    <SectionLabel>{t('hostReferral.title', 'Invite another hotel')}</SectionLabel>
+                    <HostReferral />
                   </>
                 )}
                 <AmbassadorQuotaCard />

@@ -55,7 +55,7 @@ export const TIERS = {
     label: "Micro Influencer",
     requirement: "10K–50K followers",
     track: "influencer",
-    ratePerPoint: 12,
+    ratePerPoint: 16,
   },
   mid: {
     id: "mid",

@@ -141,6 +141,24 @@ function parseProgress(raw) {
   }
 }
 
+function CreatorDemand() {
+  const demand = useQuery(api.wishlist.adminDemand);
+  if (!demand || demand.length === 0) return null;
+  return (
+    <div style={{ background: '#fff', border: '1px solid rgba(25,37,36,0.08)', borderRadius: 16, padding: '1rem 1.1rem', marginBottom: '1.25rem' }}>
+      <div style={{ fontWeight: 700, color: INK, fontSize: '0.95rem', marginBottom: 2 }}>Creator wishlist</div>
+      <div style={{ color: SAGE, fontSize: '0.78rem', marginBottom: '0.7rem' }}>Hotels and destinations creators asked for. Use the count in outreach: "3 creators want to stay with you".</div>
+      {demand.slice(0, 25).map((d) => (
+        <div key={d.key} style={{ display: 'flex', gap: '0.6rem', alignItems: 'baseline', padding: '0.35rem 0', borderTop: '1px solid rgba(25,37,36,0.06)', fontSize: '0.84rem', color: INK }}>
+          <span style={{ fontWeight: 700, minWidth: 28, fontVariantNumeric: 'tabular-nums' }}>{d.count}</span>
+          <span style={{ flex: 1, minWidth: 0 }}>{d.name}{d.place ? <span style={{ color: SAGE }}> · {d.place}</span> : null}</span>
+          <span style={{ color: SLATE, fontSize: '0.72rem', background: d.kind === 'hotel' ? MINT : BONE, borderRadius: 999, padding: '0.1rem 0.5rem' }}>{d.kind === 'hotel' ? 'Hotel' : 'Destination'}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function ActionPlan() {
   const settings = useQuery(api.admin.getSettings);
   const counts = useQuery(api.admin.getFounderCounts);
@@ -204,6 +222,8 @@ export default function ActionPlan() {
           </div>
         )}
       </div>
+
+      <CreatorDemand />
 
       {!task ? (
         <div style={{ background: MINT, borderRadius: 16, padding: '1.5rem', color: INK }}>

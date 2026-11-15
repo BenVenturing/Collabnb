@@ -1198,14 +1198,14 @@ export const deleteProfile = mutation({
     // Delete pitches (either side) — capture thread keys before deleting
     const pitchesAsCreator = await ctx.db.query("pitches").withIndex("by_creator", (q) => q.eq("creator_id", pId)).collect();
     const pitchesAsHost = await ctx.db.query("pitches").withIndex("by_host", (q) => q.eq("host_id", pId)).collect();
-    const pitches = [...pitchesAsCreator, ...pitchesAsHost];
+    const pitches = [...new Map([...pitchesAsCreator, ...pitchesAsHost].map((p) => [p._id, p])).values()];
     const pitchThreadKeys = pitches.map((p) => p.thread_key).filter(Boolean) as string[];
     await Promise.all(pitches.map((p) => ctx.db.delete(p._id)));
 
     // Delete collaborations (either side — host_id was previously missed)
     const collabsAsCreator = await ctx.db.query("collaborations").withIndex("by_creator", (q) => q.eq("creator_id", pId)).collect();
     const collabsAsHost = await ctx.db.query("collaborations").withIndex("by_host", (q) => q.eq("host_id", pId)).collect();
-    const collabs = [...collabsAsCreator, ...collabsAsHost];
+    const collabs = [...new Map([...collabsAsCreator, ...collabsAsHost].map((c) => [c._id, c])).values()];
     await Promise.all(collabs.map((c) => ctx.db.delete(c._id)));
 
     // Archive the billing trail + basic identity before everything else is

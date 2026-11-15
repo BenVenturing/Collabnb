@@ -741,6 +741,7 @@ export const buildClaim = internalAction({
       await step({ build_step: 4, claim_token: res.token, built_at: Date.now() });
       if (a.demo) return;
       await ctx.runMutation(internal.autoOutreach.markBuilt, { id: a.prospect_id, token: res.token });
+      await ctx.scheduler.runAfter(0, internal.autoOutreach.enrichBuilt, { token });
       if (res.listing_id && res.profile_id) await ctx.scheduler.runAfter(PUBLISH_NUDGE_MS, internal.autoOutreach.publishReminder, { token, listing_id: res.listing_id, profile_id: res.profile_id, claim_token: res.token, stage: 1 });
       // Hot lead: tell Ben right away.
       try {
@@ -842,6 +843,108 @@ export const markSent = internalMutation({
       tags: Array.from(new Set([...(p.tags || []), "auto"])),
       outreach_log: [...(p.outreach_log || []), { at: now, type: "email_sent", note: `auto ${a.token}` }],
     });
+  },
+});
+
+// ─── Deep contact scrape once a hotel builds its listing ─────────────────────
+// A build is the strongest signal we get, so spend the extra fetches here: every
+// contact-ish page on their site, mailto/tel/wa.me links, plus the existing
+// marketing-email endpoint and decision-maker lookup. Never overwrites a value
+// that is already on the prospect.
+const CONTACT_PATHS = ["/", "/contact", "/contact-us", "/contacts", "/kontakt", "/contacto", "/about", "/about-us", "/team", "/press", "/media", "/partnerships", "/collaborations", "/collab"];
+const EMAIL_RE = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi;
+const JUNK_EMAIL = /noreply|no-reply|example|sentry|wix|wordpress|domain\.com|\.(png|jpe?g|gif|svg|webp)$|@\d|schema\.org/i;
+const emailRank = (e: string) => /marketing|press|media|pr@|partnership|collab|influencer|social/i.test(e) ? 3 : /hello|hi@|info|contact|stay|welcome|reservation|booking|book@/i.test(e) ? 2 : /^[a-z]+(\.[a-z]+)?@/i.test(e) ? 1 : 0;
+
+async function fetchText(url: string, ms = 8000): Promise<string> {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), ms);
+  try {
+    const res = await fetch(url, { signal: ctrl.signal, headers: { "User-Agent": "Mozilla/5.0 (Macintosh) Chrome/128 Safari/537.36" } });
+    return res.ok ? (await res.text()).slice(0, 600_000) : "";
+  } catch { return ""; } finally { clearTimeout(t); }
+}
+
+async function scrapeContacts(website?: string) {
+  const out = { emails: [] as string[], whatsapp: undefined as string | undefined, phones: [] as string[], contact_url: undefined as string | undefined, pages: 0 };
+  if (!website) return out;
+  let base: URL;
+  try { base = new URL(website.startsWith("http") ? website : `https://${website}`); } catch { return out; }
+  const emails = new Map<string, number>();
+  const phones = new Set<string>();
+  const seen = new Set<string>();
+  const paths = [...CONTACT_PATHS];
+  for (let i = 0; i < paths.length && out.pages < 10; i++) {
+    const url = new URL(paths[i], base).toString();
+    if (seen.has(url)) continue;
+    seen.add(url);
+    const html = await fetchText(url);
+    if (!html) continue;
+    out.pages++;
+    if (out.pages === 1) {
+      // discover the site's own contact-ish links from the homepage nav
+      for (const m of html.matchAll(/href=["']([^"'#?]+)["']/gi)) {
+        const href = m[1];
+        if (/contact|kontakt|contacto|about|team|press|media|partner|collab/i.test(href) && !/\.(pdf|jpg|png)$/i.test(href)) {
+          try { const u = new URL(href, base); if (u.host === base.host && paths.length < 24) paths.push(u.pathname); } catch { /* skip */ }
+        }
+      }
+    }
+    for (const m of html.matchAll(/mailto:([^"'?\s>]+)/gi)) { const e = decodeURIComponent(m[1]).toLowerCase(); if (!JUNK_EMAIL.test(e)) emails.set(e, (emails.get(e) || 0) + 3); }
+    for (const m of htmlToText(html).matchAll(EMAIL_RE)) { const e = m[0].toLowerCase(); if (!JUNK_EMAIL.test(e)) emails.set(e, (emails.get(e) || 0) + 1); }
+    for (const m of html.matchAll(/(?:wa\.me\/|api\.whatsapp\.com\/send\?phone=|whatsapp:\/\/send\?phone=)\+?(\d{7,15})/gi)) out.whatsapp = out.whatsapp || m[1];
+    for (const m of html.matchAll(/tel:\+?([\d\s().-]{7,20})/gi)) { const d = m[1].replace(/\D/g, ""); if (d.length >= 8) phones.add(d); }
+    for (const m of html.matchAll(/\+\d[\d\s().-]{8,18}\d/g)) { const d = m[0].replace(/\D/g, ""); if (d.length >= 9 && d.length <= 15) phones.add(d); }
+    if (!out.contact_url && /contact|kontakt|contacto/i.test(url) && /<form/i.test(html)) out.contact_url = url;
+  }
+  out.emails = [...emails.entries()].sort((a, b) => (emailRank(b[0]) * 10 + b[1]) - (emailRank(a[0]) * 10 + a[1])).map(([e]) => e).slice(0, 8);
+  out.phones = [...phones].slice(0, 5);
+  return out;
+}
+
+export const enrichBuilt = internalAction({
+  args: { token: v.string() },
+  handler: async (ctx, { token }) => {
+    const a: any = await ctx.runQuery(internal.autoOutreach.getAuditInternal, { token });
+    if (!a || a.demo) return { skipped: "no audit" };
+    const p: any = await ctx.runQuery(internal.prospects.getById, { id: a.prospect_id });
+    if (!p) return { skipped: "no prospect" };
+    const website = p.website || a.website;
+    const site = await scrapeContacts(website);
+    const [endpoint, dm] = await Promise.all([
+      findMarketingContact({ ...p, marketing_email: undefined, whatsapp: undefined, website }).catch(() => ({} as { email?: string; phone?: string })),
+      p.decision_maker_name ? Promise.resolve(null) : findDecisionMaker(website).catch(() => null),
+    ]);
+    const emails = Array.from(new Set([endpoint.email, ...site.emails, a.email, p.marketing_email, p.email].filter((e): e is string => validEmail(e)).map((e) => e.toLowerCase())));
+    const whatsapp = site.whatsapp || (endpoint.phone || a.phone || site.phones[0] || "").replace(/\D/g, "") || undefined;
+    const res = await ctx.runMutation(internal.autoOutreach.applyEnrichment, {
+      id: p._id, website: website || undefined, emails, whatsapp, phones: site.phones, contact_url: site.contact_url,
+      dmName: dm?.name, dmRole: dm?.role, pages: site.pages,
+    });
+    return { hotel: a.hotel_name, pages: site.pages, emails, whatsapp, phones: site.phones, contact_url: site.contact_url, dm, ...res };
+  },
+});
+
+export const applyEnrichment = internalMutation({
+  args: {
+    id: v.id("prospects"), website: v.optional(v.string()), emails: v.array(v.string()), whatsapp: v.optional(v.string()), phones: v.array(v.string()),
+    contact_url: v.optional(v.string()), dmName: v.optional(v.string()), dmRole: v.optional(v.string()), pages: v.number(),
+  },
+  handler: async (ctx, a) => {
+    const p: any = await ctx.db.get(a.id);
+    if (!p) return {};
+    const best = a.emails.sort((x, y) => emailRank(y) - emailRank(x))[0];
+    const patch: Record<string, any> = { enriched_at: Date.now(), scraped_emails: a.emails, scraped_phones: a.phones };
+    if (a.website && !p.website) patch.website = a.website;
+    if (best && !validEmail(p.marketing_email)) patch.marketing_email = best;
+    if (best && !p.email) patch.email = best;
+    if (a.whatsapp && !p.whatsapp) patch.whatsapp = a.whatsapp;
+    if (a.contact_url && !p.contact_url) patch.contact_url = a.contact_url;
+    if (a.dmName && !p.decision_maker_name) { patch.decision_maker_name = a.dmName; patch.decision_maker_role = a.dmRole; }
+    const summary = `${a.pages} pages · ${a.emails.length} email${a.emails.length === 1 ? "" : "s"}${a.whatsapp ? " · WhatsApp" : a.phones.length ? ` · ${a.phones.length} phone` : ""}${a.dmName ? ` · ${a.dmName}` : ""}`;
+    patch.outreach_log = [...(p.outreach_log || []), { at: Date.now(), type: "enriched", note: summary }];
+    await ctx.db.patch(a.id, patch);
+    return { patched: Object.keys(patch).filter((k) => !["enriched_at", "outreach_log"].includes(k)) };
   },
 });
 

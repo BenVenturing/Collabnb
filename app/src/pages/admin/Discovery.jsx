@@ -642,6 +642,14 @@ function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
               onBlur={() => dmDraft !== (prospect.dm_draft || '') && update({ id: prospect._id, dmDraft })}
               rows={3} placeholder="Write the outreach message here, then copy it into Instagram."
               style={{ ...input, width: '100%', resize: 'vertical' }} />
+          {(prospect.scraped_emails?.length > 0 || prospect.scraped_phones?.length > 0) && (
+            <div>
+              <span style={label}>Found on their site</span>
+              <p style={{ margin: 0, fontSize: '0.75rem', color: '#192524', wordBreak: 'break-all' }}>
+                {[...(prospect.scraped_emails || []), ...(prospect.scraped_phones || []).map((n) => `+${n}`)].join(' · ')}
+              </p>
+            </div>
+          )}
             <div style={{ display: 'flex', gap: '0.3rem', marginTop: '0.35rem', flexWrap: 'wrap', alignItems: 'center' }}>
               {prospect.kind === 'host' && (
                 <select aria-label="Copy angle" value={angle} onChange={(e) => setAngle(e.target.value)}
@@ -1512,7 +1520,7 @@ function HostCrmBoard() {
   const colOf = (p) => (p.status === 'emailed' && (p.tags || []).includes('auto') ? 'queued' : p.status);
   for (const p of filtered) (byColumn[colOf(p)] || byColumn.queued).push(p);
   const readiness = (p) => (p.whatsapp ? 2 : 0) + ((isHotelProspect(p) ? p.ig_handle : p.instagram_handle) ? 2 : 0) + ((p.email || p.marketing_email) ? 1 : 0);
-  for (const col of CRM_COLUMNS) byColumn[col.id].sort((a, b) => (b.starred ? 1 : 0) - (a.starred ? 1 : 0) || (col.id === 'queued' ? readiness(b) - readiness(a) : 0) || outreachRank(b) - outreachRank(a) || lastActivityAt(b) - lastActivityAt(a));
+  for (const col of CRM_COLUMNS) byColumn[col.id].sort((a, b) => (col.id === 'queued' ? (b.target ? 1 : 0) - (a.target ? 1 : 0) : 0) || (b.starred ? 1 : 0) - (a.starred ? 1 : 0) || (col.id === 'queued' ? readiness(b) - readiness(a) : 0) || outreachRank(b) - outreachRank(a) || lastActivityAt(b) - lastActivityAt(a));
 
   // Per-column select-all — a global one selected across every stage at
   // once, which was rarely what you wanted (e.g. bulk-emailing the whole

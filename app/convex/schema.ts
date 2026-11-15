@@ -806,6 +806,8 @@ export default defineSchema({
     tags: v.optional(v.array(v.string())), // short codes — HC, SCR, contacted, contacted-opened, contacted-clicked (legend: PROSPECT_TAGS in Discovery.jsx)
     contact_url: v.optional(v.string()), // contact/influencer form for hotels that have no email yet
     decision_maker_name: v.optional(v.string()), // owner/GM/marketing lead found on the hotel's own site (find-decision-makers.py)
+    scraped_emails: v.optional(v.array(v.string())), // every address found on their site after they built a listing, best first
+    scraped_phones: v.optional(v.array(v.string())),
     decision_maker_role: v.optional(v.string()),
     target: v.optional(v.boolean()), // admin flag: independent property to actively pursue (separate from `starred`, which is follow-up)
     chain_override: v.optional(v.string()), // 'independent' | 'chain' — beats the CHAINS list in convex/lib/chains.ts (franchised/owner-run hotels)

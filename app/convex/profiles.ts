@@ -1299,6 +1299,27 @@ export const deleteProfile = mutation({
     const notifs = await ctx.db.query("notifications").withIndex("by_user", (q) => q.eq("user_id", pId)).collect();
     await Promise.all(notifs.map((n) => ctx.db.delete(n._id)));
 
+    // Revoke API keys so a deleted account can't keep calling the MCP / assistant APIs
+    const mcpKeys = await ctx.db.query("mcp_api_keys").withIndex("by_owner", (q) => q.eq("owner_id", pId)).collect();
+    await Promise.all(mcpKeys.map((k) => ctx.db.delete(k._id)));
+    const aiKeys = await ctx.db.query("ai_assistant_keys").withIndex("by_owner", (q) => q.eq("owner_id", pId)).collect();
+    await Promise.all(aiKeys.map((k) => ctx.db.delete(k._id)));
+
+    const wishlist = await ctx.db.query("creator_wishlist").withIndex("by_user", (q) => q.eq("user_id", pId)).collect();
+    await Promise.all(wishlist.map((w) => ctx.db.delete(w._id)));
+    const stayAlerts = await ctx.db.query("stay_alerts").withIndex("by_user", (q) => q.eq("user_id", pId)).collect();
+    await Promise.all(stayAlerts.map((a) => ctx.db.delete(a._id)));
+
+    const founderPosts = await ctx.db.query("founder_posts").filter((q) => q.eq(q.field("author_id"), pId)).collect();
+    await Promise.all(founderPosts.map((p) => ctx.db.delete(p._id)));
+
+    const claims = await ctx.db.query("listing_claims").filter((q) => q.eq(q.field("profile_id"), pId)).collect();
+    await Promise.all(claims.map((c) => ctx.db.delete(c._id)));
+
+    // Reviews they wrote stay (they belong to the reviewed party's record) but lose the author link
+    const authoredReviews = await ctx.db.query("reviews").filter((q) => q.eq(q.field("reviewer_id"), pId)).collect();
+    await Promise.all(authoredReviews.map((r) => ctx.db.patch(r._id, { reviewer_id: undefined, reviewer_name: "Deleted user" })));
+
     // Delete admin audit log entries about this user (no index on target_id)
     const auditEntries = await ctx.db.query("admin_audit_log").filter((q) => q.eq(q.field("target_id"), pId)).collect();
     await Promise.all(auditEntries.map((e) => ctx.db.delete(e._id)));

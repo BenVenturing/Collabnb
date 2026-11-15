@@ -925,6 +925,31 @@ export const enrichBuilt = internalAction({
   },
 });
 
+// npx convex run --prod autoOutreach:enrichAllBuilt '{}'  (every hotel that built; skips ones already enriched unless force)
+export const enrichAllBuilt = internalAction({
+  args: { force: v.optional(v.boolean()) },
+  handler: async (ctx, { force }): Promise<any> => {
+    const tokens: string[] = await ctx.runQuery(internal.autoOutreach.builtTokens, { force: !!force });
+    const out: any[] = [];
+    for (const token of tokens) out.push(await ctx.runAction(internal.autoOutreach.enrichBuilt, { token }));
+    return out;
+  },
+});
+
+export const builtTokens = internalQuery({
+  args: { force: v.boolean() },
+  handler: async (ctx, { force }) => {
+    const audits = (await ctx.db.query("hotel_audits").collect()) as any[];
+    const out: string[] = [];
+    for (const a of audits) {
+      if (a.demo || !a.built_at) continue;
+      const p: any = await ctx.db.get(a.prospect_id);
+      if (p && (force || !p.scraped_emails)) out.push(a.token);
+    }
+    return out;
+  },
+});
+
 export const applyEnrichment = internalMutation({
   args: {
     id: v.id("prospects"), website: v.optional(v.string()), emails: v.array(v.string()), whatsapp: v.optional(v.string()), phones: v.array(v.string()),

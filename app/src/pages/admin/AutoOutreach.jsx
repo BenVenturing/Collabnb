@@ -52,7 +52,8 @@ export default function AutoOutreach() {
         <div>
           <h2 style={{ margin: 0, color: INK }}>Auto outreach</h2>
           <div style={{ fontSize: 13, color: SAGE }}>
-            {d.enabled ? `On · cap today ${d.capToday} (max ${d.max})` : 'Paused'} · automated sends only; earlier manual outreach is unchanged in Discovery
+            {d.enabled ? `On · cap today ${d.capToday} (ramp ${d.budget?.ramp ?? d.capToday}, max ${d.max})` : 'Paused'} · automated sends only; earlier manual outreach is unchanged in Discovery
+            {d.budget && <><br />Resend quota {d.budget.used} of {d.budget.budget} used · {d.budget.due} follow-up{d.budget.due === 1 ? '' : 's'} still due today · {d.budget.reserve} kept for reminders{d.budget.per === 2 ? ' · BCC on, every email counts twice' : ''}</>}
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>

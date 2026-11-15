@@ -25,7 +25,7 @@ const VIBE_TAG_POOL = [
   "Glamping", "Chef's Kitchen", "Pool Access", "Ski-In/Ski-Out", "Artsy",
 ];
 
-type Config = { enabled: boolean; start: string; startCap: number; step: number; everyDays: number; max: number; bcc?: string };
+type Config = { enabled: boolean; start: string; startCap: number; step: number; everyDays: number; max: number; bcc?: string; budget: number; reserve: number };
 
 const todayKey = () => new Date().toISOString().slice(0, 10);
 const DAY = 86_400_000;
@@ -36,7 +36,7 @@ const lastSendAt = (a: any) => Math.max(a.created_at || 0, a.last_followup_at ||
 function readConfig(settings: Record<string, string>): Config {
   let c: any = {};
   try { c = JSON.parse(settings[CONFIG_KEY] || "{}"); } catch { /* default */ }
-  return { enabled: false, start: todayKey(), startCap: 15, step: 5, everyDays: 3, max: 50, ...c };
+  return { enabled: false, start: todayKey(), startCap: 15, step: 5, everyDays: 3, max: 50, budget: 100, reserve: 20, ...c };
 }
 
 function dailyCap(cfg: Config): number {
@@ -44,6 +44,26 @@ function dailyCap(cfg: Config): number {
   const ramp = cfg.startCap + cfg.step * Math.floor(days / cfg.everyDays);
   const max = cfg.max;
   return Math.min(max, ramp);
+}
+
+// Resend's daily quota counts every recipient, so a BCC'd email costs 2. New sends only get
+// what is left after today's follow-ups (sent or still due) and a reserve for reminders/claims.
+const FOLLOWUP_DUE_DAYS = [3, 7, 14];
+function budgetUsage(audits: any[], cfg: Config) {
+  const per = cfg.bcc ? 2 : 1;
+  const day = todayKey();
+  const dayOf = (t?: number) => (t ? new Date(t).toISOString().slice(0, 10) : "");
+  let first = 0, followups = 0, due = 0;
+  for (const a of audits) {
+    if (a.demo) continue;
+    if (dayOf(a.created_at) === day) first++;
+    if (dayOf(a.last_followup_at) === day) followups++;
+    const k = a.followups_sent || 0;
+    if (k < FOLLOWUP_DUE_DAYS.length && !(a.claim_token || a.build_step || a.built_at) && dayOf(a.created_at + FOLLOWUP_DUE_DAYS[k] * DAY) === day && dayOf(a.last_followup_at) !== day) due++;
+  }
+  const used = (first + followups) * per;
+  const room = Math.max(0, Math.floor((cfg.budget - cfg.reserve - used - due * per) / per));
+  return { budget: cfg.budget, reserve: cfg.reserve, per, first, followups, due, used, room, ramp: dailyCap(cfg), cap: Math.min(dailyCap(cfg), first + room) };
 }
 
 const validEmail = (e?: string) => !!e && /^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i.test(e) && !/example|sentry|wix|domain\.com/i.test(e);
@@ -57,7 +77,7 @@ const isAutoToday = (p: any, day: string) =>
 // ─── Config ──────────────────────────────────────────────────────────────────
 // npx convex run --prod autoOutreach:setConfig '{"enabled":true}'
 export const setConfig = internalMutation({
-  args: { enabled: v.optional(v.boolean()), startCap: v.optional(v.number()), step: v.optional(v.number()), everyDays: v.optional(v.number()), max: v.optional(v.number()), bcc: v.optional(v.string()), restartRamp: v.optional(v.boolean()) },
+  args: { enabled: v.optional(v.boolean()), startCap: v.optional(v.number()), step: v.optional(v.number()), everyDays: v.optional(v.number()), max: v.optional(v.number()), bcc: v.optional(v.string()), budget: v.optional(v.number()), reserve: v.optional(v.number()), restartRamp: v.optional(v.boolean()) },
   handler: async (ctx, { restartRamp, ...patch }) => {
     const row = await ctx.db.query("admin_settings").withIndex("by_key", (q) => q.eq("key", CONFIG_KEY)).first();
     let cur: any = {};
@@ -125,6 +145,15 @@ export const sentTodayCount = internalQuery({
   },
 });
 
+export const budgetToday = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    const row = await ctx.db.query("admin_settings").withIndex("by_key", (q) => q.eq("key", CONFIG_KEY)).first();
+    const cfg = readConfig(row ? { [CONFIG_KEY]: row.value } : {});
+    return budgetUsage((await ctx.db.query("hotel_audits").collect()) as any[], cfg);
+  },
+});
+
 export const alreadyAudited = internalQuery({
   args: { email: v.string(), handle: v.string() },
   handler: async (ctx, { email, handle }) => {
@@ -145,11 +174,12 @@ export const runDaily = internalAction({
   handler: async (ctx, { dryRun, force }): Promise<any> => {
     const settings: Record<string, string> = await ctx.runQuery(internal.admin.getSettingsInternal, {});
     const cfg = readConfig(settings);
-    const cap = force ?? dailyCap(cfg);
+    const budget = await ctx.runQuery(internal.autoOutreach.budgetToday, {});
+    const cap = force ?? budget.cap;
     const peek = await ctx.runQuery(internal.autoOutreach.pool, { limit: 0 });
     const remaining = Math.max(0, cap - peek.sentToday);
     const { ids, stats } = await ctx.runQuery(internal.autoOutreach.pool, { limit: Math.ceil(remaining * 3) });
-    const summary = { enabled: cfg.enabled, cap, sentToday: peek.sentToday, scheduling: ids.length, pool: stats, from: process.env.OUTREACH_FROM || FALLBACK_FROM };
+    const summary = { enabled: cfg.enabled, cap, sentToday: peek.sentToday, scheduling: ids.length, budget, pool: stats, from: process.env.OUTREACH_FROM || FALLBACK_FROM };
     if (dryRun || (!cfg.enabled && force === undefined) || !remaining) return summary;
     // One candidate every ~30s (plus jitter) so they don't land as one burst.
     const spread = 30_000;
@@ -948,7 +978,7 @@ export const adminFunnel = query({
     const days: Record<string, number> = {};
     audits.forEach((a) => { const d = new Date(a.created_at).toISOString().slice(0, 10); days[d] = (days[d] || 0) + 1; });
     return {
-      enabled: cfg.enabled, capToday: dailyCap(cfg), max: cfg.max,
+      enabled: cfg.enabled, capToday: budgetUsage(audits, cfg).cap, max: cfg.max, budget: budgetUsage(audits, cfg),
       today: stat(since(DAY)), week: stat(since(7 * DAY)), all: stat(audits),
       replied: rows.filter((r) => r.replied).length,
       byVariant: VARIANTS.map((v) => ({ variant: v, ...stat(audits.filter((a) => (a.variant || "A") === v)) })),

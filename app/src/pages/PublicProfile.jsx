@@ -100,6 +100,14 @@ export default function PublicProfile() {
           </div>
 
           {profile.bio && <p style={S.bio}>{profile.bio}</p>}
+          <p style={{ fontSize: '0.75rem', margin: '0 0 1rem' }}>
+            <a
+              href={`mailto:hellocollabnb@gmail.com?subject=${encodeURIComponent(`Report profile @${profile.username}`)}`}
+              style={{ color: 'var(--sage)', textDecoration: 'underline' }}
+            >
+              Report this profile
+            </a>
+          </p>
 
           {(profile.follower_count || profile.collab_count) && (
             <div style={S.stats}>

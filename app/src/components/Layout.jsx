@@ -1,6 +1,7 @@
 import AppNav from './AppNav';
 import VerificationPendingModal from './VerificationPendingModal';
 import SubscriptionModal from './SubscriptionModal';
+import TermsGate from './TermsGate';
 import FloatingHelpButton from './FloatingHelpButton';
 import OnboardingChecklist from './OnboardingChecklist'; // self-positions via fixed CSS
 import SecureAccountBanner from './SecureAccount';
@@ -301,6 +302,8 @@ export default function Layout({ children }) {
 
       {/* ── Subscription gate modal ─────────────────────────────────────────── */}
       <SubscriptionModal />
+
+      <TermsGate />
 
       {/* ── Welcome toast (post-Clerk-signup) ──────────────────────────────────── */}
       {welcomeToast && (

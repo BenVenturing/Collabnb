@@ -14,6 +14,7 @@ const REASON_LABELS = {
   unprofessional_behavior: 'Unprofessional Behavior',
   harassment: 'Harassment',
   spam: 'Spam',
+  objectionable_content: 'Objectionable Content',
   other: 'Other',
 };
 
@@ -58,6 +59,7 @@ export default function ModerationQueue() {
                 <span>Reported: <strong>{r.reportedName}</strong> ({r.reportedEmail})</span>
                 <span>By: <strong>{r.reporterName}</strong></span>
                 <span>{fmtDate(r.created_at)}</span>
+                {r.context && <span>Where: {r.context}</span>}
               </div>
             </div>
           </div>

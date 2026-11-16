@@ -20,6 +20,7 @@ import {
 import { AmenityIcon } from '../lib/amenityIcons';
 import ListingLocationMap from '../components/map/ListingLocationMap';
 import Confetti from '../components/Confetti';
+import ReportModal from '../components/ReportModal';
 import { TIERS, normalizeTierId } from '../../convex/lib/compensationPoints';
 
 // listing.creator_tier is stored as an id ("ugc_pro") — resolve to the
@@ -1193,6 +1194,7 @@ export default function ListingDetail({ previewListing = null, preview = false }
     api.profiles.getByUsername,
     sampleListing ? { username: 'ben.venturing' } : 'skip'
   );
+  const [reportOpen, setReportOpen] = useState(false);
   const convexHostId = listing?.host_id;
   const convexHostProfile = useQuery(
     api.profiles.getById,
@@ -1828,6 +1830,22 @@ export default function ListingDetail({ previewListing = null, preview = false }
                         {t('messageHost')}
                       </button>
                     </SampleTooltip>
+                    {!blockActions && listing.host_id && profile?._id && (
+                      <button
+                        onClick={() => setReportOpen(true)}
+                        style={{ background: 'none', border: 'none', padding: 0, fontFamily: 'var(--font-body)', fontSize: '0.8rem', color: 'var(--sage)', textDecoration: 'underline', cursor: 'pointer' }}
+                      >
+                        Report or block host
+                      </button>
+                    )}
+                    {reportOpen && (
+                      <ReportModal
+                        reportedUserId={listing.host_id}
+                        reportedName={hostProfile?.full_name}
+                        context={`Listing: ${listing.title || listing._id}`}
+                        onClose={() => setReportOpen(false)}
+                      />
+                    )}
                     {listing.property_url && (
                       <a
                         href={listing.property_url}

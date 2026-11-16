@@ -733,6 +733,12 @@ export default function Settings() {
                     <FieldRow key={p._id} label={p.full_name} value={t('privacy.blockedValue')} action={t('privacy.unblock')} onAction={() => handleUnblock(String(p._id))} danger />
                   ))
                 )}
+                <SectionLabel>Safety & contact</SectionLabel>
+                <p style={{ fontSize: '0.8rem', color: 'var(--sage)', margin: '0 0 0.5rem', lineHeight: 1.55 }}>
+                  Report a user from the flag icon in any conversation. We review reports within 24 hours. To report abuse or reach support, email{' '}
+                  <a href="mailto:hellocollabnb@gmail.com" style={{ color: 'var(--ink)', fontWeight: 600 }}>hellocollabnb@gmail.com</a>.{' '}
+                  <a href="/terms.html" target="_blank" rel="noreferrer" style={{ color: 'var(--ink)', fontWeight: 600 }}>Terms of Service</a>
+                </p>
                 <SectionLabel>{t('privacy.sectionPolicy')}</SectionLabel>
                 <button
                   onClick={() => setPolicyExpanded((e) => !e)}

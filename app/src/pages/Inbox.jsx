@@ -13,6 +13,7 @@ import { useTranslation } from 'react-i18next';
 import i18nInstance from '../i18n';
 import { api } from '../../convex/_generated/api';
 import SkeletonCard from '../components/SkeletonCard';
+import ReportModal from '../components/ReportModal';
 import { ThinkingOrb } from 'thinking-orbs';
 
 const TAG_STYLES = {
@@ -268,6 +269,7 @@ function ConversationPanel({ thread, allThreads, collabs, onViewCollab, onArchiv
   const convexMessages = useQuery(api.threadMessages.getByThread, { threadKey });
   const sendMutation = useMutation(api.threadMessages.sendMessage);
   const draftAiReply = useAction(api.aiAssistant.draftReply);
+  const [reportOpen, setReportOpen] = useState(false);
   const [drafting, setDrafting] = useState(false);
   const [aiDraftError, setAiDraftError] = useState('');
   const [sendError, setSendError] = useState('');
@@ -474,6 +476,16 @@ function ConversationPanel({ thread, allThreads, collabs, onViewCollab, onArchiv
         </div>
         {/* Action icons */}
         <div className="flex gap-2">
+          {!isCollabnb && !thread.is_sample && (thread.other_id || thread.participant_id) && (
+            <button
+              onClick={() => setReportOpen(true)}
+              className="w-8 h-8 rounded-full bg-bone hover:bg-stone/60 flex items-center justify-center transition-colors"
+              title="Report or block"
+              aria-label="Report or block"
+            >
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 22V4"/><path d="M4 4h13l-2 4 2 4H4"/></svg>
+            </button>
+          )}
           {!isCollabnb && (
             <div className="relative">
               <button
@@ -770,6 +782,15 @@ function ConversationPanel({ thread, allThreads, collabs, onViewCollab, onArchiv
           )}
         </div>
       </div>
+
+      {reportOpen && (
+        <ReportModal
+          reportedUserId={thread.other_id || thread.participant_id}
+          reportedName={thread.host_name}
+          context={`Inbox thread: ${thread.listing_title || threadKey}`}
+          onClose={() => setReportOpen(false)}
+        />
+      )}
 
       {popupPerson && (
         <ProfilePopupCard

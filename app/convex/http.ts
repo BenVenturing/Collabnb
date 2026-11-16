@@ -292,6 +292,27 @@ http.route({
       }
     }
 
+    // Dispute or refund on a collab charge: freeze any unsent creator payout and
+    // alert admin. Payouts already sent are not reversed (manual recovery).
+    if (event.type === "charge.dispute.created" || event.type === "charge.refunded") {
+      const obj = event.data.object as any;
+      const pi = typeof obj.payment_intent === "string" ? obj.payment_intent : obj.payment_intent?.id;
+      if (pi) {
+        const res: any = await ctx.runMutation(internal.contracts.holdPayoutForChargeIssue, { paymentIntentId: pi });
+        if (res?.found) {
+          await ctx.runAction(internal.email.sendAdminNotification, {
+            type: "payout_approval",
+            subject: `Payout ${res.alreadySent ? "ALREADY SENT" : "held"}: ${event.type}`,
+            body: `${event.type} on payment ${pi} (contract ${res.contractId}). ${
+              res.alreadySent
+                ? `Creator payout of $${res.amount} was already sent — manual recovery needed.`
+                : "Creator payout is now on hold; release it from Money once resolved."
+            }`,
+          });
+        }
+      }
+    }
+
     // Stripe Connect onboarding status — fires as the creator completes KYC
     // and Stripe enables charges/payouts on their connected account.
     if (event.type === "account.updated") {

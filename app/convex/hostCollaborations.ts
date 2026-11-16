@@ -12,24 +12,28 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 // @ts-ignore — plain-JS rules module, shared verbatim with the app repo's tests
+import { requireOwnerOrAdmin, canAccessOwner } from "./lib/auth";
 import { validateContractTransition, validateSubmissionsTransition } from "./pipelineRules.js";
 
 const CREATOR_STAGES = ["pending", "updated", "accepted", "uploaded_tagged", "closed", "archived"];
 
 export const getByHost = query({
   args: { hostId: v.string() },
-  handler: async (ctx, { hostId }) =>
-    ctx.db
+  handler: async (ctx, { hostId }) => {
+    if (!(await canAccessOwner(ctx, hostId))) return [];
+    return ctx.db
       .query("collaborations")
       .withIndex("by_host", (q) => q.eq("host_id", hostId))
-      .collect(),
+      .collect();
+  },
 });
 
-async function ownedBy(ctx: any, id: any, role: "host" | "creator", profileId: string) {
+// The client-sent hostId/profileId is kept in the args for mobile compatibility
+// but is never trusted: ownership is checked against the signed-in caller.
+async function ownedBy(ctx: any, id: any, role: "host" | "creator") {
   const collab = await ctx.db.get(id);
   if (!collab) throw new Error("Collaboration not found");
-  const owner = role === "host" ? collab.host_id : collab.creator_id;
-  if (owner !== profileId) throw new Error("Not your collaboration");
+  await requireOwnerOrAdmin(ctx, role === "host" ? collab.host_id : collab.creator_id);
   return collab;
 }
 
@@ -42,8 +46,8 @@ export const setStage = mutation({
     current_stage: v.optional(v.string()),
     status: v.optional(v.string()),
   },
-  handler: async (ctx, { id, hostId, current_stage, status }) => {
-    const collab = await ownedBy(ctx, id, "host", hostId);
+  handler: async (ctx, { id, current_stage, status }) => {
+    const collab = await ownedBy(ctx, id, "host");
     if (current_stage !== undefined && !CREATOR_STAGES.includes(current_stage)) {
       throw new Error(`Unknown stage: ${current_stage}`);
     }
@@ -77,8 +81,8 @@ export const saveDetails = mutation({
     stay_dates: v.optional(v.string()),
     deliverables: v.optional(v.string()),
   },
-  handler: async (ctx, { id, hostId, host_note, stay_dates, deliverables }) => {
-    await ownedBy(ctx, id, "host", hostId);
+  handler: async (ctx, { id, host_note, stay_dates, deliverables }) => {
+    await ownedBy(ctx, id, "host");
     const patch: Record<string, any> = {};
     if (host_note !== undefined) patch.host_note = host_note.slice(0, 2000);
     if (stay_dates !== undefined) patch.dates = stay_dates.slice(0, 200);
@@ -94,8 +98,8 @@ export const saveContract = mutation({
     profileId: v.string(),
     contract: v.string(),
   },
-  handler: async (ctx, { id, role, profileId, contract }) => {
-    const collab = await ownedBy(ctx, id, role, profileId);
+  handler: async (ctx, { id, role, contract }) => {
+    const collab = await ownedBy(ctx, id, role);
     if (collab.status === "terminated") throw new Error("This collaboration was ended");
 
     const next = validateContractTransition(collab.contract_draft, contract, role);
@@ -118,8 +122,8 @@ export const saveDeliverables = mutation({
     profileId: v.string(),
     submissions: v.string(),
   },
-  handler: async (ctx, { id, role, profileId, submissions }) => {
-    const collab = await ownedBy(ctx, id, role, profileId);
+  handler: async (ctx, { id, role, submissions }) => {
+    const collab = await ownedBy(ctx, id, role);
     if (collab.status === "terminated") throw new Error("This collaboration was ended");
     if (!["accepted", "updated", "uploaded_tagged"].includes(collab.current_stage)) {
       throw new Error("Deliverables open once the terms are agreed");
@@ -148,8 +152,8 @@ export const endCollaboration = mutation({
     profileId: v.string(),
     reason: v.optional(v.string()),
   },
-  handler: async (ctx, { id, role, profileId, reason }) => {
-    const collab = await ownedBy(ctx, id, role, profileId);
+  handler: async (ctx, { id, role, reason }) => {
+    const collab = await ownedBy(ctx, id, role);
     if (collab.status === "terminated") return; // idempotent
     if (["closed", "archived"].includes(collab.current_stage)) {
       throw new Error("This collaboration is already completed");

@@ -438,6 +438,15 @@ export const setFounderStatus = mutation({
   },
 });
 
+async function notifyPayoutChange(ctx: any, profile: any, change: string) {
+  if (!profile?.email) return;
+  await ctx.scheduler.runAfter(0, internal.emails.sendPayoutChangedEmail, {
+    to: profile.email,
+    name: profile.full_name || "",
+    change,
+  });
+}
+
 // Creator picks which payout rail they want to connect (before onboarding).
 export const setPayoutMethod = mutation({
   args: { profileId: v.string(), payoutMethod: v.union(v.literal("stripe_connect"), v.literal("wise")) },
@@ -458,6 +467,7 @@ export const setStripeConnectAccount = internalMutation({
     const patch: Record<string, unknown> = { stripe_connect_account_id: args.accountId };
     if (!profile?.payout_method) patch.payout_method = "stripe_connect";
     await ctx.db.patch(args.profileId as any, patch);
+    await notifyPayoutChange(ctx, profile, "a Stripe payout account was connected to your profile");
   },
 });
 
@@ -484,6 +494,7 @@ export const setWiseRecipient = internalMutation({
     const patch: Record<string, unknown> = { wise_recipient_id: args.recipientId, wise_recipient_currency: args.currency };
     if (!profile?.payout_method) patch.payout_method = "wise";
     await ctx.db.patch(args.profileId as any, patch);
+    await notifyPayoutChange(ctx, profile, "a Wise payout recipient was connected to your profile");
   },
 });
 
@@ -516,6 +527,7 @@ export const disconnectPayoutMethod = mutation({
     }
 
     await ctx.db.patch(args.profileId as any, patch);
+    await notifyPayoutChange(ctx, profile, `your ${target === "wise" ? "Wise" : "Stripe"} payout method was disconnected`);
   },
 });
 
@@ -532,6 +544,7 @@ export const setActivePayoutMethod = mutation({
       : !!profile.wise_recipient_id;
     if (!isConnected) throw new ConvexError("Connect that payout method first.");
     await ctx.db.patch(args.profileId as any, { payout_method: args.payoutMethod });
+    await notifyPayoutChange(ctx, profile, `your active payout method was switched to ${args.payoutMethod === "wise" ? "Wise" : "Stripe"}`);
   },
 });
 

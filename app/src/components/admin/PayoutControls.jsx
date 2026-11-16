@@ -56,10 +56,12 @@ export function PayoutHoldControls({ contract: c, size = 'md' }) {
 
   const release = async () => {
     if (!window.confirm(`Release $${c.creator_payout_amount} to ${c.creator_name} right now, skipping the rest of the hold window?`)) return;
+    const passkey = window.prompt('Payout approval passkey');
+    if (!passkey) return;
     setBusy('release');
     setResult(null);
     try {
-      await releasePayoutNow({ contractId: c._id });
+      await releasePayoutNow({ contractId: c._id, passkey });
       setResult({ ok: true });
     } catch (err) {
       setResult({ ok: false, message: err?.message || 'Failed' });
@@ -106,10 +108,12 @@ export function SendWisePayoutButton({ contract: c, size = 'md' }) {
 
   const send = async () => {
     if (!window.confirm(`Send $${c.creator_payout_amount} to ${c.creator_name} via Wise? Only do this once Collabnb's Stripe balance has actually settled to your bank.`)) return;
+    const passkey = window.prompt('Payout approval passkey');
+    if (!passkey) return;
     setBusy(true);
     setResult(null);
     try {
-      await sendWisePayout({ contractId: c._id });
+      await sendWisePayout({ contractId: c._id, passkey });
       setResult({ ok: true });
     } catch (err) {
       setResult({ ok: false, message: err?.message || 'Failed' });

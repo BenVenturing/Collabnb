@@ -929,6 +929,22 @@ export const claimPayout = internalMutation({
   },
 });
 
+// Stripe dispute/refund on a collab charge: freeze the creator payout if it
+// hasn't been sent. Already-sent payouts are left alone and reported to admin.
+export const holdPayoutForChargeIssue = internalMutation({
+  args: { paymentIntentId: v.string() },
+  handler: async (ctx, args) => {
+    const c: any = await ctx.db
+      .query("contracts")
+      .filter((q) => q.eq(q.field("payment_intent_id"), args.paymentIntentId))
+      .first();
+    if (!c) return { found: false as const };
+    const alreadySent = c.creator_payout_status === "paid" || c.creator_payout_status === "processing";
+    if (!alreadySent) await ctx.db.patch(c._id, { creator_payout_held: true });
+    return { found: true as const, contractId: String(c._id), alreadySent, amount: c.creator_payout_amount ?? 0 };
+  },
+});
+
 // Admin declines a pending charge — no money moves, and it drops out of the
 // queue for good (doesn't retry on its own; re-triggering is a manual admin
 // action, since a declined charge usually means something about the collab

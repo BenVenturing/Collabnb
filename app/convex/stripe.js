@@ -813,14 +813,18 @@ export const chargeContractFee = internalAction({
 // second factor beyond "logged into the admin panel" before anything real
 // gets charged, given this is an off-session auto-charge with no in-the-
 // moment user confirmation on the host's side.
+function requirePayoutPasskey(passkey) {
+  const expected = process.env.PAYOUT_APPROVAL_PASSKEY;
+  if (!expected) throw new ConvexError('PAYOUT_APPROVAL_PASSKEY is not set in Convex environment variables — set one before any payout or charge can be approved.');
+  if (passkey !== expected) throw new ConvexError('Incorrect passkey.');
+}
+
 export const approveContractCharge = action({
   args: { contractId: v.string(), passkey: v.string() },
   handler: async (ctx, args) => {
     await requireAdminAction(ctx, internal.profiles.getByClerkUserId);
 
-    const expected = process.env.PAYOUT_APPROVAL_PASSKEY;
-    if (!expected) throw new ConvexError('PAYOUT_APPROVAL_PASSKEY is not set in Convex environment variables — set one before any charge can be approved.');
-    if (args.passkey !== expected) throw new ConvexError('Incorrect passkey.');
+    requirePayoutPasskey(args.passkey);
 
     const contract = await ctx.runQuery(internal.contracts.getByIdInternal, { id: args.contractId });
     if (!contract) throw new ConvexError('Contract not found.');
@@ -1073,9 +1077,10 @@ export const forwardCreatorPayout = internalAction({
 // immediately instead of waiting out the rest of the PAYOUT_HOLD_MS window.
 // Only meaningful for Stripe Connect — Wise payouts are already admin-manual.
 export const releasePayoutNow = action({
-  args: { contractId: v.string() },
+  args: { contractId: v.string(), passkey: v.string() },
   handler: async (ctx, args) => {
     await requireAdminAction(ctx, internal.profiles.getByClerkUserId);
+    requirePayoutPasskey(args.passkey);
     const contract = await ctx.runQuery(internal.contracts.getByIdInternal, { id: args.contractId });
     if (!contract) throw new Error('Contract not found');
     if (contract.creator_payout_status === 'paid') throw new Error('This contract has already been paid out');
@@ -1255,9 +1260,10 @@ export const createWiseRecipient = action({
 // to settle funds to Collabnb's own bank before there's real cash to forward
 // (see forwardCreatorPayout). Flow: quote → transfer → fund from Wise balance.
 export const sendWisePayout = action({
-  args: { contractId: v.string() },
+  args: { contractId: v.string(), passkey: v.string() },
   handler: async (ctx, args) => {
     await requireAdminAction(ctx, internal.profiles.getByClerkUserId);
+    requirePayoutPasskey(args.passkey);
     const token = process.env.WISE_API_TOKEN;
     const wiseProfileId = process.env.WISE_PROFILE_ID;
     if (!token || !wiseProfileId) throw new Error('WISE_API_TOKEN/WISE_PROFILE_ID are not set in Convex environment variables');

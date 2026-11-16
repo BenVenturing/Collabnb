@@ -94,6 +94,19 @@ export const sendConnectPayoutEmail = internalAction({
   },
 });
 
+export const sendPayoutChangedEmail = internalAction({
+  args: { to: v.string(), name: v.string(), change: v.string() },
+  handler: async (_ctx, { to, name, change }) => {
+    const apiKey = process.env.RESEND_API_KEY;
+    if (!apiKey) return;
+    const firstName = (name || "there").split(" ")[0];
+    const body = `
+      <p style="margin:0 0 18px;font-size:22px;font-weight:700;color:#241F19;">Your payout details changed</p>
+      ${heroChip(`Hi ${firstName}, ${change}. If this wasn't you, reply to this email right away so we can lock your account.`)}`;
+    await sendViaResend(apiKey, to, "Your Collabnb payout destination changed", layout(body));
+  },
+});
+
 // ─── Role-switch approved — finish the new role's profile ────────────────────
 // Sent instead of sendAccessGrantedEmail when the approval flipped the
 // person's role (signup-time admin correction, or a self-serve switch

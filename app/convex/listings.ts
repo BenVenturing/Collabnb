@@ -674,6 +674,26 @@ export const deleteListing = mutation({
   },
 });
 
+// Run with: npx convex run listings:deleteListingsByTitle '{"title":"..."}'
+export const deleteListingsByTitle = internalMutation({
+  args: { title: v.string() },
+  handler: async (ctx, { title }) => {
+    const rows = (await ctx.db.query("listings").collect()).filter((l: any) => l.title === title);
+    for (const r of rows) await ctx.db.delete(r._id);
+    return { deleted: rows.length, ids: rows.map((r) => r._id) };
+  },
+});
+
+// Run with: npx convex run listings:renameListingTitle '{"from":"...","to":"..."}'
+export const renameListingTitle = internalMutation({
+  args: { from: v.string(), to: v.string() },
+  handler: async (ctx, { from, to }) => {
+    const rows = (await ctx.db.query("listings").collect()).filter((l: any) => l.title === from);
+    for (const r of rows) await ctx.db.patch(r._id, { title: to });
+    return { renamed: rows.length };
+  },
+});
+
 const SAMPLE_LISTINGS = [
       {
         title: "Glacier Prime Cabin",
@@ -741,9 +761,9 @@ const SAMPLE_LISTINGS = [
         deliverable_load: "Heavy",
         dates_available: "Jan–Mar 2026",
         due_days: 10,
-        image: "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&q=80",
+        image: "https://images.unsplash.com/photo-1784552562846-9584b2afdcde?w=800&q=80",
         gallery_images: [
-          "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=1200&q=85",
+          "https://images.unsplash.com/photo-1784552562846-9584b2afdcde?w=1200&q=85",
           "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=800&q=80",
           "https://images.unsplash.com/photo-1433086966358-54859d0ed716?w=800&q=80",
           "https://images.unsplash.com/photo-1501785888041-af3ef285b470?w=800&q=80",
@@ -772,7 +792,7 @@ const SAMPLE_LISTINGS = [
         status: "published",
       },
       {
-        title: "Mountain Lodge Escape",
+        title: "Baan Doi Jungle Lodge",
         subtitle: "Jungle mountain luxury with panoramic views",
         location: "Chiang Mai, Thailand",
         property_type: "Lodge",
@@ -789,9 +809,9 @@ const SAMPLE_LISTINGS = [
         deliverable_load: "Custom campaign",
         dates_available: "Nov–Feb 2026",
         due_days: 21,
-        image: "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=800&q=80",
+        image: "https://images.unsplash.com/photo-1714240230232-e7046497f94a?w=800&q=80",
         gallery_images: [
-          "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=1200&q=85",
+          "https://images.unsplash.com/photo-1714240230232-e7046497f94a?w=1200&q=85",
           "https://images.unsplash.com/photo-1528181304800-259b08848526?w=800&q=80",
           "https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=800&q=80",
         ],
@@ -815,54 +835,6 @@ const SAMPLE_LISTINGS = [
         ],
         location_full: "Chiang Mai, Thailand",
         lat: 18.7883, lng: 98.9853,
-        status: "published",
-      },
-      {
-        title: "Vineyard Wine Estate",
-        subtitle: "Private villa on a working South African estate",
-        location: "Stellenbosch, South Africa",
-        property_type: "Estate",
-        is_featured: false,
-        rating: 4.96,
-        review_count: 129,
-        compensation: "$900 Cash",
-        compensation_type: "paid",
-        cash_amount: 900,
-        collab_type: "Full Package",
-        creator_tier: "Macro",
-        deliverables: "1 Influencer Reel, 1 Carousel Post, 16 Photos",
-        deliverable_count: 18,
-        deliverable_load: "Heavy",
-        dates_available: "Mar–Nov 2026",
-        due_days: 14,
-        image: "https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=800&q=80",
-        gallery_images: [
-          "https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=1200&q=85",
-          "https://images.unsplash.com/photo-1566042351553-52fb6fc0a880?w=800&q=80",
-          "https://images.unsplash.com/photo-1573246123716-6b178079bfb0?w=800&q=80",
-          "https://images.unsplash.com/photo-1504376379689-8a543476bc2f?w=800&q=80",
-          "https://images.unsplash.com/photo-1531058020387-3be344556be6?w=800&q=80",
-        ],
-        about: "This Cape Dutch-style villa sits on a working wine estate in the Jonkershoek Valley, one of the most photographed wine corridors in South Africa. The property dates to 1743 — the thick whitewashed walls, carved gable, and original yellowwood floors have been immaculately preserved — but the interior has been updated with the kind of quiet luxury that makes for effortless content: linen drapes, raw plaster walls, and antique wine presses repurposed as sculpture.\n\nThe estate produces its own Chenin Blanc, Syrah, and red blend from 28 hectares of vines that frame the property on every side. Your stay includes a private tour of the barrel room with the winemaker, and a hosted tasting for up to four guests — not the standard tourist circuit, but a genuine behind-the-scenes access that most visitors never see. The heated estate pool is positioned between the vine rows, looking out to the Stellenbosch Mountain range.\n\nStellenbosch itself is a 10-minute drive — one of South Africa's most walkable university towns, with world-class restaurants, a vibrant street food scene, and the Franschhoek wine corridor within easy reach. For macro creators looking for a property that photographs like editorial and performs like travel content, this is one of the strongest collab opportunities on the platform.",
-        amenities: [
-          { icon: "🍷", label: "Private wine tasting" },
-          { icon: "🌿", label: "Vineyard access" },
-          { icon: "🏊", label: "Heated estate pool" },
-          { icon: "👨‍🍳", label: "Chef's kitchen" },
-        ],
-        what_you_get: [
-          "$900 cash payment upon content approval",
-          "Complimentary 2-night estate stay",
-          "Private vineyard & barrel room tour",
-          "Hosted wine tasting (up to 4 guests)",
-        ],
-        what_you_deliver: "18 total deliverables across 3 formats (Heavy load)",
-        requirements: [
-          "Minimum 100,000 followers on primary platform",
-          "Macro creator tier required",
-        ],
-        location_full: "Stellenbosch, Western Cape, South Africa",
-        lat: -33.9364, lng: 18.8605,
         status: "published",
       },
       {
@@ -1038,8 +1010,7 @@ export const syncSampleListings = internalMutation({
 const SAMPLE_CANONICAL: Record<string, string> = {
   "Glacier Prime Cabin": "Lake Tahoe",
   "Tranquil Waterfront Retreat": "Bariloche",
-  "Mountain Lodge Escape": "Chiang Mai",
-  "Vineyard Wine Estate": "Stellenbosch",
+  "Baan Doi Jungle Lodge": "Chiang Mai",
   "Lakeside Forest Treehouse": "Asheville",
   "Desert Dome Glamping": "Paphos",
 };

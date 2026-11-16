@@ -17,7 +17,7 @@ const AUTO_SCROLL_MS = 4000;
 // Used only when live inventory is too thin to carry the carousel.
 const PLACEHOLDER_LISTINGS = [
   {
-    image: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=900&q=80',
+    image: 'https://images.unsplash.com/photo-1784552562846-9584b2afdcde?w=900&q=80',
     location_city: 'Bariloche',
     location_country: 'Argentina',
     _placeholder: true,

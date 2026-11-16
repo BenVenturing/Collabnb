@@ -196,7 +196,32 @@ export const markCompleted = mutation({
     contractId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    if (args.creatorId) await requireOwnerOrAdmin(ctx, args.creatorId);
+    const caller = args.creatorId
+      ? await requireOwnerOrAdmin(ctx, args.creatorId)
+      : await requireAuthedProfile(ctx);
+    if (caller.is_admin !== true) {
+      const me = String(caller._id);
+      // Completion can queue a charge on the host's card, so the caller must be a
+      // party to the contract (and it must be fully signed) — and a party to the collab.
+      if (args.contractId) {
+        const contractDocId = ctx.db.normalizeId("contracts", args.contractId);
+        const contract: any = contractDocId ? await ctx.db.get(contractDocId) : null;
+        if (!contract) throw new ConvexError("Contract not found.");
+        if (![contract.owner_id, contract.host_id, contract.creator_id].some((p) => p && String(p) === me)) {
+          throw new ConvexError("You don't have permission to do that.");
+        }
+        if (!contract.creator_signed || !contract.host_signed) {
+          throw new ConvexError("Both parties must sign the contract before it can be completed.");
+        }
+      }
+      if (args.id) {
+        const collabDocId = ctx.db.normalizeId("collaborations", args.id);
+        const collab: any = collabDocId ? await ctx.db.get(collabDocId) : null;
+        if (collab && ![collab.creator_id, collab.host_id].some((p) => p && String(p) === me)) {
+          throw new ConvexError("You don't have permission to do that.");
+        }
+      }
+    }
     await completeCollaboration(ctx, { collabId: args.id, contractId: args.contractId, creatorId: args.creatorId });
   },
 });

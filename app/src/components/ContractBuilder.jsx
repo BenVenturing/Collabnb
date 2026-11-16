@@ -63,8 +63,7 @@ const STATUS_CONFIG = {
 /* Hosts the creator can send contracts to */
 const KNOWN_HOSTS = [
   { id: 'host_1', name: SAMPLE_HOST.name, avatar: SAMPLE_HOST.avatar_url, properties: ['Glacier Prime Cabin', 'Tranquil Waterfront Retreat'] },
-  { id: 'host_2', name: 'Sierra Mountain Lodge', avatar: null, properties: ['Mountain Lodge Escape'] },
-  { id: 'host_3', name: 'Napa Valley Estates', avatar: null, properties: ['Vineyard Wine Estate'] },
+  { id: 'host_2', name: 'Baan Doi Hospitality', avatar: null, properties: ['Baan Doi Jungle Lodge'] },
 ];
 
 const contractTermsKey = (c) =>

@@ -97,7 +97,10 @@ http.route({
     }
 
     const { data } = payload;
-    const email = data.email_addresses?.[0]?.email_address;
+    // Use the primary, verified address only — an unverified one could belong to
+    // someone else and would let this webhook link the wrong profile.
+    const primary = (data.email_addresses || []).find((e: any) => e.id === data.primary_email_address_id);
+    const email = primary?.verification?.status === "verified" ? primary.email_address : undefined;
     const fullName = data.first_name
       ? `${data.first_name} ${data.last_name || ""}`.trim()
       : data.username || email?.split("@")[0];
@@ -108,7 +111,8 @@ http.route({
 
     // httpActions have no ctx.db — link/create must go through a mutation.
     const result = await ctx.runMutation(internal.profiles.linkOrCreateFromClerk, {
-      email,
+      clerkUserId: typeof data.id === "string" ? data.id : undefined,
+      email: email.toLowerCase().trim(),
       fullName: fullName || email.split("@")[0],
       username: data.username || email.split("@")[0],
     });
@@ -485,13 +489,36 @@ http.route({
   handler: httpAction(async () => new Response("OK", { status: 200 })),
 });
 
+// Wise signs webhook bodies with RSA-SHA256 (base64, X-Signature-SHA256 header).
+// Set the public key from Wise's webhook docs (matching sandbox/live):
+//   npx convex env set WISE_WEBHOOK_PUBLIC_KEY "<PEM>" --prod
+async function verifyWiseSignature(publicKeyPem: string, signatureB64: string, body: string): Promise<boolean> {
+  try {
+    const b64 = publicKeyPem.replace(/-----[^-]+-----/g, "").replace(/\s+/g, "");
+    const der = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+    const key = await crypto.subtle.importKey("spki", der, { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, ["verify"]);
+    const sig = Uint8Array.from(atob(signatureB64), (c) => c.charCodeAt(0));
+    return await crypto.subtle.verify("RSASSA-PKCS1-v1_5", key, sig, new TextEncoder().encode(body));
+  } catch {
+    return false;
+  }
+}
+
 http.route({
   path: "/wise-webhook",
   method: "POST",
   handler: httpAction(async (ctx, request) => {
+    const publicKey = process.env.WISE_WEBHOOK_PUBLIC_KEY;
+    if (!publicKey) return new Response("Wise webhook key not configured", { status: 503 });
+    const rawBody = await request.text();
+    const signature = request.headers.get("x-signature-sha256");
+    if (!signature || !(await verifyWiseSignature(publicKey, signature, rawBody))) {
+      return new Response("Invalid signature", { status: 401 });
+    }
+
     let event: any;
     try {
-      event = JSON.parse(await request.text());
+      event = JSON.parse(rawBody);
     } catch {
       return new Response("Invalid JSON", { status: 400 });
     }

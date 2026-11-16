@@ -915,9 +915,13 @@ export default function HostDashboard() {
     try { localStorage.setItem(SAMPLE_BANNER_KEY, '1'); } catch {}
   }
 
-  function removeSampleListing(listing) {
+  async function removeSampleListing(listing) {
     const id = String(listing._id || listing.id);
     if (!id) return;
+    if (profile?.is_admin === true && listing._id) {
+      try { await deleteListingMutation({ id: listing._id }); } catch (err) { console.error(err); }
+      return;
+    }
     setHiddenSampleIds((prev) => {
       if (prev.includes(id)) return prev;
       const next = [...prev, id];
@@ -995,7 +999,7 @@ export default function HostDashboard() {
     ? convexHostListings.map(normalizeConvexListing)
     : (convexSamples ?? []).map(normalizeConvexListing);
   const sourceListings = rawSource.filter((l) =>
-    hasRealListings || !hiddenSampleIds.includes(String(l._id || l.id))
+    !(l.is_sample && hiddenSampleIds.includes(String(l._id || l.id)))
   );
 
   const hostListings = sourceListings.map((l) => {

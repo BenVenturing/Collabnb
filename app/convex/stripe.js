@@ -3,7 +3,7 @@ import { api, internal } from './_generated/api';
 import { v, ConvexError } from 'convex/values';
 import Stripe from 'stripe';
 import { computeFee, ACH_REQUIRED_ABOVE_CASH_VALUE } from './fees';
-import { requireAdminAction, requireOwnerOrAdminAction } from './lib/auth';
+import { requireAdminAction, requireOwnerOrAdminAction, requireAuthedProfileAction } from './lib/auth';
 
 // Tiered lifetime pricing — price rises as more spots are purchased.
 // First 50 buyers: $100, next 50: $125, next 50: $150, final 50: $200.
@@ -76,6 +76,16 @@ async function getOneDollarCoupon(stripe, priceId) {
 
 // One-time Checkout for host platform fee.
 // Requires: npx convex env set STRIPE_SECRET_KEY sk_test_...
+// The host side of a contract (or an admin) — the only people who may start or
+// finish saving the card that will be charged for it.
+function assertHostOfContract(caller, contract) {
+  if (caller.is_admin === true) return;
+  const me = String(caller._id);
+  const isHost = contract.host_id && String(contract.host_id) === me;
+  const isHostOwner = contract.owner_id && String(contract.owner_id) === me && caller.role === 'host';
+  if (!isHost && !isHostOwner) throw new ConvexError("You don't have permission to do that.");
+}
+
 const PAYMENTS_BLOCKED_MSG = 'Payments are frozen on this contract — its collaboration was terminated by Collabnb.';
 
 export const createCheckoutSession = action({
@@ -90,10 +100,18 @@ export const createCheckoutSession = action({
     const secretKey = process.env.STRIPE_SECRET_KEY;
     if (!secretKey) throw new Error('STRIPE_SECRET_KEY is not set in Convex environment variables');
 
+    const caller = await requireAuthedProfileAction(ctx, internal.profiles.getByClerkUserId);
     const contract = await ctx.runQuery(internal.contracts.getByIdInternal, { id: args.contractId });
     if (!contract) throw new Error('Contract not found');
+    assertHostOfContract(caller, contract);
     if (contract.paid) throw new Error('This contract fee has already been paid');
     if (contract.payments_blocked) throw new ConvexError(PAYMENTS_BLOCKED_MSG);
+    // This checkout collects the platform fee only, and a successful one marks the
+    // contract paid — which would skip collecting the creator's cash. Contracts
+    // where Collabnb forwards the cash must go through the saved-card flow.
+    if (contract.payout_handling !== 'in_person' && contract.payment !== 'Free Stay' && contract.currency !== 'free_stay' && (contract.cash_value ?? 0) > 0) {
+      throw new ConvexError('This contract includes a creator payout — save a card to pay it.');
+    }
 
     const stripe = new Stripe(secretKey);
     const host = contract.host_id
@@ -144,12 +162,15 @@ export const createSubscriptionSession = action({
     const secretKey = process.env.STRIPE_SECRET_KEY;
     if (!secretKey) throw new Error('STRIPE_SECRET_KEY is not set in Convex environment variables');
 
+    const caller = await requireAuthedProfileAction(ctx, internal.profiles.getByClerkUserId);
+    const profileId = String(caller._id);
+
     const stripe = new Stripe(secretKey);
     const isYearly = args.tier === 'yearly';
     const priceId = isYearly ? process.env.STRIPE_PRICE_YEARLY_ID : process.env.STRIPE_PRICE_MONTHLY_ID;
     if (!priceId) throw new Error('STRIPE_PRICE_MONTHLY_ID/STRIPE_PRICE_YEARLY_ID are not set in Convex environment variables');
 
-    const buyer = await ctx.runQuery(internal.profiles.getByIdInternal, { id: args.profileId });
+    const buyer = caller;
     const testDiscount = isTestDollarAccount(buyer?.email);
     let discounts;
     if (testDiscount) {
@@ -158,13 +179,14 @@ export const createSubscriptionSession = action({
     }
 
     const session = await stripe.checkout.sessions.create({
-      payment_method_types: ['card'],
+      // Apple Pay / Google Pay ride on 'card' in Checkout; us_bank_account is ACH.
+      payment_method_types: ['card', 'us_bank_account'],
       mode: 'subscription',
       line_items: [{ price: priceId, quantity: 1 }],
       ...(discounts ? { discounts } : {}),
       success_url: args.successUrl,
       cancel_url: args.cancelUrl,
-      metadata: { profileId: args.profileId, tier: args.tier, ...(testDiscount ? { testDiscount: 'true' } : {}) },
+      metadata: { profileId, tier: isYearly ? 'yearly' : 'monthly', ...(testDiscount ? { testDiscount: 'true' } : {}) },
       custom_text: {
         submit: { message: 'You can cancel anytime from your profile settings.' },
       },
@@ -182,15 +204,26 @@ export const verifySubscriptionSession = action({
     const secretKey = process.env.STRIPE_SECRET_KEY;
     if (!secretKey) throw new Error('STRIPE_SECRET_KEY is not set in Convex environment variables');
 
+    const caller = await requireAuthedProfileAction(ctx, internal.profiles.getByClerkUserId);
+
     const stripe = new Stripe(secretKey);
     const session = await stripe.checkout.sessions.retrieve(args.sessionId, {
       expand: ['subscription'],
     });
 
     if (session.status !== 'complete') throw new Error('Checkout session is not complete');
+    // Only a real, paid subscription checkout counts — a free card-setup session
+    // also reaches status 'complete' and must never grant access.
+    if (session.mode !== 'subscription') throw new Error('Not a subscription session');
+    if (session.payment_status !== 'paid' && session.payment_status !== 'no_payment_required') {
+      throw new Error('Payment not complete');
+    }
+    const subStatus = session.subscription?.status;
+    if (subStatus !== 'active' && subStatus !== 'trialing') throw new Error('Subscription is not active');
 
     const profileId = session.metadata?.profileId;
     if (!profileId) throw new Error('No profileId in session metadata');
+    if (profileId !== String(caller._id)) throw new Error('You do not have permission to do that.');
 
     const tier = session.metadata?.tier || 'monthly';
     const sub = session.subscription;
@@ -326,11 +359,14 @@ export const createLifetimeSession = action({
     const secretKey = process.env.STRIPE_SECRET_KEY;
     if (!secretKey) throw new Error('STRIPE_SECRET_KEY is not set in Convex environment variables');
 
+    const caller = await requireAuthedProfileAction(ctx, internal.profiles.getByClerkUserId);
+    const profileId = String(caller._id);
+
     const lifetimeCount = await ctx.runQuery(api.profiles.countLifetimeMembers);
     let tier = getLifetimeTier(lifetimeCount);
     if (!tier) throw new Error('All lifetime spots are sold out. Please choose a monthly or annual plan.');
 
-    const buyer = await ctx.runQuery(internal.profiles.getByIdInternal, { id: args.profileId });
+    const buyer = caller;
     const testDiscount = isTestDollarAccount(buyer?.email);
     if (testDiscount) tier = { ...tier, price: 1 };
 
@@ -352,7 +388,7 @@ export const createLifetimeSession = action({
       success_url: args.successUrl,
       cancel_url: args.cancelUrl,
       metadata: {
-        profileId: args.profileId,
+        profileId,
         role: args.role,
         type: 'lifetime',
         lifetimeTier: tier.label,
@@ -375,6 +411,8 @@ export const verifyLifetimeSession = action({
     const secretKey = process.env.STRIPE_SECRET_KEY;
     if (!secretKey) throw new Error('STRIPE_SECRET_KEY is not set in Convex environment variables');
 
+    const caller = await requireAuthedProfileAction(ctx, internal.profiles.getByClerkUserId);
+
     const stripe = new Stripe(secretKey);
     const session = await stripe.checkout.sessions.retrieve(args.sessionId);
 
@@ -384,6 +422,7 @@ export const verifyLifetimeSession = action({
     if (session.metadata?.type !== 'lifetime') throw new Error('Not a lifetime session');
 
     const profileId = session.metadata.profileId;
+    if (profileId !== String(caller._id)) throw new Error('You do not have permission to do that.');
     const lifetimeTier = session.metadata.lifetimeTier || 'Lifetime';
     const stripeCustomerId = typeof session.customer === 'string'
       ? session.customer
@@ -421,8 +460,11 @@ export const createFeeSetupSession = action({
     const secretKey = process.env.STRIPE_SECRET_KEY;
     if (!secretKey) throw new Error('STRIPE_SECRET_KEY is not set in Convex environment variables');
 
+    const caller = await requireAuthedProfileAction(ctx, internal.profiles.getByClerkUserId);
     const contract = await ctx.runQuery(internal.contracts.getByIdInternal, { id: args.contractId });
     if (!contract) throw new Error('Contract not found');
+    assertHostOfContract(caller, contract);
+    if (contract.payments_blocked) throw new ConvexError(PAYMENTS_BLOCKED_MSG);
     const { fee, cash, isFreeStay } = computeContractFee(contract);
 
     // Requires ACH Direct Debit + Financial Connections enabled in the
@@ -469,12 +511,17 @@ export const verifyFeeSetupSession = action({
     const secretKey = process.env.STRIPE_SECRET_KEY;
     if (!secretKey) throw new Error('STRIPE_SECRET_KEY is not set in Convex environment variables');
 
+    const caller = await requireAuthedProfileAction(ctx, internal.profiles.getByClerkUserId);
     const stripe = new Stripe(secretKey);
     const session = await stripe.checkout.sessions.retrieve(args.sessionId, { expand: ['setup_intent'] });
 
     if (session.status !== 'complete') throw new Error('Setup session is not complete');
+    if (session.metadata?.type !== 'fee_setup') throw new Error('Invalid setup session');
     const contractId = session.metadata?.contractId;
     if (!contractId) throw new Error('No contractId in setup session metadata');
+    const contractForAuth = await ctx.runQuery(internal.contracts.getByIdInternal, { id: contractId });
+    if (!contractForAuth) throw new Error('Contract not found');
+    assertHostOfContract(caller, contractForAuth);
 
     const feeAmount = Number(session.metadata?.feeAmount ?? 0);
     const customerId = typeof session.customer === 'string' ? session.customer : session.customer?.id;
@@ -781,7 +828,8 @@ export const approveContractCharge = action({
     if (contract.payments_blocked) throw new ConvexError(PAYMENTS_BLOCKED_MSG);
     if (contract.charge_approval_status !== 'pending_approval') throw new ConvexError('This charge is not awaiting approval.');
 
-    await ctx.runMutation(internal.contracts.markChargeApproved, { id: args.contractId });
+    const claim = await ctx.runMutation(internal.contracts.markChargeApproved, { id: args.contractId });
+    if (!claim.ok) throw new ConvexError('This charge was already approved.');
     return await ctx.runAction(internal.stripe.executeApprovedCharge, { contractId: args.contractId });
   },
 });
@@ -830,7 +878,7 @@ export const executeApprovedCharge = internalAction({
           ? 'Collabnb collaboration payment (platform fee + creator payout)'
           : 'Collabnb platform fee — completed collaboration',
         metadata: { contractId: args.contractId, type: 'collab_payment', feeAmount: String(fee), creatorPayout: String(creatorPayout), ...(testDiscount ? { testDiscount: 'true' } : {}) },
-      });
+      }, { idempotencyKey: `collab-charge-${args.contractId}-${amountInCents}` });
 
       if (intent.status === 'succeeded') {
         const chargeId = typeof intent.latest_charge === 'string' ? intent.latest_charge : intent.latest_charge?.id;
@@ -977,6 +1025,8 @@ export const forwardCreatorPayout = internalAction({
     if (creator.payout_method === 'stripe_connect' && creator.stripe_connect_account_id) {
       const secretKey = process.env.STRIPE_SECRET_KEY;
       const stripe = new Stripe(secretKey);
+      const claim = await ctx.runMutation(internal.contracts.claimPayout, { id: args.contractId });
+      if (!claim.ok) return { skipped: claim.reason };
       try {
         const transfer = await stripe.transfers.create({
           amount: Math.round(args.amount * 100),
@@ -984,7 +1034,7 @@ export const forwardCreatorPayout = internalAction({
           destination: creator.stripe_connect_account_id,
           source_transaction: args.chargeId,
           metadata: { contractId: args.contractId },
-        });
+        }, { idempotencyKey: `payout-${args.contractId}-${creator.stripe_connect_account_id}` });
         await ctx.runMutation(internal.contracts.setPayoutStatus, {
           id: args.contractId, status: 'paid', method: 'stripe_connect', reference: transfer.id,
         });
@@ -1030,6 +1080,7 @@ export const releasePayoutNow = action({
     if (!contract) throw new Error('Contract not found');
     if (contract.creator_payout_status === 'paid') throw new Error('This contract has already been paid out');
     if (contract.payments_blocked) throw new ConvexError(PAYMENTS_BLOCKED_MSG);
+    if (!contract.paid) throw new Error("The host's charge hasn't succeeded yet — nothing to forward");
     if (!contract.creator_payout_amount) throw new Error('No payout amount recorded on this contract');
 
     await ctx.runMutation(internal.contracts.setPayoutHold, { contractId: args.contractId, held: false });
@@ -1215,6 +1266,7 @@ export const sendWisePayout = action({
     if (!contract) throw new Error('Contract not found');
     if (contract.creator_payout_status === 'paid') throw new Error('This contract has already been paid out');
     if (contract.payments_blocked) throw new ConvexError(PAYMENTS_BLOCKED_MSG);
+    if (!contract.paid) throw new Error("The host's charge hasn't succeeded yet — don't send this payout");
     if (!contract.creator_id) throw new Error('Contract has no linked creator');
 
     const creator = await ctx.runQuery(internal.profiles.getByIdInternal, { id: String(contract.creator_id) });
@@ -1226,7 +1278,15 @@ export const sendWisePayout = action({
     const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
     const base = wiseBaseUrl();
 
+    const claim = await ctx.runMutation(internal.contracts.claimPayout, { id: args.contractId });
+    if (!claim.ok) throw new ConvexError(`Payout can't be sent right now (${claim.reason}).`);
     await ctx.runMutation(internal.contracts.setPayoutStatus, { id: args.contractId, status: 'processing', method: 'wise' });
+
+    // Stable per-contract UUID: if this is retried or double-fired, Wise returns the
+    // original transfer instead of creating a second one.
+    const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`collabnb-wise-payout:${args.contractId}`)));
+    const hex = Array.from(digest.slice(0, 16)).map((b) => b.toString(16).padStart(2, '0')).join('');
+    const customerTransactionId = `${hex.slice(0, 8)}-${hex.slice(8, 12)}-4${hex.slice(13, 16)}-a${hex.slice(17, 20)}-${hex.slice(20, 32)}`;
 
     try {
       const quoteRes = await fetch(`${base}/v3/profiles/${wiseProfileId}/quotes`, {
@@ -1248,7 +1308,7 @@ export const sendWisePayout = action({
         body: JSON.stringify({
           targetAccount: creator.wise_recipient_id,
           quoteUuid: quote.id,
-          customerTransactionId: `${args.contractId}-${Date.now()}`,
+          customerTransactionId,
           details: { reference: 'Collabnb payout' },
         }),
       });

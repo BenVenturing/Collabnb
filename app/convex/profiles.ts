@@ -57,17 +57,21 @@ export const getOrCreate = mutation({
       .withIndex("by_clerk_user_id", (q) => q.eq("clerk_user_id", clerkUserId))
       .unique();
     if (!existing) {
-      // One-time link for a row created before clerk_user_id was tracked.
-      // Only links an UNCLAIMED row (never re-links one already owned by a
-      // different Clerk user) — args.email can't be cryptographically
-      // verified right now, so this may only carry the link forward, never
-      // grant/escalate privilege (that still requires isAdmin above, which
-      // stays gated on the verified JWT email).
-      const legacyMatch = await ctx.db
+      // args.email is client-typed and unverified, so it can never be used to
+      // claim or duplicate an existing row. A row is linked to this login only
+      // via a VERIFIED email (JWT claim, when present) — otherwise the signed
+      // Clerk webhook (linkOrCreateFromClerk) links it by clerk_user_id.
+      const emailRow = await ctx.db
         .query("profiles")
         .withIndex("by_email", (q) => q.eq("email", email))
         .unique();
-      if (legacyMatch && !legacyMatch.clerk_user_id) existing = legacyMatch;
+      if (emailRow) {
+        if (verifiedEmail === email && !emailRow.clerk_user_id) {
+          existing = emailRow;
+        } else {
+          throw new ConvexError("Your account is still being set up — please try again in a few seconds.");
+        }
+      }
     }
 
     if (existing) {
@@ -843,6 +847,7 @@ export const updateSubscription = internalMutation({
 // waitlist profile by email or creates a fresh profile for the new Clerk user.
 export const linkOrCreateFromClerk = internalMutation({
   args: {
+    clerkUserId: v.optional(v.string()),
     email: v.string(),
     fullName: v.string(),
     username: v.string(),
@@ -859,6 +864,9 @@ export const linkOrCreateFromClerk = internalMutation({
         full_name: args.fullName,
         clerk_registered: true,
       };
+      // Bind the row to this Clerk user (email here came from a signed webhook,
+      // so it's verified) — but never steal a row already owned by someone else.
+      if (args.clerkUserId && !existing.clerk_user_id) patch.clerk_user_id = args.clerkUserId;
       // Apply the signup-selected role only when claiming a not-yet-registered
       // waitlist row (mirrors getOrCreate). Established accounts are untouched.
       if (!existing.clerk_registered && args.role && args.role !== existing.role) {
@@ -877,6 +885,7 @@ export const linkOrCreateFromClerk = internalMutation({
       bio: "",
       is_founder: false,
       clerk_registered: true,
+      clerk_user_id: args.clerkUserId,
     });
     return { created: true, profileId };
   },
@@ -941,6 +950,31 @@ export const updateSubscriptionFromRevenueCat = internalMutation({
     if (args.status === "expired") {
       await recomputeAccessState(ctx, args.profileId);
     }
+  },
+});
+
+// CLI-only: `npx convex run --prod profiles:setupReviewDemo '{"email":"..."}'`.
+// Gives the App Store review demo account a verified creator profile with an
+// active membership, without consuming a founder slot (approveCreator would).
+export const setupReviewDemo = internalMutation({
+  args: { email: v.string() },
+  handler: async (ctx, { email }) => {
+    const profile = await ctx.db
+      .query("profiles")
+      .withIndex("by_email", (q) => q.eq("email", email.toLowerCase()))
+      .unique();
+    if (!profile) throw new Error(`No profile for ${email} — sign up in the app first`);
+    await ctx.db.patch(profile._id, {
+      role: "creator",
+      is_verified: true,
+      is_rejected: false,
+      creator_track: profile.creator_track ?? "ugc",
+      access_state: "active",
+      subscription_status: "active",
+      subscription_tier: "monthly",
+      subscription_expires_at: Date.now() + 10 * 365 * 24 * 60 * 60 * 1000,
+    });
+    return { profileId: profile._id };
   },
 });
 

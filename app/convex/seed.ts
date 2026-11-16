@@ -99,9 +99,9 @@ export const seed = internalMutation({
         deliverable_load: "Moderate",
         dates_available: "Jan–Mar 2026",
         due_days: 10,
-        image: "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&q=80",
+        image: "https://images.unsplash.com/photo-1784552562846-9584b2afdcde?w=800&q=80",
         gallery_images: [
-          "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=1200&q=85",
+          "https://images.unsplash.com/photo-1784552562846-9584b2afdcde?w=1200&q=85",
           "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=800&q=80",
           "https://images.unsplash.com/photo-1433086966358-54859d0ed716?w=800&q=80",
           "https://images.unsplash.com/photo-1501785888041-af3ef285b470?w=800&q=80",
@@ -132,7 +132,7 @@ export const seed = internalMutation({
         host_name: "Ben Venturing",
       },
       {
-        title: "Mountain Lodge Escape",
+        title: "Baan Doi Jungle Lodge",
         subtitle: "Jungle mountain luxury with panoramic views",
         location: "Chiang Mai, Thailand",
         property_type: "Lodge",
@@ -149,9 +149,9 @@ export const seed = internalMutation({
         deliverable_load: "Heavy",
         dates_available: "Nov–Feb 2026",
         due_days: 21,
-        image: "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=800&q=80",
+        image: "https://images.unsplash.com/photo-1714240230232-e7046497f94a?w=800&q=80",
         gallery_images: [
-          "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=1200&q=85",
+          "https://images.unsplash.com/photo-1714240230232-e7046497f94a?w=1200&q=85",
           "https://images.unsplash.com/photo-1528181304800-259b08848526?w=800&q=80",
           "https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=800&q=80",
           "https://images.unsplash.com/photo-1506665531195-3566af2b4dfa?w=800&q=80",
@@ -178,56 +178,6 @@ export const seed = internalMutation({
         location_full: "Chiang Mai, Thailand",
         lat: 18.7883,
         lng: 98.9853,
-        host_name: "Ben Venturing",
-      },
-      {
-        title: "Vineyard Wine Estate",
-        subtitle: "Private villa on a working South African estate",
-        location: "Stellenbosch, South Africa",
-        property_type: "Estate",
-        is_featured: true,
-        rating: 4.96,
-        review_count: 129,
-        compensation: "$800 Cash",
-        compensation_type: "paid",
-        cash_amount: 800,
-        collab_type: "Full Package",
-        creator_tier: "Macro",
-        deliverables: "3 Reels, 8 Photos, 1 YouTube Video",
-        deliverable_count: 12,
-        deliverable_load: "Moderate",
-        dates_available: "Mar–Nov 2026",
-        due_days: 14,
-        image: "https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=800&q=80",
-        gallery_images: [
-          "https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=1200&q=85",
-          "https://images.unsplash.com/photo-1566042351553-52fb6fc0a880?w=800&q=80",
-          "https://images.unsplash.com/photo-1573246123716-6b178079bfb0?w=800&q=80",
-          "https://images.unsplash.com/photo-1504376379689-8d54347b4f08?w=800&q=80",
-          "https://images.unsplash.com/photo-1531058020387-3be344556be6?w=800&q=80",
-        ],
-        about:
-          "This Cape Dutch-style villa sits on a working wine estate in the Jonkershoek Valley, one of the most photographed wine corridors in South Africa. The property dates to 1743 — the thick whitewashed walls, carved gable, and original yellowwood floors have been immaculately preserved — but the interior has been updated with the kind of quiet luxury that makes for effortless content: linen drapes, raw plaster walls, and antique wine presses repurposed as sculpture.\n\nThe estate produces its own Chenin Blanc, Syrah, and red blend from 28 hectares of vines that frame the property on every side. Your stay includes a private tour of the barrel room with the winemaker, and a hosted tasting for up to four guests — not the standard tourist circuit, but a genuine behind-the-scenes access that most visitors never see. The heated estate pool is positioned between the vine rows, looking out to the Stellenbosch Mountain range.\n\nStellenbosch itself is a 10-minute drive — one of South Africa's most walkable university towns, with world-class restaurants, a vibrant street food scene, and the Franschhoek wine corridor within easy reach. For macro creators looking for a property that photographs like editorial and performs like travel content, this is one of the strongest collab opportunities on the platform.",
-        amenities: [
-          { icon: "🍷", label: "Private wine tasting" },
-          { icon: "🌿", label: "Vineyard access" },
-          { icon: "🏊", label: "Heated estate pool" },
-          { icon: "👨‍🍳", label: "Chef's kitchen" },
-        ],
-        what_you_get: [
-          "$800 cash payment upon content approval",
-          "Complimentary 2-night estate stay",
-          "Private vineyard & barrel room tour",
-          "Hosted wine tasting (up to 4 guests)",
-        ],
-        what_you_deliver: "12 total deliverables across 3 formats (Moderate load)",
-        requirements: [
-          "Minimum 100,000 followers on primary platform",
-          "Macro creator tier required",
-        ],
-        location_full: "Stellenbosch, Western Cape, South Africa",
-        lat: -33.9364,
-        lng: 18.8605,
         host_name: "Ben Venturing",
       },
       {
@@ -373,7 +323,7 @@ export const seed = internalMutation({
       location: "Bariloche, Argentina",
       host_name: "Ben Venturing",
       image:
-        "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&q=80",
+        "https://images.unsplash.com/photo-1784552562846-9584b2afdcde?w=800&q=80",
       status: "uploaded",
       status_text: "Uploaded",
       dates: "Jan 28–31, 2026",
@@ -392,11 +342,11 @@ export const seed = internalMutation({
 
     await ctx.db.insert("collaborations", {
       listing_id: "4",
-      property_name: "Mountain Lodge Escape",
+      property_name: "Baan Doi Jungle Lodge",
       location: "Chiang Mai, Thailand",
       host_name: "Ben Venturing",
       image:
-        "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=800&q=80",
+        "https://images.unsplash.com/photo-1714240230232-e7046497f94a?w=800&q=80",
       status: "archived",
       status_text: "Archived",
       dates: "Jan 10–13, 2026",
@@ -428,22 +378,13 @@ export const seed = internalMutation({
     });
 
     await ctx.db.insert("threads", {
-      listing_title: "Mountain Lodge Escape",
+      listing_title: "Baan Doi Jungle Lodge",
       host_name: "Ben Venturing",
       tag: "Application",
       last_message: "I'd love to collaborate on this property...",
       timestamp: "Apr 18",
       unread: 1,
       collab_id: "3",
-    });
-
-    await ctx.db.insert("threads", {
-      listing_title: "Vineyard Wine Estate",
-      host_name: "Ben Venturing",
-      tag: "Pitch",
-      last_message: "I have some ideas for unique content angles...",
-      timestamp: "Apr 17",
-      unread: 3,
     });
 
     // Seed default collection
@@ -464,10 +405,8 @@ export const patchAbouts = internalMutation({
         "Glacier Prime is a hand-crafted old-growth forest cabin built into a granite ridge above the western shore of Lake Tahoe. The structure is made almost entirely from reclaimed Douglas fir and stone sourced on-site, with floor-to-ceiling windows that frame unobstructed views of the lake and the Sierra Nevada range beyond.\n\nInside, the cabin blends raw wilderness with considered comfort — a cast-iron wood stove anchors the main living space, while the lofted sleeping area opens to a private deck where you can watch alpenglow turn the mountains pink at dusk. The private hot tub sits cantilevered over the tree line, giving you the sensation of floating above the forest.\n\nThe surrounding 12 acres of old-growth pine and cedar are entirely private. Deer pass through most mornings. The trailhead to Eagle Falls and Desolation Wilderness is a 10-minute drive, and the nearest ski resort is under 20 minutes. This is a property that rewards a slow pace — one that's designed to be felt as much as photographed.",
       "Tranquil Waterfront Retreat":
         "Set directly on the shore of Nahuel Huapi Lake in Argentine Patagonia, this lakefront villa is surrounded by old-growth lenga beech forest on three sides and open water on the fourth. The Andes rise dramatically behind the property — snow-capped peaks reflected in a lake so clear it reads almost teal in afternoon light.\n\nThe villa was designed by a Buenos Aires architect who grew up in Bariloche, and it shows. The interiors lean into the landscape rather than competing with it — raw concrete, local slate floors, and Douglas fir ceilings frame views that shift from alpine blue to deep orange depending on the hour. The infinity pool is positioned to create a seamless visual merge with the lake beyond, a shot that photographs unlike almost anything else in South America.\n\nFrom the private dock you can kayak into sheltered coves, or simply sit on the jetty at golden hour while the lake goes still. Bariloche's chocolate shops, craft beer scene, and hiking trails are 20 minutes away — but this property makes it easy to never leave.",
-      "Mountain Lodge Escape":
+      "Baan Doi Jungle Lodge":
         "Perched 900 meters above Chiang Mai in the Doi Suthep-Pui National Park buffer zone, this jungle mountain lodge is carved into a ridge overlooking layered rice terraces, teak forest, and the valley city below. On clear mornings, you can see all the way to the Burmese border — on misty ones, the property floats above a sea of white cloud.\n\nThe lodge was built using a traditional Northern Thai construction method called 'sala' architecture — open-air pavilions connected by elevated walkways through the canopy. The main living pavilion has no fourth wall, just a view that opens directly onto the jungle and the valley beyond. The infinity pool hangs at the edge of the ridge and at certain angles appears to pour directly into the cityscape below.\n\nThis is a heavy-content stay by design. The property has a dedicated yoga sala that catches the sunrise, an outdoor fire pit that draws in fireflies after dark, and an on-site guide who can arrange a private pre-dawn trek to Doi Suthep temple before the tourists arrive. The host provides daily chef-prepared meals using ingredients from the on-site garden. It's a place built for creators who want depth, not just aesthetics.",
-      "Vineyard Wine Estate":
-        "This Cape Dutch-style villa sits on a working wine estate in the Jonkershoek Valley, one of the most photographed wine corridors in South Africa. The property dates to 1743 — the thick whitewashed walls, carved gable, and original yellowwood floors have been immaculately preserved — but the interior has been updated with the kind of quiet luxury that makes for effortless content: linen drapes, raw plaster walls, and antique wine presses repurposed as sculpture.\n\nThe estate produces its own Chenin Blanc, Syrah, and red blend from 28 hectares of vines that frame the property on every side. Your stay includes a private tour of the barrel room with the winemaker, and a hosted tasting for up to four guests — not the standard tourist circuit, but a genuine behind-the-scenes access that most visitors never see. The heated estate pool is positioned between the vine rows, looking out to the Stellenbosch Mountain range.\n\nStellenbosch itself is a 10-minute drive — one of South Africa's most walkable university towns, with world-class restaurants, a vibrant street food scene, and the Franschhoek wine corridor within easy reach. For macro creators looking for a property that photographs like editorial and performs like travel content, this is one of the strongest collab opportunities on the platform.",
       "Lakeside Forest Treehouse":
         "The Lakeside Forest Treehouse sits 30 feet up in a cluster of old-growth white oaks at the edge of a private 4-acre lake in the Blue Ridge Mountains outside Asheville. The structure is suspended on living trees — no concrete footings, no earthworks — and the platform sways slightly in the wind the way a boat does at anchor. At night, the lake reflects the stars directly below your feet through the glass floor panels.\n\nThe interior is compact and intentional: a queen sleeping platform, a clawfoot soaking tub positioned at the window, and a reading nook built into the bow of the tree. The wrap-around deck is the real living space — hammock, fire table, and a direct staircase down to the dock where two kayaks are always ready. The lake is entirely private, no other structures visible from the water.\n\nThis is a light-deliverable collab designed for photographers and visual creators who produce exceptional single images rather than high-volume content. The property offers golden-hour lake light in both morning and evening, which is rare. The host is a landscape photographer himself and can share optimal shot locations on the property that aren't visible from the standard guest areas.",
       "Desert Dome Glamping":

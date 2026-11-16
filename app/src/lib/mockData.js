@@ -1,8 +1,3 @@
-import vineyard1 from '../assets/vineyard-1.jpg';
-import vineyard2 from '../assets/vineyard-2.jpg';
-import vineyard3 from '../assets/vineyard-3.jpg';
-import vineyard4 from '../assets/vineyard-4.jpg';
-import vineyard5 from '../assets/vineyard-5.jpg';
 import benVenturingPhoto from '../assets/ben-venturing.png';
 import { Mail, Handshake, RefreshCw, Upload, CheckCircle2, Archive } from 'lucide-react';
 
@@ -140,9 +135,9 @@ export const SAMPLE_LISTINGS = [
     dates_available: 'Jan–Mar 2026',
     due_days: 10,
 
-    image: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&q=80',
+    image: 'https://images.unsplash.com/photo-1784552562846-9584b2afdcde?w=800&q=80',
     gallery_images: [
-      'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=1200&q=85',
+      'https://images.unsplash.com/photo-1784552562846-9584b2afdcde?w=1200&q=85',
       'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=800&q=80',
       'https://images.unsplash.com/photo-1501854140801-50d01698950b?w=800&q=80',
       'https://images.unsplash.com/photo-1486870591958-9b9d0d1dda99?w=800&q=80',
@@ -186,7 +181,7 @@ export const SAMPLE_LISTINGS = [
   },
   {
     id: '4',
-    title: 'Mountain Lodge Escape',
+    title: 'Baan Doi Jungle Lodge',
     subtitle: 'Jungle mountain luxury with panoramic views',
     location: 'Chiang Mai, Thailand',
     property_type: 'Lodge',
@@ -206,9 +201,9 @@ export const SAMPLE_LISTINGS = [
     dates_available: 'Nov–Feb 2026',
     due_days: 21,
 
-    image: 'https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=800&q=80',
+    image: 'https://images.unsplash.com/photo-1714240230232-e7046497f94a?w=800&q=80',
     gallery_images: [
-      'https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=1200&q=85',
+      'https://images.unsplash.com/photo-1714240230232-e7046497f94a?w=1200&q=85',
       'https://images.unsplash.com/photo-1506665531195-3566af2b4dfa?w=800&q=80',
     ],
 
@@ -248,74 +243,6 @@ export const SAMPLE_LISTINGS = [
     location_full: 'Chiang Mai, Thailand',
     lat: 18.7883,
     lng: 98.9853,
-  },
-  {
-    id: '7',
-    title: 'Vineyard Wine Estate',
-    subtitle: 'Private villa on a working South African estate',
-    location: 'Stellenbosch, South Africa',
-    property_type: 'Estate',
-    is_featured: true,
-    rating: 4.96,
-    review_count: 129,
-
-    compensation: '$800 Cash',
-    compensation_type: 'paid',
-    cash_amount: 800,
-
-    collab_type: 'Full Package',
-    creator_tier: 'Macro',
-    deliverables: '3 Reels, 8 Photos, 1 YouTube Video',
-    deliverable_count: 12,
-    deliverable_load: 'Moderate',
-    dates_available: 'Mar–Nov 2026',
-    due_days: 14,
-
-    image: vineyard1,
-    gallery_images: [
-      vineyard1,
-      vineyard2,
-      vineyard3,
-      vineyard4,
-      vineyard5,
-    ],
-
-    about: 'A Cape Dutch manor built in 1823, set at the foot of the Jonkershoek Mountains on a 120-acre working wine estate in the heart of Stellenbosch. The private guest wing spans six bedrooms with wide-plank Oregon pine floors, pressed tin ceilings, and a wraparound stoep (veranda) that looks out over the vine rows toward Table Mountain. Directly adjacent to the main house is exclusive access to the barrel hall — a vaulted stone cellar with 400 oak barrels that is available for private use during the stay, including after-hours shoots with controlled lighting available on request.\n\nThe vine rows run east-west and catch the Jonkershoek Valley haze from 7am to 9am every morning — a combination of mountain mist and dew on the leaves that creates a soft, directional light that luxury travel photographers specifically seek out in South Africa. The estate produces Cabernet Sauvignon, Chenin Blanc, and a single-vineyard Syrah, and a hosted tasting with the master sommelier is arranged on day two of the stay.\n\nStellenbosch town — with its oak-lined streets, galleries, and restaurants — is 20 minutes. Cape Town city center and the V&A Waterfront are 45 minutes. The Franschhoek Wine Tram is 30 minutes east. Table Mountain\'s aerial cableway is 50 minutes away and makes for a one-day content excursion that pairs naturally with this estate stay.',
-
-    amenities: [
-      { icon: 'wine',     label: 'Private wine tasting' },
-      { icon: 'garden',   label: 'Vineyard access' },
-      { icon: 'pool',     label: 'Heated estate pool' },
-      { icon: 'kitchen',  label: "Chef's kitchen" },
-      { icon: 'wine',     label: 'Master sommelier' },
-      { icon: 'wine',     label: 'Wine cellar suite' },
-      { icon: 'mountain', label: 'Table Mountain views' },
-      { icon: 'wifi',     label: 'High-speed WiFi' },
-    ],
-
-    what_you_get: [
-      '$800 cash payment upon content approval',
-      'Complimentary 2-night stay in private Cape Dutch guest wing',
-      'Exclusive barrel room access including after-hours shoot access',
-      'Hosted tasting with master sommelier (up to 4 guests)',
-      'Golden-hour vine row access — 7am–9am both mornings',
-      'Curated wine selection from the estate cellar on arrival',
-    ],
-    what_you_deliver: '3 Reels (estate reveal + vine rows, barrel room tasting, golden hour in the vines), 8 aspirational photos (Cape Dutch exterior, vine rows close-up, barrel cellar, pool + mountain backdrop, plated wine pairing, sunset estate view, estate bedroom, sommelier tasting), 1 YouTube video minimum 12 minutes — winemaking behind-the-scenes, estate history, tasting notes, Jonkershoek Valley B-roll',
-
-    requirements: [
-      'Minimum 100,000 followers on primary platform',
-      'Macro creator tier required — lifestyle or luxury travel niche preferred',
-      'YouTube video must be minimum 12 minutes, cinematic-grade edit',
-      'Feed aesthetic must align with luxury hospitality — no low-effort content',
-      'All content must be aspirational, brand-safe, and location-tagged',
-      'Raw footage of vine rows and barrel room must be delivered alongside final cuts',
-      'All content submitted within 14 days of checkout',
-    ],
-
-    location_full: 'Stellenbosch, Western Cape, South Africa',
-    lat: -33.9364,
-    lng: 18.8605,
   },
   {
     id: '5',

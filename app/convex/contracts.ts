@@ -90,9 +90,23 @@ export const save = mutation({
     summaryNote: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    if (args.ownerId) await requireOwnerOrAdmin(ctx, args.ownerId);
+    // Always require a signed-in caller; they must be the owner (or admin) and
+    // may only apply their own signature — never sign for the counterparty.
+    const caller = await requireAuthedProfile(ctx);
+    const me = String(caller._id);
+    const isAdmin = caller.is_admin === true;
+    const ownerId = args.ownerId ?? me;
+    if (!isAdmin && ownerId !== me) throw new Error("You don't have permission to do that.");
+    if (!isAdmin) {
+      if (args.creatorSigned === true && args.creatorId !== me) {
+        throw new Error("Only the creator can sign as creator.");
+      }
+      if (args.hostSigned === true && args.hostId !== me) {
+        throw new Error("Only the host can sign as host.");
+      }
+    }
     return await ctx.db.insert("contracts", {
-      owner_id: args.ownerId,
+      owner_id: ownerId,
       host_id: args.hostId,
       creator_id: args.creatorId,
       creator_name: args.creatorName,
@@ -166,11 +180,20 @@ export const update = mutation({
       // sends both flags, so only a false → true flip counts as signing; an
       // unchanged flag or a counter-offer clearing a signature is allowed.
       if (caller.is_admin !== true) {
-        if (args.updates.creator_signed === true && !b.creator_signed && caller.role === "host") {
+        const creatorId = args.updates.creator_id ?? b.creator_id;
+        const hostId = args.updates.host_id ?? b.host_id;
+        if (args.updates.creator_signed === true && !b.creator_signed && creatorId !== me) {
           throw new Error("Only the creator can sign as creator.");
         }
-        if (args.updates.host_signed === true && !b.host_signed && caller.role !== "host") {
+        if (args.updates.host_signed === true && !b.host_signed && hostId !== me) {
           throw new Error("Only the host can sign as host.");
+        }
+        // Once a party is set, a non-admin can't repoint the contract at someone else.
+        for (const f of ["host_id", "creator_id"] as const) {
+          const next = args.updates[f];
+          if (next !== undefined && b[f] && next !== b[f]) {
+            throw new Error("You can't change the parties on this contract.");
+          }
         }
       }
     }
@@ -876,10 +899,33 @@ export const getPendingChargeApprovals = query({
   },
 });
 
+// Atomic: only the first caller moves pending_approval → approved, so a
+// double-click or two admins approving at once can never both reach Stripe.
 export const markChargeApproved = internalMutation({
   args: { id: v.string() },
   handler: async (ctx, args) => {
+    const c: any = await ctx.db.get(args.id as any);
+    if (!c || c.charge_approval_status !== "pending_approval") return { ok: false };
     await ctx.db.patch(args.id as any, { charge_approval_status: "approved", charge_approved_at: Date.now() });
+    return { ok: true };
+  },
+});
+
+// Atomic claim on a creator payout: flips the status to "processing" only if it
+// isn't already sent/in flight/held/frozen, so the scheduled release, "Release
+// Now" and the Wise button can never send the same payout twice.
+export const claimPayout = internalMutation({
+  args: { id: v.string() },
+  handler: async (ctx, args) => {
+    const c: any = await ctx.db.get(args.id as any);
+    if (!c) return { ok: false, reason: "no_contract" };
+    if (c.payments_blocked) return { ok: false, reason: "payments_blocked" };
+    if (c.creator_payout_held) return { ok: false, reason: "held" };
+    if (c.creator_payout_status === "paid" || c.creator_payout_status === "processing") {
+      return { ok: false, reason: "already_sent" };
+    }
+    await ctx.db.patch(args.id as any, { creator_payout_status: "processing" });
+    return { ok: true };
   },
 });
 

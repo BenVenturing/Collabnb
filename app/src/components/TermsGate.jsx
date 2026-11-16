@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useMutation } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { useAuth } from '../contexts/AuthContext';
@@ -10,12 +10,24 @@ export default function TermsGate() {
   const acceptTerms = useMutation(api.profiles.acceptTerms);
   const [checked, setChecked] = useState(false);
   const [busy, setBusy] = useState(false);
+  const pid = profile?._id ? String(profile._id) : null;
+  const key = pid ? `collabnb_terms_${pid}` : null;
+  const needs = !!pid && !profile.terms_accepted_at;
+  const read = () => { try { return localStorage.getItem(key) === TERMS_VERSION; } catch { return false; } };
+  const [localOk, setLocalOk] = useState(() => (key ? read() : false));
 
-  if (!profile?._id || profile.terms_accepted_at) return null;
+  useEffect(() => {
+    if (!needs) return;
+    if (read()) { setLocalOk(true); acceptTerms({ profileId: pid, version: TERMS_VERSION }).catch(() => {}); }
+  }, [needs, pid]);
+
+  if (!needs || localOk) return null;
 
   async function accept() {
     setBusy(true);
-    try { await acceptTerms({ profileId: String(profile._id), version: TERMS_VERSION }); } catch {}
+    try { localStorage.setItem(key, TERMS_VERSION); } catch {}
+    setLocalOk(true);
+    try { await acceptTerms({ profileId: pid, version: TERMS_VERSION }); } catch {}
     setBusy(false);
   }
 

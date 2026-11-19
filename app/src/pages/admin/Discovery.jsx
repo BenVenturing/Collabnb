@@ -1612,7 +1612,7 @@ function HostCrmBoard() {
   const colOf = (p) => (p.status === 'emailed' && (p.tags || []).includes('auto') ? 'queued' : p.status);
   for (const p of filtered) (byColumn[colOf(p)] || byColumn.queued).push(p);
   const readiness = (p) => (p.whatsapp ? 2 : 0) + ((isHotelProspect(p) ? p.ig_handle : p.instagram_handle) ? 2 : 0) + ((p.email || p.marketing_email) ? 1 : 0);
-  for (const col of CRM_COLUMNS) byColumn[col.id].sort((a, b) => (col.id === 'queued' ? (b.target ? 1 : 0) - (a.target ? 1 : 0) : 0) || (b.starred ? 1 : 0) - (a.starred ? 1 : 0) || (col.id === 'queued' ? readiness(b) - readiness(a) : 0) || outreachRank(b) - outreachRank(a) || lastActivityAt(b) - lastActivityAt(a));
+  for (const col of CRM_COLUMNS) byColumn[col.id].sort((a, b) => (b.starred ? 1 : 0) - (a.starred ? 1 : 0) || (col.id === 'queued' ? (b.target ? 1 : 0) - (a.target ? 1 : 0) : 0) || (col.id === 'queued' ? readiness(b) - readiness(a) : 0) || outreachRank(b) - outreachRank(a) || lastActivityAt(b) - lastActivityAt(a));
 
   // Per-column select-all — a global one selected across every stage at
   // once, which was rarely what you wanted (e.g. bulk-emailing the whole

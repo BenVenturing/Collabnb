@@ -1005,6 +1005,25 @@ export const builtStarToTarget = internalMutation({
   },
 });
 
+export const starHotels = internalMutation({
+  args: { names: v.array(v.string()), dryRun: v.optional(v.boolean()) },
+  handler: async (ctx, { names, dryRun }) => {
+    const audits = (await ctx.db.query("hotel_audits").collect()) as any[];
+    const want = names.map((n) => n.toLowerCase().trim());
+    const out: Record<string, string[]> = {};
+    for (const n of want) out[n] = [];
+    for (const a of audits) {
+      if (a.demo) continue;
+      const hn = String(a.hotel_name).toLowerCase();
+      const hit = want.find((n) => hn.includes(n));
+      if (!hit) continue;
+      out[hit].push(a.hotel_name);
+      if (!dryRun) await ctx.db.patch(a.prospect_id, { starred: true });
+    }
+    return { dryRun: !!dryRun, matched: out };
+  },
+});
+
 export const markSkipped = internalMutation({
   args: { id: v.id("prospects"), reason: v.string() },
   handler: async (ctx, { id, reason }) => {

@@ -237,7 +237,8 @@ function ruleNeedsRefToken(rule: { dm_message: string; tier2_message?: string; t
 // signup can be attributed back to this DM (see profiles.getOrCreate).
 function renderMessage(message: string, refToken: string | undefined, shortPath?: string): string {
   if (!refToken || !message.includes("{{link}}")) return message;
-  return message.replaceAll("{{link}}", `${SITE_URL}/${shortPath || "go"}/${refToken}`);
+  const link = shortPath ? `${SITE_URL}/${shortPath}` : `${SITE_URL}/go/${refToken}`;
+  return message.replaceAll("{{link}}", link);
 }
 
 async function sendPublicReply(commentId: string, message: string): Promise<void> {
@@ -518,6 +519,33 @@ const AUTOREPLY_FLOWS = [
     dm_message: "Hey! Creator Plus keeps you applying to stays and messaging hosts after your free 30-day trial. It's $10/month or $60/year, and browsing stays free. See the plans: {{link}}",
     tier2_message: "Hey! Just checking you saw this 👋 Here are the Creator Plus plans again: {{link}}",
     tier3_message: "Last nudge from us 👋 The yearly Creator Plus plan is $60, which saves you $60 compared to paying monthly: {{link}}",
+  },
+  {
+    keywords: ["price", "prices", "pricing", "cost", "costs", "fee", "fees", "how much"],
+    signup_url: `${SITE_URL}/pricing/`,
+    short_path: "cost",
+    public_reply: PUBLIC_REPLY,
+    dm_message: "Hey! Collabnb is free to try for 30 days. After that, Creator Plus is $10/month or $60/year, and browsing stays is always free. Hosts list for free. See the plans: {{link}}",
+    tier2_message: "Hey! Just checking you saw this 👋 Here are the plans again: {{link}}",
+    tier3_message: "Last nudge from us 👋 Start your free 30 days, no commitment: {{link}}",
+  },
+  {
+    keywords: ["info", "information", "details", "how it works", "explain"],
+    signup_url: `${SITE_URL}/`,
+    short_path: "info",
+    public_reply: PUBLIC_REPLY,
+    dm_message: "Hey! Collabnb connects boutique stays with vetted content creators. Hosts list a stay, creators apply, and you agree a collab together. Take a look: {{link}}",
+    tier2_message: "Hey! Just checking you saw this 👋 Here's the overview again: {{link}}",
+    tier3_message: "Last nudge from us 👋 Whether you host or create, you can join free: {{link}}",
+  },
+  {
+    keywords: ["link", "links", "website", "join", "signup", "sign up", "start"],
+    signup_url: `${JOIN_URL}`,
+    short_path: "start",
+    public_reply: PUBLIC_REPLY,
+    dm_message: "Hey! Here's where to join Collabnb. Pick Host if you have a stay, or Creator if you make content: {{link}}",
+    tier2_message: "Hey! Just checking you saw this 👋 Here's the signup page again: {{link}}",
+    tier3_message: "Last nudge from us 👋 It takes about two minutes to join: {{link}}",
   },
 ];
 

@@ -36,3 +36,12 @@
 /plus /pricing/ 302
 /plus/ /pricing/ 302
 /plus/* /go/:splat 302
+/cost /pricing/ 302
+/cost/ /pricing/ 302
+/cost/* /go/:splat 302
+/info / 302
+/info/ / 302
+/info/* /go/:splat 302
+/start /join 302
+/start/ /join 302
+/start/* /go/:splat 302

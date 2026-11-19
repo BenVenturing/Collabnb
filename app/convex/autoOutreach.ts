@@ -92,6 +92,10 @@ export const setConfig = internalMutation({
 });
 
 const MAX_FOLLOWERS = 25_000;
+const FREEMAIL = /^(gmail|googlemail|yahoo|ymail|hotmail|outlook|live|msn|icloud|me|aol|proton|protonmail|gmx|mail)\./i;
+const GENERIC_INBOX = /^(reservations?|reserv|frontdesk|front\.desk|front-desk|reception|booking|bookings|concierge|guestservices|guest\.services|res|stay|rooms)@/i;
+const emailDomain = (e?: string) => (validEmail(e) ? String(e).split("@")[1].toLowerCase() : "");
+const SHARED_DOMAIN_MIN = 3;
 const BIG_PROPERTY = /\b(resort|resorts|casino|convention|conference cent(er|re)|shingle creek|halekulani|tower|towers|club|vacation (club|rentals?)|timeshare|condo(minium)?s?)\b/i;
 
 // ─── Candidate pool ──────────────────────────────────────────────────────────
@@ -101,6 +105,8 @@ export const pool = internalQuery({
     const rows = (await ctx.db.query("prospects").withIndex("by_kind_status", (q) => q.eq("kind", "host")).collect()) as any[];
     const day = todayKey();
     const sentToday = rows.filter((p) => isAutoToday(p, day)).length;
+    const domCount = new Map<string, number>();
+    for (const r of rows) { const d = emailDomain(r.marketing_email || r.email); if (d && !FREEMAIL.test(d)) domCount.set(d, (domCount.get(d) || 0) + 1); }
     const stats = { hosts: rows.length, fresh: 0, withHandle: 0, withEmail: 0, independent: 0, eligible: 0 };
     const eligible = rows.filter((p) => {
       if (!["new", "queued"].includes(p.status)) return false;
@@ -112,6 +118,10 @@ export const pool = internalQuery({
       if (!validEmail(p.marketing_email) && !validEmail(p.email) && !p.website) return false;
       stats.withEmail++;
       if (detectChain(p)) return false;
+      const ed = emailDomain(p.marketing_email || p.email);
+      if (ed && detectChain({ display_name: p.display_name, website: `https://${ed}` } as any)) return false;
+      if (ed && (domCount.get(ed) || 0) >= SHARED_DOMAIN_MIN) return false;
+      if (GENERIC_INBOX.test(String(p.marketing_email || p.email || "")) && !p.decision_maker_name) return false;
       if (BIG_PROPERTY.test(String(p.display_name || ""))) return false;
       if ((p.follower_count ?? 0) > MAX_FOLLOWERS) return false;
       stats.independent++;
@@ -565,6 +575,7 @@ export const processOne = internalAction({
     if (!preview && (await ctx.runQuery(internal.autoOutreach.alreadyAudited, { email, handle }))) return skip("same email or instagram already audited");
     const chain = detectChain({ display_name: p.display_name, website: `https://${email.split("@")[1]}` } as any) || detectChain({ display_name: p.display_name, website } as any);
     if (chain) return skip(`chain or management group (${chain.group})`);
+    if (GENERIC_INBOX.test(email) && !p.decision_maker_name) return skip("generic front-desk inbox only");
 
     const hotel = String(p.display_name || ig.fullName || handle).replace(/\s*[|·•-]\s.*$/, "").trim().slice(0, 80);
     const okName = (n?: string, r?: string) => !!n && n.trim().split(/\s+/).length >= 2 && !/\b(chef|sous|cook|bartender|sommelier|server|housekeep)/i.test(`${n} ${r || ""}`);

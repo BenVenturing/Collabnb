@@ -311,7 +311,6 @@ function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
 
   async function dmOnInstagram() {
     const igHandle = isHotel ? prospect.ig_handle : prospect.instagram_handle;
-    if (!igHandle) { setOpen(true); setFocusIgPending(true); return; }
     let text = dmDraft;
     if (!text) {
       // No draft yet — generate one now (using analyzed data if available)
@@ -328,6 +327,11 @@ function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
       setGenBusy(false);
     }
     try { await navigator.clipboard.writeText(text); } catch { /* clipboard unavailable */ }
+    if (!igHandle) {
+      setGenErr('Draft copied — add their Instagram handle to open the DM thread');
+      setOpen(true); setFocusIgPending(true);
+      return;
+    }
     window.open(`https://ig.me/m/${igHandle}`, '_blank', 'noopener');
     // Moves the card into the "DMed" column the moment you actually go do
     // it — no separate click needed, for either kind. Only from earlier in

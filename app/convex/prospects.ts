@@ -2104,6 +2104,7 @@ export const importMapsHotelsLocal = mutation({
   args: {
     secret: v.string(),
     regionTag: v.string(),
+    extraTags: v.optional(v.array(v.string())),
     rows: v.array(v.object({
       handle: v.string(),
       name: v.string(),
@@ -2117,7 +2118,7 @@ export const importMapsHotelsLocal = mutation({
       notes: v.optional(v.string()),
     })),
   },
-  handler: async (ctx, { secret, regionTag, rows }) => {
+  handler: async (ctx, { secret, regionTag, extraTags, rows }) => {
     const expected = process.env.LOCAL_IMPORT_SECRET;
     if (!expected || secret !== expected) throw new Error("Invalid or missing import secret.");
     const hosts = await ctx.db.query("prospects").withIndex("by_kind_status", (q) => q.eq("kind", "host")).collect();
@@ -2151,7 +2152,7 @@ export const importMapsHotelsLocal = mutation({
         website: r.website,
         ig_handle: r.ig_handle,
         notes: r.notes,
-        tags: [regionTag],
+        tags: [regionTag, ...(extraTags || [])],
         source: "maps",
         status: "queued",
         created_at: Date.now(),

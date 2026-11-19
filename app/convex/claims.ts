@@ -158,6 +158,13 @@ export const markViewed = mutation({
       last_viewed_at: now,
     });
     if (!c.first_viewed_at) {
+      if (c.profile_id) {
+        const audit = await ctx.db.query("hotel_audits").filter((q) => q.eq(q.field("claim_token"), token)).first();
+        if (audit) {
+          const p = await ctx.db.get(audit.prospect_id);
+          if (p && !(p as any).starred) await ctx.db.patch(p._id, { starred: true });
+        }
+      }
       await ctx.scheduler.runAfter(0, internal.email.sendAdminNotification, {
         type: "signup",
         subject: `👀 ${c.hotel_name} opened their claim link`,

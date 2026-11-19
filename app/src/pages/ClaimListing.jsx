@@ -39,7 +39,18 @@ export default function ClaimListing() {
   const redeemed = useRef(false);
 
   useEffect(() => {
-    if (claim && !viewed.current) { viewed.current = true; markViewed({ token }).catch(() => {}); }
+    if (!claim || viewed.current) return;
+    const fire = () => {
+      if (viewed.current) return;
+      viewed.current = true;
+      markViewed({ token }).catch(() => {});
+    };
+    const evs = ['scroll', 'pointerdown', 'keydown', 'touchstart'];
+    let armed = false;
+    const t = setTimeout(() => { armed = true; }, 1500);
+    const onAct = () => { if (armed) { fire(); evs.forEach(e => window.removeEventListener(e, onAct)); } };
+    evs.forEach(e => window.addEventListener(e, onAct, { passive: true }));
+    return () => { clearTimeout(t); evs.forEach(e => window.removeEventListener(e, onAct)); };
   }, [claim, token, markViewed]);
 
   async function doRedeem() {

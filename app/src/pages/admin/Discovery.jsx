@@ -177,6 +177,17 @@ const PROSPECT_TAGS = {
   BALI: 'Bali — from the Google Maps area sweep',
 };
 
+const COUNTRY_PALETTE = ['#0ea5e9', '#f97316', '#8b5cf6', '#10b981', '#ec4899', '#eab308', '#ef4444', '#14b8a6', '#6366f1', '#84cc16', '#f43f5e', '#06b6d4'];
+const COUNTRY_FIXED = { Indonesia: '#0ea5e9', Mexico: '#10b981', Italy: '#ef4444', 'United States': '#6366f1', Portugal: '#f97316', 'Costa Rica': '#84cc16', Colombia: '#eab308', Greece: '#06b6d4', Morocco: '#ec4899', Thailand: '#8b5cf6', Croatia: '#14b8a6' };
+const countryOf = (p) => String(p.country || '').trim();
+const countryColor = (name) => {
+  if (!name) return null;
+  if (COUNTRY_FIXED[name]) return COUNTRY_FIXED[name];
+  let h = 0;
+  for (const ch of name) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return COUNTRY_PALETTE[h % COUNTRY_PALETTE.length];
+};
+
 function TagChips({ tags, small }) {
   if (!tags?.length) return null;
   return tags.map((t) => (
@@ -413,7 +424,7 @@ function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
   }
 
   return (
-    <div style={{ position: 'relative', padding: '0.8rem 0.9rem', borderRadius: '0.875rem', background: 'rgba(255,255,255,0.72)', border: '1px solid rgba(25,37,36,0.07)' }}>
+    <div style={{ position: 'relative', padding: '0.8rem 0.9rem', borderRadius: '0.875rem', background: 'rgba(255,255,255,0.72)', border: '1px solid rgba(25,37,36,0.07)', ...(crm && countryColor(countryOf(prospect)) ? { borderLeft: `4px solid ${countryColor(countryOf(prospect))}` } : {}) }}>
       {(isHotelProspect(prospect) || prospect.tags?.length > 0) && (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', flexWrap: 'wrap', gap: 4, margin: '-0.25rem 0 0.3rem' }}>
           <TagChips tags={prospect.tags} small />
@@ -1574,6 +1585,7 @@ function HostCrmBoard() {
   const [hideChains, setHideChains] = useState(false);
   const [targetsOnly, setTargetsOnly] = useState(false);
   const [region, setRegion] = useState('');
+  const [countryFilter, setCountryFilter] = useState('');
   const [area, setArea] = useState('');
   const [walkIn, setWalkIn] = useState(false);
   const [selected, setSelected] = useState(() => new Set());
@@ -1599,6 +1611,7 @@ function HostCrmBoard() {
     if (hideChains && detectChain(p)) return false;
     if (targetsOnly && !p.target) return false;
     if (region && !(p.tags || []).includes(region)) return false;
+    if (countryFilter && countryOf(p) !== countryFilter) return false;
     if (area && areaOf(p) !== area) return false;
     if (!filterText.trim()) return true;
     const t = filterText.toLowerCase();
@@ -1607,6 +1620,10 @@ function HostCrmBoard() {
       || (p.location || '').toLowerCase().includes(t)
       || (p.niche || '').toLowerCase().includes(t);
   });
+
+  const countryCounts = {};
+  for (const p of hosts) if (p.status !== 'new' && countryOf(p)) countryCounts[countryOf(p)] = (countryCounts[countryOf(p)] || 0) + 1;
+  const countryList = Object.entries(countryCounts).sort((a, b) => b[1] - a[1]);
 
   const areas = [...new Set(hosts.filter((p) => p.status !== 'new' && (!region || (p.tags || []).includes(region))).map(areaOf).filter(Boolean))].sort();
 
@@ -1735,6 +1752,18 @@ function HostCrmBoard() {
       </div>
 
       <TagLegend />
+
+      {countryList.length > 0 && (
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', marginBottom: '0.7rem' }}>
+          {countryList.map(([name, n]) => (
+            <button key={name} onClick={() => setCountryFilter((c) => (c === name ? '' : name))} title={countryFilter === name ? 'Click to show all countries' : `Show only ${name}`}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0.22rem 0.6rem', borderRadius: 9999, border: `1.5px solid ${countryColor(name)}`, background: countryFilter === name ? countryColor(name) : 'transparent', color: countryFilter === name ? '#fff' : '#192524', fontSize: '0.7rem', fontWeight: 600, cursor: 'pointer', opacity: countryFilter && countryFilter !== name ? 0.45 : 1 }}>
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: countryFilter === name ? '#fff' : countryColor(name) }} />
+              {name} · {n}
+            </button>
+          ))}
+        </div>
+      )}
 
       {showFilters && (
         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center', marginBottom: '0.85rem', padding: '0.5rem 0.6rem', borderRadius: '0.6rem', background: 'rgba(25,37,36,0.04)' }}>

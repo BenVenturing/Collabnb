@@ -341,7 +341,7 @@ function HostListingCard({ listing, meta, delay, glowState, onToggleStatus, onDu
   return (
     <div
       className="reveal-up"
-      style={{ position: 'relative', animationDelay: `${delay}ms`, opacity: 0 }}
+      style={{ position: 'relative', animationDelay: `${delay}ms`, opacity: 0, height: '100%' }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => { setHovered(false); setMenuOpen(false); }}
     >
@@ -354,6 +354,9 @@ function HostListingCard({ listing, meta, delay, glowState, onToggleStatus, onDu
           borderRadius: '1.25rem',
           overflow: 'hidden',
           cursor: 'pointer',
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
           transform: hovered && !confirmDelete ? 'translateY(-4px)' : 'none',
           boxShadow: frozen
             ? '0 4px 16px rgba(25,37,36,0.07), 0 0 0 2.5px rgba(209,235,219,0.7), 0 0 18px rgba(74,155,127,0.22)'
@@ -367,7 +370,7 @@ function HostListingCard({ listing, meta, delay, glowState, onToggleStatus, onDu
         }}
         onClick={() => navigate(`/host/listing/${listing.id}`)}
       >
-        <div style={{ position: 'relative', height: 176, overflow: 'hidden' }}>
+        <div style={{ position: 'relative', height: 176, flexShrink: 0, overflow: 'hidden' }}>
           <img
             src={listing.image}
             alt={listing.title}
@@ -386,17 +389,17 @@ function HostListingCard({ listing, meta, delay, glowState, onToggleStatus, onDu
           </span>
         </div>
 
-        <div style={{ padding: '0.875rem 1rem 1rem' }}>
+        <div style={{ padding: '0.875rem 1rem 1rem', flex: 1, display: 'flex', flexDirection: 'column' }}>
           <div style={{ marginBottom: '0.2rem' }}>
-            <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.875rem', color: 'var(--ink)', lineHeight: 1.25 }}>
+            <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.875rem', color: 'var(--ink)', lineHeight: 1.25, display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
               {listing.title}
             </p>
           </div>
-          <p style={{ fontSize: '0.72rem', color: 'var(--sage)', marginBottom: '0.6rem' }}>{listing.location}</p>
-          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '0.5rem', marginBottom: '0.75rem' }}>
-            <div>
-              <p style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--ink)', lineHeight: 1.2 }}>{listing.compensation}</p>
-              <p style={{ fontSize: '0.67rem', color: 'var(--sage)', marginTop: '0.15rem' }}>{listing.deliverables}</p>
+          <p style={{ fontSize: '0.72rem', color: 'var(--sage)', marginBottom: '0.6rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{listing.location}</p>
+          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '0.5rem', marginBottom: '0.75rem', marginTop: 'auto', minHeight: '3.4rem' }}>
+            <div style={{ minWidth: 0 }}>
+              <p style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--ink)', lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{listing.compensation}</p>
+              <p style={{ fontSize: '0.67rem', color: 'var(--sage)', marginTop: '0.15rem', lineHeight: 1.35, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{listing.deliverables}</p>
             </div>
             <span className="chip" style={{ fontSize: '0.62rem', padding: '0.2rem 0.5rem', flexShrink: 0 }}>
               {listing.collab_type}
@@ -1222,7 +1225,7 @@ export default function HostDashboard() {
               </p>
             </div>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1.25rem', alignItems: 'start' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1.25rem', alignItems: 'stretch' }}>
               {filtered.map((listing, i) => (
                 <HostListingCard key={listing.id} listing={listing} meta={listing.meta} delay={i * 55} glowState={glowState} onToggleStatus={toggleListingStatus} onDuplicate={duplicateListing} onRemoveSample={removeSampleListing} onDelete={deleteListing} />
               ))}

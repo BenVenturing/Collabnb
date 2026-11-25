@@ -786,18 +786,22 @@ export default function Explore() {
     }
   }
 
-  const trending    = byPropType(scored.filter((l) => l.is_featured));
-  const forYou      = byPropType(
+  // Each listing appears in only the first row it qualifies for.
+  const shownIds = new Set();
+  const claim = (arr) => arr.filter((l) => !shownIds.has(l.id) && shownIds.add(l.id));
+  const trending    = claim(byPropType(scored.filter((l) => l.is_featured)));
+  const forYou      = claim(byPropType(
     scored
       .filter((l) => l._match >= FOR_YOU_MIN_SCORE)
       .sort((a, b) => b._match - a._match || (b.rating ?? 0) - (a.rating ?? 0))
-  );
-  const nearMe      = byPropType(
+  ));
+  const nearMe      = claim(byPropType(
     scored
       .filter((l) => l._matchParts.location >= NEAR_ME_MIN_LOCATION)
       .sort((a, b) => b._matchParts.location - a._matchParts.location || b._match - a._match)
-  );
+  ));
   const allFiltered = byPropType(scored);
+  const moreStays   = allFiltered.filter((l) => !shownIds.has(l.id));
 
   // ── Map data: search/filter matches that have coordinates ────────────────────
   const mapListings = allFiltered.filter((l) => typeof l.lat === 'number' && typeof l.lng === 'number');
@@ -1242,8 +1246,8 @@ export default function Explore() {
 
             <SectionRow
               title={t('sections.allStays')}
-              subtitle={t('sections.allStaysSubtitle', { count: allFiltered.length })}
-              listings={allFiltered}
+              subtitle={t('sections.allStaysSubtitle', { count: moreStays.length })}
+              listings={moreStays}
               saved={savedIds}
               onSave={toggleSave}
               onNavigate={goToListing}

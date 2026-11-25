@@ -1385,8 +1385,34 @@ export const deleteProfile = mutation({
 export const deleteAccount = action({
   args: { profileId: v.id("profiles") },
   handler: async (ctx, args): Promise<{ deleted: boolean; email?: string; reason?: string }> => {
+    const before = await ctx.runQuery(internal.profiles.getByIdInternal, { id: args.profileId });
+    const stripeCustomerId: string | undefined = before?.stripe_customer_id;
+
     const res: { deleted: boolean; email?: string; reason?: string } =
       await ctx.runMutation(api.profiles.deleteProfile, { profileId: args.profileId });
+
+    // Cancel only after deleteProfile's ownership check has passed.
+    const stripeKey = process.env.STRIPE_SECRET_KEY;
+    if (stripeKey && res.deleted && stripeCustomerId) {
+      try {
+        const listRes = await fetch(
+          `https://api.stripe.com/v1/subscriptions?customer=${encodeURIComponent(stripeCustomerId)}&status=all&limit=100`,
+          { headers: { Authorization: `Bearer ${stripeKey}` } },
+        );
+        const { data } = (await listRes.json()) as { data?: Array<{ id: string; status: string }> };
+        for (const sub of data ?? []) {
+          if (["active", "trialing", "past_due", "unpaid", "incomplete", "paused"].includes(sub.status)) {
+            const r = await fetch(`https://api.stripe.com/v1/subscriptions/${sub.id}`, {
+              method: "DELETE",
+              headers: { Authorization: `Bearer ${stripeKey}` },
+            });
+            if (!r.ok) console.error("Stripe cancel failed", sub.id, await r.text());
+          }
+        }
+      } catch (err) {
+        console.error("Stripe cancellation failed for customer", stripeCustomerId, err);
+      }
+    }
 
     const key = process.env.CLERK_SECRET_KEY;
     if (key && res.deleted && res.email) {

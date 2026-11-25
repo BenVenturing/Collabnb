@@ -129,6 +129,10 @@ export const approveCreator = mutation({
 
     const now = Date.now();
     const trialDays = profile.referred_by ? REFERRED_TRIAL_DURATION_DAYS : TRIAL_DURATION_DAYS;
+    // The trial runs from signup, not approval. A host switching to creator
+    // signed up long ago, so their trial starts at approval instead.
+    const trialStart = isRoleSwitch ? now : profile._creationTime;
+    const trialEnd = trialStart + trialDays * 24 * 60 * 60 * 1000;
     const patch: Record<string, any> = {
       is_verified: true,
       creator_verified: true,
@@ -137,9 +141,9 @@ export const approveCreator = mutation({
       is_founder: isFounder,
       is_rejected: undefined,
       rejection_reason: undefined,
-      access_state: isFounder ? "active" : "trial",
-      trial_starts_at: isFounder ? undefined : now,
-      trial_ends_at: isFounder ? undefined : now + trialDays * 24 * 60 * 60 * 1000,
+      access_state: isFounder ? "active" : trialEnd > now ? "trial" : "limited",
+      trial_starts_at: isFounder ? undefined : trialStart,
+      trial_ends_at: isFounder ? undefined : trialEnd,
       admin_verification_note: args.adminNote,
       creator_approved_at: now,
     };

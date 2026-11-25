@@ -27,6 +27,7 @@ export default defineConfig({
         terms: resolve(__dirname, 'terms.html'),
         'cookie-policy': resolve(__dirname, 'cookie-policy.html'),
         'refund-policy': resolve(__dirname, 'refund-policy.html'),
+        support: resolve(__dirname, 'support.html'),
         pricing: resolve(__dirname, 'pricing/index.html'),
         calculator: resolve(__dirname, 'pricing/calculator.html'),
       },

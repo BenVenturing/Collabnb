@@ -676,7 +676,8 @@ export default function Explore() {
   // Filter out any the user has dismissed on this device.
   const sampleActive = (samplesRaw || [])
     .map((l) => ({ ...normalizeConvexListing(l, t), _isSample: true }))
-    .filter((l) => !hiddenSampleIds.includes(l.id));
+    .filter((l) => !hiddenSampleIds.includes(l.id))
+    .filter((l, i, arr) => arr.findIndex((x) => x.title === l.title) === i);
 
   // Client-side cache: seed display instantly on repeat visits, update when fresh data arrives
   const cachedListings = cache.get(EXPLORE_CACHE_KEY);

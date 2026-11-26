@@ -1143,7 +1143,9 @@ export const adminFunnel = query({
     const stat = (list: any[]) => ({ sent: list.length, viewed: list.filter((a) => a.view_count).length, built: list.filter((a) => (a.built_at || a.claim_token) && !a.bot_build).length });
     const days: Record<string, number> = {};
     audits.forEach((a) => { const d = new Date(a.created_at).toISOString().slice(0, 10); days[d] = (days[d] || 0) + 1; });
+    const manual = await ctx.db.query("admin_settings").withIndex("by_key", (q) => q.eq("key", MANUAL_RUN_KEY)).first();
     return {
+      lastManualRun: Number(manual?.value || 0) || null,
       enabled: cfg.enabled, capToday: budgetUsage(audits, cfg).cap, max: cfg.max, budget: budgetUsage(audits, cfg),
       today: stat(since(DAY)), week: stat(since(7 * DAY)), all: stat(audits),
       replied: rows.filter((r) => r.replied).length,
@@ -1151,6 +1153,24 @@ export const adminFunnel = query({
       perDay: Object.entries(days).sort().slice(-14).map(([date, n]) => ({ date, n })),
       rows,
     };
+  },
+});
+
+// Admin "Run now": same as the 01:00 UTC cron, still capped by today's budget.
+const MANUAL_RUN_KEY = "auto_outreach_manual_run_at";
+const MANUAL_RUN_LOCK = 60 * 60_000;
+export const adminRunNow = mutation({
+  args: {},
+  handler: async (ctx) => {
+    await requireAdmin(ctx);
+    const row = await ctx.db.query("admin_settings").withIndex("by_key", (q) => q.eq("key", MANUAL_RUN_KEY)).first();
+    const last = Number(row?.value || 0);
+    if (Date.now() - last < MANUAL_RUN_LOCK) return { ok: false, last };
+    const value = String(Date.now());
+    if (row) await ctx.db.patch(row._id, { value });
+    else await ctx.db.insert("admin_settings", { key: MANUAL_RUN_KEY, value });
+    await ctx.scheduler.runAfter(0, internal.autoOutreach.runDaily, {});
+    return { ok: true };
   },
 });
 

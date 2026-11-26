@@ -31,6 +31,8 @@ function stage(r) {
 export default function AutoOutreach() {
   const d = useQuery(api.autoOutreach.adminFunnel);
   const setEnabled = useMutation(api.autoOutreach.adminSetEnabled);
+  const runNow = useMutation(api.autoOutreach.adminRunNow);
+  const [runMsg, setRunMsg] = useState('');
   const [filter, setFilter] = useState('all');
   const [flow, setFlow] = useState(null);
   if (!d) return <div style={{ padding: 24, color: SAGE }}>Loading…</div>;
@@ -45,6 +47,15 @@ export default function AutoOutreach() {
     return true;
   });
   const maxDay = Math.max(1, ...d.perDay.map((x) => x.n));
+  // Cron: daily at 01:00 UTC (convex/crons.ts "auto hotel outreach").
+  const nextRun = (() => { const n = new Date(); const t = new Date(Date.UTC(n.getUTCFullYear(), n.getUTCMonth(), n.getUTCDate(), 1)); if (t <= n) t.setUTCDate(t.getUTCDate() + 1); return t; })();
+  const hrs = (ms) => { const m = Math.round(ms / 60000); return m >= 60 ? `${Math.floor(m / 60)}h ${m % 60}m` : `${m}m`; };
+  const locked = d.lastManualRun && Date.now() - d.lastManualRun < 3600000;
+  const onRunNow = async () => {
+    if (!window.confirm(`Send today's batch now? Up to ${Math.max(0, d.capToday - d.today.sent)} emails go out over the next ~45 minutes. Tomorrow's 01:00 UTC run still happens.`)) return;
+    const r = await runNow({});
+    setRunMsg(r.ok ? 'Running now. Sends appear below as they go out.' : 'Already ran in the last hour.');
+  };
 
   return (
     <div style={{ padding: 24, maxWidth: 1100, background: BONE, minHeight: '100%' }}>
@@ -53,11 +64,17 @@ export default function AutoOutreach() {
           <h2 style={{ margin: 0, color: INK }}>Auto outreach</h2>
           <div style={{ fontSize: 13, color: SAGE }}>
             {d.enabled ? `On · cap today ${d.capToday} (ramp ${d.budget?.ramp ?? d.capToday}, max ${d.max})` : 'Paused'} · automated sends only; earlier manual outreach is unchanged in Discovery
+            <br />{d.enabled ? <>Next run {nextRun.toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' })} (in {hrs(nextRun - Date.now())})</> : 'Next run: paused'}
+            {d.lastManualRun && <> · last manual run {new Date(d.lastManualRun).toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' })}</>}
+            {runMsg && <> · <strong style={{ color: INK }}>{runMsg}</strong></>}
             {d.budget && <><br />Resend quota {d.budget.used} of {d.budget.budget} used · {d.budget.due} follow-up{d.budget.due === 1 ? '' : 's'} still due today · {d.budget.reserve} kept for reminders{d.budget.per === 2 ? ' · BCC on, every email counts twice' : ''}</>}
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
         <button onClick={() => setFlow({})} style={{ background: '#fff', color: INK, border: `1px solid ${INK}`, borderRadius: 999, padding: '9px 18px', fontWeight: 600, cursor: 'pointer' }}>How it works</button>
+        <button onClick={onRunNow} disabled={!d.enabled || locked || d.today.sent >= d.capToday}
+          title={!d.enabled ? 'Start sending first' : locked ? 'Ran in the last hour' : d.today.sent >= d.capToday ? "Today's cap is used up" : "Send today's batch now instead of waiting for the scheduled run"}
+          style={{ background: '#fff', color: INK, border: `1px solid ${INK}`, borderRadius: 999, padding: '9px 18px', fontWeight: 600, cursor: 'pointer', opacity: !d.enabled || locked || d.today.sent >= d.capToday ? 0.45 : 1 }}>Run now</button>
         <button
           onClick={() => setEnabled({ enabled: !d.enabled })}
           style={{ background: d.enabled ? '#fff' : INK, color: d.enabled ? INK : '#fff', border: `1px solid ${INK}`, borderRadius: 999, padding: '9px 18px', fontWeight: 600, cursor: 'pointer' }}

@@ -2915,33 +2915,6 @@ main .glass-sm { background: rgba(255, 255, 255, 0.65); }
   opacity: 1;
 }
 
-/* "In development" beta scrim over the phone mockup */
-.phone-dev-scrim {
-  position: absolute;
-  inset: 0;
-  z-index: 30;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 1.5rem;
-  text-align: center;
-  background: rgba(239,236,233,0.4);
-  backdrop-filter: blur(6px) saturate(120%);
-  -webkit-backdrop-filter: blur(6px) saturate(120%);
-}
-.phone-dev-scrim-label {
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-size: 1.05rem;
-  color: var(--ink);
-  letter-spacing: 0.01em;
-  padding: 0.6rem 1.25rem;
-  background: rgba(255,255,255,0.4);
-  border: 1px solid rgba(255,255,255,0.55);
-  border-radius: 999px;
-  box-shadow: 0 4px 16px rgba(25,37,36,0.08);
-}
-
 
 /* --- GLOBE SECTION --- */
 .globe-section {

@@ -21,8 +21,6 @@ export default function PricingPage() {
   const [founderCreatorCount, setFounderCreatorCount] = useState(0);
   const [founderHostCount,    setFounderHostCount]    = useState(0);
   const [lifetimeCount,       setLifetimeCount]       = useState(0);
-  const [creatorCount,        setCreatorCount]        = useState(0);
-  const [hostCount,           setHostCount]           = useState(0);
   const [marketplaceStats,    setMarketplaceStats]    = useState(null);
 
   useEffect(() => {
@@ -32,14 +30,14 @@ export default function PricingPage() {
 
     async function fetchCounts() {
       try {
-        const profiles = await client.query('profiles:getAll');
+        const [counts, lifetime] = await Promise.all([
+          client.query('waitlist:getCounts'),
+          client.query('profiles:countLifetimeMembers'),
+        ]);
         if (cancelled) return;
-        setCreatorCount(profiles.filter(p => p.role === 'creator').length);
-        setHostCount(profiles.filter(p => p.role === 'host').length);
-        setLifetimeCount(profiles.filter(p => p.is_lifetime === true).length);
-        // Founding members are those with is_founder=true
-        setFounderCreatorCount(profiles.filter(p => p.is_founder === true && p.role === 'creator').length);
-        setFounderHostCount(profiles.filter(p => p.is_founder === true && p.role === 'host').length);
+        setFounderCreatorCount(counts.creators);
+        setFounderHostCount(counts.hosts);
+        setLifetimeCount(lifetime);
       } catch (err) {
         console.warn('Pricing count fetch failed:', err);
       }

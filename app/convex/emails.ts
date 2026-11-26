@@ -134,7 +134,10 @@ export const sendRejectionEmail = internalAction({
     const t = await ctx.runQuery(internal.emailTemplates.getCopy, { templateId: "rejection" });
     // Feedback callout only renders when a reason was given.
     const copy = reason ? t : { ...t, calloutText: undefined };
-    const { subject, html } = renderTemplate(copy, { firstName, reason: reason || "" });
+    const reasonHtml = (reason || "")
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/\n/g, "<br>");
+    const { subject, html } = renderTemplate(copy, { firstName, reason: reasonHtml });
     await sendViaResend(apiKey, email, subject, html);
   },
 });

@@ -86,6 +86,11 @@ export const create = mutation({
       : creatorDocId ? await ctx.db.get(creatorDocId) : null;
     const hostDocId = args.hostId ? ctx.db.normalizeId("profiles", args.hostId) : null;
     const host = hostDocId ? await ctx.db.get(hostDocId) : null;
+    const listingDocId = ctx.db.normalizeId("listings", args.listingId);
+    const listingDoc = listingDocId ? await ctx.db.get(listingDocId) : null;
+    if (listingDoc && ((listingDoc as any).status !== "published" || (listingDoc as any).is_sample === true)) {
+      throw new ConvexError("This listing isn't open for applications.");
+    }
 
     const now = new Date().toLocaleDateString("en-US", {
       month: "short",

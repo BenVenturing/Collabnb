@@ -173,6 +173,7 @@ const PROSPECT_TAGS = {
   'contacted-clicked': 'Already emailed earlier and they clicked a link',
   auto: 'Auto outreach sent: audit page + claim link emailed, DM nudge drafted below (send it ~2 days later)',
   'auto-skip': 'Auto outreach skipped this hotel (reason in the outreach log)',
+  'auto-removed': 'A mail scanner built this listing, not the hotel. Removed after 7 days unpublished; follow-ups resumed',
   LBK: 'Lombok — from the Google Maps area sweep',
   BALI: 'Bali — from the Google Maps area sweep',
 };
@@ -1480,7 +1481,10 @@ function HostOutreachCampaign() {
 // "Confirmed" since that's the lifecycle stage it actually represents.
 // Plain "new" (unconfirmed pool candidates) live only in Host Outreach, not
 // on this board.
+// "sourcing" is a view, not a status: confirmed hotels still missing a real IG
+// handle or an email sit there and move to Confirmed once both are on file.
 const CRM_COLUMNS = [
+  { id: 'sourcing', label: 'Sourcing', status: 'queued', hint: 'Still missing a real Instagram handle or an email. Moves to Confirmed once both are filled in.' },
   { id: 'queued', label: 'Confirmed / cold' },
   { id: 'contacted', label: 'DMed' },
   { id: 'emailed', label: 'Emailed' },
@@ -1630,10 +1634,17 @@ function HostCrmBoard() {
   const byColumn = {};
   for (const col of CRM_COLUMNS) byColumn[col.id] = [];
   // Auto outreach (cold email) stays in Confirmed so manual DM/WhatsApp can follow.
-  const colOf = (p) => (p.status === 'emailed' && (p.tags || []).includes('auto') ? 'queued' : p.status);
+  const isAuto = (p) => (p.tags || []).includes('auto');
+  const hasEmail = (p) => String(p.email || p.marketing_email || '').split(/[,;\s]+/).some((e) => /^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i.test(e));
+  const detailsComplete = (p) => !!(isHotelProspect(p) ? p.ig_handle : p.instagram_handle) && hasEmail(p);
+  const colOf = (p) => {
+    if (p.status === 'emailed' && isAuto(p)) return 'queued';
+    if (p.status === 'queued' && !isAuto(p) && !detailsComplete(p)) return 'sourcing';
+    return p.status;
+  };
   for (const p of filtered) (byColumn[colOf(p)] || byColumn.queued).push(p);
   const readiness = (p) => (p.whatsapp ? 2 : 0) + ((isHotelProspect(p) ? p.ig_handle : p.instagram_handle) ? 2 : 0) + ((p.email || p.marketing_email) ? 1 : 0);
-  for (const col of CRM_COLUMNS) byColumn[col.id].sort((a, b) => (b.starred ? 1 : 0) - (a.starred ? 1 : 0) || (col.id === 'queued' ? (b.target ? 1 : 0) - (a.target ? 1 : 0) : 0) || (col.id === 'queued' ? readiness(b) - readiness(a) : 0) || outreachRank(b) - outreachRank(a) || lastActivityAt(b) - lastActivityAt(a));
+  for (const col of CRM_COLUMNS) byColumn[col.id].sort((a, b) => (b.starred ? 1 : 0) - (a.starred ? 1 : 0) || (col.status === 'queued' || col.id === 'queued' ? (b.target ? 1 : 0) - (a.target ? 1 : 0) : 0) || (col.status === 'queued' || col.id === 'queued' ? readiness(b) - readiness(a) : 0) || outreachRank(b) - outreachRank(a) || lastActivityAt(b) - lastActivityAt(a));
 
   // Per-column select-all — a global one selected across every stage at
   // once, which was rarely what you wanted (e.g. bulk-emailing the whole
@@ -1699,7 +1710,8 @@ function HostCrmBoard() {
 
   function handleDrop(colId) {
     setDragOverCol(null);
-    if (dragId) updateStatus({ id: dragId, status: colId }).catch(() => {});
+    const status = CRM_COLUMNS.find((c) => c.id === colId)?.status || colId;
+    if (dragId) updateStatus({ id: dragId, status }).catch(() => {});
     setDragId(null);
   }
 
@@ -1775,7 +1787,7 @@ function HostCrmBoard() {
         </div>
       )}
 
-      {walkIn ? <WalkInList hosts={byColumn.queued} /> : (
+      {walkIn ? <WalkInList hosts={[...byColumn.sourcing, ...byColumn.queued]} /> : (
       <div style={{ display: 'flex', gap: '1.25rem', overflowX: 'auto', paddingBottom: '0.5rem', alignItems: 'flex-start' }}>
         {CRM_COLUMNS.map((col) => (
           <div key={col.id}
@@ -1792,7 +1804,7 @@ function HostCrmBoard() {
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                 <input type="checkbox" aria-label={`Select all in ${col.label}`} disabled={byColumn[col.id].length === 0}
                   checked={isColumnSelected(col.id)} onChange={() => toggleColumnSelectAll(col.id)} style={checkbox} />
-                <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#192524' }}>{col.label}</span>
+                <span title={col.hint} style={{ fontSize: '0.78rem', fontWeight: 700, color: '#192524' }}>{col.label}</span>
               </div>
               <span style={{ fontSize: '0.7rem', color: '#646B62' }}>{byColumn[col.id].length}</span>
             </div>

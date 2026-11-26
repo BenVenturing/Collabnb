@@ -213,4 +213,12 @@ crons.daily(
   {}
 );
 
+// Daily: remove unpublished scanner-built listings 7 days after the build.
+crons.daily(
+  "clean up bot builds",
+  { hourUTC: 2, minuteUTC: 0 },
+  internal.autoOutreach.cleanupBotBuilds,
+  {}
+);
+
 export default crons;

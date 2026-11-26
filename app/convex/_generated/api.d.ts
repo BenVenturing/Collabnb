@@ -69,6 +69,7 @@ import type * as profiles from "../profiles.js";
 import type * as prospects from "../prospects.js";
 import type * as referrals from "../referrals.js";
 import type * as reports from "../reports.js";
+import type * as reviewDemo from "../reviewDemo.js";
 import type * as reviews from "../reviews.js";
 import type * as seed from "../seed.js";
 import type * as social from "../social.js";
@@ -150,6 +151,7 @@ declare const fullApi: ApiFromModules<{
   prospects: typeof prospects;
   referrals: typeof referrals;
   reports: typeof reports;
+  reviewDemo: typeof reviewDemo;
   reviews: typeof reviews;
   seed: typeof seed;
   social: typeof social;

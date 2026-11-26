@@ -5,6 +5,7 @@ import { requireAuthedProfile } from "./lib/auth";
 import { computeLoadTier } from "./lib/compensationPoints";
 
 const MAGIC_LINK_DAYS = 45;
+const BOT_WINDOW = 10 * 60_000;
 
 function listingFields(p: any, c: { hotel_name: string }) {
   const deliverables = Array.isArray(p.deliverables) ? p.deliverables : undefined;
@@ -180,6 +181,14 @@ export const _getClaim = internalQuery({
     await ctx.db.query("listing_claims").withIndex("by_token", (q) => q.eq("token", token)).unique(),
 });
 
+export const _markEmailed = internalMutation({
+  args: { token: v.string() },
+  handler: async (ctx, { token }) => {
+    const c = await ctx.db.query("listing_claims").withIndex("by_token", (q) => q.eq("token", token)).unique();
+    if (c) await ctx.db.patch(c._id, { last_email_at: Date.now() });
+  },
+});
+
 export const _setClerkUser = internalMutation({
   args: { token: v.string(), clerk_user_id: v.string() },
   handler: async (ctx, { token, clerk_user_id }) => {
@@ -193,9 +202,11 @@ export const _setClerkUser = internalMutation({
 // already has its own Clerk account, the hotel signs in normally instead.
 export const magicLink = action({
   args: { token: v.string() },
-  handler: async (ctx, { token }): Promise<{ ticket?: string; mode: "ticket" | "signin" | "signup" }> => {
+  handler: async (ctx, { token }): Promise<{ ticket?: string; retryAt?: number; mode: "ticket" | "signin" | "signup" | "wait" }> => {
     const c: any = await ctx.runQuery(internal.claims._getClaim, { token });
     if (!c) throw new ConvexError("This link is no longer valid.");
+    // Mail scanners open the link right after delivery; no auto sign-in for them.
+    if (c.last_email_at && Date.now() - c.last_email_at < BOT_WINDOW) return { mode: "wait", retryAt: c.last_email_at + BOT_WINDOW };
     if (!c.email || !c.profile_id) return { mode: "signup" };
     if (Date.now() - c.created_at > MAGIC_LINK_DAYS * 86400000) return { mode: "signin" };
     const key = process.env.CLERK_SECRET_KEY;
@@ -303,6 +314,8 @@ export const sendOutreach = internalAction({
   handler: async (ctx, { to, subject, html, text, bcc = "benventuring@gmail.com", hotel_name }) => {
     const apiKey = process.env.RESEND_API_KEY;
     if (!apiKey) throw new ConvexError("RESEND_API_KEY not set");
+    const claimToken = /\/claim\/([A-Za-z0-9_-]+)/.exec(html + text)?.[1];
+    if (claimToken) await ctx.runMutation(internal.claims._markEmailed, { token: claimToken });
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },

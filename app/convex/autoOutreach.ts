@@ -115,7 +115,8 @@ export const pool = internalQuery({
       stats.fresh++;
       if (!realHandle(p) && !p.website) return false;
       stats.withHandle++;
-      if (!validEmail(p.marketing_email) && !validEmail(p.email) && !p.website) return false;
+      // processOne finds the email from the IG business profile or the bio-link site.
+      if (!validEmail(p.marketing_email) && !validEmail(p.email) && !p.website && !realHandle(p)) return false;
       stats.withEmail++;
       if (detectChain(p)) return false;
       const ed = emailDomain(p.marketing_email || p.email);
@@ -701,6 +702,12 @@ export const requestBuild = mutation({
     const a = await ctx.db.query("hotel_audits").withIndex("by_token", (q) => q.eq("token", token)).unique();
     if (!a) return { ok: false };
     if (a.claim_token || (a.build_step && a.build_step > 0 && !a.build_error)) return { ok: true };
+    // Security scanners open the email link and click the button within minutes of delivery.
+    const retryAt = lastSendAt(a) + BOT_WINDOW;
+    if (!a.demo && Date.now() < retryAt) {
+      await ctx.db.patch(a._id, { bot_build_attempts: (a.bot_build_attempts || 0) + 1 });
+      return { ok: false, retryAt };
+    }
     await ctx.db.patch(a._id, { build_step: 1, build_error: undefined, build_started_at: Date.now(), build_photos: [] });
     await ctx.scheduler.runAfter(0, internal.autoOutreach.buildClaim, { token });
     return { ok: true };
@@ -777,6 +784,7 @@ export const publishReminder = internalAction({
     const t: any = await ctx.runQuery(internal.emailTemplates.getCopy, { templateId: "publish_reminder" });
     const { html } = renderTemplate(t, { hotelName: esc(r.hotel) }, url);
     const subject = String(t.subject || "").replace(/\{\{hotelName\}\}/g, r.hotel);
+    await ctx.runMutation(internal.claims._markEmailed, { token: args.claim_token });
     const text = `${r.greeting}\n\nYour Collabnb listing for ${r.hotel} is built and waiting, but it isn't published yet, so creators can't find it.\n\nCheck the photos and dates, then hit Publish:\n${url}\n\nBenjamin`;
     try { await sendEmail(r.email, subject, html, text); }
     catch (e: any) { await ctx.runMutation(internal.autoOutreach.patchAudit, { token: args.token, patch: { build_error: `reminder: ${String(e?.message || e).slice(0, 150)}` } }); }
@@ -788,7 +796,7 @@ export const publishNudgeStep = internalMutation({
   handler: async (ctx, args) => {
     const a: any = await ctx.db.query("hotel_audits").withIndex("by_token", (q) => q.eq("token", args.token)).unique();
     const listing: any = await ctx.db.get(args.listing_id as any).catch(() => null);
-    if (!a || !listing) return null;
+    if (!a || !listing || a.bot_build) return null;
     if (listing.status === "published") { if (!a.published_at) await ctx.db.patch(a._id, { published_at: Date.now() }); return null; }
     await ctx.db.patch(a._id, { publish_reminders: args.stage });
     if (args.stage === 1) {
@@ -1127,12 +1135,12 @@ export const adminFunnel = query({
         publish_reminders: a.publish_reminders || 0, published_at: a.published_at,
         variant: a.variant || "A", followups: a.followups_sent || 0, last_followup_at: a.last_followup_at,
         clicked: !!(a.claim_token || a.build_step || a.built_at),
-        bot_views: a.bot_views || 0, bot_reset: !!a.bot_reset_at,
+        bot_views: a.bot_views || 0, bot_reset: !!a.bot_reset_at, bot_build: !!a.bot_build,
         replied: !!p?.replied_at || p?.status === "replied", status: p?.status, dm_draft: p?.dm_draft, dm_done: (p?.outreach_log || []).some((e: any) => e.type === "dm_sent"),
       });
     }
     const since = (ms: number) => audits.filter((a) => now - a.created_at < ms);
-    const stat = (list: any[]) => ({ sent: list.length, viewed: list.filter((a) => a.view_count).length, built: list.filter((a) => a.built_at || a.claim_token).length });
+    const stat = (list: any[]) => ({ sent: list.length, viewed: list.filter((a) => a.view_count).length, built: list.filter((a) => (a.built_at || a.claim_token) && !a.bot_build).length });
     const days: Record<string, number> = {};
     audits.forEach((a) => { const d = new Date(a.created_at).toISOString().slice(0, 10); days[d] = (days[d] || 0) + 1; });
     return {
@@ -1178,6 +1186,103 @@ export const tidyAutoTags = internalMutation({
       n++;
     }
     return { updated: n };
+  },
+});
+
+// Daily: a bot build still unpublished after 7 days, with no reply, is removed: draft listing,
+// claim, the account this flow made (Convex + Clerk), the Target mark; follow-ups resume.
+// Dry run: npx convex run --prod autoOutreach:cleanupBotBuilds '{"dryRun":true}'
+const BOT_BUILD_TTL = 7 * DAY;
+export const botBuildCandidates = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    const audits = (await ctx.db.query("hotel_audits").collect()) as any[];
+    const out: any[] = [];
+    for (const a of audits) {
+      if (a.demo || !a.bot_build || !a.built_at || a.bot_removed_at || Date.now() - a.built_at < BOT_BUILD_TTL) continue;
+      const claim: any = a.claim_token ? await ctx.db.query("listing_claims").withIndex("by_token", (q) => q.eq("token", a.claim_token)).unique() : null;
+      const listing: any = claim?.listing_id ? await ctx.db.get(claim.listing_id as any).catch(() => null) : null;
+      if (listing && listing.status !== "draft") continue;
+      const p: any = await ctx.db.get(a.prospect_id);
+      if (p && (p.replied_at || p.status === "replied" || p.status === "signed")) continue;
+      out.push({ token: a.token, hotel: a.hotel_name, clerk_user_id: claim?.clerk_user_id });
+    }
+    return out;
+  },
+});
+
+export const cleanupBotBuilds = internalAction({
+  args: { dryRun: v.optional(v.boolean()) },
+  handler: async (ctx, { dryRun }): Promise<any[]> => {
+    const list: any[] = await ctx.runQuery(internal.autoOutreach.botBuildCandidates, {});
+    if (dryRun) return list;
+    const key = process.env.CLERK_SECRET_KEY;
+    const out: any[] = [];
+    for (const c of list) {
+      let clerk = "none";
+      if (c.clerk_user_id && key) {
+        const headers = { Authorization: `Bearer ${key}` };
+        const u = await fetch(`https://api.clerk.com/v1/users/${c.clerk_user_id}`, { headers });
+        // Only delete Clerk users this claim flow created (username host_<token>).
+        if (u.ok && String((await u.json()).username || "").startsWith("host_")) {
+          clerk = (await fetch(`https://api.clerk.com/v1/users/${c.clerk_user_id}`, { method: "DELETE", headers })).ok ? "deleted" : "delete failed";
+        } else clerk = u.ok ? "kept (not made by claim flow)" : "not found";
+      }
+      const r = await ctx.runMutation(internal.autoOutreach.removeBotBuild, { token: c.token });
+      out.push({ hotel: c.hotel, clerk, ...r });
+    }
+    return out;
+  },
+});
+
+export const removeBotBuild = internalMutation({
+  args: { token: v.string() },
+  handler: async (ctx, { token }) => {
+    const a: any = await ctx.db.query("hotel_audits").withIndex("by_token", (q) => q.eq("token", token)).unique();
+    if (!a || !a.bot_build || a.bot_removed_at) return { skipped: true };
+    const claim: any = a.claim_token ? await ctx.db.query("listing_claims").withIndex("by_token", (q) => q.eq("token", a.claim_token)).unique() : null;
+    const r: any = {};
+    if (claim) {
+      const listing: any = claim.listing_id ? await ctx.db.get(claim.listing_id as any).catch(() => null) : null;
+      if (listing && listing.status !== "draft") return { skipped: "listing is live" };
+      if (listing) { await ctx.db.delete(listing._id); r.listing = "deleted"; }
+      const prof: any = claim.profile_id ? await ctx.db.get(claim.profile_id as any).catch(() => null) : null;
+      if (prof && !prof.is_admin) {
+        const other = await ctx.db.query("listings").withIndex("by_host", (q) => q.eq("host_id", String(prof._id))).first();
+        if (!other) { await ctx.db.delete(prof._id); r.profile = "deleted"; }
+      }
+      await ctx.db.delete(claim._id);
+    }
+    await ctx.db.patch(a._id, { bot_removed_at: Date.now(), claim_token: undefined, built_at: undefined, build_step: undefined, build_started_at: undefined, build_photos: undefined, build_ideas: undefined, build_error: undefined, publish_reminders: undefined });
+    const p: any = await ctx.db.get(a.prospect_id);
+    if (p) {
+      await ctx.db.patch(p._id, {
+        target: false,
+        tags: Array.from(new Set([...(p.tags || []).filter((t: string) => t !== "auto-built"), "auto-removed"])),
+        outreach_log: [...(p.outreach_log || []), { at: Date.now(), type: "bot_build_removed", note: token }],
+      });
+      const n = (a.followups_sent || 0) + 1;
+      if (n <= FOLLOWUP_DUE_DAYS.length) { await ctx.scheduler.runAfter(DAY, internal.autoOutreach.followUp, { id: p._id, token, n }); r.followUp = n; }
+    }
+    return r;
+  },
+});
+
+// Flags builds that started within BOT_WINDOW of any send (first email or follow-up) as scanner clicks.
+// Run: npx convex run --prod autoOutreach:flagBotBuilds '{"dryRun":true}'
+export const flagBotBuilds = internalMutation({
+  args: { dryRun: v.optional(v.boolean()) },
+  handler: async (ctx, { dryRun }) => {
+    const audits = (await ctx.db.query("hotel_audits").collect()) as any[];
+    const out: any[] = [];
+    for (const a of audits) {
+      if (a.demo || !a.build_started_at || a.bot_build) continue;
+      const gap = a.build_started_at - lastSendAt(a);
+      if (gap < 0 || gap >= BOT_WINDOW) continue;
+      out.push({ hotel: a.hotel_name, minsAfterSend: Math.round(gap / 60_000) });
+      if (!dryRun) await ctx.db.patch(a._id, { bot_build: true });
+    }
+    return out;
   },
 });
 

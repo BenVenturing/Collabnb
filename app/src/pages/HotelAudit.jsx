@@ -30,7 +30,17 @@ export default function HotelAudit() {
   const autoStarted = useRef(false);
   useEffect(() => { try { sessionStorage.setItem('cb_quiet', '1'); } catch {} }, []);
 
-  const start = () => { setBuilding(true); requestBuild({ token }).catch(() => {}); };
+  const [waitUntil, setWaitUntil] = useState(0);
+  const [, tick] = useState(0);
+  useEffect(() => {
+    if (!waitUntil) return;
+    const t = setInterval(() => { tick((n) => n + 1); if (Date.now() >= waitUntil) setWaitUntil(0); }, 1000);
+    return () => clearInterval(t);
+  }, [waitUntil]);
+  const start = () => {
+    setBuilding(true);
+    requestBuild({ token }).then((r) => { if (r?.retryAt) { setBuilding(false); setWaitUntil(r.retryAt); } }).catch(() => {});
+  };
 
   // Mail scanners load links in a real browser, so ?build=1 only scrolls to the
   // button; a build needs a human tap. An in-progress build still resumes.
@@ -118,7 +128,9 @@ export default function HotelAudit() {
         </p>
         {built
           ? <a href={`/claim/${data.build.claim_token}?go=1`} style={cta}>Open my listing →</a>
-          : <button onClick={start} style={{ ...cta, border: 'none', cursor: 'pointer', font: 'inherit', fontWeight: 700 }}>Build my listing →</button>}
+          : waitUntil
+            ? <p style={{ color: C.slate, lineHeight: 1.6, margin: 0 }}>To protect your hotel from fake sign-ups by automated email scanners, this link unlocks a few minutes after our email arrives. Tap Build again in {Math.max(1, Math.ceil((waitUntil - Date.now()) / 60_000))} min.</p>
+            : <button onClick={start} style={{ ...cta, border: 'none', cursor: 'pointer', font: 'inherit', fontWeight: 700 }}>Build my listing →</button>}
         <p style={{ color: C.sage, fontSize: '0.85rem', marginTop: '0.9rem' }}>
           Questions? WhatsApp Benjamin on <a href={WHATSAPP} style={{ color: C.green, fontWeight: 600 }}>+1 623-221-2170</a>
         </p>

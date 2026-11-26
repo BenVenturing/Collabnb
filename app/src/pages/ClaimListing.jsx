@@ -120,6 +120,7 @@ export default function ClaimListing() {
         localStorage.setItem(PENDING_KEY, token);
         localStorage.setItem('collabnb_waitlist_role', 'host');
         const res = await magicLink({ token });
+        if (res.mode === 'wait') setError(`To protect your hotel from fake sign-ups by automated email scanners, this link unlocks a few minutes after our email arrives. Tap Open my draft listing in ${Math.max(1, Math.ceil((res.retryAt - Date.now()) / 60_000))} min.`);
         if (res.mode === 'ticket' && res.ticket) {
           const si = await signIn.create({ strategy: 'ticket', ticket: res.ticket });
           if (si.status === 'complete') { await setActive({ session: si.createdSessionId }); window.location.reload(); return; }
@@ -146,6 +147,11 @@ export default function ClaimListing() {
       setBusy(true); setError('');
       try {
         const res = await magicLink({ token });
+        if (res.mode === 'wait') {
+          setBusy(false);
+          setError(`To protect your hotel from fake sign-ups by automated email scanners, this link unlocks a few minutes after our email arrives. Tap again in ${Math.max(1, Math.ceil((res.retryAt - Date.now()) / 60_000))} min.`);
+          return;
+        }
         if (res.mode === 'ticket' && res.ticket) {
           const si = await signIn.create({ strategy: 'ticket', ticket: res.ticket });
           if (si.status === 'complete') { await setActive({ session: si.createdSessionId }); window.location.reload(); return; }

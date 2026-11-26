@@ -1286,6 +1286,7 @@ export default defineSchema({
     listing_id: v.optional(v.string()),
     profile_id: v.optional(v.string()),
     clerk_user_id: v.optional(v.string()),
+    last_email_at: v.optional(v.number()), // an email with the one-click link just went out; scanners open it within minutes
     created_at: v.number(),
   }).index("by_token", ["token"]),
 
@@ -1312,6 +1313,7 @@ export default defineSchema({
     bot_reset_at: v.optional(v.number()),
     bot_build: v.optional(v.boolean()), // build started within minutes of a send: a scanner clicked, not the hotel
     bot_build_attempts: v.optional(v.number()),
+    bot_removed_at: v.optional(v.number()), // unpublished bot build cleaned up after 7 days
     demo: v.optional(v.boolean()), // demo send to Ben: hidden from stats, no follow-ups, build doesn't touch the prospect
     audit: v.any(),
     build_step: v.optional(v.number()), // 1 photos, 2 copy, 3 account, 4 done

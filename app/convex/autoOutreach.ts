@@ -1055,6 +1055,28 @@ export const markSkipped = internalMutation({
   },
 });
 
+// After an email is found by hand for a skipped hotel: drop auto-skip so the next run retries it.
+// npx convex run --prod autoOutreach:requeueSkipped '{"handles":["hc-…","somehotel"]}'
+export const requeueSkipped = internalMutation({
+  args: { handles: v.array(v.string()) },
+  handler: async (ctx, { handles }) => {
+    const want = new Set(handles.map((h) => h.toLowerCase()));
+    const rows = (await ctx.db.query("prospects").withIndex("by_kind_status", (q) => q.eq("kind", "host")).collect()) as any[];
+    const out: any[] = [];
+    for (const p of rows) {
+      if (!want.has(String(p.instagram_handle).toLowerCase())) continue;
+      if (!(p.tags || []).includes("auto-skip")) { out.push({ handle: p.instagram_handle, skipped: "not auto-skipped" }); continue; }
+      if (!validEmail(p.marketing_email) && !validEmail(p.email)) { out.push({ handle: p.instagram_handle, skipped: "still no email" }); continue; }
+      await ctx.db.patch(p._id, {
+        tags: (p.tags || []).filter((t: string) => t !== "auto-skip"),
+        outreach_log: [...(p.outreach_log || []), { at: Date.now(), type: "auto_requeued", note: "email found by hand" }],
+      });
+      out.push({ handle: p.instagram_handle, requeued: true });
+    }
+    return out;
+  },
+});
+
 export const logEvent = internalMutation({
   args: { id: v.id("prospects"), type: v.string(), note: v.optional(v.string()) },
   handler: async (ctx, { id, type, note }) => {

@@ -481,6 +481,12 @@ export const getMyAccess = query({
       isVerified: true,
       isAdmin: profile.is_admin === true,
       subscriptionStatus: profile.subscription_status,
+      subscriptionTier: profile.subscription_tier,
+      subscriptionExpiresAt: profile.subscription_expires_at,
+      hasBilling: !!profile.stripe_customer_id,
+      iapStatus: profile.revenuecat_status,
+      iapTier: profile.revenuecat_tier,
+      iapExpiresAt: profile.revenuecat_expires_at,
     };
   },
 });

@@ -165,6 +165,15 @@ export const createSubscriptionSession = action({
     const caller = await requireAuthedProfileAction(ctx, internal.profiles.getByClerkUserId);
     const profileId = String(caller._id);
 
+    // One membership per person: block a second subscription on either rail.
+    const now = Date.now();
+    if (caller.subscription_status === 'active' && (caller.subscription_expires_at ?? Infinity) > now) {
+      throw new Error('You already have Collabnb Plus.');
+    }
+    if (caller.revenuecat_status === 'active' && (caller.revenuecat_expires_at ?? Infinity) > now) {
+      throw new Error('You already have Collabnb Plus through the App Store. Manage it in your iPhone Settings.');
+    }
+
     const stripe = new Stripe(secretKey);
     const isYearly = args.tier === 'yearly';
     const priceId = isYearly ? process.env.STRIPE_PRICE_YEARLY_ID : process.env.STRIPE_PRICE_MONTHLY_ID;

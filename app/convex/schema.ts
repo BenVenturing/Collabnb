@@ -321,6 +321,9 @@ export default defineSchema({
       usage_rights: v.optional(v.string()),
     }))),
     is_sample: v.optional(v.boolean()),
+    // App Review demo stay: published so the demo creator can apply, but
+    // shown only to the appreview-* demo accounts.
+    is_review_demo: v.optional(v.boolean()),
     // Set the first time this listing goes live and stay alerts fan out
     // (see stayAlerts.notifyForListing) — re-publishing a listing that was
     // pulled back to draft must never re-notify the same creators.
@@ -1307,6 +1310,8 @@ export default defineSchema({
     last_followup_at: v.optional(v.number()),
     bot_views: v.optional(v.number()), // opens within minutes of a send (mail scanners)
     bot_reset_at: v.optional(v.number()),
+    bot_build: v.optional(v.boolean()), // build started within minutes of a send: a scanner clicked, not the hotel
+    bot_build_attempts: v.optional(v.number()),
     demo: v.optional(v.boolean()), // demo send to Ben: hidden from stats, no follow-ups, build doesn't touch the prospect
     audit: v.any(),
     build_step: v.optional(v.number()), // 1 photos, 2 copy, 3 account, 4 done

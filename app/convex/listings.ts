@@ -135,7 +135,11 @@ export const getAll = query({
   args: { viewerId: v.optional(v.string()) },
   handler: async (ctx, { viewerId }) => {
     const listings = await ctx.db.query("listings").collect();
-    const filtered = listings.filter((l: any) => !l.is_sample && !l.needs_compensation_review);
+    const viewerDoc: any = viewerId ? await ctx.db.get(viewerId as any).catch(() => null) : null;
+    const isDemoViewer = typeof viewerDoc?.email === "string" && viewerDoc.email.startsWith("appreview-");
+    const filtered = listings.filter(
+      (l: any) => !l.is_sample && !l.needs_compensation_review && (!l.is_review_demo || isDemoViewer)
+    );
 
     // Check viewer's access level
     let canViewFull = true;
@@ -306,7 +310,7 @@ export const getPublishedPreview = query({
   handler: async (ctx, { country, limit }) => {
     const all = await ctx.db.query("listings").collect();
     let published = all.filter(
-      (l: any) => l.status === "published" && !l.is_sample && !l.needs_compensation_review
+      (l: any) => l.status === "published" && !l.is_sample && !l.is_review_demo && !l.needs_compensation_review
     );
     if (country) {
       published = published.filter((l: any) => l.location_country === country);
@@ -352,7 +356,7 @@ export const getPublicMapPreview = query({
     const visible = all.filter(
       (l: any) =>
         l.is_sample === true ||
-        (l.status === "published" && !l.needs_compensation_review)
+        (l.status === "published" && !l.is_review_demo && !l.needs_compensation_review)
     );
     return Promise.all(
       visible
@@ -408,7 +412,7 @@ export const search = query({
   },
   handler: async (ctx, args) => {
     let listings = (await ctx.db.query("listings").collect())
-      .filter((l: any) => !l.is_sample && !l.needs_compensation_review);
+      .filter((l: any) => !l.is_sample && !l.is_review_demo && !l.needs_compensation_review);
 
     if (args.location) {
       const q = args.location.toLowerCase();

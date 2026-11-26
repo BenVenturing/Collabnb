@@ -102,12 +102,14 @@ export const upsertProfiles = internalMutation({
       out[a.role] = String(id);
     }
 
-    // Give the host one listing by copying a sample stay. It stays a sample
-    // (is_sample) so it never shows up as a real stay to real creators.
+    // Give the host one published stay copied from a sample. is_review_demo
+    // hides it from everyone except the appreview-* accounts, so the demo
+    // creator can apply to it without it showing up for real creators.
     const hostListings = await ctx.db
       .query("listings")
       .filter((q) => q.eq(q.field("host_id"), out.host))
       .collect();
+    const demoFields = { is_sample: false, is_review_demo: true, status: "published" };
     if (hostListings.length === 0) {
       const sample = await ctx.db
         .query("listings")
@@ -119,9 +121,12 @@ export const upsertProfiles = internalMutation({
           ...fields,
           host_id: out.host,
           host_name: "Jordan Host",
-          is_sample: true,
+          is_featured: false,
+          ...demoFields,
         });
       }
+    } else {
+      for (const l of hostListings) await ctx.db.patch(l._id, { ...demoFields, is_featured: false } as any);
     }
     return out;
   },

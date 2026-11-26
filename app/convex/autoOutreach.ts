@@ -192,8 +192,8 @@ export const runDaily = internalAction({
     const { ids, stats } = await ctx.runQuery(internal.autoOutreach.pool, { limit: Math.ceil(remaining * 3) });
     const summary = { enabled: cfg.enabled, cap, sentToday: peek.sentToday, scheduling: ids.length, budget, pool: stats, from: process.env.OUTREACH_FROM || FALLBACK_FROM };
     if (dryRun || (!cfg.enabled && force === undefined) || !remaining) return summary;
-    // One candidate every ~30s (plus jitter) so they don't land as one burst.
-    const spread = 30_000;
+    // One candidate every ~90s: an Apify lookup takes up to 90s, and overlapping runs get refused.
+    const spread = 90_000;
     await Promise.all(ids.map((id: any, i: number) =>
       ctx.scheduler.runAfter(Math.round(i * spread + Math.random() * 10_000), internal.autoOutreach.processOne, { id, cap })));
     return summary;
@@ -557,7 +557,11 @@ export const processOne = internalAction({
     let ig: Awaited<ReturnType<typeof fetchIg>>;
     try { ig = await fetchIg(handle); } catch (e: any) {
       const msg = String(e?.message || e);
-      if (/\b(402|429|5\d\d)\b/.test(msg)) return { skipped: `instagram provider unavailable, retry later: ${msg.slice(0, 80)}` };
+      if (/\b(402|429|5\d\d)\b/.test(msg)) {
+        // Not tagged auto-skip, so the next run retries; logged so it isn't silent.
+        if (!preview) await ctx.runMutation(internal.autoOutreach.logEvent, { id, type: "auto_retry_later", note: `instagram provider unavailable: ${msg.slice(0, 80)}` });
+        return { skipped: `instagram provider unavailable, retry later: ${msg.slice(0, 80)}` };
+      }
       return skip(`instagram fetch failed: ${msg.slice(0, 80)}`);
     }
     if (!ig || ig.posts.length < 3 || ig.followers < 100) return skip("private, inactive or tiny instagram");

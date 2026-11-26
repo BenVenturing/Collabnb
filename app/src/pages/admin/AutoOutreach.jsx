@@ -52,7 +52,7 @@ export default function AutoOutreach() {
   const hrs = (ms) => { const m = Math.round(ms / 60000); return m >= 60 ? `${Math.floor(m / 60)}h ${m % 60}m` : `${m}m`; };
   const locked = d.lastManualRun && Date.now() - d.lastManualRun < 3600000;
   const onRunNow = async () => {
-    if (!window.confirm(`Send today's batch now? Up to ${Math.max(0, d.capToday - d.today.sent)} emails go out over the next ~45 minutes. Tomorrow's 01:00 UTC run still happens.`)) return;
+    if (!window.confirm(`Send today's batch now? Up to ${Math.max(0, d.capToday - d.today.sent)} emails go out over the next 1–2 hours. Tomorrow's 01:00 UTC run still happens.`)) return;
     const r = await runNow({});
     setRunMsg(r.ok ? 'Running now. Sends appear below as they go out.' : 'Already ran in the last hour.');
   };

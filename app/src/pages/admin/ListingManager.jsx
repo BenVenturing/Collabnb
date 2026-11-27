@@ -168,9 +168,9 @@ export default function ListingManager() {
               {filtered.map((l, i) => (
                 <tr
                   key={String(l._id)}
-                  style={{ borderBottom: i < filtered.length - 1 ? '1px solid rgba(25,37,36,0.05)' : 'none', transition: 'background 0.1s' }}
+                  style={{ borderBottom: i < filtered.length - 1 ? '1px solid rgba(25,37,36,0.05)' : 'none', transition: 'background 0.1s', background: l.is_test ? 'rgba(25,37,36,0.05)' : 'transparent', opacity: l.is_test ? 0.6 : 1 }}
                   onMouseEnter={(e) => { e.currentTarget.style.background = BONE; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = l.is_test ? 'rgba(25,37,36,0.05)' : 'transparent'; }}
                 >
                   {/* Listing */}
                   <td style={{ padding: '0.75rem', minWidth: 140 }}>
@@ -186,8 +186,9 @@ export default function ListingManager() {
                   </td>
 
                   {/* Host */}
-                  <td style={{ padding: '0.75rem', color: SLATE, fontSize: '0.78rem' }}>
+                  <td style={{ padding: '0.75rem', color: l.is_test ? INK : SLATE, fontSize: '0.78rem', fontWeight: l.is_test ? 700 : 400 }}>
                     {l.host_name || '—'}
+                    {l.is_test && <div style={{ fontSize: '0.62rem', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: SAGE }}>Test</div>}
                   </td>
 
                   {/* Type */}

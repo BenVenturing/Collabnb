@@ -37,7 +37,7 @@ export const submitCrashReport = mutation({
     await ctx.scheduler.runAfter(0, internal.email.sendAdminNotification, {
       type: "crash",
       subject: `App crash reported${userEmail ? ` by ${userEmail}` : ""}`,
-      body: `${message}\n\nURL: ${args.url}\nUser: ${userEmail || "signed out"}\n\n${args.stack || ""}\n\nView in admin: https://collabnb.com/#/admin`,
+      body: `${message}\n\nURL: ${args.url}\nUser: ${userEmail || "signed out"}\n\n${args.stack || ""}\n\nView in admin: https://collabnb.com/admin`,
     });
 
     return id;

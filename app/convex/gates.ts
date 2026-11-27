@@ -531,7 +531,7 @@ export const expireTrials = internalMutation({
         type: "trial_expired",
         title: "Your trial has ended",
         body: "Subscribe to Creator Plus to continue accessing full marketplace features.",
-        link: "/#/profile",
+        link: "/profile",
         read: false,
         created_at: now,
       });

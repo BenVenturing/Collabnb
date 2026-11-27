@@ -1,4 +1,3 @@
-import { pendingClaimProfileIds } from "./lib/pendingClaims";
 import { v, ConvexError } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { internal } from "./_generated/api";
@@ -93,7 +92,7 @@ export const signUp = mutation({
     await ctx.scheduler.runAfter(0, internal.email.sendAdminNotification, {
       type: "signup",
       subject: `New ${role} waitlist signup: ${rest.full_name}`,
-      body: `Name: ${rest.full_name}\nEmail: ${email}\nRole: ${role}\nCity: ${rest.city || "—"}\nInstagram: ${rest.instagram_handle ? "@" + rest.instagram_handle : "—"}\n\nView in admin: https://collabnb.com/#/admin`,
+      body: `Name: ${rest.full_name}\nEmail: ${email}\nRole: ${role}\nCity: ${rest.city || "—"}\nInstagram: ${rest.instagram_handle ? "@" + rest.instagram_handle : "—"}\n\nView in admin: https://collabnb.com/admin`,
     });
 
     // Welcome email to the new member
@@ -110,13 +109,25 @@ export const signUp = mutation({
 export const getCounts = query({
   args: {},
   handler: async (ctx) => {
-    const profiles = await ctx.db.query("profiles").collect();
-    // Matches admin Users tab: only approved (verified, not rejected) profiles
-    const pending = await pendingClaimProfileIds(ctx);
-    const real = profiles.filter((p) => p.is_verified === true && p.is_rejected !== true && !pending.has(String(p._id)));
+    const [profiles, claims, listings] = await Promise.all([
+      ctx.db.query("profiles").collect(),
+      ctx.db.query("listing_claims").collect(),
+      ctx.db.query("listings").collect(),
+    ]);
+    // Outreach-built host profiles only count once the hotel actually signed in
+    // (scanner clicks can open the claim link and build a draft).
+    const unclaimed = new Set(
+      (claims as any[]).filter((c) => c.profile_id && c.status !== "claimed").map((c) => String(c.profile_id)),
+    );
+    const isTest = (p: any) => p.is_admin === true || (typeof p.email === "string" && p.email.startsWith("appreview-"));
+    const real = profiles.filter((p) => p.is_verified === true && p.is_rejected !== true && !isTest(p));
     const creators = real.filter((p) => p.role === "creator").length;
-    const hosts    = real.filter((p) => p.role === "host").length;
-    return { creators, hosts, total: creators + hosts };
+    const hostIds = new Set(real.filter((p) => p.role === "host" && !unclaimed.has(String(p._id))).map((p) => String(p._id)));
+    const hosts = hostIds.size;
+    const live = (listings as any[]).filter(
+      (l) => l.status === "published" && !l.is_sample && !l.is_review_demo && !l.needs_compensation_review && hostIds.has(String(l.host_id)),
+    ).length;
+    return { creators, hosts, live, total: creators + hosts };
   },
 });
 

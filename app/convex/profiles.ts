@@ -1504,7 +1504,7 @@ export const checkMetricsReminders = internalMutation({
         type: 'metrics_reminder',
         title: 'Time to update your metrics',
         body: 'Your audience stats are over 30 days old. Keep them fresh so hosts can find you.',
-        link: '/#/profile',
+        link: '/profile',
         read: false,
         created_at: now,
       });

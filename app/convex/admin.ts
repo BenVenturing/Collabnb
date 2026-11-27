@@ -444,6 +444,7 @@ export const getAdminListings = query({
         image: l.image,
         rating: l.rating,
         review_count: l.review_count,
+        is_test: !!((l as any).is_sample || (l as any).is_review_demo),
       }))
       .sort((a, b) => (b._creationTime ?? 0) - (a._creationTime ?? 0));
   },

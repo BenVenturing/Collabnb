@@ -375,7 +375,7 @@ export const TEMPLATE_DEFAULTS: Record<string, TemplateDef> = {
     trigger: "Daily 9am UTC cron — trial ends within 3 days (sent once)",
     category: "Trials",
     vars: ["firstName", "days"],
-    buttonHref: `${BASE_URL}/#/profile`,
+    buttonHref: `${BASE_URL}/profile`,
     copy: {
       subject: "{{days}} left on your Collabnb trial",
       heading: "{{days}} left on your trial, {{firstName}}",
@@ -389,7 +389,7 @@ export const TEMPLATE_DEFAULTS: Record<string, TemplateDef> = {
     category: "Trials",
     vars: ["firstName"],
     calloutColor: "#8B6F52",
-    buttonHref: `${BASE_URL}/#/profile`,
+    buttonHref: `${BASE_URL}/profile`,
     copy: {
       subject: "Your Collabnb trial has ended",
       heading: "Your trial has ended, {{firstName}}",

@@ -311,6 +311,7 @@ function buildAudit(ig: NonNullable<Awaited<ReturnType<typeof fetchIg>>>) {
   return {
     followers: ig.followers, posts_analyzed: n, engagement: Number(eng.toFixed(2)), days_since_post: daysSince,
     posts_last_30: last30, reels, best_x: Number(bestX.toFixed(1)), best_post_url: bestPost?.code ? `https://www.instagram.com/p/${bestPost.code}/` : undefined,
+    best_post: bestPost ? { image: bestPost.image, caption: bestPost.caption, likes: bestPost.likes, comments: bestPost.comments, views: bestPost.views, video: bestPost.video, at: bestPost.at } : undefined,
     findings, teaser,
   };
 }
@@ -603,7 +604,8 @@ export const processOne = internalAction({
     const subject = variantSubject(variant, hotel, audit.teaser);
     const { html, text } = emailParts({ variant, greeting, hotel, teaser: audit.teaser, auditUrl, buildUrl });
 
-    const avatar = await rehost(ctx, ig.avatar);
+    const [avatar, bestImage] = await Promise.all([rehost(ctx, ig.avatar), rehost(ctx, audit.best_post?.image)]);
+    if (audit.best_post) audit.best_post.image = bestImage;
     const reserved = await ctx.runMutation(internal.autoOutreach.createAudit, {
       token, prospect_id: id, hotel_name: hotel, email, handle,
       website, phone, city: ig.city || p.location || undefined, country: p.country || undefined,
@@ -661,6 +663,17 @@ export const sendDemo = internalAction({
   handler: async (ctx, { to, from, variant }): Promise<any> => {
     const src: any = await ctx.runMutation(internal.autoOutreach.insertDemoAudit, { to, from, token: newToken("demo") });
     if (!src) return { error: "no source audit" };
+    if (!src.audit.best_post?.image) {
+      try {
+        const ig = await fetchIg(src.handle);
+        if (ig) {
+          const fresh: any = buildAudit(ig);
+          if (fresh.best_post) fresh.best_post.image = await rehost(ctx, fresh.best_post.image);
+          src.audit = { ...src.audit, ...fresh, created_at: Date.now() };
+          await ctx.runMutation(internal.autoOutreach.patchAudit, { token: src.token, patch: { audit: src.audit } });
+        }
+      } catch { /* fall back to the cloned audit */ }
+    }
     const v_ = ((VARIANTS as string[]).includes(variant || "") ? variant : "A") as Variant;
     const auditUrl = `https://collabnb.com/audit/${src.token}`;
     const subject = variantSubject(v_, src.hotel_name, src.audit.teaser);

@@ -11,6 +11,7 @@ const C = {
 const SEV = { high: C.red, medium: C.amber, good: C.green };
 const SEV_LABEL = { high: 'Gap', medium: 'Watch', good: 'Strength' };
 const WHATSAPP = 'https://wa.me/16232212170';
+const HELP_EMAIL = 'hellocollabnb@gmail.com';
 
 // Same figures and sources as collabnb.com/how-it-works.
 const CREATOR_STATS = [
@@ -72,7 +73,7 @@ export default function HotelAudit() {
   return (
     <Shell>
       <section style={{ textAlign: 'center', padding: '2.25rem 0 1.5rem' }}>
-        {a.avatar && <img src={a.avatar} alt="" style={{ width: 72, height: 72, borderRadius: '50%', objectFit: 'cover', border: `3px solid ${C.white}`, boxShadow: '0 6px 18px -8px rgba(25,37,36,.35)' }} />}
+        {a.avatar && <img src={a.avatar} alt="" style={{ display: 'block', margin: '0 auto', width: 92, height: 92, borderRadius: '50%', objectFit: 'cover', border: `3px solid ${C.white}`, boxShadow: '0 6px 18px -8px rgba(25,37,36,.35)' }} />}
         <div style={{ ...pill, marginTop: '0.9rem' }}>Instagram audit · @{a.handle}</div>
         <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(1.9rem,6vw,2.8rem)', lineHeight: 1.1, color: C.ink, margin: '0.9rem 0 0.6rem', letterSpacing: '-0.02em' }}>
           How {data.hotel_name} shows up on Instagram
@@ -102,19 +103,21 @@ export default function HotelAudit() {
         ))}
       </div>
 
-      {a.best_post_url && (
+      {a.best_post?.image ? <BestPost a={a} /> : a.best_post_url && (
         <p style={{ color: C.slate, fontSize: '0.9rem', margin: '0.9rem 0 0' }}>
           Your strongest recent post: <a href={a.best_post_url} target="_blank" rel="noreferrer" style={{ color: C.green, fontWeight: 600 }}>view on Instagram</a>
         </p>
       )}
 
       <Label>Why creator content works</Label>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: 10 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: '1.5rem 12px' }}>
         {CREATOR_STATS.map(([n, label, src]) => (
-          <div key={n} style={{ background: C.white, border: `1px solid ${C.line}`, borderRadius: 14, padding: '1rem 1.1rem' }}>
-            <div style={{ fontSize: '1.6rem', fontWeight: 700, color: C.ink }}>{n}</div>
-            <div style={{ color: C.slate, lineHeight: 1.45, fontSize: '0.9rem', margin: '0.2rem 0 0.4rem' }}>{label}</div>
-            <div style={{ fontSize: '0.72rem', color: C.sage }}>{src}</div>
+          <div key={n} style={{ display: 'flex', flexDirection: 'column' }}>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(2.6rem,9vw,3.4rem)', lineHeight: 1, letterSpacing: '-0.04em', color: C.green, padding: '0 0.2rem 0.6rem' }}>{n}</div>
+            <div style={{ flex: 1, background: C.white, border: `1px solid ${C.line}`, borderRadius: 14, padding: '0.85rem 0.95rem' }}>
+              <div style={{ color: C.slate, lineHeight: 1.45, fontSize: '0.86rem', marginBottom: '0.4rem' }}>{label}</div>
+              <div style={{ fontSize: '0.7rem', color: C.sage }}>{src}</div>
+            </div>
           </div>
         ))}
       </div>
@@ -131,8 +134,9 @@ export default function HotelAudit() {
           : waitUntil
             ? <p style={{ color: C.slate, lineHeight: 1.6, margin: 0 }}>To protect your hotel from fake sign-ups by automated email scanners, this link unlocks a few minutes after our email arrives. Tap Build again in {Math.max(1, Math.ceil((waitUntil - Date.now()) / 60_000))} min.</p>
             : <button onClick={start} style={{ ...cta, border: 'none', cursor: 'pointer', font: 'inherit', fontWeight: 700 }}>Build my listing →</button>}
-        <p style={{ color: C.sage, fontSize: '0.85rem', marginTop: '0.9rem' }}>
-          Questions? WhatsApp Benjamin on <a href={WHATSAPP} style={{ color: C.green, fontWeight: 600 }}>+1 623-221-2170</a>
+        <p style={{ color: C.sage, fontSize: '0.85rem', margin: '0.9rem 0 0', lineHeight: 1.7 }}>
+          Questions? Contact the Collabnb team.<br />
+          Call or WhatsApp <a href={WHATSAPP} style={{ color: C.green, fontWeight: 600 }}>+1 623-221-2170</a> · Email <a href={`mailto:${HELP_EMAIL}`} style={{ color: C.green, fontWeight: 600 }}>{HELP_EMAIL}</a>
         </p>
       </section>
     </Shell>
@@ -248,7 +252,7 @@ export function Builder({ data, retry, opening = false }) {
           {build.error ? (
             <>
               <button onClick={retry} style={{ ...cta, border: 'none', cursor: 'pointer', font: 'inherit', fontWeight: 700 }}>Try again</button>
-              <p style={{ color: C.sage, fontSize: '0.85rem', marginTop: '0.8rem' }}>Or WhatsApp Benjamin on <a href={WHATSAPP} style={{ color: C.green, fontWeight: 600 }}>+1 623-221-2170</a> and he'll set it up for you.</p>
+              <p style={{ color: C.sage, fontSize: '0.85rem', marginTop: '0.8rem' }}>Or contact the Collabnb team: call or WhatsApp <a href={WHATSAPP} style={{ color: C.green, fontWeight: 600 }}>+1 623-221-2170</a>, or email <a href={`mailto:${HELP_EMAIL}`} style={{ color: C.green, fontWeight: 600 }}>{HELP_EMAIL}</a>, and we'll set it up for you.</p>
             </>
           ) : done ? (
             opening
@@ -288,13 +292,43 @@ const BUILD_CSS = `
 @media (prefers-reduced-motion: reduce){.cb-build *{animation:none!important;transition:none!important}}
 `;
 
+function BestPost({ a }) {
+  const p = a.best_post;
+  const why = [
+    a.best_x >= 1.2 ? `It earned ${a.best_x}x your average engagement` : 'It earned your highest engagement',
+    `with ${p.likes.toLocaleString()} likes and ${p.comments.toLocaleString()} comments${p.views ? ` on ${p.views.toLocaleString()} views` : ''}.`,
+  ].join(' ');
+  const how = p.video
+    ? 'Short-form video like this reaches people who don’t follow you yet. Creators can make it on repeat.'
+    : 'Imagery like this is what stops the scroll. Creators can turn it into Reels that reach new audiences.';
+  return (
+    <>
+      <Label>Your strongest recent post</Label>
+      <a href={a.best_post_url} target="_blank" rel="noreferrer" className="cb-best" style={{ display: 'grid', gridTemplateColumns: 'minmax(0,200px) 1fr', gap: '1.1rem', alignItems: 'center', background: C.white, border: `1px solid ${C.line}`, borderRadius: 16, padding: 12, textDecoration: 'none', color: 'inherit' }}>
+        <div style={{ position: 'relative' }}>
+          <img src={p.image} alt="" style={{ display: 'block', width: '100%', aspectRatio: '4/5', objectFit: 'cover', borderRadius: 12 }} />
+          {p.video && <span style={{ position: 'absolute', top: 8, left: 8, background: 'rgba(25,37,36,.7)', color: C.white, fontSize: '0.7rem', fontWeight: 700, padding: '0.2rem 0.55rem', borderRadius: 99 }}>▶ Reel</span>}
+        </div>
+        <div style={{ padding: '0.25rem 0.4rem 0.25rem 0' }}>
+          <div style={{ fontFamily: 'var(--font-display)', fontSize: '2.4rem', lineHeight: 1, color: C.green, letterSpacing: '-0.03em' }}>{a.best_x >= 1.2 ? `${a.best_x}x` : 'Top'}</div>
+          <div style={{ fontSize: '0.78rem', color: C.sage, margin: '0.2rem 0 0.8rem' }}>your average engagement</div>
+          <div style={{ color: C.ink, lineHeight: 1.55, fontSize: '0.95rem' }}>{why}</div>
+          <div style={{ color: C.slate, lineHeight: 1.55, fontSize: '0.9rem', marginTop: '0.4rem' }}>{how}</div>
+          <div style={{ color: C.green, fontWeight: 600, fontSize: '0.85rem', marginTop: '0.8rem' }}>View on Instagram →</div>
+        </div>
+      </a>
+      <style>{`@media (max-width:520px){.cb-best{grid-template-columns:1fr!important}}`}</style>
+    </>
+  );
+}
+
 function Shell({ children }) {
   return (
     <div style={{ minHeight: '100vh', background: C.bg, padding: '0 16px 3rem' }}>
+      <header style={{ padding: '1.25rem 0', display: 'flex', justifyContent: 'flex-start' }}>
+        <a href="https://collabnb.com"><img src={collabnbLogo} alt="Collabnb" style={{ height: 36, display: 'block' }} /></a>
+      </header>
       <div style={{ maxWidth: 680, margin: '0 auto' }}>
-        <header style={{ padding: '1.25rem 0', display: 'flex', justifyContent: 'center' }}>
-          <a href="https://collabnb.com"><img src={collabnbLogo} alt="Collabnb" style={{ height: 28 }} /></a>
-        </header>
         {children}
       </div>
     </div>

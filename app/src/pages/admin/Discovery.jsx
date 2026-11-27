@@ -221,7 +221,7 @@ function TagLegend() {
 }
 
 // ─── Single prospect card ─────────────────────────────────────────────────────
-const isHotelProspect = (p) => p.instagram_handle?.startsWith('hc-');
+const isHotelProspect = (p) => /^(hc|mp)-/.test(p.instagram_handle || '');
 
 function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
   const updateStatus = useMutation(api.prospects.updateStatus);
@@ -380,7 +380,7 @@ function ProspectCard({ prospect, selected, onToggleSelect, crm }) {
   const flowIdx = flow.indexOf(prospect.status);
   const nextStatus = flowIdx === -1 ? undefined : flow[flowIdx + 1];
   const emailSent = !!prospect.email_sequence?.[0]?.sent_at;
-  const isHotel = prospect.instagram_handle?.startsWith('hc-');
+  const isHotel = isHotelProspect(prospect);
   const dmed = !!prospect.contacted_at;
   const dmReady = !!dmDraft.trim() && !(isHotel && !prospect.ig_handle);
   const whatsapped = !!prospect.whatsapped_at;

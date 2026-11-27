@@ -68,7 +68,8 @@ function budgetUsage(audits: any[], cfg: Config) {
 
 const validEmail = (e?: string) => !!e && /^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i.test(e) && !/example|sentry|wix|domain\.com/i.test(e);
 const realHandle = (p: any): string | undefined => {
-  const h = p.ig_handle || (String(p.instagram_handle || "").startsWith("hc-") ? undefined : p.instagram_handle);
+  // hc- (Hotel Creators) and mp- (Google Maps place) keys are placeholders, not Instagram handles.
+  const h = p.ig_handle || (/^(hc|mp)-/.test(String(p.instagram_handle || "")) ? undefined : p.instagram_handle);
   return h ? String(h).replace(/^@/, "").toLowerCase() : undefined;
 };
 const isAutoToday = (p: any, day: string) =>
@@ -1062,18 +1063,18 @@ export const markSkipped = internalMutation({
 // After an email is found by hand for a skipped hotel: drop auto-skip so the next run retries it.
 // npx convex run --prod autoOutreach:requeueSkipped '{"handles":["hc-…","somehotel"]}'
 export const requeueSkipped = internalMutation({
-  args: { handles: v.array(v.string()) },
-  handler: async (ctx, { handles }) => {
+  args: { handles: v.array(v.string()), force: v.optional(v.boolean()) },
+  handler: async (ctx, { handles, force }) => {
     const want = new Set(handles.map((h) => h.toLowerCase()));
     const rows = (await ctx.db.query("prospects").withIndex("by_kind_status", (q) => q.eq("kind", "host")).collect()) as any[];
     const out: any[] = [];
     for (const p of rows) {
       if (!want.has(String(p.instagram_handle).toLowerCase())) continue;
       if (!(p.tags || []).includes("auto-skip")) { out.push({ handle: p.instagram_handle, skipped: "not auto-skipped" }); continue; }
-      if (!validEmail(p.marketing_email) && !validEmail(p.email)) { out.push({ handle: p.instagram_handle, skipped: "still no email" }); continue; }
+      if (!force && !validEmail(p.marketing_email) && !validEmail(p.email)) { out.push({ handle: p.instagram_handle, skipped: "still no email" }); continue; }
       await ctx.db.patch(p._id, {
         tags: (p.tags || []).filter((t: string) => t !== "auto-skip"),
-        outreach_log: [...(p.outreach_log || []), { at: Date.now(), type: "auto_requeued", note: "email found by hand" }],
+        outreach_log: [...(p.outreach_log || []), { at: Date.now(), type: "auto_requeued", note: force ? "wrongly skipped" : "email found by hand" }],
       });
       out.push({ handle: p.instagram_handle, requeued: true });
     }

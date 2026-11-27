@@ -217,12 +217,14 @@ function runCount(el, target, duration = 2000) {
 async function initCounters() {
   let creators = 0;
   let hosts = 0;
+  let live = 0;
 
   async function fetchCounts() {
     try {
       const counts = await getProfileCounts();
       creators = counts.creators;
       hosts = counts.hosts;
+      live = counts.live || 0;
       updateUI();
     } catch (err) {
       console.warn('Could not fetch live counts:', err);
@@ -239,6 +241,13 @@ async function initCounters() {
 
     if (creatorEl) runCount(creatorEl, creators);
     if (hostEl) runCount(hostEl, hosts);
+    // Keep the host counter hidden until it's worth showing.
+    const hostItem = hostEl && hostEl.closest('.counter-item');
+    if (hostItem) hostItem.style.display = hosts >= 10 ? '' : 'none';
+
+    // Only show live stays once there are enough to look established.
+    const liveEl = document.querySelector('#count-live');
+    if (liveEl && live >= 5) { liveEl.textContent = `${live} live stays`; liveEl.style.display = ''; }
 
     if (creatorBar) {
       setTimeout(() => { creatorBar.style.width = `${Math.min(100, (creators / 100) * 100)}%`; }, 200);

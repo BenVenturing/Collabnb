@@ -31,7 +31,7 @@ const client = convexInstance || mockClient;
 export async function getProfileCounts() {
   try {
     const counts = await client.query('waitlist:getCounts');
-    return { creators: counts.creators, hosts: counts.hosts };
+    return { creators: counts.creators, hosts: counts.hosts, live: counts.live || 0 };
   } catch (err) {
     console.warn('getProfileCounts failed:', err.message);
     return { creators: 0, hosts: 0 };

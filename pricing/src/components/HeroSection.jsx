@@ -26,9 +26,11 @@ export default function HeroSection({ spotsRemaining, isFoundingFull, founderCre
           <div className="glass rounded-full px-5 py-2.5 text-sm font-semibold text-ink font-display">
             <span className="text-lg">{founderCreatorCount}</span><span className="text-sage font-normal"> / 100 creators</span>
           </div>
-          <div className="glass rounded-full px-5 py-2.5 text-sm font-semibold text-ink font-display">
-            <span className="text-lg">{founderHostCount}</span><span className="text-sage font-normal"> / 100 hosts</span>
-          </div>
+          {founderHostCount >= 10 && (
+            <div className="glass rounded-full px-5 py-2.5 text-sm font-semibold text-ink font-display">
+              <span className="text-lg">{founderHostCount}</span><span className="text-sage font-normal"> / 100 hosts</span>
+            </div>
+          )}
         </div>
       )}
 

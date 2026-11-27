@@ -97,7 +97,7 @@ export default function PricingPage() {
         </ul>
         <div className="flex items-center gap-3">
           <span className="text-[0.65rem] uppercase tracking-widest text-sage font-medium bg-black/[0.04] px-2.5 py-1.5 rounded-full whitespace-nowrap">
-            {founderCreatorCount}/100 · {founderHostCount}/100
+            {founderCreatorCount}/100{founderHostCount >= 10 ? ` · ${founderHostCount}/100` : ''}
           </span>
           <a href="../join.html" className="btn-ink text-xs py-2 px-4 whitespace-nowrap">
             Join
